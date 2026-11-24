@@ -4,11 +4,15 @@
 //! the transaction would have to prove, input for input (the guest, its `ReceiveInput` and the
 //! session limit `lee`'s public backend gives it, captured by `trace::TAPE`).
 //!
-//! * `perf_prove --dump DIR [--with-verify-all]`: run the scenarios of `lez/results/stage1-*.md`
-//!   and `stage4-attest.md` (dev mode is not needed: public execution is never proven), keep the
-//!   transitions of the actions measured, and write each one's input (`NNN.input`, borsh
-//!   `ReceiveInput`), the executor's journal (`NNN.journal`), the guests (`elf-<image id>.bin`) and
-//!   `index.tsv`.
+//! * `perf_prove --dump DIR`: run the scenarios of `lez/results/stage1-*.md`, `stage4-attest.md`
+//!   and `stage5-vault-v5.md` (dev mode is not needed: public execution is never proven), keep the
+//!   transitions of the actions measured (every message of the attestation program, every type of
+//!   statement), and write each one's input (`NNN.input`, borsh `ReceiveInput`), the executor's
+//!   journal (`NNN.journal`), the guests (`elf-<image id>.bin`) and `index.tsv`. Rows 1–39 are the
+//!   dump of 21 November 2026 (`bench/perf/results/p2-a`, `p2-b`); rows 40–50 were added on 24
+//!   November: the finality update in one public transaction (`VerifyAll`, `ApplyVerified`,
+//!   `Record`), `Read` and `ReadPadded`, and the accumulator-leaf statement. `--with-verify-all`,
+//!   which used to add the `VerifyAll` transaction, is still accepted and changes nothing.
 //! * `perf_prove --prove DIR N`: prove transition `N` for real (`RISC0_DEV_MODE` must be unset or
 //!   0): a composite receipt, then compressed to a succinct one; both verified against the image
 //!   id, the journal compared with the executor's. Prints one `RESULT` line (tab-separated).
@@ -28,15 +32,15 @@ use std::{
 };
 
 use harness::{
-    attest, scenarios,
+    accumulated, attest, scenarios,
     trace::{Taped, TAPE},
-    TxReport,
+    vault, TxReport,
 };
 use lee_core::program::ReceiveInput;
 use risc0_zkvm::{compute_image_id, default_executor, default_prover, ExecutorEnv, ProverOpts};
 
 fn usage() -> ! {
-    eprintln!("usage: perf_prove --dump DIR [--with-verify-all] | --prove DIR N | --exec DIR N [RUNS]");
+    eprintln!("usage: perf_prove --dump DIR | --prove DIR N | --exec DIR N [RUNS]");
     std::process::exit(2)
 }
 
@@ -103,7 +107,7 @@ fn keep(
     }
 }
 
-fn dump(dir: &Path, with_verify_all: bool) {
+fn dump(dir: &Path) {
     fs::create_dir_all(dir).unwrap();
     let mut rows = Vec::new();
 
@@ -147,17 +151,56 @@ fn dump(dir: &Path, with_verify_all: bool) {
         (l == "Succeed").then(|| "instance succession: Succeed (then Spawn at the successor)".to_string())
     });
 
-    if with_verify_all {
-        // The whole finality update in one public transaction (VerifyAll), stage1-one-transaction.md.
-        let (reports, tape) = taped(scenarios::one_transaction_update);
-        let all: Vec<TxReport> = reports;
-        let n: usize = all.iter().map(|r| r.transitions.len()).sum();
-        let tail = &tape[tape.len() - n..];
-        let pairs = by_report(&all, tail);
-        keep(&mut rows, "one_transaction", &pairs, |l| {
-            l.contains("VerifyAll").then(|| format!("finality update in one transaction: {l}"))
-        });
-    }
+    // Rows 40-50 (24 November 2026): the rest of the program's messages and the last type of statement.
+    //
+    // The whole finality update in one public transaction (stage1-one-transaction.md): `VerifyAll` at
+    // the payer's actor, which sends `ApplyVerified` to the instance, which sends `Record` to the header.
+    let (all, tape) = taped(scenarios::one_transaction_update);
+    let n: usize = all.iter().map(|r| r.transitions.len()).sum();
+    let pairs = by_report(&all, &tape[tape.len() - n..]);
+    keep(&mut rows, "one_transaction", &pairs, |l| {
+        l.contains("VerifyAll")
+            .then(|| "finality update in one public transaction: VerifyAll (then ApplyVerified, Record)".to_string())
+    });
+
+    // `Read` and `ReadPadded`, the read idiom of LEZ v0.4 (what a private consumer's transaction runs
+    // publicly): a public reader of the reference consumer reads the finalized block's record
+    // (`ReadRecord` -> `Read` -> reply), then the same with 1,024 bytes the program ignores
+    // (`accumulated::read_record`, pinned by tests/costs_attestation.rs).
+    let mut s = attest::Stage4::new();
+    let before = s.w.chain.reports.len();
+    let (_, tape) = taped(|| accumulated::read_record(&mut s));
+    let pairs = by_report(&s.w.chain.reports[before..], &tape);
+    keep(&mut rows, "read_record", &pairs, |l| match l {
+        "ReadRecord (→ Read → reply), empty reader" => {
+            Some("read: a public reader of the consumer reads a record (ReadRecord, then Read, then the reply)".into())
+        }
+        "ReadPadded, 1,024 bytes of padding" => Some("read: the same with 1,024 bytes of padding (ReadPadded)".into()),
+        _ => None,
+    });
+
+    // The accumulator-leaf statement on real data (tests/vault.rs, stage5-vault-v5.md rows 1 and 3):
+    // FerrataVault v5's slots 0 and 1 and one deposit leaf, then both leaves, under the record of
+    // Sepolia block 12,112,773 that the instance wrote after following the chain from the period-1378
+    // bootstrap (the requests of `vault::real`; EVIDENCE row 71 proved the second on an earlier image).
+    let mut v = vault::RealVault::load();
+    let leaf_requests = [
+        ("the vault v5: slots 0 and 1 and deposit leaf 0 (real Sepolia state)", vec![v.leaf(0)]),
+        ("the vault v5: slots 0 and 1 and both deposit leaves", vec![v.leaf(0), v.leaf(1)]),
+    ];
+    let (reports, tape) = taped(|| {
+        leaf_requests
+            .iter()
+            .map(|(label, leaves)| {
+                let request = vault::vault_request(v.base(), &v.proof, &v.root, leaves);
+                let (report, a) = v.run(label, &request);
+                vault::check_vault_attestation(&a.expect("accepted"), &v.root, v.count, leaves);
+                report
+            })
+            .collect::<Vec<_>>()
+    });
+    let pairs = by_report(&reports, &tape);
+    keep(&mut rows, "vault_leaf", &pairs, |l| Some(format!("statement: accumulator leaf: {l}")));
 
     let mut index = fs::File::create(dir.join("index.tsv")).unwrap();
     writeln!(
@@ -301,7 +344,7 @@ fn main() {
     match args.first().map(String::as_str) {
         Some("--dump") => {
             let dir = PathBuf::from(args.get(1).unwrap_or_else(|| usage()));
-            dump(&dir, args.iter().any(|a| a == "--with-verify-all"));
+            dump(&dir);
         }
         Some("--prove") => {
             let dir = PathBuf::from(args.get(1).unwrap_or_else(|| usage()));

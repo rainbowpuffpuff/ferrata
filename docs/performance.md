@@ -69,17 +69,25 @@ target ([`lez/RESULTS.md`](../lez/RESULTS.md) §5, "What is not built").
 ### P.2 Cost by program action: cycles, gas, proof time, proof size
 
 **Every program action and statement type, proven for real** ([`perf-proofs.md`](../lez/results/perf-proofs.md),
-21 November 2026; instance succession and the proven path's committee handoff added after review): the 39 guest executions (37, and `Succeed`/`Spawn` added) of the test suite's scenarios (`lez/results/stage1-*.md`,
-`stage4-attest.md`), each with the exact input LEZ v0.4.0-rc1 gives it, proven by r0vm 3.0.5 on a cloud container held
-to 16 CPUs and 32 GiB (one container per transition, `bench/perf/prove_modal.py`; `bench/perf/prove-actions.sh` runs
-the same `perf_prove --prove` on one machine): a composite receipt verified against the image id with its journal
-equal to the executor's, then compressed to one succinct receipt and verified again. LEZ v0.4 does not prove public
-transactions (every node re-executes them): these are the proofs a prover of the same execution would make, RFP-020's
-method. Execution gas equals the user cycles proven in every row. Proof times are sums over a transaction's
-transitions; each transition's machine is in the results file (mostly AMD Zen 3 hosts; four actions sum transitions
-proven on different hosts, `Init`, `Init` adopt 2/2 and both `Finish` rows, and the slot, absent-slot and four-facts
-statements ran on Zen 4, and the succession row's two transitions on two hosts, `Succeed` (38) on Intel and `Spawn`
-(39) on AMD Zen 3: compression times differ by up to about 40 % between hosts):
+21 and 24 November 2026): the 50 guest executions of the test suite's scenarios (`lez/results/stage1-*.md`,
+`stage4-attest.md`, `stage5-vault-v5.md`), which run every message of the attestation program (`Init`, `JobOpen`,
+`Adopt`, `Apply`, `Record`, `Open`, `Miller`, `Finish`, `VerifyAll`, `ApplyVerified`, `Attest`, `Read`, `ReadPadded`,
+`Succeed`, `Spawn`) and every type of statement (account, absent account, storage slot, absent slot, event log, a slot
+behind an EIP-2935 hop, several facts with a relation, accumulator leaf), each with the exact input LEZ v0.4.0-rc1
+gives it, proven by r0vm 3.0.5 on a cloud container held to 16 CPUs and 32 GiB (one container per transition,
+`bench/perf/prove_modal.py`; `bench/perf/prove-actions.sh` runs the same `perf_prove --prove` on one machine): a
+composite receipt verified against the image id with its journal equal to the executor's, then compressed to one
+succinct receipt and verified again. Every record is of this tree's images, checked one by one by the command that
+writes the results file: each proof's image id is the dump's, and is the attestation program's `0x816d1fef…` or the
+reference consumer's `0x8464603b…` of [`image-ids.md`](image-ids.md), whose binaries' sha256 the dumped guests
+match. LEZ v0.4 does not prove public transactions (every node re-executes them): these are the proofs a prover of
+the same execution would make, RFP-020's method. Execution gas equals the user cycles proven in every row. Proof
+times are sums over a transaction's transitions; each transition's machine is in the results file (mostly AMD Zen 3
+hosts; eight actions sum transitions proven on different hosts, `Init`, `Init` adopt 2/2, both `Finish` rows, the
+succession (`Succeed` on Intel, `Spawn` on Zen 3), the public `VerifyAll` transaction (its `Record` on AMD Zen 2),
+the read and the padded read (three of their transitions on Zen 4); the slot, absent-slot and four-facts statements
+ran on Zen 4: between hosts, compression differs up to 2.5 times (the same 17,350-cycle `Record`: 6.4 s on Intel, 8.4 s
+on Zen 4, 16.1 s on Zen 2), proving more than three times (6.4 s on Zen 4 to 21.4 s on Zen 2)):
 
 | action | transitions | exec gas | stor gas | user cycles proven | segments | prove (composite) s | compress to succinct s | composite B | succinct B (one per transition) | peak RSS GiB |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -94,6 +102,7 @@ statements ran on Zen 4, and the succession row's two transitions on two hosts, 
 | finality update: Open (step 1) | 2 | 2,194,902 | 3,525 | 2,194,902 | 4 | 307.9 | 60.3 | 1,089,102 | 228,025 + 225,347 | 9.19 |
 | finality update: Miller (step 2) | 1 | 3,308,048 | 399 | 3,308,048 | 4 | 410.1 | 70.5 | 1,116,487 | 225,379 | 9.19 |
 | finality update: Finish (step 3) | 3 | 3,725,955 | 527 | 3,725,955 | 6 | 514.0 | 89.3 | 1,600,717 | 224,968 + 225,461 + 224,041 | 9.19 |
+| finality update in one public transaction: VerifyAll (then ApplyVerified, Record) | 3 | 9,124,896 | 4,105 | 9,124,896 | 12 | 1114.4 | 214.9 | 3,267,807 | 227,408 + 225,429 + 224,041 | 9.20 |
 | statement: account: the WETH contract (nonce, balance, storage root, code hash) | 1 | 168,909 | 4,424 | 168,909 | 1 | 67.2 | 19.6 | 488,178 | 227,717 | 3.47 |
 | statement: storage slot: a WETH balance, value >= 1 | 1 | 275,865 | 7,338 | 275,865 | 1 | 81.0 | 16.0 | 506,294 | 230,663 | 4.60 |
 | statement: storage slot: an absent slot is zero | 1 | 270,580 | 7,291 | 270,580 | 1 | 87.7 | 17.5 | 506,200 | 230,616 | 4.60 |
@@ -102,9 +111,13 @@ statements ran on Zen 4, and the succession row's two transitions on two hosts, 
 | statement: event log: a Transfer in the block's largest receipt (306 logs) | 1 | 1,619,960 | 58,812 | 1,619,960 | 2 | 277.1 | 40.7 | 903,717 | 282,105 | 9.18 |
 | statement: storage slot 16 blocks back: one EIP-2935 hop, then the slot | 1 | 499,277 | 13,578 | 499,277 | 1 | 162.4 | 21.1 | 532,022 | 236,903 | 9.15 |
 | statement: four facts in one call (account, two slots, a log) and a relation | 1 | 454,255 | 12,309 | 454,255 | 1 | 134.7 | 16.5 | 529,612 | 235,698 | 9.15 |
+| statement: accumulator leaf: FerrataVault v5's slots 0 and 1 and deposit leaf 0 (real Sepolia state) | 1 | 327,016 | 7,659 | 327,016 | 1 | 108.5 | 20.8 | 506,840 | 230,936 | 4.62 |
+| statement: accumulator leaf: the same with both deposit leaves | 1 | 392,358 | 8,731 | 392,358 | 1 | 109.1 | 20.8 | 509,048 | 232,040 | 4.62 |
 | consumer: a public actor calls Attest: storage slot | 3 | 386,181 | 7,507 | 386,181 | 3 | 136.9 | 42.0 | 1,014,414 | 237,300 + 231,045 + 224,122 | 4.61 |
 | consumer: a public actor calls Attest: event log | 3 | 164,872 | 2,792 | 164,872 | 3 | 102.9 | 40.7 | 987,070 | 228,624 + 226,261 + 224,358 | 3.47 |
 | consumer: reference consumer: claim an ERC-20 Transfer (credits its sender once) | 4 | 185,389 | 2,768 | 185,389 | 4 | 108.6 | 51.8 | 1,206,854 | 227,890 + 226,261 + 224,064 + 223,480 | 3.47 |
+| read: a public reader of the consumer reads a record (ReadRecord, then Read, then the reply) | 3 | 39,410 | 604 | 39,410 | 3 | 21.3 | 30.1 | 667,870 | 223,462 + 224,105 + 224,048 | 1.44 |
+| read: the same with 1,024 bytes of padding (ReadPadded) | 3 | 63,319 | 1,628 | 63,319 | 3 | 27.0 | 27.9 | 698,824 | 226,106 + 225,133 + 224,333 | 1.44 |
 | instance succession: Succeed (then Spawn at the successor) | 2 | 70,610 | 697 | 70,610 | 2 | 29.2 | 16.2 | 494,422 | 224,827 + 224,464 | 1.44 |
 
 **The proven update path** (one private transaction proving a whole finality update, `VerifyAll` at a private
@@ -114,7 +127,11 @@ peak **9.21 GiB**, receipt **227,120 B**, transaction 231,114 B; settled through
 verified, charged **485,298** execution gas (the flat 409,764 plus a 75,534-cycle public part) and 224,063 storage
 gas. Earlier images: 3,240.5 s on the laptop CPU (16 threads, shared), 49.5 s on one L4, 895.6 s on a cloud CPU with
 32 prover threads ([`lez/RESULTS.md`](../lez/RESULTS.md) §3, §9). The same update in one public transaction
-(`VerifyAll`) is charged 9,115,325 execution gas and needs no proof. **The proven committee handoff** (`prove_private
+(`VerifyAll`, then `ApplyVerified` and `Record`) is charged 9,124,896 execution gas and 4,105 storage gas
+(`lez/results/stage1-one-transaction.md`), and LEZ v0.4 does not prove it; its three executions are proven all the
+same (the table's row): `VerifyAll` itself, the private transition's 9,049,362 user cycles in the same 10 segments,
+**1,079.3 s** composite and 189.7 s to compress on a 16-CPU container (AMD Zen 3), peak 9.20 GiB, succinct receipt
+**227,408 B** (InnerReceipt, the table's measure; 231,713 B as a whole `Receipt`). **The proven committee handoff** (`prove_private
 --handoff`: update_1 as served, its 512 keys adopted in the same private call, no new header): 15,796,512 user cycles in
 17 segments, `execute_and_prove` **2,254.2 s** on a 16-CPU container (AMD Zen 4), peak 9.20 GiB, receipt **227,347 B**,
 transaction 231,568 B; settled with the receipt verified, charged **451,895** execution gas (409,764 + a 42,131-cycle
@@ -126,9 +143,12 @@ peak 9.19 GiB (P.4, [`perf-p4-laptop.md`](../lez/results/perf-p4-laptop.md)); un
 one L4 (receipt 227,170 B; [`gpu-prover/RESULTS.md`](../gpu-prover/RESULTS.md), run `gpu-l4-attest-2`). A handler
 pays 5.7 cycles per byte it receives and about 3.4 per byte it sends ([`attestation.md`](design/attestation.md) §4.3).
 
-**Reproducible from the test suite**: `lez/harness/tests/public_path.rs`, `attest_public.rs`, `attest_private.rs` and
-`sepolia.rs` write the cycle and gas tables (`lez/RESULTS.md` §8); `perf_prove --dump` captures the same scenarios'
-guest inputs and `bench/perf/prove-actions.sh` (or `prove_modal.py`) proves each one.
+**Reproducible from the test suite**: `lez/harness/tests/public_path.rs`, `attest_public.rs`, `attest_private.rs`,
+`sepolia.rs`, `vault.rs` and `costs_attestation.rs` write or pin the cycle and gas tables (`lez/RESULTS.md` §8);
+`perf_prove --dump` captures the same scenarios' guest inputs (all 50 transitions) and `bench/perf/prove-actions.sh`
+(or `p2-stage.sh` and `prove_modal.py`) proves each one; `python3 -I bench/perf/summarize_proofs.py
+bench/perf/results/p2-c bench/perf/results/p2-b bench/perf/results/p2-a` writes the results file from the records
+and stops if a record is not of this tree's images.
 
 **One public transaction with a residue witness (experimental, not deployed).** An unaudited copy of
 the program whose `VerifyAll` checks a residue witness (Novakovic and Eagen; `c ≠ 0`, `w ∈ Fp6`,

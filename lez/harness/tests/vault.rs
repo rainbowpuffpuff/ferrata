@@ -4,6 +4,12 @@ use harness::{render, vault};
 
 const MAX_GAS_EXEC: u64 = 10_000_000;
 
+/// The leaf requests on FerrataVault v5's real state, pinned as `tests/costs_attestation.rs` pins the other
+/// actions' charges: rows 1–3 of `results/stage5-vault-v5.md`, each one `Attest` (its cycles, which are its
+/// execution gas; storage gas): slots 0 and 1 with deposit leaf 0, with leaf 1, and with both. The first and the
+/// third are proven for real on this tree's program (`results/perf-proofs.md`, transitions 49 and 50).
+const REAL_LEAVES: [(u64, u64); 3] = [(327_016, 7_659), (327_017, 7_659), (392_358, 8_731)];
+
 /// The vault's request (its account, slots 0 and 1, deposit leaves against the root in slot 0)
 /// through the program in the guest, on a synthetic state that holds the vault's own eight
 /// deposits under a record in the Gloas layout; then the refusals.
@@ -43,6 +49,12 @@ fn the_vault_on_sepolia() {
     println!("{out}");
     for r in accepted.iter().chain(&refused) {
         assert!(r.charge.gas_exec <= MAX_GAS_EXEC, "{} is over MAX_GAS_EXEC", r.label);
+    }
+    assert!(accepted.len() >= REAL_LEAVES.len(), "{} requests accepted, {} pinned", accepted.len(), REAL_LEAVES.len());
+    for (r, (cycles, stor)) in accepted.iter().zip(REAL_LEAVES) {
+        let handlers: Vec<(&str, u64)> = r.transitions.iter().map(|t| (t.handler.as_str(), t.cycles)).collect();
+        assert_eq!(handlers, [("Attest", cycles)], "{}: the pinned cycles moved", r.label);
+        assert_eq!((r.charge.gas_exec, r.charge.gas_stor), (cycles, stor), "{}: the pinned charge moved", r.label);
     }
     std::fs::write(harness::results_dir().join("stage5-vault-v5.md"), out).unwrap();
 }

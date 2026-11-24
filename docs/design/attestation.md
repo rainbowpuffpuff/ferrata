@@ -130,7 +130,7 @@ Measured on mainnet periods 1899–1903 (Fulu, 512-member committees), in the in
 | Finality update, proven path | 1 | 479,854 | 479,854 | 224,063 |
 | Handoff with no new header, proven path (dev mode) | 1 | 448,530 | 448,530 | 224,063 |
 
-The current programs charge a little more for the same updates, which CI pins (`lez/harness/tests/costs_attestation.rs`): a finality update 9,228,905 execution gas (4,451 storage gas), update_1's rotation and adoption 16,092,355 (54,491), update_0's committee-only job 15,997,954 (53,675), the proven path 485,298 with a 75,534-cycle public part, and a proven handoff 451,895 with a 42,131-cycle public part.
+The current programs charge a little more for the same updates, which CI pins (`lez/harness/tests/costs_attestation.rs`): a finality update 9,228,905 execution gas (4,451 storage gas), update_1's rotation and adoption 16,092,355 (54,491), update_0's committee-only job 15,997,954 (53,675), the finality update in one public transaction 9,124,896 (4,105 storage gas), the proven path 485,298 with a 75,534-cycle public part, and a proven handoff 451,895 with a 42,131-cycle public part.
 
 Execution gas is the user cycles LEZ metered, storage gas the transaction's serialized size. After every job the instance's store equals the native `FinalizedStore`'s, every finalized root equals the canonical root a second provider reports, and the record equals the native finalized header's.
 
