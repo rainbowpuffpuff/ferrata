@@ -508,8 +508,11 @@ Rectangle {
     }
 
     // ---- reusable pieces -----------------------------------------------------------------------
-    component Heading: Label { font.pixelSize: 18; font.bold: true; color: "#1d2733"; Layout.topMargin: 6 }
-    component Note: Label { wrapMode: Text.WordWrap; color: "#4a5563"; Layout.fillWidth: true; font.pixelSize: 13 }
+    // Every label shows its text as plain text: Qt would otherwise render a string that starts like HTML as rich text,
+    // and labels show what the network, an RPC or the module answered (review L1).
+    component PlainLabel: Label { textFormat: Text.PlainText }
+    component Heading: PlainLabel { font.pixelSize: 18; font.bold: true; color: "#1d2733"; Layout.topMargin: 6 }
+    component Note: PlainLabel { wrapMode: Text.WordWrap; color: "#4a5563"; Layout.fillWidth: true; font.pixelSize: 13 }
     component Box: Rectangle {
         default property alias content: inner.data
         Layout.fillWidth: true
@@ -523,18 +526,18 @@ Rectangle {
         property bool ownRelease: false
         property string tableName: ""
         readonly property var s: Privacy.step(step, ownRelease)
-        Label { text: "What is public and what is private: " + s.title; font.bold: true }
-        Label { objectName: tableName ? tableName + ".publicEth" : ""; visible: s.publicEth.length > 0; text: "Public on Ethereum: " + s.publicEth.join("; "); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: "#8a4b00" }
-        Label { visible: s.publicLez.length > 0; text: "Public on LEZ: " + s.publicLez.join("; "); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: "#8a4b00" }
-        Label { text: "Private: " + s.hidden.join("; "); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: "#1b6b3a" }
+        PlainLabel { text: "What is public and what is private: " + s.title; font.bold: true }
+        PlainLabel { objectName: tableName ? tableName + ".publicEth" : ""; visible: s.publicEth.length > 0; text: "Public on Ethereum: " + s.publicEth.join("; "); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: "#8a4b00" }
+        PlainLabel { visible: s.publicLez.length > 0; text: "Public on LEZ: " + s.publicLez.join("; "); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: "#8a4b00" }
+        PlainLabel { text: "Private: " + s.hidden.join("; "); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: "#1b6b3a" }
     }
     component LeakList: Box {
         property var items: []
         property string summaryName: ""
-        Label { objectName: summaryName; text: "Exposure: " + Privacy.exposure(items); font.bold: true }
+        PlainLabel { objectName: summaryName; text: "Exposure: " + Privacy.exposure(items); font.bold: true }
         Repeater {
             model: items
-            Label {
+            PlainLabel {
                 text: (modelData.level === 0 ? "● " : modelData.level === 1 ? "▲ " : "■ ") + modelData.text
                 color: modelData.level === 0 ? "#1b6b3a" : modelData.level === 1 ? "#8a6d00" : "#b3261e"
                 wrapMode: Text.WordWrap; Layout.fillWidth: true
@@ -565,17 +568,17 @@ Rectangle {
         RowLayout {
             Layout.fillWidth: true
             ColumnLayout {
-                Label { text: "Ferrata Bridge"; font.pixelSize: 24; font.bold: true; color: "#1d2733" }
-                Label { text: "ETH and ERC-20s between Ethereum and LEZ, private by default. Prototype, not audited."; color: "#4a5563" }
+                PlainLabel { text: "Ferrata Bridge"; font.pixelSize: 24; font.bold: true; color: "#1d2733" }
+                PlainLabel { text: "ETH and ERC-20s between Ethereum and LEZ, private by default. Prototype, not audited."; color: "#4a5563" }
             }
             Item { Layout.fillWidth: true }
             ColumnLayout {
-                Label {
+                PlainLabel {
                     objectName: "header.network"
                     text: info ? info.network : (transport === "module" ? "Logos core: ferrata_bridge_module" : "devnet backend: " + backendUrl)
                     color: "#4a5563"; font.pixelSize: 12
                 }
-                Label {
+                PlainLabel {
                     objectName: "header.endpoints"
                     // Inside Logos the endpoints are the module's (its chain service's), read with `info`.
                     text: transport !== "module" ? "Ethereum RPC " + ethRpc + " · LEZ " + sequencer
@@ -584,11 +587,11 @@ Rectangle {
                     color: "#4a5563"; font.pixelSize: 12
                 }
                 RowLayout {
-                    Label { objectName: "wallet.status"; text: connectedAccount ? "Wallet: " + Fmt.short(connectedAccount) : "Wallet: not connected"; font.bold: true }
+                    PlainLabel { objectName: "wallet.status"; text: connectedAccount ? "Wallet: " + Fmt.short(connectedAccount) : "Wallet: not connected"; font.bold: true }
                     Button { objectName: "wallet.connect"; text: connectedAccount ? "Switch account" : "Connect wallet"; onClicked: walletConnect() }
                     BusyIndicator { running: busy > 0 || jobRunning(); visible: running; implicitWidth: 24; implicitHeight: 24 }
                 }
-                Label {
+                PlainLabel {
                     objectName: "header.job"
                     visible: jobRunning()
                     text: jobRunning() ? (ethJob && !jobOver(ethJob) ? (approvalText !== "" ? approvalText : "Job " + ethJob.id + ": the " + ethJob.kind + " is " + ethJob.state + ".") : jobText(claimJob && !jobOver(claimJob) ? claimJob : burnJob)) : ""
@@ -598,7 +601,7 @@ Rectangle {
                 // (`info`), the LEZ holdings of account /0 (`scan`); refreshed on demand.
                 RowLayout {
                     visible: connectedAccount !== "" && info !== null
-                    Label {
+                    PlainLabel {
                         objectName: "header.balances"
                         text: !info ? "" : ("Ethereum: " + (info.user && info.user.eth_balance_wei !== undefined ? Fmt.eth(info.user.eth_balance_wei) : "–")
                               + (info.eth_block !== undefined ? " (block " + info.eth_block + ")" : "")
@@ -616,39 +619,39 @@ Rectangle {
             visible: transport === "module"
             RowLayout {
                 Layout.fillWidth: true
-                Label { text: netOpen ? "Network: " + netSession.network : "Open a session on a Ferrata test network"; font.bold: true; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+                PlainLabel { text: netOpen ? "Network: " + netSession.network : "Open a session on a Ferrata test network"; font.bold: true; Layout.fillWidth: true; wrapMode: Text.WordWrap }
                 Button { objectName: "net.close"; visible: netOpen; text: "Close the session"; enabled: !jobRunning(); onClicked: netClose() }
             }
             ColumnLayout {
                 visible: !netOpen
                 Layout.fillWidth: true
-                RowLayout { Label { text: "Network address"; Layout.preferredWidth: 170 } TextField { id: fNet; objectName: "net.address"; placeholderText: "https://… (the test network's address, as its /basecamp/ page names it)"; Layout.preferredWidth: 560 } }
-                RowLayout { Label { text: "Sepolia RPC"; Layout.preferredWidth: 170 } TextField { id: fNetEth; objectName: "net.eth"; text: "https://ethereum-sepolia-rpc.publicnode.com"; Layout.preferredWidth: 560 } }
-                RowLayout { Label { text: "Recovery phrase"; Layout.preferredWidth: 170 } TextField { id: fPhrase; objectName: "net.phrase"; echoMode: TextInput.Password; placeholderText: "12 or 24 words (BIP-39): a phrase for the test network, never one that holds value"; Layout.preferredWidth: 560 } }
-                RowLayout { Label { text: "Your Sepolia address"; Layout.preferredWidth: 170 } TextField { id: fDepositor; objectName: "net.depositor"; placeholderText: "0x… (optional: the account Logos's signer sends your deposits from)"; Layout.preferredWidth: 560 } }
+                RowLayout { PlainLabel { text: "Network address"; Layout.preferredWidth: 170 } TextField { id: fNet; objectName: "net.address"; placeholderText: "https://… (the test network's address, as its /basecamp/ page names it)"; Layout.preferredWidth: 560 } }
+                RowLayout { PlainLabel { text: "Sepolia RPC"; Layout.preferredWidth: 170 } TextField { id: fNetEth; objectName: "net.eth"; text: "https://ethereum-sepolia-rpc.publicnode.com"; Layout.preferredWidth: 560 } }
+                RowLayout { PlainLabel { text: "Recovery phrase"; Layout.preferredWidth: 170 } TextField { id: fPhrase; objectName: "net.phrase"; echoMode: TextInput.Password; placeholderText: "12 or 24 words (BIP-39): a phrase for the test network, never one that holds value"; Layout.preferredWidth: 560 } }
+                RowLayout { PlainLabel { text: "Your Sepolia address"; Layout.preferredWidth: 170 } TextField { id: fDepositor; objectName: "net.depositor"; placeholderText: "0x… (optional: the account Logos's signer sends your deposits from)"; Layout.preferredWidth: 560 } }
                 RowLayout {
                     Button { objectName: "net.open"; text: "Open with this phrase"; enabled: busy === 0 && fNet.text.trim() !== "" && fPhrase.text.trim() !== ""; onClicked: netOpenSession(false) }
                     Button { objectName: "net.generate"; text: "New phrase"; enabled: busy === 0 && fNet.text.trim() !== ""; onClicked: netOpenSession(true) }
                 }
                 Note { text: "The phrase goes once to ferrata_bridge_module, which keeps what it derives from it (the keys of public accounts /0-/7 and the bridge seed) in Basecamp's memory for this session only: nothing is written to disk or logged, and closing the session or Basecamp drops them. The network sees signatures and account ids only. Ethereum transactions are never signed here: Logos's signer signs a deposit after you approve it. The module accepts only the deployment it knows (bridge program, configuration, vault, Sepolia) and refuses any other." }
             }
-            Label { objectName: "net.status"; text: netStatus; visible: netStatus !== ""; wrapMode: Text.WordWrap; Layout.fillWidth: true; color: netStatusBad ? "#b3261e" : "#1b6b3a" }
+            PlainLabel { objectName: "net.status"; text: netStatus; visible: netStatus !== ""; wrapMode: Text.WordWrap; Layout.fillWidth: true; color: netStatusBad ? "#b3261e" : "#1b6b3a" }
             ColumnLayout {
                 visible: netWords.length > 0
                 Layout.fillWidth: true
-                Label { text: "Your new recovery phrase, shown once: write it down, then hide it. The module keeps no copy of the words."; font.bold: true; wrapMode: Text.WordWrap; Layout.fillWidth: true }
-                Label { objectName: "net.words"; text: netWords.map(function (w, i) { return (i + 1) + ". " + w; }).join("   "); wrapMode: Text.WordWrap; Layout.fillWidth: true; font.family: "monospace" }
+                PlainLabel { text: "Your new recovery phrase, shown once: write it down, then hide it. The module keeps no copy of the words."; font.bold: true; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                PlainLabel { objectName: "net.words"; text: netWords.map(function (w, i) { return (i + 1) + ". " + w; }).join("   "); wrapMode: Text.WordWrap; Layout.fillWidth: true; font.family: "monospace" }
                 Button { objectName: "net.wordsDone"; text: "I have written them down"; onClicked: netWords = [] }
             }
             ColumnLayout {
                 visible: netOpen
                 Layout.fillWidth: true
-                Label { objectName: "net.accounts"; text: netOpen ? "LEZ public /0: " + netSession.public_accounts[0].id + "  ·  Sepolia address: " + (netSession.depositor ? netSession.depositor : "none (planning a deposit needs one)") : ""; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                PlainLabel { objectName: "net.accounts"; text: netOpen ? "LEZ public /0: " + netSession.public_accounts[0].id + "  ·  Sepolia address: " + (netSession.depositor ? netSession.depositor : "none (planning a deposit needs one)") : ""; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 RowLayout {
                     Button { objectName: "net.faucet"; text: "Get test LGO for /0 (the network's faucet)"; enabled: busy === 0 && !jobRunning(); onClicked: netFaucet(0) }
                     Button { objectName: "net.balances"; text: "LGO balances"; enabled: busy === 0 && !jobRunning(); onClicked: netReadBalances() }
                 }
-                Label { objectName: "net.faucetText"; text: faucetText; visible: faucetText !== ""; wrapMode: Text.WordWrap; Layout.fillWidth: true; font.pixelSize: 12 }
+                PlainLabel { objectName: "net.faucetText"; text: faucetText; visible: faucetText !== ""; wrapMode: Text.WordWrap; Layout.fillWidth: true; font.pixelSize: 12 }
                 Note { text: "In this session: the registry and the vault read, your positions found from your phrase, a deposit planned up to its approval (Logos's signer sends it), the plaintext claim of a deposit to one of your public accounts, the public burn, and the release handed to the ferrata tool. A private claim or burn needs a proof made on your machine (the ferrata tool, same phrase)." }
             }
         }
@@ -661,8 +664,8 @@ Rectangle {
             color: "#fdecea"; radius: 6; border.color: "#f5c2bd"
             ColumnLayout {
                 id: errCol; anchors.fill: parent; anchors.margins: 8
-                Label { objectName: "error.message"; text: Fmt.friendly(lastError); font.bold: true; color: "#b3261e"; wrapMode: Text.WordWrap; Layout.fillWidth: true }
-                Label { objectName: "error.detail"; text: Fmt.technical(lastError); color: "#6b2a24"; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                PlainLabel { objectName: "error.message"; text: Fmt.friendly(lastError); font.bold: true; color: "#b3261e"; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                PlainLabel { objectName: "error.detail"; text: Fmt.technical(lastError); color: "#6b2a24"; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
             }
         }
 
@@ -691,8 +694,8 @@ Rectangle {
                 Heading { text: "Deposit: Ethereum to LEZ" }
                 Note { text: "Only fixed amounts can be deposited, so every deposit of a denomination looks alike. Your LEZ destination is hidden inside the commitment C until you claim." }
                 Box {
-                    Label { text: "Token: " + (token() ? token().symbol + " (registered, deposits " + (token().deposits_enabled ? "open" : "closed") + ")" : "loading the registry…"); font.bold: true }
-                    Label { text: "Denomination" }
+                    PlainLabel { text: "Token: " + (token() ? token().symbol + " (registered, deposits " + (token().deposits_enabled ? "open" : "closed") + ")" : "loading the registry…"); font.bold: true }
+                    PlainLabel { text: "Denomination" }
                     RowLayout {
                         Repeater {
                             model: token() ? token().denominations : []
@@ -704,8 +707,8 @@ Rectangle {
                             }
                         }
                     }
-                    Label { objectName: "deposit.price"; text: priceText; color: "#4a5563" }
-                    Label { text: "Destination on LEZ" }
+                    PlainLabel { objectName: "deposit.price"; text: priceText; color: "#4a5563" }
+                    PlainLabel { text: "Destination on LEZ" }
                     RadioButton { objectName: "deposit.kind.private"; text: "Private account (recommended)"; checked: destKind === "private"; onClicked: { destKind = "private"; publicAcknowledged = false; depAck.checked = false; } }
                     RadioButton { objectName: "deposit.kind.public"; text: "Public account"; checked: destKind === "public"; onClicked: { destKind = "public"; publicAcknowledged = false; depAck.checked = false; } }
                     CheckBox {
@@ -717,9 +720,9 @@ Rectangle {
                         onClicked: publicAcknowledged = checked
                     }
                     RowLayout {
-                        Label { text: "Account" }
+                        PlainLabel { text: "Account" }
                         SpinBox { objectName: "deposit.account"; from: 0; to: 7; value: destAccount; onValueModified: destAccount = value }
-                        Label { text: "(within the recovery window of 8 accounts)"; color: "#4a5563" }
+                        PlainLabel { text: "(within the recovery window of 8 accounts)"; color: "#4a5563" }
                     }
                     CheckBox { objectName: "deposit.delay"; text: "Hold the claim for a random delay (recommended): " + delayHours + " h"; checked: delayOn; onClicked: delayOn = checked }
                     CheckBox { objectName: "deposit.relayer"; text: "Claim through a permissionless relayer (recommended): it pays the LEZ fee"; checked: relayerOn; onClicked: relayerOn = checked }
@@ -743,9 +746,9 @@ Rectangle {
                         enabled: busy === 0 && token() !== null && connectedAccount !== "" && (destKind === "private" || publicAcknowledged)
                         onClicked: reviewDeposit(true)
                     }
-                    Label { visible: connectedAccount === ""; text: "Connect the wallet first."; color: "#8a6d00" }
+                    PlainLabel { visible: connectedAccount === ""; text: "Connect the wallet first."; color: "#8a6d00" }
                 }
-                Label { objectName: "deposit.result"; text: depositText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                PlainLabel { objectName: "deposit.result"; text: depositText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 Item { Layout.fillHeight: true }
             }
 
@@ -772,13 +775,13 @@ Rectangle {
                         }
                     }
                     }
-                    Label { visible: !positions || positions.deposits.length === 0; text: "No deposits found for this wallet yet."; color: "#4a5563" }
+                    PlainLabel { visible: !positions || positions.deposits.length === 0; text: "No deposits found for this wallet yet."; color: "#4a5563" }
                     RowLayout {
                         RadioButton { objectName: "claim.mode.private"; text: "Private claim (recommended)"; checked: claimMode === "private"; onClicked: { claimMode = "private"; plainAcknowledged = false; claimAck.checked = false; } }
                         RadioButton { objectName: "claim.mode.plain"; text: "Plaintext claim"; checked: claimMode === "plain"; onClicked: { claimMode = "plain"; plainAcknowledged = false; claimAck.checked = false; } }
                     }
                     CheckBox { id: claimAck; objectName: "claim.plain.ack"; visible: claimMode === "plain"; text: "I understand: a plaintext claim shows on LEZ which deposit paid which account"; checked: false; onClicked: plainAcknowledged = checked }
-                    Label {
+                    PlainLabel {
                         objectName: "claim.delay"
                         visible: claimLeaf >= 0 && held(claimLeaf)
                         text: claimLeaf >= 0 && heldUntil[claimLeaf] ? "Held for another " + hoursLeft(heldUntil[claimLeaf]) + " h (until " + new Date(heldUntil[claimLeaf]).toLocaleTimeString() + (clockOffset > 0 ? " on the devnet's clock" : "") + ") by the random delay you chose: a claim right after a deposit narrows which deposit it could be." : ""
@@ -796,14 +799,14 @@ Rectangle {
                         visible: claimJob !== null
                         Layout.fillWidth: true
                         BusyIndicator { running: claimJob !== null && !jobOver(claimJob); visible: running; implicitWidth: 24; implicitHeight: 24 }
-                        Label { objectName: "claim.job"; text: jobText(claimJob); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: claimJob && claimJob.state === "failed" ? "#b3261e" : "#1d2733" }
+                        PlainLabel { objectName: "claim.job"; text: jobText(claimJob); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: claimJob && claimJob.state === "failed" ? "#b3261e" : "#1d2733" }
                     }
                 }
                 LeakList {
                     objectName: "claim.leaks"; summaryName: "claim.leaks.summary"
                     items: Privacy.claimLeaks({ mode: claimMode, kind: depositOf(claimLeaf) ? depositOf(claimLeaf).kind : "", held: claimLeaf >= 0 && held(claimLeaf), skipDelay: skipDelay, relayer: relayerOn })
                 }
-                Label { objectName: "claim.result"; text: claimText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                PlainLabel { objectName: "claim.result"; text: claimText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 StepTable { step: "claim" }
                 Item { Layout.fillHeight: true }
             }
@@ -815,7 +818,7 @@ Rectangle {
                 Heading { text: "Burn on LEZ, release on Ethereum" }
                 Note { text: "A burn publishes a note whose recipient is encrypted to you. After a checkpoint covers it, " + (netOpen ? "the release is proven on your machine by the ferrata tool from the same phrase (its input says which burn it is) and presented to the vault by a relayer or by you" : logosEth() ? "you release it on Ethereum from your release account (on this path no relayer sends it)" : "a relayer releases it on Ethereum") + ": the release does not say which burn it pays." }
                 Box {
-                    Label { objectName: "burn.holding"; text: "Private holding /0: " + Fmt.eth(holding("private")) + "  ·  public holding /0: " + Fmt.eth(holding("public")); font.bold: true }
+                    PlainLabel { objectName: "burn.holding"; text: "Private holding /0: " + Fmt.eth(holding("private")) + "  ·  public holding /0: " + Fmt.eth(holding("public")); font.bold: true }
                     RowLayout {
                         RadioButton { objectName: "burn.kind.private"; text: "Burn from a private account (recommended)"; checked: burnKind === "private"; onClicked: { burnKind = "private"; burnPublicAcknowledged = false; burnAck.checked = false; } }
                         RadioButton { objectName: "burn.kind.public"; text: "Burn from a public account"; checked: burnKind === "public"; onClicked: { burnKind = "public"; burnPublicAcknowledged = false; burnAck.checked = false; } }
@@ -828,7 +831,7 @@ Rectangle {
                         }
                     }
                     RowLayout {
-                        Label { text: "Release to" }
+                        PlainLabel { text: "Release to" }
                         TextField { objectName: "burn.recipient"; text: recipient; Layout.preferredWidth: 420; onEditingFinished: recipient = text }
                         Button { objectName: "burn.fresh"; text: "New fresh address"; onClicked: recipient = freshAddress() }
                     }
@@ -843,14 +846,14 @@ Rectangle {
                         visible: burnJob !== null
                         Layout.fillWidth: true
                         BusyIndicator { running: burnJob !== null && !jobOver(burnJob); visible: running; implicitWidth: 24; implicitHeight: 24 }
-                        Label { objectName: "burn.job"; text: jobText(burnJob); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: burnJob && burnJob.state === "failed" ? "#b3261e" : "#1d2733" }
+                        PlainLabel { objectName: "burn.job"; text: jobText(burnJob); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: burnJob && burnJob.state === "failed" ? "#b3261e" : "#1d2733" }
                     }
                 }
                 LeakList {
                     objectName: "burn.leaks"; summaryName: "burn.leaks.summary"
                     items: Privacy.burnLeaks({ kind: burnKind, freshRecipient: !info || recipient.toLowerCase() !== String(info.user.depositor).toLowerCase(), relayer: !logosEth(), delay: releaseDelayOn, delayHours: releaseDelayHours })
                 }
-                Label { objectName: "burn.result"; text: burnText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                PlainLabel { objectName: "burn.result"; text: burnText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 Box {
                     RowLayout {
                         Button { objectName: "redeem.checkpoint"; text: "Checkpoint (devnet stand-in prover)"; visible: transport === "devnet"; onClicked: call("checkpoint", {}, function (ok) { if (ok) refreshPositions(); }) }
@@ -866,7 +869,7 @@ Rectangle {
                             onClicked: releaseBurn = burnKey(modelData)
                         }
                     }
-                    Label {
+                    PlainLabel {
                         objectName: "release.delay"
                         visible: releaseBurn >= 0 && releaseHeld(releaseBurn)
                         text: releaseBurn >= 0 && releaseHeldUntil[releaseBurn] ? "Held for another " + hoursLeft(releaseHeldUntil[releaseBurn]) + " h (until " + new Date(releaseHeldUntil[releaseBurn]).toLocaleTimeString() + (clockOffset > 0 ? " on the devnet's clock" : "") + ") by the random delay you chose: a release right after a burn narrows which burn it could be." : ""
@@ -876,7 +879,7 @@ Rectangle {
                     Button { objectName: "release.wait"; visible: transport === "devnet" && releaseBurn >= 0 && releaseHeld(releaseBurn); text: "Devnet: let the delay pass (moves the devnet clock " + hoursLeft(releaseHeldUntil[releaseBurn]) + " h on)"; onClicked: letTimePass(releaseHeldUntil[releaseBurn]) }
                     Button { objectName: "release.submit"; text: netOpen ? "How to release (the ferrata tool proves it)" : (logosEth() ? "Release from your release account" : "Release through a relayer"); enabled: busy === 0 && !jobRunning() && releaseBurn >= 0 && connectedAccount !== "" && (!releaseHeld(releaseBurn) || releaseSkipDelay); onClicked: reviewRelease() }
                 }
-                Label { objectName: "release.result"; text: releaseText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                PlainLabel { objectName: "release.result"; text: releaseText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 RowLayout {
                     StepTable { step: "burn" }
                     StepTable { step: "release"; ownRelease: logosEth(); tableName: "redeem.steps.release" }
@@ -892,26 +895,26 @@ Rectangle {
                 Note { text: netOpen ? "Everything below is found from your phrase alone: the vault's whole deposit list (checked against its depositRoot), your burns found on LEZ by their tags, and each claim read from its nullifier's account. Private holdings are read by LEZ's wallet (the ferrata tool), not here."
                                     : "Everything below is found from your seed alone: the whole deposit list (checked against the vault's depositRoot) and the zone's history, with no query about any single position." }
                 Button { objectName: "positions.recover"; text: "Recover from the seed"; onClicked: refreshPositions() }
-                Label {
+                PlainLabel {
                     objectName: "positions.summary"
                     text: positions ? "Found " + positions.deposits.length + " deposits of this wallet (" + positions.deposits.filter(function (d) { return d.state !== "claimed"; }).length + " not claimed) among " + positions.vault_deposits + " in the vault, and " + positions.burns.length + " burns (" + positions.burns.filter(function (b) { return !b.released; }).length + " not released)." : "Not scanned yet."
                     font.bold: true; wrapMode: Text.WordWrap; Layout.fillWidth: true
                 }
                 Box {
-                    Label { text: "Deposits"; font.bold: true }
+                    PlainLabel { text: "Deposits"; font.bold: true }
                     Repeater {
                         model: positions ? positions.deposits : []
-                        Label { text: "#" + modelData.leaf_index + "  " + Fmt.eth(modelData.amount) + "  to " + modelData.kind + " /" + modelData.account + "  " + modelData.state }
+                        PlainLabel { text: "#" + modelData.leaf_index + "  " + Fmt.eth(modelData.amount) + "  to " + modelData.kind + " /" + modelData.account + "  " + modelData.state }
                     }
-                    Label { text: "Burns"; font.bold: true }
+                    PlainLabel { text: "Burns"; font.bold: true }
                     Repeater {
                         model: positions ? positions.burns : []
-                        Label { text: "burn " + modelData.burn_index + "  " + Fmt.eth(modelData.amount) + "  to " + Fmt.short(modelData.recipient) + "  " + (modelData.released ? "released" : "not released") }
+                        PlainLabel { text: "burn " + modelData.burn_index + "  " + Fmt.eth(modelData.amount) + "  to " + Fmt.short(modelData.recipient) + "  " + (modelData.released ? "released" : "not released") }
                     }
-                    Label { text: "Holdings"; font.bold: true }
+                    PlainLabel { text: "Holdings"; font.bold: true }
                     Repeater {
                         model: positions ? positions.holdings : []
-                        Label { text: modelData.kind + " /" + modelData.account + "  " + Fmt.eth(modelData.balance) }
+                        PlainLabel { text: modelData.kind + " /" + modelData.account + "  " + Fmt.eth(modelData.balance) }
                     }
                 }
                 Item { Layout.fillHeight: true }
@@ -929,20 +932,20 @@ Rectangle {
                         id: tokBox
                         property int tokDecimals: modelData.decimals !== undefined ? modelData.decimals : 18
                         property string tokSymbol: modelData.symbol ? modelData.symbol : "ETH"
-                        Label { objectName: "registry.token." + index; text: modelData.symbol + "  " + (modelData.registered ? "registered" : "not registered") + " · deposits " + (modelData.deposits_enabled ? "open" : "closed") + " · escrowed " + Fmt.units(modelData.escrowed, modelData.decimals, modelData.symbol); font.bold: true }
+                        PlainLabel { objectName: "registry.token." + index; text: modelData.symbol + "  " + (modelData.registered ? "registered" : "not registered") + " · deposits " + (modelData.deposits_enabled ? "open" : "closed") + " · escrowed " + Fmt.units(modelData.escrowed, modelData.decimals, modelData.symbol); font.bold: true }
                         Repeater {
                             model: modelData.denominations
-                            Label { text: "Denomination " + Fmt.units(modelData.amount, tokBox.tokDecimals, tokBox.tokSymbol) + ": mint fee " + Fmt.units(modelData.mint_fee, tokBox.tokDecimals, tokBox.tokSymbol) + ", relay fee " + Fmt.units(modelData.relay_fee, tokBox.tokDecimals, tokBox.tokSymbol) + ", burn fee " + Fmt.units(modelData.burn_fee, tokBox.tokDecimals, tokBox.tokSymbol) + ", checkpoint fee " + Fmt.units(modelData.checkpoint_fee, tokBox.tokDecimals, tokBox.tokSymbol) }
+                            PlainLabel { text: "Denomination " + Fmt.units(modelData.amount, tokBox.tokDecimals, tokBox.tokSymbol) + ": mint fee " + Fmt.units(modelData.mint_fee, tokBox.tokDecimals, tokBox.tokSymbol) + ", relay fee " + Fmt.units(modelData.relay_fee, tokBox.tokDecimals, tokBox.tokSymbol) + ", burn fee " + Fmt.units(modelData.burn_fee, tokBox.tokDecimals, tokBox.tokSymbol) + ", checkpoint fee " + Fmt.units(modelData.checkpoint_fee, tokBox.tokDecimals, tokBox.tokSymbol) }
                         }
-                        Label {
+                        PlainLabel {
                             text: "Ethereum, deposit cap: " + Fmt.cap(modelData.vault_deposit_cap.available, tokBox.tokDecimals, tokBox.tokSymbol) + " available of " + Fmt.cap(modelData.vault_deposit_cap.capacity, tokBox.tokDecimals, tokBox.tokSymbol) + " (used " + Fmt.pct(Number(modelData.vault_deposit_cap.capacity) - Number(modelData.vault_deposit_cap.available), modelData.vault_deposit_cap.capacity) + "), refill " + Fmt.cap(modelData.vault_deposit_cap.refill_per_second, tokBox.tokDecimals, tokBox.tokSymbol) + "/s" + (modelData.release_delay_next !== undefined && modelData.release_delay_next !== null ? "; release delay " + modelData.release_delay_next + " s" : "")
                             wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.maximumWidth: 1120
                         }
-                        Label {
+                        PlainLabel {
                             text: "Ethereum, release cap: " + Fmt.cap(modelData.vault_release_cap.available, tokBox.tokDecimals, tokBox.tokSymbol) + " available of " + Fmt.cap(modelData.vault_release_cap.capacity, tokBox.tokDecimals, tokBox.tokSymbol) + " (used " + Fmt.pct(Number(modelData.vault_release_cap.capacity) - Number(modelData.vault_release_cap.available), modelData.vault_release_cap.capacity) + ")"
                             wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.maximumWidth: 1120
                         }
-                        Label {
+                        PlainLabel {
                             objectName: "registry.lez." + index
                             visible: modelData.lez !== null
                             text: modelData.lez ? "LEZ, mint cap: level " + modelData.lez.mint_cap.level + " of " + modelData.lez.mint_cap.capacity + " LEZ units (used " + Fmt.pct(Number(modelData.lez.mint_cap.capacity) - Number(modelData.lez.mint_cap.level), modelData.lez.mint_cap.capacity) + "); burn cap: level " + modelData.lez.burn_cap.level + " of " + modelData.lez.burn_cap.capacity + " (used " + Fmt.pct(Number(modelData.lez.burn_cap.capacity) - Number(modelData.lez.burn_cap.level), modelData.lez.burn_cap.capacity) + ");\nmints frozen until " + (modelData.lez.mints_frozen_until_ms > 0 ? new Date(modelData.lez.mints_frozen_until_ms).toISOString() : "not frozen") + "; burns frozen until " + (modelData.lez.burns_frozen_until_ms > 0 ? new Date(modelData.lez.burns_frozen_until_ms).toISOString() : "not frozen") : ""
@@ -950,7 +953,7 @@ Rectangle {
                         }
                     }
                 }
-                Label {
+                PlainLabel {
                     objectName: "registry.vault"
                     text: registry ? "Vault: " + registry.vault.deposits + " deposits, " + registry.vault.checkpoints + " checkpoints, retired " + registry.vault.retired + ", deposits frozen until " + registry.vault.deposits_frozen_until + ", releases frozen until " + registry.vault.releases_frozen_until : ""
                     wrapMode: Text.WordWrap; Layout.fillWidth: true
@@ -966,18 +969,18 @@ Rectangle {
                 Note { text: "The admin sets caps, never below the immutable floor, and cannot freeze; the freeze authority freezes mints and burns for at most 30 days at a time and runs Sunset. Neither can move escrow or raise a fee past the ceiling. " + (onModule() ? "Here the module builds each LEZ message at the role's own actor and the role's LEZ wallet signs it only once a person approves exactly that message there (in this run a stand-in wallet holds the role keys and asks for the role password); each vault call is approved in the Logos signer by the role's Ethereum account." : "On the devnet the harness holds both roles' keys; a deployment uses its multisig.") }
                 Button { objectName: "admin.refresh"; text: "Load roles and controls"; onClicked: refreshAdmin() }
                 Box {
-                    Label { objectName: "admin.roles"; text: admin ? "Admin " + Fmt.short(admin.admin) + " · freeze authority " + Fmt.short(admin.freeze_authority) + " · fee recipient " + Fmt.short(admin.fee_recipient) + " · cap floor " + admin.floor.capacity + " LEZ units" : "Not loaded."; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                    PlainLabel { objectName: "admin.roles"; text: admin ? "Admin " + Fmt.short(admin.admin) + " · freeze authority " + Fmt.short(admin.freeze_authority) + " · fee recipient " + Fmt.short(admin.fee_recipient) + " · cap floor " + admin.floor.capacity + " LEZ units" : "Not loaded."; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 }
                 Box {
-                    Label { text: "SetCap (admin)"; font.bold: true }
+                    PlainLabel { text: "SetCap (admin)"; font.bold: true }
                     RowLayout {
                         RadioButton { id: capMints; objectName: "admin.cap.mints"; text: "mints"; checked: true }
                         RadioButton { objectName: "admin.cap.burns"; text: "burns" }
-                        Label { text: "capacity" }
+                        PlainLabel { text: "capacity" }
                         TextField { id: capCapacity; objectName: "admin.cap.capacity"; text: "11000000000"; Layout.preferredWidth: 160 }
-                        Label { text: "refill per second" }
+                        PlainLabel { text: "refill per second" }
                         TextField { id: capRefill; objectName: "admin.cap.refill"; text: "10000000"; Layout.preferredWidth: 120 }
-                        Label { text: "LEZ units" }
+                        PlainLabel { text: "LEZ units" }
                     }
                     Button {
                         objectName: "admin.setcap"; text: "Set cap"; enabled: busy === 0
@@ -1000,11 +1003,11 @@ Rectangle {
                 Note { visible: onModule(); text: "LEZ Freeze and its lifting: ferrata_bridge_module builds them (admin lez_freeze) but does not send them on this path yet: their attested time record needs the execution block's header, which the module does not fetch." }
                 Box {
                     visible: !onModule()
-                    Label { text: "Freeze (freeze authority)"; font.bold: true }
+                    PlainLabel { text: "Freeze (freeze authority)"; font.bold: true }
                     RowLayout {
                         CheckBox { id: frMints; objectName: "admin.freeze.mints"; text: "mints"; checked: true }
                         CheckBox { id: frBurns; objectName: "admin.freeze.burns"; text: "burns" }
-                        Label { text: "for hours" }
+                        PlainLabel { text: "for hours" }
                         SpinBox { id: frHours; objectName: "admin.freeze.hours"; from: 1; to: 720; value: 1 }
                     }
                     Button {
@@ -1020,7 +1023,7 @@ Rectangle {
                 }
                 Box {
                     visible: !onModule()
-                    Label { text: "Lift a freeze (freeze authority)"; font.bold: true }
+                    PlainLabel { text: "Lift a freeze (freeze authority)"; font.bold: true }
                     Button {
                         objectName: "admin.unfreeze"; text: "Lift the freeze"; enabled: busy === 0
                         onClicked: propose({
@@ -1038,14 +1041,14 @@ Rectangle {
                 // in the Logos signer. Shown when the module's session reads and sends Ethereum through Logos Core.
                 ColumnLayout {
                     visible: !!(admin && admin.vault_roles)
-                    Label { text: "The vault on Ethereum (through Logos Core's send stack)"; font.bold: true }
-                    Label { objectName: "admin.vault.roles"; text: admin && admin.vault_roles ? "Vault admin " + Fmt.short(admin.vault_roles.admin) + " · freeze authority " + Fmt.short(admin.vault_roles.freeze_authority) + " · ETH deposit cap " + (admin.vault ? admin.vault.token.vault_deposit_cap.capacity : "?") + " wei · ETH deposits frozen until " + (admin.vault ? admin.vault.token.deposits_frozen_until : "?") : ""; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                    PlainLabel { text: "The vault on Ethereum (through Logos Core's send stack)"; font.bold: true }
+                    PlainLabel { objectName: "admin.vault.roles"; text: admin && admin.vault_roles ? "Vault admin " + Fmt.short(admin.vault_roles.admin) + " · freeze authority " + Fmt.short(admin.vault_roles.freeze_authority) + " · ETH deposit cap " + (admin.vault ? admin.vault.token.vault_deposit_cap.capacity : "?") + " wei · ETH deposits frozen until " + (admin.vault ? admin.vault.token.deposits_frozen_until : "?") : ""; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                     RowLayout {
-                        Label { text: "ETH deposit cap (wei)" }
+                        PlainLabel { text: "ETH deposit cap (wei)" }
                         TextField { id: vaultCap; objectName: "admin.vault.cap"; text: "50000000000000000000"; Layout.preferredWidth: 220 }
-                        Label { text: "refill/s" }
+                        PlainLabel { text: "refill/s" }
                         TextField { id: vaultRefill; objectName: "admin.vault.refill"; text: "1000000000000000"; Layout.preferredWidth: 160 }
-                        Label { text: "gas limit" }
+                        PlainLabel { text: "gas limit" }
                         TextField { id: vaultGas; objectName: "admin.vault.gas"; text: ""; placeholderText: "estimated + 25% + 20000"; Layout.preferredWidth: 170 }
                         Button {
                             objectName: "admin.vault.setcap"; text: "Set the vault's cap (admin)"; enabled: busy === 0 && !jobRunning()
@@ -1099,7 +1102,7 @@ Rectangle {
                 // checks the role and the call before anything is asked; the role's account approves in the Logos signer.
                 ColumnLayout {
                     visible: logosEth() && !!(admin && admin.vault_roles)
-                    Label { text: "Any vault action (every token, every setting)"; font.bold: true }
+                    PlainLabel { text: "Any vault action (every token, every setting)"; font.bold: true }
                     RowLayout {
                         ComboBox {
                             id: vaultAction; objectName: "admin.any.action"; Layout.preferredWidth: 260
@@ -1136,7 +1139,7 @@ Rectangle {
                         }
                     }
                 }
-                Label { objectName: "admin.result"; text: adminText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                PlainLabel { objectName: "admin.result"; text: adminText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 Item { Layout.fillHeight: true }
             }
 
@@ -1158,19 +1161,19 @@ Rectangle {
                 Heading { text: "Endpoints" }
                 Box {
                     RowLayout {
-                        Label { text: "Backend" }
+                        PlainLabel { text: "Backend" }
                         RadioButton { objectName: "settings.transport.devnet"; text: "devnet backend (HTTP)"; checked: transport === "devnet"; onClicked: transport = "devnet" }
                         RadioButton { objectName: "settings.transport.module"; text: "Logos core module ferrata_bridge_module"; checked: transport === "module"; enabled: inLogos; onClicked: transport = "module" }
                     }
-                    RowLayout { Label { text: "Devnet backend URL"; Layout.preferredWidth: 170 } TextField { id: fBackend; objectName: "settings.backend"; text: backendUrl; Layout.preferredWidth: 420 } }
-                    RowLayout { Label { text: "Ethereum RPC"; Layout.preferredWidth: 170 } TextField { id: fRpc; objectName: "settings.ethRpc"; text: ethRpc; Layout.preferredWidth: 420; onTextEdited: endpointsEdited = true } }
-                    RowLayout { Label { text: "LEZ sequencer or zone"; Layout.preferredWidth: 170 } TextField { id: fSeq; objectName: "settings.sequencer"; text: sequencer; Layout.preferredWidth: 420; onTextEdited: endpointsEdited = true } }
+                    RowLayout { PlainLabel { text: "Devnet backend URL"; Layout.preferredWidth: 170 } TextField { id: fBackend; objectName: "settings.backend"; text: backendUrl; Layout.preferredWidth: 420 } }
+                    RowLayout { PlainLabel { text: "Ethereum RPC"; Layout.preferredWidth: 170 } TextField { id: fRpc; objectName: "settings.ethRpc"; text: ethRpc; Layout.preferredWidth: 420; onTextEdited: endpointsEdited = true } }
+                    RowLayout { PlainLabel { text: "LEZ sequencer or zone"; Layout.preferredWidth: 170 } TextField { id: fSeq; objectName: "settings.sequencer"; text: sequencer; Layout.preferredWidth: 420; onTextEdited: endpointsEdited = true } }
                     RowLayout {
                         Button { objectName: "settings.apply"; text: "Apply and test"; enabled: busy === 0; onClicked: applyEndpoints() }
                         Button { objectName: "settings.reload"; text: "Show the endpoints in use"; visible: transport === "module"; enabled: busy === 0; onClicked: { endpointsEdited = false; refreshInfo(); } }
                     }
-                    Label { objectName: "settings.status"; text: endpointStatus; wrapMode: Text.WordWrap; Layout.fillWidth: true; font.bold: true }
-                    Label { objectName: "settings.via"; text: endpointsVia; visible: transport === "module" && endpointsVia !== ""; wrapMode: Text.WordWrap; Layout.fillWidth: true; color: "#4a5563"; font.pixelSize: 12 }
+                    PlainLabel { objectName: "settings.status"; text: endpointStatus; wrapMode: Text.WordWrap; Layout.fillWidth: true; font.bold: true }
+                    PlainLabel { objectName: "settings.via"; text: endpointsVia; visible: transport === "module" && endpointsVia !== ""; wrapMode: Text.WordWrap; Layout.fillWidth: true; color: "#4a5563"; font.pixelSize: 12 }
                 }
                 Note {
                     objectName: "settings.sandboxNote"
@@ -1332,20 +1335,20 @@ Rectangle {
             radius: 8; color: "white"
             ColumnLayout {
                 id: selCol; anchors.fill: parent; anchors.margins: 15; spacing: 8
-                Label { text: "Ferrata Bridge asks to connect"; font.pixelSize: 18; font.bold: true }
-                Label { text: "Choose the account it may use. It can read this account's positions and propose transactions; each one needs your approval."; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                PlainLabel { text: "Ferrata Bridge asks to connect"; font.pixelSize: 18; font.bold: true }
+                PlainLabel { text: "Choose the account it may use. It can read this account's positions and propose transactions; each one needs your approval."; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 Repeater {
                     model: info ? (info.network_session ? [info.network_session.public_accounts[0]] : [info.user.depositor]) : []
                     Button { objectName: "wallet.account." + index; text: info && info.network_session ? "LEZ public /0 " + modelData + " · accounts /0–/7 of your phrase" : "Ethereum " + modelData + " · LEZ accounts /0–/7 of the same seed"; Layout.fillWidth: true; onClicked: { connectedAccount = modelData; selecting = false; refreshPositions(); } }
                 }
-                Label { visible: !info && connectError === "" && !connectSlow; text: "Waiting for the backend…"; color: "#8a6d00" }
-                Label {
+                PlainLabel { visible: !info && connectError === "" && !connectSlow; text: "Waiting for the backend…"; color: "#8a6d00" }
+                PlainLabel {
                     objectName: "wallet.slow"
                     visible: !info && connectError === "" && connectSlow
                     text: "No answer from ferrata_bridge_module yet. In Basecamp it runs only once it is loaded: Settings → Module Inspector → Ferrata bridge → Load."
                     wrapMode: Text.WordWrap; Layout.fillWidth: true; color: "#8a6d00"
                 }
-                Label { objectName: "wallet.error"; visible: !info && connectError !== ""; text: Fmt.friendly(connectError); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: "#b3261e" }
+                PlainLabel { objectName: "wallet.error"; visible: !info && connectError !== ""; text: Fmt.friendly(connectError); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: "#b3261e" }
                 Button { objectName: "wallet.cancel"; text: "Cancel"; onClicked: selecting = false }
             }
         }
@@ -1365,18 +1368,18 @@ Rectangle {
             radius: 8; color: "white"
             ColumnLayout {
                 id: apCol; anchors.fill: parent; anchors.margins: 15; spacing: 6
-                Label { objectName: "approval.title"; text: approval ? approval.title : ""; font.pixelSize: 18; font.bold: true }
+                PlainLabel { objectName: "approval.title"; text: approval ? approval.title : ""; font.pixelSize: 18; font.bold: true }
                 Repeater {
                     model: approval ? approval.rows : []
                     RowLayout {
-                        Label { text: modelData[0]; Layout.preferredWidth: 130; color: "#4a5563" }
-                        Label { text: modelData[1]; wrapMode: Text.WrapAnywhere; Layout.fillWidth: true; font.bold: true }
+                        PlainLabel { text: modelData[0]; Layout.preferredWidth: 130; color: "#4a5563" }
+                        PlainLabel { text: modelData[1]; wrapMode: Text.WrapAnywhere; Layout.fillWidth: true; font.bold: true }
                     }
                 }
-                Label { text: "What it does"; font.bold: true; Layout.topMargin: 6 }
+                PlainLabel { text: "What it does"; font.bold: true; Layout.topMargin: 6 }
                 Repeater {
                     model: approval ? approval.effects : []
-                    Label { text: "• " + modelData; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                    PlainLabel { text: "• " + modelData; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 }
                 RowLayout {
                     Layout.topMargin: 8
