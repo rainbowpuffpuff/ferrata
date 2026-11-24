@@ -1,0 +1,7 @@
+14:29:35 toolchains: cargo 1.93.0 (083ac5135 2025-12-15), risc0-r0vm 3.0.5; nproc 2
+14:29:36 main: a0f388279e2d (LEZ v0.4.0-rc1): cargo build --locked -p methods -p methods-statements -p methods-rebate
+14:35:51 main: built, 11 guest rows
+14:35:52 msg: f72ad464bd67 (LEZ v0.4.0-rc3): cargo build --locked -p methods-msg
+14:37:00 msg: built, 2 guest rows
+14:37:01 names: d112d09cc9ae (LEZ v0.4.0-rc3): cargo build --release -p methods-names
+14:37:56 names: built, 2 guest rows

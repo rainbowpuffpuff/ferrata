@@ -1,0 +1,57 @@
+<!-- path: /apps/ | title: Apps and program registry | desc: Every program deployed on the Ferrata LEZ test network with its image id rebuilt from source, its commit, IDL and name record, checked live against the chain; and every app this host serves, checked against the repository. | script: apps.js -->
+<h1>Apps and program registry</h1>
+<p class="lead">Every program on this network, with the image id a documented rebuild reproduces from its source commit,
+checked live against the loader header on chain; and every app this host serves, checked file by file against the
+repository.</p>
+
+<h2 id="programs">Programs</h2>
+<p>On LEZ a program is named by its <em>image id</em>, the hash of its exact RISC Zero binary. The loader keeps the id in
+the program account's header; an <em>immutable</em> header can never point at another binary. So a program is what its
+source builds to, if the build is reproducible: ours are (<code>scripts/guest-rustc</code> makes guest builds independent
+of the machine and path; <code>docs/image-ids.md</code> shows two builds at two paths giving equal bytes).</p>
+<div class="note info" role="note">
+<p><strong>Rebuild:</strong> {{REBUILD_SUMMARY}} <span class="small">({{REBUILD_WHEN}})</span></p>
+<p>Run it yourself from a clone: <code>scripts/reproduce/deployed.sh build --out DIR</code> then
+<code>scripts/reproduce/deployed.sh compare --out DIR</code>, with the pinned toolchains of
+<code>scripts/reproduce/Dockerfile</code> (or <code>scripts/reproduce/deployed.sh docker --out DIR</code>). Without a build,
+<code>python3 -I scripts/reproduce/check_network.py chain</code> compares the chain with the list in seconds. <strong>Two
+sources are not public yet</strong> (marked below: the messages and names programs, on branches not yet merged); until
+they are, only the project can rebuild those two.</p>
+</div>
+<p id="chain-status" aria-live="polite" class="small muted">The live columns read this network's chain from your browser (JavaScript).</p>
+<div class="table-wrap"><table id="programs-table">
+<caption>Deployed programs (list: <a href="registry.json">registry.json</a> = <code>scripts/reproduce/deployed-programs.json</code>)</caption>
+<thead><tr><th scope="col">Program</th><th scope="col">What it does</th><th scope="col">Image id</th><th scope="col">Source commit</th><th scope="col">IDL</th><th scope="col">Rebuilt from source</th><th scope="col">On chain now</th><th scope="col">Name record</th></tr></thead>
+<tbody>
+{{APPS_ROWS}}
+</tbody></table></div>
+<p class="small">"On chain now": <span class="badge ok">fresh</span> the program account's loader header names the
+rebuilt image id and is immutable; <span class="badge warn">stale</span> the header names another id than the registry's
+newest source (the source moved on, or the program was redeployed); <span class="badge bad">mismatch</span> the header or
+<a href="/programs.json">/programs.json</a> disagrees with the registry. "Name record": the name, if any, that the names
+program's reverse record gives for the program account. Programs deployed but missing from the registry are listed
+below the table when the page finds them.</p>
+<div id="extra" aria-live="polite"></div>
+
+<h2 id="apps">Apps on this host</h2>
+<p>Each app is a set of static files; each file's SHA-256 is in <a href="/bridge/verify/manifest.json">the site
+manifest</a>, tied to a commit of the repository; the manifest marks which of those commits are public. The "Files" column is checked live: this browser fetches every
+file of the app and compares its hash with the manifest (a convenience: for a check that holds against this host, run
+<code>python3 -I scripts/site-manifest.py verify</code>; see <a href="/bridge/verify/">Verify</a>).</p>
+<div class="table-wrap"><table id="apps-table">
+<caption>Apps served here</caption>
+<thead><tr><th scope="col">App</th><th scope="col">Published in</th><th scope="col">Source</th><th scope="col">Talks to</th><th scope="col">Files</th></tr></thead>
+<tbody>
+<tr data-prefix="/wallet/"><th scope="row"><a href="/wallet/">Wallet</a></th><td>this repository</td><td><code>deploy/testnet/web/wallet/</code></td><td>this host's <code>/rpc</code> and <code>/faucet</code>; your browser wallet for Ethereum reads</td><td class="files">—</td></tr>
+<tr data-prefix="/explorer/ /assets/ /network.html /registry/ /agents/ /status/index.html /idl/"><th scope="row"><a href="/explorer/">Explorer</a>, <a href="/network">network</a>, <a href="/status/">status</a>, <a href="/registry/">registry</a>, <a href="/agents/">agents</a></th><td>this repository</td><td><code>deploy/testnet/web/explorer/</code></td><td>this host's <code>/rpc</code>; public beacon and execution endpoints named in <code>config.json</code></td><td class="files">—</td></tr>
+<tr data-prefix="/index.html /evidence.html /evidence.json /build.json /img/ /style.css"><th scope="row"><a href="/">Build page</a></th><td>this repository</td><td><code>deploy/testnet/web/build/</code></td><td>this host; <code>api.github.com</code> (CI status)</td><td class="files">—</td></tr>
+<tr data-prefix="/msg/"><th scope="row">Messaging library <code>/msg/</code></th><td>this repository</td><td><code>deploy/testnet/web/msg/</code></td><td>this host's <code>/rpc</code></td><td class="files">—</td></tr>
+<tr data-prefix="/names/"><th scope="row">Names resolver <code>/names/</code></th><td>this repository</td><td><code>names/js/</code></td><td>this host's <code>/rpc</code></td><td class="files">—</td></tr>
+<tr data-prefix="/health.html /health.js"><th scope="row"><a href="/health">Health</a></th><td>the host (not in this repository)</td><td>the host's <code>www/</code></td><td>this host's <code>/status/status.json</code></td><td class="files">—</td></tr>
+<tr data-prefix="/trust/ /bridge/ /apps/ /accessibility/"><th scope="row"><a href="/trust/">Trust pages</a> (this page)</th><td>this repository</td><td><code>deploy/testnet/web/trust/</code></td><td>this host; <code>raw.githubusercontent.com</code> (the verify page's second copy)</td><td class="files">—</td></tr>
+<tr data-prefix="/basecamp/"><th scope="row"><a href="/basecamp/">Basecamp packages</a></th><td>this repository</td><td><code>deploy/testnet/web/basecamp/</code></td><td>this host</td><td class="files">—</td></tr>
+<tr data-rest="1"><th scope="row">Other served files</th><td>—</td><td>files in the manifest that no row above covers</td><td>—</td><td class="files">—</td></tr>
+</tbody></table></div>
+<p class="small muted">Publisher names are the repository branches the files come from, not on-chain identities: the
+site's apps are published by this project, and the manifest ties each file to a commit, which is a stronger check than
+a name record (a name says who claims a file; a hash says which bytes).</p>

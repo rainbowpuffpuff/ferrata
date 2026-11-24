@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://raw.githubusercontent.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="The Ferrata private ERC-20/ETH bridge between Sepolia and this LEZ test network: security, privacy, and how to verify the site.">
+<title>Bridge · Ferrata LEZ test network</title>
+<link rel="stylesheet" href="../trust/trust.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the content</a>
+<header class="site"><div class="wrap">
+<a class="brand" href="/">Ferrata LEZ test network</a>
+<nav aria-label="Site"><ul><li><a href="/">Build page</a></li><li><a href="/network">Network</a></li><li><a href="/explorer/">Explorer</a></li><li><a href="/wallet/">Wallet</a></li><li><a href="/status/">Status</a></li><li><a href="/trust/">Trust</a></li><li><a href="/bridge/" aria-current="page">Bridge</a></li><li><a href="/apps/">Apps</a></li><li><a href="/accessibility/">Accessibility</a></li></ul></nav>
+</div></header>
+<main id="main" class="wrap" tabindex="-1">
+<h1>The Ferrata bridge on this test network</h1>
+<p class="lead">A private bridge for ETH and ERC-20 tokens between Ethereum (here Sepolia) and LEZ: deposits are public on
+Ethereum, the LEZ account they pay is not; burns on LEZ release on Ethereum against a zero-knowledge proof.</p>
+<div class="note bad" role="note"><p><strong>Test network, test value only. Not audited.</strong></p></div>
+<ul class="cards">
+<li><h2><a href="/bridge/security/">Security</a></h2><p>Trust assumptions, roles, caps, freezes, the advisory and its correction.</p></li>
+<li><h2><a href="/bridge/privacy/">Privacy</a></h2><p>What stays private, what is public, what this host and each helper sees.</p></li>
+<li><h2><a href="/bridge/verify/">Verify</a></h2><p>The served files against the repository, from a second source.</p></li>
+</ul>
+<h2 id="use">Use it</h2>
+<p>Deposits start in the <a href="/wallet/">wallet</a> (any EIP-1193 browser wallet on Sepolia). Claims, burns and
+releases need a proof made on your own machine with the <code>ferrata</code> tool from the repository; see
+<a href="/bridge/privacy/#helpers">why</a>.</p>
+<p>Vault: <code>0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787</code> on Sepolia. LEZ bridge program: <a href="/apps/#p-ferrata_bridge_b1"><code>ferrata_bridge_b1</code></a>.</p>
+</main>
+<footer class="site"><div class="wrap">
+<p>This page is static and its source is in the public repository: <a href="https://github.com/rainbowpuffpuff/ferrata/tree/main/deploy/testnet/web/trust">deploy/testnet/web/trust/</a>. Every file this host serves is listed with its SHA-256 and commit in <a href="/bridge/verify/">the site manifest</a>; check it from a clone with <code>python3 -I scripts/site-manifest.py verify</code>. No cookies, no analytics, no third-party scripts.</p>
+</div></footer>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://raw.githubusercontent.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="What the Ferrata bridge keeps on your machine, what it publishes by design, the correlations that remain, and what this host and each helper can see.">
+<title>Bridge privacy · Ferrata LEZ test network</title>
+<link rel="stylesheet" href="../../trust/trust.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the content</a>
+<header class="site"><div class="wrap">
+<a class="brand" href="/">Ferrata LEZ test network</a>
+<nav aria-label="Site"><ul><li><a href="/">Build page</a></li><li><a href="/network">Network</a></li><li><a href="/explorer/">Explorer</a></li><li><a href="/wallet/">Wallet</a></li><li><a href="/status/">Status</a></li><li><a href="/trust/">Trust</a></li><li><a href="/bridge/" aria-current="page">Bridge</a></li><li><a href="/apps/">Apps</a></li><li><a href="/accessibility/">Accessibility</a></li></ul></nav>
+</div></header>
+<main id="main" class="wrap" tabindex="-1">
+<h1>Bridge privacy</h1>
+<p class="lead">What stays on your machine, what each chain publishes by design, what an observer can still correlate,
+and what this host and every helper can see. Sources: <code>docs/trust.md</code> §8, the privacy suite's results
+(<code>docs/privacy/RESULTS.md</code>) and the field-by-field table <code>docs/privacy/generated/fields.md</code>.</p>
+
+<h2 id="secrets">What never leaves your machine</h2>
+<p>The values that would link a deposit on Ethereum to a balance on LEZ are your seed and what derives from it: the keys
+<code>kAuth</code> and <code>kView</code>, a deposit's secret <code>s</code> and the opening of its commitment
+<code>C</code>, a burn's <code>r</code>, <code>sOut</code> and recipient, and your burn counter. On the default, private
+path <strong>none of them leaves your machine and none is in any transaction</strong>.</p>
+<div class="note ok" role="note"><p><strong>Measured, not asserted.</strong> The privacy suite searched every public
+byte of both chains over 20 round trips for 320 such values and found none, in dev mode and on real proofs of the
+deployed programs (EVIDENCE rows 23 and 89).</p></div>
+<p>A <em>plaintext</em> claim publishes its whole witness (leaf index, depositor, <code>s</code>, destination). You must
+choose it explicitly; the tools warn first.</p>
+
+<h2 id="public">What is public by design</h2>
+<ul>
+<li><strong>The deposit</strong> on Ethereum: depositor address, token, denomination, the commitment <code>C</code>.
+That is the public leg; the bridge hides which LEZ account it pays, not that you deposited.</li>
+<li><strong>A claim</strong> on LEZ: a nullifier, the root it reads, a fee alias; with a relayer, the relayer and its fee.</li>
+<li><strong>A release</strong> on Ethereum: chain, vault, configuration, root, nullifier, token, amount, recipient, relayer, fee.</li>
+</ul>
+
+<h2 id="correlations">What an observer can still correlate</h2>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Residual correlations (docs/trust.md §8), none hidden by the defaults"><table>
+<caption>Residual correlations (<code>docs/trust.md</code> §8), none hidden by the defaults</caption>
+<thead><tr><th scope="col">Correlation</th><th scope="col">What it reveals</th><th scope="col">Mitigation</th></tr></thead>
+<tbody>
+<tr><th scope="row">Amount and token</th><td>narrows a claim to deposits of that token and denomination</td><td>fixed denominations: at most eight per token, three by default</td></tr>
+<tr><th scope="row">Timing</th><td>deposit-to-claim and burn-to-release intervals</td><td>the tools propose a delay: a claim 1–12 h after the deposit (from the seed), a random release delay</td></tr>
+<tr><th scope="row">The root a claim reads</th><td>the deposit is at least that old</td><td>read the newest root</td></tr>
+<tr><th scope="row">A retry after a cap refusal</th><td>the first attempt's time</td><td>the tools check caps before proving</td></tr>
+<tr><th scope="row">The fee payer of a private transaction</th><td>a first claim funded from a faucet links to that source</td><td>a gas drop with a relayer receipt (built in the relayer and the <code>ferrata</code> tool)</td></tr>
+<tr><th scope="row">An adversary's own deposits</th><td>subtracted from any anonymity set</td><td>none. On a test network with few users, the sets are small.</td></tr>
+<tr><th scope="row">Network metadata</th><td>your IP address to every RPC endpoint you use</td><td>use your own endpoints or a network-level anonymiser; out of the bridge's scope</td></tr>
+</tbody></table></div>
+
+<h2 id="host">What this host sees</h2>
+<p>Every page on this host may run scripts from this host only (its Content-Security-Policy, which
+<code>scripts/site-manifest.py verify</code> checks), so no page runs another site's script. What else a page
+reads: the trust pages read only this host, except the verify page's quick check, which also reads the manifest's copy
+on GitHub; the build page reads <code>api.github.com</code> (CI status); the explorer and status pages read the public
+beacon and execution endpoints named in the explorer's <code>config.json</code>; the wallet reads this host and your
+browser wallet. The host's own software (its web server's configuration, the gateway and the faucet) is not in this
+repository yet; by its configuration:</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="What this host&#x27;s services record"><table>
+<caption>What this host's services record</caption>
+<thead><tr><th scope="col">Service</th><th scope="col">Records</th><th scope="col">Does not record</th></tr></thead>
+<tbody>
+<tr><th scope="row">Web server (Caddy)</th><td>by its configuration (the host's <code>Caddyfile</code>), no per-request access log: it defines a log file for the server's own messages but no site <code>log</code> directive (not inspected on the host itself)</td><td>request bodies</td></tr>
+<tr><th scope="row">JSON-RPC gateway <code>/rpc</code></th><td>your IP address, the method names of each call, their count and cost, status, size, time</td><td>the call's parameters: which accounts or blocks you asked for are not logged. The gateway does see them in memory to apply its allowlist, and so does the sequencer.</td></tr>
+<tr><th scope="row">Faucet <code>/faucet</code></th><td>your IP address with the account it credited (rate limits)</td><td>anything else</td></tr>
+</tbody></table></div>
+<p>The gateway's log (with the faucet's lines) and the web server's log file are copied to the operator's CloudWatch
+log group, kept 30 days by the stack's default (the host's stack definition).
+A host that wanted to log more could: that is why its code belongs in the repository, and why the wallet's files are listed
+in <a href="/bridge/verify/">the site manifest</a>. To avoid this host entirely, run the tools against your own LEZ node
+and your own Ethereum endpoint.</p>
+
+<h2 id="helpers">What each helper learns</h2>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Parties that may act for you (docs/trust.md §8.1, §8.2)"><table>
+<caption>Parties that may act for you (<code>docs/trust.md</code> §8.1, §8.2)</caption>
+<thead><tr><th scope="col">Party</th><th scope="col">Receives</th><th scope="col">Learns beyond what the chain then shows</th><th scope="col">Never learns</th></tr></thead>
+<tbody>
+<tr><th scope="row">Gas-drop relayer</th><td>a 212-byte receipt for a first claim's fee</td><td>that a claim spending a given nullifier will follow; the time; your IP address</td><td>which deposit, its depositor, its destination</td></tr>
+<tr><th scope="row">Release relayer</th><td>the release job (exactly what the release publishes)</td><td>the time it got the job; your IP address</td><td><code>sOut</code>, <code>r</code>, which burn, your seed</td></tr>
+<tr><th scope="row">Release wrapper (Groth16)</th><td>a succinct receipt</td><td>what the release publishes</td><td>the witness (succinct receipts are zero-knowledge)</td></tr>
+<tr><th scope="row">A prover you ask to prove a private claim or burn</th><td>the full witness</td><td><strong>everything, including the key that authorises spends</strong>: a third-party prover holds custody, not just a view</td><td>—</td></tr>
+</tbody></table></div>
+<div class="note info" role="note"><p><strong>Why the web wallet does not prove private transactions.</strong> No browser
+can make a proof of LEZ's privacy circuit today, and sending the witness to someone else's prover hands them your account.
+Claims, burns and releases are made with the <code>ferrata</code> tool on your own machine. Measured on CPU with LEZ
+v0.4.0-rc3: a private claim took 264.3 s to prove and a private burn 302.2 s (EVIDENCE row 123); no GPU time for them is
+recorded.</p></div>
+
+<p>Related: <a href="/bridge/security/">what the bridge trusts</a> · <a href="/bridge/verify/">verify this site's files</a></p>
+</main>
+<footer class="site"><div class="wrap">
+<p>This page is static and its source is in the public repository: <a href="https://github.com/rainbowpuffpuff/ferrata/tree/main/deploy/testnet/web/trust">deploy/testnet/web/trust/</a>. Every file this host serves is listed with its SHA-256 and commit in <a href="/bridge/verify/">the site manifest</a>; check it from a clone with <code>python3 -I scripts/site-manifest.py verify</code>. No cookies, no analytics, no third-party scripts.</p>
+</div></footer>
+</body>
+</html>

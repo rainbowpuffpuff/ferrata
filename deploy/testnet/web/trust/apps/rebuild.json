@@ -1,0 +1,43 @@
+{
+ "record": "scripts/reproduce/runs/2026-11-23-deployed-testnet/",
+ "when": "build 23 November 2026, 14:29:35\u201314:37:56 UTC (steps.txt); chain read 2026-11-23 22:24:31 UTC (compare.txt)",
+ "summary": "9 of 9 deployed programs rebuilt from their source commits to the recorded image id and binary SHA-256, r0vm agreeing, each equal to its immutable loader header on this network.",
+ "programs": [
+  {
+   "name": "ferrata_attestation",
+   "ok": true
+  },
+  {
+   "name": "ferrata_bridge_b1",
+   "ok": true
+  },
+  {
+   "name": "ferrata_consumer",
+   "ok": true
+  },
+  {
+   "name": "ferrata_holdings",
+   "ok": true
+  },
+  {
+   "name": "ferrata_statements",
+   "ok": true
+  },
+  {
+   "name": "ferrata_statements_reader",
+   "ok": true
+  },
+  {
+   "name": "ferrata_rebate",
+   "ok": true
+  },
+  {
+   "name": "ferrata_msg",
+   "ok": true
+  },
+  {
+   "name": "ferrata_names",
+   "ok": true
+  }
+ ]
+}

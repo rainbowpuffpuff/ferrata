@@ -1,0 +1,60 @@
+<!-- path: /bridge/verify/ | title: Verify this site | desc: Check that every file this host serves is the one committed in the public repository, from a second source the host does not control. | script: verify.js -->
+<h1>Verify this site</h1>
+<p class="lead">Every file this host serves from the repository is listed, with its SHA-256 and the commit it comes from,
+in <a href="manifest.json">manifest.json</a>. The same manifest is committed in the repository. A check that matters
+compares three things from outside this host. <strong>Most of the commits it names are not public yet</strong> (the
+test network's branches have not been merged); until they are, a file at such a commit can be checked against the
+manifest, not against its source. The manifest marks each file's commit public or not.</p>
+
+<div class="note warn" role="note">
+<p><strong>A check run by this page proves nothing if this host is compromised</strong>: a host that alters the wallet
+can alter this page and its script too, and make them say "all equal". The button below is a convenience for spotting
+a broken deploy. The check that holds against the host is the script, run on your machine from a clone of the
+repository.</p>
+</div>
+
+<h2 id="script">The check that holds: run it yourself</h2>
+<pre><code>git clone https://github.com/rainbowpuffpuff/ferrata && cd ferrata
+python3 -I scripts/site-manifest.py verify -v --second https://THE-NAME-IN-YOUR-ADDRESS-BAR
+python3 -I scripts/site-manifest.py verify --github main      # the manifest committed on GitHub, read from GitHub</code></pre>
+<p>It compares:</p>
+<ol>
+<li><strong>The manifest this host serves</strong> (<a href="manifest.json">/bridge/verify/manifest.json</a>) with
+<strong>the manifest committed in the repository</strong> (your clone's copy, or GitHub's with <code>--github REF</code>).
+They must be byte-identical; the repository's copy is the reference.</li>
+<li><strong>Every listed file as this host serves it</strong>, hashed on your machine, with the manifest, and, where your
+clone has the listed commit, with the file read from git.</li>
+<li>The same files fetched again under the host's other name (<code>--second</code>: give the name you browse with;
+the default site is the network address in <code>scripts/reproduce/deployed-programs.json</code>; another TLS name and
+Host header) with a browser's User-Agent, so a host serving the checker one thing and browsers another has to tell them apart by IP
+address alone.</li>
+</ol>
+<p>It also checks the security headers (<code>Content-Security-Policy</code> with <code>script-src 'self'</code> on every
+page, HSTS, <code>nosniff</code>, <code>frame-ancestors 'none'</code>). Exit status 1 on any difference.</p>
+
+<h3>What no check of a website can do</h3>
+<ul>
+<li><strong>Targeted serving.</strong> A host can serve altered files only to some visitors (by IP, time or cookie) and
+the right ones to anyone who checks. The check shows what <em>you</em> were served when you ran it. For the wallet, which
+holds keys, the safest route is to run it from your clone: its files are plain static files (<code>deploy/testnet/web/wallet/</code>).</li>
+<li><strong>Files the manifest does not list.</strong> HTTP gives no directory listing; the manifest lists what was on the
+host when it was made, and the files it could not match to the repository are named below.</li>
+<li><strong>Server-side behaviour.</strong> The RPC gateway and faucet are programs; their source is public
+(<code>deploy/testnet/host/</code>) but what runs cannot be proven from outside. What the chain says can: read it from
+your own LEZ node.</li>
+</ul>
+
+<h2 id="manifest">The manifest</h2>
+<p>Made from the host's own file list after each deploy: each served file matched by its SHA-256 and path to a committed
+file under <code>deploy/testnet/</code> or <code>names/js/</code> (<code>scripts/site-manifest.py build</code>). Files the
+host writes itself (status, configuration with deployed accounts) are listed without a hash; files that match no
+committed file are named. This page cannot hold the manifest's numbers: its own SHA-256 is in the manifest.</p>
+<div id="summary" aria-live="polite"><p class="muted">Loading <a href="manifest.json">manifest.json</a>…</p></div>
+<noscript><p>Read <a href="manifest.json">manifest.json</a> directly.</p></noscript>
+
+<h2 id="here">Quick check in this browser</h2>
+<p>Fetches the manifest and every listed file from this host, hashes them here with the Web Crypto API, and also fetches
+the manifest committed on GitHub's <code>main</code> to compare. Read the warning above first.</p>
+<p><button type="button" id="run">Check the served files</button></p>
+<div id="out" aria-live="polite"></div>
+<noscript><p>The quick check needs JavaScript. The script above does not.</p></noscript>

@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://raw.githubusercontent.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="What the Ferrata bridge on this test network trusts, who can do what, the caps and freezes, RISC Zero&#x27;s advisory and our correction, and how to check each claim yourself.">
+<title>Bridge security · Ferrata LEZ test network</title>
+<link rel="stylesheet" href="../../trust/trust.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the content</a>
+<header class="site"><div class="wrap">
+<a class="brand" href="/">Ferrata LEZ test network</a>
+<nav aria-label="Site"><ul><li><a href="/">Build page</a></li><li><a href="/network">Network</a></li><li><a href="/explorer/">Explorer</a></li><li><a href="/wallet/">Wallet</a></li><li><a href="/status/">Status</a></li><li><a href="/trust/">Trust</a></li><li><a href="/bridge/" aria-current="page">Bridge</a></li><li><a href="/apps/">Apps</a></li><li><a href="/accessibility/">Accessibility</a></li></ul></nav>
+</div></header>
+<main id="main" class="wrap" tabindex="-1">
+<h1>Bridge security</h1>
+<p class="lead">What you trust when you use the Ferrata bridge on this test network, who holds which power, what limits a
+loss, and how to check each claim yourself instead of reading it here. The full statement is
+<a href="https://github.com/rainbowpuffpuff/ferrata/blob/main/docs/trust.md"><code>docs/trust.md</code></a>. The vault's
+facts below are those of its committed deployment record,
+<a href="https://github.com/rainbowpuffpuff/ferrata/blob/main/vault/deployments/sepolia-31-B.json"><code>vault/deployments/sepolia-31-B.json</code></a>,
+which <a href="https://github.com/rainbowpuffpuff/ferrata/blob/main/vault/deployments/sepolia-31-B.verification.txt"><code>sepolia-31-B.verification.txt</code></a>
+checked against Sepolia (47 checks, 0 failed, read-only).</p>
+
+<div class="note bad" role="note">
+<p><strong>Test network, test value only. Not audited.</strong> No third-party audit has been done. The reviews are
+internal (<a href="https://github.com/rainbowpuffpuff/ferrata/tree/main/docs/reviews">docs/reviews/</a>). The
+Ethereum side is Sepolia; this LEZ network runs one sequencer, which we operate.</p>
+</div>
+
+<h2 id="deployment">What is deployed</h2>
+<div class="table-wrap" tabindex="0" role="region" aria-label="The two halves of the bridge"><table>
+<caption>The two halves of the bridge</caption>
+<thead><tr><th scope="col">Part</th><th scope="col">Where</th><th scope="col">Facts</th><th scope="col">Check it</th></tr></thead>
+<tbody>
+<tr><th scope="row">Vault (Ethereum side)</th><td>Sepolia, <code>0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787</code>, code from block 12,196,188, deployed by <code>0x79A9…5C07</code></td>
+<td>RISC Zero verifier 3.1.0 (selector <code>0xe71e6620</code>, the fixed release: see <a href="#advisory">the advisory</a>) behind an emergency stop whose owner is renounced; rule (B); LEZ configuration id <code>0x3773b588…67cd</code>; parameters <code>vault/script/params/sepolia-31.json</code> (on main)</td>
+<td><a href="#check">the <code>cast</code> calls below</a></td></tr>
+<tr><th scope="row">Bridge program (LEZ side)</th><td>this network, program account <code>36iqVMFp…yrk</code> (<a href="/apps/#p-ferrata_bridge_b1">registry entry</a>)</td>
+<td>Image id <code>0x847a4336…7515</code>, milestone B1, immutable, rebuilt from source to the same id. Built on RISC Zero 3.0.5 like every LEZ v0.4 program. This page does not record whether its pairing with the vault (<code>Init</code>, ETH <code>Register</code>) has been applied: the <a href="/explorer/">explorer</a> shows the program's transactions.</td>
+<td><a href="/apps/">/apps/</a> reads its loader header from the chain; <code>python3 -I scripts/reproduce/check_network.py chain</code></td></tr>
+</tbody></table></div>
+
+<h2 id="trust">What you trust</h2>
+<p>Nothing in Ferrata takes a party's word for a fact: an attestation is accepted because the LEZ program verifies
+Ethereum's sync-committee signatures from a pinned checkpoint and the Merkle proofs under it; a claim, because the bridge
+program proves the deposit under a root the attestation program attested; a release, because the vault verifies a
+zero-knowledge proof of the burn. Every off-chain party (updaters, provers, relayers, RPC providers) only carries data
+those checks accept or refuse: its role is liveness only. Four assumptions remain:</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Assumptions, what breaks if one fails, and what bounds the loss (docs/trust.md §0, §1)"><table>
+<caption>Assumptions, what breaks if one fails, and what bounds the loss (<code>docs/trust.md</code> §0, §1)</caption>
+<thead><tr><th scope="col">You trust</th><th scope="col">For</th><th scope="col">If it fails</th><th scope="col">What bounds the loss</th><th scope="col">On this test network</th></tr></thead>
+<tbody>
+<tr><th scope="row">The starting checkpoint of the attestation instance</th><td>that the instance follows the real Ethereum</td><td>a false chain from the start</td><td>anyone compares the checkpoint root with public Ethereum before relying on it</td><td>the Sepolia instance's checkpoint is published in <a href="/programs.json">/programs.json</a></td></tr>
+<tr><th scope="row">Two thirds of each 512-member sync committee</th><td>that every recorded header was finalized</td><td>facts about blocks that never existed are attested</td><td>caps and freezes; the attestation monitor's alarms</td><td>the <a href="/status/">status page</a> shows the monitor and the beacon providers it compares with</td></tr>
+<tr><th scope="row">Fewer than <code>t</code> of the LEZ zone's accredited sequencer keys</th><td>every burn root the vault accepts (the return leg)</td><td><code>t</code> keys can forge a burn root and release escrow</td><td>the public wait Δ, watchers, the release delay and revocation, release caps</td><td><strong><code>nMin = tMin = 1</code>: one key, this network's single sequencer's.</strong> Whoever holds it can forge a burn root; the caps, the wait and the 1-day revocation window bound what that takes. Production needs several independent sequencers.</td></tr>
+<tr><th scope="row">The proof systems</th><td>that every accepted proof is true</td><td>anything a proof gates</td><td>caps and freezes; the emergency stop once a proof of unsoundness is published</td><td>vault: verifier 3.1.0 (fixed). LEZ side: LEZ v0.4.0-rc3 on RISC Zero 3.0.5, still under the advisory: <a href="#advisory">see below</a></td></tr>
+</tbody></table></div>
+
+<h2 id="roles">Roles and powers</h2>
+<p>From <code>docs/trust.md</code> §4.1 and <code>vault/README.md</code>, "Roles"; the holders from the deployment record. No role can move escrow.</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Who can do what on the vault (the LEZ program mirrors the freeze controls)"><table>
+<caption>Who can do what on the vault (the LEZ program mirrors the freeze controls)</caption>
+<thead><tr><th scope="col">Role</th><th scope="col">Here</th><th scope="col">Can</th><th scope="col">Cannot</th></tr></thead>
+<tbody>
+<tr><th scope="row">Admin</th><td>the deployer key <code>0x79A9…5C07</code> (one key: the design asks for a multisig; a test network shortcut)</td><td>register a token once; enable or disable deposits per token; set caps above the immutable floor; set release delays within bounds; raise Δ; propose watchers and a new freeze authority (applied 14 days later, in public); announce fee schedules (7 days' notice, at most 1% each)</td><td>move escrow; change a registered token; lower Δ; cut a cap below the floor; freeze, unfreeze, revoke, retire; change any immutable (verifier, image ids, configuration, timers, floors)</td></tr>
+<tr><th scope="row">Freeze authority</th><td><code>0x8eE79c5148F2e2969f0cB2114DD733c9e818cbF4</code></td><td>freeze deposits, releases, checkpoints (vault) and mints, burns (LEZ), globally or per token, each for at most <code>maxFreeze</code> unless renewed; cancel a candidate; <code>revokeFrom</code> within the window; <code>retire()</code></td><td>touch the registry, caps, delays, Δ or escrow; accept anything; undo a stop or a retirement</td></tr>
+<tr><th scope="row">Watcher</th><td><code>0x78E5689AbdBb93ED3Ea749d190f9b00b42bAE0B6</code> (the only one; the other two slots are empty)</td><td>cancel a pending checkpoint candidate; pause checkpoints for at most 12 hours</td><td>anything else</td></tr>
+<tr><th scope="row">Relayer</th><td>anyone; this network's host runs one (its address is in no committed record)</td><td>send checkpoints, finalisations and releases that carry valid proofs</td><td>redirect or overcharge (proofs bind destination, recipient and fee)</td></tr>
+<tr><th scope="row">Emergency stop</th><td>RISC Zero's <code>RiscZeroVerifierEmergencyStop</code> at <code>0xC159…b314</code>, owner renounced</td><td>stop every proof-gated call for good, only on <code>estop(receipt)</code>: a published proof of unsoundness</td><td>be tripped by anyone holding a key</td></tr>
+<tr><th scope="row">Anyone</th><td>you</td><td>deposit; submit and finalise checkpoints with proofs; release with a proof; refund once allowed; apply a role proposal after 14 days; retire the vault after 30 days without checkpoint progress (plus one candidate wait)</td><td>—</td></tr>
+</tbody></table></div>
+<p class="small muted">The earlier bridge program (<code>0xccde6171…</code>, the red team's F1) let <code>Init</code> accept a freeze authority equal to the admin; the B1 build deployed here refuses it (exit 240), and the vault refuses the same pair at construction (<code>RolesMustDiffer</code>).</p>
+
+<h2 id="caps">Caps, delays and freezes on this vault</h2>
+<p>As read back from the vault in the deployment record (it was deployed capped: <code>"uncapped": false</code>):</p>
+<ul>
+<li><strong>Caps</strong>: per day, deposits and releases each at most 10 ETH for ETH and 1,000,000 TUSD for the test token (6 decimals); a global daily cap on each (1,030,000,000,000 value units); an <em>immutable</em> release floor of 300,000,000 value units a day, so that no admin can throttle releases below it. Each bucket refills over a day.</li>
+<li><strong>Δ</strong> (outbound finality wait): 3,600 s, equal to its floor; the admin may only raise it.</li>
+<li><strong>Timers</strong>: revocation window 86,400 s (1 day); minimum release delay 0; release delays are set by the admin between the two. The design's production values are 7 days and 24 hours (<code>vault/script/DeployVault.s.sol</code>); this network uses short ones so a round trip fits a demonstration.</li>
+<li><strong>Freezes</strong> lapse after <code>maxFreeze</code>: 2,592,000 s (30 days), immutable. With no checkpoint progress for 30 days plus one candidate wait, anyone can retire the vault, no key needed; refunds then open after a sunset checkpoint and its revocation window (<code>docs/trust.md</code> §4.3).</li>
+</ul>
+
+<h2 id="advisory">RISC Zero's Groth16 advisory, and our correction</h2>
+<p>On 11 November 2026 RISC Zero published
+<a href="https://github.com/risc0/risc0/security/advisories/GHSA-g6qg-9j8p-7j87">GHSA-g6qg-9j8p-7j87</a> and
+<a href="https://github.com/risc0/risc0-ethereum/security/advisories/GHSA-mm6c-35cm-g4x2">GHSA-mm6c-35cm-g4x2</a>:
+Groth16 verifiers up to 3.0.x accept a receipt whose claim was swapped for an attacker's. Our
+<a href="https://github.com/rainbowpuffpuff/ferrata/blob/main/docs/security/risc0-groth16-advisory-2026-11-21/README.md">security note of 21 November</a>
+records that we acted only on 21 November, after a code review raised it, and what we did: caps set on the four older Sepolia vaults, which will not be used again; the move to RISC Zero 3.1.</p>
+<div class="note warn" role="note">
+<p><strong>Corrected 23 November 2026.</strong> The note first said the light client's public path did not depend on
+RISC Zero. It does: on LEZ v0.4 a privacy-preserving transaction's calls to public programs are applied on the strength
+of its proof alone, and LEZ v0.4.0-rc1 and rc3 accept a Groth16 receipt under the affected versions. So if LEZ accepts
+a forged receipt (not tested: no forgery was built), it could write any of our programs' state: the attestation
+instance's records, the bridge program's mints. The fix is LEZ's: a LEZ release on RISC Zero 3.1.</p>
+<p><strong>What that means here.</strong> The note and <code>docs/trust.md</code> said "no v0.4 program of ours runs on a
+public network". That was true when written and stopped being true on 23 November 2026, when this public test network
+started running them on LEZ v0.4.0-rc3 with RISC Zero 3.0.5; both documents now carry a dated correction. The new vault
+verifies with 3.1.0, but a release still rests on burns the LEZ side recorded, and the LEZ side rests on LEZ's check. Test
+value only; the vault's caps bound what a forgery could take.</p>
+</div>
+
+<h2 id="failures">When things go wrong</h2>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Failure classes (docs/trust.md §4.3, §6)"><table>
+<caption>Failure classes (<code>docs/trust.md</code> §4.3, §6)</caption>
+<thead><tr><th scope="col">Failure</th><th scope="col">Effect</th><th scope="col">What you can do</th></tr></thead>
+<tbody>
+<tr><th scope="row">This host stops (sequencer, updater, relayer)</th><td>no new blocks; no claims or releases are processed</td><td>funds stay in the vault; after 30 days without checkpoint progress (plus one candidate wait) anyone may retire it; refunds open after a sunset checkpoint and its revocation window</td></tr>
+<tr><th scope="row">A relayer or prover lies</th><td>refused by the proof checks</td><td>use another, or send yourself (<code>ferrata release --self-send</code>)</td></tr>
+<tr><th scope="row">A bug in our code</th><td>depends on the bug; programs are immutable, so no fix in place</td><td>caps bound it; the freeze authority can freeze and <code>revokeFrom</code>; a fixed version deploys as a new program with a new vault</td></tr>
+<tr><th scope="row">This host serves altered pages</th><td>a page could lie or a wallet could leak keys</td><td><a href="/bridge/verify/">check the served files against the repository</a> from your own machine</td></tr>
+</tbody></table></div>
+
+<h2 id="check">Check it yourself</h2>
+<p>With Foundry's <code>cast</code> and any Sepolia RPC endpoint you choose (read-only calls, no key):</p>
+<pre tabindex="0"><code>V=0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787
+cast call $V "admin()(address)"            --rpc-url $SEPOLIA_RPC_URL
+cast call $V "freezeAuthority()(address)"  --rpc-url $SEPOLIA_RPC_URL
+cast call $V "maxFreeze()(uint256)"        --rpc-url $SEPOLIA_RPC_URL
+cast call $V "revokeWindow()(uint256)"     --rpc-url $SEPOLIA_RPC_URL
+cast call $V "deltaFloor()(uint256)"       --rpc-url $SEPOLIA_RPC_URL
+cast call $V "lezConfigId()(bytes32)"      --rpc-url $SEPOLIA_RPC_URL
+cast call $V "releaseImageId()(bytes32)"   --rpc-url $SEPOLIA_RPC_URL
+cast call $V "verifier()(address)"         --rpc-url $SEPOLIA_RPC_URL
+cast call $V "retired()(bool)"             --rpc-url $SEPOLIA_RPC_URL</code></pre>
+<p>The LEZ side, from a clone of the repository: <code>python3 -I scripts/reproduce/check_network.py chain</code>
+reads every deployed program's loader header on this network and compares it with the image ids that
+<code>scripts/reproduce/deployed.sh</code> rebuilds from source (<a href="/apps/">/apps/</a>; two of the nine sources are
+not public yet).</p>
+<p>Related: <a href="/bridge/privacy/">what the bridge reveals</a> · <a href="/bridge/verify/">verify this site's files</a> · <a href="https://github.com/rainbowpuffpuff/ferrata/blob/main/SECURITY.md">report a vulnerability</a></p>
+</main>
+<footer class="site"><div class="wrap">
+<p>This page is static and its source is in the public repository: <a href="https://github.com/rainbowpuffpuff/ferrata/tree/main/deploy/testnet/web/trust">deploy/testnet/web/trust/</a>. Every file this host serves is listed with its SHA-256 and commit in <a href="/bridge/verify/">the site manifest</a>; check it from a clone with <code>python3 -I scripts/site-manifest.py verify</code>. No cookies, no analytics, no third-party scripts.</p>
+</div></footer>
+</body>
+</html>

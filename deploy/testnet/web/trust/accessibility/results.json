@@ -1,0 +1,487 @@
+{
+ "when": "2026-11-23 22:40 UTC",
+ "tools": "axe-core 4.14.1 (sha512-pinned), Playwright 1.58.0 with Chromium 145.0.7632.6 and Firefox 146.0.1",
+ "site": "this commit's trust pages served locally over the live host (54-156-116-24.sslip.io), whose other pages are as it served them",
+ "summary": "8 of 18 pages pass every axe-core rule in all four runs; the table lists the rest.",
+ "pages": [
+  {
+   "path": "/",
+   "owner": "build page",
+   "violations": [
+    {
+     "id": "scrollable-region-focusable",
+     "impact": "serious",
+     "help": "Scrollable region must have keyboard access",
+     "nodes": 7,
+     "targets": [
+      ".try.card:nth-child(1) > .cmd > pre",
+      ".try.card:nth-child(2) > .cmd > pre",
+      ".try.card:nth-child(5) > .cmd > pre"
+     ],
+     "where": [
+      "chromium-1366-light",
+      "chromium-1366-dark",
+      "chromium-390-light",
+      "firefox-1366-light"
+     ]
+    }
+   ],
+   "keyboard": {
+    "stops": 391,
+    "skip_link": true,
+    "first": "Skip to content",
+    "hidden_stops": 0,
+    "focus_visible": "yes",
+    "trap": "none"
+   }
+  },
+  {
+   "path": "/evidence.html",
+   "owner": "build page",
+   "violations": [],
+   "keyboard": {
+    "stops": 400,
+    "skip_link": true,
+    "first": "Skip to content",
+    "hidden_stops": 0,
+    "focus_visible": "yes",
+    "trap": "none"
+   }
+  },
+  {
+   "path": "/network",
+   "owner": "explorer",
+   "violations": [
+    {
+     "id": "heading-order",
+     "impact": "moderate",
+     "help": "Heading levels should only increase by one",
+     "nodes": 1,
+     "targets": [
+      ".card[href$=\"explorer/\"] > h3"
+     ],
+     "where": [
+      "chromium-1366-light",
+      "chromium-1366-dark",
+      "chromium-390-light",
+      "firefox-1366-light"
+     ]
+    }
+   ],
+   "keyboard": {
+    "stops": 14,
+    "skip_link": false,
+    "first": "Ferrata LEZ test network",
+    "hidden_stops": 0,
+    "focus_visible": "yes",
+    "trap": "none"
+   }
+  },
+  {
+   "path": "/health",
+   "owner": "the host",
+   "violations": [
+    {
+     "id": "color-contrast",
+     "impact": "serious",
+     "help": "Elements must meet minimum color contrast ratio thresholds",
+     "nodes": 1,
+     "targets": [
+      ".ok"
+     ],
+     "where": [
+      "chromium-1366-dark"
+     ]
+    }
+   ],
+   "keyboard": {
+    "stops": 5,
+    "skip_link": false,
+    "first": "Home",
+    "hidden_stops": 0,
+    "focus_visible": "yes",
+    "trap": "none"
+   }
+  },
+  {
+   "path": "/explorer/",
+   "owner": "explorer",
+   "violations": [
+    {
+     "id": "link-in-text-block",
+     "impact": "serious",
+     "help": "Links must be distinguishable without relying on color",
+     "nodes": 84,
+     "targets": [
+      ".act-lightclient.act:nth-child(1) > .act-meta.muted.small > a:nth-child(1)",
+      ".act-meta.muted.small > a[href$=\"#/block/4444\"]",
+      ".act-lightclient.act:nth-child(2) > .act-meta.muted.small > a:nth-child(1)"
+     ],
+     "where": [
+      "chromium-1366-light",
+      "chromium-1366-dark",
+      "chromium-390-light",
+      "firefox-1366-light"
+     ]
+    },
+    {
+     "id": "page-has-heading-one",
+     "impact": "moderate",
+     "help": "Page should contain a level-one heading",
+     "nodes": 1,
+     "targets": [
+      "html"
+     ],
+     "where": [
+      "chromium-1366-light",
+      "chromium-1366-dark",
+      "chromium-390-light",
+      "firefox-1366-light"
+     ]
+    }
+   ],
+   "keyboard": {
+    "stops": 66,
+    "skip_link": false,
+    "first": "Ferrata LEZ test network",
+    "hidden_stops": 0,
+    "focus_visible": "yes",
+    "trap": "none"
+   }
+  },
+  {
+   "path": "/status/",
+   "owner": "explorer",
+   "violations": [
+    {
+     "id": "color-contrast",
+     "impact": "serious",
+     "help": "Elements must meet minimum color contrast ratio thresholds",
+     "nodes": 1,
+     "targets": [
+      ".note > .muted.small"
+     ],
+     "where": [
+      "chromium-1366-light",
+      "chromium-390-light",
+      "firefox-1366-light"
+     ]
+    },
+    {
+     "id": "target-size",
+     "impact": "serious",
+     "help": "All touch targets must be 24px large, or leave sufficient space",
+     "nodes": 2,
+     "targets": [
+      "details:nth-child(6) > summary",
+      "details:nth-child(7) > summary"
+     ],
+     "where": [
+      "chromium-1366-light",
+      "chromium-1366-dark",
+      "chromium-390-light",
+      "firefox-1366-light"
+     ]
+    }
+   ],
+   "keyboard": {
+    "stops": 94,
+    "skip_link": false,
+    "first": "Ferrata LEZ test network",
+    "hidden_stops": 0,
+    "focus_visible": "yes",
+    "trap": "none"
+   }
+  },
+  {
+   "path": "/registry/",
+   "owner": "explorer",
+   "violations": [
+    {
+     "id": "link-in-text-block",
+     "impact": "serious",
+     "help": "Links must be distinguishable without relying on color",
+     "nodes": 1,
+     "targets": [
+      "p:nth-child(4) > a"
+     ],
+     "where": [
+      "chromium-1366-light",
+      "chromium-1366-dark",
+      "chromium-390-light",
+      "firefox-1366-light"
+     ]
+    },
+    {
+     "id": "scrollable-region-focusable",
+     "impact": "serious",
+     "help": "Scrollable region must have keyboard access",
+     "nodes": 1,
+     "targets": [
+      "pre"
+     ],
+     "where": [
+      "chromium-390-light"
+     ]
+    }
+   ],
+   "keyboard": {
+    "stops": 28,
+    "skip_link": false,
+    "first": "Ferrata LEZ test network",
+    "hidden_stops": 0,
+    "focus_visible": "yes",
+    "trap": "none"
+   }
+  },
+  {
+   "path": "/agents/",
+   "owner": "explorer",
+   "violations": [
+    {
+     "id": "link-in-text-block",
+     "impact": "serious",
+     "help": "Links must be distinguishable without relying on color",
+     "nodes": 13,
+     "targets": [
+      "a[href$=\"AGENTS.md\"]",
+      "p:nth-child(9) > a[rel=\"noopener\"]",
+      "li:nth-child(9) > a[rel=\"noopener\"]:nth-child(2)"
+     ],
+     "where": [
+      "chromium-1366-light",
+      "chromium-1366-dark",
+      "chromium-390-light",
+      "firefox-1366-light"
+     ]
+    },
+    {
+     "id": "scrollable-region-focusable",
+     "impact": "serious",
+     "help": "Scrollable region must have keyboard access",
+     "nodes": 32,
+     "targets": [
+      "pre:nth-child(17)",
+      "pre:nth-child(33)",
+      "pre:nth-child(52)"
+     ],
+     "where": [
+      "chromium-1366-light",
+      "chromium-1366-dark",
+      "chromium-390-light",
+      "firefox-1366-light"
+     ]
+    },
+    {
+     "id": "empty-table-header",
+     "impact": "minor",
+     "help": "Table header text should not be empty",
+     "nodes": 2,
+     "targets": [
+      ".scroll:nth-child(6) > table > thead > tr > th:nth-child(1)",
+      ".scroll:nth-child(6) > table > thead > tr > th:nth-child(2)"
+     ],
+     "where": [
+      "chromium-1366-light",
+      "chromium-1366-dark",
+      "chromium-390-light",
+      "firefox-1366-light"
+     ]
+    }
+   ],
+   "keyboard": {
+    "stops": 49,
+    "skip_link": false,
+    "first": "Ferrata LEZ test network",
+    "hidden_stops": 0,
+    "focus_visible": "yes",
+    "trap": "none"
+   }
+  },
+  {
+   "path": "/wallet/",
+   "owner": "wallet",
+   "violations": [
+    {
+     "id": "color-contrast",
+     "impact": "serious",
+     "help": "Elements must meet minimum color contrast ratio thresholds",
+     "nodes": 1,
+     "targets": [
+      "#net-status"
+     ],
+     "where": [
+      "chromium-1366-dark"
+     ]
+    }
+   ],
+   "keyboard": {
+    "stops": 2,
+    "skip_link": false,
+    "first": "Create a new wallet",
+    "hidden_stops": 0,
+    "focus_visible": "yes",
+    "trap": "none"
+   }
+  },
+  {
+   "path": "/status.html",
+   "owner": "the host (leftover)",
+   "violations": [
+    {
+     "id": "color-contrast",
+     "impact": "serious",
+     "help": "Elements must meet minimum color contrast ratio thresholds",
+     "nodes": 1,
+     "targets": [
+      ".ok"
+     ],
+     "where": [
+      "chromium-1366-dark"
+     ]
+    }
+   ],
+   "keyboard": {
+    "stops": 4,
+    "skip_link": false,
+    "first": "Home",
+    "hidden_stops": 0,
+    "focus_visible": "yes",
+    "trap": "none"
+   }
+  },
+  {
+   "path": "/basecamp/",
+   "owner": "Basecamp page",
+   "violations": [
+    {
+     "id": "color-contrast",
+     "impact": "serious",
+     "help": "Elements must meet minimum color contrast ratio thresholds",
+     "nodes": 37,
+     "targets": [
+      "dd:nth-child(2) > .st.ok",
+      "dd:nth-child(4) > .st.ok",
+      "dd:nth-child(6) > .st.ok"
+     ],
+     "where": [
+      "chromium-1366-light",
+      "chromium-390-light",
+      "firefox-1366-light"
+     ]
+    },
+    {
+     "id": "scrollable-region-focusable",
+     "impact": "serious",
+     "help": "Scrollable region must have keyboard access",
+     "nodes": 1,
+     "targets": [
+      "#tested > .scroll"
+     ],
+     "where": [
+      "chromium-390-light"
+     ]
+    }
+   ],
+   "keyboard": {
+    "stops": 72,
+    "skip_link": true,
+    "first": "Skip to content",
+    "hidden_stops": 0,
+    "focus_visible": "yes",
+    "trap": "none"
+   }
+  },
+  {
+   "path": "/trust/",
+   "owner": "trust pages",
+   "violations": [],
+   "keyboard": {
+    "stops": 18,
+    "skip_link": true,
+    "first": "Skip to the content",
+    "hidden_stops": 0,
+    "focus_visible": "yes",
+    "trap": "none"
+   }
+  },
+  {
+   "path": "/bridge/",
+   "owner": "trust pages",
+   "violations": [],
+   "keyboard": {
+    "stops": 19,
+    "skip_link": true,
+    "first": "Skip to the content",
+    "hidden_stops": 0,
+    "focus_visible": "yes",
+    "trap": "none"
+   }
+  },
+  {
+   "path": "/bridge/security/",
+   "owner": "trust pages",
+   "violations": [],
+   "keyboard": {
+    "stops": 38,
+    "skip_link": true,
+    "first": "Skip to the content",
+    "hidden_stops": 0,
+    "focus_visible": "yes",
+    "trap": "none"
+   }
+  },
+  {
+   "path": "/bridge/privacy/",
+   "owner": "trust pages",
+   "violations": [],
+   "keyboard": {
+    "stops": 19,
+    "skip_link": true,
+    "first": "Skip to the content",
+    "hidden_stops": 0,
+    "focus_visible": "yes",
+    "trap": "none"
+   }
+  },
+  {
+   "path": "/bridge/verify/",
+   "owner": "trust pages",
+   "violations": [],
+   "keyboard": {
+    "stops": 28,
+    "skip_link": true,
+    "first": "Skip to the content",
+    "hidden_stops": 0,
+    "focus_visible": "yes",
+    "trap": "none"
+   }
+  },
+  {
+   "path": "/apps/",
+   "owner": "trust pages",
+   "violations": [],
+   "keyboard": {
+    "stops": 49,
+    "skip_link": true,
+    "first": "Skip to the content",
+    "hidden_stops": 0,
+    "focus_visible": "yes",
+    "trap": "none"
+   }
+  },
+  {
+   "path": "/accessibility/",
+   "owner": "trust pages",
+   "violations": [],
+   "keyboard": {
+    "stops": 33,
+    "skip_link": true,
+    "first": "Skip to the content",
+    "hidden_stops": 0,
+    "focus_visible": "yes",
+    "trap": "none"
+   }
+  }
+ ]
+}

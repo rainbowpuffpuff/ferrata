@@ -11,7 +11,7 @@
 #     rzup is newest); RISC Zero 3.0.5 (cargo-risczero, r0vm) with guest Rust 1.88.0 and C++ 2024.1.5 in ~/.risc0,
 #     and the same with guest Rust 1.91.1, LEZ's own, in /work/risc0-home-lez (as scripts/ci/install-risc0.sh);
 #   Foundry v1.3.6 (the release tarball's sha256); solc 0.8.26 (the sha256 of binaries.soliditylang.org's list);
-#   LEZ v0.4.0-rc1 (1806e87) and v0.4.0-rc2 (e3edf47), Logos Blockchain d480efc6 (scripts/fetch-upstream.sh's).
+#   LEZ v0.4.0-rc1 (1806e87), v0.4.0-rc2 (e3edf47) and v0.4.0-rc3 (bafd07b; the test network's, for scripts/reproduce/deployed.sh), Logos Blockchain d480efc6 (scripts/fetch-upstream.sh's).
 FROM ubuntu:24.04@sha256:2198e4c65076e9cb0b3d695219df667c0e3b0072da64ca3c2648aca17dcecaf5
 ENV HOME=/home/builder RUSTUP_HOME=/home/builder/.rustup CARGO_HOME=/home/builder/.cargo \
     FOUNDRY_DIR=/home/builder/.foundry RISC0_HOME_LEZ=/work/risc0-home-lez CARGO_TERM_COLOR=never LANG=C.UTF-8 \
@@ -56,7 +56,7 @@ RUN mkdir -p $FOUNDRY_DIR/bin && cd $FOUNDRY_DIR && curl -sSfL -o foundry.tar.gz
          || { find $HOME -name 'solc*'; exit 1; }; }
 
 # The upstream trees beside the checkout, where scripts/fetch-upstream.sh puts them (run again, it only checks them).
-RUN for spec in v0.4.0-rc1:1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21 v0.4.0-rc2:e3edf47402a82557103ca719b30d0bd2684338d1; do \
+RUN for spec in v0.4.0-rc1:1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21 v0.4.0-rc2:e3edf47402a82557103ca719b30d0bd2684338d1 v0.4.0-rc3:bafd07be0701398f9bc435f73ab05e9a7936c301; do \
       tag=${spec%%:*}; commit=${spec#*:}; \
       git clone -q --depth 1 --branch $tag https://github.com/logos-blockchain/logos-execution-zone.git \
         /work/upstream/lez-$tag && test "$(git -C /work/upstream/lez-$tag rev-parse HEAD)" = $commit || exit 1; done \

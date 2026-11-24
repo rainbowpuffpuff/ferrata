@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://raw.githubusercontent.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Accessibility statement of the Ferrata LEZ test network: axe-core and keyboard checks of every page in Chromium and Firefox, what fails, which branch owns it, and what automated checks cannot tell.">
+<title>Accessibility · Ferrata LEZ test network</title>
+<link rel="stylesheet" href="../trust/trust.css">
+<script type="module" src="a11y.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the content</a>
+<header class="site"><div class="wrap">
+<a class="brand" href="/">Ferrata LEZ test network</a>
+<nav aria-label="Site"><ul><li><a href="/">Build page</a></li><li><a href="/network">Network</a></li><li><a href="/explorer/">Explorer</a></li><li><a href="/wallet/">Wallet</a></li><li><a href="/status/">Status</a></li><li><a href="/trust/">Trust</a></li><li><a href="/bridge/">Bridge</a></li><li><a href="/apps/">Apps</a></li><li><a href="/accessibility/" aria-current="page">Accessibility</a></li></ul></nav>
+</div></header>
+<main id="main" class="wrap" tabindex="-1">
+<h1>Accessibility</h1>
+<p class="lead">We aim for WCAG 2.2 level AA on every page of this site. This statement says what we checked, how, what
+fails today, and what we have not checked. It does not claim conformance.</p>
+
+<h2 id="results">Results</h2>
+<p>The table is read from <a href="results.json">results.json</a>, the record the check wrote, so that this page's own
+markup is the markup the check saw.</p>
+<div id="summary" aria-live="polite"><p class="muted">Loading <a href="results.json">results.json</a>…</p></div>
+<noscript><p>Without JavaScript, read the record directly: <a href="results.json">results.json</a>.</p></noscript>
+
+<h2 id="method">How it was checked</h2>
+<ul>
+<li><strong>axe-core</strong> (version pinned by its sha512) injected into each page after it loaded and its scripts
+settled, in Chromium and in Firefox, at a desktop width (1366 px) and a phone width (390 px), in light and dark colour
+schemes: four runs per page. Tags: <code>wcag2a</code>, <code>wcag2aa</code>, <code>wcag21a</code>,
+<code>wcag21aa</code>, <code>wcag22aa</code>, <code>best-practice</code>.</li>
+<li><strong>Keyboard</strong>: Tab pressed through each page (up to 400 stops) recording every focused element: whether
+focus ever stops on something hidden, whether it is visibly outlined, whether a skip link is the first stop, and whether
+focus gets stuck.</li>
+<li>The script is <code>scripts/a11y/check.py</code> in the repository; the record names the versions it ran with and
+the address it checked.</li>
+</ul>
+
+<h2 id="limits">What these checks cannot tell</h2>
+<ul>
+<li>Automated rules find only part of the accessibility problems a page can have. No screen reader user has tested this
+site; no manual audit against all WCAG success criteria has been done.</li>
+<li>Pages that build their content from live chain data were checked in the state they reached within a few seconds;
+dialogs and states reached only by interaction were checked only where the keyboard pass opened them.</li>
+<li>Zoom to 400% and text spacing were not tested systematically.</li>
+</ul>
+
+<h2 id="owners">Who fixes what</h2>
+<p>Each page's owner is the repository branch its files come from, named in the table above. The trust pages
+(<code>/trust/</code>, <code>/bridge/</code>, <code>/apps/</code>, <code>/accessibility/</code>) are fixed in the same
+change that finds the problem; problems on other pages are listed in the table with the branch that owns them. Report a
+problem as an issue on the <a href="https://github.com/rainbowpuffpuff/ferrata/issues">repository</a>.</p>
+</main>
+<footer class="site"><div class="wrap">
+<p>This page is static and its source is in the public repository: <a href="https://github.com/rainbowpuffpuff/ferrata/tree/main/deploy/testnet/web/trust">deploy/testnet/web/trust/</a>. Every file this host serves is listed with its SHA-256 and commit in <a href="/bridge/verify/">the site manifest</a>; check it from a clone with <code>python3 -I scripts/site-manifest.py verify</code>. No cookies, no analytics, no third-party scripts.</p>
+</div></footer>
+</body>
+</html>

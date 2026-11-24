@@ -2,7 +2,9 @@
 
 > **Corrected 23 November 2026**: the light client's public path is not independent of LEZ's check of
 > privacy-preserving transactions, as "Not affected" below said; see [the correction](#correction-23-november-2026).
-> The rest of the note stands as written on 21 November 2026.
+> The rest of the note stands as written on 21 November 2026, except that its "no live exposure" sentence stopped
+> holding later on 23 November 2026, when the project's public test network started running the v0.4 programs: see
+> "Corrected again" in [the correction](#correction-23-november-2026).
 
 RISC Zero published two critical advisories on 11 November 2026:
 [GHSA-g6qg-9j8p-7j87](https://github.com/risc0/risc0/security/advisories/GHSA-g6qg-9j8p-7j87) (risc0-zkvm) and
@@ -154,6 +156,13 @@ transaction's public effects go through the owning program's apply (LEZ v0.3.1
 `lee/state_machine/src/validated_state_diff/mod.rs:556`), where the port runs every light-client check
 (`lez-v03/guest/src/main.rs:16-19`); whether a forged privacy-preserving transaction could write its state there was not
 examined.
+
+**Corrected again, 23 November 2026.** The paragraph above stopped holding later the same day: since 23 November 2026
+the project's own public test network (LEZ v0.4.0-rc3 on RISC Zero 3.0.5, its one sequencer ours, test value only) runs
+the v0.4 programs, the attestation and bridge programs among them. Until LEZ moves to RISC Zero 3.1, that network's
+program state is exposed as this section describes, if LEZ accepts a forged receipt, which has not been tested. The
+vault paired with it verifies with RISC Zero's verifier 3.1.0 (`vault/deployments/sepolia-31-B.verification.txt`), but a
+release rests on burns the LEZ side recorded.
 
 **Why it was missed.** The note judged the public path by the transactions it sends, not by everything that can
 write the state it reads. Internal reviews of `main` at `8c38d723` (22 and 23 November 2026) found it.

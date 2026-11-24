@@ -1,0 +1,177 @@
+{
+  "about": "Every program deployed on the Ferrata LEZ test network (the network named below; its /programs.json): where its source is, how it is rebuilt, and the image id and binary sha256 the rebuild must give. scripts/reproduce/deployed.sh rebuilds them; scripts/reproduce/check_network.py compares the network's /programs.json and each program's loader header on chain with this file. Served to the browser as /apps/registry.json (deploy/testnet/web/trust/apps/registry.json is this file's copy; test_trust.py holds them equal).",
+  "network": "https://54-156-116-24.sslip.io",
+  "toolchain": "RISC Zero 3.0.5 (risc0-build =3.0.5), guest Rust 1.91.1 in RISC0_HOME=risc0-home-lez, host Rust 1.93.0, through scripts/guest-rustc (path-independent guest builds); the image of scripts/reproduce/Dockerfile",
+  "sources": [
+    {
+      "id": "main",
+      "commit": "a0f388279e2de21305e0a8d1b0777f627ad165b9",
+      "short": "a0f38827",
+      "where": "public main of rainbowpuffpuff/ferrata",
+      "lez_tag": "v0.4.0-rc1",
+      "build": "cd lez && cargo build -p methods -p methods-statements -p methods-rebate --locked",
+      "packages": [
+        "methods",
+        "methods-statements",
+        "methods-rebate"
+      ],
+      "release": false,
+      "locked": true
+    },
+    {
+      "id": "msg",
+      "commit": "acf6fce022814a7d12ecfa3a472884903a2fd1a3",
+      "short": "acf6fce0",
+      "where": "public main: the messages programs' commit (v1's guest and wire crate as deployed)",
+      "lez_tag": "v0.4.0-rc3",
+      "build": "cd lez && cargo build -p methods-msg --locked",
+      "packages": [
+        "methods-msg"
+      ],
+      "release": false,
+      "locked": true
+    },
+    {
+      "id": "names",
+      "commit": "",
+      "short": "",
+      "where": "deployed v1: source not in public history (v2's is in lez/guests/names and lez/names-wire; the two differ only in lez/names-wire/src/lib.rs)",
+      "lez_tag": "v0.4.0-rc3",
+      "select": "lez/scripts/lez-select.sh v0.4.0-rc3, then every lez/ manifest's upstream/lez-v0.4.0-rc1 path set to rc3 (names/e2e/box.sh copy_tree)",
+      "build": "cd lez && cargo build --release -p methods-names",
+      "packages": [
+        "methods-names"
+      ],
+      "release": true,
+      "locked": false
+    }
+  ],
+  "programs": [
+    {
+      "name": "ferrata_attestation",
+      "title": "Attestation program",
+      "rfp": "RFP-021",
+      "what": "Verifies Ethereum consensus (sync committee light client) and proves facts about Ethereum state on LEZ.",
+      "source": "main",
+      "path": "lez/guests/program",
+      "guest": "ferrata_lez",
+      "image_id": "0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df",
+      "binary_sha256": "ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9",
+      "idl": "/idl/ferrata_attestation.idl.json",
+      "idl_repo": "idl/ferrata_attestation.idl.json",
+      "record": "docs/image-ids.md (ferrata_lez)"
+    },
+    {
+      "name": "ferrata_bridge_b1",
+      "title": "Bridge program (milestone B1)",
+      "rfp": "RFP-022",
+      "what": "The LEZ side of the private ERC-20/ETH bridge: claims of deposits, burns for release.",
+      "source": "main",
+      "path": "lez/guests/bridge",
+      "guest": "ferrata_bridge",
+      "image_id": "0x847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515",
+      "binary_sha256": "537cbe7a4c6900419b54e556b9741a9e37d86adf53f5e65683aa2b22c8e9a036",
+      "idl": "/idl/ferrata_bridge.idl.json",
+      "idl_repo": "idl/ferrata_bridge.idl.json",
+      "record": "docs/image-ids.md (ferrata_bridge_b1)"
+    },
+    {
+      "name": "ferrata_consumer",
+      "title": "Reference consumer",
+      "rfp": "RFP-021",
+      "what": "Example program that reads an attested fact and acts on it.",
+      "source": "main",
+      "path": "lez/guests/consumer",
+      "guest": "ferrata_consumer",
+      "image_id": "0x8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96",
+      "binary_sha256": "d02e4aa394f73702fec3e9983f32e8c9743dbaa1a41d2d705fc06f1b63e94ca5",
+      "idl": "",
+      "idl_repo": "",
+      "record": "docs/image-ids.md (ferrata_consumer)"
+    },
+    {
+      "name": "ferrata_holdings",
+      "title": "Holdings (worked example)",
+      "rfp": "RFP-021",
+      "what": "Second consumer: gates an action on an attested token holding.",
+      "source": "main",
+      "path": "lez/guests/holdings",
+      "guest": "ferrata_holdings",
+      "image_id": "0xa79e3f5c4496f2707ab6f55a980efb00dd80aaf562b51f5a504349e9a97c5591",
+      "binary_sha256": "504a67c071a103b5d99de10163ae97f925151b09b59c49048e50f3d315b710c5",
+      "idl": "",
+      "idl_repo": "",
+      "record": "docs/image-ids.md (ferrata_holdings)"
+    },
+    {
+      "name": "ferrata_statements",
+      "title": "Recorded statements",
+      "rfp": "RFP-021 soft 1",
+      "what": "Keeps attested statements on chain for later readers.",
+      "source": "main",
+      "path": "lez/guests/statements",
+      "guest": "ferrata_statements",
+      "image_id": "0x86acef86dc73be13b76de63d21d41ac928639f3be7144132f22f14831d5bc663",
+      "binary_sha256": "439f6ac628ef691f321545b77b1819136fcef6965b7a4b31b031568f4c63a0fa",
+      "idl": "",
+      "idl_repo": "",
+      "record": "docs/image-ids.md (ferrata_statements)"
+    },
+    {
+      "name": "ferrata_statements_reader",
+      "title": "Statements reader",
+      "rfp": "RFP-021 soft 1",
+      "what": "Reference reader of recorded statements.",
+      "source": "main",
+      "path": "lez/guests/statements-reader",
+      "guest": "ferrata_statements_reader",
+      "image_id": "0xd2a8b082f1e4326daad8aad58c2a525f76f17001bb362040fec67260d4d3e73d",
+      "binary_sha256": "a74b740eb72c18a06d62a8f55c845fa88a171c913604bf3bdb5d9e2c0d39aa18",
+      "idl": "",
+      "idl_repo": "",
+      "record": "docs/image-ids.md (ferrata_statements_reader)"
+    },
+    {
+      "name": "ferrata_rebate",
+      "title": "Operator rebate",
+      "rfp": "RFP-021 soft 5",
+      "what": "Pays back the operator who keeps the light client current.",
+      "source": "main",
+      "path": "lez/guests/rebate",
+      "guest": "ferrata_rebate",
+      "image_id": "0xe8f1c1c1381a08faf284fd33226ae11fcb4b7b7d3c397faa113b76d9c7e6d902",
+      "binary_sha256": "9891fe89165220ae46fd5d1ad6f285b750ceb2b65a431b030356bee1b6e5b1bd",
+      "idl": "",
+      "idl_repo": "",
+      "record": "docs/image-ids.md (ferrata_rebate)"
+    },
+    {
+      "name": "ferrata_msg",
+      "title": "Encrypted messages",
+      "rfp": "test network",
+      "what": "Wallet-to-wallet encrypted inbox (the wallet's Messages tab).",
+      "source": "msg",
+      "path": "lez/guests/msg",
+      "guest": "ferrata_msg",
+      "image_id": "0x04ae1988fe84eef6da472152a75b17e6c7453e6e4775264f12af1a750b945277",
+      "binary_sha256": "5b7af994f1169f2b6a905ccfda478f098f5bdef9e09cce0edae07fa8fe733134",
+      "idl": "/idl/ferrata_msg.idl.json",
+      "idl_repo": "",
+      "record": "docs/image-ids.md at acf6fce0 (ferrata_msg)"
+    },
+    {
+      "name": "ferrata_names",
+      "title": "Names",
+      "rfp": "test network",
+      "what": "Human-readable names for LEZ accounts, commit-reveal registration.",
+      "source": "names",
+      "path": "lez/guests/names",
+      "guest": "ferrata_names",
+      "image_id": "0xee9578cab413451e1f0a0cf267a7874ca3231ed0a30907f5d793648ac4e6f790",
+      "binary_sha256": "5653a2ee1c3a85f3b29f32a1a227030a2619c096d0dd7c6c92b872e9e7ce75ab",
+      "idl": "/idl/ferrata_names.idl.json",
+      "idl_repo": "",
+      "record": "names/image-ids.md (v1, the LEZ v0.4.0-rc3 row)"
+    }
+  ]
+}

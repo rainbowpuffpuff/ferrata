@@ -614,6 +614,10 @@ built, and the test or recorded run that shows the mitigation.
   `Record` in its own actors' names. The fix is LEZ's: a LEZ whose receipt check is sound, a LEZ on
   risc0 3.1.0 (LEZ `dev` moved at `6aaabe5`). No live exposure follows today: no v0.4 program of ours runs on a public
   network, and every v0.4 sequencer named in this repository is one we ran.
+  **Corrected 23 November 2026:** the first half of that sentence stopped holding on 23 November 2026, when the
+  project's own public test network (LEZ v0.4.0-rc3 on RISC Zero 3.0.5, its one sequencer ours, test value only)
+  started running these programs; until LEZ moves to RISC Zero 3.1 that network's program state is exposed as this
+  paragraph describes, if LEZ accepts a forged receipt, which has not been tested.
 - **If the proof system is unsound** and RISC Zero publishes the proof, anyone can trip the stop: nothing
   more is released or refunded, owed balances stay claimable, and whatever escrow remains stays in the
   vault (vault v5; [`vault/README.md`](../vault/README.md), "Verifier and stop", "Refunds"). Before the stop
