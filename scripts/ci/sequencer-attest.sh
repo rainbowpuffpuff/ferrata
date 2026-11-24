@@ -136,7 +136,11 @@ toolchains() {
   fi
   [ -n "$lez_home" ] || die "no RISC Zero home with guest Rust 1.91.1 for LEZ (set RISC0_HOME_LEZ; scripts/ci/install-risc0.sh)"
   export RISC0_HOME="$lez_home"
-  command -v r0vm > /dev/null || die "r0vm is not on PATH (scripts/ci/install-risc0.sh)"
+  # LEZ's crates (the sequencer, the driver, the wallet's prover) are on risc0-zkvm 3.0.5, which finds its r0vm through
+  # RISC0_HOME; rzup puts it in no bin/ directory, so it goes on PATH too, for what calls `r0vm` by name.
+  local r0vm
+  r0vm="$(r0vm_of "$lez_home" 3.0.5)" || die "no r0vm 3.0.5 in $lez_home or on PATH (scripts/ci/install-risc0.sh)"
+  export PATH="$(dirname "$r0vm"):$PATH"
 }
 unset RISC0_DEV_MODE   # the sequencer verifies receipts; the private attestation's proof is real
 

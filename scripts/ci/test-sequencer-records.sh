@@ -57,6 +57,19 @@ check "with REPO: ../NAME/ written from beside it -> <repo>/" grep -q -F 'Compil
 check "with REPO: other paths beside it, and a longer name, kept" grep -q -F 'from ../other/lez and ../some-checkout-2/x' "$S/out2/run.log"
 check "with REPO: the checkout's name nowhere left" not grep -q -F 'some-checkout/' "$S/out2/run.log"
 
+# r0vm_of: rzup's layout (r0vm inside cargo-risczero's extension), else an r0vm on PATH of that version.
+F=$S/r0vm-homes; rm -rf "$F"; mkdir -p "$F/lez/extensions/v3.0.5-cargo-risczero-x86_64-unknown-linux-gnu" "$F/bin"
+fake() { printf '#!/bin/sh\necho "risc0-r0vm %s"\n' "$2" > "$1"; chmod +x "$1"; }
+fake "$F/lez/extensions/v3.0.5-cargo-risczero-x86_64-unknown-linux-gnu/r0vm" 3.0.5
+check "r0vm_of: the version rzup put in the home's extension" \
+  test "$(r0vm_of "$F/lez" 3.0.5)" = "$F/lez/extensions/v3.0.5-cargo-risczero-x86_64-unknown-linux-gnu/r0vm"
+check "r0vm_of: another version is not taken from the home" not env PATH=/usr/bin:/bin bash -c '. "$1"; r0vm_of "$2" 3.1.0' _ "$here/sequencer-records.sh" "$F/lez"
+fake "$F/bin/r0vm" 3.1.0
+check "r0vm_of: an r0vm on PATH that reports the version" \
+  test "$(PATH="$F/bin:/usr/bin:/bin" bash -c '. "$1"; r0vm_of "$2" 3.1.0' _ "$here/sequencer-records.sh" "$F/lez")" = "$F/bin/r0vm"
+check "r0vm_of: an r0vm on PATH of another version is refused" \
+  not env PATH="$F/bin:/usr/bin:/bin" bash -c '. "$1"; r0vm_of "$2" 3.1.1' _ "$here/sequencer-records.sh" "$F/none"
+
 echo
 echo "test-sequencer-records.sh: $npass passed, $nfail failed"
 [ "$nfail" = 0 ]

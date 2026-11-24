@@ -114,7 +114,10 @@ export FERRATA_LIVE_JOBS="${FERRATA_LIVE_JOBS:-$NPROC}" CARGO_BUILD_JOBS="${CARG
 # ---- build ---------------------------------------------------------------------------------------------------------
 stage_build() {
   local LH; LH="$(lez_home)"
-  command -v r0vm > /dev/null || die "r0vm is not on PATH (scripts/ci/install-risc0.sh)"
+  # rzup's homes, as scripts/ci/install-risc0.sh fills them: r0vm 3.0.5 for LEZ's crates (the LEZ home), 3.1.0 for
+  # ferrata-e2e (~/.risc0). Neither is on a runner's PATH; each program finds its own through RISC0_HOME.
+  r0vm_of "$LH" 3.0.5 > /dev/null || die "no r0vm 3.0.5 in $LH or on PATH (scripts/ci/install-risc0.sh)"
+  r0vm_of "$HOME/.risc0" 3.1.0 > /dev/null || die "no r0vm 3.1.0 in ~/.risc0 (scripts/ci/install-risc0.sh)"
   command -v forge > /dev/null && command -v anvil > /dev/null && command -v cast > /dev/null || die "Foundry (forge, anvil, cast) is missing"
   [ -f "$BESIDE/upstream/lez-v0.4.0-rc1/Cargo.toml" ] || die "LEZ v0.4.0-rc1 is not beside the repository (scripts/fetch-upstream.sh)"
   [ "$(bash "$REPO/lez/scripts/lez-select.sh" --show)" = v0.4.0-rc1 ] || die "the tree's manifests do not point at LEZ v0.4.0-rc1"
@@ -163,6 +166,11 @@ stage_run() {
   # LEZ's sequencer, crown-driver and the tool are on risc0-zkvm 3.0.5: its r0vm is in the LEZ home (a runner keeps it
   # in ~/risc0-home-lez, which lez/live/env.sh does not look for; ~/.risc0 holds 3.1.0 for bridge/ and checkpoint/).
   export RISC0_HOME="$LH"
+  local r0vm
+  r0vm="$(r0vm_of "$LH" 3.0.5)" || die "no r0vm 3.0.5 in $LH or on PATH (scripts/ci/install-risc0.sh)"
+  export PATH="$(dirname "$r0vm"):$PATH"
+  CI_RT_R0VM31="$(r0vm_of "$HOME/.risc0" 3.1.0)" || die "no r0vm 3.1.0 in ~/.risc0 (scripts/ci/install-risc0.sh)"
+  export CI_RT_R0VM31
   rm -rf "$OUT/zone" "$OUT/run"
   mkdir -p "$OUT/run"
   export CI_RT_REPO="$REPO" CI_RT_OUT="$OUT/run" CI_RT_WORK="$T/work" CI_RT_TOOLS="$TOOLS" CI_RT_LEZ_HOME="$LH"

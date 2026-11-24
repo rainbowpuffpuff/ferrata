@@ -287,8 +287,8 @@ mkdir -p "$W/checkpoint"
 cp "$W/checkpoint/cp-ci-b.json" "$R/checkpoint/"
 # ferrata-e2e (bridge/) is on risc0-zkvm 3.1.0, whose executor is r0vm 3.1.0 (scripts/ci/install-risc0.sh puts it in
 # ~/.risc0); LEZ's crates, the sequencer and the `ferrata` tool are on 3.0.5 (RISC0_HOME, the LEZ home).
-R0VM31="$(find "$HOME/.risc0" -path '*v3.1.0*' -name r0vm -type f 2>/dev/null | head -n 1)"
-[ -n "$R0VM31" ] || die "no r0vm 3.1.0 under ~/.risc0 (scripts/ci/install-risc0.sh)"
+R0VM31="${CI_RT_R0VM31:-}"
+[ -n "$R0VM31" ] && [ -x "$R0VM31" ] || die "no r0vm 3.1.0 (CI_RT_R0VM31; scripts/ci/install-risc0.sh)"
 env -u RISC0_HOME RISC0_SERVER_PATH="$R0VM31" "$B/ferrata-e2e" exec --program "$B/checkpoint_b.bin" \
   --input "$W/checkpoint/cp-ci-b.input" --meta "$W/checkpoint/cp-ci-b.json" \
   > "$R/checkpoint/exec.txt" 2>&1 || { tail -n 15 "$R/checkpoint/exec.txt"; die "the rule (B) guest's execution"; }
