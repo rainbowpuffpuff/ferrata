@@ -813,7 +813,7 @@ Rectangle {
                 objectName: "page.redeem"
                 spacing: 8
                 Heading { text: "Burn on LEZ, release on Ethereum" }
-                Note { text: "A burn publishes a note whose recipient is encrypted to you. After a checkpoint covers it, " + (logosEth() ? "you release it on Ethereum from your release account (on this path no relayer sends it)" : "a relayer releases it on Ethereum") + ": the release does not say which burn it pays." }
+                Note { text: "A burn publishes a note whose recipient is encrypted to you. After a checkpoint covers it, " + (netOpen ? "the release is proven on your machine by the ferrata tool from the same phrase (its input says which burn it is) and presented to the vault by a relayer or by you" : logosEth() ? "you release it on Ethereum from your release account (on this path no relayer sends it)" : "a relayer releases it on Ethereum") + ": the release does not say which burn it pays." }
                 Box {
                     Label { objectName: "burn.holding"; text: "Private holding /0: " + Fmt.eth(holding("private")) + "  ·  public holding /0: " + Fmt.eth(holding("public")); font.bold: true }
                     RowLayout {
@@ -889,7 +889,8 @@ Rectangle {
                 objectName: "page.positions"
                 spacing: 8
                 Heading { text: "Positions, recovered from the seed" }
-                Note { text: "Everything below is found from your seed alone: the whole deposit list (checked against the vault's depositRoot) and the zone's history, with no query about any single position." }
+                Note { text: netOpen ? "Everything below is found from your phrase alone: the vault's whole deposit list (checked against its depositRoot), your burns found on LEZ by their tags, and each claim read from its nullifier's account. Private holdings are read by LEZ's wallet (the ferrata tool), not here."
+                                    : "Everything below is found from your seed alone: the whole deposit list (checked against the vault's depositRoot) and the zone's history, with no query about any single position." }
                 Button { objectName: "positions.recover"; text: "Recover from the seed"; onClicked: refreshPositions() }
                 Label {
                     objectName: "positions.summary"
