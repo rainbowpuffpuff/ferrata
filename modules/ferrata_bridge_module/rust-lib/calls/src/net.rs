@@ -458,6 +458,16 @@ fn with_mut<T>(f: impl FnOnce(&mut Net) -> Result<T, String>) -> Result<T, Strin
     f(g.as_mut().ok_or("no network session: open one first")?)
 }
 
+/// Makes this process non-dumpable (Linux): no core dump of it, and no other process of the person can read its memory
+/// (ptrace, /proc/PID/mem). Called at seal_key, before any secret arrives, and at open; it stays so.
+pub(crate) fn not_dumpable() {
+    #[cfg(target_os = "linux")]
+    // SAFETY: prctl(PR_SET_DUMPABLE, 0) changes only this process's own attribute and touches no memory.
+    unsafe {
+        libc::prctl(libc::PR_SET_DUMPABLE, 0, 0, 0, 0);
+    }
+}
+
 /// Whether a network session is open.
 pub(crate) fn is_open() -> bool {
     lock_net().is_some()
@@ -583,7 +593,7 @@ pub(crate) fn checksummed_address(s: &str, what: &str) -> Result<[u8; 20], Strin
 }
 
 /// What the network checks at open found: the deployment, its endpoints, and what was read.
-struct Checked {
+pub(crate) struct Checked {
     dep: &'static Deployment,
     lez: Lez,
     faucet: String,
@@ -692,21 +702,14 @@ pub(crate) fn open(params: &Value, channel: seal::Keys) -> Result<(Value, Value)
         "network",
     )?;
     let eth = endpoint(params["eth_rpc"].as_str().filter(|s| !s.trim().is_empty()).unwrap_or(DEFAULT_SEPOLIA_RPC), "eth_rpc")?;
-    // The phrase, opened from its seal or made here; its bytes are wiped when this function returns.
-    let (phrase, made): (Zeroizing<Vec<u8>>, bool) = match (params.get("phrase_sealed").filter(|p| !p.is_null()), params["generate"] == true) {
+    // Every input is checked, and the network too, before the phrase is opened or a seed derived (review round 2, MF3:
+    // a refused open leaves nothing of them behind).
+    let sealed = match (params.get("phrase_sealed").filter(|p| !p.is_null()), params["generate"] == true) {
         (Some(_), true) => return Err("open_network takes either a sealed phrase or generate, not both".into()),
-        (Some(p), false) => {
-            let ct = unhex(p["ct"].as_str().ok_or("phrase_sealed.ct")?)?;
-            let tag = unhex(p["mac"].as_str().ok_or("phrase_sealed.mac")?)?;
-            (channel.open_phrase(&ct, &tag)?, false)
-        }
-        (None, true) => {
-            let words = lezkey::new_phrase()?;
-            (Zeroizing::new(words.as_bytes().to_vec()), true)
-        }
+        (Some(p), false) => Some((unhex(p["ct"].as_str().ok_or("phrase_sealed.ct")?)?, unhex(p["mac"].as_str().ok_or("phrase_sealed.mac")?)?)),
+        (None, true) => None,
         (None, false) => return Err("open_network needs your recovery phrase sealed (phrase_sealed), or generate: true for a new one".into()),
     };
-    let seed = lezkey::seed_of_phrase(std::str::from_utf8(&phrase).map_err(|_| "not a valid BIP-39 English recovery phrase (not text)".to_string())?)?;
     let depositor = match params["depositor"].as_str().filter(|s| !s.trim().is_empty()) {
         Some(a) => Some(address(a, "depositor")?),
         None => None,
@@ -716,13 +719,18 @@ pub(crate) fn open(params: &Value, channel: seal::Keys) -> Result<(Value, Value)
     }
     let c = check_network(&base, &eth)?;
 
-    // The keys, only now (nothing above read anything with the phrase). The process stops being dumpable first: no
-    // core dump of it, and no other process of the person reads its memory (ptrace, /proc/PID/mem).
-    #[cfg(target_os = "linux")]
-    // SAFETY: prctl(PR_SET_DUMPABLE, 0) changes only this process's own attribute and touches no memory.
-    unsafe {
-        libc::prctl(libc::PR_SET_DUMPABLE, 0, 0, 0, 0);
-    }
+    // The phrase, only now: opened from its seal or made here (its bytes wiped when this function returns), then the
+    // seed and the keys. The process is not dumpable since seal_key (no core dump of it, and no other process of the
+    // person reads its memory: ptrace, /proc/PID/mem).
+    not_dumpable();
+    let (phrase, made): (Zeroizing<Vec<u8>>, bool) = match sealed {
+        Some((ct, tag)) => (channel.open_phrase(&ct, &tag)?, false),
+        None => {
+            let words = lezkey::new_phrase()?;
+            (Zeroizing::new(words.as_bytes().to_vec()), true)
+        }
+    };
+    let seed = lezkey::seed_of_phrase(std::str::from_utf8(&phrase).map_err(|_| "not a valid BIP-39 English recovery phrase (not text)".to_string())?)?;
     let accounts = lezkey::public_accounts(&seed, GAP)?;
     let private = lezkey::private_account_ids(&seed, GAP);
     let keys = {
@@ -1377,8 +1385,11 @@ pub(crate) mod tests {
     #[test]
     fn a_bad_phrase_is_refused_without_naming_a_word() {
         let _s = crate::jobs::tests::serial();
-        let (params, _) = sealed(json!({ "network": "https://n.example" }), Some("abandon abandon zebra"));
+        // The phrase is opened only after the network's checks (review round 2, MF3): those pass here (a stand-in).
+        let (params, _) = sealed(json!({ "network": "http://127.0.0.1:9", "eth_rpc": "http://127.0.0.1:9" }), Some("abandon abandon zebra"));
+        SKIP_CHECKS.store(true, Ordering::SeqCst);
         let e = open_sealed(&params).err().unwrap();
+        SKIP_CHECKS.store(false, Ordering::SeqCst);
         assert!(e.contains("not a valid BIP-39") && !e.contains("zebra") && !e.contains("abandon"), "{e}");
     }
 
@@ -1467,7 +1478,7 @@ pub(crate) mod tests {
         let holder = *bw::holder_actor(program, &cid, AccountId::new(id0)).account_id.value();
         let net = stand_in_lez(holder, 1_000_000_000_000_000, Duration::ZERO);
         let (methods, sent) = (net.methods.clone(), net.sent.clone());
-        let (params, _view) = sealed(json!({ "network": net.url }), Some(PHRASE));
+        let (params, _view) = sealed(json!({ "network": net.url, "eth_rpc": "http://127.0.0.1:9" }), Some(PHRASE));
         let (s, summary) = open_sealed(&params).unwrap();
         SKIP_CHECKS.store(false, Ordering::SeqCst);
         assert!(s.get("bridge_seed").is_none() && !s.to_string().contains("43bff369"), "no bridge seed in the session's record: {s}");

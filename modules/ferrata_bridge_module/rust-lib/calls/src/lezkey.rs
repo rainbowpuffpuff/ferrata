@@ -54,7 +54,15 @@ const ACCOUNT_ID_PRIVATE_PREFIX: &str = "/LEE/v0.3/AccountId/Private/";
 
 /// The seed of a recovery phrase as LEZ's wallet makes it: BIP-39 English, any valid length, `to_seed("")`. The words
 /// are normalized as the web wallet does (trimmed, lowercased, single spaces). The error never names a word.
+#[cfg(test)]
+thread_local! {
+    /// Seeds derived on this thread (net.rs tests: a refused open derives none).
+    pub(crate) static SEEDS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
 pub(crate) fn seed_of_phrase(phrase: &str) -> Result<Zeroizing<[u8; 64]>, String> {
+    #[cfg(test)]
+    SEEDS.with(|c| c.set(c.get() + 1));
     const BAD: &str = "not a valid BIP-39 English recovery phrase (a word, the word count or the checksum is wrong)";
     // The English word list is ASCII: anything else is refused before a copy is made. The words are normalized into
     // one buffer sized once, so that no reallocation leaves a part of the phrase behind; it and the parsed mnemonic

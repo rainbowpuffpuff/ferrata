@@ -180,7 +180,9 @@ fn dispatch(method: &str, params: &Value, caller: &str) -> Result<Value, String>
         return Err(crate::net::ALREADY_OPEN.into());
     }
     if method == "seal_key" {
-        // The module's one-time key for the view's sealed phrase (seal.rs), and who Logos Core says is calling.
+        // The module's one-time key for the view's sealed phrase (seal.rs), and who Logos Core says is calling. The
+        // process stops being dumpable now, before any secret arrives (review round 2, MF3).
+        crate::net::not_dumpable();
         let (key_id, public) = crate::seal::new_key()?;
         return Ok(json!({ "key_id": key_id, "public_key": hex(&public), "scheme": crate::seal::SCHEME, "caller": caller }));
     }
@@ -2216,7 +2218,7 @@ mod tests {
         let net = stand_in_lez(holder, held, Duration::ZERO);
         SKIP_CHECKS.store(true, Ordering::SeqCst);
         let mut view = ViewClient::new(VIEW);
-        let (reply, _) = view.open(&json!({ "network": net.url }), Some(PHRASE));
+        let (reply, _) = view.open(&json!({ "network": net.url, "eth_rpc": "http://127.0.0.1:9" }), Some(PHRASE));
         SKIP_CHECKS.store(false, Ordering::SeqCst);
         let r = v(&reply);
         assert_eq!(r["ok"], true, "{r}");
@@ -2310,10 +2312,12 @@ mod tests {
         let r = v(&wallet_as(VIEW, &json!({ "method": "open_network", "params": { "network": "https://n.example", "phrase": PHRASE } }).to_string()));
         let e = r["error"].as_str().unwrap();
         assert!(e.contains("sealed to the module's one-time key") && !e.contains("abandon"), "{e}");
-        let (mut params, _) = crate::net::tests::sealed(json!({ "network": "https://n.example" }), Some(PHRASE));
+        let (mut params, _) = crate::net::tests::sealed(json!({ "network": "http://127.0.0.1:9", "eth_rpc": "http://127.0.0.1:9" }), Some(PHRASE));
         let (other, _) = crate::net::tests::sealed(json!({}), Some("legal winner thank year wave sausage worth useful legal winner thank yellow"));
         params["phrase_sealed"] = other["phrase_sealed"].clone();
+        SKIP_CHECKS.store(true, Ordering::SeqCst);
         let r = v(&wallet_as(VIEW, &json!({ "method": "open_network", "params": params }).to_string()));
+        SKIP_CHECKS.store(false, Ordering::SeqCst);
         let e = r["error"].as_str().unwrap();
         assert!(e.contains("does not verify") && !e.contains("abandon") && !e.contains("legal"), "{e}");
         assert!(!crate::net::is_open());
@@ -2327,7 +2331,7 @@ mod tests {
         let net = stand_in_lez([0u8; 32], 0, Duration::ZERO);
         SKIP_CHECKS.store(true, Ordering::SeqCst);
         let mut view = ViewClient::new(VIEW);
-        let (reply, words) = view.open(&json!({ "network": net.url }), None);
+        let (reply, words) = view.open(&json!({ "network": net.url, "eth_rpc": "http://127.0.0.1:9" }), None);
         SKIP_CHECKS.store(false, Ordering::SeqCst);
         let words = words.expect("the view opens the words");
         assert_eq!(words.split(' ').count(), 24);
@@ -2356,6 +2360,34 @@ mod tests {
         assert_eq!(seen(Some("*.debug=false")), json!(false));
         assert_eq!(seen(Some("ferrata.debug=true")), json!(false));
         assert_eq!(seen(None), json!(false));
+    }
+
+    /// Review round 2, MF3: the process is not dumpable from seal_key on, and an open refused for its inputs or its
+    /// network opens no phrase and derives no seed.
+    #[test]
+    fn r2_mf3_nothing_of_the_phrase_before_the_checks() {
+        let _s = serial();
+        close();
+        #[cfg(target_os = "linux")]
+        {
+            // SAFETY: this process's own attribute.
+            unsafe { libc::prctl(libc::PR_SET_DUMPABLE, 1, 0, 0, 0) };
+            assert_eq!(v(&wallet_as(VIEW, r#"{"method":"seal_key","params":{}}"#))["ok"], true);
+            // SAFETY: as above.
+            assert_eq!(unsafe { libc::prctl(libc::PR_GET_DUMPABLE, 0, 0, 0, 0) }, 0, "not dumpable after seal_key");
+        }
+        let seeds = || crate::lezkey::SEEDS.with(std::cell::Cell::get);
+        let before = seeds();
+        // A mistyped depositor, then a network that does not answer: refused, no seed derived.
+        for (depositor, network) in [("0x9858EfFD232B4033E47d90003D41EC34EcaEdA94", "https://n.example"), ("", "http://127.0.0.1:9")] {
+            let mut view = ViewClient::new(VIEW);
+            // Plain http to this machine: the https client (a global hook rpc.rs's own test expects unset) is not installed.
+            let (r, _) = view.open(&json!({ "network": network, "eth_rpc": "http://127.0.0.1:9", "depositor": depositor }), Some(PHRASE));
+            assert_eq!(v(&r)["ok"], false, "{r}");
+            assert!(!r.contains("abandon"), "{r}");
+        }
+        assert_eq!(seeds(), before, "no seed derived for a refused open");
+        assert!(!crate::net::is_open());
     }
 
     /// Review round 2, MF1: no public method of the module reaches the open session's keys: each refuses a request that
