@@ -340,10 +340,14 @@ words="$(echo "$ev" | jq -r '.[0].data' | sed 's/^0x//')"
 AMOUNT="$(python3 -I -c 'import sys; d = sys.argv[1]; print(int(d[0:64], 16))' "$words")"
 RELAY_FEE="$(python3 -I -c 'import sys; d = sys.argv[1]; print(int(d[128:192], 16))' "$words")"
 FRESH_BAL="$(cast balance "$FRESH" --rpc-url "$RPC")"
-# The event's amount is the burn's whole denomination; the recipient is paid it less the relay fee.
+# The event's amount is the burn's whole denomination; the vault pays the recipient that less the relay fee and the
+# fees it credits in the same transaction (the denomination's checkpoint fee, to the checkpoint's prover: OwedCredited).
 [ "$AMOUNT" = "$DENOM" ] || die "the Release event's amount $AMOUNT is not the burnt $DENOM"
-[ "$FRESH_BAL" = "$(( AMOUNT - RELAY_FEE ))" ] || die "the fresh address holds $FRESH_BAL wei, not the Release event's $AMOUNT less its relay fee $RELAY_FEE"
-ok "Ethereum tx $RELEASE_TX: the Release event pays out the burnt $AMOUNT wei; the fresh address holds $FRESH_BAL wei, the relayer was paid $RELAY_FEE"
+oc="$(cast keccak 'OwedCredited(address,address,uint256)')"
+CREDITED="$(cast receipt "$RELEASE_TX" --rpc-url "$RPC" --json | python3 -I -c 'import json, sys; r = json.load(sys.stdin); t = sys.argv[1].lower(); print(sum(int(l["data"], 16) for l in r["logs"] if l["topics"] and l["topics"][0].lower() == t))' "$oc")"
+[ "$(( FRESH_BAL + RELAY_FEE + CREDITED ))" = "$AMOUNT" ] || die "the fresh address holds $FRESH_BAL wei; with the relay fee $RELAY_FEE and the credited fees $CREDITED that is not the Release event's $AMOUNT"
+[ "$FRESH_BAL" -gt 0 ] || die "the fresh address received nothing"
+ok "Ethereum tx $RELEASE_TX: the Release event pays out the burnt $AMOUNT wei: $FRESH_BAL to the fresh address, $RELAY_FEE relay fee to the relayer, $CREDITED credited (OwedCredited: the checkpoint fee)"
 
 begin "release again refused"
 [ -n "$CALLDATA" ] || die "the release's calldata was not printed (user/16-release.txt)"
@@ -364,10 +368,10 @@ jq -n --arg fb "$FORK_BLOCK" --arg fh "$FORK_HASH" --arg ft "$(date -u -d "@$FOR
   --arg dtx "$DEPOSIT_TX" --arg den "$DENOM" --arg ctx "$CLAIM_TX" --arg hc "$HOLD_CLAIM" --arg btx "$BURN_TX" --arg hb "$HOLD_BURN" \
   --arg fr "$FRESH" --arg br "$(jq -r .burnRoot "$CP")" --arg bc "$(jq -r .burnCount "$CP")" --arg ns "$(jq -r .newState "$CP")" \
   --arg tip "$(jq -r .tipId "$CP")" --arg vf "$FINAL" --arg acc "$ACCEPTED" --arg rtx "$RELEASE_TX" --arg am "$AMOUNT" \
-  --arg rf "$RELAY_FEE" --arg fb2 "$FRESH_BAL" --arg nul "$NULLIFIER" --arg ss "$STAND_IN_SLOT" \
+  --arg rf "$RELAY_FEE" --arg cr "$CREDITED" --arg fb2 "$FRESH_BAL" --arg nul "$NULLIFIER" --arg ss "$STAND_IN_SLOT" \
   '{fork: {block: ($fb | tonumber), hash: $fh, time: $ft}, standInSlot: ($ss | tonumber), vault: $v, configId: $c,
     deposit: {tx: $dtx, denominationWei: $den}, claim: {tx: $ctx, holdingAfterClaim: $hc},
     burn: {tx: $btx, recipient: $fr, holdingAfterBurn: $hb},
     checkpoint: {burnRoot: $br, burnCount: $bc, newState: $ns, tipId: $tip, vaultFinalState: $vf, burnRootAccepted: ($acc == "true")},
-    release: {tx: $rtx, amountWei: $am, relayFeeWei: $rf, recipientBalanceWei: $fb2, nullifier: $nul, replayRefused: true}}' > "$R/facts.json"
+    release: {tx: $rtx, amountWei: $am, relayFeeWei: $rf, creditedFeesWei: $cr, recipientBalanceWei: $fb2, nullifier: $nul, replayRefused: true}}' > "$R/facts.json"
 say "the round trip: every step ok ($(wc -l < "$STEPS") steps)"
