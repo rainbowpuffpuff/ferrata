@@ -451,6 +451,7 @@ note = "waits on Logos: LEZ testnet 0.4 does not exist. Shown instead: the recor
 id = "RFP-021 S.2"
 tests = [
   { path = "scripts/ci/sequencer-attest.sh", kind = "test", ci = "sequencer-attest" },
+  { path = "lez/scripts/test_fetch_attest_fixture.py", kind = "test", ci = "links" },
   { path = "e2e/runs/ci-sequencer-2026-11-24/attest/README.md", kind = "record" },
   { path = "e2e/ci/run.sh", kind = "test", ci = "roundtrip" },
   { path = "lez/live/verify-run.sh", kind = "test", ci = "local", run = "cd lez/live && ./verify-run.sh" },

@@ -46,8 +46,8 @@ block's RLP header. The script then fetches, in this order:
    same account on mainnet (latest block), to record that one contract has one address and one code
    hash on both chains (the chain-binding test asks a Sepolia fact as a mainnet statement);
 4. `eth_getBlockReceipts` of the block, and the first ERC-20 `Transfer` in it (of `--log-token`
-   if given) emitted by a token contract (not EIP-7708's ETH-transfer log) with an amount under 2^128
-   (what a pool of the reference consumer can credit);
+   if given) emitted by a token contract (not EIP-7708's ETH-transfer log), its address topics 20-byte
+   words, with an amount under 2^128 (what a pool of the reference consumer can credit);
 5. with `--deposits VAULT:FROM_BLOCK`: the vault's `Deposit` logs from FROM_BLOCK to the block
    (`eth_getLogs`), the leaves of the deposit tree whose root is the vault's slot 0;
 6. with `--updates-from P`: every period's update from P to the period before the finality
@@ -113,16 +113,29 @@ MAX_CODE_PROBES = 24
 def erc20_transfers(receipts):
     """(tx index, position in the receipt, log) of every ERC-20 `Transfer` of a successful
     transaction: three topics and one 32-byte data word (an ERC-721 transfer has four topics), emitted
-    by a token contract (EIP-7708's ETH-transfer logs have the same shape and are left out)."""
+    by a token contract (EIP-7708's ETH-transfer logs have the same shape and are left out), its `from`
+    and `to` topics addresses (no high bytes: `describe` names their low 20 bytes)."""
     out = []
     for r in receipts:
         if r["status"] != "0x1":
             continue
         for position, log in enumerate(r["logs"]):
             if (len(log["topics"]) == 3 and log["topics"][0] == TRANSFER and len(log["data"]) == 2 + 64
-                    and log["address"].lower() != ETH_TRANSFER_LOGGER):
+                    and log["address"].lower() != ETH_TRANSFER_LOGGER
+                    and all(int(x, 16) >> 160 == 0 for x in log["topics"][1:])):
                 out.append((int(r["transactionIndex"], 16), position, log))
     return out
+
+
+def attested_transfer(receipts, log_token=None):
+    """The Transfer a Sepolia fixture attests: the first of `erc20_transfers` (of `log_token` if given)
+    that a pool of the reference consumer can credit (lez/wire's Pool::accept refuses an amount of 2^128
+    or more: AMOUNT_TOO_LARGE), as (tx index, position in the receipt, log); None if there is none.
+    lez/scripts/test_fetch_attest_fixture.py tests it offline (CI's links job)."""
+    for t in erc20_transfers(receipts):
+        if (log_token is None or t[2]["address"].lower() == log_token.lower()) and int(t[2]["data"], 16) < 1 << 128:
+            return t
+    return None
 
 
 def describe(tx_index, position, log, receipts):
@@ -284,13 +297,11 @@ def fetch_gloas(out, a):
     receipts, _ = f.rpc_any("eth_getBlockReceipts", [hex(n)], f"receipts_{n}.json", state_n)
     if [int(r["transactionIndex"], 16) for r in receipts] != list(range(len(receipts))):
         raise SystemExit("receipts are not in transaction order")
-    transfers = [t for t in erc20_transfers(receipts)
-                 if (a.log_token is None or t[2]["address"].lower() == a.log_token.lower())
-                 and int(t[2]["data"], 16) < 1 << 128]
-    if not transfers:
+    picked = attested_transfer(receipts, a.log_token)
+    if picked is None:
         raise SystemExit(f"block {n} has no ERC-20 Transfer{' of ' + a.log_token if a.log_token else ''} under 2^128; "
                          "run again after the next finality update")
-    transfer = describe(*transfers[0], receipts)
+    transfer = describe(*picked, receipts)
 
     # 5. The vault's deposits.
     deposits = None
