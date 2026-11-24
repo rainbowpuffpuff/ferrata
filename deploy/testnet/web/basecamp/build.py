@@ -108,7 +108,7 @@ def main():
     repro = load("tests/reproduce.json", required=False)
     commit = rel["source_commit"]
     short = commit[:8]
-    # A release re-signed in part (spike's resign.sh, release_records.py annotate): source_commits {commit: [files]},
+    # A release re-signed in part (release.json written by basecamp_release.py, then annotated): source_commits {commit: [files]},
     # each package its source_commit. A release from one commit has neither, and the page reads as it always did.
     mixed = rel.get("source_commits") or {}
     from_text = " and ".join(f'<code>{c[:8]}</code> ({len(fs)} package{"s" if len(fs) != 1 else ""})'
