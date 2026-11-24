@@ -2,7 +2,7 @@
  "about": "Every file the Ferrata LEZ test network's host serves from the repository, with its SHA-256 and the commit it comes from. Check it with `python3 -I scripts/site-manifest.py verify` from a clone. A file whose commit is not public (\"public\": false) can be checked against this manifest but not yet against its source.",
  "site": "https://54-156-116-24.sslip.io",
  "made": "2026-11-24T16:37Z",
- "made_how": "the host's own file list (sha256sum of its web root) at 2026-11-24T16:37Z, right after the site was deployed from public main c8ef7b1b (install-web.sh: the build page with /testers/, the wallet, the explorer, /msg/, /names/, /AGENTS.md; the apps page of the trust pages)",
+ "made_how": "the host's own file list (sha256sum of its web root) at 2026-11-24T16:37Z, right after the site was deployed from public main c8ef7b1b (install-web.sh: the build page with /testers/, the wallet, the explorer, /msg/, /names/, /AGENTS.md; the apps page of the trust pages); on 24 November 2026 /apps/index.html as the agents-links branch has it (the build page's row of its apps table lists /llms.txt), at a commit no public branch holds yet",
  "public_checked": {
   "utc": "2026-11-24T16:44Z",
   "refs": {
@@ -187,12 +187,12 @@
   },
   {
    "path": "/apps/index.html",
-   "sha256": "59bb4bf480cda604a915de28def22176c6ed21d0e27c4cb2bb33cd78ca7e494f",
-   "bytes": 21125,
-   "commit": "c8ef7b1b3f09ba6c424f289bb864302be922679a",
+   "sha256": "050fdab5d5d67386e7fbe1989d66f078c881493418b2d60532dd2a1fb07c101f",
+   "bytes": 21135,
+   "commit": "d7360e5529d6f4e2527f63a4a29549f1886ca2f5",
    "repo_path": "deploy/testnet/web/trust/apps/index.html",
-   "branch": "origin/main",
-   "public": true
+   "branch": "agents-links",
+   "public": false
   },
   {
    "path": "/apps/rebuild.json",
