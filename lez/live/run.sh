@@ -34,6 +34,8 @@
 #   For the observations in observations/: FERRATA_LIVE_PHASE_SECONDS (a cap on each phase) and
 #   FERRATA_LIVE_BEDROCK_TRACE=1 (the node's block proposer logs at trace level)
 #   FERRATA_LIVE_JOBS, FERRATA_LIVE_NICE   build parallelism (default 4 jobs under nice 19)
+#   FERRATA_LIVE_CARGO_MESSAGES  a file: the builds append cargo's JSON messages to it
+#                          (--message-format=json-render-diagnostics), for scripts/fetch_native.py check-build
 #   FERRATA_LIVE_RPC_PORT, FERRATA_LIVE_BEDROCK_PORT  (defaults 3040, 18080: LEZ's)
 set -euo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/env.sh"
@@ -46,11 +48,22 @@ BEDROCK_FUNDING_PUBLIC_KEY=2e03b2eff5a45478e7e79668d2a146cf2c5c7925bce927f2b1c67
 NODE_DIR="$FERRATA_LIVE_TMP/bedrock"
 NODE_BIN="$NODE_DIR/.resolved-host/logos-blockchain-node"
 
+# cargo_in DIR ARGS...: cargo in DIR with this script's target directory and niceness; with FERRATA_LIVE_CARGO_MESSAGES,
+# cargo's JSON messages (its stdout) are appended to that file, the rendered diagnostics staying on stderr.
+cargo_in() {
+  local dir="$1"; shift
+  if [ -n "${FERRATA_LIVE_CARGO_MESSAGES:-}" ]; then
+    ( cd "$dir" && CARGO_TARGET_DIR="$TARGET" $NICE cargo "$@" --message-format=json-render-diagnostics ) >> "$FERRATA_LIVE_CARGO_MESSAGES"
+  else
+    ( cd "$dir" && CARGO_TARGET_DIR="$TARGET" $NICE cargo "$@" )
+  fi
+}
+
 build_sequencer() { # $1: output name, rest: extra cargo arguments
   local out="$1"; shift
   check_lez
   echo "== building LEZ sequencer_service ($out) with $CARGO_BUILD_JOBS jobs"
-  ( cd "$LEZ_SRC" && CARGO_TARGET_DIR="$TARGET" $NICE cargo build --release --locked -p sequencer_service "$@" )
+  cargo_in "$LEZ_SRC" build --release --locked -p sequencer_service "$@"
   cp "$TARGET/release/sequencer_service" "$BIN/$out"
   ( cd "$LEZ_SRC" && rustc --version && cargo --version ) > "$BIN/$out.toolchain"
   sha256sum "$BIN/$out" | cut -d' ' -f1 > "$BIN/$out.sha256"
@@ -64,7 +77,7 @@ build_driver() {
   # The driver links LEZ's wallet: start its lockfile from LEZ's, so that the wallet is built
   # with the dependency versions LEZ pins (cargo keeps what applies and adds the rest).
   [ -f "$LIVE_DIR/driver/Cargo.lock" ] || cp "$LEZ_SRC/Cargo.lock" "$LIVE_DIR/driver/Cargo.lock"
-  ( cd "$LIVE_DIR/driver" && CARGO_TARGET_DIR="$TARGET" $NICE cargo build --release )
+  cargo_in "$LIVE_DIR/driver" build --release
   cp "$TARGET/release/live-driver" "$BIN/live-driver"
 }
 

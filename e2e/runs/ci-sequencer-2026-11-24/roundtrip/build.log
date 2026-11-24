@@ -1,0 +1,189 @@
+vault_libs: forge-std (foundry-rs/forge-std@v1.10.0): 60 files, tree hash ddb80f51bf3ae961da3520a409f99a22286c9b0e93bae5d66664ba482768a9e5: as pinned
+vault_libs: openzeppelin-contracts (OpenZeppelin/openzeppelin-contracts@v5.4.0): 834 files, tree hash 1059160495f67b1c74bce2cecaa0018c7686d16e0203e68f2d14af928e65c77d: as pinned
+vault_libs: risc0-ethereum (risc0/risc0-ethereum@v3.1.0): 911 files, tree hash 4d9296b0ef5411b786bb147191ba40b9386c40745448d83ea29f90fa41cf7b1a: as pinned
+No files changed, compilation skipped
+note[screaming-snake-case-const]: constants should use SCREAMING_SNAKE_CASE
+ --> <repo>/vault/script/TestTetherToken.sol:9:28
+  |
+9 |     string public constant name = "Ferrata Test Tether";
+  |                            ----
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#screaming-snake-case-const
+
+note[screaming-snake-case-const]: constants should use SCREAMING_SNAKE_CASE
+  --> <repo>/vault/script/TestTetherToken.sol:10:28
+   |
+10 |     string public constant symbol = "TUSDT";
+   |                            ------
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#screaming-snake-case-const
+
+note[screaming-snake-case-const]: constants should use SCREAMING_SNAKE_CASE
+  --> <repo>/vault/script/TestTetherToken.sol:11:27
+   |
+11 |     uint8 public constant decimals = 6;
+   |                           --------
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#screaming-snake-case-const
+
+warning: unknown lint id: 'unsafe-cheatcode'
+  --> <repo>/vault/test/TreeVectors.t.sol:30:13
+   |
+30 |             // forge-lint: disable-next-line(unsafe-cheatcode)
+   |             --------------------------------------------------
+   |
+
+warning: unknown lint id: 'unsafe-cheatcode'
+  --> <repo>/vault/test/TreeVectors.t.sol:33:9
+   |
+33 |         // forge-lint: disable-next-line(unsafe-cheatcode)
+   |         --------------------------------------------------
+   |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> <repo>/vault/test/invariant/BrokenVerifierHandler.sol:172:9
+    |
+172 |         // forge-lint: disable-next-line(unsafe-typecast)
+    |         -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> <repo>/vault/test/invariant/BrokenVerifierHandler.sol:214:9
+    |
+214 |         // forge-lint: disable-next-line(unsafe-typecast)
+    |         -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> <repo>/vault/test/invariant/BrokenVerifierHandler.sol:301:9
+    |
+301 |         // forge-lint: disable-next-line(unsafe-typecast)
+    |         -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> <repo>/vault/test/invariant/VaultHandler.sol:391:9
+    |
+391 |         // forge-lint: disable-next-line(unsafe-typecast)
+    |         -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> <repo>/vault/test/invariant/VaultHandler.sol:526:13
+    |
+526 |             // forge-lint: disable-next-line(unsafe-typecast)
+    |             -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> <repo>/vault/test/invariant/VaultHandler.sol:686:17
+    |
+686 |                 // forge-lint: disable-next-line(unsafe-typecast)
+    |                 -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> <repo>/vault/test/invariant/VaultHandler.sol:770:13
+    |
+770 |             // forge-lint: disable-next-line(unsafe-typecast)
+    |             -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+    --> <repo>/vault/test/invariant/VaultHandler.sol:1021:9
+     |
+1021 |         // forge-lint: disable-next-line(unsafe-typecast)
+     |         -------------------------------------------------
+     |
+
+   Compiling methods v0.1.0 (<repo>/bridge/methods)
+    Finished `release` profile [optimized] target(s) in 6.64s
+    Finished `release` profile [optimized] target(s) in 0.58s
+   Compiling methods v0.1.0 (<repo>/checkpoint/methods)
+    Finished `release` profile [optimized] target(s) in 5.03s
+ok rapidsnark 0.0.8: sha256 59bdd709eed96235de061f352893f4650c923b54b591052118593012bb1cd831, 4 files checked, ~/.cache/ferrata/native/rapidsnark-0.0.8-59bdd709eed96235
+ok logos-blockchain-circuits 0.5.7: sha256 92a0c6ad810d486631518b7b9b247a2b66f66af6f8f8ddce381acbbdfedc0f7f, 18 files checked, ~/.cache/ferrata/native/logos-blockchain-circuits-0.5.7-92a0c6ad810d4866
+warning[E0602]: unknown lint: `raw_borrows_via_references`
+  |
+  = note: requested on the command line with `-W raw_borrows_via_references`
+  = note: `#[warn(unknown_lints)]` on by default
+
+For more information about this error, try `rustc --explain E0602`.
+warning: `logos-blockchain-log-targets-macros` (lib) generated 1 warning
+warning: `logos-blockchain-log-targets` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-utils` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-groth16` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-circuits-prover` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-proofs-error` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-poseidon2` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-binary-codec-macros` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-binary-codec` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-pol` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-poq` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-time` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-dynamic-merkle` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-zksign` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-merkle-tree` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-blend-crypto` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-key-management-system-macros` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-key-management-system-keys` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-blend-proofs` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-poc` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-utxotree` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-cryptarchia-engine` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-mmr` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-core` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-tracing` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-cryptarchia-sync` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-services-utils` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-time-service` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-blend-message` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-libp2p` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-network-service` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-ledger` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-storage-service` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-chain-broadcast-service` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-version` (build script) generated 1 warning (1 duplicate)
+warning: lee@0.1.0: Generated module at <repo>/checkpoint/fidelity/../target/release/build/lee-08bd594d00d606af/out/lee/privacy_preserving_circuit/mod.rs
+   Compiling logos-blockchain-version v0.0.0 (../upstream/logos-blockchain-d480efc6/nodes/version)
+warning: `logos-blockchain-chain-service` (lib) generated 1 warning (1 duplicate)
+warning: programs@0.1.0: Generated module at <repo>/checkpoint/fidelity/../target/release/build/programs-15b7aefeaf899b7e/out/lez/programs/mod.rs
+warning: `logos-blockchain-sdp-service` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-http-api-common` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-key-management-system-operators` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-key-management-system-service` (lib) generated 1 warning (1 duplicate)
+   Compiling logos-blockchain-common-http-client v0.0.0 (../upstream/logos-blockchain-d480efc6/nodes/node/http-client)
+warning: `logos-blockchain-version` (lib) generated 1 warning (1 duplicate)
+   Compiling common v0.1.0 (../upstream/lez-v0.4.0-rc1/lez/common)
+   Compiling logos-blockchain-zone-sdk v0.0.0 (../upstream/logos-blockchain-d480efc6/zone-sdk)
+warning: `logos-blockchain-common-http-client` (lib) generated 1 warning (1 duplicate)
+   Compiling key_protocol v0.1.0 (../upstream/lez-v0.4.0-rc1/lee/key_protocol)
+   Compiling testnet_initial_state v0.1.0 (../upstream/lez-v0.4.0-rc1/lez/testnet_initial_state)
+   Compiling chain_state v0.1.0 (../upstream/lez-v0.4.0-rc1/lez/chain_state)
+   Compiling fidelity v0.1.0 (<repo>/checkpoint/fidelity)
+warning: `logos-blockchain-zone-sdk` (lib) generated 1 warning (1 duplicate)
+    Finished `release` profile [optimized] target(s) in 27.68s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+check-build: every build script linked native code only from its own build output, the system library directories, or the checked archives (rapidsnark, logos-blockchain-circuits)
+   Compiling methods v0.1.0 (<repo>/lez/methods)
+    Finished `dev` profile [unoptimized] target(s) in 8.80s
+== building LEZ sequencer_service (sequencer_service_standalone) with 4 jobs
+warning: lee@0.1.0: Generated module at ../tmp/ci-seq-roundtrip/target/release/build/lee-438159721fa1680d/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at ../tmp/ci-seq-roundtrip/target/release/build/programs-d2912b9194ac970d/out/lez/programs/mod.rs
+    Finished `release` profile [optimized] target(s) in 2.13s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+== ../tmp/ci-seq-roundtrip/bin/sequencer_service_standalone (b4dd60923cfa9c3ba3375ace63ccbc10a61a203fd84bc8fb235cdfa909e79b88)
+warning: lee@0.1.0: Generated module at ../tmp/ci-seq-roundtrip/target/release/build/lee-08bd594d00d606af/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at ../tmp/ci-seq-roundtrip/target/release/build/programs-15b7aefeaf899b7e/out/lez/programs/mod.rs
+   Compiling crown-driver v0.1.0 (<repo>/lez/crown/driver)
+    Finished `release` profile [optimized] target(s) in 22.89s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+warning: lee@0.1.0: Generated module at ../tmp/ci-seq-roundtrip/target/release/build/lee-51f15a1d524f426a/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at ../tmp/ci-seq-roundtrip/target/release/build/programs-83a713f6fc81bb13/out/lez/programs/mod.rs
+    Finished `release` profile [optimized] target(s) in 1.95s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+check-build: every build script linked native code only from its own build output, the system library directories, or the checked archives (rapidsnark, logos-blockchain-circuits)

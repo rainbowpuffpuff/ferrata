@@ -1,0 +1,77 @@
+[14:26:26] == build (started 2026-11-24T14:26:26Z); 4 build jobs
+[14:26:26] vault: libraries and build (output to e2e/runs/ci-sequencer-2026-11-24/roundtrip/build.log)
+[14:26:30] bridge: the release guest (guest Rust 1.88.0) and ferrata-e2e (output to e2e/runs/ci-sequencer-2026-11-24/roundtrip/build.log)
+[14:26:38] checkpoint: the rule (B) guest (guest Rust 1.88.0) (output to e2e/runs/ci-sequencer-2026-11-24/roundtrip/build.log)
+[14:26:43] checkpoint: ci_zone (Rust 1.98.1) (output to e2e/runs/ci-sequencer-2026-11-24/roundtrip/build.log)
+[14:27:11] checkpoint: ci_zone linked native code only from the checked archives (fetch_native.py check-build) (output to e2e/runs/ci-sequencer-2026-11-24/roundtrip/build.log)
+[14:27:12] LEZ guests: the attestation and bridge programs (the committed v0.4.0-rc1 manifests) (output to e2e/runs/ci-sequencer-2026-11-24/roundtrip/build.log)
+[14:27:21] LEZ v0.4.0-rc1's sequencer_service (standalone) (output to e2e/runs/ci-sequencer-2026-11-24/roundtrip/build.log)
+[14:27:50] crown-driver (lez/crown/driver) (output to e2e/runs/ci-sequencer-2026-11-24/roundtrip/build.log)
+[14:28:13] cli: ferrata, ferrata-relayer, seqnet-fund, seqnet-txs (output to e2e/runs/ci-sequencer-2026-11-24/roundtrip/build.log)
+[14:28:15] the sequencer, crown-driver and cli linked native code only from the checked archives (fetch_native.py check-build) (output to e2e/runs/ci-sequencer-2026-11-24/roundtrip/build.log)
+[14:28:16] build took 1 min
+[14:28:16] == run: LEZ v0.4.0-rc1's sequencer (standalone: its mock Bedrock, no Logos Blockchain node), blocks every 3 s; the round trip in its hook
+[14:28:16] run: LEZ sequencer (standalone) + scripts/ci/sequencer-roundtrip-hook.sh (output to e2e/runs/ci-sequencer-2026-11-24/roundtrip/sequencer-roundtrip.log)
+== Bedrock: the sequencer's in-process mock (LEZ's `standalone` feature); no Logos Blockchain node runs
+== sequencer: sequencer_service_standalone (b4dd60923cfa9c3ba3375ace63ccbc10a61a203fd84bc8fb235cdfa909e79b88), pid 1448, RPC 127.0.0.1:3040
+   head block 1, 3 s after the sequencer was started
+command: <scratch>/bin/sequencer_service_standalone start <scratch>/run/sequencer_home --rpc-listen-address 127.0.0.1:3040 
+RISC0_* variables in the sequencer's environment: RISC0_HOME=<risc0-home> 
+(RISC0_DEV_MODE absent: receipts of privacy-preserving transactions are verified)
+== phase hook (14:28:21)
+[hook 14:28:21] == fork
+[hook 14:28:24] ok: fork: Sepolia block 12203095 (2026-11-24T14:12:24Z, 957 s old), hash 0x0a100fa0511b0abca17d306e02a437ff3499fddfd0ae05ba7fff02c04c308731, from https://ethereum-sepolia-rpc.publicnode.com; anvil forks it, chain id 11155111
+[hook 14:28:24] == zone: programs and the stand-in instance
+[hook 14:29:22] ok: zone: programs and the stand-in instance: attestation program 0x816d1fef46… and bridge program 0x847a4336c2… deployed through LEZ's loader; stand-in instance 0x7725154af4… (bootstrap slot 11649088); zone tip 21
+[hook 14:29:22] == vault deployed on the fork
+[hook 14:29:32] ok: vault deployed on the fork: vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 (rule B), configId 0xd38bff1d95d9441377a6f2ff257f4b5f060614214d5af3f196b8a39f0b8311e6, genesisState 0x8e54c7d6a8de29730ff8874b4f6ab32653c3d6f85274cc44fa19057391a3efb8 (ci_zone's test committee); RISC Zero's Groth16 verifier 0x25Fa4286d401bdc4AC7657bc7a1ebdE1B737F4b1 (code hash 0x47dfdcd8969f76d298cd5c4bc1f2889a6bc042b8c0f1e428f526cce1316b9970) deployed by DeployVault, its code then replaced on the fork by MockRiscZeroVerifier's; checkpoint guest 0xdafa6ab9a26841681fd071b8e4cdfae514371f82902426dc9fb1e2c80d29cda0, release guest 0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd
+[hook 14:29:32] == deposit
+[hook 14:29:33] ok: deposit: 0.001 ETH to the user's public /0, Ethereum tx 0x5bc73d2a3ae9dc9a0fae4d10525801ae2d42741b19be27658254ef73ca7ca200; the vault's tree holds 1 leaf
+[hook 14:29:33] == operator import
+[hook 14:29:55] ok: operator import: the stand-in committee finalized the fork's block 12203104; bridge Init (pairing: configId in the vault's slot 2), bridge Register ETH (registry entry, schedules 0 and 1, leaf count), bridge ImportRoot n=1 (stage 1, block 12203104): 3 of 3 applied
+[hook 14:29:55] == fees
+[hook 14:29:58] ok: fees: native LEZ to the user's public /0 (0x8a7162a5acc0f2c0beab5a9d07dfab129e7dc9b18cd9c14b3090fe2cc40154b0): 3000000000000
+[hook 14:29:58] == claim (plaintext)
+[hook 14:29:58] the claim's delay let pass on the fork's clock: 2701 blocks
+[hook 14:30:04] ok: claim (plaintext): LEZ tx ad02e144dede462189601665e2bbab5e02ef6a3315636e5c9a53fdfdc1775ea2 applied; the user's public /0 holds 1000000000000000 (0.001 ETH)
+[hook 14:30:04] == claim again refused
+[hook 14:30:05] ok: claim again refused: refused: error: refused: LEZ bridge program exit code 250 ALREADY_CLAIMED (checked before sending: the zone's history shows it claimed): the deposit's nullifier is spent; the holding unchanged
+[hook 14:30:05] == burn
+[hook 14:30:10] ok: burn: LEZ tx 5f854d592a8e5e1dba1b86272c1db93d10ed081921e35970773be3e747b795e7 applied: 0.001 ETH burnt to 0xC5318b5f799EDDec797e4fF8502EF6f69a2398bC; the holding is 0
+[hook 14:30:10] == checkpoint journal
+[hook 14:30:16] ok: checkpoint journal: 34 applied zone transactions in 28 blocks; the guest's journal equals the native one ({"executor_wall_s":0.482167856,"image_id":"0xdafa6ab9a26841681fd071b8e4cdfae514371f82902426dc9fb1e2c80d29cda0","input_by); 1 burn, root 0x5ec74bb264f97bbc0dc38c1dc5fef1db6d143b7682043bcb6c73d70a5286fecc
+[hook 14:30:16] == checkpoint accepted
+[hook 14:30:17] the fork's clock moved on 3601 s: the candidate's wait (Delta 3600 s)
+[hook 14:30:17] ok: checkpoint accepted: submitCandidate, Delta let pass, finalizeAttested by ferrata-relayer; finalState 0x30bd250244169c2c23da06e6f29f79c2e1036acf843eef6dcbe8cb152d6162e4; burn root accepted
+[hook 14:30:17] == release journal
+[hook 14:30:17] the release was held (its delay after the checkpoint)
+[hook 14:30:17] the fork's clock moved on 121 s: the release delay (120 s after finalizeAttested)
+[hook 14:30:18] ok: release journal: release guest 0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd: journal equal to the native one (RISC0_DEV_MODE: executed, receipt fake)
+[hook 14:30:18] == release paid
+[hook 14:30:19] ok: release paid: Ethereum tx 0x83961a9bea86f95704ad048fd749dc4bfff3eef44e4fe36d972ffce7fafa5041: the Release event pays out the burnt 1000000000000000 wei: 997000000000000 to the fresh address, 2000000000000 relay fee to the relayer, 1000000000000 credited (OwedCredited: the checkpoint fee)
+[hook 14:30:19] == release again refused
+[hook 14:30:19] ok: release again refused: eth_call of the same release reverts with NullifierAlreadyUsed (0xcad2ae02); nullifierUsed(0x7c3fea11dd42d7a42f76c0614c661606aa58fb09a8f8cafff2c271907c0068c0) = true
+[hook 14:30:24] ethtxs.py failed:   File "<repo>/e2e/seqnet/ethtxs.py", line 20, in rpc
+    raise RuntimeError(f"{method}: {out['error']}")
+RuntimeError: eth_getBlockTransactionCountByNumber: {'code': 4444, 'message': 'pruned history unavailable: requested 0, earliest available 1000000'}
+[hook 14:30:24] the round trip: every step ok (14 steps)
+# The run's environment
+
+- started 2026-11-24T14:28:17Z, finished 2026-11-24T14:30:25Z (UTC); exit status of the phases: 0
+- phases: hook
+- LEZ: v0.4.0-rc1, commit 1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21, source tree unmodified
+- sequencer: sequencer_service_standalone, sha256 b4dd60923cfa9c3ba3375ace63ccbc10a61a203fd84bc8fb235cdfa909e79b88, built with rustc 1.98.1 (48a229cea 2026-09-01) cargo 1.98.1 (797e8a9bc 2026-08-05) 
+- Bedrock: none; the sequencer's mock Bedrock actor (LEZ's `standalone` feature)
+- sequencer configuration: LEZ's lez/sequencer/service/networks/local.json with the changes of config/sequencer_config.diff
+- RISC0_* variables in the sequencer's environment: RISC0_HOME=<risc0-home> 
+- head rewinds in the sequencer's log: 0; inscriptions it gave up on: 0
+- driver: live-driver, built from lez/live/driver at HEAD (uncommitted paths: 36)
+- r0vm: risc0-r0vm 3.0.5
+- guest binaries: program sha256 ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9, scripted sha256 29249a3ac807ad3268ff5499ccee70a75b687d5fe5517fa5843b333c2c6c1bc0
+- machine: 2 CPUs visible, unknown, 64 GiB, Linux 4.19.0-gvisor
+- ports: sequencer RPC 127.0.0.1:3040, metrics 127.0.0.1:9000, Bedrock API 127.0.0.1:18080
+- last block: 42; blocks the sequencer published to Bedrock: 0; its last channel update: 
+== records in e2e/runs/ci-sequencer-2026-11-24/roundtrip/zone
+[14:30:26] run done at 2 min
+[14:30:26] == check: the records of e2e/runs/ci-sequencer-2026-11-24/roundtrip/run
+[14:30:26] check: every step of the round trip as designed

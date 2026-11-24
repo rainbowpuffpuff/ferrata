@@ -40,7 +40,8 @@ rpc() { # method [params-json]
 }
 
 check_lez
-[ -x "$BIN/live-driver" ] || die "build first: run.sh build"
+# A run of the hook alone (FERRATA_LIVE_PHASES=hook: the hook brings its own client) needs no driver.
+if [ "$PHASES" != hook ]; then [ -x "$BIN/live-driver" ] || die "build first: run.sh build"; fi
 [ -f "$PROGRAM_BIN" ] && [ -f "$SCRIPTED_BIN" ] || die "the guest binaries are missing (README.md says how to obtain them): $PROGRAM_BIN, $SCRIPTED_BIN"
 
 BEDROCK="${FERRATA_LIVE_BEDROCK:-}"
@@ -340,9 +341,9 @@ for phase in $PHASES; do
         if [ -n "${FERRATA_LIVE_PROOF_THREADS:-}" ]; then export RAYON_NUM_THREADS="$FERRATA_LIVE_PROOF_THREADS"; fi
         renice -n "${FERRATA_LIVE_PROOF_NICE:-10}" -p $BASHPID > /dev/null
         driver "$phase" ) 2>&1 | tee -a "$LOG/driver.log"; rc=${PIPESTATUS[0]} ;;
-    attest-private)   # driver/src/attest.rs: the private attestation, proven for real in the driver; its threads and
-      # priority as private-real's (FERRATA_LIVE_PROOF_THREADS, FERRATA_LIVE_PROOF_NICE); --consumer-bin through
-      # FERRATA_LIVE_DRIVER_EXTRA
+    attest-private|fresh-private)   # driver/src/attest.rs, driver/src/fresh.rs: the private attestation, proven for
+      # real in the driver; its threads and priority as private-real's (FERRATA_LIVE_PROOF_THREADS,
+      # FERRATA_LIVE_PROOF_NICE); --consumer-bin through FERRATA_LIVE_DRIVER_EXTRA
       ( unset RISC0_DEV_MODE
         if [ -n "${FERRATA_LIVE_PROOF_THREADS:-}" ]; then export RAYON_NUM_THREADS="$FERRATA_LIVE_PROOF_THREADS"; fi
         renice -n "${FERRATA_LIVE_PROOF_NICE:-10}" -p $BASHPID > /dev/null
@@ -372,7 +373,7 @@ for phase in $PHASES; do
   if [ "$rc" != 0 ]; then echo "== phase $phase FAILED (exit $rc)" | tee -a "$LOG/driver.log"; status=$rc; break; fi
 done
 # Whatever happened, write the records of what did run.
-if [ "$status" != 0 ]; then ( unset RISC0_DEV_MODE; driver export ) 2>&1 | tee -a "$LOG/driver.log"; fi
+if [ "$status" != 0 ] && [ -x "$BIN/live-driver" ]; then ( unset RISC0_DEV_MODE; driver export ) 2>&1 | tee -a "$LOG/driver.log"; fi
 head_block="$(rpc getLastBlockId 2>/dev/null | sed -n 's/.*"result":\([0-9]*\).*/\1/p')"
 bedrock_end=""
 if [ "$BEDROCK" = node ]; then bedrock_end="$(curl -fsS -m 5 "http://127.0.0.1:$BEDROCK_PORT/cryptarchia/info" 2>/dev/null)"; fi

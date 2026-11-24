@@ -39,6 +39,20 @@ for d, _, files in os.walk(top):
 PY
 }
 
+# r0vm_of HOME VERSION: the r0vm of VERSION that rzup installed in the RISC Zero home HOME, which it keeps inside
+# cargo-risczero's extension (HOME/extensions/v<VERSION>-cargo-risczero-<target>/r0vm, no bin/ link), else an r0vm on
+# PATH that reports VERSION; status 1 if there is neither. A GitHub runner has r0vm on PATH in neither version:
+# scripts/ci/install-risc0.sh installs through rzup only, and risc0-zkvm finds its own version through RISC0_HOME.
+r0vm_of() {
+  local d
+  for d in "$1"/extensions/v"$2"-cargo-risczero-*/r0vm; do
+    if [ -f "$d" ] && [ -x "$d" ]; then echo "$d"; return 0; fi
+  done
+  d="$(command -v r0vm 2>/dev/null || true)"
+  if [ -n "$d" ] && "$d" --version 2>/dev/null | grep -q -E "(^| )$2\$"; then echo "$d"; return 0; fi
+  return 1
+}
+
 # consumer_deployed RECORDS: the reference consumer was deployed through the loader in this run: its
 # CreateHeader and each of its segments (programs.tsv's count) applied, per run.tsv. programs.tsv alone
 # proves nothing: the driver lists the consumer there whenever it is given --consumer-bin.
