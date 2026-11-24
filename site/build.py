@@ -5,8 +5,9 @@ Reads docs/requirements-status.md (every row's status and reason), docs/traceabi
 docs/EVIDENCE.md (the evidence rows), scripts/ci/row-tests.toml with scripts/ci/check-row-tests.py's model of the
 workflows (which tests CI really runs), site/data/rfp-requirements.json (the RFPs' own words), site/data/proposal-257.json
 (the filed milestones, budget and timeline), site/content.toml (which runs and screenshots to feature) and the run
-records it names; writes a static site to deploy/testnet/web/build/ (index.html, evidence.html, assets, images,
-build.json). No server code. At run time the page requests, besides its own files: github.com (four workflow badge
+records it names, and site/testers.html (the testers' start page, written by hand: each of its numbers names the file it
+comes from, which must still hold it); writes a static site to deploy/testnet/web/build/ (index.html, evidence.html,
+testers/index.html, assets, images, build.json). No server code. At run time the page requests, besides its own files: github.com (four workflow badge
 images), api.github.com (each workflow's latest run on main and the proposal's state: five calls, cached five
 minutes), and its own host (/rpc, /status/status.json or /status.json, /status/programs.json or /programs.json,
 /faucet).
@@ -44,6 +45,10 @@ SECTION_ORDER = {
                 "Privacy Preservation"],
 }
 MILESTONES = ("M0", "A1", "A2", "A3", "A4", "B1", "B2", "B3", "B4", "R")
+TESTERS_SRC = "site/testers.html"          # the testers' start page's body, written by hand (its numbers cite sources)
+TESTERS_DIR = "testers"                    # served at /testers/
+ISSUE_FORM = ".github/ISSUE_TEMPLATE/tester-report.yml"
+SOURCE_NOTE = re.compile(r"<!-- source: (\S+) \| (.+?) -->", re.S)
 SEPOLIA = 11155111
 ROW_ID = re.compile(r"^(VS|Sec|Priv|Soft|F|U|R|P|S)\.(\d+)$")
 h = html.escape
@@ -701,10 +706,13 @@ def count_rows(rows):
     return c
 
 
-def page(site, title, body, desc, extra_head=""):
+def page(site, title, body, desc, extra_head="", root="", script=True):
+    """A page of the bundle; `root` leads from the page's directory to the bundle's (testers/ -> "../"). Without
+    `script` the page loads no script at all (and needs none)."""
     csp = ("default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://github.com "
            "https://api.github.com; connect-src 'self' https://api.github.com; base-uri 'none'; form-action 'none'; "
            "object-src 'none'")
+    js = f'<script src="{root}assets/site.js" defer></script>\n' if script else ""
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -717,14 +725,13 @@ def page(site, title, body, desc, extra_head=""):
 <meta property="og:title" content="{h(title)}">
 <meta property="og:description" content="{h(desc)}">
 <meta name="color-scheme" content="light dark">
-<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
-<link rel="stylesheet" href="assets/site.css">
+<link rel="icon" href="{root}assets/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="{root}assets/site.css">
 {extra_head}</head>
 <body>
-{ICONS}
+{ICONS if script else ""}
 {body}
-<script src="assets/site.js" defer></script>
-</body>
+{js}</body>
 </html>
 """
 
@@ -740,7 +747,9 @@ def render_index(site, model):
     parts.append('<header class="top"><div class="wrap top-in"><a class="brand" href="#main" aria-label="Ferrata, top of the page">'
                  '<img src="assets/logo.svg" alt="" width="28" height="28"><span>Ferrata</span></a>'
                  '<nav aria-label="Sections"><ul>' +
-                 "".join(f'<li><a href="#{k}">{h(v)}</a></li>' for k, v in nav) + "</ul></nav></div></header>")
+                 "".join(f'<li><a href="#{k}">{h(v)}</a></li>' for k, v in nav) + "</ul></nav>"
+                 f'<a class="top-cta" href="{TESTERS_DIR}/">Testers<span class="top-cta-more">: start here</span></a>'
+                 "</div></header>")
     parts.append('<main id="main">')
 
     # Hero
@@ -760,6 +769,8 @@ def render_index(site, model):
                  'CI on main <b data-live="ci-chip">see below</b></a></li>')
     parts.append('<li><a class="chip chip-warn" href="#security"><span class="dot dot-warn" aria-hidden="true"></span>Not audited</a></li>')
     parts.append("</ul>")
+    parts.append(f'<p class="testers-cta"><a href="{TESTERS_DIR}/">Testers: start here</a> <span>What to try on the test '
+                 'network, in order, what each step should show, and how to report what you find.</span></p>')
 
     # One card per RFP: its name, the count shown, the bar of its four statuses and their counts (rows aligned
     # across the two cards)
@@ -1351,6 +1362,65 @@ def render_evidence(site, model):
     return page(site, "Ferrata · the evidence index", "\n".join(out), "Every evidence row of Ferrata's bid for Logos RFP-021 and RFP-022.")
 
 
+def source_notes(site, text):
+    """The `<!-- source: PATH | TEXT -->` notes of a page and, for each, whether PATH is tracked and holds TEXT
+    (runs of whitespace count as one space): [(path, text, problem or None)]."""
+    out = []
+    for path, snippet in SOURCE_NOTE.findall(text):
+        squash = lambda s: re.sub(r"\s+", " ", s).strip()  # noqa: E731
+        if path not in site.repo.files:
+            out.append((path, snippet, "not a tracked file"))
+        elif squash(snippet) not in squash(site.repo.text(path)):
+            out.append((path, snippet, "the file no longer holds this text"))
+        else:
+            out.append((path, snippet, None))
+    return out
+
+
+def render_testers(site, model):
+    """The testers' start page (/testers/): site/testers.html in the build page's header, footer and style. No script:
+    it is complete without JavaScript."""
+    if ISSUE_FORM not in site.repo.files:
+        raise SystemExit(f"build.py: {ISSUE_FORM} is not tracked (the page links to it)")
+    text = re.sub(r"<!--#.*?-->\n?", "", site.repo.text(TESTERS_SRC), flags=re.S)
+    bad = [f"{p}: {why}: {s!r}" for p, s, why in source_notes(site, text) if why]
+    if bad:
+        raise SystemExit(f"build.py: {TESTERS_SRC}: a number's source does not hold it any more (update the page):\n  "
+                         + "\n  ".join(bad))
+
+    def src(m):
+        url = site.md(None).repo_url(m.group(1), m.group(2))
+        if url is None:
+            raise SystemExit(f"build.py: {TESTERS_SRC}: {m.group(1)} is not tracked")
+        return h(url)
+
+    body = re.sub(r"\{\{src:([^}#]+)(?:#([^}]+))?\}\}", src, text)
+    for key, url in (("{{report}}", f"{site.gh}/issues/new?template={posixpath.basename(ISSUE_FORM)}"),
+                     ("{{security}}", f"{site.gh}/security/advisories/new")):
+        body = body.replace(key, h(url))
+    left = re.findall(r"\{\{[^}]*\}\}", body)
+    if left:
+        raise SystemExit(f"build.py: {TESTERS_SRC}: unknown placeholders {left}")
+    nav = [("steps", "What to try"), ("bridge-times", "Bridge times"), ("limits", "Limits"), ("safety", "Safety"),
+           ("report", "Report")]
+    st = model["stamp"]
+    header = ('<a class="skip" href="#main">Skip to content</a><header class="top"><div class="wrap top-in">'
+              '<a class="brand" href="../" aria-label="Ferrata, the build page"><img src="../assets/logo.svg" alt="" '
+              'width="28" height="28"><span>Ferrata</span></a><nav aria-label="Sections"><ul>'
+              + "".join(f'<li><a href="#{k}">{h(v)}</a></li>' for k, v in nav) + "</ul></nav></div></header>")
+    footer = (f'<footer class="foot"><div class="wrap"><p>This page is <a href="{h(site.src(TESTERS_SRC))}"><code>{TESTERS_SRC}'
+              f'</code></a>, built by <code>site/build.py</code> from the repository at commit <code data-built-from='
+              f'"{h(st["commit"])}">{h(st["short"])}</code> ({h(st["date"])}){" with uncommitted changes" if st["dirty"] else ""}. '
+              'Each number on it names its source in an HTML comment (view the page’s source); '
+              '<code>site/test_site.py</code> checks that each source still holds it.</p>'
+              '<p>No scripts, no cookies, no analytics: the page loads its stylesheet and logo from this host, nothing '
+              'else. The report form is on GitHub.</p><p>Code and text MIT OR Apache-2.0.</p></div></footer>')
+    desc = ("Testers of Ferrata's LEZ test network: what to try, in order, what each step should show, the bridge's "
+            "waiting times, the limits, safety, and how to report.")
+    return page(site, "Testers: start here · Ferrata’s LEZ test network", header + '<main id="main">\n' + body.strip()
+                + "\n</main>\n" + footer, desc, root="../", script=False)
+
+
 def evidence_json(site):
     md = site.md("docs/EVIDENCE.md")
     out = {}
@@ -1428,6 +1498,7 @@ def build():
     files["index.html"] = render_index(site, model).encode()
     files["evidence.html"] = render_evidence(site, model).encode()
     files["evidence.json"] = evidence_json(site).encode()
+    files[f"{TESTERS_DIR}/index.html"] = render_testers(site, model).encode()
     css = (SITE / "assets" / "site.css").read_text(encoding="utf-8") + "\n" + generated_css(site)
     files["assets/site.css"] = css.encode()
     for name in ("site.js", "logo.svg", "nojs.css"):

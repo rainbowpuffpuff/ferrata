@@ -1,0 +1,6 @@
+# Blank issues stay allowed; security problems are pointed to a private report (SECURITY.md).
+blank_issues_enabled: true
+contact_links:
+  - name: A security problem
+    url: https://github.com/rainbowpuffpuff/ferrata/security/advisories/new
+    about: Report a vulnerability privately (SECURITY.md), not in a public issue.

@@ -17,6 +17,9 @@ are long hex words, /status/programs.json and /faucet). Checks:
   - at 375, 768, 1024, 1450 and 1920 px, with the live readings in: the page does not scroll sideways; in the hero's
     summary no piece of text overlaps another and each stays inside its card, chip or bar part; no Live card has
     content wider than the card; no box clips its text;
+  - the testers' page (testers/): linked from the build page's header and hero at every width; seven steps, the
+    bridge's four, the report form's link; no script at all, so the same without JavaScript; at the five widths it
+    does not scroll sideways, nothing in it is wider than the screen, no table scrolls and no box clips its text;
   - no script error on any of these pages.
 
 Usage: python3 site/test_ui.py [BUNDLE_DIR]  (exit 0 pass, 1 fail, 77 when Playwright with Chromium is not installed)
@@ -105,6 +108,24 @@ LAYOUT = """() => {
     if ((c.overflowX === "hidden" || c.overflowX === "clip") && c.clip === "auto" && shown(e) && e.scrollWidth > e.clientWidth + 1)
       out.push(`clipped: ${e.tagName.toLowerCase()}.${e.className} ${label(e.textContent)} (${e.scrollWidth} px in ${e.clientWidth})`);
   }
+  return out;
+}"""
+
+
+# The testers' page at one width: what overflows or is clipped (an empty list when nothing is)
+TESTERS_LAYOUT = """() => {
+  const out = [], de = document.documentElement, vw = de.clientWidth;
+  if (de.scrollWidth > vw + 1) out.push(`the page scrolls sideways (${de.scrollWidth} px wide in ${vw})`);
+  const shown = (e) => e.checkVisibility({ visibilityProperty: true, opacityProperty: true }) && !e.closest(".vh");
+  const label = (t) => JSON.stringify(t.trim().replace(/\\s+/g, " ").slice(0, 32));
+  for (const e of document.querySelectorAll("main *")) {
+    if (!shown(e) || !e.getClientRects().length) continue;
+    const r = e.getBoundingClientRect(), c = getComputedStyle(e);
+    if (r.right > vw + 1 || r.left < -1) out.push(`wider than the screen: ${e.tagName.toLowerCase()}.${e.className} ${label(e.textContent)}`);
+    if ((c.overflowX === "hidden" || c.overflowX === "clip") && c.clip === "auto" && e.scrollWidth > e.clientWidth + 1)
+      out.push(`clipped: ${e.tagName.toLowerCase()}.${e.className} ${label(e.textContent)}`);
+  }
+  for (const s of document.querySelectorAll("main .scroll")) if (s.scrollWidth > s.clientWidth + 1) out.push(`a table scrolls sideways: ${label(s.textContent)}`);
   return out;
 }"""
 
@@ -243,6 +264,33 @@ def main():
         mob.wait_for_timeout(200)
         n = mob.locator("#req-table tbody tr:visible").count()
         check(n == 5, f"on a phone ?status=waits shows {n} rows of the table, not 5")
+
+        # The testers' page: its links from the build page, its steps, no script; the layout at every width
+        report = "https://github.com/rainbowpuffpuff/ferrata/issues/new?template=tester-report.yml"
+        for width in WIDTHS:
+            tp = page(width=width, height=900)
+            tp.goto(base, wait_until="load")
+            for sel, where in ((".top .top-cta", "header"), (".hero .testers-cta a", "hero")):
+                link = tp.locator(sel)
+                check(link.count() == 1 and link.is_visible() and link.get_attribute("href") == "testers/",
+                      f"{width} px: the build page's {where} shows no link to testers/")
+            tp.locator(".top .top-cta").click()
+            tp.wait_for_load_state("load")
+            check(tp.url == base + "testers/", f"{width} px: the header's link leads to {tp.url}")
+            for what in tp.evaluate(TESTERS_LAYOUT):
+                problems.append(f"testers/ at {width} px: {what}")
+            tp.context.close()
+        tp = page(js=False)
+        tp.goto(base + "testers/", wait_until="load")
+        check(tp.locator("script").count() == 0, "testers/ loads a script")
+        check(tp.locator("ol.t-steps > li").count() == 7, f"testers/: {tp.locator('ol.t-steps > li').count()} steps, not 7")
+        check(tp.locator("#step-bridge ol.t-sub > li").count() == 4, "testers/: the bridge has not four steps")
+        check(tp.locator("#report a.btn").get_attribute("href") == report, "testers/: the report link is not the tester-report form")
+        check(tp.locator("#safety").is_visible() and tp.locator(".t-alert").is_visible(), "testers/: the safety notes do not show")
+        tp.locator(".top-in .brand").click()
+        tp.wait_for_load_state("load")
+        check(tp.url == base, f"testers/: the brand leads to {tp.url}, not the build page")
+        tp.context.close()
 
         for width in WIDTHS:
             lp = page(width=width, height=900, readings=True)

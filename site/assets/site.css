@@ -486,3 +486,33 @@ dialog.sheet[open] { display: flex; }
 }
 .lede-wide { max-width: none; margin-bottom: .7rem; }
 .rq-block .more p { color: var(--ink); font-size: .95rem; }
+/* ---- The testers' start page (/testers/) and its links from the build page's header and hero */
+.top-cta { margin-left: auto; flex: none; padding: .32rem .75rem; border-radius: 999px; background: var(--accent); color: var(--plane);
+  text-decoration: none; font-weight: 650; font-size: .9rem; white-space: nowrap; }
+.top-cta:hover { filter: brightness(1.08); }
+@media (max-width: 560px) { .top-cta-more { display: none; } }
+.testers-cta { display: flex; flex-wrap: wrap; align-items: baseline; gap: .15rem .6rem; max-width: 76ch; margin: -.4rem 0 1.4rem;
+  padding: .55rem .9rem; background: var(--surface); border: 1px solid var(--hair); border-left: 4px solid var(--accent);
+  border-radius: var(--r); }
+.testers-cta a { font-weight: 650; }
+.testers-cta span { color: var(--ink-2); font-size: .94rem; }
+.t-alert { max-width: 76ch; margin: .9rem 0 0; padding: .6rem .9rem; background: var(--surface); border-radius: var(--r);
+  border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--hair)); border-left: 4px solid var(--warn); }
+.t-steps { max-width: 84ch; margin: 0; padding-left: 1.9rem; display: grid; gap: .8rem; }
+.t-steps > li { background: var(--surface); border: 1px solid var(--hair); border-radius: var(--r); padding: .75rem 1rem .6rem; }
+.t-steps > li::marker { color: var(--accent); font-weight: 750; }
+.t-steps h3 { margin: .1rem 0 .3rem; }
+.t-ok { color: var(--ink-2); }
+.t-ok b { color: var(--ink); font-weight: 650; }
+.t-sub { margin: .4rem 0 .3rem; padding-left: 1.3rem; display: grid; gap: .55rem; }
+.t-sub > li::marker { font-weight: 650; color: var(--ink-2); }
+.t-sub .t-ok { display: block; margin-top: .2rem; }
+.t-table { max-width: 100ch; }
+.t-table tbody th { font-weight: 600; width: 28%; }
+.t-list { padding-left: 1.2rem; max-width: 84ch; }
+.t-list li { margin: .35rem 0; }
+.t-safety { max-width: 84ch; padding: .3rem 1rem .3rem .2rem; background: var(--surface); border: 1px solid var(--hair);
+  border-left: 4px solid var(--warn); border-radius: var(--r); }
+a.btn { display: inline-block; text-decoration: none; }
+@media (max-width: 760px) { .t-table tbody th { width: auto; } }
+.scroll + h3 { margin-top: 1.6rem; }

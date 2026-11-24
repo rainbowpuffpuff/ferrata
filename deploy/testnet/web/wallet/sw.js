@@ -4,7 +4,7 @@
 // copy only when offline). It never sees the wallet's keys and never touches the network calls: the RPC and the faucet
 // are POSTs and pass straight through. A new build waits until the page asks for it (the "Reload" banner).
 // BEGIN FILES (written by test/pwa-files.mjs; do not edit by hand)
-const BUILD = '6b0cba47abc8632a';
+const BUILD = 'd784d34fe1d6888f';
 const FILES = {
   'app.js': '9eec8abbe2d76731a005ae72c06bc694b4ba38d6cf4839af06d07414e6b05484',
   'applock.js': 'a59bb7c8aa6978c1f9581599dc8c05f7df4598bc69ec62d9a66d406dce47eae4',
@@ -23,7 +23,7 @@ const FILES = {
   'icons/mono-96.png': '7ce71dd0cc5fe0f2811e86cde4de8bcb24d372eb7e80156365d9c603817649cf',
   'icons/mono.svg': 'c51c91efa3c7c7f6251d49cb5df0709ffb43f5bb3fff3d562a49b39fe6afeb95',
   'inbox.js': 'b44278ee6f5eac456bc8298e79ccf4ccd07215b004a5d8444d569efac901ad19',
-  'index.html': '3742ce6b196bc1d7bbc379af8b1e33953d9675249abd74640c6464aca3807bf2',
+  'index.html': '7d058586bfc16a1d55f4b212dbc81cab7e8134ef70ab04e5fc94b5c4d6c61f66',
   'keystore.js': '3f38a0d0384c21e05a0ed5413264d2fbba64bf0520ff4088bc69a04281a673e8',
   'lez.js': 'd278674401ed2aa47ad87d4ba1fa7846324dbfcc12911be0903e1bf407302c1e',
   'manifest.json': 'ae6f89d3122bcbfc787a90ffc90a14c7c8f351d7a6623a74df47d5e0c0a2e07f',

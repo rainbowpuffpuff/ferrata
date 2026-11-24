@@ -23,7 +23,8 @@ RANGE_LIMIT=50   # the gateway's GATEWAY_MAX_RANGE: the explorer pages getBlockR
 rm -rf "$STAGE"; mkdir -p "$STAGE"; tar -xzf "$TGZ" -C "$STAGE"
 install -d -m 755 "$WWW" "$WWW/wallet"
 install -d -o ferrata -g ferrata -m 755 "$WWW/status"
-# 1. the build page owns /index.html, /evidence.*, /build.json, /assets/{site.css,site.js,logo.svg}, /img/
+# 1. the build page owns /index.html, /evidence.*, /build.json, /assets/{site.css,site.js,logo.svg,nojs.css}, /img/ and
+#    /testers/ (the testers' start page): everything build.json's "files" lists
 cp -r "$STAGE/build/." "$WWW/"
 # 2. the explorer bundle: its landing becomes /network.html, the rest keeps its paths (/explorer/, /status/index.html,
 #    /agents/, /registry/, /assets/*.js, /idl/, /config.json, /AGENTS.md)
