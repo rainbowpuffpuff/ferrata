@@ -184,7 +184,11 @@ fn dispatch(method: &str, params: &Value, caller: &str) -> Result<Value, String>
         // process stops being dumpable now, before any secret arrives (review round 2, MF3).
         crate::net::not_dumpable();
         let (key_id, public) = crate::seal::new_key()?;
-        return Ok(json!({ "key_id": key_id, "public_key": hex(&public), "scheme": crate::seal::SCHEME, "caller": caller }));
+        // 32 bytes of the operating system's randomness for the view's own secret: QML has no cryptographic generator
+        // (Math.random is Qt's one process-wide MT19937), and only the caller receives this reply (review round 2, MF2).
+        let mut entropy = [0u8; 32];
+        getrandom::getrandom(&mut entropy).map_err(|e| format!("no randomness from the operating system: {e}"))?;
+        return Ok(json!({ "key_id": key_id, "public_key": hex(&public), "entropy": hex(&entropy), "scheme": crate::seal::SCHEME, "caller": caller }));
     }
     // The jobs (jobs.rs) answer from the module's memory, never from the chains or lez_core.
     if method == "job" {
@@ -703,6 +707,10 @@ fn open_network(params: &Value) -> Result<Value, String> {
         return Err("refused: open_network takes the phrase sealed to the module's one-time key (seal_key, then key_id, view_key and \
                     phrase_sealed), never in clear: Logos Core's IPC carries a call's arguments in clear, and Qt's debug logging \
                     writes them to Basecamp's log".into());
+    }
+    if params["generate"] == true && qt_debug_logging() {
+        return Err("refused: no new phrase is made here while Qt debug logging is on in this Basecamp (review round 2, MF2): \
+                    make one in the network's web wallet (/wallet/, its browser's cryptographic generator), then open with it".into());
     }
     let key_id = params["key_id"].as_u64().ok_or("open_network needs key_id (from seal_key)")?;
     let view_pk: [u8; 32] = fixed(&params["view_key"], "view_key")?;
@@ -2360,6 +2368,25 @@ mod tests {
         assert_eq!(seen(Some("*.debug=false")), json!(false));
         assert_eq!(seen(Some("ferrata.debug=true")), json!(false));
         assert_eq!(seen(None), json!(false));
+    }
+
+    /// Review round 2, MF2: seal_key gives the view 32 fresh bytes of the operating system's randomness for its secret,
+    /// and no new phrase is made while Qt debug logging is on.
+    #[test]
+    fn r2_mf2_the_views_secret_gets_the_modules_randomness() {
+        let _s = serial();
+        close();
+        let key = |_: u8| v(&wallet_as(VIEW, r#"{"method":"seal_key","params":{}}"#))["result"]["entropy"].as_str().unwrap_or("").to_string();
+        let (a, b) = (key(0), key(1));
+        assert!(a.len() == 66 && a.starts_with("0x") && a != b, "{a} {b}");
+        std::env::set_var("QT_LOGGING_RULES", "*.debug=true");
+        let net = stand_in_lez([0u8; 32], 0, Duration::ZERO);
+        SKIP_CHECKS.store(true, Ordering::SeqCst);
+        let (r, words) = ViewClient::new(VIEW).open(&json!({ "network": net.url, "eth_rpc": "http://127.0.0.1:9" }), None);
+        SKIP_CHECKS.store(false, Ordering::SeqCst);
+        std::env::remove_var("QT_LOGGING_RULES");
+        assert!(v(&r)["error"].as_str().unwrap_or("").contains("no new phrase is made here while Qt debug logging is on") && words.is_none(), "{r}");
+        assert!(!crate::net::is_open());
     }
 
     /// Review round 2, MF3: the process is not dumpable from seal_key on, and an open refused for its inputs or its

@@ -41,6 +41,8 @@ Item {
         property var held: null
         property string pendingKind: ""
         property bool debugLog: false
+        property bool noEntropy: false
+        property int opens: 0
         property int jobId: 7
 
         function reply(result) {
@@ -75,9 +77,12 @@ Item {
             if (method === "seal_key") {
                 secret = new Uint8Array(32); for (var i = 0; i < 32; i++) secret[i] = 0x42;
                 publicKey = Seal.hex(Seal.x25519Base(secret));
-                return reply({ key_id: 1, public_key: publicKey, scheme: "x25519-hmac-sha256/v1", caller: "module:ferrata_bridge_ui" });
+                var r = { key_id: 1, public_key: publicKey, scheme: "x25519-hmac-sha256/v1", caller: "module:ferrata_bridge_ui" };
+                if (!noEntropy) r.entropy = "33".repeat(32);
+                return reply(r);
             }
             if (method === "open_network") {
+                opens += 1;
                 if (params.phrase !== undefined) return refuse("refused: a phrase in clear");
                 var viewPk = Seal.unhex(params.view_key), modulePk = Seal.unhex(publicKey);
                 keys = Seal.derive(Seal.x25519(secret, viewPk), viewPk, modulePk);
@@ -319,6 +324,7 @@ Item {
             host.app.resumeJobs();
             tryVerify(function () { return host.app.qtDebugLog; }, 2000, "the module said so");
             verify(el("net.qtlog").visible && el("net.qtlog").text.indexOf("every key typed") >= 0, el("net.qtlog").text);
+            verify(!el("net.generate").enabled, "no New phrase while Qt debug logging is on (round 2, MF2)");
             el("net.address").text = "https://n.example";
             typePhrase("abandon");
             compare(host.app.phraseLen, 0, "no keys taken");
@@ -330,6 +336,18 @@ Item {
             host.app.resumeJobs();
             tryVerify(function () { return !host.app.qtDebugLog; }, 2000);
             verify(!el("net.qtlog").visible);
+        }
+        // Round 2, MF2: without the module's 32 bytes of randomness the view makes no key and opens nothing.
+        function test_11_no_open_without_the_modules_randomness() {
+            logos.noEntropy = true;
+            var opensBefore = logos.opens;
+            el("net.address").text = "https://n.example";
+            typePhrase(phrase);
+            click("net.open");
+            tryVerify(function () { return !host.app.netOpening; }, 3000);
+            verify(!host.app.netOpen && String(host.app.netStatus).indexOf("the module's key is not usable") >= 0, host.app.netStatus);
+            compare(logos.opens, opensBefore, "no open_network sent");
+            logos.noEntropy = false;
         }
         function openWithoutWait() {
             el("net.address").text = "https://n.example";

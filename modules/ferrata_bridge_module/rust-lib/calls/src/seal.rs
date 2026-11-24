@@ -199,14 +199,14 @@ mod tests {
     }
 
     // The vector of modules/ferrata_bridge_ui/tests/seal-test.mjs: made by seal.js in the view's way (its Math.random
-    // and Date.now fixed), opened and answered here.
+    // and Date.now fixed; the module's entropy 0x24 x 32), opened and answered here.
     const MODULE_PK: &str = "132c442be010fbd57e72603328aa76e71fccc1503aae219327d14d9c9993f472";
-    const VIEW_KEY: &str = "1db374d9f0d91bc172bbce9216043a64a4b9a1dbf899f25749e5fbf7eb8c4a57";
-    const PHRASE_CT: &str = "9816ae171b0e755a9e76002e81cfbc60937c2d2176dbd7c78f8621738d36b8cf2c39ceaa7c43975308a6ae880eb644c74b2346b7e610c56f4a26c5b9c9fafa38a546bfa5e7ea45f21aba0745539906a21ec2776e99f66f45a414147764";
-    const PHRASE_MAC: &str = "ec1692184be31a1465340439d41fc2f7df4a43495ddd7541e748703e7032f37e";
-    const WORDS_CT: &str = "31f12c4c5a24a630c67530260c48bc83992716e7f5643c2fb747fccb81571b25d27ba0f7edc2765d6676eac50fc415fb1bb4dbf9088c8478587a04e09859bd2e720efb40082706d2ecc557";
-    const WORDS_MAC: &str = "fcd904c95f237d4ffee966aaeb5de586d842ecacfd005a2f7a5080f11fa95b96";
-    const CALL7_MAC: &str = "eb7c11840968d2c10311a5a8456536ccba9db8bdd679edb944b93471574a2534";
+    const VIEW_KEY: &str = "ff854c15857d81eed2aff488fc21159467d9237bd12eec0640a5b28b397a3637";
+    const PHRASE_CT: &str = "e8b88ff3a680ffa6b61317cb4856be235024974e70904d84b8da6ac7f4fa427ce5de0bb4e3c5dca4b37bebf7e757617cc7e1558622eb04acaabd5dc23d7a9df291ac33bf00007ccc8661b7b5ae76723c8cbb63076ddfb26cefdfc837ba";
+    const PHRASE_MAC: &str = "34c69a20aad6445d026f3e83730e800ec1e8dfc753052779d24edc078fbfe3d3";
+    const WORDS_CT: &str = "faf6875fa16f670447b59cfd944404dffa6445a1ede7f95073775582fbca4ab4bc06367b7ff973e2665b44f9f4d887a9281fa5bf9dcfcfd7ec482f688ee7290fffdbce9a3fed0f81d0f301";
+    const WORDS_MAC: &str = "3fa1d584f8993ea258cdbc250428f52481d25a9ec3fb818a7edcc798c5855035";
+    const CALL7_MAC: &str = "9e2db54380de70a44661f2dc1d8bb9f0e3ad1580c4fc57e8165dbcc383e75fe7";
 
     #[test]
     fn the_views_sealed_phrase_opens_in_the_module() {

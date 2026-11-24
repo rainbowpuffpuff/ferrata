@@ -58,7 +58,9 @@ eq("utf8", hex(S.utf8("a€😀")), "61e282acf09f9880");
 const moduleSecret = new Uint8Array(32).fill(0x42);
 const modulePk = S.x25519Base(moduleSecret);
 const phrase = t("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about");
-const sealed = S.sealPhrase(hex(modulePk), phrase);
+const ENTROPY = "24".repeat(32);  // seal_key's entropy, fixed here
+const sealed = S.sealPhrase(hex(modulePk), phrase, ENTROPY);
+eq("no seal without the module's entropy", S.sealPhrase(hex(modulePk), phrase) === null && S.viewKeyFor(hex(modulePk), "24") === null, true);
 const words = t("legal winner thank year wave sausage worth useful legal winner thank yellow");
 const back = new Uint8Array(words); S.streamXor(sealed.keys.wordsEnc, back);
 const vector = {
@@ -70,12 +72,12 @@ const vector = {
 if (process.argv.includes("--print")) console.log(JSON.stringify(vector, null, 1));
 const want = {
   module_pk: "132c442be010fbd57e72603328aa76e71fccc1503aae219327d14d9c9993f472",
-  view_key: "1db374d9f0d91bc172bbce9216043a64a4b9a1dbf899f25749e5fbf7eb8c4a57",
-  phrase_ct: "9816ae171b0e755a9e76002e81cfbc60937c2d2176dbd7c78f8621738d36b8cf2c39ceaa7c43975308a6ae880eb644c74b2346b7e610c56f4a26c5b9c9fafa38a546bfa5e7ea45f21aba0745539906a21ec2776e99f66f45a414147764",
-  phrase_mac: "ec1692184be31a1465340439d41fc2f7df4a43495ddd7541e748703e7032f37e",
-  words_ct: "31f12c4c5a24a630c67530260c48bc83992716e7f5643c2fb747fccb81571b25d27ba0f7edc2765d6676eac50fc415fb1bb4dbf9088c8478587a04e09859bd2e720efb40082706d2ecc557",
-  words_mac: "fcd904c95f237d4ffee966aaeb5de586d842ecacfd005a2f7a5080f11fa95b96",
-  call7_mac: "eb7c11840968d2c10311a5a8456536ccba9db8bdd679edb944b93471574a2534",
+  view_key: "ff854c15857d81eed2aff488fc21159467d9237bd12eec0640a5b28b397a3637",
+  phrase_ct: "e8b88ff3a680ffa6b61317cb4856be235024974e70904d84b8da6ac7f4fa427ce5de0bb4e3c5dca4b37bebf7e757617cc7e1558622eb04acaabd5dc23d7a9df291ac33bf00007ccc8661b7b5ae76723c8cbb63076ddfb26cefdfc837ba",
+  phrase_mac: "34c69a20aad6445d026f3e83730e800ec1e8dfc753052779d24edc078fbfe3d3",
+  words_ct: "faf6875fa16f670447b59cfd944404dffa6445a1ede7f95073775582fbca4ab4bc06367b7ff973e2665b44f9f4d887a9281fa5bf9dcfcfd7ec482f688ee7290fffdbce9a3fed0f81d0f301",
+  words_mac: "3fa1d584f8993ea258cdbc250428f52481d25a9ec3fb818a7edcc798c5855035",
+  call7_mac: "9e2db54380de70a44661f2dc1d8bb9f0e3ad1580c4fc57e8165dbcc383e75fe7",
 };
 for (const k of Object.keys(want)) if (want[k]) eq(`vector ${k}`, vector[k], want[k]);
 // The module's shared secret from its side, and the words opened by the view.
@@ -90,7 +92,7 @@ eq("the module opens the phrase", Buffer.from(ct).toString(), Buffer.from(phrase
 eq("phrase MAC", hex(S.hmac(keys.phraseMac, h(vector.phrase_ct))), vector.phrase_mac);
 // Real randomness: two seals of one phrase share nothing.
 const R = load(false);
-const a = R.sealPhrase(hex(modulePk), phrase), b = R.sealPhrase(hex(modulePk), phrase);
+const a = R.sealPhrase(hex(modulePk), phrase, ENTROPY), b = R.sealPhrase(hex(modulePk), phrase, ENTROPY);
 eq("two seals differ", a.viewKey !== b.viewKey && a.ct !== b.ct, true);
 console.log(failed ? `${failed} FAILED` : "all passed");
 process.exit(failed ? 1 : 0);

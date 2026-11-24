@@ -129,7 +129,7 @@ Rectangle {
         var fail = function (why) { Seal.wipe(phrase); netOpening = false; netStatus = "Not opened: " + why; netStatusBad = true; };
         call("seal_key", {}, function (ok, k) {
             if (!ok) { fail(String(k)); return; }
-            var a = generate ? Seal.viewKeyFor(k.public_key) : Seal.sealPhrase(k.public_key, phrase);
+            var a = generate ? Seal.viewKeyFor(k.public_key, k.entropy) : Seal.sealPhrase(k.public_key, phrase, k.entropy);
             Seal.wipe(phrase);
             if (!a) { fail("the module's key is not usable"); return; }
             netCaller = String(k.caller);
@@ -773,7 +773,8 @@ Rectangle {
                 RowLayout { PlainLabel { text: "Your Sepolia address"; Layout.preferredWidth: 170 } TextField { id: fDepositor; objectName: "net.depositor"; placeholderText: "0x… (optional: shown in the header with its Sepolia balance)"; Layout.preferredWidth: 560 } }
                 RowLayout {
                     Button { objectName: "net.open"; text: "Open with this phrase"; enabled: canOpen(); onClicked: netOpenSession(false) }
-                    Button { objectName: "net.generate"; text: "New phrase"; enabled: busy === 0 && !netOpening && fNet.text.trim() !== ""; onClicked: netOpenSession(true) }
+                    // Off while Qt debug logging is on (review round 2, MF2): make a new phrase in the web wallet then.
+                    Button { objectName: "net.generate"; text: "New phrase"; enabled: busy === 0 && !netOpening && fNet.text.trim() !== "" && !qtDebugLog; onClicked: netOpenSession(true) }
                 }
                 Note { objectName: "net.note"; text: "Where your phrase goes: it is kept here as bytes as you type it (a paste passes through the clipboard), then sealed to ferrata_bridge_module's one-time key, so it never crosses Logos Core's IPC in clear, and wiped from this view. The module opens it only to derive the keys of public accounts /0-/7 and the bridge keys, wipes it, and keeps those keys in its memory (not dumpable, not readable by other processes) until you close the session, quit Basecamp, or 15 minutes pass without a call. What passed through Basecamp's window (your keystrokes, a paste) may stay in its memory until reused: use a test phrase, never one that holds value. Only this view can use the session (each call is signed with a key agreed when it opens). Every LEZ transaction is shown to you before the module signs it. The module accepts only the deployment it knows (bridge program, configuration, vault, Sepolia) and refuses any other; the network's own answers (positions, balances) are trusted as they come." }
             }

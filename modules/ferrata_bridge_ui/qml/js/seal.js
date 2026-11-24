@@ -307,12 +307,13 @@ function streamXor(key, data) {
     }
 }
 
-// The view's one-time secret: hashed from what the view has that nobody else sees (the phrase, when there is one) and
-// from Math.random (Qt's QRandomGenerator::global(): seeded from the operating system, not a cryptographic generator).
-function viewSecret(modulePk, phrase) {
+// The view's one-time secret: hashed from 32 bytes of the operating system's randomness the module sent with its key
+// (seal_key's `entropy`: QML has no cryptographic generator; Math.random is Qt's one process-wide MT19937, which any
+// mini-app in Basecamp's window can sample), the phrase when there is one, and Math.random and the time besides.
+function viewSecret(modulePk, phrase, entropy) {
     var noise = new Uint8Array(64), i;
     for (i = 0; i < 64; i++) noise[i] = Math.floor(Math.random() * 256);
-    var parts = [utf8(LABEL + "/view-secret"), modulePk, noise, utf8(String(Date.now()))];
+    var parts = [entropy, utf8(LABEL + "/view-secret"), modulePk, noise, utf8(String(Date.now()))];
     if (phrase) parts.push(phrase);
     var all = concat(parts);
     var sk = sha256(all);
@@ -320,10 +321,12 @@ function viewSecret(modulePk, phrase) {
     return sk;
 }
 
-function agree(modulePkHex, phrase) {
-    var modulePk = unhex(modulePkHex);
-    if (!modulePk || modulePk.length !== 32) return null;
-    var sk = viewSecret(modulePk, phrase);
+// No agreement without the module's 32 bytes of entropy.
+function agree(modulePkHex, phrase, entropyHex) {
+    var modulePk = unhex(modulePkHex), entropy = unhex(entropyHex);
+    if (!modulePk || modulePk.length !== 32 || !entropy || entropy.length !== 32) return null;
+    var sk = viewSecret(modulePk, phrase, entropy);
+    wipe(entropy);
     var viewPk = x25519Base(sk), shared = x25519(sk, modulePk);
     wipe(sk);
     var zero = true;
@@ -336,8 +339,8 @@ function agree(modulePkHex, phrase) {
 
 // Seals the phrase (its UTF-8 bytes, which the caller then wipes) to the module's one-time key: the open_network
 // parameters view_key and phrase_sealed, and the session's keys (kept by the view for the MACs).
-function sealPhrase(modulePkHex, phrase) {
-    var a = agree(modulePkHex, phrase);
+function sealPhrase(modulePkHex, phrase, entropyHex) {
+    var a = agree(modulePkHex, phrase, entropyHex);
     if (!a) return null;
     var ct = new Uint8Array(phrase.length);
     ct.set(phrase);
@@ -349,7 +352,7 @@ function sealPhrase(modulePkHex, phrase) {
 }
 
 // For a new phrase: the view's key alone (the module seals the words to it).
-function viewKeyFor(modulePkHex) { return agree(modulePkHex, null); }
+function viewKeyFor(modulePkHex, entropyHex) { return agree(modulePkHex, null, entropyHex); }
 
 // The words the module sealed to the view: their bytes (wiped by the caller), or null when the MAC does not hold.
 function openWords(keys, ctHex, macHex) {
