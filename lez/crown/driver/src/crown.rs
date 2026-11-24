@@ -94,8 +94,13 @@ const STAND_IN_BOOTSTRAP_SLOT: u64 = 1409 * 8192 + 64;
 /// blocks with the wall clock takes an `Init` only inside the weak-subjectivity period of its checkpoint (3,532 epochs
 /// on Sepolia's configuration), so a run later than that after period 1409 names a recent slot (CI's
 /// `scripts/ci/sequencer-roundtrip.sh`: 64 slots into a period whose next 64 slots per capture have passed).
-fn stand_in_bootstrap_slot() -> u64 {
-    std::env::var("CROWN_STAND_IN_SLOT").ok().and_then(|s| s.parse().ok()).unwrap_or(STAND_IN_BOOTSTRAP_SLOT)
+/// A value that is not a slot number is an error, not the default (whose window ends about 26 November 2026).
+fn stand_in_bootstrap_slot() -> Result<u64> {
+    match std::env::var("CROWN_STAND_IN_SLOT") {
+        Ok(text) => text.trim().parse().map_err(|_| anyhow!("CROWN_STAND_IN_SLOT={text:?} is not a slot number")),
+        Err(std::env::VarError::NotPresent) => Ok(STAND_IN_BOOTSTRAP_SLOT),
+        Err(e) => bail!("CROWN_STAND_IN_SLOT: {e}"),
+    }
 }
 /// How far back from a capture's block the ETH schedule 0's time is searched (registration
 /// happens in the deploy, hours before the deposits).
@@ -696,7 +701,7 @@ pub fn stand_in_base() -> Result<Chain> {
     let fake = fake_committee(512, 0x5e);
     let block0 = sha256(b"ferrata-crown/stand-in/bootstrap execution block (not a block)");
     let (state_root, branches) = sparse_tree(&[(CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS, fake.committee.hash_tree_root())], 9_001);
-    let header0 = gloas_header(stand_in_bootstrap_slot(), block0, state_root, 9_100);
+    let header0 = gloas_header(stand_in_bootstrap_slot()?, block0, state_root, 9_100);
     let bootstrap = LightClientBootstrap {
         header: header0.clone(),
         current_sync_committee: fake.committee.clone(),
@@ -720,7 +725,7 @@ fn stand_in_update(config: &Config, i: u64, block_hash: Root) -> Result<LightCli
     let fake = fake_committee(512, 0x5e);
     let spec = config.spec();
     let ctx = CoreContext { spec: &spec, genesis_validators_root: config.genesis_validators_root, bls: &BLS };
-    let finalized_slot = stand_in_bootstrap_slot() + 64 * i;
+    let finalized_slot = stand_in_bootstrap_slot()? + 64 * i;
     let finalized = gloas_header(finalized_slot, block_hash, filler(9_200 + i), 9_300 + 100 * i);
     let (attested_state, branches) = sparse_tree(&[(FINALIZED_ROOT_GINDEX_GLOAS, finalized.beacon.hash_tree_root())], 9_400 + i);
     let attested = gloas_header(finalized_slot + 32, filler(9_500 + i), attested_state, 9_600 + 100 * i);
