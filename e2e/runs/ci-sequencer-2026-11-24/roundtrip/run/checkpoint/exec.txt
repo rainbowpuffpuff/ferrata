@@ -1,1 +1,1 @@
-{"executor_wall_s":0.434881854,"image_id":"0xdafa6ab9a26841681fd071b8e4cdfae514371f82902426dc9fb1e2c80d29cda0","input_bytes":1279649,"journal_bytes":544,"journal_equals_native":true,"padded_cycles":12582912,"po2":[20,20,20,20,20,20,20,20,20,20,20,20],"segments":12,"user_cycles":9348406}
+{"executor_wall_s":0.482167856,"image_id":"0xdafa6ab9a26841681fd071b8e4cdfae514371f82902426dc9fb1e2c80d29cda0","input_bytes":1279661,"journal_bytes":544,"journal_equals_native":true,"padded_cycles":12582912,"po2":[20,20,20,20,20,20,20,20,20,20,20,20],"segments":12,"user_cycles":9335467}

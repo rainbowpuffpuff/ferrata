@@ -1,40 +1,48 @@
 {
   "fork": {
-    "block": 12200361,
-    "hash": "0x56d10a8725f576d93fa1be580163fb8cd79eb1a523ddfa4f778edd57dadc749e",
-    "time": "2026-11-24T04:43:00Z"
+    "block": 12203095,
+    "hash": "0x0a100fa0511b0abca17d306e02a437ff3499fddfd0ae05ba7fff02c04c308731",
+    "time": "2026-11-24T14:12:24Z",
+    "ageS": 957,
+    "maxAgeS": 3600,
+    "rpc": "https://ethereum-sepolia-rpc.publicnode.com"
   },
-  "standInSlot": 11640896,
+  "standInSlot": 11649088,
   "vault": "0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516",
-  "configId": "0xa62fb073bd6f4022aab5bf1df9efd607c083283264aaf2ec8fe6eaf5bb46d2ab",
+  "configId": "0xd38bff1d95d9441377a6f2ff257f4b5f060614214d5af3f196b8a39f0b8311e6",
   "deposit": {
-    "tx": "0x361f55b2772b4101dbd8ca21def839021e6ef2ab6de886b42caa333210d09c1e",
+    "tx": "0x5bc73d2a3ae9dc9a0fae4d10525801ae2d42741b19be27658254ef73ca7ca200",
     "denominationWei": "1000000000000000"
   },
   "claim": {
-    "tx": "73417d65fff98c84e969de481d220069b0739fbf03077ec3f4a79d1b195ed8ce",
+    "tx": "ad02e144dede462189601665e2bbab5e02ef6a3315636e5c9a53fdfdc1775ea2",
     "holdingAfterClaim": "1000000000000000"
   },
   "burn": {
-    "tx": "b9d3c862ca68d872fe55aca72711eef7cb7228550fe41a87deec6ec1a2a166c5",
-    "recipient": "0xF74077965351A6fe64cA1124762ceA9D22d1cE2e",
+    "tx": "5f854d592a8e5e1dba1b86272c1db93d10ed081921e35970773be3e747b795e7",
+    "recipient": "0xC5318b5f799EDDec797e4fF8502EF6f69a2398bC",
     "holdingAfterBurn": "0"
   },
   "checkpoint": {
-    "burnRoot": "0xedac98ed007261fa1a5af3ca961f89bd9bb71e02ae7013b52248b495607867dc",
+    "burnRoot": "0x5ec74bb264f97bbc0dc38c1dc5fef1db6d143b7682043bcb6c73d70a5286fecc",
     "burnCount": "1",
-    "newState": "0x75037d4d2d4080a62476f6ce8e0a4b09797310044c75bfa8bbf7cfb6e113b962",
+    "newState": "0x30bd250244169c2c23da06e6f29f79c2e1036acf843eef6dcbe8cb152d6162e4",
     "tipId": "30",
-    "vaultFinalState": "0x75037d4d2d4080a62476f6ce8e0a4b09797310044c75bfa8bbf7cfb6e113b962",
+    "vaultFinalState": "0x30bd250244169c2c23da06e6f29f79c2e1036acf843eef6dcbe8cb152d6162e4",
     "burnRootAccepted": true
   },
   "release": {
-    "tx": "0x05288fac33825493d194b91ee8794f777c1f41a436eee1b1fcbb060b871ef684",
+    "tx": "0x83961a9bea86f95704ad048fd749dc4bfff3eef44e4fe36d972ffce7fafa5041",
     "amountWei": "1000000000000000",
     "relayFeeWei": "2000000000000",
     "creditedFeesWei": "1000000000000",
     "recipientBalanceWei": "997000000000000",
-    "nullifier": "0x5f4aa3df33d51f50c0c852e7fac18a00fd10bc950aaae7a150a95dc1800342f1",
+    "nullifier": "0x7c3fea11dd42d7a42f76c0614c661606aa58fb09a8f8cafff2c271907c0068c0",
+    "replay": {
+      "callExit": 1,
+      "revertSelector": "0xcad2ae02",
+      "nullifierUsed": true
+    },
     "replayRefused": true
   }
 }

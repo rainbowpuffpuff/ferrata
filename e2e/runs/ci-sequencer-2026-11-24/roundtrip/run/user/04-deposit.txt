@@ -1,4 +1,4 @@
-$ ferrata --seed <work>/user/seed.txt --eth-rpc http://127.0.0.1:18547 --chain-id 11155111 --vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 --from-block 12200361 deposit --denomination 0 --kind public --i-accept-public-account --keystore <work>/user/keystore/depositor --password-file <work>/user/eth.pass --send --yes
+$ ferrata --seed <work>/user/seed.txt --eth-rpc http://127.0.0.1:18547 --chain-id 11155111 --vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 --from-block 12203095 deposit --denomination 0 --kind public --i-accept-public-account --keystore <work>/user/keystore/depositor --password-file <work>/user/eth.pass --send --yes
 
 deposit to the vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 on chain 11155111
   denomination  0.001 ETH (1000000000000000 base units, 18 decimals)
@@ -21,4 +21,4 @@ privacy of these choices: High: a direct link is public
   ok Delayed claim: held for 9 h, so the claim's time does not point at your deposit.
   ok Private fee path: the claim's LEZ fee is paid inside its proof (or by a relayer); no fee payment ties the claim to you.
 WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
-sent: 0x361f55b2772b4101dbd8ca21def839021e6ef2ab6de886b42caa333210d09c1e in block 12200370
+sent: 0x5bc73d2a3ae9dc9a0fae4d10525801ae2d42741b19be27658254ef73ca7ca200 in block 12203104

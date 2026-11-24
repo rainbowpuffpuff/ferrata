@@ -7,8 +7,8 @@
 #
 # STAGE is one of build, run, check, summary; without one, all four in this order. The CI job
 # (.github/workflows/sequencer.yml, job `sequencer-roundtrip`) runs one stage per step, each with its own timeout; the
-# build box (spike/modal-build's mrun; never a laptop) runs them in one call. RESULTS-DIR must be under e2e/runs/
-# (forge reads the vault's parameters there: vault/foundry.toml's fs_permissions).
+# build box (spike/modal-build's mrun; never a laptop) runs them in one call. For the stage run, RESULTS-DIR must be
+# under e2e/runs/ (forge reads the vault's parameters there: vault/foundry.toml's fs_permissions).
 #
 #   build    the tools, from this tree: the vault (forge), the release guest and ferrata-e2e (bridge/), the rule (B)
 #            checkpoint guest and ci_zone (checkpoint/), the LEZ guests (the attestation program and the bridge program
@@ -61,7 +61,9 @@ for s in $STAGES; do
 done
 mkdir -p "$OUT"
 OUT="$(cd "$OUT" && pwd)"
-case "$OUT" in "$REPO"/e2e/runs/*) ;; *) die "RESULTS-DIR must be under e2e/runs/ (vault/foundry.toml's fs_permissions)" ;; esac
+case " $STAGES " in
+  *" run "*) case "$OUT" in "$REPO"/e2e/runs/*) ;; *) die "RESULTS-DIR must be under e2e/runs/ (vault/foundry.toml's fs_permissions)" ;; esac ;;
+esac
 LOG="$OUT/sequencer-roundtrip.log"
 touch "$LOG"
 # shellcheck source=scripts/ci/sequencer-records.sh
