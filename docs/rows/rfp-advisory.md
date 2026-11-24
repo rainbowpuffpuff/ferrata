@@ -1,6 +1,6 @@
 # Stream rfp-advisory: proposed changes for the integrator
 
-**Folded on `integration10`, 21 November 2026:** the requirement rows (R.8, Sec.2 and Sec.3 to in part; the reasons of
+**Folded on 21 November 2026:** the requirement rows (R.8, Sec.2 and Sec.3 to in part; the reasons of
 Sec.6, Sec.8 and Sec.9 extended) into `docs/requirements-status.md`, with the counts there, in `docs/traceability.md`
 and in README.md; row 154, the EVIDENCE header's list of transactions and the one-line notes on rows 41, 42, 91, 92,
 141 and 142 into `docs/EVIDENCE.md`. **Applied on `integration9`, 22 November 2026,** once `rfp-docs-final` and `rfp-ci-release` had
