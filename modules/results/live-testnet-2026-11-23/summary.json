@@ -818,7 +818,7 @@
     "health": [
      {
       "chain": "sepolia",
-      "daemon": "modules-live",
+      "daemon": "live-testnet",
       "failed_rounds": 0,
       "failing_sends": 0,
       "finalized_slot": 11642880,
@@ -868,7 +868,7 @@
     "health": [
      {
       "chain": "sepolia",
-      "daemon": "modules-live",
+      "daemon": "live-testnet",
       "failed_rounds": 0,
       "failing_sends": 0,
       "finalized_slot": 11643104,

@@ -1,6 +1,6 @@
 # live-testnet.sh session: ferrata_updater_module on the public test network (LEZ v0.4.0-rc3), our own Sepolia instance.
 [daemon]
-name = "modules-live"
+name = "live-testnet"
 state_dir = "<out>/session/updater-state"
 poll_secs = 24
 listen = "127.0.0.1:9464"

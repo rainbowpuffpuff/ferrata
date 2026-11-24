@@ -381,7 +381,7 @@ do_session() {
   cat > "$W/req/updater.toml" <<T
 # live-testnet.sh session: ferrata_updater_module on the public test network (LEZ $TAG), our own Sepolia instance.
 [daemon]
-name = "modules-live"
+name = "live-testnet"
 state_dir = "$W/updater-state"
 poll_secs = 24
 listen = "127.0.0.1:9464"
@@ -657,7 +657,7 @@ do_session2() {
 # live-testnet.sh session2: ferrata_updater_module on the public test network (LEZ $TAG), reaching it directly, with an
 # execution source through eth_rpc_module: every update's execution block confirmed before it is sent.
 [daemon]
-name = "modules-live-2"
+name = "live-testnet-2"
 state_dir = "$W/updater-state"
 poll_secs = 24
 listen = "127.0.0.1:9465"

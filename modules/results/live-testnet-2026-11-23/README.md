@@ -64,7 +64,7 @@ module's first round); `status` through Logos Core answered `running` 88 times o
 | structured logging | one line per transaction (step, result, gas, block, send-to-final time, hash: [`session/updater-module.log`](session/updater-module.log)), the journal (TSV), `/health` (JSON) and `/metrics` (Prometheus), and `status` through Logos Core (JSON, [`session/probes-u1/`](session/probes-u1/)) |
 | a clean shutdown path | `stop`: the round in hand finishes and the backend saves its follower, then `logosctl daemon stop` exit 0 (both sessions); after each restart the module went on from the saved follower |
 | (runnable on a network) | session 1 through a loopback relay; session 2 directly: `[sequencer] rpc` the network's https URL, Logos Core started with `FERRATA_SEQUENCER_REMOTE` (that URL) and `FERRATA_TESTNET_SEND=yes`, as an operator of a remote sequencer does (8 jobs, 24 of 24 transactions, `check.py` whole) |
-| the operator journey: install, configure, run, monitor | [operator guide](../../../docs/guides/operator-guide.md) §0 and §3 (the module's calls for providers, the execution endpoint and a remote sequencer: proposed text in `docs/rows/modules-live.md`); monitoring by `attest-monitor` on the same instance (88 polls, its alerts in [`session/monitor/`](session/monitor/)); both sessions' commands in `modules/scripts/live-testnet.sh` |
+| the operator journey: install, configure, run, monitor | [operator guide](../../../docs/guides/operator-guide.md) §0 and §3 (the module's calls for providers, the execution endpoint and a remote sequencer: §3.6); monitoring by `attest-monitor` on the same instance (88 polls, its alerts in [`session/monitor/`](session/monitor/)); both sessions' commands in `modules/scripts/live-testnet.sh` |
 
 ## RFP-021 P.6: CPU, memory and time of the off-chain components (measured)
 
@@ -208,6 +208,9 @@ python3 -I lez/updater/results/live-sepolia/check.py modules/results/live-testne
 ```
 
 ## Files
+
+The updater daemon's configured name is written `live-testnet` (session 2: `live-testnet-2`) throughout the record,
+the name `modules/scripts/live-testnet.sh` gives it now; the runs used an earlier working name.
 
 | file | what |
 |---|---|
