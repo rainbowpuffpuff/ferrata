@@ -323,7 +323,7 @@ u 16-release env RISC0_DEV_MODE=1 RISC0_HOME="$CI_RT_LEZ_HOME" "${F[@]}" --json 
   --seal "$W/seal.hex" --job-out "$W/release-job.json" || die "the release (user/16-release.txt)"
 grep -q 'journal equal to the native one' "$R/user/16-release.txt" || die "the release guest's journal was not checked against the native one"
 CALLDATA="$(grep -o -E 'data 0x[0-9a-f]+' "$R/user/16-release.txt" | tail -n 1 | awk '{print $2}')"
-ok "the release guest executed in dev mode: $(grep -m1 'journal equal to the native one' "$R/user/16-release.txt" | cut -c1-140)"
+ok "$(json_of "$R/user/16-release.txt" | jq -r '.report[] | select(test("journal equal to the native one"))' | head -n 1 | sed 's/^ *//' | cut -c1-160)"
 
 begin "release paid"
 rj="$(jq -r .journal "$W/release-job.json")"; rj="0x${rj#0x}"
@@ -352,11 +352,13 @@ ok "Ethereum tx $RELEASE_TX: the Release event pays out the burnt $AMOUNT wei: $
 begin "release again refused"
 [ -n "$CALLDATA" ] || die "the release's calldata was not printed (user/16-release.txt)"
 if cast call "$VAULT" "$CALLDATA" --from "$RELAYER" --rpc-url "$RPC" > "$W/replay.txt" 2>&1; then die "the vault accepts the same release again"; fi
+want_sel="$(cast sig 'NullifierAlreadyUsed()')"
+grep -q -i -- "$want_sel" "$W/replay.txt" || die "the same release reverted, but not with NullifierAlreadyUsed ($want_sel): $(head -c 300 "$W/replay.txt")"
 NULLIFIER="$(json_of "$R/user/16-release.txt" | jq -r .result.nullifier 2>/dev/null)"
 if [ -z "$NULLIFIER" ] || [ "$NULLIFIER" = null ]; then NULLIFIER="$(grep -o -E 'nullifier[^0-9a-fx]*0x[0-9a-f]{64}' "$R/user/16-release.txt" | grep -o -E '0x[0-9a-f]{64}' | head -n 1)"; fi
 USED="$([ -n "$NULLIFIER" ] && call 'nullifierUsed(bytes32)(bool)' "$NULLIFIER" || echo "?")"
 [ "$USED" = true ] || die "the release's nullifier is not marked used ($NULLIFIER: $USED)"
-ok "eth_call of the same release reverts ($(grep -o -E 'revert[^|]*' "$W/replay.txt" | head -n 1 | cut -c1-100)); nullifierUsed($NULLIFIER) = true"
+ok "eth_call of the same release reverts with NullifierAlreadyUsed ($want_sel); nullifierUsed($NULLIFIER) = true"
 
 # ---- the records ---------------------------------------------------------------------------------------------------
 "$B/crown-driver" export --chain stand-in "${D[@]}" --out "$R/lez/export" > "$W/export.log" 2>&1 || say "crown-driver export failed: $(tail -n 3 "$W/export.log")"
