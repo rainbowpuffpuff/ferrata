@@ -49,7 +49,8 @@ commit `6b42bc2e` (branch `ci-sequencer`), on 24 November 2026, 04:56:54–04:59
 anvil kept every transaction (the deployer and the relayer are impersonated; the user's deposit is signed with anvil's
 published dev key 2 and sent to anvil only); the public Sepolia RPC was read for the fork and nothing else.
 
-`sequencer-roundtrip.log` and `build.log` keep every call of that day, in order: the cold build (41 min: the vault
+`sequencer-roundtrip.log` keeps every call of that day, in order (`build.log` only the last two, warm, builds): the
+cold build (41 min: the vault
 1 min, `bridge/` 2 min, the rule (B) guest 2.5 min, `ci_zone` 8.5 min, the LEZ guests 1.3 min (their target directory
 warm from the attestation job's run), LEZ v0.4.0-rc1's standalone sequencer 10.5 min, crown-driver 7 min, `cli/`
 9.3 min); five run attempts that stopped, each fixed before the next (DeployVault refuses any verifier but RISC Zero's
