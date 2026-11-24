@@ -12,9 +12,13 @@
 //! under it with exactly the journal the tool computes natively before the job leaves the machine ([`check_receipt`]):
 //! a guest served by a dishonest network could otherwise write the claim's witness into what the relayer is handed.
 //!
-//! Absent (an origin that answers 4xx, or not over HTTP: a local sequencer), the claim pays its fee from the account
-//! that proves and its dry run says what that reveals; unreachable or malformed (5xx, a transport error, a document
-//! that does not parse), the claim stops: the weaker choice is never taken without the user's `--no-gas-drop`.
+//! Only an answer 404 or 410 means "this network publishes no relayer" (the claim then pays its fee from the account
+//! that proves, as without this module, and its dry run says what that reveals). Every other outcome stops the claim
+//! (and a burn that has no drop left, [`burn_without_remainder`]) with a message naming `--no-gas-drop`: 429 (with its
+//! Retry-After), any other 4xx, 5xx, a timeout, a transport error, a document that does not parse, a relayer that is
+//! paused or not accepting jobs ([`claim_choice`]). The terms are read over https, or over http from this machine only
+//! (a plain-http origin elsewhere could be answered by anyone on the path, who would then name the relayer the claim
+//! pays its relay fee to, or answer 404); the published inbox and guest must be https or the terms' own origin.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -89,6 +93,8 @@ pub struct Published {
     pub amount: u128,
     /// What a drop is meant to pay for (`claim`, `burn`).
     pub covers: Vec<String>,
+    /// Whether its inbox takes jobs now (the gateway's `accepting`; absent: yes). Read before the receipt is proven.
+    pub accepting: bool,
 }
 
 impl Published {
@@ -114,9 +120,23 @@ pub fn info_url(sequencer: &str) -> Option<String> {
     u.join(INFO_PATH).ok().map(String::from)
 }
 
+/// Whether `url` is https, or http to this machine (a loopback host).
+pub fn secure_origin(url: &str) -> bool {
+    url::Url::parse(url).is_ok_and(|u| {
+        u.scheme() == "https"
+            || (u.scheme() == "http" && matches!(u.host_str(), Some("127.0.0.1" | "localhost" | "[::1]" | "::1")))
+    })
+}
+
+/// A published URL read against `base`: https, or on `base`'s own origin.
 fn http_url(base: &str, s: &str, what: &str) -> Result<String> {
-    let u = url::Url::parse(base)?.join(s).with_context(|| format!("the published {what} {s:?}"))?;
+    let b = url::Url::parse(base)?;
+    let u = b.join(s).with_context(|| format!("the published {what} {s:?}"))?;
     ensure!(matches!(u.scheme(), "http" | "https"), "the published {what} {u} is not http(s)");
+    ensure!(
+        u.scheme() == "https" || u.origin() == b.origin(),
+        "the published {what} {u} is plain http on another origin than the terms ({base})"
+    );
     Ok(u.into())
 }
 
@@ -146,6 +166,7 @@ pub fn parse(source: &str, body: &[u8]) -> Result<Published> {
         guest: http_url(source, s("guest")?, "guest")?,
         amount,
         covers,
+        accepting: v.get("accepting").and_then(Value::as_bool).unwrap_or(true),
     })
 }
 
@@ -153,18 +174,63 @@ fn client(timeout: Duration) -> Result<reqwest::Client> {
     Ok(reqwest::Client::builder().timeout(timeout).build()?)
 }
 
-/// The gas-drop relayer the network behind `sequencer` publishes: `None` when it publishes none (an answer 4xx, or a
-/// sequencer not reached over HTTP); an error when it cannot be read (5xx, transport, a document that does not parse).
+/// The gas-drop relayer the network behind `sequencer` publishes: `None` only for an answer 404 or 410 (or a sequencer
+/// URL that is not http(s)); an error for anything else ([`discover_with`], 20 s).
 pub async fn discover(sequencer: &str) -> Result<Option<Published>> {
+    discover_with(sequencer, Duration::from_secs(20)).await
+}
+
+/// [`discover`] with its timeout.
+pub async fn discover_with(sequencer: &str, timeout: Duration) -> Result<Option<Published>> {
     let Some(url) = info_url(sequencer) else { return Ok(None) };
-    let r = client(Duration::from_secs(20))?.get(&url).send().await.with_context(|| format!("GET {url}"))?;
+    ensure!(
+        secure_origin(&url),
+        "{url} is plain http to another machine: anyone on the path could answer it, naming the relayer the claim pays its relay fee to or hiding it; use the sequencer's https URL, or name a relayer's inbox yourself (--gas-drop-inbox and --relayer)"
+    );
+    let r = client(timeout)?.get(&url).send().await.with_context(|| format!("GET {url}"))?;
     let status = r.status();
-    if status.is_client_error() {
+    if matches!(status.as_u16(), 404 | 410) {
         return Ok(None);
     }
+    let retry = r.headers().get("retry-after").and_then(|v| v.to_str().ok()).map(String::from);
     let body = r.bytes().await.with_context(|| format!("GET {url}"))?;
-    ensure!(status.is_success(), "GET {url}: {status}: {}", String::from_utf8_lossy(&body[..body.len().min(300)]));
+    let text = String::from_utf8_lossy(&body[..body.len().min(300)]).into_owned();
+    if status.as_u16() == 429 {
+        bail!("GET {url}: 429 Too Many Requests{}: {text}", retry.map(|r| format!(" (retry after {r} s)")).unwrap_or_default());
+    }
+    ensure!(status.is_success(), "GET {url}: {status}: {text}");
     parse(&url, &body).map(Some).with_context(|| format!("the gas-drop relayer published at {url}"))
+}
+
+/// The opt-out every refusal of this module names.
+pub const OPT_OUT: &str = "or pay the LEZ fee from your own private account (--no-gas-drop; the dry run's fee payer line says what that reveals)";
+
+/// A claim's fee payer from what [`discover`] found at `info`: the network's relayer if it publishes one that takes
+/// jobs; `None` (the account that proves pays) only when the network publishes none (404, 410); an error, naming
+/// `--no-gas-drop`, for everything else: the claim stops instead of taking the weaker fee payer.
+pub fn claim_choice(found: Result<Option<Published>>, info: &str) -> Result<Option<Published>> {
+    match found {
+        Ok(Some(p)) if !p.accepting => {
+            bail!("the network's gas-drop relayer {} takes no jobs now (its inbox is full): try again later, {OPT_OUT}", hx(&p.relayer))
+        }
+        Ok(found) => Ok(found),
+        Err(e) => Err(e.context(format!("the network's gas-drop relayer ({info}) could not be read: try again, {OPT_OUT}"))),
+    }
+}
+
+/// A private burn with no drop of this wallet holding native LEZ: its own private account pays only if the network
+/// publishes no relayer (404, 410: as without a gas drop). With a relayer published, a drop would have been the default
+/// (a drop pays the claim and one burn), so paying from the user's account needs `--no-gas-drop`; a network that cannot
+/// be read stops the burn.
+pub fn burn_without_remainder(found: Result<Option<Published>>, info: &str) -> Result<()> {
+    match found {
+        Ok(None) => Ok(()),
+        Ok(Some(p)) => bail!(
+            "no gas drop of this wallet holds native LEZ for this burn's fee (a drop pays a claim and one burn) and the network publishes relayer {}: paying from your own private account reveals where its native LEZ came from; add --no-gas-drop to confirm that",
+            hx(&p.relayer)
+        ),
+        Err(e) => Err(e.context(format!("the network's gas-drop relayer ({info}) could not be read: try again, {OPT_OUT}"))),
+    }
 }
 
 /// The image id of a guest ELF.
@@ -234,7 +300,10 @@ pub async fn post_job(url: &str, job: &Value) -> Result<String> {
     if status.as_u16() == 409 {
         return Ok(format!("{url} (it holds this deposit's job already: {short})"));
     }
-    ensure!(status.is_success(), "the relayer's inbox {url} refused the job: {status}: {short}");
+    ensure!(
+        status.is_success(),
+        "the relayer's inbox {url} refused the job: {status}: {short}; nothing was paid: try again later (the same command reuses its one-time account), name another relayer (--relayer, --gas-drop-inbox), {OPT_OUT}"
+    );
     let job = serde_json::from_str::<Value>(&text).ok().and_then(|v| v["job"].as_str().map(String::from));
     Ok(match job {
         Some(j) => format!("{url} (job {j})"),
@@ -256,6 +325,19 @@ mod tests {
     }
 
     #[test]
+    fn only_https_or_this_machine_is_read() {
+        assert!(secure_origin("https://ferrata.example/relayer/gas-drop"));
+        assert!(secure_origin("http://127.0.0.1:8090/relayer/gas-drop") && secure_origin("http://localhost/x"));
+        assert!(!secure_origin("http://ferrata.example/relayer/gas-drop") && !secure_origin("http://10.0.0.5:3040/x"));
+    }
+
+    #[tokio::test]
+    async fn plain_http_elsewhere_stops_before_any_request() {
+        let e = format!("{:#}", claim_choice(discover("http://192.0.2.1:3040/rpc").await, "i").unwrap_err());
+        assert!(e.contains("plain http") && e.contains("--no-gas-drop"), "{e}");
+    }
+
+    #[test]
     fn info_url_is_the_sequencers_origin() {
         assert_eq!(info_url("https://ferrata.example/rpc").as_deref(), Some("https://ferrata.example/relayer/gas-drop"));
         assert_eq!(info_url("https://rpc.example").as_deref(), Some("https://rpc.example/relayer/gas-drop"));
@@ -273,8 +355,17 @@ mod tests {
         assert_eq!(p.covers, ["claim", "burn"]);
         assert_eq!(hx(&p.relayer), RL);
         assert!(p.describe().contains("for: claim, burn"));
-        // Without "covers": a claim's fee only.
-        assert_eq!(parse("https://n.example/x", doc("").as_bytes()).unwrap().covers, ["claim"]);
+        // Without "covers": a claim's fee only; without "accepting": accepting.
+        let p = parse("https://n.example/x", doc("").as_bytes()).unwrap();
+        assert_eq!(p.covers, ["claim"]);
+        assert!(p.accepting);
+        assert!(!parse("https://n.example/x", doc(r#","accepting":false"#).as_bytes()).unwrap().accepting);
+        // An https inbox elsewhere is accepted; plain http elsewhere is not; plain http on the terms' own origin is.
+        let abs = doc("").replace("\"/relayer/gas-drop\"", "\"https://relay.example/in\"");
+        assert_eq!(parse("https://n.example/x", abs.as_bytes()).unwrap().inbox, "https://relay.example/in");
+        let plain = doc("").replace("\"/relayer/gas-drop\"", "\"http://relay.example/in\"");
+        assert!(parse("https://n.example/x", plain.as_bytes()).is_err());
+        assert!(parse("http://127.0.0.1:9/relayer/gas-drop", doc("").as_bytes()).is_ok());
     }
 
     #[test]
@@ -302,6 +393,15 @@ mod tests {
 
     /// One HTTP answer from a local listener, for discover() and post_job().
     async fn serve_once(status: &'static str, body: &'static str) -> (String, tokio::task::JoinHandle<String>) {
+        serve_once_with(status, "", body).await
+    }
+
+    /// [`serve_once`] with extra header lines (each ending in \r\n).
+    async fn serve_once_with(
+        status: &'static str,
+        headers: &'static str,
+        body: &'static str,
+    ) -> (String, tokio::task::JoinHandle<String>) {
         use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
         let l = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = l.local_addr().unwrap().port();
@@ -329,7 +429,7 @@ mod tests {
             }
             let n = buf.len();
             let reply = format!(
-                "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                "HTTP/1.1 {status}\r\nContent-Type: application/json\r\n{headers}Content-Length: {}\r\nConnection: close\r\n\r\n{body}",
                 body.len()
             );
             s.write_all(reply.as_bytes()).await.unwrap();
@@ -339,20 +439,76 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn discover_none_error_and_found() {
-        let (seq, h) = serve_once("404 Not Found", "{}").await;
-        assert_eq!(discover(&seq).await.unwrap(), None);
-        assert!(h.await.unwrap().starts_with("GET /relayer/gas-drop "));
-        let (seq, _) = serve_once("405 Method Not Allowed", "").await;
-        assert_eq!(discover(&seq).await.unwrap(), None);
-        let (seq, _) = serve_once("503 Service Unavailable", r#"{"error":"the relayer is paused"}"#).await;
-        assert!(format!("{:#}", discover(&seq).await.unwrap_err()).contains("paused"));
-        let (seq, _) = serve_once("200 OK", "not json").await;
-        assert!(discover(&seq).await.is_err());
+    async fn only_404_and_410_mean_no_relayer() {
+        for status in ["404 Not Found", "410 Gone"] {
+            let (seq, h) = serve_once(status, "{}").await;
+            assert_eq!(claim_choice(discover(&seq).await, "i").unwrap(), None, "{status}: no relayer published");
+            assert!(h.await.unwrap().starts_with("GET /relayer/gas-drop "));
+        }
         let body: &'static str = Box::leak(doc("").into_boxed_str());
         let (seq, _) = serve_once("200 OK", body).await;
-        let p = discover(&seq).await.unwrap().unwrap();
+        let p = claim_choice(discover(&seq).await, "i").unwrap().unwrap();
         assert!(p.inbox.ends_with("/relayer/gas-drop") && p.inbox.starts_with("http://127.0.0.1:"));
+    }
+
+    /// Every other answer stops the claim, naming the opt-out: never the user's own account silently (review F1).
+    #[tokio::test]
+    async fn every_other_answer_stops_the_claim_and_the_burn() {
+        let cases: [(&'static str, &'static str, &'static str, &str); 9] = [
+            ("429 Too Many Requests", "Retry-After: 10\r\n", r#"{"error":"too many gas-drop reads"}"#, "retry after 10 s"),
+            ("403 Forbidden", "", "{}", "403"),
+            ("405 Method Not Allowed", "", "", "405"),
+            ("400 Bad Request", "", "{}", "400"),
+            ("500 Internal Server Error", "", "{}", "500"),
+            ("502 Bad Gateway", "", "", "502"),
+            ("503 Service Unavailable", "Retry-After: 600\r\n", r#"{"error":"the gas-drop relayer is paused: refilling"}"#, "paused"),
+            ("200 OK", "", "not json", "not JSON"),
+            ("200 OK", "", r#"{"relayer":"0x12"}"#, "relayer"),
+        ];
+        for (status, headers, body, says) in cases {
+            let (seq, _) = serve_once_with(status, headers, body).await;
+            let e = format!("{:#}", claim_choice(discover(&seq).await, "the terms").unwrap_err());
+            assert!(e.contains(says) && e.contains("--no-gas-drop"), "{status}: {e}");
+            let (seq, _) = serve_once_with(status, headers, body).await;
+            let e = format!("{:#}", burn_without_remainder(discover(&seq).await, "the terms").unwrap_err());
+            assert!(e.contains("--no-gas-drop"), "burn, {status}: {e}");
+        }
+        // A relayer that takes no jobs: stops before the receipt is proven.
+        let full: &'static str = Box::leak(doc(r#","accepting":false"#).into_boxed_str());
+        let (seq, _) = serve_once("200 OK", full).await;
+        let e = format!("{:#}", claim_choice(discover(&seq).await, "i").unwrap_err());
+        assert!(e.contains("takes no jobs") && e.contains("--no-gas-drop"), "{e}");
+    }
+
+    #[tokio::test]
+    async fn a_timeout_or_no_listener_stops_the_claim() {
+        // A listener that accepts and never answers: the timeout.
+        let l = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = l.local_addr().unwrap().port();
+        let hold = tokio::spawn(async move {
+            let (s, _) = l.accept().await.unwrap();
+            tokio::time::sleep(Duration::from_secs(30)).await;
+            drop(s);
+        });
+        let seq = format!("http://127.0.0.1:{port}/rpc");
+        let e = format!("{:#}", claim_choice(discover_with(&seq, Duration::from_secs(1)).await, "i").unwrap_err());
+        assert!(e.contains("--no-gas-drop"), "{e}");
+        hold.abort();
+        // Nothing listening: connection refused.
+        let free = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = free.local_addr().unwrap().port();
+        drop(free);
+        let seq = format!("http://127.0.0.1:{port}/rpc");
+        assert!(claim_choice(discover(&seq).await, "i").is_err());
+        assert!(burn_without_remainder(discover(&seq).await, "i").is_err());
+    }
+
+    #[test]
+    fn a_burn_without_a_drop_left() {
+        assert!(burn_without_remainder(Ok(None), "i").is_ok(), "no relayer published: the own account, as without drops");
+        let p = parse("https://n.example/x", doc("").as_bytes()).unwrap();
+        let e = format!("{:#}", burn_without_remainder(Ok(Some(p)), "i").unwrap_err());
+        assert!(e.contains("add --no-gas-drop to confirm"), "{e}");
     }
 
     #[tokio::test]
@@ -365,6 +521,7 @@ mod tests {
         let (url, _) = serve_once("409 Conflict", r#"{"error":"held"}"#).await;
         assert!(post_job(&url, &job).await.unwrap().contains("holds this deposit's job already"));
         let (url, _) = serve_once("429 Too Many Requests", r#"{"error":"per-IP limit"}"#).await;
-        assert!(format!("{:#}", post_job(&url, &job).await.unwrap_err()).contains("per-IP limit"));
+        let e = format!("{:#}", post_job(&url, &job).await.unwrap_err());
+        assert!(e.contains("per-IP limit") && e.contains("--no-gas-drop"), "{e}");
     }
 }

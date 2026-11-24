@@ -471,17 +471,28 @@ async fn run(cli: Cli, out: &mut flow::Out) -> Result<(&'static str, serde_json:
                         record,
                         wait_secs: gas_drop_wait,
                     }),
-                    // The network's relayer, by default (U.5, Priv.7): read from the sequencer's origin.
+                    // The network's relayer, by default (U.5, Priv.7): read from the sequencer's origin. Only "none
+                    // published" (404, 410) leaves the fee to the account that proves; anything else stops the claim.
                     None => {
                         let rpc = need(&c.sequencer, "--sequencer (or FERRATA_SEQUENCER)")?;
-                        let found = gasdrop_net::discover(&rpc).await.with_context(|| {
-                            format!("the network's gas-drop relayer ({}) could not be read: try again, or pay the LEZ fee from your own private account (--no-gas-drop; the dry run's fee payer line says what that reveals)", gasdrop_net::info_url(&rpc).unwrap_or_default())
-                        })?;
-                        match found {
+                        let info = gasdrop_net::info_url(&rpc).unwrap_or_default();
+                        match gasdrop_net::claim_choice(gasdrop_net::discover(&rpc).await, &info)? {
                             None => None,
                             Some(p) => {
                                 let elf = match gas_drop_elf {
-                                    Some(e) => e,
+                                    Some(e) => {
+                                        let id = gasdrop_net::image_id_of(
+                                            &std::fs::read(&e).with_context(|| format!("--gas-drop-elf {}", e.display()))?,
+                                        )?;
+                                        ensure!(
+                                            id == p.image_id,
+                                            "--gas-drop-elf {} is guest {}, but the network's relayer verifies receipts of {}: its receipt would be refused",
+                                            e.display(),
+                                            hx(&id),
+                                            hx(&p.image_id)
+                                        );
+                                        e
+                                    }
                                     None => gasdrop_net::fetch_guest(&p, &home).await?,
                                 };
                                 Some(flow::GasDropOpts {
@@ -541,6 +552,7 @@ async fn run(cli: Cli, out: &mut flow::Out) -> Result<(&'static str, serde_json:
             let (mut ledger, ctx) = zone(c, &e, &seed, payer.as_deref(), bridge_program).await?;
             let o = flow::BurnOpts {
                 gas_drops: if no_gas_drop { None } else { c.lez_wallet.as_ref().map(|h| h.join("ferrata-gas-drops.json")) },
+                network: if no_gas_drop { None } else { c.sequencer.clone() },
                 public: from == Kind::Public,
                 accept_public: i_accept_public_account,
                 account: a,

@@ -1486,6 +1486,7 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         yes: true,
         journal: None,
         gas_drops: None,
+        network: None,
     };
     let mut out = flow::Out::new(true);
     let unacked = flow::burn(&eth_side, &user, &mut zone, &ctx, &bopts, &mut out)
@@ -1965,6 +1966,7 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         yes: false,
         journal: None,
         gas_drops: None,
+        network: None,
     };
     let mut out = flow::Out::new(true);
     flow::burn(&eth_side, &user, &mut zone, &ctx, &bopts, &mut out).await?;
@@ -2485,6 +2487,7 @@ async fn counters_pairing_and_quiet_dry_runs(
         yes: send,
         journal: Some(journal.clone()),
         gas_drops: None,
+        network: None,
     };
     let (r1, r2, r3, r4) = (
         Address::repeat_byte(0xe1),

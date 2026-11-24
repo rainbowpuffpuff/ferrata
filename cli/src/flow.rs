@@ -551,7 +551,7 @@ pub async fn claim_row<L: Ledger>(
     if private {
         out.line(match drop {
             Some(GasDropOpts { published: Some(p), .. }) => format!(
-                "fee payer: a fresh one-time private account, credited (sealed) by the network's gas-drop {} and swept in the claim's proof; the relayer learns a time, that account and the address you post from, never which deposit; --no-gas-drop pays from your own private account instead",
+                "fee payer: a fresh one-time private account, credited (sealed) by the network's gas-drop {} and swept in the claim's proof; the claim names that relayer, so the deposit's registered relay fee (the same amount whoever is named; without a relayer it goes to the configuration's fee recipient) is paid to it; the relayer learns a time, that account and the address you post from, never which deposit (reading its terms told the network's host this address prepares a claim, as the history reads do); --no-gas-drop pays from your own private account instead",
                 p.describe()
             ),
             Some(_) => "fee payer: a fresh one-time private account, credited by the relayer (sealed) and swept in the claim's proof; the relayer learns a time and that account, never which deposit".to_string(),
@@ -650,6 +650,9 @@ pub struct BurnOpts {
     /// paid from a drop's one-time account that still holds native LEZ (what its relayer's credit left after the
     /// claim). `None` (`--no-gas-drop`): paid by the private account that proves.
     pub gas_drops: Option<PathBuf>,
+    /// The sequencer's URL, read for the network's relayer when no drop holds native LEZ
+    /// (`gasdrop_net::burn_without_remainder`); `None` with `--no-gas-drop`.
+    pub network: Option<String>,
 }
 
 pub struct Burned {
@@ -869,6 +872,12 @@ pub async fn burn<L: Ledger>(
             None => "fee payer: your private account that proves; its native LEZ came from somewhere (a faucet or a purchase can link it to you); a claim's gas drop (on by default when the network publishes a relayer) leaves enough in its one-time account to pay a burn".to_string(),
         });
     }
+    // No drop left: the account that proves pays only where the network publishes no relayer (404, 410), or with
+    // --no-gas-drop; an unreadable network stops the burn (review F1).
+    if let (false, Some(_), None, Some(rpc)) = (o.public, &o.gas_drops, drop_payer, &o.network) {
+        let info = crate::gasdrop_net::info_url(rpc).unwrap_or_default();
+        crate::gasdrop_net::burn_without_remainder(crate::gasdrop_net::discover(rpc).await, &info)?;
+    }
     out.line(format!("public: {}", lez::reveals(&plan.call)));
     if o.public && !o.accept_public {
         bail!("refusing to burn from a public account without --i-accept-public-account: the holder, its balance and the burn are public on LEZ; burn from a private account (the default) instead");
@@ -881,7 +890,16 @@ pub async fn burn<L: Ledger>(
         if let Some((id, _)) = drop_payer {
             ledger.set_private_fee_payer(id).await?;
         }
-        let h = ledger.submit(&plan.call).await?;
+        let h = match (ledger.submit(&plan.call).await, drop_payer) {
+            (Ok(h), _) => h,
+            (Err(e), Some((id, left))) => {
+                return Err(e.context(format!(
+                    "this burn's LEZ fee from the gas drop's one-time account {} ({left} native LEZ left) did not go through: if what is left does not cover the fee, add --no-gas-drop to pay from your own private account (the dry run's fee payer line says what that reveals)",
+                    hx(id.value())
+                )))
+            }
+            (Err(e), None) => return Err(e),
+        };
         out.line(format!("sent: {h}"));
         // Recorded for the next run; the burn is sent whatever happens here (review L1).
         if let Some(j) = &journal {
