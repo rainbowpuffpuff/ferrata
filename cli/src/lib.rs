@@ -4,7 +4,8 @@
 //! * [`eth`]: the vault's calls and events, a keystore signer, the verified deposit list.
 //! * [`lez`]: the zone's history, the claim and burn calls with the program's own checks, and
 //!   submission through LEZ's wallet library.
-//! * [`scan`]: recovery from the seed alone; [`burns`]: the burn-counter journal (a counter never given to two burns).
+//! * [`scan`]: recovery from the seed alone; [`burns`]: the burn-counter journal (a counter never given to two burns);
+//!   [`deposits`]: the deposit journal (a deposit sent once is not sent again by a run that did not see it land).
 //! * [`release`]: the release witness, journal, guest run and vault call.
 //! * [`relayer`]: the relayer daemon's checks and calls: releases and rule (B) checkpoints on the
 //!   vault, root imports and the gas drop on LEZ; [`relayerd`]: the daemon itself (`ferrata-relayer`,
@@ -21,6 +22,7 @@ pub mod attest;
 #[cfg(feature = "lez-wallet")]
 pub mod burns;
 pub mod codes;
+pub mod deposits;
 pub mod eth;
 #[cfg(feature = "lez-wallet")]
 pub mod flow;

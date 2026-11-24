@@ -31,7 +31,10 @@
 #                         approved at evm_signer_cli) and LEZ through lez_core (hook-logoseth.sh)
 #   run.sh robust NAME    the cli round trip with two deposits, the relayer daemon's root import on the sequencer
 #                         (U.03), the claims' fees paid from the relayer daemon's gas drops (U.05), a claim killed
-#                         between its proof and its sending and a burn killed after its sending (R.07) (hook-robust.sh)
+#                         between its proof and its sending and a burn killed after its sending (R.07); the second
+#                         deposit killed after its Ethereum transaction, the import killed after its send, the
+#                         attestor killed and cut off, the prover and its client killed mid-proof, the release's relayer
+#                         killed before and after its transaction (R.06, R.07) (hook-robust.sh)
 #   run.sh basecamp NAME  the round trip in the mini-app inside Logos Basecamp, ferrata_bridge_module and lez_core
 #                         loaded in the same Basecamp (hook-basecamp.sh; first modules/ferrata_bridge_ui/scripts/
 #                         basecamp-build.sh, BASECAMP_BUILD=its OUT)
@@ -74,9 +77,9 @@ build() {
   ( cd "$REPO/lez/crown/driver" && { [ -f Cargo.lock ] || cp "$REPO/lez/live/driver/Cargo.lock" Cargo.lock; } \
       && CARGO_TARGET_DIR="$TGT" cargo build --release ) > "$L/driver.log" 2>&1 \
     || { grep -E -A7 '^error' "$L/driver.log" | head -60; die "crown-driver build"; }
-  say "realblocks-crown, ferrata-e2e"
-  ( cd "$REPO/checkpoint" && cargo build --release -p realblocks --bin realblocks-crown ) > "$L/realblocks.log" 2>&1 \
-    || { grep -E -A7 '^error' "$L/realblocks.log" | head -40; die "realblocks-crown build"; }
+  say "realblocks-crown, ferrata_attestor, ferrata-e2e"
+  ( cd "$REPO/checkpoint" && cargo build --release -p realblocks --bin realblocks-crown && cargo build --release -p ferrata-attestor ) \
+    > "$L/realblocks.log" 2>&1 || { grep -E -A7 '^error' "$L/realblocks.log" | head -40; die "realblocks-crown or ferrata_attestor build"; }
   ( cd "$REPO/bridge" && cargo build --release -p ferrata-e2e ) > "$L/e2e.log" 2>&1 \
     || { grep -E -A7 '^error' "$L/e2e.log" | head -40; die "ferrata-e2e build"; }
   say "the gas-drop guest (bridge/guests' gasdrop, built by bridge's host crate with ~/.risc0, as cli/tests/relayer.sh)"
@@ -87,7 +90,8 @@ build() {
   mkdir -p "$T/bin"
   cp "$gd" "$T/bin/gasdrop.bin"
   cp "$TGT/release/ferrata" "$TGT/release/ferrata-relayer" "$TGT/release/seqnet-fund" "$TGT/release/seqnet-txs" \
-     "$TGT/release/crown-driver" "$REPO/checkpoint/target/release/realblocks-crown" "$REPO/bridge/target/release/ferrata-e2e" "$T/bin/"
+     "$TGT/release/crown-driver" "$REPO/checkpoint/target/release/realblocks-crown" "$REPO/checkpoint/target/release/ferrata_attestor" \
+     "$REPO/bridge/target/release/ferrata-e2e" "$T/bin/"
   say "the zone's bundle: $(basename "$BUNDLE"), with this tree's crown-driver and session.sh (lez/crown/build.sh repack)"
   mkdir -p "$T/crown-lez/bin"; cp "$T/bin/crown-driver" "$T/crown-lez/bin/crown-driver"
   CROWN_LEZ_TMP="$T/crown-lez" bash "$REPO/lez/crown/build.sh" repack "$BUNDLE" > "$L/repack.log" 2>&1 \

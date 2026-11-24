@@ -7,7 +7,8 @@ faults the test chooses as it goes, for the off-chain components' fault scenario
 Listens on 127.0.0.1 (the port written to F). Before each request it reads the control file C (one line):
 
   pass                  forward (also when C is missing or empty)
-  outage                every request answered 503, or the connection closed (as a provider that is down)
+  outage                every request answered 503, or the connection closed (as a provider that is down); GET
+                        requests too (a node's REST API: answered 503)
   hold METHOD SECS      a request whose JSON body names METHOD ("method") is forwarded, and its answer held SECS seconds
                         before it is returned (the test kills the client meanwhile: the call reached the server, the
                         client never learnt it); then C is set back to `pass`
@@ -96,6 +97,9 @@ def main():
                 pass
 
         def do_GET(self):
+            if control()[0] == "outage":
+                log("GET " + self.path.split("?")[0], "outage")
+                return self.reply(503, b"service unavailable", "text/plain")
             req = urllib.request.Request(a.upstream + self.path)
             try:
                 with urllib.request.urlopen(req, timeout=60) as r:

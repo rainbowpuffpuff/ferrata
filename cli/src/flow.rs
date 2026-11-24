@@ -12,8 +12,10 @@
 use std::path::{Path, PathBuf};
 
 use alloy::{
+    network::TransactionBuilder as _,
     primitives::{Address, Bytes, B256, U256},
-    providers::DynProvider,
+    providers::{DynProvider, Provider as _},
+    rpc::types::TransactionRequest,
     sol_types::SolCall as _,
 };
 use anyhow::{anyhow, bail, ensure, Context as _, Result};
@@ -21,7 +23,7 @@ use ferrata_bridge_core::{chain_id_u256, inbound, inbound::DestKind, Hash};
 use lee::AccountId;
 
 use crate::{
-    burns, codes,
+    burns, codes, deposits,
     eth::{self, IVault},
     hx,
     lez::{self, BurnFrom, Context, Ledger},
@@ -161,13 +163,95 @@ pub struct DepositOpts {
     pub send: bool,
     pub yes: bool,
     pub confirmations: u64,
+    /// The deposit journal's directory ([`crate::deposits`]): a sent deposit is recorded there before it is signed.
+    pub journal: Option<PathBuf>,
 }
 
 pub struct Deposited {
     pub commitment: Hash,
-    pub nullifier: Hash,
+    /// `None` for a deposit an earlier run sent and this one found on the chain (`ferrata scan` shows its nullifier).
+    pub nullifier: Option<Hash>,
     pub j: u64,
-    pub sent: Option<(B256, Option<u64>)>,
+    /// The transaction (unknown when an earlier run was killed before the node answered) and the leaf index.
+    pub sent: Option<(Option<B256>, Option<u64>)>,
+    /// Sent by an earlier run that did not see it land, found here on the chain: nothing sent by this run.
+    pub earlier: bool,
+}
+
+/// What an earlier, interrupted run of the same deposit left ([`resolve_open_deposits`]).
+#[derive(Default)]
+struct Resolved {
+    /// Found on chain, with its leaf index when its receipt names it: nothing is to be sent.
+    found: Option<(deposits::Entry, Option<u64>)>,
+    /// Never reached a node: sent again with its `j` and nonce.
+    resend: Option<deposits::Entry>,
+}
+
+/// The deposit journal's open entries of `depositor` resolved from the chain before a deposit is sent (R.7); a pending
+/// one stops the run.
+async fn resolve_open_deposits(
+    eth: &Eth,
+    p: &DynProvider,
+    l: &deposits::Locked<'_>,
+    ask: &deposits::Entry,
+    out: &mut Out,
+) -> Result<Resolved> {
+    let (mut found, mut resend) = (None, None);
+    for e in l.open_of(ask.chain_id, ask.vault, ask.depositor)? {
+        let count = eth::view(&eth.p, eth.vault, IVault::depositCountCall { depositor: e.depositor }, None).await?;
+        let latest = eth::retry_rpc(|| p.get_transaction_count(e.depositor).latest()).await?;
+        let pending = eth::retry_rpc(|| p.get_transaction_count(e.depositor).pending()).await?;
+        let known = match e.hash {
+            Some(h) => eth::retry_rpc(|| p.get_transaction_by_hash(h)).await?.is_some(),
+            None => false,
+        };
+        let same = e.same_ask(ask);
+        match deposits::status(&e, count, latest, pending, known) {
+            deposits::Status::OnChain => {
+                let leaf = match e.hash {
+                    Some(h) => eth::retry_rpc(|| p.get_transaction_receipt(h))
+                        .await?
+                        .and_then(|rc| eth::deposit_of_receipt(&rc).map(|d| d.leafIndex)),
+                    None => None,
+                };
+                out.line(format!(
+                    "deposit journal: an earlier run's {} is on the chain{} (it was interrupted before it saw it land)",
+                    e.describe(),
+                    leaf.map(|i| format!(", leaf {i}")).unwrap_or_default()
+                ));
+                l.resolved(&e)?;
+                if same && found.is_none() {
+                    found = Some((e, leaf));
+                }
+            }
+            deposits::Status::Pending => bail!(
+                "deposit journal: an earlier run's {} is pending at the node: not sending another deposit; run the \
+                 command again once it is mined (it is found then, and not sent twice)",
+                e.describe()
+            ),
+            deposits::Status::NotDeposited => {
+                out.line(format!(
+                    "deposit journal: an earlier run's {} was not deposited (its nonce went to another transaction, or it \
+                     reverted); nothing of it is on the chain",
+                    e.describe()
+                ));
+                l.resolved(&e)?;
+            }
+            deposits::Status::NotSent => {
+                out.line(format!(
+                    "deposit journal: an earlier run's {} never reached a node{}",
+                    e.describe(),
+                    if same { ": sent again with the same j and nonce" } else { ": this deposit takes its place" }
+                ));
+                if same {
+                    resend = Some(e);
+                } else {
+                    l.resolved(&e)?;
+                }
+            }
+        }
+    }
+    Ok(Resolved { found, resend })
 }
 
 /// `ferrata deposit`.
@@ -189,6 +273,43 @@ pub async fn deposit(
         o.account,
         o.gap
     );
+    let dk = if o.public { DestKind::Public } else { DestKind::Private };
+    let ask = deposits::Entry {
+        chain_id: eth.chain_id,
+        vault: eth.vault,
+        depositor,
+        j: 0,
+        token: o.token,
+        denomination: o.denomination,
+        destination: format!("{} /{}", kind_name(dk), o.account),
+        commitment: String::new(),
+        nonce: 0,
+        hash: None,
+        at: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs()),
+    };
+    // The deposit journal (R.7): a sending run holds its lock from here to the receipt and resolves what an earlier,
+    // interrupted run left before it plans anything; a dry run only names it.
+    let store = o.journal.as_deref().map(deposits::Store::new);
+    let locked = match (&store, signer, o.send) {
+        (Some(s), Some(_), true) => Some(s.lock()?),
+        _ => None,
+    };
+    let mut resend = None;
+    if let (Some(l), Some(sg)) = (&locked, signer) {
+        let Resolved { found, resend: again } = resolve_open_deposits(eth, &sg.p, l, &ask, out).await?;
+        if let Some((e, leaf)) = found {
+            out.line("the same deposit asked again: not depositing a second time (`ferrata scan` lists it)");
+            let commitment = crate::h32(&e.commitment).unwrap_or_default();
+            return Ok(Deposited { commitment, nullifier: None, j: e.j, sent: Some((e.hash, leaf)), earlier: true });
+        }
+        resend = again;
+    } else if let Some(s) = &store {
+        if let Ok(j) = s.peek() {
+            for e in j.open.iter().filter(|e| e.chain_id == ask.chain_id && e.vault == ask.vault && e.depositor == depositor) {
+                out.line(format!("deposit journal: open: {} (resolved from the chain when a deposit is sent)", e.describe()));
+            }
+        }
+    }
     let price = eth::deposit_price(&eth.p, eth.vault, o.token, o.denomination).await?;
     vault_freeze(
         eth,
@@ -205,7 +326,6 @@ pub async fn deposit(
     let j = eth::view(&eth.p, eth.vault, IVault::depositCountCall { depositor }, None).await?;
     let keys = seed.bridge_keys();
     let dests = seed.destinations(o.gap)?;
-    let dk = if o.public { DestKind::Public } else { DestKind::Private };
     let chain = chain_id_u256(eth.chain_id);
     let s = inbound::deposit_secret(&keys.auth, &chain, &eth.vault.into_array(), &depositor.into_array(), j);
     let dest = dests.of(dk, o.account);
@@ -308,20 +428,59 @@ pub async fn deposit(
         out.line("a public destination is sent only with --i-accept-public-account");
     }
     if !confirm(out, o.send, o.yes)? {
-        return Ok(Deposited { commitment, nullifier, j, sent: None });
+        return Ok(Deposited { commitment, nullifier: Some(nullifier), j, sent: None, earlier: false });
     }
     let signer = signer.ok_or_else(|| anyhow!("--send needs --keystore and --password-file"))?;
     if let Some(data) = approve_call {
         let rc = eth::send(&signer.p, depositor, o.token, data, U256::ZERO, o.confirmations).await?;
         out.line(format!("approved: {} in block {}", rc.transaction_hash, rc.block_number.unwrap_or_default()));
     }
-    let receipt = eth::send(&signer.p, depositor, eth.vault, input, value, o.confirmations).await?;
+    let receipt = match &locked {
+        None => eth::send(&signer.p, depositor, eth.vault, input, value, o.confirmations).await?,
+        Some(l) => {
+            // Recorded before it is signed, with the nonce it takes (an earlier run's that never left: the same one).
+            let tx = TransactionRequest::default().with_from(depositor).with_to(eth.vault).with_input(input).with_value(value);
+            if let Err(e) = signer.p.call(tx.clone()).await {
+                match eth::refusal_of(&e, "eth_call before sending") {
+                    Some(r) => bail!(r),
+                    None => bail!("the vault would revert: {e}"),
+                }
+            }
+            let nonce = match &resend {
+                Some(e) if e.j == j => e.nonce,
+                _ => eth::retry_rpc(|| signer.p.get_transaction_count(depositor).pending()).await?,
+            };
+            let entry = deposits::Entry { j, commitment: hx(&commitment), nonce, ..ask.clone() };
+            l.record(&entry)?;
+            let pending = signer.p.send_transaction(tx.with_nonce(nonce)).await.map_err(|e| {
+                match eth::refusal_of(&e, "eth_sendTransaction") {
+                    Some(r) => anyhow!(r),
+                    None => anyhow!(
+                        "sending: {e} (the deposit journal keeps it: the same command again finds it on the chain or sends it \
+                         again with the same nonce, never a second deposit)"
+                    ),
+                }
+            })?;
+            let hash = *pending.tx_hash();
+            l.sent(&entry, hash)?;
+            out.line(format!("transaction {hash} sent (nonce {nonce}); waiting for its receipt"));
+            let receipt = pending.with_required_confirmations(o.confirmations.max(1)).get_receipt().await.map_err(|e| {
+                anyhow!(
+                    "the deposit {hash} was sent and its receipt could not be read: {e}; the same command again finds it \
+                     on the chain (the deposit journal), and does not deposit twice"
+                )
+            })?;
+            l.resolved(&entry)?;
+            ensure!(receipt.status(), "the transaction {} reverted", receipt.transaction_hash);
+            receipt
+        }
+    };
     let leaf = eth::deposit_of_receipt(&receipt).map(|d| d.leafIndex);
     out.line(format!("sent: {} in block {}", receipt.transaction_hash, receipt.block_number.unwrap_or_default()));
     if leaf != Some(next_leaf) {
         out.line("note: another deposit landed first, so this deposit's claim delay differs from the one printed (`ferrata scan` shows it)");
     }
-    Ok(Deposited { commitment, nullifier, j, sent: Some((receipt.transaction_hash, leaf)) })
+    Ok(Deposited { commitment, nullifier: Some(nullifier), j, sent: Some((Some(receipt.transaction_hash), leaf)), earlier: false })
 }
 
 // ---- claim ---------------------------------------------------------------------------------------
