@@ -18,9 +18,11 @@ root's `.github/`, so nothing here runs from this repository). Each module is a 
 writes that repository from this one (the module's directory with its staged crate committed, since
 the builder copies only `rust-lib/` and a flake sees only tracked files).
 
-**Not done:** no catalog repository, module repositories, release, tag or index has been created or
-published (no push, no public network). The action itself has not run. Publishing is one owner step,
-prepared by [`RELEASE.md`](RELEASE.md): `modules/scripts/release-publish.sh ORG CATALOG_REPO
+**Published once,** by the owner, from `98375f82`: [`landclimber/ferrata-modules`](https://github.com/landclimber/ferrata-modules)
+(24 November 2026), the six modules as signed, immutable `<module>-v0.1.0` releases built by the action, the index
+on the catalog's `main`; read back in [`releases/RELEASE-INTEGRITY.md`](../../releases/RELEASE-INTEGRITY.md) and
+installed from in [`install-test-landclimber-2026-11-24/`](install-test-landclimber-2026-11-24/README.md). The mini-app
+(`ferrata_bridge_ui`, a ui module) is not in it. Publishing is one owner step, prepared by [`RELEASE.md`](RELEASE.md): `modules/scripts/release-publish.sh ORG CATALOG_REPO
 SIGNING_KEY_FILE --yes` generates the published catalog's `logos-repo.json` (the signer's `did:jwk` under
 `trustedSigners`, the `indexUrl`), exports the module repositories, assembles the catalog, checks the
 remote side read-only, then creates the repositories, pushes them and sets the signing secret, and stops:
@@ -52,4 +54,7 @@ module's log end to end and `advance` (`e2e.sh`), and the bridge module on the m
 (`bridge_e2e.sh`, with `RELEASE_ELF`). Its log, with those runs' check lines, is in `install-test/`
 (`modules/RESULTS.md`). `install-test-relayer/` is the relayer module's: installed by name from its own dry run's
 catalog, loaded, called, and its root imports on the mini-app's devnet through the installed module
-(`CATALOG_E2E_SCRIPTS=relayer-e2e.sh PARTS=roots`), 10 checks passed.
+(`CATALOG_E2E_SCRIPTS=relayer-e2e.sh PARTS=roots`), 10 checks passed. `install-test-landclimber-2026-11-24/` is the
+install from the published catalog: the six installed by name from its raw `logos-repo.json` URL with
+`signature_policy: require`, loaded and called, after an unsigned, an other-signer and a tampered copy and the
+catalog's package before its key was trusted were refused (56 of 56 steps).
