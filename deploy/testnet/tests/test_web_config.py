@@ -5,9 +5,11 @@ panels use the program their bundled client is written for: the wallet as this r
 v1, also where v2 is deployed and a v2 config was served before (the fault found on the live network: the panels
 pointed at programs their clients do not speak); a wallet with v2 clients gets v2 (v1 as legacy) and is left off
 without it; an unrecognised client is left off. The explorer's catalogue keeps v1; what the host set in a served config
-and the bundle leaves empty is kept, also when the last run stopped after installing the bundle's raw configs; the
-module's rpc is the site's own; files are written whole; the program streams' AGENTS sections and the host's limits are
-in /AGENTS.md once, also after a second run.
+and the bundle leaves empty is kept, the live file's values first (a hand-set lezReady false stays false) and the copy
+served after the last good run filling only what the live file lacks or leaves null, also when the last run stopped
+after installing the bundle's raw configs; the module's rpc is the site's own; files, /AGENTS.md included, are written
+whole (a new file renamed over the old); the program streams' AGENTS sections and the host's limits are in /AGENTS.md
+once, also after a second run.
 Run: python3 -I deploy/testnet/tests/test_web_config.py"""
 import json
 import pathlib
@@ -87,8 +89,11 @@ def configs(v2, clients):
 
 with tempfile.TemporaryDirectory() as d:
     www, stage, here, served = site(pathlib.Path(d), v2=True)
+    agents_inode = (www / "AGENTS.md").stat().st_ino
     r = run(www, stage, here, served)
     check("runs", r.returncode == 0)
+    check("/AGENTS.md written whole: a new file renamed over the old, not rewritten in place",
+          (www / "AGENTS.md").stat().st_ino != agents_inode)
     m = json.loads((www / "msg" / "config.json").read_text())
     check("messaging module: the v2 program, v1 as its legacy program, the site's own rpc (not a name served before)",
           m["program"] == MSG2 and m["legacy_program"] == MSG1 and m["rpc"] == "https://net.example/rpc" and m["note"] == "n")
@@ -133,5 +138,20 @@ check("a wallet whose clients are not recognised: its panels left off, whatever 
 m, w = configs(v2=True, clients="v1")
 check("stand-in v1 clients read as v1 (the markers, not the bundle's other text)",
       w.get("msg") == {"program": MSG1} and w.get("names") == {"program": NAMES1})
+with tempfile.TemporaryDirectory() as d:
+    www, stage, here, served = site(pathlib.Path(d), v2=True)
+    # The live file as this run found it (install-web.sh copies it into the stage before step 3): the operator closed
+    # deposits and moved fromBlock after the last good run, whose served copy still says otherwise.
+    (stage / "live-configs").mkdir()
+    (stage / "live-configs" / "wallet-config.json").write_text(json.dumps(
+        {"bridge": {"program": BRIDGE, "vault": "0x1949", "lezReady": False, "fromBlock": 12200000, "configId": None}}))
+    (served / "wallet-config.json").write_text(json.dumps(
+        {"bridge": {"program": BRIDGE, "vault": "0x1111", "lezReady": True, "fromBlock": 12196188, "configId": "0x37",
+                    "token": {"symbol": "TUSD"}}}))
+    run(www, stage, here, served)
+    b = json.loads((www / "wallet" / "config.json").read_text())["bridge"]
+    check("the live file's values win over the copy served after the last good run (lezReady false stays false, the "
+          "vault and fromBlock as set live); that copy fills only what the live file lacks or leaves null (token, configId)",
+          (b["lezReady"], b["fromBlock"], b["vault"], b["configId"], b["token"]) == (False, 12200000, "0x1949", "0x37", {"symbol": "TUSD"}))
 print("all passed" if not FAILED else f"FAILED {len(FAILED)}")
 sys.exit(1 if FAILED else 0)

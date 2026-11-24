@@ -207,8 +207,14 @@ monitor's, top-up's, gateway's and Caddy's go to CloudWatch Logs. Restarts are s
   root: messages v2 for the messaging module (v1 as legacy), left off on a host without it; the wallet's inbox and names
   panels on the program their bundled client is written for (v1 for the wallet as this repository bundles it, also
   where v2 is deployed and a v2 config was served before; v2 for v2 clients; off where that program is missing or the
-  client is not recognised); the explorer's catalogue on v1, what the host set in a served config kept (also after a
-  run stopped half way), the module's rpc the site's own, files written whole, each AGENTS section once.
+  client is not recognised); the explorer's catalogue on v1, what the host set in a served config kept (the live
+  file's values first, the copy served after the last good run filling only what it lacks or leaves null, also after
+  a run stopped half way), the module's rpc the site's own, files written whole (`/AGENTS.md` included), each AGENTS
+  section once.
+- `python3 -I deploy/testnet/tests/test_install_web.py`: `install-web.sh` itself, its shell steps run on a scratch
+  copy (its paths moved into a temporary tree, curl, caddy and systemctl stubbed): deposits closed by hand
+  (`lezReady` false, a later `fromBlock`) stay closed at the next install, and after a run stopped after step 3 the next
+  good run brings the host's values back.
 - `python3 -I deploy/testnet/tests/test_checkpoint_parent.py`: `ferrata-bridge-checkpoint`'s parent, its refusal to
   stack candidates and to build when the vault's `finalState` cannot be read, against a stand-in Sepolia endpoint;
   `--rebuild` with a stand-in `realblocks-crown` (its copy kept where no parent is chosen from).

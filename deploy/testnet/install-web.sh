@@ -21,9 +21,14 @@ SITES="$SSLIP"; [ -n "${FERRATA_DOMAIN:-}" ] && SITES="$FERRATA_DOMAIN, $SSLIP"
 RANGE_LIMIT=50   # the gateway's GATEWAY_MAX_RANGE: the explorer pages getBlockRange by it
 
 rm -rf "$STAGE"; mkdir -p "$STAGE"; tar -xzf "$TGZ" -C "$STAGE"
-# The wallet's and the messaging module's config as last served, kept outside the stage: web-config.py keeps what the
-# host set there and the bundle leaves empty (the wallet's bridge settings). Written below only once step 5 succeeds,
-# so a run stopped half way (the bundle's raw configs already in place) does not lose them; the first run copies them.
+# The wallet's and the messaging module's config as this run finds them, the host's hand edits included (deposits
+# closed with lezReady false), copied before step 3 replaces them with the bundle's raw ones: web-config.py keeps their
+# values first, where the bundle leaves them empty.
+install -d -m 755 "$STAGE/live-configs"
+for f in wallet msg; do [ ! -f "$WWW/$f/config.json" ] || cp "$WWW/$f/config.json" "$STAGE/live-configs/$f-config.json"; done
+# The same two as served after the last run that succeeded, kept outside the stage and written below only once step 5
+# succeeds: they fill only what the live copies lack or leave null, the raw configs a run stopped half way leaves in
+# place. The first run copies them.
 SERVED=/var/lib/ferrata/web-served
 install -d -m 755 "$SERVED"
 for f in wallet msg; do [ -f "$SERVED/$f-config.json" ] || [ ! -f "$WWW/$f/config.json" ] || cp "$WWW/$f/config.json" "$SERVED/$f-config.json"; done

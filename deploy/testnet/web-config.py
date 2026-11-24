@@ -8,10 +8,12 @@ URLs and the programs and instances it deployed (programs.json), and /AGENTS.md 
   PRIMARY      the site's name (the domain, else the sslip.io name)
   HERE         deploy/testnet (for host/www/AGENTS-limits.md)
   RANGE_LIMIT  the gateway's getBlockRange limit
-  STAGE        the unpacked web tarball (for the program streams' AGENTS sections)
-  SERVED       the wallet's and the messaging module's config as last served (wallet-config.json, msg-config.json):
-               install-web.sh keeps them outside the stage and writes them only after this step succeeds, so a run
-               stopped half way does not lose them
+  STAGE        the unpacked web tarball (for the program streams' AGENTS sections), with live-configs/: the wallet's
+               and the messaging module's config as this run found them (wallet-config.json, msg-config.json, the
+               host's hand edits included), which install-web.sh copies there before the bundle replaces them
+  SERVED       the same two as served after the last run that succeeded: install-web.sh keeps them outside the stage
+               and writes them only after this step succeeds; they fill only what the live copies lack or leave null
+               (the bundle's raw configs, which a run stopped half way leaves in place)
 
 The messaging module is the messages program's second version's client: it is pointed at `ferrata_msg_v2`
 (programs.json), the first version, live and immutable, named as legacy (the module reads its old inboxes); on a host
@@ -20,10 +22,11 @@ The wallet's inbox and names panels are pointed at the program their bundled cli
 own seed domains tell (wallet/msg/ferrata-msg.js, wallet/vendor/names.js): the first versions for the wallet as it is
 bundled now, the second ones once its clients are; a panel whose program is not deployed, or whose client is not
 recognised, is left off (the wallet says no program is configured). The explorer's catalogue keeps the first
-versions, whose IDLs and images it reads. A value the host set in a served config
-and the bundle leaves empty (null, or a key it does not have) is kept (the wallet's bridge settings); the module's rpc
-is the site's own, written each run (absolute: its command-line tool reads the file outside a browser). Each file is
-written whole (a new file renamed over the old).
+versions, whose IDLs and images it reads. What the host set in a served config is kept where the bundle leaves it
+empty (null, or a key it does not have): the wallet's bridge settings, hand edits included (deposits closed with
+lezReady false stay closed). The live file's values win; the copy last served fills only what the live file lacks or
+leaves null. The module's rpc is the site's own, written each run (absolute: its command-line tool reads the file
+outside a browser). Each file, /AGENTS.md included, is written whole (a new file renamed over the old).
 """
 import json
 import os
@@ -36,11 +39,16 @@ def load(path):
         return json.load(f)
 
 
-def save(path, value):
+def save_text(path, text):
+    """The file written whole: a new file renamed over the old, so a reader never sees half of it."""
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(value, f, indent=2)
+        f.write(text)
     os.replace(tmp, path)
+
+
+def save(path, value):
+    save_text(path, json.dumps(value, indent=2))
 
 
 def keep(new, old):
@@ -78,9 +86,13 @@ def written_for(path, markers):
     return next((name for name, marker in markers if marker in src), None)
 
 
-def served_before(served, name):
-    p = os.path.join(served, name)
-    return load(p) if served and os.path.exists(p) else {}
+def host_values(stage, served, name):
+    """What the host had set in a served config: the live file as this run found it (STAGE/live-configs/NAME) first;
+    the copy served after the last good run (SERVED/NAME) fills only what the live file lacks or leaves null."""
+    def read(d):
+        p = os.path.join(d, name) if d else ""
+        return load(p) if p and os.path.exists(p) else {}
+    return keep(read(os.path.join(stage, "live-configs") if stage else ""), read(served))
 
 
 def explorer(www, site, progs, range_limit):
@@ -108,11 +120,11 @@ def explorer(www, site, progs, range_limit):
     save(p, c)
 
 
-def messaging(www, site, progs, served):
+def messaging(www, site, progs, stage, served):
     m = os.path.join(www, "msg", "config.json")
     if not os.path.exists(m):
         return
-    c = keep(load(m), served_before(served, "msg-config.json"))
+    c = keep(load(m), host_values(stage, served, "msg-config.json"))
     program, legacy = current(progs, "ferrata_msg")
     c["program"] = program  # null without the second version: the module is left off
     if legacy:
@@ -139,15 +151,14 @@ def agents(www, primary, here, range_limit, stage):
             if first and first not in t2:
                 t2 = t2.rstrip() + "\n\n" + body + "\n"
     if t2 != t:
-        with open(a, "w", encoding="utf-8") as f:
-            f.write(t2)
+        save_text(a, t2)
 
 
-def wallet(www, progs, served):
+def wallet(www, progs, stage, served):
     w = os.path.join(www, "wallet", "config.json")
     if not os.path.exists(w):
         return
-    c = keep(load(w), served_before(served, "wallet-config.json"))
+    c = keep(load(w), host_values(stage, served, "wallet-config.json"))
     c.update({"network": "Ferrata LEZ testnet (rc3)", "rpc": "/rpc", "faucet": "/faucet", "explorer": "/explorer/"})
     a = account(progs, "ferrata_attestation")
     inst = (progs.get("instances") or {}).get("sepolia")
@@ -178,9 +189,9 @@ def main(argv):
     site = f"https://{primary}"
     progs = load(os.path.join(www, "programs.json"))
     explorer(www, site, progs, range_limit)
-    messaging(www, site, progs, served)
+    messaging(www, site, progs, stage, served)
     agents(www, primary, here, range_limit, stage)
-    wallet(www, progs, served)
+    wallet(www, progs, stage, served)
 
 
 if __name__ == "__main__":
