@@ -1,8 +1,8 @@
 # Third-party notices for the Basecamp release of Ferrata's Logos packages
 
 These notices go with every package of the release (`linux-amd64/*.lgx`, `darwin-arm64/*.lgx`, built from commit
-`a0f38827`). Ferrata's own code in them is licensed MIT OR Apache-2.0 (the repository's
-[LICENSE-MIT](https://github.com/rainbowpuffpuff/ferrata/blob/a0f388279e2de21305e0a8d1b0777f627ad165b9/LICENSE-MIT) and [LICENSE-APACHE](https://github.com/rainbowpuffpuff/ferrata/blob/a0f388279e2de21305e0a8d1b0777f627ad165b9/LICENSE-APACHE)); nothing here changes that. The packages
+`b6d9be61`). Ferrata's own code in them is licensed MIT OR Apache-2.0 (the repository's
+[LICENSE-MIT](https://github.com/rainbowpuffpuff/ferrata/blob/b6d9be6130ac58bb1d38de3dc7766332a2665e0b/LICENSE-MIT) and [LICENSE-APACHE](https://github.com/rainbowpuffpuff/ferrata/blob/b6d9be6130ac58bb1d38de3dc7766332a2665e0b/LICENSE-APACHE)); nothing here changes that. The packages
 also contain code by others, listed below with its licence; the licence texts are in [`licenses/`](licenses/).
 
 ## What each package contains
@@ -25,7 +25,8 @@ Qt and Logos Core are not in the packages: the plugins use the ones of the Logos
 
 The versions are those of the modules' nixpkgs pin (`e9f00bd893984bc8ce46c895c3bf7cac95331127`, through
 logos-module-builder `5f74cdb`) for both `x86_64-linux` and `aarch64-darwin` (`nix eval` on the build box, 23 November
-2026), and the packaged `libcrypto` of both platforms names itself "OpenSSL 3.5.1 1 Jul 2025".
+2026; the pin is the same at `b6d9be61`), and the packaged `libcrypto` of both platforms names itself "OpenSSL 3.5.1 1 Jul
+2025" (checked again in this release's packages, 24 November 2026).
 
 ## The Rust code in each plugin
 
@@ -40,11 +41,12 @@ MIT OR Apache-2.0, with the notices of its toolchain's `COPYRIGHT` file (https:/
 ## `ferrata_updater_module`: the native libraries, and the GNU GPL version 3
 
 The updater's plugin links LEZ's node-side crates, which link, statically, the native libraries of two prebuilt
-archives: the same two archives the command-line release describes ([`releases/third-party/THIRD-PARTY-NOTICES.md`](https://github.com/rainbowpuffpuff/ferrata/blob/a0f388279e2de21305e0a8d1b0777f627ad165b9/releases/third-party/THIRD-PARTY-NOTICES.md)).
+archives: the same two archives the command-line release describes ([`releases/third-party/THIRD-PARTY-NOTICES.md`](https://github.com/rainbowpuffpuff/ferrata/blob/b6d9be6130ac58bb1d38de3dc7766332a2665e0b/releases/third-party/THIRD-PARTY-NOTICES.md)).
 `modules/scripts/stage-updater.sh` places them in the exported module (`rust-lib/vendor/rapidsnark/`, `rust-lib/vendor/lbc/`;
 `rust-lib/.cargo/config.toml` names them as `RAPIDSNARK_LIB_DIR` and `LBC_ROOT_DIR`); on the build box, 23 November
 2026, the export's files were checked against the sha256 that `scripts/native-deps.json` pins: rapidsnark's 4 libraries
-and the circuits' 18 files, all equal.
+and the circuits' 18 files, all equal. The export of `b6d9be61` (24 November 2026) staged the same files: the updater's
+`version` reply gives the same `files_sha256` for both archives as that export's.
 
 **`rapidsnark-linux-x86_64-pic-v0.0.8.zip`** (sha256 `59bdd709eed96235de061f352893f4650c923b54b591052118593012bb1cd831`):
 
@@ -91,7 +93,7 @@ The texts named there: [`licenses/GPL-3.0.txt`](licenses/GPL-3.0.txt), [`license
 ### Changing and relinking the LGPL libraries (LGPL version 3, section 4)
 
 You may modify GMP, rapidsnark, ffiasm or circomlib and run the updater with your version. Everything needed to
-rebuild it is public: Ferrata at `a0f38827`, and `modules/scripts/basecamp-release.sh build` (or `export.sh`, then `nix
+rebuild it is public: Ferrata at `b6d9be61`, and `modules/scripts/basecamp-release.sh build` (or `export.sh`, then `nix
 build .#lgx-portable` in the exported module). Put your builds of rapidsnark's libraries (`librapidsnark.a`, `libfr.a`,
 `libfq.a`, `libgmp.a`) in the export's `rust-lib/vendor/rapidsnark/` and the circuits' directory in
 `rust-lib/vendor/lbc/`, and rebuild.
@@ -105,7 +107,7 @@ build .#lgx-portable` in the exported module). Put your builds of rapidsnark's l
   | [`sources/gmp-6.3.0.tar.xz`](sources/gmp-6.3.0.tar.xz) | 2,094,196 | `a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898` |
   | [`sources/gmp-6.2.1.tar.xz`](sources/gmp-6.2.1.tar.xz) | 2,027,316 | `fd4829912cddd12f84181c3451cc752be224643e87fac497b69edddadc49b4f2` |
 
-- **The rest of the plugin**: the source at the URLs and commits in the tables above, Ferrata's at `a0f38827`
+- **The rest of the plugin**: the source at the URLs and commits in the tables above, Ferrata's at `b6d9be61`
   (https://github.com/rainbowpuffpuff/ferrata), and every crate at the version and source of the exported module's
   `Cargo.lock` ([`crates.md`](crates.md)).
 - **Written offer**: for at least three years after this release, and for as long as its packages are offered, anyone

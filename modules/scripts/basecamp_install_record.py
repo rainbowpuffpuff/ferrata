@@ -20,7 +20,10 @@ if len(sys.argv) not in (3, 4):
     sys.exit("usage: basecamp_install_record.py RECORD_DIR OUT_DIR [HOST_BASE]")
 rec, out = sys.argv[1], sys.argv[2]
 host = sys.argv[3].rstrip("/") if len(sys.argv) == 4 else ""
-SOURCE = json.load(open(os.path.join(out, "..", "release.json"), encoding="utf-8"))["source_commit"]
+RELEASE = json.load(open(os.path.join(out, "..", "release.json"), encoding="utf-8"))
+SOURCE = RELEASE["source_commit"]
+# A release re-signed in part gives each package its source_commit: each module must report its own.
+COMMIT_OF = {p["name"]: p.get("source_commit", SOURCE) for p in RELEASE["packages"] if p["platform"] == "linux-amd64"}
 MODULES = ["ferrata_attest_module", "ferrata_bridge_module", "ferrata_relayer_module", "ferrata_updater_module",
            "ferrata_attestor_module", "ferrata_monitor_module", "ferrata_bridge_ui"]
 roots = dict(line.rstrip("\n").split("=", 1) for line in open(os.path.join(rec, "roots.env"), encoding="utf-8") if "=" in line)
@@ -62,8 +65,9 @@ for m in MODULES:
     else:
         row["load"] = steps[f"load-{m}"]["pass"]
         text = json.dumps(reply(f"version-{m}"))
-        ok = steps[f"version-{m}"]["pass"] and SOURCE in set(re.findall(r"\b[0-9a-f]{40}\b", text))
-        row["calls"].append({"method": "version", "ok": ok, "note": f"reports the source commit {SOURCE[:8]}" if ok else "answered without the source commit"})
+        src = COMMIT_OF.get(m, SOURCE)
+        ok = steps[f"version-{m}"]["pass"] and src in set(re.findall(r"\b[0-9a-f]{40}\b", text))
+        row["calls"].append({"method": "version", "ok": ok, "note": f"reports the source commit {src[:8]}" if ok else "answered without the source commit"})
     packages.append(row)
 by = {p["name"]: p for p in packages}
 

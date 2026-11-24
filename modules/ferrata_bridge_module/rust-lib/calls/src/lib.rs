@@ -22,7 +22,10 @@ mod admin;
 mod evm;
 mod jobs;
 mod lez;
+mod lezkey;
+mod net;
 mod rpc;
+mod seal;
 mod send;
 mod session;
 mod user;
@@ -31,6 +34,7 @@ mod wallet;
 pub use lez::{set_lez_core, LezCoreCall};
 pub use rpc::{set_eth_rpc_module, EthRpcModuleCall};
 pub use send::{set_module_call, ModuleCall};
+pub use session::{ViewClient, NATIVE};
 
 use ferrata_bridge_core::{
     chain_id_u256,
@@ -141,13 +145,47 @@ pub fn admin(request: &str) -> String {
 }
 
 /// `wallet(request)`: one call of the mini-app's view (`{"method", "params"}`), run with this module's
-/// methods over the chains a chain service reads and sends to (`session.rs`); `{"ok", "result"|"error"}`.
+/// methods over the chains a chain service reads and sends to (`session.rs`); `{"ok", "result"|"error"}`. Called
+/// natively (no Logos Core caller).
 pub fn wallet(request: &str) -> String {
     session::wallet(request)
 }
 
+/// `wallet(request)` from `caller` as Logos Core names it (`module:<name>`, `host`, `unknown`): the module's glue.
+pub fn wallet_as(caller: &str, request: &str) -> String {
+    session::wallet_as(caller, request)
+}
+
+/// A public method's request. One that names keys (`keys`) is refused: the network session's keys serve only the
+/// session's own calls (`wallet`, from its view, each with its MAC; review round 2, MF1).
 fn parse(request: &str) -> Result<Value, String> {
-    serde_json::from_str(request).map_err(|e| format!("request is not JSON: {e}"))
+    let v: Value = serde_json::from_str(request).map_err(|e| format!("request is not JSON: {e}"))?;
+    if v.get("keys").is_some() {
+        return Err(KEYS_REFUSED.into());
+    }
+    Ok(v)
+}
+
+const KEYS_REFUSED: &str = "refused: a request does not name keys (`keys`): the network session's keys serve only its own \
+view's calls (wallet, each with its MAC)";
+
+thread_local! {
+    /// Set only while this thread runs one MAC-verified call of the network session's view (session.rs `route`):
+    /// `keys()` then takes the session's keys. Nothing in a request selects them.
+    static SESSION_KEYS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Runs `f`, one verified call of the network session's view, with the session's keys available to `keys()`; the
+/// previous state comes back afterwards, also when `f` panics.
+pub(crate) fn with_session_keys<T>(f: impl FnOnce() -> T) -> T {
+    struct Restore(bool);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            SESSION_KEYS.with(|c| c.set(self.0));
+        }
+    }
+    let _restore = Restore(SESSION_KEYS.with(|c| c.replace(true)));
+    f()
 }
 
 fn reply(result: Result<Value, String>) -> String {
@@ -165,15 +203,38 @@ fn verify_error(e: VerifyError) -> &'static str {
 // Inputs shared by the methods
 // ---------------------------------------------------------------------------------------------
 
-/// The wallet's keys: `bridge_seed`, or `lez_seed` (the BIP-39 seed of the LEZ wallet).
-pub(crate) fn keys(req: &Value) -> Result<BridgeKeys, String> {
+/// The wallet's keys, made from a request's `bridge_seed` or `lez_seed`, or, within one verified call of the network
+/// session's view ([`with_session_keys`]), the session's own, borrowed under its lock (net.rs; never copied out of it).
+pub(crate) enum Keys {
+    Made(BridgeKeys),
+    Session(net::SessionKeys),
+}
+
+impl std::ops::Deref for Keys {
+    type Target = BridgeKeys;
+    fn deref(&self) -> &BridgeKeys {
+        match self {
+            Keys::Made(k) => k,
+            Keys::Session(k) => k,
+        }
+    }
+}
+
+/// The wallet's keys: `bridge_seed`, or `lez_seed` (the BIP-39 seed of the LEZ wallet), or the network session's.
+pub(crate) fn keys(req: &Value) -> Result<Keys, String> {
+    if req.get("keys").is_some() {
+        return Err(KEYS_REFUSED.into());
+    }
+    if SESSION_KEYS.with(std::cell::Cell::get) {
+        return Ok(Keys::Session(net::session_keys()?));
+    }
     if !req["bridge_seed"].is_null() {
         let seed = bytes(&req["bridge_seed"], "bridge_seed")?;
-        return Ok(BridgeKeys::from_bridge_seed(&seed));
+        return Ok(Keys::Made(BridgeKeys::from_bridge_seed(&seed)));
     }
     if !req["lez_seed"].is_null() {
         let seed = bytes(&req["lez_seed"], "lez_seed")?;
-        return Ok(BridgeKeys::from_bridge_seed(&hmac_sha256(&seed, BRIDGE_SEED_LABEL)));
+        return Ok(Keys::Made(BridgeKeys::from_bridge_seed(&hmac_sha256(&seed, BRIDGE_SEED_LABEL))));
     }
     Err("the request needs `bridge_seed` or `lez_seed`".into())
 }

@@ -32,6 +32,24 @@ function pct(used, capacity) {
 
 // The program's and the vault's codes, by name, mapped to what the user can do.
 var MESSAGES = [
+    // Inside Logos the bridge module's wallet session is opened with a chain service (the stand-in for Logos's Ethereum
+    // and LEZ modules), which the view does not open: in Basecamp a person meets this on the first call.
+    [/no wallet session|no network session/, "Not connected to a network: open a session above (the test network's address and your recovery phrase). Nothing was read or sent."],
+    // The network session (ferrata_bridge_module's open_network): what it does not do, and what a step needs first.
+    [/needs a proof of LEZ's privacy circuit/, "A private claim or burn needs a proof made on your machine with your keys: run it with the ferrata tool from the same phrase, or choose the plaintext claim or the public burn here (each after its acknowledgement). Nothing was sent."],
+    [/use the faucet first/, "Not enough LGO for the LEZ fee: get test LGO with the faucet button above, then try again. Nothing was sent."],
+    // The session's own refusals (review round 1): who may use it, what a step needs, how long a call may take.
+    [/not the one this view opened/, "Refused: the module's session is not the one this view opened. Close the session and open it again. Nothing was sent."],
+    [/network session ended/, "The module's session ended (15 minutes without a call, or the module restarted): open it again above. Nothing was sent."],
+    [/belongs to the Ferrata Bridge view|opened by the Ferrata Bridge view|MAC does not hold|\(a replay\)/, "Refused: only the view that opened the session can use it. Nothing was read or sent."],
+    [/a network session is open in this module; close it first/, "A session is already open in the module: close it first (or quit Basecamp; it also ends after 15 minutes without a call)."],
+    [/deposits are made in the network's web wallet/, "Deposits are made in the network's web wallet with this phrase (Basecamp has no Logos signer for Sepolia yet); claim and burn them here afterwards."],
+    [/release address|enter the Ethereum address the release pays|checksummed form|fails its EIP-55/, "Enter the address the release pays: yours, in its checksummed form (upper and lower case as your wallet shows it). Nothing was signed."],
+    [/did not answer in time|more than this call has left/, "The network did not answer in time: try again. Nothing was signed."],
+    [/above this module's ceiling/, "Refused: the network asks for a LEZ fee above the module's ceiling. Nothing was signed."],
+    [/no transaction waits for approval/, "That transaction no longer waits for approval (sent, replaced or expired): start the step again."],
+    [/a deposit needs your Sepolia address/, "A deposit needs your Sepolia address (the account Logos's signer sends it from): close the session and open it again with that address. Nothing was sent."],
+    [/this session reads and sends through the network|this session's endpoints are the network's|admin calls are its operator's/, "Not in a network session: it uses the network's own endpoints, and the bridge's admin calls are its operator's. Nothing was changed."],
     // The module's jobs (its private claim and burn run for minutes): busy while one is proven, one at a time, a job the
     // module does not know (it was restarted).
     [/^busy: job \d+/, "Busy: a private transaction is being proven. This can be done once it is finished."],

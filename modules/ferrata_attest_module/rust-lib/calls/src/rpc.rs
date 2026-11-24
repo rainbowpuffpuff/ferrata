@@ -6,8 +6,10 @@
 //!   `verified_proxy_module`). Reachable only inside Logos Core: the module crate installs the client
 //!   with [`set_eth_rpc_module`] (modules/LOGOS-CORE-MODULES.md).
 //! * `"rpc_url": "http://..."` (or `"eth": {"via": "http", "rpc_url": ...}`): the plain path kept as the
-//!   fallback, a minimal HTTP/1.1 client over `std::net`, plain `http://` only (a local node or a
-//!   recorded-data server, `modules/scripts/recorded_rpc.py`); remote `https://` endpoints are refused.
+//!   fallback, a minimal HTTP/1.1 client over `std::net`, plain `http://` (a local node or a
+//!   recorded-data server, `modules/scripts/recorded_rpc.py`). An `https://` endpoint is reached only
+//!   through the client a module installs with [`set_https`] (`ferrata_bridge_module`'s network session,
+//!   which also decides which endpoints it may use); without one it is refused.
 //!
 //! Nothing either path returns is trusted: every proof is checked against a record before it is used.
 //! [`Rpc::report`] says which path answered and, through `eth_rpc_module`, the route it named for each
@@ -33,6 +35,18 @@ pub type EthRpcModuleCall = fn(i64, &str, &str, u64) -> Result<String, String>;
 
 static ETH_RPC_MODULE: OnceLock<EthRpcModuleCall> = OnceLock::new();
 
+/// How the module crate reaches an `https://` endpoint: (URL, the JSON-RPC request's text, a timeout in
+/// milliseconds) -> the response body, or why there is none.
+pub type HttpsPost = fn(&str, &str, u64) -> Result<String, String>;
+
+static HTTPS: OnceLock<HttpsPost> = OnceLock::new();
+
+/// Installed by `ferrata_bridge_module`'s network session (rustls); no other module installs one.
+#[allow(dead_code)]
+pub fn set_https(f: HttpsPost) {
+    let _ = HTTPS.set(f);
+}
+
 /// Installed once by the module crate (inside Logos Core); natively nothing is installed and the
 /// `eth_rpc_module` path answers with an error.
 pub fn set_eth_rpc_module(f: EthRpcModuleCall) {
@@ -41,6 +55,7 @@ pub fn set_eth_rpc_module(f: EthRpcModuleCall) {
 
 enum Via {
     Http(Http),
+    Https(String),
     Module { chain_id: i64 },
 }
 
@@ -53,9 +68,17 @@ pub struct Rpc {
 }
 
 impl Rpc {
-    /// The plain path: an `http://` endpoint.
+    /// The plain path: an `http://` endpoint, or an `https://` one through the installed client.
     pub fn new(url: &str, timeout_ms: u64) -> Result<Self, String> {
-        Ok(Self { via: Via::Http(Http::new(url, timeout_ms)?), timeout_ms, calls: 0, routes: Vec::new() })
+        let via = if url.starts_with("https://") {
+            if HTTPS.get().is_none() {
+                return Err(format!("rpc_url {url:?}: no https:// client in this module (http:// or eth_rpc_module)"));
+            }
+            Via::Https(url.to_string())
+        } else {
+            Via::Http(Http::new(url, timeout_ms)?)
+        };
+        Ok(Self { via, timeout_ms, calls: 0, routes: Vec::new() })
     }
 
     /// The path a request names: `eth` (`{"via": "eth_rpc_module", "chain_id": N}` or
@@ -88,6 +111,18 @@ impl Rpc {
                 self.routes.push("http".into());
                 Ok(v)
             }
+            Via::Https(url) => {
+                let post = HTTPS.get().ok_or_else(|| format!("{method}: no https:// client"))?;
+                let body = json!({ "jsonrpc": "2.0", "id": self.calls, "method": method, "params": params }).to_string();
+                let text = post(url, &body, self.timeout_ms)?;
+                let v: Value =
+                    serde_json::from_str(&text).map_err(|e| format!("{method}: response is not JSON: {e}"))?;
+                if let Some(err) = v.get("error").filter(|e| !e.is_null()) {
+                    return Err(format!("{method}: the node answered with an error: {err}"));
+                }
+                self.routes.push("https".into());
+                v.get("result").cloned().ok_or_else(|| format!("{method}: no result in the response"))
+            }
             Via::Module { chain_id } => {
                 let f = ETH_RPC_MODULE
                     .get()
@@ -114,6 +149,12 @@ impl Rpc {
             Via::Http(h) => json!({
                 "via": "http",
                 "rpc_url": format!("http://{}:{}{}", h.host, h.port, h.path),
+                "calls": self.calls,
+                "routes": self.routes,
+            }),
+            Via::Https(url) => json!({
+                "via": "https",
+                "rpc_url": url,
                 "calls": self.calls,
                 "routes": self.routes,
             }),

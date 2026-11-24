@@ -20,3 +20,21 @@ borsh = { version = "=1.6.1", features = ["derive"] }
 serde_json = "1"
 # The vault's function selectors (Keccak-256 of the signature), as ferrata-core computes Keccak.
 tiny-keccak = { version = "2", features = ["keccak"] }
+# The network session (net.rs, lezkey.rs): HTTPS to a test network's gateway and to an Ethereum endpoint (rustls with
+# ring, Mozilla's roots from webpki-roots; no redirects), the recovery phrase (BIP-39), LEZ's public keys and BIP-340
+# signatures (k256), its private account ids (ML-KEM-768, as LEZ's key_protocol), secrets zeroized when dropped (bip39's
+# mnemonic too).
+ureq = { version = "3", default-features = false, features = ["rustls"] }
+bip39 = { version = "2.2", default-features = false, features = ["std", "zeroize"] }
+k256 = { version = "0.13", default-features = false, features = ["std", "arithmetic", "schnorr"] }
+hmac = "0.12"
+sha2 = "0.10"
+ml-kem = "0.3"
+zeroize = "1"
+getrandom = "0.2"
+bs58 = "0.5"
+base64 = "0.22"
+# The sealed channel with the mini-app's view (seal.rs): X25519 (its secrets zeroized on drop), and the module's
+# process made non-dumpable while it holds keys (libc's prctl).
+x25519-dalek = { version = "2", features = ["static_secrets"] }
+libc = "0.2"

@@ -57,7 +57,10 @@ pub trait FerrataBridgeModule: Send + 'static {
     /// session's LEZ reads and private sends through Logos Core's `lez_core`, `lez_report` lists those
     /// calls; `claim` and `burn` start a job in a thread of the module and answer at once (a private one is
     /// proven for minutes, and a host may end the call sooner), `job` answers a job's state and, once done, its
-    /// reply, `jobs` lists them (calls/src/jobs.rs); `{"ok", ...}`.
+    /// reply, `jobs` lists them (calls/src/jobs.rs); `seal_key` and `open_network` open a session on a Ferrata test
+    /// network's public endpoints instead (HTTPS; only the deployment the module knows; the person's recovery phrase sealed
+    /// to the module's one-time key; for the mini-app's view only, each later call with its MAC), with `faucet`,
+    /// `balances`, `claim`/`burn` built for approval and `confirm`, and `close` (calls/src/net.rs, seal.rs); `{"ok", ...}`.
     fn wallet(&mut self, request: String) -> String;
     /// The admin's and the freeze authority's functions: `status` (the vault's roles, registry, caps and freezes read
     /// through Logos Core's `eth_rpc_module`; LEZ's from the bridge program's states), a vault action built, checked
@@ -123,6 +126,18 @@ fn module_call(module: &str, method: &str, args: &serde_json::Value, timeout_ms:
     })
 }
 
+/// The caller of the call being dispatched on this thread, as Logos Core names it (from Logos protocol 0.6 the host
+/// pushes it with each dispatch; the SDK's `current_caller`): `module:<name>` (token-bound: capability_module checks
+/// that the name is a registered module, not who presents it), `host` (one of the host's own anchors), or `unknown`
+/// (a host that says nothing, or no dispatch on this thread).
+fn caller_name() -> String {
+    match logos_rust_sdk::current_caller() {
+        logos_rust_sdk::LogosCaller::Module { name, .. } => format!("module:{name}"),
+        logos_rust_sdk::LogosCaller::HostAnchor => "host".to_string(),
+        _ => "unknown".to_string(),
+    }
+}
+
 #[derive(Default)]
 struct FerrataBridge;
 
@@ -167,7 +182,13 @@ impl FerrataBridgeModule for FerrataBridge {
     }
 
     fn wallet(&mut self, request: String) -> String {
-        guarded("wallet", || ferrata_bridge_calls::wallet(&request))
+        // Who calls, as Logos Core says (the network session answers only the mini-app's view; calls/src/session.rs),
+        // and the request's text wiped once answered (it may carry a sealed phrase or a call's MAC).
+        let mut request = request;
+        let caller = caller_name();
+        let reply = guarded("wallet", || ferrata_bridge_calls::wallet_as(&caller, &request));
+        zeroize::Zeroize::zeroize(&mut request);
+        reply
     }
     fn import_root(&mut self, request: String) -> String {
         guarded("import_root", || ferrata_bridge_calls::import_root(&request))
