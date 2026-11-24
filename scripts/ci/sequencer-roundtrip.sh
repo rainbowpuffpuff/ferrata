@@ -198,8 +198,8 @@ need = {
     "the checkpoint counted the one burn": int(c["burnCount"]) == 1,
     "the vault's final state is the checkpoint's new state": c["vaultFinalState"].lower() == c["newState"].lower(),
     "the vault accepted the checkpoint's burn root": c["burnRootAccepted"] is True,
-    "the fresh address holds what the vault's Release event says": r["recipientBalanceWei"] == r["amountWei"],
-    "amount + relay fee = the denomination burnt": int(r["amountWei"]) + int(r["relayFeeWei"]) == int(d["denominationWei"]),
+    "the vault's Release event pays out the denomination burnt": r["amountWei"] == d["denominationWei"],
+    "the fresh address holds that amount less the relay fee": int(r["recipientBalanceWei"]) == int(r["amountWei"]) - int(r["relayFeeWei"]),
     "the same release again refused": r["replayRefused"] is True,
 }
 bad = [k for k, v in need.items() if not v]

@@ -340,9 +340,10 @@ words="$(echo "$ev" | jq -r '.[0].data' | sed 's/^0x//')"
 AMOUNT="$(python3 -I -c 'import sys; d = sys.argv[1]; print(int(d[0:64], 16))' "$words")"
 RELAY_FEE="$(python3 -I -c 'import sys; d = sys.argv[1]; print(int(d[128:192], 16))' "$words")"
 FRESH_BAL="$(cast balance "$FRESH" --rpc-url "$RPC")"
-[ "$FRESH_BAL" = "$AMOUNT" ] || die "the fresh address holds $FRESH_BAL wei, the Release event says $AMOUNT"
-[ "$(( AMOUNT + RELAY_FEE ))" = "$DENOM" ] || die "amount $AMOUNT + relay fee $RELAY_FEE is not the burnt $DENOM"
-ok "Ethereum tx $RELEASE_TX: the fresh address holds $FRESH_BAL wei, the relayer was paid $RELAY_FEE (together the 0.001 ETH burnt)"
+# The event's amount is the burn's whole denomination; the recipient is paid it less the relay fee.
+[ "$AMOUNT" = "$DENOM" ] || die "the Release event's amount $AMOUNT is not the burnt $DENOM"
+[ "$FRESH_BAL" = "$(( AMOUNT - RELAY_FEE ))" ] || die "the fresh address holds $FRESH_BAL wei, not the Release event's $AMOUNT less its relay fee $RELAY_FEE"
+ok "Ethereum tx $RELEASE_TX: the Release event pays out the burnt $AMOUNT wei; the fresh address holds $FRESH_BAL wei, the relayer was paid $RELAY_FEE"
 
 begin "release again refused"
 [ -n "$CALLDATA" ] || die "the release's calldata was not printed (user/16-release.txt)"
