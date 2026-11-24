@@ -1,4 +1,4 @@
 <scratch>/run/sequencer_home is set up
-  channel signing public key  8a09f98513e9a5917ccc81334eec4c9a82c1d9b412c682641550c620861e7e06
+  channel signing public key  6b1fddaa98dabcb7bfa43bc20f68316c2702ef13a5edcb24a2c2cd0128c213dc
 `start` creates the channel if it does not exist yet.
 Creating the channel stakes that key at genesis.

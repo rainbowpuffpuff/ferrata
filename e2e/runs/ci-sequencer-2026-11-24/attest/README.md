@@ -7,12 +7,13 @@ Sepolia, read from public endpoints when the run started.
 
 | | |
 |---|---|
-| checkpoint | Sepolia slot 11640832 (2026-11-23T08:46:24Z, period 1421, Gloas layout), block root `0x49cd05dd2796f3e0539e53797dfd2a9f76c4887b5124eb9bbbf2b7fe8b3efaec`, the second provider's; Init valid until 2026-12-09T01:37:36Z |
-| period updates | 1421 (finalized slot 11640832; advanced False, adopted True) |
-| finality update | finalizes slot 11646336 (2026-11-24T03:07:12Z), root `0x18ee938f06b720bc37a2e00517063f8a1ddc2efbdeb032ff85a481acca82f4fe` (the second provider's), signature slot 11646401, 486/512 signers |
-| its execution block | 12199909, hash `0xc19a5b4a93b314918604f2a3c5bcfe8fd21b924b697a650c1db427a62e21faa0` |
-| storage fact | `0x1c7d4b196cb0c7b01d743fbc6116a902379c7238` slot `0x000000000000000000000000000000000000000000000000000000000000000b` = `0x000000000000000000000000000000000000000000000000951404989cd91159` (Sepolia USDC `totalSupply_`, equal to `totalSupply()` at the block) |
-| log fact | ERC-20 Transfer, tx 0 log 0: token `0xd4778aa86d4ef3513a5a1c4d8d6e121f3ba58236`, from `0x81a1ed90703d0fbd8fa097d4a42420363f936cfc` to `0x9749ced506ad8431f793628615b0a1c351e9d718`, amount 2590814 |
+| checkpoint | Sepolia slot 11649024 (2026-11-24T12:04:48Z, period 1422, Gloas layout), block root `0xa5f802a576c15165dbf01b65bfe2b97a2327ea8638dd3a366f880aca1b20d006`, the second provider's; Init valid until 2026-12-10T04:56:00Z |
+| freshness | checked at 2026-11-24T14:45:21Z: the finalized block 801 s old, the bootstrap 9633 s old (bounds 7200 and 115200 s) |
+| period updates | 1422 (finalized slot 11649024; advanced False, adopted True) |
+| finality update | finalizes slot 11649760 (2026-11-24T14:32:00Z), root `0xa31a73bbb64878fcad0fb07c6966c1e503ef4af34f3d142d55f424d10dfbd79e` (the second provider's), signature slot 11649825, 494/512 signers |
+| its execution block | 12203185, hash `0x74a8942836cc69ef12c4eaad07abddb2d26d5ae8d4c1fd3dbd1a498ab3e47240` |
+| storage fact | `0x1c7d4b196cb0c7b01d743fbc6116a902379c7238` slot `0x000000000000000000000000000000000000000000000000000000000000000b` = `0x000000000000000000000000000000000000000000000000951404984abb7b6c` (Sepolia USDC `totalSupply_`, equal to `totalSupply()` at the block) |
+| log fact | ERC-20 Transfer, tx 1 log 0: token `0xfffffffffffffffffffffffffffffffffffffffe`, from `0x37ea8d73e68eeb1ec06fba8d8c369757313e8a5a` to `0x46bc78edd02638cd5c00211c2787c0cebd7a99ea`, amount 9590799996931000 |
 
 | phase | sent | applied | refused (exit code) | reverted | other |
 |---|---:|---:|---:|---:|---:|
@@ -28,28 +29,3 @@ Sepolia, read from public endpoints when the run started.
   environment.md, logs/, private/), `fresh/` (the fetched data, each directory pinned by its SHA256SUMS; check.json,
   fetch.log), `sequencer-attest.log`
 
-## This record
-
-Made by `bash scripts/ci/sequencer-attest.sh e2e/runs/ci-sequencer-2026-11-24/attest` (the six stages in one call,
-as the CI job runs them one per step) on the repository's Modal build box (Linux x86-64), after
-`scripts/fetch-upstream.sh`, with the scripts of commit `dd8c878d` and the driver of `5b0630c7` (branch
-`ci-sequencer`), on 24 November 2026, 03:08:23–03:51:38 UTC. The box reports 2 CPUs, so the script used 4 build
-jobs; the run set `FERRATA_LIVE_PROOF_THREADS=4` (since `b10ea7b0` the script's default on a 4-core machine), as a
-4-core GitHub runner would. Nothing was sent to any network: the sequencer listened on 127.0.0.1; the public
-endpoints were read only (`fresh/*/SOURCE.md` lists every request).
-
-Measured on the box (`sequencer-attest.log`, `records/logs/driver.log`, mrun's ledger):
-
-| stage or phase | time |
-|---|---|
-| checkpoint (one attempt) | 2 s |
-| build: the guests (5 min), LEZ v0.4.0-rc3's standalone sequencer (10 min), the driver (2 min) | 17 min |
-| data (one attempt: its finality update advanced the store) | 2 s |
-| run: deploy 60 s, fresh-follow 34 s, fresh-scenarios 122 s, fresh-consume 51 s, fresh-private 1,283 s (the real proof 1,222.1 s, 4 threads), export 4 s | 26 min |
-| the whole call (mrun) | 2,638 s, 2.79 core-hours, about 0.27 USD |
-
-The guests built are the images of `docs/image-ids.md`: `ferrata_lez` `0x816d1fef…` (sha256 `ddfde69b…`), `scripted`
-`0x8cb0e3f5…` (`29249a3a…`), `ferrata_consumer` `0x8464603b…` (`d02e4aa3…`), as the sequencer's loader recorded
-them (`records/programs.tsv`). The chain: 519 blocks; 90 transactions: 67 applied, 21 refused with the program's
-exit code, 2 reverted otherwise (the wallet's default gas limit on an adoption part; an `Open` before its signature
-slot on the instance whose clock runs ten years later), none dropped, rejected or unfinished (`records/summary.txt`).

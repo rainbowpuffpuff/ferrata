@@ -1,827 +1,74 @@
-   Compiling proc-macro2 v1.0.106
-   Compiling quote v1.0.45
-   Compiling unicode-ident v1.0.24
-   Compiling serde_core v1.0.228
-   Compiling cfg-if v1.0.4
-   Compiling libc v0.2.186
-   Compiling version_check v0.9.5
-   Compiling const-oid v0.9.6
-   Compiling ident_case v1.0.1
-   Compiling serde v1.0.228
-   Compiling strsim v0.11.1
-   Compiling typenum v1.20.1
-   Compiling equivalent v1.0.2
-   Compiling hashbrown v0.17.1
-   Compiling once_cell v1.21.4
-   Compiling winnow v1.0.3
-   Compiling libm v0.2.16
-   Compiling subtle v2.6.1
-   Compiling autocfg v1.5.1
-   Compiling zerocopy v0.8.50
-   Compiling toml_datetime v1.1.1+spec-1.1.0
-   Compiling rustversion v1.0.22
-   Compiling zeroize v1.8.2
-   Compiling thiserror v2.0.18
-   Compiling base64ct v1.8.3
-   Compiling paste v1.0.15
-   Compiling cfg_aliases v0.2.1
-   Compiling fnv v1.0.7
-   Compiling spin v0.9.9
-   Compiling anyhow v1.0.103
-   Compiling cpufeatures v0.2.17
-   Compiling getrandom v0.4.2
-   Compiling num-bigint-dig v0.8.6
-   Compiling foldhash v0.1.5
-   Compiling zmij v1.0.21
-   Compiling rustix v1.1.4
-   Compiling borsh v1.6.1
-   Compiling pin-project-lite v0.2.17
-   Compiling hex v0.4.3
-   Compiling lazy_static v1.5.0
-   Compiling tracing-core v0.1.36
-   Compiling risc0-zkp v3.0.4
-   Compiling winnow v0.7.15
-   Compiling log v0.4.31
-   Compiling linux-raw-sys v0.12.1
-   Compiling hashbrown v0.15.5
-   Compiling pem-rfc7468 v0.7.0
-   Compiling smallvec v1.15.1
-   Compiling rand_core v0.9.5
-   Compiling bitflags v2.12.1
-   Compiling toml_write v0.1.2
-   Compiling unicode-xid v0.2.6
-   Compiling camino v1.2.2
-   Compiling heck v0.5.0
-   Compiling serde_json v1.0.150
-   Compiling der v0.7.10
-   Compiling encoding_rs v0.8.35
-   Compiling arraydeque v0.5.1
-   Compiling ruint-macro v1.2.1
-   Compiling itoa v1.0.18
-   Compiling indexmap v2.14.0
-   Compiling option-ext v0.2.0
-   Compiling memchr v2.8.1
-   Compiling fastrand v2.4.1
-   Compiling hex-literal v0.4.1
-   Compiling no_std_strings v0.1.3
-   Compiling elf v0.7.4
-   Compiling include_bytes_aligned v0.1.4
-   Compiling docker-generate v0.1.3
-   Compiling generic-array v0.14.7
-   Compiling hashlink v0.10.0
-   Compiling num-traits v0.2.19
-   Compiling toml_parser v1.1.2+spec-1.1.0
-   Compiling syn v2.0.117
-   Compiling block-buffer v0.10.4
-   Compiling crypto-common v0.1.7
-   Compiling spki v0.7.3
-   Compiling toml_edit v0.25.12+spec-1.1.0
-   Compiling yaml-rust2 v0.10.4
-   Compiling getrandom v0.2.17
-   Compiling digest v0.10.7
-   Compiling dirs-sys v0.5.0
-   Compiling pkcs8 v0.10.2
-   Compiling rand_core v0.6.4
-   Compiling dirs v6.0.0
-   Compiling sha2 v0.10.9
-   Compiling blake2 v0.10.6
-   Compiling pkcs1 v0.7.5
-   Compiling signature v2.2.0
-   Compiling num-integer v0.1.46
-   Compiling proc-macro-crate v3.5.0
-   Compiling num-iter v0.1.45
-   Compiling tempfile v3.27.0
-   Compiling semver v1.0.28
-   Compiling ppv-lite86 v0.2.21
-   Compiling rand_chacha v0.3.1
-   Compiling rand v0.8.6
-   Compiling darling_core v0.20.11
-   Compiling darling_core v0.23.0
-   Compiling rsa v0.9.10
-   Compiling serde_derive v1.0.228
-   Compiling thiserror-impl v2.0.18
-   Compiling num_enum_derive v0.7.6
-   Compiling stability v0.2.1
-   Compiling bytemuck_derive v1.10.2
-   Compiling borsh-derive v1.6.1
-   Compiling tracing-attributes v0.1.31
-   Compiling strum_macros v0.27.2
-   Compiling derive_more-impl v2.1.1
-   Compiling darling_macro v0.20.11
-   Compiling darling_macro v0.23.0
-   Compiling num_enum v0.7.6
-   Compiling risc0-zkvm-platform v2.2.2
-   Compiling risc0-zkos-v1compat v2.2.2
-   Compiling darling v0.20.11
-   Compiling derive_builder_core v0.20.2
-   Compiling darling v0.23.0
-   Compiling serde_with_macros v3.20.0
-   Compiling bytemuck v1.25.0
-   Compiling ruint v1.20.0
-   Compiling risc0-core v3.0.1
-   Compiling cobs v0.3.0
-   Compiling strum v0.27.2
-   Compiling derive_more v2.1.1
-   Compiling tracing v0.1.44
-   Compiling serde_spanned v0.6.9
-   Compiling toml_datetime v0.6.11
-   Compiling postcard v1.1.3
-   Compiling cargo-platform v0.1.9
-   Compiling derive_builder_macro v0.20.2
-   Compiling toml_edit v0.22.27
-   Compiling cargo_metadata v0.19.2
-   Compiling serde_with v3.20.0
-   Compiling risc0-binfmt v3.0.4
-   Compiling derive_builder v0.20.2
-   Compiling toml v0.8.23
-   Compiling rzup v0.5.1
-   Compiling risc0-build v3.0.5
+ok rapidsnark 0.0.8: sha256 59bdd709eed96235de061f352893f4650c923b54b591052118593012bb1cd831, 4 files checked, ~/.cache/ferrata/native/rapidsnark-0.0.8-59bdd709eed96235
+ok logos-blockchain-circuits 0.5.7: sha256 92a0c6ad810d486631518b7b9b247a2b66f66af6f8f8ddce381acbbdfedc0f7f, 18 files checked, ~/.cache/ferrata/native/logos-blockchain-circuits-0.5.7-92a0c6ad810d4866
    Compiling methods v0.1.0 (<repo>/lez/methods)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5m 01s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.36s
 lez-select: v0.4.0-rc1 -> v0.4.0-rc3 (bafd07be0701398f9bc435f73ab05e9a7936c301)
 == building LEZ sequencer_service (sequencer_service_standalone) with 4 jobs
-    Updating crates.io index
-    Updating git repository `https://github.com/logos-blockchain/logos-blockchain-testing.git`
- Downloading crates ...
-  Downloaded cmake v0.1.58
-  Downloaded aws-lc-rs v1.18.1
-  Downloaded bytesize v2.3.1
-  Downloaded downcast v0.11.0
-  Downloaded downcast-rs v2.0.2
-  Downloaded dunce v1.0.5
-  Downloaded enum-iterator-derive v1.5.0
-  Downloaded enum-iterator v2.3.0
-  Downloaded evmap v11.0.0
-  Downloaded form_urlencoded v1.2.2
-  Downloaded fragile v2.1.0
-  Downloaded fs_extra v1.3.0
-  Downloaded hashbag v0.1.13
-  Downloaded hashbrown v0.16.1
-  Downloaded aws-lc-sys v0.45.0
-  Downloaded jsonrpsee-server v0.26.0
-  Downloaded kameo_actors v0.8.1
-  Downloaded kameo_macros v0.21.1
-  Downloaded left-right v0.11.8
-  Downloaded kameo v0.22.2
-  Downloaded metrics v0.24.6
-  Downloaded metrics-exporter-prometheus v0.18.3
-  Downloaded metrics-util v0.20.4
-  Downloaded mockall v0.15.0
-  Downloaded mockall_derive v0.15.0
-  Downloaded predicates v3.1.4
-  Downloaded predicates-core v1.0.10
-  Downloaded predicates-tree v1.0.13
-  Downloaded quanta v0.12.6
-  Downloaded rand_xoshiro v0.7.0
-  Downloaded rapidhash v4.5.1
-  Downloaded raw-cpuid v11.6.0
-  Downloaded route-recognizer v0.3.1
-  Downloaded sketches-ddsketch v0.3.1
-  Downloaded strum_macros v0.28.0
-  Downloaded strum v0.28.0
-  Downloaded termtree v0.5.1
-  Downloaded tokio-retry v0.3.2
-  Downloaded url v2.5.8
-  Downloaded zstd v0.13.3
-  Downloaded zstd-safe v7.2.4
-  Downloaded zstd-sys v2.0.16+zstd.1.5.7
-   Compiling cfg-if v1.0.4
-   Compiling libc v0.2.186
-   Compiling serde_core v1.0.228
-   Compiling zeroize v1.8.2
-   Compiling subtle v2.6.1
-   Compiling typenum v1.20.1
-   Compiling portable-atomic v1.13.1
-   Compiling pin-project-lite v0.2.17
-   Compiling critical-section v1.2.0
-   Compiling once_cell v1.21.4
-   Compiling log v0.4.31
-   Compiling smallvec v1.15.1
-   Compiling memchr v2.8.1
-   Compiling getrandom v0.2.17
-   Compiling generic-array v0.14.7
-   Compiling rand_core v0.6.4
-   Compiling tracing-core v0.1.36
-   Compiling crypto-common v0.1.7
-   Compiling serde v1.0.228
-   Compiling zerocopy v0.8.50
-   Compiling tracing v0.1.44
-   Compiling bytes v1.12.1
-   Compiling const-oid v0.9.6
-   Compiling thiserror v2.0.18
-   Compiling block-buffer v0.10.4
-   Compiling digest v0.10.7
-   Compiling futures-core v0.3.32
-   Compiling itoa v1.0.18
-   Compiling futures-sink v0.3.32
-   Compiling scopeguard v1.2.0
-   Compiling parking_lot_core v0.9.12
-   Compiling lock_api v0.4.14
-   Compiling slab v0.4.12
-   Compiling futures-io v0.3.32
-   Compiling parking_lot v0.12.5
-   Compiling libm v0.2.16
-   Compiling socket2 v0.6.4
-   Compiling errno v0.3.14
-   Compiling signal-hook-registry v1.4.8
-   Compiling futures-channel v0.3.32
-   Compiling mio v1.2.1
-   Compiling futures-task v0.3.32
-   Compiling futures-util v0.3.32
-   Compiling tokio v1.53.3
-   Compiling cpufeatures v0.2.17
-   Compiling num-traits v0.2.19
-   Compiling ppv-lite86 v0.2.21
-   Compiling equivalent v1.0.2
-   Compiling hashbrown v0.17.1
-   Compiling rand_chacha v0.3.1
-   Compiling rand v0.8.6
-   Compiling either v1.16.0
-   Compiling indexmap v2.14.0
-   Compiling num-integer v0.1.46
-   Compiling sha2 v0.10.9
-   Compiling percent-encoding v2.3.2
-   Compiling zerofrom v0.1.8
-   Compiling stable_deref_trait v1.2.1
-   Compiling allocator-api2 v0.2.21
-   Compiling foldhash v0.1.5
-   Compiling yoke v0.8.2
-   Compiling zerovec v0.11.6
-   Compiling hashbrown v0.15.5
-   Compiling signature v2.2.0
-   Compiling byteorder v1.5.0
-   Compiling num-bigint v0.4.6
-   Compiling zmij v1.0.21
-   Compiling spin v0.9.9
-   Compiling lazy_static v1.5.0
-   Compiling serde_json v1.0.150
-   Compiling getrandom v0.3.4
-   Compiling tinystr v0.8.3
-   Compiling writeable v0.6.3
-   Compiling litemap v0.8.2
-   Compiling icu_locale_core v2.2.0
-   Compiling rand_core v0.9.5
-   Compiling potential_utf v0.1.5
-   Compiling zerotrie v0.2.4
-   Compiling futures-executor v0.3.32
-   Compiling rand_core v0.10.1
-   Compiling utf8_iter v1.0.4
-   Compiling icu_provider v2.2.0
-   Compiling icu_collections v2.2.0
-   Compiling arrayvec v0.7.6
-   Compiling icu_normalizer_data v2.2.0
-   Compiling icu_properties_data v2.2.0
-   Compiling icu_normalizer v2.2.0
-   Compiling icu_properties v2.2.0
-   Compiling form_urlencoded v1.2.2
-   Compiling ark-std v0.5.0
-   Compiling ark-serialize v0.5.0
-   Compiling ahash v0.8.12
-   Compiling idna_adapter v1.2.2
-   Compiling getrandom v0.4.2
-   Compiling idna v1.1.0
-   Compiling rand_chacha v0.9.0
-   Compiling cmov v0.5.4
-   Compiling ctutils v0.4.2
-   Compiling url v2.5.8
-   Compiling rand v0.9.4
-   Compiling futures v0.3.32
-   Compiling tokio-util v0.7.18
-   Compiling itertools v0.13.0
-   Compiling hex v0.4.3
-   Compiling hybrid-array v0.4.12
-   Compiling blake2 v0.10.6
-   Compiling hmac v0.12.1
-   Compiling keccak v0.1.6
-   Compiling prost v0.14.3
-   Compiling ark-ff v0.5.0
-   Compiling crypto-common v0.2.2
-   Compiling bitflags v2.12.1
-   Compiling curve25519-dalek v4.1.3
-   Compiling tracing-subscriber v0.2.25
-   Compiling ed25519 v2.2.3
-   Compiling data-encoding v2.11.0
-   Compiling anyhow v1.0.103
-   Compiling ed25519-dalek v2.2.0
-   Compiling serde_with v3.20.0
-   Compiling block-buffer v0.12.0
-   Compiling merlin v3.0.0
-   Compiling fnv v1.0.7
-   Compiling unsigned-varint v0.8.0
-   Compiling data-encoding-macro-internal v0.1.18
-   Compiling const-str v0.4.3
-   Compiling static_assertions v1.1.0
-   Compiling data-encoding-macro v0.1.20
-   Compiling multihash v0.19.5
-   Compiling base256emoji v1.0.2
-   Compiling hkdf v0.12.4
-   Compiling bs58 v0.5.1
-   Compiling base-x v0.2.11
-   Compiling tokio-stream v0.1.18
-   Compiling multibase v0.9.2
-   Compiling libp2p-identity v0.2.14
-   Compiling arrayref v0.3.9
-   Compiling ark-poly v0.5.0
-   Compiling ark-relations v0.5.1
-   Compiling multiaddr v0.18.2
-   Compiling ark-snark v0.5.1
-   Compiling aho-corasick v1.1.4
-   Compiling regex-syntax v0.8.10
-   Compiling ark-ec v0.5.0
-   Compiling powerfmt v0.2.0
-   Compiling regex-automata v0.4.14
-   Compiling ark-bn254 v0.5.0
-   Compiling ark-crypto-primitives v0.5.0
-   Compiling ark-groth16 v0.5.0
-   Compiling deranged v0.5.8
-   Compiling pin-project v1.1.13
-   Compiling time-core v0.1.8
-   Compiling num-conv v0.2.2
-   Compiling time v0.3.47
-   Compiling http v1.4.1
-   Compiling base64 v0.22.1
-   Compiling bincode v1.3.3
-   Compiling ipnet v2.12.0
-   Compiling block-padding v0.4.2
-   Compiling hashlink v0.10.0
-   Compiling inout v0.2.2
-   Compiling http-body v1.0.1
-   Compiling cmake v0.1.58
-   Compiling fs_extra v1.3.0
-   Compiling dunce v1.0.5
-   Compiling ryu v1.0.23
-   Compiling aws-lc-sys v0.45.0
-   Compiling strum v0.27.2
-   Compiling cipher v0.5.2
-   Compiling const-oid v0.10.2
-   Compiling tower-service v0.3.3
-   Compiling thiserror v1.0.69
-   Compiling cpufeatures v0.3.0
-   Compiling httparse v1.10.1
-   Compiling rustls-pki-types v1.14.1
-   Compiling aws-lc-rs v1.18.1
-   Compiling logos-blockchain-log-targets v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling num_enum v0.7.6
-   Compiling untrusted v0.9.0
-   Compiling ring v0.17.14
-   Compiling prost v0.13.5
-   Compiling utoipa v6.0.0
-   Compiling overwatch v0.2.0 (https://github.com/logos-co/Overwatch?rev=fc71a844886f9fb8f382ecfadcebff455e33474b#fc71a844)
-   Compiling regex v1.12.3
-   Compiling try-lock v0.2.5
-   Compiling atomic-waker v1.1.2
-   Compiling unsafe-libyaml v0.2.11
-   Compiling humantime v2.3.0
-   Compiling base64ct v1.8.3
-   Compiling serde_yaml v0.9.34+deprecated
-   Compiling h2 v0.4.18
-   Compiling want v0.3.1
-   Compiling digest v0.11.3
-   Compiling http-body-util v0.1.3
-   Compiling const-hex v1.19.1
-   Compiling serde_ignored v0.1.14
-   Compiling httpdate v1.0.3
-   Compiling rustls v0.23.46
-   Compiling logos-blockchain-utils v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling hyper v1.10.1
-   Compiling crossbeam-utils v0.8.21
-   Compiling chacha20 v0.10.2
-   Compiling generic-array v1.4.3
-   Compiling logos-blockchain-circuits-types v0.5.7 (https://github.com/logos-blockchain/logos-blockchain-circuits.git?tag=v0.5.7#ebf7ddf5)
-   Compiling sync_wrapper v1.0.2
-   Compiling tower-layer v0.3.3
-   Compiling logos-blockchain-groth16 v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling hyper-util v0.1.20
-   Compiling pem-rfc7468 v0.7.0
-   Compiling futures-timer v3.0.4
-   Compiling tinyvec_macros v0.1.1
-   Compiling tinyvec v1.11.0
-   Compiling der v0.7.10
-   Compiling tower v0.5.3
-   Compiling logos-blockchain-circuits-common v0.5.7 (https://github.com/logos-blockchain/logos-blockchain-circuits.git?tag=v0.5.7#ebf7ddf5)
-   Compiling fastrand v2.4.1
-   Compiling spki v0.7.3
-   Compiling triomphe v0.1.15
-   Compiling pkcs8 v0.10.2
-   Compiling archery v1.2.2
-   Compiling borsh v1.6.1
-   Compiling risc0-zkvm-platform v2.2.2
-   Compiling bytemuck v1.25.0
    Compiling rust-rapidsnark v0.1.3 (https://github.com/logos-blockchain/logos-blockchain-rust-rapidsnark.git?rev=e91187f8ccb5bbfc7bb00dac88169112428da78f#e91187f8)
-   Compiling rpds v1.2.1
-   Compiling risc0-core v3.0.1
-   Compiling sha3 v0.10.9
-   Compiling semver v1.0.28
-   Compiling hex-literal v0.4.1
-   Compiling risc0-zkp v3.0.4
-   Compiling spongefish v0.2.0 (https://github.com/arkworks-rs/spongefish.git?rev=3ded547f7f56d7f8a1fc4c9a5c0ce965310bba5f#3ded547f)
-   Compiling logos-blockchain-circuits-prover v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling logos-blockchain-proofs-error v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling jf-crhf v0.2.0 (https://github.com/EspressoSystems/jellyfish?tag=jf-crhf-v0.2.0#f1538793)
-   Compiling cobs v0.3.0
-   Compiling jf-poseidon2 v0.2.0 (https://github.com/EspressoSystems/jellyfish.git?rev=8d80230358e900f8d63765a937f63f4978ca1daa#8d802303)
-   Compiling postcard v1.1.3
-   Compiling crunchy v0.2.4
-   Compiling ruint v1.20.0
-   Compiling derive_more v2.1.1
-   Compiling quick-protobuf v0.8.1
-   Compiling itertools v0.10.5
-   Compiling unsigned-varint v0.7.2
-   Compiling elf v0.7.4
-   Compiling multistream-select v0.13.0
-   Compiling logos-blockchain-poseidon2 v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling risc0-binfmt v3.0.4
-   Compiling astro-float-num v0.3.6
-   Compiling rw-stream-sink v0.4.0
-   Compiling num-iter v0.1.45
-   Compiling serde_spanned v0.6.9
-   Compiling toml_datetime v0.6.11
-   Compiling linux-raw-sys v0.12.1
-   Compiling toml_write v0.1.2
-   Compiling unicode-ident v1.0.24
-   Compiling winnow v0.7.15
-   Compiling web-time v1.1.0
-   Compiling libp2p-core v0.43.2
-   Compiling toml_edit v0.22.27
-   Compiling proc-macro2 v1.0.106
-   Compiling astro-float v0.9.5
-   Compiling rustix v1.1.4
-   Compiling num-bigint-dig v0.8.6
-   Compiling logos-blockchain-binary-codec v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
    Compiling logos-blockchain-circuits-pol-sys v0.5.7 (https://github.com/logos-blockchain/logos-blockchain-circuits.git?tag=v0.5.7#ebf7ddf5)
-   Compiling pkcs1 v0.7.5
-   Compiling encoding_rs v0.8.35
-   Compiling keccak v0.2.0 (https://github.com/logos-blockchain/sponges?rev=3a56e99771beedf04946eab21a4a62adc2951377#3a56e997)
-   Compiling openssl-probe v0.2.1
-   Compiling arraydeque v0.5.1
-   Compiling option-ext v0.2.0
-   Compiling dirs-sys v0.5.0
-   Compiling yaml-rust2 v0.10.4
-   Compiling rustls-native-certs v0.8.4
-   Compiling quote v1.0.45
-   Compiling rsa v0.9.10
-   Compiling logos-blockchain-pol v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling tempfile v3.27.0
-   Compiling toml v0.8.23
-   Compiling camino v1.2.2
-   Compiling hex-conservative v0.2.2
-   Compiling cargo-platform v0.1.9
-   Compiling include_bytes_aligned v0.1.4
-   Compiling no_std_strings v0.1.3
-   Compiling risc0-zkos-v1compat v2.2.2
-   Compiling cargo_metadata v0.19.2
-   Compiling bitcoin_hashes v0.14.2
-   Compiling rzup v0.5.1
-   Compiling derive_builder v0.20.2
    Compiling logos-blockchain-circuits-poq-sys v0.5.7 (https://github.com/logos-blockchain/logos-blockchain-circuits.git?tag=v0.5.7#ebf7ddf5)
-   Compiling risc0-circuit-recursion v4.0.4
-   Compiling syn v1.0.109
-   Compiling tiny-keccak v2.0.2
-   Compiling dirs v6.0.0
-   Compiling unicode-normalization v0.1.25
-   Compiling light-poseidon v0.4.0
-   Compiling bit-vec v0.8.0
-   Compiling downcast-rs v1.2.1
-   Compiling docker-generate v0.1.3
-   Compiling risc0-build v3.0.5
-   Compiling rrs-lib v0.1.0
-   Compiling risc0-circuit-rv32im v4.0.4
-   Compiling rs-merkle-tree v0.1.0
-   Compiling lazy-regex v3.6.0
-   Compiling bip39 v2.2.2
-   Compiling risc0-circuit-keccak v4.0.5
-   Compiling logos-blockchain-poq v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
    Compiling logos-blockchain-circuits-signature-sys v0.5.7 (https://github.com/logos-blockchain/logos-blockchain-circuits.git?tag=v0.5.7#ebf7ddf5)
-   Compiling sha3 v0.11.0
-   Compiling logos-blockchain-time v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling risc0-groth16 v3.0.4
-   Compiling crossbeam-channel v0.5.15
-   Compiling kem v0.3.0
-   Compiling module-lattice v0.2.3
-   Compiling opentelemetry v0.32.0
-   Compiling serde-big-array v0.5.1
-   Compiling logos-blockchain-dynamic-merkle v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling logos-blockchain-zksign v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling logos-blockchain-merkle-tree v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling libp2p-swarm v0.47.1
-   Compiling ml-kem v0.3.2
-   Compiling risc0-zkvm v3.0.5
-   Compiling logos-blockchain-blend-crypto v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
    Compiling logos-blockchain-circuits-poc-sys v0.5.7 (https://github.com/logos-blockchain/logos-blockchain-circuits.git?tag=v0.5.7#ebf7ddf5)
-   Compiling webpki-roots v1.0.10
-   Compiling matchers v0.2.0
-   Compiling x25519-dalek v2.0.1
-   Compiling sharded-slab v0.1.7
-   Compiling tracing-serde v0.2.0
-   Compiling tracing-log v0.2.0
-   Compiling thread_local v1.1.9
-   Compiling arbitrary-int v2.2.0
-   Compiling nu-ansi-term v0.50.3
-   Compiling base58 v0.2.0
-   Compiling rustc-hash v2.1.2
-   Compiling logos-blockchain-key-management-system-keys v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling logos-blockchain-circuits-prover v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling logos-blockchain-pol v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling logos-blockchain-zksign v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
    Compiling lee_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lee/state_machine/core)
-   Compiling tracing-subscriber v0.3.23
    Compiling logos-blockchain-poc v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling logos-blockchain-blend-proofs v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling logos-blockchain-utxotree v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling logos-blockchain-poq v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
    Compiling logos-blockchain-cryptarchia-engine v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling logos-blockchain-mmr v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling tower-http v0.6.11
-   Compiling hyper-timeout v0.5.2
-   Compiling minimal-lexical v0.2.1
-   Compiling nom v7.1.3
-   Compiling tonic v0.14.6
-   Compiling logos-blockchain-core v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling foldhash v0.2.0
-   Compiling rusticata-macros v4.1.0
-   Compiling opentelemetry_sdk v0.32.1
-   Compiling serde_urlencoded v0.7.1
-   Compiling netlink-packet-core v0.8.1
-   Compiling asn1-rs v0.7.2
-   Compiling crossbeam-epoch v0.9.20
-   Compiling tonic-prost v0.14.6
-   Compiling reqwest v0.13.4
-   Compiling rustls-webpki v0.103.16
-   Compiling prost-types v0.13.5
-   Compiling prost-types v0.14.3
-   Compiling tokio-rustls v0.26.4
-   Compiling hyper-rustls v0.27.9
-   Compiling netlink-sys v0.8.8
-   Compiling asynchronous-codec v0.7.0
-   Compiling socket2 v0.5.10
-   Compiling simd-adler32 v0.3.9
-   Compiling match_cfg v0.1.0
-   Compiling adler2 v2.0.1
-   Compiling miniz_oxide v0.8.9
-   Compiling hostname v0.3.1
-   Compiling quick-protobuf-codec v0.3.1
-   Compiling netlink-proto v0.12.0
-   Compiling reqwest v0.12.28
-   Compiling tonic-types v0.14.6
-   Compiling crc32fast v1.5.0
-   Compiling loki-api v0.1.3
-   Compiling opentelemetry-http v0.32.0
-   Compiling opentelemetry-proto v0.32.0
-   Compiling nix v0.30.1
-   Compiling prometheus v0.14.0
-   Compiling snap v1.1.1
-   Compiling netlink-packet-route v0.28.0
-   Compiling futures-bounded v0.2.4
-   Compiling rand v0.10.1
-   Compiling concurrent-queue v2.5.0
-   Compiling tracing-futures v0.2.5
-   Compiling siphasher v1.0.3
-   Compiling symlink v0.1.0
-   Compiling parking v2.2.1
-   Compiling event-listener v5.4.1
-   Compiling tracing-appender v0.2.5
-   Compiling rtnetlink v0.20.0
-   Compiling fastbloom v0.17.0
-   Compiling hickory-proto v0.25.2
-   Compiling tracing-gelf v0.7.1
-   Compiling tracing-loki v0.2.7
-   Compiling opentelemetry-prometheus v0.32.0
-   Compiling opentelemetry-otlp v0.32.0
-   Compiling flate2 v1.1.9
-   Compiling oid-registry v0.8.1
-   Compiling der-parser v10.0.0
-   Compiling tracing-opentelemetry v0.33.0
-   Compiling opentelemetry-appender-tracing v0.32.0
-   Compiling pem v3.0.6
-   Compiling yasna v0.5.2
-   Compiling uuid v1.23.2
-   Compiling rand_pcg v0.10.2
-   Compiling opentelemetry-semantic-conventions v0.32.1
-   Compiling lru-slab v0.1.2
-   Compiling tagptr v0.2.0
-   Compiling quinn-proto v0.11.19
-   Compiling moka v0.12.15
-   Compiling logos-blockchain-tracing v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling rcgen v0.13.2
-   Compiling if-watch v3.2.2
-   Compiling x509-parser v0.17.0
-   Compiling quinn-udp v0.5.14
-   Compiling event-listener-strategy v0.5.4
-   Compiling futures-rustls v0.26.0
-   Compiling hashbrown v0.14.5
-   Compiling base16ct v0.2.0
-   Compiling resolv-conf v0.7.6
-   Compiling hashlink v0.9.1
-   Compiling hickory-resolver v0.25.2
-   Compiling serdect v0.2.0
-   Compiling libp2p-tls v0.6.2
-   Compiling async-channel v2.5.0
-   Compiling quinn v0.11.9
+   Compiling logos-blockchain-key-management-system-keys v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling logos-blockchain-blend-crypto v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling logos-blockchain-blend-proofs v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
    Compiling build_utils v0.1.0 (../upstream/lez-v0.4.0-rc3/build_utils)
-   Compiling libp2p-request-response v0.29.0
-   Compiling uint v0.10.0
-   Compiling ff v0.13.1
-   Compiling hex_fmt v0.3.0
-   Compiling libp2p-gossipsub v0.49.5
-   Compiling group v0.13.0
-   Compiling libp2p-kad v0.48.0
-   Compiling libp2p-autonat v0.15.0
-   Compiling libp2p-quic v0.13.1
-   Compiling libp2p-dns v0.44.0
-   Compiling librocksdb-sys v0.17.3+10.4.2
-   Compiling sec1 v0.7.3
-   Compiling libp2p-mdns v0.48.0
-   Compiling libp2p-identify v0.47.0
    Compiling cross_zone_emission_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/cross_zone_emission_core)
-   Compiling libp2p-allow-block-list v0.6.0
-   Compiling libp2p-connection-limits v0.6.0
-   Compiling crypto-bigint v0.5.5
-   Compiling xml-rs v0.8.28
-   Compiling elliptic-curve v0.13.8
-   Compiling xmltree v0.10.3
-   Compiling libp2p v0.56.0
-   Compiling libp2p-stream v0.4.0-alpha
-   Compiling netdev v0.31.0
-   Compiling attohttpc v0.30.1
-   Compiling rfc6979 v0.4.0
-   Compiling ecdsa v0.16.9
-   Compiling igd-next v0.16.2
-   Compiling logos-blockchain-cryptarchia-sync v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling natpmp v0.5.0
    Compiling lee v0.1.0 (../upstream/lez-v0.4.0-rc3/lee/state_machine)
-   Compiling backon v1.6.0
-   Compiling logos-blockchain-services-utils v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling sntpc v0.5.2
-   Compiling itertools v0.14.0
-   Compiling logos-blockchain-time-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling logos-blockchain-blend-message v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling logos-blockchain-libp2p v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling logos-blockchain-core v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
 warning: lee@0.1.0: Generated module at ../tmp/sequencer-v0.4.0-rc3/target/release/build/lee-438159721fa1680d/out/lee/privacy_preserving_circuit/mod.rs
-   Compiling k256 v0.13.4
    Compiling program_loader_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/program_loader/core)
-   Compiling serde_arrays v0.2.0
-   Compiling mime v0.3.17
-   Compiling axum-core v0.5.6
-   Compiling logos-blockchain-ledger v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling logos-blockchain-network-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling logos-blockchain-chain-broadcast-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling serde_path_to_error v0.1.20
-   Compiling matchit v0.8.4
-   Compiling validator v0.20.0
-   Compiling axum v0.8.9
    Compiling cross_zone_marker_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/cross_zone_marker)
    Compiling programs v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs)
-   Compiling logos-blockchain-http-api-common v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling cross_zone_inbox_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/cross_zone_inbox/core)
-   Compiling logos-blockchain-version v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-warning: programs@0.1.0: Generated module at ../tmp/sequencer-v0.4.0-rc3/target/release/build/programs-d2912b9194ac970d/out/lez/programs/mod.rs
    Compiling bridge_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/bridge/core)
+   Compiling cross_zone_inbox_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/cross_zone_inbox/core)
    Compiling ping_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/ping_core)
-   Compiling cross_zone_outbox_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/cross_zone_outbox/core)
    Compiling wrapped_token_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/wrapped_token/core)
+   Compiling cross_zone_outbox_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/cross_zone_outbox/core)
    Compiling bridge_lock_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/bridge_lock/core)
    Compiling sequencer_stake_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/sequencer_stake/core)
+warning: programs@0.1.0: Generated module at ../tmp/sequencer-v0.4.0-rc3/target/release/build/programs-d2912b9194ac970d/out/lez/programs/mod.rs
    Compiling fee_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/fee/core)
    Compiling clock_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/clock/core)
-   Compiling zstd-sys v2.0.16+zstd.1.5.7
-   Compiling system_accounts v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/system_accounts)
-   Compiling anstyle v1.0.14
-   Compiling kameo_macros v0.21.1
-   Compiling inout v0.1.4
-   Compiling dyn-clone v1.0.20
-   Compiling downcast-rs v2.0.2
-   Compiling cipher v0.4.4
-   Compiling kameo v0.22.2
-   Compiling logos-blockchain-key-management-system-operators v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling hmac v0.13.0
-   Compiling der v0.8.2
-   Compiling ff v0.14.0
-   Compiling rapidhash v4.5.1
-   Compiling universal-hash v0.5.1
-   Compiling zstd-safe v7.2.4
-   Compiling opaque-debug v0.3.1
-   Compiling cpubits v0.1.1
-   Compiling polyval v0.6.2
-   Compiling metrics v0.24.6
-   Compiling logos-blockchain-key-management-system-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling jsonrpsee-types v0.26.0
-   Compiling strum_macros v0.28.0
-   Compiling jsonrpsee-core v0.26.0
-   Compiling strum v0.28.0
-   Compiling ghash v0.5.1
-   Compiling crypto-bigint v0.7.5
-   Compiling spki v0.8.0
-   Compiling group v0.14.0
-   Compiling ctr v0.9.2
-   Compiling aes v0.8.4
-   Compiling sha1 v0.10.6
-   Compiling aead v0.5.2
-   Compiling enum-iterator-derive v1.5.0
-   Compiling mockall_derive v0.15.0
-   Compiling predicates-core v1.0.10
-   Compiling base16ct v1.0.0
-   Compiling sec1 v0.8.1
-   Compiling enum-iterator v2.3.0
-   Compiling aes-gcm v0.10.3
-   Compiling soketto v0.8.1
-   Compiling pkcs8 v0.11.0
    Compiling sequencer_actors_common v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/sequencer/actors/common)
-   Compiling hkdf v0.13.0
-   Compiling rustls-platform-verifier v0.5.3
-   Compiling termtree v0.5.1
-   Compiling mockall v0.15.0
-   Compiling hmac-sha512 v1.1.12
-   Compiling predicates-tree v1.0.13
-   Compiling elliptic-curve v0.14.0
-   Compiling predicates v3.1.4
-   Compiling fragile v2.1.0
-   Compiling glob v0.3.4
-   Compiling utf8parse v0.2.2
-   Compiling downcast v0.11.0
-   Compiling anstyle-parse v1.0.0
-   Compiling kameo_actors v0.8.1
-   Compiling jsonrpsee-client-transport v0.26.0
-   Compiling primefield v0.14.0
-   Compiling sequencer_channel_signing_actor v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/sequencer/actors/channel_signing)
-   Compiling rfc6979 v0.6.0-pre.0
-   Compiling signature v3.0.0
-   Compiling humantime-serde v1.1.1
-   Compiling colorchoice v1.0.5
-   Compiling anstyle-query v1.1.5
-   Compiling iana-time-zone v0.1.65
-   Compiling is_terminal_polyfill v1.70.2
-   Compiling route-recognizer v0.3.1
-   Compiling jsonrpsee-server v0.26.0
-   Compiling chrono v0.4.44
-   Compiling anstream v1.0.0
-   Compiling ecdsa v0.17.0-rc.22
-   Compiling primeorder v0.14.0-rc.14
-   Compiling jsonrpsee-ws-client v0.26.0
-   Compiling pcsc-sys v1.3.0
-   Compiling jsonrpsee-http-client v0.26.0
-   Compiling wnaf v0.14.0-rc.1
-   Compiling tokio-retry v0.3.2
-   Compiling sha2 v0.11.0
-   Compiling ctr v0.10.1
-   Compiling aead v0.6.1
    Compiling mempool v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/mempool)
-   Compiling jsonrpsee-wasm-client v0.26.0
-   Compiling sponge-cursor v0.1.0
-   Compiling sha3 v0.12.0
-   Compiling k256 v0.14.0-rc.14
-   Compiling jsonrpsee v0.26.0
-   Compiling ccm v0.6.0-rc.3
-   Compiling pcsc v2.9.0
-   Compiling aes v0.9.1
-   Compiling pbkdf2 v0.13.0
-   Compiling cbc v0.2.1
-   Compiling raw-cpuid v11.6.0
-   Compiling strsim v0.11.1
-   Compiling base64 v0.21.7
-   Compiling clap_lex v1.1.0
-   Compiling unicode-width v0.2.2
-   Compiling console v0.16.3
-   Compiling clap_builder v4.6.0
-   Compiling keycard-rs v0.1.0 (https://github.com/keycard-tech/keycard-rs?rev=9535a657ba04b1e6916de51777e22b4837c1a84d#9535a657)
-   Compiling quanta v0.12.6
    Compiling sequencer_executor_actor_metrics v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/sequencer/actors/executor/metrics)
-   Compiling hashbrown v0.16.1
-   Compiling left-right v0.11.8
-   Compiling password-hash v0.5.0
-   Compiling env_filter v1.0.1
-   Compiling rand_xoshiro v0.7.0
-   Compiling rtoolbox v0.0.5
-   Compiling metrics-exporter-prometheus v0.18.3
-   Compiling hashbag v0.1.13
-   Compiling unicode-segmentation v1.13.3
-   Compiling jiff v0.2.28
-   Compiling unit-prefix v0.5.2
-   Compiling sketches-ddsketch v0.3.1
-   Compiling metrics-util v0.20.4
-   Compiling zstd v0.13.3
-   Compiling indicatif v0.18.4
-   Compiling evmap v11.0.0
-   Compiling async-stream v0.3.6
-   Compiling rpassword v7.5.4
-   Compiling clap v4.6.1
-   Compiling env_logger v0.11.10
-   Compiling argon2 v0.5.3
+   Compiling system_accounts v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/system_accounts)
    Compiling keycard_wallet v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/keycard_wallet)
    Compiling sequencer_rpc_server_actor_metrics v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/sequencer/actors/rpc_server/metrics)
-   Compiling bytesize v2.3.1
    Compiling sequencer_service_metrics v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/sequencer/service/metrics)
-   Compiling rocksdb v0.24.0
+   Compiling logos-blockchain-cryptarchia-sync v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling logos-blockchain-blend-message v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling logos-blockchain-chain-broadcast-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling logos-blockchain-libp2p v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling logos-blockchain-network-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling logos-blockchain-ledger v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
    Compiling logos-blockchain-storage-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
    Compiling logos-blockchain-chain-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling logos-blockchain-http-api-common v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
    Compiling logos-blockchain-sdp-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling logos-blockchain-key-management-system-operators v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling logos-blockchain-key-management-system-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
    Compiling logos-blockchain-common-http-client v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling sequencer_channel_signing_actor v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/sequencer/actors/channel_signing)
    Compiling common v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/common)
    Compiling logos-blockchain-zone-sdk v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
    Compiling sequencer_storage_actor v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/sequencer/actors/storage)
    Compiling key_protocol v0.1.0 (../upstream/lez-v0.4.0-rc3/lee/key_protocol)
    Compiling testnet_initial_state v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/testnet_initial_state)
-   Compiling sequencer_slasher_actor v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/sequencer/actors/slasher)
    Compiling chain_state v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/chain_state)
-   Compiling sequencer_core_metrics v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/sequencer/core/metrics)
-   Compiling cross_zone v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/cross_zone)
-   Compiling sequencer_service_protocol v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/sequencer/service/protocol)
+   Compiling sequencer_slasher_actor v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/sequencer/actors/slasher)
    Compiling sequencer_bedrock_actor v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/sequencer/actors/bedrock)
+   Compiling cross_zone v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/cross_zone)
+   Compiling sequencer_core_metrics v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/sequencer/core/metrics)
+   Compiling sequencer_service_protocol v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/sequencer/service/protocol)
    Compiling sequencer_service_rpc v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/sequencer/service/rpc)
    Compiling wallet v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/wallet)
    Compiling sequencer_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/sequencer/core)
@@ -829,158 +76,66 @@ warning: programs@0.1.0: Generated module at ../tmp/sequencer-v0.4.0-rc3/target/
    Compiling sequencer_executor_actor v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/sequencer/actors/executor)
    Compiling sequencer_rpc_server_actor v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/sequencer/actors/rpc_server)
    Compiling sequencer_service v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/sequencer/service)
-    Finished `release` profile [optimized] target(s) in 9m 48s
+    Finished `release` profile [optimized] target(s) in 2m 10s
 warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
 note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
 == ../tmp/sequencer-v0.4.0-rc3/bin/sequencer_service_standalone (9c4b6d5633a0089654f6b48800144af82fce21de197a40ed543dddc78ca328ef)
 == building the driver with 4 jobs
-   Compiling tokio v1.53.3
-   Compiling form_urlencoded v1.2.3
-   Compiling data-encoding-macro v0.1.20
-   Compiling rustls-webpki v0.103.16
-   Compiling multibase v0.9.2
-   Compiling url v2.5.9
    Compiling lee_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lee/state_machine/core)
-   Compiling multiaddr v0.18.2
-   Compiling rustls v0.23.46
-   Compiling tokio-util v0.7.18
-   Compiling tokio-stream v0.1.18
-   Compiling overwatch v0.2.0 (https://github.com/logos-co/Overwatch?rev=fc71a844886f9fb8f382ecfadcebff455e33474b#fc71a844)
-   Compiling logos-blockchain-utils v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling logos-blockchain-groth16 v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling h2 v0.4.18
-   Compiling tower v0.5.3
-   Compiling logos-blockchain-proofs-error v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling logos-blockchain-binary-codec v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling libp2p-core v0.43.2
    Compiling logos-blockchain-pol v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling hyper v1.10.1
-   Compiling hyper-util v0.1.20
-   Compiling rs-merkle-tree v0.1.0
-   Compiling logos-blockchain-poq v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling logos-blockchain-time v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling tokio-rustls v0.26.4
    Compiling logos-blockchain-zksign v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling libp2p-swarm v0.47.1
-   Compiling logos-blockchain-blend-crypto v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling logos-blockchain-key-management-system-keys v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
    Compiling logos-blockchain-poc v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling logos-blockchain-blend-proofs v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling logos-blockchain-poq v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling logos-blockchain-key-management-system-keys v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
    Compiling logos-blockchain-cryptarchia-engine v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling hyper-timeout v0.5.2
-   Compiling tower-http v0.6.11
-   Compiling logos-blockchain-mmr v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling hyper-rustls v0.27.9
-   Compiling logos-blockchain-core v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling tonic v0.14.6
-   Compiling opentelemetry_sdk v0.32.1
-   Compiling serde_urlencoded v0.7.1
-   Compiling tonic-prost v0.14.6
-   Compiling reqwest v0.13.4
-   Compiling netlink-sys v0.8.8
-   Compiling tonic-types v0.14.6
-   Compiling netlink-proto v0.12.0
-   Compiling opentelemetry-http v0.32.0
-   Compiling opentelemetry-proto v0.32.0
-   Compiling reqwest v0.12.28
-   Compiling quinn-proto v0.11.19
-   Compiling hickory-proto v0.25.2
-   Compiling tracing-gelf v0.7.1
-   Compiling tracing-loki v0.2.7
-   Compiling rtnetlink v0.20.0
-   Compiling opentelemetry-prometheus v0.32.0
-   Compiling opentelemetry-otlp v0.32.0
-   Compiling futures-rustls v0.26.0
-   Compiling hickory-resolver v0.25.2
-   Compiling logos-blockchain-tracing v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling libp2p-tls v0.6.2
-   Compiling quinn v0.11.9
-   Compiling if-watch v3.2.2
-   Compiling libp2p-request-response v0.29.0
-   Compiling socket2 v0.5.10
-   Compiling libp2p-gossipsub v0.49.5
-   Compiling libp2p-quic v0.13.1
-   Compiling libp2p-kad v0.48.0
-   Compiling libp2p-autonat v0.15.0
-   Compiling libp2p-dns v0.44.0
-   Compiling libp2p-identify v0.47.0
-   Compiling libp2p-allow-block-list v0.6.0
-   Compiling libp2p-connection-limits v0.6.0
+   Compiling logos-blockchain-blend-crypto v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling logos-blockchain-blend-proofs v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling build_utils v0.1.0 (../upstream/lez-v0.4.0-rc3/build_utils)
    Compiling cross_zone_emission_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/cross_zone_emission_core)
-   Compiling libp2p v0.56.0
-   Compiling libp2p-stream v0.4.0-alpha
-   Compiling attohttpc v0.30.1
-   Compiling natpmp v0.5.0
-   Compiling igd-next v0.16.2
+   Compiling lee v0.1.0 (../upstream/lez-v0.4.0-rc3/lee/state_machine)
+   Compiling logos-blockchain-core v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+warning: lee@0.1.0: Generated module at ../tmp/sequencer-v0.4.0-rc3/target/release/build/lee-c854e17799f6fff2/out/lee/privacy_preserving_circuit/mod.rs
+   Compiling program_loader_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/program_loader/core)
+   Compiling cross_zone_marker_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/cross_zone_marker)
+   Compiling programs v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs)
+   Compiling cross_zone_inbox_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/cross_zone_inbox/core)
+   Compiling bridge_lock_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/bridge_lock/core)
+   Compiling ping_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/ping_core)
+   Compiling cross_zone_outbox_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/cross_zone_outbox/core)
+   Compiling wrapped_token_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/wrapped_token/core)
+warning: programs@0.1.0: Generated module at ../tmp/sequencer-v0.4.0-rc3/target/release/build/programs-37892babc3304bfe/out/lez/programs/mod.rs
+   Compiling sequencer_stake_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/sequencer_stake/core)
+   Compiling bridge_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/bridge/core)
+   Compiling fee_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/fee/core)
+   Compiling clock_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/clock/core)
+   Compiling keycard_wallet v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/keycard_wallet)
+   Compiling system_accounts v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/system_accounts)
+   Compiling ferrata-lez-wire v0.1.0 (<repo>/lez/wire)
+   Compiling test_guest_core v0.1.0 (../upstream/lez-v0.4.0-rc3/test_guest_core)
+   Compiling ferrata-lez-bridge-wire v0.1.0 (<repo>/lez/live/frozen/bridge-wire)
    Compiling logos-blockchain-cryptarchia-sync v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling librocksdb-sys v0.17.3+10.4.2
-   Compiling logos-blockchain-services-utils v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling sntpc v0.5.2
-   Compiling backon v1.6.0
    Compiling logos-blockchain-blend-message v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
    Compiling logos-blockchain-libp2p v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling logos-blockchain-time-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling rocksdb v0.24.0
-   Compiling axum-core v0.5.6
    Compiling logos-blockchain-ledger v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-warning: lee@0.1.0: Generated module at ../tmp/sequencer-v0.4.0-rc3/target/release/build/lee-c854e17799f6fff2/out/lee/privacy_preserving_circuit/mod.rs
    Compiling logos-blockchain-storage-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
    Compiling logos-blockchain-network-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
    Compiling logos-blockchain-chain-broadcast-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling program_loader_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/program_loader/core)
-   Compiling axum v0.8.9
-   Compiling lee v0.1.0 (../upstream/lez-v0.4.0-rc3/lee/state_machine)
-   Compiling logos-blockchain-chain-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling validator v0.20.0
-   Compiling cross_zone_marker_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/cross_zone_marker)
-warning: programs@0.1.0: Generated module at ../tmp/sequencer-v0.4.0-rc3/target/release/build/programs-37892babc3304bfe/out/lez/programs/mod.rs
-   Compiling cross_zone_inbox_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/cross_zone_inbox/core)
    Compiling logos-blockchain-http-api-common v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling ping_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/ping_core)
-   Compiling cross_zone_outbox_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/cross_zone_outbox/core)
-   Compiling bridge_lock_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/bridge_lock/core)
-   Compiling wrapped_token_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/wrapped_token/core)
-   Compiling bridge_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/bridge/core)
-   Compiling clock_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/clock/core)
-   Compiling fee_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/fee/core)
-   Compiling sequencer_stake_core v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs/sequencer_stake/core)
-   Compiling logos-blockchain-sdp-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling programs v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/programs)
-   Compiling system_accounts v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/system_accounts)
-   Compiling jsonrpsee-core v0.26.0
-   Compiling logos-blockchain-common-http-client v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling rustls-platform-verifier v0.5.3
-   Compiling common v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/common)
-   Compiling digest v0.9.0
-   Compiling num_cpus v1.17.0
-   Compiling threadpool v1.8.1
-   Compiling soketto v0.8.1
-   Compiling pairing v0.23.0
-   Compiling block-buffer v0.9.0
-   Compiling sha2 v0.9.9
-   Compiling bls12_381 v0.8.0
-   Compiling jsonrpsee-client-transport v0.26.0
-   Compiling blst v0.3.17
-   Compiling jsonrpsee-ws-client v0.26.0
-   Compiling jsonrpsee-http-client v0.26.0
-   Compiling ferrata-core v0.0.1 (<repo>/crates/ferrata-core)
+   Compiling logos-blockchain-chain-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
    Compiling logos-blockchain-key-management-system-operators v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling jsonrpsee v0.26.0
-   Compiling key_protocol v0.1.0 (../upstream/lez-v0.4.0-rc3/lee/key_protocol)
    Compiling logos-blockchain-key-management-system-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
-   Compiling sequencer_service_protocol v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/sequencer/service/protocol)
-   Compiling testnet_initial_state v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/testnet_initial_state)
+   Compiling logos-blockchain-sdp-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling logos-blockchain-common-http-client v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling common v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/common)
    Compiling logos-blockchain-zone-sdk v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+   Compiling sequencer_service_protocol v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/sequencer/service/protocol)
+   Compiling key_protocol v0.1.0 (../upstream/lez-v0.4.0-rc3/lee/key_protocol)
    Compiling sequencer_service_rpc v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/sequencer/service/rpc)
-   Compiling keycard_wallet v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/keycard_wallet)
-   Compiling ferrata-lez-wire v0.1.0 (<repo>/lez/wire)
-   Compiling ferrata-bridge-core v0.2.0 (<repo>/bridge/crates/ferrata-bridge-core)
+   Compiling testnet_initial_state v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/testnet_initial_state)
    Compiling wallet v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/wallet)
-   Compiling ferrata-lez-bridge-wire v0.1.0 (<repo>/lez/live/frozen/bridge-wire)
-   Compiling ferrata-spectests v0.0.1 (<repo>/crates/ferrata-spectests)
-   Compiling test_guest_core v0.1.0 (../upstream/lez-v0.4.0-rc3/test_guest_core)
    Compiling chain_state v0.1.0 (../upstream/lez-v0.4.0-rc3/lez/chain_state)
    Compiling live-driver v0.1.0 (<repo>/lez/live/driver)
-    Finished `release` profile [optimized] target(s) in 2m 21s
+    Finished `release` profile [optimized] target(s) in 1m 33s
 warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
 note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+check-build: every build script linked native code only from its own build output, the system library directories, or the checked archives (rapidsnark, logos-blockchain-circuits)

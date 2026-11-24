@@ -1,6 +1,6 @@
-# Sepolia: a Gloas bootstrap of period 1421 (slot 11,640,832) and the period updates from it
+# Sepolia: a Gloas bootstrap of period 1422 (slot 11,649,024) and the period updates from it
 
-Fetched by `scripts/fetch-sepolia-checkpoint.py` between 2026-11-24T03:08:23Z and 2026-11-24T03:08:25Z (UTC). Every request went
+Fetched by `scripts/fetch-sepolia-checkpoint.py` between 2026-11-24T14:41:23Z and 2026-11-24T14:41:26Z (UTC). Every request went
 to a public endpoint without an API key, with User-Agent `curl/8`. Responses are stored byte for byte,
 except the `updates` stream, which is split into one file per period with its 8-byte length and 4-byte fork
 digest removed (the digests are listed below). `SHA256SUMS` pins every file.
@@ -24,21 +24,21 @@ committee of the store's own period (`validate_light_client_update`'s `update_ha
 `crates/ferrata-core/src/validate.rs`), and `apply_light_client_update` adopts that committee without moving
 the finalized header. The store then follows the chain into the next period, as the old fixture's did.
 
-**When this checkpoint leaves the period.** Slot 11,640,832 is in epoch 363,776; its period ends
-at the start of epoch 367,309, slot 11,753,888, **2026-12-09T01:37:36Z**. An `Init` from
+**When this checkpoint leaves the period.** Slot 11,649,024 is in epoch 364,032; its period ends
+at the start of epoch 367,565, slot 11,762,080, **2026-12-10T04:56:00Z**. An `Init` from
 this checkpoint is valid only before then (each later transaction is bounded by the period of the store's
 finalized header at that time, which the updates move forward).
 
 | | |
 |---|---|
 | chain | Sepolia: chain id 11155111, `genesis_validators_root` 0xd8ea171f3c94aea21ebc42a1ed61052acf3f9209c00e4efbaaddac09ed9b8078; Gloas since epoch 353,024 (version 0x90000076) |
-| bootstrap (Gloas layout, 25,472 bytes) | slot 11,640,832 (2026-11-23T08:46:24Z), period 1421, block root 0x49cd05dd2796f3e0539e53797dfd2a9f76c4887b5124eb9bbbf2b7fe8b3efaec (the second provider's, `beacon_header_11640832_second.json`) |
-| its weak-subjectivity end (3,532 epochs) | slot 11,753,888, 2026-12-09T01:37:36Z |
-| finality update (Gloas) | attested slot 11,646,336, signature slot 11,646,337, 486/512 signers; finalized slot 11,646,272, root 0xe21bcae194ebafef59e7ccabfde987483f24fc400fd34e1defb711d9c808ce6c |
+| bootstrap (Gloas layout, 25,472 bytes) | slot 11,649,024 (2026-11-24T12:04:48Z), period 1422, block root 0xa5f802a576c15165dbf01b65bfe2b97a2327ea8638dd3a366f880aca1b20d006 (the second provider's, `beacon_header_11649024_second.json`) |
+| its weak-subjectivity end (3,532 epochs) | slot 11,762,080, 2026-12-10T04:56:00Z |
+| finality update (Gloas) | attested slot 11,649,792, signature slot 11,649,793, 494/512 signers; finalized slot 11,649,728, root 0x642117f76f860433f5e60e1d5ec35876b88e4e290aacdc620eb5be3d98d8d6da |
 
 | period | layout | fork digest | attested slot | signature slot | finalized slot | signers | relevant to the bootstrapped store as |
 |---|---|---|---|---|---|---|---|
-| 1421 | gloas | 0x669e6c11 | 11640896 | 11640897 | 11640832 | 486/512 | newer than the bootstrap |
+| 1422 | gloas | 0x669e6c11 | 11649088 | 11649089 | 11649024 | 494/512 | newer than the bootstrap |
 
 Cross-checks made by the script: the bootstrap is in the Gloas layout and its header hashes to the root the
 second beacon provider (ethereum-sepolia-beacon-api.publicnode.com) reports as canonical at its slot; every
@@ -52,9 +52,9 @@ light client itself (`crown-driver check --chain sepolia`, the driver's tests, a
 
 | UTC | endpoint | request | file | note |
 |---|---|---|---|---|
-| 2026-11-24T03:08:23Z | https://lodestar-sepolia.chainsafe.io | `GET /eth/v1/beacon/light_client/finality_update` | finality_update.ssz | gloas |
-| 2026-11-24T03:08:23Z | https://ethereum-sepolia-beacon-api.publicnode.com | `GET /eth/v1/beacon/headers/11640832` |  |  |
-| 2026-11-24T03:08:23Z | https://lodestar-sepolia.chainsafe.io | `GET /eth/v1/beacon/light_client/bootstrap/0x49cd05dd2796f3e0539e53797dfd2a9f76c4887b5124eb9bbbf2b7fe8b3efaec` |  | gloas |
-| 2026-11-24T03:08:24Z | https://lodestar-sepolia.chainsafe.io | `GET /eth/v1/beacon/light_client/updates?start_period=1421&count=1` |  | gloas |
-| 2026-11-24T03:08:24Z | https://ethereum-sepolia-beacon-api.publicnode.com | `GET /eth/v1/beacon/headers/11640832` | beacon_header_11640832_second.json |  |
-| 2026-11-24T03:08:24Z | https://ethereum-sepolia-beacon-api.publicnode.com | `GET /eth/v1/beacon/headers/11646272` | beacon_header_11646272_second.json |  |
+| 2026-11-24T14:41:23Z | https://lodestar-sepolia.chainsafe.io | `GET /eth/v1/beacon/light_client/finality_update` | finality_update.ssz | gloas |
+| 2026-11-24T14:41:23Z | https://ethereum-sepolia-beacon-api.publicnode.com | `GET /eth/v1/beacon/headers/11649024` |  |  |
+| 2026-11-24T14:41:23Z | https://lodestar-sepolia.chainsafe.io | `GET /eth/v1/beacon/light_client/bootstrap/0xa5f802a576c15165dbf01b65bfe2b97a2327ea8638dd3a366f880aca1b20d006` |  | gloas |
+| 2026-11-24T14:41:23Z | https://lodestar-sepolia.chainsafe.io | `GET /eth/v1/beacon/light_client/updates?start_period=1422&count=1` |  | gloas |
+| 2026-11-24T14:41:24Z | https://ethereum-sepolia-beacon-api.publicnode.com | `GET /eth/v1/beacon/headers/11649024` | beacon_header_11649024_second.json |  |
+| 2026-11-24T14:41:25Z | https://ethereum-sepolia-beacon-api.publicnode.com | `GET /eth/v1/beacon/headers/11649728` | beacon_header_11649728_second.json |  |
