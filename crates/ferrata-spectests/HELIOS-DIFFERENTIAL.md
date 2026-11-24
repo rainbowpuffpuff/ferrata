@@ -146,14 +146,105 @@ FERRATA_DIFF_CORPUS=<dir> cargo test --locked -p ferrata-spectests --test helios
 cd crates/ferrata-spectests/lodestar && npm ci && node diff.mjs <dir>     # exits 1 on any disagreement
 ```
 
+## Program step-path differential oracle (24 November 2026)
+
+[`tests/helios_step_oracle.rs`](tests/helios_step_oracle.rs) closes the gaps listed above by running
+`helios-consensus-core` 0.12.0, **source unmodified** (`a16z/helios` rev
+`2af9b41887e069144ee56cd710f3ddca195473f8`, source SHA-256
+`17be8945b6af08d5b07da5f84d734c09c9375d86f982713beaf1a9cdfa410a20` over its 11 files, no `[patch]` overrides in root
+manifests or `.cargo/config.toml`), **built with this repo's lockfile** (differing from Helios's own workspace lockfile
+in `ethereum_ssz` 0.9.1 vs 0.9.0, `typenum` 1.20.1 vs 1.18.0, `alloy-primitives` 1.7.3 vs 1.6.0, and `ethereum_hashing`
+from crates.io rather than Helios's workspace `[patch]`), directly against **Ferrata's program step path** — a native
+mirror of the handler sequence in [`lez/guests/program/src/main.rs`](../../lez/guests/program/src/main.rs) calling
+`CompactBootstrap`, `CompactUpdate::layout_of`/`decode`, `steps::store_for_update` (in-place fork upgrade),
+`SignerWitness`, `steps::step1` (`Open`), `Job::step2` (`Miller`), multi-part `Job::adopt`, `Job::step3` (`Finish`),
+`steps::apply`, `CompactStore`, and `HeaderRecord` (both the public multi-transaction job path and the single-transaction
+`VerifyAll` path), alongside `FinalizedStore(Adoption::OnChain)` and `LightClientStore`. Any unexpected disagreement
+fails with the full serialized input and state diff written out (and dumped to `$FERRATA_ORACLE_FAILURES_DIR` when set).
+
+### BLS libraries compared (not `blst` on both sides)
+
+| Implementation | BLS library | Version & lockfile checksum / pin |
+|---|---|---|
+| Ferrata program step path (`ferrata-core`, native tests) | `blst` (C/asm, NCC Group audited upstream) | `blst 0.3.17`, checksum `c20659f9bbee16cbbd2f7393e40ab6309f5a98f76a2eb57a995ec508b72387fe` |
+| Ferrata attestation guest (`lez/guests/program`, `rv32im`) | RISC Zero accelerated `blst` fork | `blst = "=0.3.16"` patched from `risc0/blst` tag `v0.3.16-risczero.0` (not exercised natively) |
+| `helios-consensus-core` 0.12.0 (source unmodified, built with this repo's lockfile) | Pure-Rust `bls12_381` (zkcrypto, `sha2 0.9.9`, manual `point * r` G2 subgroup check) | `bls12_381 0.8.0`, checksum `d7bc6d6292be3a19e6379786dac800f551e5865a5bb51ebbe3064ab80433f403` (does **not** link `blst`) |
+| Lodestar `@lodestar/light-client` 1.43.0 | Herumi `bls-eth-wasm` 1.7.0 via `@chainsafe/bls` 8.2.0 | WebAssembly (does **not** link `blst`) |
+
+`helios_pin_is_unmodified_0_12_0` asserts these exact pins, checksums, source-tree SHA-256, and the absence of
+`[patch]` overrides in root manifests and `.cargo/config.toml` on every CI run. Because Helios 0.12.0 uses pure-Rust
+`bls12_381` rather than `blst`, the differential oracle cross-checks independent BLS implementations as well as
+independent SSZ, Merkle, and light-client logic.
+
+### What is compared and case counts (24–25 November 2026)
+
+| Suite / test (`tests/helios_step_oracle.rs`) | Scope | Cases | Result | Runs in CI? |
+|---|---|---:|---|---|
+| `helios_pin_is_unmodified_0_12_0` | `Cargo.lock` pin, `bls12_381` / `blst` checksums, no `[patch]` (manifests + `.cargo/config.toml`), `helios-consensus-core` source SHA-256 (11 files) | 1 check | pass | yes (`test`) |
+| `every_recorded_real_update_in_repo_agrees_with_helios_on_step_path` | **Every** recorded real update across all 19 `.ssz` directories in the repo (13 bootstraps, 321 updates: 123 mainnet across periods 1899–1903 & 1906–1914; 198 Sepolia across periods 1378–1417 & 1422; 104 period + 217 finality; 271 unique payloads by SHA-256; Electra, Gloas, and the Electra→Gloas fork upgrade), plus a repo-wide completeness check asserting 332/332 non-vector `.ssz` files are covered | 334 (13 bootstraps + 321 updates) | 320 applied by step path, 1 valid optimistic-only `NotNewer`; **0 disagreements** | yes (`test`) |
+| `official_sync_vectors_agree_with_helios_on_step_path` | All 33 Helios-decodable `consensus-specs` v1.7.0-beta.4 `light_client/sync` vectors (Capella through Gloas) through Helios and the step path | 111 updates across 33 cases (9 in-place fork upgrades): **96** compared verdict & state against Helios; **15** after a Helios `force_update` (in 5 cases) checked one way | 96 two-way compared (61 applied, 35 policy-refused); 15 post-`force_update` checked one way (0 applied, 15 refused); **0 disagreements** | yes (`test`) |
+| `every_field_mutation_agrees_with_helios_on_step_path` | Structured single-field, branch-node, committee, signature (G2 non-subgroup, identity, wrong-message), bitvector, slot/clock/period/fork-edge, and SSZ-framing mutations (host-side decoders: `ferrata-core` `LightClientUpdate::decode` for period updates, test-local decoder for finality updates) across all 4 real update shapes (Electra period, Electra finality, Gloas period with Electra→Gloas upgrade, Gloas finality); plus **17** bootstrap (14) and store (3) mutations judged against Helios; plus **18** step-path-only `CompactUpdate` (4), `SignerWitness` (6), and `Job` step-order/digest (8) refusals (no Helios side) | 502 (467 update mutations + 17 bootstrap/store differential + 18 step-path-only wire/witness/job refusals) | Update mutations: 16 accepted by both, 439 refused by both, 4 valid optimistic-only in Helios/spec (policy-refused by step path; 443 non-#872 step-path refusals), 8 #872 pins; all 17 bootstrap/store refused by both; all 18 step-path-only refused; **0 disagreements** | yes (`test`) |
+| `adopted_keys_must_match_committee_key_root_on_step_path` (and `tests/steps.rs::adopted_keys_must_match_committee_key_root`) | Step-path-only adoption key-root binding guard (no Helios side): adopting a bootstrap or `next_sync_committee` with two distinct keys swapped (within-part and cross-part; G1 aggregate sum preserved, `pubkeys_root` changed) on both 2-part public jobs and 1-part `VerifyAll` | 8 step-path-only refusals | All 8 refused with `CommitteeInvalid` (fails on mutant dropping the `pubkeys_root` Merkle check in `AdoptionProgress::add_part`) | yes (`test`) |
+| `resigned_semantic_edges_agree_with_helios_on_step_path` | Fabricated re-signed updates (32-key Electra, Electra→Gloas fork-version `signature_slot - 1` boundary, 3 malformed committee adoptions under `StricterOnChainAdoption`, #871/#872/#751 pins, and 512-key mainnet 341 vs 342 threshold) | 45 | **0 unexpected disagreements** | yes (`test`) |
+| `ci_fast_random_mutations_agree_with_helios_on_step_path` | Fast CI seeded random mutations (seed `0x26112401`, 100 each across 4 base updates: Electra finality, Electra period, Gloas finality, Gloas period+fork upgrade; half at fixed `current_slot`, half at `mutated_sig_slot + 1`) | 400 | 397 refused, 0 accepted at fixed clock, 3 accepted at dynamic clock; **0 disagreements** | yes (`test`) |
+| `full_random_mutations_across_all_layouts_agree_with_helios_on_step_path` (`#[ignore]`) | Full seeded random sweep over the same 4 base updates as the CI subset with a distinct seed (`0x261124ff`, 2,500 per class, fixed and dynamic clocks) | 10,000 | 9,975 refused, 1 accepted at fixed clock (lowered `signature_slot` still `> attested_slot` in same period/fork), 24 accepted at dynamic clock; **0 disagreements** | full script (`scripts/helios-oracle-full.sh`) |
+| **Step-path oracle totals** | CI fast subset (7 default tests, **16–20 s**): **1,400 cases** (1,374 Helios-judged + 26 step-path-only refusals) + 1 pin check; full step-path suite: **11,400 cases** + 1 pin check (plus `helios_lab_record`'s 246 lab updates and `helios_oracle`'s 2,000 mainnet mutations) | **11,400** step-path cases | **0 unexpected disagreements** | CI + full script |
+
+On every accepted differential case, the oracle asserts bit-for-bit agreement between Helios 0.12.0, Ferrata's public
+step job, Ferrata's `VerifyAll` path, and `FinalizedStore(Adoption::OnChain)` on `ApplyOutcome` (`rotated`, `advanced`,
+`adopted`), `CompactStore` finalized/current/next roots, and `HeaderRecord` (slot, beacon root, execution root,
+block hash, and block number where the layout carries a payload header).
+
+### What this oracle does not cover
+
+- **Shared specification or transcription blind spots**: Helios and Ferrata implement the same Ethereum Altair–Gloas
+  light-client specification; a bug in the specification itself, or a shared misreading both clients make, will agree.
+- **RISC Zero `rv32im` guest execution and accelerated `blst`**: the native step-path oracle runs `ferrata-core` on
+  `x86_64` with upstream `blst 0.3.17`, not the `lez/guests/program` ELF compiled for `riscv32im-unknown-none-elf`
+  with RISC Zero's `v0.3.16-risczero.0` accelerated `blst` patch.
+- **The LEZ actor shell and guest wrapper**: `ProgramStepState` is a native mirror of `lez/guests/program/src/main.rs`'s
+  call sequence rather than the guest binary itself (if `main.rs` changes, the mirror does not follow automatically).
+  PDA key derivation, LEZ account authorization, `timestamp_window` clock enforcement (`main.rs` passes
+  `update.signature_slot` to `steps::step1` and leaves `current_slot >= signature_slot` to LEZ's validity window), and
+  record write-once storage are tested by the `lez-harness` suites rather than this oracle.
+- **No Helios comparison on step-path-only checks and post-`force_update` vector steps**: the 18 wire/witness/job
+  refusals (`CompactUpdate`, `SignerWitness`, `Job`) and 8 adoption key-root binding refusals
+  (`adopted_keys_must_match_committee_key_root_on_step_path`) assert Ferrata step-path invariants directly without a
+  Helios side; the 15 official sync-vector updates that follow a Helios `force_update` (in 5 of 33 cases) are checked
+  one way (the step path never finalizes a header Helios never finalized; all 15 refused). Host-side finality-update
+  SSZ-framing mutations exercise a test-local decoder rather than `lez/advance::decode_finality_update`.
+- **Pre-Capella vectors**: the 19 Altair and Bellatrix `consensus-specs` sync cases Helios 0.12.0 cannot decode
+  (`NoMatchingVariant`) are tested by `ferrata-spectests`'s own `vectors.rs` and `steps.rs`, not against Helios.
+- **Refusal reason codes**: verdicts and post-states are compared, not error-variant strings (error codes and
+  atomicity are pinned by `adversarial.rs`, `mutation_guards.rs`, and `lez/harness/tests/exit_codes.rs`).
+- **Independent security audit**: differential testing against Helios and Lodestar raises confidence in specification
+  conformance, but does not substitute for an external third-party audit of `ferrata-core` and the guest program.
+
+See [`docs/rows/helios-oracle.md`](../../docs/rows/helios-oracle.md) for the proposed RFP-021 R.6 / RFP-022 R.6
+row updates.
+
 ## Re-run
 
+Fast CI subset (runs automatically inside CI's `test` job, 16–20 s):
+
 ```sh
-scripts/fetch-vectors.sh            # the official vectors (helios_oracle.rs only)
-cargo test --locked -p ferrata-spectests --test helios_lab_record --test helios_oracle -- --nocapture
+scripts/fetch-vectors.sh
+cargo test --locked -p ferrata-spectests --test helios_step_oracle -- --nocapture
 ```
 
-Ran on the build box (a Modal CPU container), 18 November 2026, rustc 1.93.0: 4 + 9 tests passed
-([`results/helios-differential-2026-11-18.txt`](results/helios-differential-2026-11-18.txt)). The record test reads
-the lab's record as committed; when the lab's record grows, it replays the new updates too, and still requires the
-end state of `instances.tsv`.
+Full step-path + legacy Helios differential run (recorded 24 November 2026 on `x86_64` Linux, rustc 1.93.0, 223 s on
+laptop / 168 s reproduced on build box, 11,392 step-path cases + 246 lab-record updates + 2,000 mainnet mutations, 0
+unexpected disagreements, [`results/helios-step-oracle-2026-11-24.txt`](results/helios-step-oracle-2026-11-24.txt),
+path-redacted; the 8 adoption key-root binding cases in `adopted_keys_must_match_committee_key_root_on_step_path` were
+added in the follow-up commit, bringing the suite to 7 default tests and 11,400 cases):
+
+```sh
+bash scripts/helios-oracle-full.sh --out crates/ferrata-spectests/results/helios-step-oracle-2026-11-24.txt
+```
+
+Earlier build-box run (18 November 2026, rustc 1.93.0, 4 + 9 tests passed):
+[`results/helios-differential-2026-11-18.txt`](results/helios-differential-2026-11-18.txt). The record tests read
+the lab's record as committed; when the lab's record grows, they replay the new updates too, and
+`every_recorded_real_update_in_repo_agrees_with_helios_on_step_path` walks the working tree and fails with actionable
+instructions if any new `.ssz` file is added without being replayed (or explicitly excluded with a reason in
+`NON_REPLAY_SSZ`).

@@ -285,10 +285,14 @@ note = "the updater: a source that is down counted and the others used; 2 droppe
 id = "RFP-021 R.6"
 tests = [
   { path = "crates/ferrata-spectests/tests/helios_oracle.rs", kind = "test", ci = "test" },
+  { path = "crates/ferrata-spectests/tests/helios_lab_record.rs", kind = "test", ci = "test" },
+  { path = "crates/ferrata-spectests/tests/helios_step_oracle.rs", kind = "test", ci = "test" },
+  { path = "scripts/helios-oracle-full.sh", kind = "test", ci = "local", run = "bash scripts/helios-oracle-full.sh" },
+  { path = "crates/ferrata-spectests/results/helios-step-oracle-2026-11-24.txt", kind = "record" },
   { path = "crates/ferrata-spectests/tests/mpt_proofs.rs", kind = "test", ci = "test" },
   { path = "crates/ferrata-spectests/tests/bls_vectors.rs", kind = "test", ci = "test" },
 ]
-note = "BLS is blst (upstream audited; zkcrypto as a cross-check), 61 official vectors on both libraries; Merkle-Patricia and RLP checked against alloy-trie and alloy-rlp; the light-client logic is Ferrata's own transcription against the specification (Helios an oracle, not a dependency)"
+note = "BLS is blst (upstream audited; zkcrypto as a cross-check), 61 official vectors on both libraries; Merkle-Patricia and RLP checked against alloy-trie and alloy-rlp; the light-client logic is Ferrata's own transcription against the specification, checked on the program's step path against Helios 0.12.0, source unmodified, built with this repo's lockfile (bls12_381 0.8.0) on all 321 recorded real updates, 33 official vectors (96 two-way compared, 15 post-force_update checked one way), 467 field/edge/SSZ-framing mutations, 17 bootstrap/store mutations, 45 re-signed semantic edges, and 400 CI / 10,000 full random mutations, alongside 18 step-path-only wire/witness/job and 8 adoption key-root binding refusals"
 
 [[row]]
 id = "RFP-021 R.7"

@@ -88,6 +88,8 @@ def runs(job, path):
 
 check("trace: test runs crates/ferrata-spectests/tests/steps.rs (cargo test --workspace at the root)",
       runs("test", "crates/ferrata-spectests/tests/steps.rs"))
+check("trace: test runs crates/ferrata-spectests/tests/helios_step_oracle.rs (fast step-path oracle subset)",
+      runs("test", "crates/ferrata-spectests/tests/helios_step_oracle.rs"))
 check("trace: test does not run lez/harness/tests/public_path.rs (lez/ is its own workspace)",
       not runs("test", "lez/harness/tests/public_path.rs"))
 check("trace: roundtrip runs cli/tests/roundtrip_b.rs (through e2e/ci/run.sh, in cli/)",

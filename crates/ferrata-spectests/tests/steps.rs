@@ -695,3 +695,105 @@ fn a_bad_adoption_witness_is_refused_and_changes_nothing() {
     wrong.aggregate_pubkey = c.pubkeys[0];
     assert_eq!(adopt_committee(&wrong, &keys), Err(Error::CommitteeInvalid));
 }
+
+#[test]
+fn adopted_keys_must_match_committee_key_root() {
+    let spec = mainnet();
+    let (bootstrap, updates) = mainnet_data();
+    let bls = Blst::new(Aggregation::Auto);
+    let gvr = root(GENESIS_VALIDATORS_ROOT);
+    let trusted = root(TRUSTED_BLOCK_ROOT);
+    let ctx = Context { spec: &spec, genesis_validators_root: gvr, bls: &bls };
+
+    // Swapping two distinct keys preserves the G1 aggregate sum while changing `pubkeys_root`, so
+    // the aggregate-sum check alone cannot catch it; only the Merkle key-root check in
+    // `AdoptionProgress::add_part` refuses it.
+    let c = &bootstrap.current_sync_committee;
+    let summary = CommitteeSummary::of(c);
+    let keys = uncompressed_keys(c).unwrap();
+    assert_ne!(keys[0], keys[1], "distinct keys for within-part swap");
+    assert_ne!(keys[0], keys[256], "distinct keys for cross-part swap");
+
+    // Confirm the swapped committee still sums to the exact committed `aggregate_pubkey` while
+    // hashing to a different `pubkeys_root`.
+    for (label, i, j) in [("within part", 0usize, 1usize), ("across parts", 0, 256)] {
+        let mut swapped_c = c.clone();
+        swapped_c.pubkeys.swap(i, j);
+        assert_eq!(bls.check_committee_onchain(&swapped_c), Ok(()), "sum unchanged ({label})");
+        assert_ne!(CommitteeSummary::of(&swapped_c).pubkeys_root, summary.pubkeys_root, "root changed ({label})");
+    }
+
+    let mut swapped_within = keys.clone();
+    swapped_within.swap(0, 1);
+    let mut swapped_across = keys.clone();
+    swapped_across.swap(0, 256);
+
+    // 1. Single-part `adopt_committee`: both swaps must be refused with `CommitteeInvalid`.
+    assert_eq!(adopt_committee(&summary, &swapped_within), Err(Error::CommitteeInvalid));
+    assert_eq!(adopt_committee(&summary, &swapped_across), Err(Error::CommitteeInvalid));
+
+    // 2. Multi-part `AdoptionProgress::add_part`: refused on the final part, progress unchanged.
+    for (label, swapped) in [("within part", &swapped_within), ("across parts", &swapped_across)] {
+        let mut progress = AdoptionProgress::new(summary, 2);
+        progress.add_part(0, &swapped[..256], 512).unwrap();
+        let before_final = progress.clone();
+        assert_eq!(
+            progress.add_part(1, &swapped[256..], 512),
+            Err(Error::CommitteeInvalid),
+            "2-part AdoptionProgress swap {label}"
+        );
+        assert_eq!(progress, before_final, "refused final part must leave progress unchanged ({label})");
+    }
+
+    // 3. Full bootstrap step path (`steps::initialize` + `Job::adopt`), 2-part and 1-part.
+    let compact_boot = CompactBootstrap::of(&bootstrap);
+    for (label, swapped) in [("within part", &swapped_within), ("across parts", &swapped_across)] {
+        let (_, mut job2) = steps::initialize(&trusted, &compact_boot, LcFork::Electra, &spec, 2).unwrap();
+        job2.adopt(0, &swapped[..256], 512).unwrap();
+        assert_eq!(
+            job2.adopt(1, &swapped[256..], 512),
+            Err(StepError::Core(Error::CommitteeInvalid)),
+            "bootstrap 2-part Job::adopt swap {label}"
+        );
+        let (_, mut job1) = steps::initialize(&trusted, &compact_boot, LcFork::Electra, &spec, 1).unwrap();
+        assert_eq!(
+            job1.adopt(0, swapped, 512),
+            Err(StepError::Core(Error::CommitteeInvalid)),
+            "bootstrap 1-part Job::adopt swap {label}"
+        );
+    }
+
+    // 4. Full update step path (`steps::step1` -> `step2` -> `Job::adopt` on mainnet update_1):
+    //    adopting `next_sync_committee` with two swapped keys must be refused in 2-part and 1-part modes.
+    let (mut policy, mut compact) = init_both(&trusted, &bootstrap, LcFork::Electra, &spec, &bls, 2);
+    compare_update("update 0", &mut policy, &mut compact, &updates[0], updates[0].signature_slot + 1, &ctx, 2).unwrap();
+    let u1 = &updates[1];
+    let cu1 = CompactUpdate::of(u1);
+    let sw1 = SignerWitness::build(&policy.core().next_sync_committee, &u1.sync_aggregate.bits).unwrap();
+    let u1_keys = uncompressed_keys(&u1.next_sync_committee).unwrap();
+    assert_ne!(u1_keys[0], u1_keys[1]);
+    assert_ne!(u1_keys[0], u1_keys[256]);
+    let mut u1_swap_within = u1_keys.clone();
+    u1_swap_within.swap(0, 1);
+    let mut u1_swap_across = u1_keys.clone();
+    u1_swap_across.swap(0, 256);
+
+    for (label, swapped) in [("within part", &u1_swap_within), ("across parts", &u1_swap_across)] {
+        let mut job2 = steps::step1(&compact, &cu1, &sw1, u1.signature_slot + 1, &spec, &gvr, 2).unwrap();
+        job2.step2().unwrap();
+        job2.adopt(0, &swapped[..256], 512).unwrap();
+        assert_eq!(
+            job2.adopt(1, &swapped[256..], 512),
+            Err(StepError::Core(Error::CommitteeInvalid)),
+            "update 2-part Job::adopt swap {label}"
+        );
+        let mut job1 = steps::step1(&compact, &cu1, &sw1, u1.signature_slot + 1, &spec, &gvr, 1).unwrap();
+        job1.step2().unwrap();
+        job1.step3().unwrap();
+        assert_eq!(
+            job1.adopt(0, swapped, 512),
+            Err(StepError::Core(Error::CommitteeInvalid)),
+            "update 1-part Job::adopt swap {label}"
+        );
+    }
+}
