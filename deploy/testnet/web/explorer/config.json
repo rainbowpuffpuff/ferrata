@@ -1,0 +1,244 @@
+{
+  "name": "Ferrata LEZ test network",
+  "lez": "v0.4.0-rc3",
+  "rpc": "/rpc",
+  "public_rpc": "",
+  "site": "",
+  "wallet": "/wallet/",
+  "faucet": "",
+  "faucet_api": "POST https://{{HOST}}/faucet with {\"account\": \"<your LEZ public account id, base58>\"}: 10 LGO, once a day per account (GET /faucet: its terms, account and balance)",
+  "lez_explorer": "",
+  "status_api": "status/status.json",
+  "repo": "https://github.com/rainbowpuffpuff/ferrata",
+  "bedrock": {
+    "anchored": true,
+    "node_version": "0.3.5-rc.1",
+    "channel_id": "0101010101010101010101010101010101010101010101010101010101010101",
+    "explorer": ""
+  },
+  "bridge": {
+    "chain_id": 11155111,
+    "vault": "",
+    "vault_explorer": "",
+    "status": ""
+  },
+  "programs": [
+    {
+      "key": "attestation",
+      "name": "Ferrata attestation",
+      "crate": "ferrata_lez",
+      "rfp": "RFP-021",
+      "what": "Ethereum light clients on LEZ: each instance verifies sync-committee signatures, keeps the finalized header, writes one record per finalized header, and attests storage slots, accounts, logs and receipts of finalized blocks against those records.",
+      "image_id": "816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df",
+      "binary_sha256": "ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9",
+      "binary_bytes": 627064,
+      "source": "https://github.com/rainbowpuffpuff/ferrata/tree/main/lez/guests/program",
+      "guide": "https://github.com/rainbowpuffpuff/ferrata/blob/main/docs/guides/consumer-guide.md",
+      "idl": "idl/ferrata_attestation.idl.json",
+      "account": ""
+    },
+    {
+      "key": "bridge",
+      "name": "Ferrata bridge",
+      "crate": "ferrata_bridge_b1",
+      "rfp": "RFP-022",
+      "what": "The private ERC-20/ETH bridge's LEZ side: imports the vault's deposit roots through attested Ethereum state, mints private or public holdings on claim, burns for release, with registration, fees, caps, freezes and roles.",
+      "image_id": "847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515",
+      "binary_sha256": "537cbe7a4c6900419b54e556b9741a9e37d86adf53f5e65683aa2b22c8e9a036",
+      "binary_bytes": 607448,
+      "source": "https://github.com/rainbowpuffpuff/ferrata/tree/main/lez/guests/bridge",
+      "guide": "https://github.com/rainbowpuffpuff/ferrata/blob/main/docs/guides/user-guide.md",
+      "idl": "idl/ferrata_bridge.idl.json",
+      "account": ""
+    },
+    {
+      "key": "consumer",
+      "name": "Reference consumer",
+      "crate": "ferrata_consumer",
+      "rfp": "RFP-021",
+      "what": "The reference program that asks the attestation program for a fact and acts on the reply: how another LEZ program consumes attested Ethereum state.",
+      "image_id": "8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96",
+      "binary_sha256": "d02e4aa394f73702fec3e9983f32e8c9743dbaa1a41d2d705fc06f1b63e94ca5",
+      "binary_bytes": 471408,
+      "source": "https://github.com/rainbowpuffpuff/ferrata/tree/main/lez/guests/consumer",
+      "guide": "https://github.com/rainbowpuffpuff/ferrata/blob/main/docs/guides/consumer-guide.md",
+      "idl": "",
+      "account": ""
+    },
+    {
+      "key": "holdings",
+      "name": "Holdings (worked example)",
+      "crate": "ferrata_holdings",
+      "rfp": "RFP-021",
+      "what": "A second consumer, the consumer guide's worked example: records an Ethereum account's token holdings on LEZ from an attested statement.",
+      "image_id": "a79e3f5c4496f2707ab6f55a980efb00dd80aaf562b51f5a504349e9a97c5591",
+      "binary_sha256": "504a67c071a103b5d99de10163ae97f925151b09b59c49048e50f3d315b710c5",
+      "binary_bytes": 307504,
+      "source": "https://github.com/rainbowpuffpuff/ferrata/tree/main/lez/guests/holdings",
+      "guide": "https://github.com/rainbowpuffpuff/ferrata/blob/main/docs/guides/consumer-guide.md",
+      "idl": "",
+      "account": ""
+    },
+    {
+      "key": "names",
+      "name": "Names",
+      "crate": "ferrata_names",
+      "rfp": "test network",
+      "what": "Human-readable names for LEZ accounts: commit-reveal registration, a primary name per account, transfers, renewal, a private receiver so a name can be paid privately.",
+      "image_id": "ee9578cab413451e1f0a0cf267a7874ca3231ed0a30907f5d793648ac4e6f790",
+      "binary_sha256": "5653a2ee1c3a85f3b29f32a1a227030a2619c096d0dd7c6c92b872e9e7ce75ab",
+      "source": "",
+      "guide": "",
+      "idl": "idl/ferrata_names.idl.json",
+      "account": ""
+    },
+    {
+      "key": "msg",
+      "name": "Encrypted messages",
+      "crate": "ferrata_msg",
+      "rfp": "test network",
+      "what": "Wallet-to-wallet messages: the program stores envelopes it cannot read (X25519 or X25519 + ML-KEM-768, XChaCha20-Poly1305, padded), with spam limits and contacts-only inboxes enforced on chain.",
+      "image_id": "04ae1988fe84eef6da472152a75b17e6c7453e6e4775264f12af1a750b945277",
+      "binary_sha256": "5b7af994f1169f2b6a905ccfda478f098f5bdef9e09cce0edae07fa8fe733134",
+      "binary_bytes": 275444,
+      "source": "",
+      "guide": "",
+      "idl": "idl/ferrata_msg.idl.json",
+      "account": ""
+    },
+    {
+      "key": "statements",
+      "name": "Recorded statements",
+      "crate": "ferrata_statements",
+      "rfp": "RFP-021",
+      "what": "Attested statements kept on LEZ for later readers.",
+      "image_id": "86acef86dc73be13b76de63d21d41ac928639f3be7144132f22f14831d5bc663",
+      "binary_sha256": "439f6ac628ef691f321545b77b1819136fcef6965b7a4b31b031568f4c63a0fa",
+      "binary_bytes": 318504,
+      "source": "https://github.com/rainbowpuffpuff/ferrata/tree/main/lez/guests/statements",
+      "guide": "",
+      "idl": "",
+      "account": ""
+    },
+    {
+      "key": "statements-reader",
+      "name": "Statements reader",
+      "crate": "ferrata_statements_reader",
+      "rfp": "RFP-021",
+      "what": "The reference reader of recorded statements.",
+      "image_id": "d2a8b082f1e4326daad8aad58c2a525f76f17001bb362040fec67260d4d3e73d",
+      "binary_sha256": "a74b740eb72c18a06d62a8f55c845fa88a171c913604bf3bdb5d9e2c0d39aa18",
+      "binary_bytes": 316572,
+      "source": "https://github.com/rainbowpuffpuff/ferrata/tree/main/lez/guests/statements-reader",
+      "guide": "",
+      "idl": "",
+      "account": ""
+    },
+    {
+      "key": "rebate",
+      "name": "Operator rebate",
+      "crate": "ferrata_rebate",
+      "rfp": "RFP-021",
+      "what": "Rebates to the parties who keep the light client following Ethereum.",
+      "image_id": "e8f1c1c1381a08faf284fd33226ae11fcb4b7b7d3c397faa113b76d9c7e6d902",
+      "binary_sha256": "9891fe89165220ae46fd5d1ad6f285b750ceb2b65a431b030356bee1b6e5b1bd",
+      "binary_bytes": 290528,
+      "source": "https://github.com/rainbowpuffpuff/ferrata/tree/main/lez/guests/rebate",
+      "guide": "",
+      "idl": "",
+      "account": ""
+    }
+  ],
+  "known_images": {
+    "816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df": {
+      "key": "attestation",
+      "name": "Ferrata attestation",
+      "idl": "idl/ferrata_attestation.idl.json"
+    },
+    "847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515": {
+      "key": "bridge",
+      "name": "Ferrata bridge",
+      "idl": "idl/ferrata_bridge.idl.json"
+    },
+    "ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd": {
+      "key": "bridge-v0",
+      "name": "Ferrata bridge (before milestone B1)",
+      "idl": ""
+    },
+    "8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96": {
+      "key": "consumer",
+      "name": "Reference consumer",
+      "idl": ""
+    },
+    "a79e3f5c4496f2707ab6f55a980efb00dd80aaf562b51f5a504349e9a97c5591": {
+      "key": "holdings",
+      "name": "Holdings (worked example)",
+      "idl": ""
+    },
+    "ee9578cab413451e1f0a0cf267a7874ca3231ed0a30907f5d793648ac4e6f790": {
+      "key": "names",
+      "name": "Names",
+      "idl": "idl/ferrata_names.idl.json"
+    },
+    "04ae1988fe84eef6da472152a75b17e6c7453e6e4775264f12af1a750b945277": {
+      "key": "msg",
+      "name": "Encrypted messages",
+      "idl": "idl/ferrata_msg.idl.json"
+    },
+    "86acef86dc73be13b76de63d21d41ac928639f3be7144132f22f14831d5bc663": {
+      "key": "statements",
+      "name": "Recorded statements",
+      "idl": ""
+    },
+    "d2a8b082f1e4326daad8aad58c2a525f76f17001bb362040fec67260d4d3e73d": {
+      "key": "statements-reader",
+      "name": "Statements reader",
+      "idl": ""
+    },
+    "e8f1c1c1381a08faf284fd33226ae11fcb4b7b7d3c397faa113b76d9c7e6d902": {
+      "key": "rebate",
+      "name": "Operator rebate",
+      "idl": ""
+    }
+  },
+  "instances": [],
+  "accounts": {
+    "ob15kRVNHFC2VxygSRqk55tLDeQ5bwTrvrbSYWkN1Gs": "faucet"
+  },
+  "beacon_apis": {
+    "1": [
+      "https://ethereum-beacon-api.publicnode.com",
+      "https://lodestar-mainnet.chainsafe.io"
+    ],
+    "11155111": [
+      "https://ethereum-sepolia-beacon-api.publicnode.com",
+      "https://lodestar-sepolia.chainsafe.io"
+    ]
+  },
+  "execution_rpcs": {
+    "1": [
+      "https://ethereum-rpc.publicnode.com"
+    ],
+    "11155111": [
+      "https://ethereum-sepolia-rpc.publicnode.com"
+    ]
+  },
+  "alarms": {
+    "lag_warn_epochs": 4,
+    "lag_bad_epochs": 64,
+    "period_warn_hours": 12,
+    "ws_warn_hours": 24
+  },
+  "scan_blocks": 300,
+  "status_scan_blocks": 600,
+  "status_refresh_s": 30,
+  "native": {
+    "symbol": "LGO",
+    "decimals": 9
+  },
+  "status_history": "status/history.json",
+  "range_limit": 50,
+  "landing": "network",
+  "feed_blocks": 300,
+  "faucet_path": "faucet"
+}

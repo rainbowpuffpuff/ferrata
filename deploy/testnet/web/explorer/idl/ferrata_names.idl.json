@@ -1,0 +1,967 @@
+{
+  "version": "0.1.0",
+  "name": "ferrata_names",
+  "spec": "logos-co/spel c6f73ce (spel-framework-core 0.7.0, docs/reference/idl.md)",
+  "metadata": {
+    "name": "ferrata_names",
+    "version": "0.1.0"
+  },
+  "instruction_type": "ferrata_lez_names_wire::NamesMessage",
+  "docs": [
+    "Human-readable names for LEZ accounts, for the LEZ v0.4 test network (EXPERIMENTAL, UNAUDITED). Hand-written IDL in SPEL's format, as ferrata_bridge.idl.json.",
+    "Each instruction is a variant of the borsh enum named by instruction_type; discriminator is its one-byte variant index, followed by args in order.",
+    "A signed action is sent to user(signer) (the root, signed by the account), which forwards it to name(n); the name's actor sees the caller as from = user(signer).",
+    "Names: 3-32 bytes of a-z, 0-9 and -, no leading or trailing -, no --, not reserved; at most 5 per account; 180-day term, 30-day grace; no fee on the test network.",
+    "Time: now_ms in a message sets the transaction's timestamp validity window to [now_ms, now_ms + 600000); [now_ms, now_ms + 120000) for commit and register (the reveal).",
+    "Registration is commit and reveal: commit stores a hash of (signer, salt, name); register reveals it from 4 minutes after the commit's now_ms and within 24 hours, so a copier who learns the name from a reveal can only reveal after that reveal's window has closed.",
+    "Refusals exit with one byte, 230-254 (below); the bridge program also uses 240-255, so a code is read with the program that returned it."
+  ],
+  "instructions": [
+    {
+      "name": "register",
+      "variant": "Register",
+      "discriminator": [
+        0
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "user(signer) = Actor(signer, program): the signer's own actor of this program; the root message, signed"
+          ]
+        },
+        {
+          "name": "name",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "name(n): the public PDA of the program with seed sha256(\"ferrata-names/v1/name/\" || n); PDA evidence while it holds no record"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "ferrata-names/v1/name/"
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "previous_owner",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "user(previous owner), only when the name has lapsed (its count and primary name are debited)"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "now_ms",
+          "type": "u64"
+        },
+        {
+          "name": "target",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "receiver",
+          "type": {
+            "option": {
+              "defined": "PrivateReceiver"
+            }
+          }
+        },
+        {
+          "name": "salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "The reveal: register a free or lapsed name for the signer, pointing at `target` (and optionally a private receiver). The signer's pending commitment must equal sha256(\"ferrata-names/v1/commit/\" || signer || salt || name) and now_ms must be in its reveal window; the commitment is spent. Emits Registered."
+      ]
+    },
+    {
+      "name": "renew",
+      "variant": "Renew",
+      "discriminator": [
+        1
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "user(signer) = Actor(signer, program): the signer's own actor of this program; the root message, signed"
+          ]
+        },
+        {
+          "name": "name",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "name(n): the public PDA of the program with seed sha256(\"ferrata-names/v1/name/\" || n); holds the record"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "ferrata-names/v1/name/"
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "now_ms",
+          "type": "u64"
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Owner: extend to now_ms + 180 days, until the 30-day grace period after expiry ends. Emits Renewed."
+      ]
+    },
+    {
+      "name": "transfer",
+      "variant": "Transfer",
+      "discriminator": [
+        2
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "user(signer) = Actor(signer, program): the signer's own actor of this program; the root message, signed"
+          ]
+        },
+        {
+          "name": "name",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "name(n): the public PDA of the program with seed sha256(\"ferrata-names/v1/name/\" || n); holds the record"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "ferrata-names/v1/name/"
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "to",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "now_ms",
+          "type": "u64"
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Owner, before expiry: offer the name to `to`, who takes it with accept; `to` = the owner withdraws the offer. Emits Offered."
+      ]
+    },
+    {
+      "name": "set_target",
+      "variant": "SetTarget",
+      "discriminator": [
+        3
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "user(signer) = Actor(signer, program): the signer's own actor of this program; the root message, signed"
+          ]
+        },
+        {
+          "name": "name",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "name(n): the public PDA of the program with seed sha256(\"ferrata-names/v1/name/\" || n); holds the record"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "ferrata-names/v1/name/"
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "target",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "receiver",
+          "type": {
+            "option": {
+              "defined": "PrivateReceiver"
+            }
+          }
+        },
+        {
+          "name": "now_ms",
+          "type": "u64"
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Owner, before expiry: change what the name resolves to. Emits Updated."
+      ]
+    },
+    {
+      "name": "release",
+      "variant": "Release",
+      "discriminator": [
+        4
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "user(signer) = Actor(signer, program): the signer's own actor of this program; the root message, signed"
+          ]
+        },
+        {
+          "name": "name",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "name(n): the public PDA of the program with seed sha256(\"ferrata-names/v1/name/\" || n); holds the record; emptied"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "ferrata-names/v1/name/"
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Owner, any time: free the name. Emits Released."
+      ]
+    },
+    {
+      "name": "set_primary",
+      "variant": "SetPrimary",
+      "discriminator": [
+        5
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "user(signer) = Actor(signer, program): the signer's own actor of this program; the root message, signed"
+          ]
+        },
+        {
+          "name": "name",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "name(n): the public PDA of the program with seed sha256(\"ferrata-names/v1/name/\" || n); holds the record (absent when clearing)"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "ferrata-names/v1/name/"
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": {
+            "option": "string"
+          }
+        },
+        {
+          "name": "now_ms",
+          "type": "u64"
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Set the signer's primary name (reverse record): the name must be live and point at the signer. None clears it."
+      ]
+    },
+    {
+      "name": "credit",
+      "variant": "Credit",
+      "discriminator": [
+        6
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "user(a), from name(name) only"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal (from name(name) only): a now holds the name."
+      ]
+    },
+    {
+      "name": "debit",
+      "variant": "Debit",
+      "discriminator": [
+        7
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "user(a), from name(name) only"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal (from name(name) only): a no longer holds the name; clears it as primary."
+      ]
+    },
+    {
+      "name": "primary",
+      "variant": "Primary",
+      "discriminator": [
+        8
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "user(a), from name(name) only"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal (from name(name) only): make the name a's primary name."
+      ]
+    },
+    {
+      "name": "accept",
+      "variant": "Accept",
+      "discriminator": [
+        9
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "user(signer) = Actor(signer, program): the signer's own actor of this program; the root message, signed"
+          ]
+        },
+        {
+          "name": "name",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "name(n): the public PDA of the program with seed sha256(\"ferrata-names/v1/name/\" || n); holds the record"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "ferrata-names/v1/name/"
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "previous_owner",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "user(owner): debited"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "now_ms",
+          "type": "u64"
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Take a name offered to the signer, before expiry: it then points at the signer, with no private receiver; the new owner is credited (at most 5 names). Emits Transferred."
+      ]
+    },
+    {
+      "name": "commit",
+      "variant": "Commit",
+      "discriminator": [
+        10
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "user(signer) = Actor(signer, program): the signer's own actor of this program; the root message, signed"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "commitment",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "now_ms",
+          "type": "u64"
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Step 1 of registering: store the commitment at user(signer), replacing a pending one; revealable from now_ms + 240,000 ms (COMMIT_SLACK 120 s + MIN_REVEAL_DELAY 120 s) until now_ms + 86,400,000 ms. Valid only in blocks within 120 s of now_ms."
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "NameRecord",
+      "type": {
+        "defined": "NameRecord"
+      }
+    },
+    {
+      "name": "UserState",
+      "type": {
+        "defined": "UserState"
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "PrivateReceiver",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "npk",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "vpk",
+          "type": {
+            "vec": "u8"
+          }
+        }
+      ],
+      "docs": [
+        "What a sender needs to pay the name's holder privately: LEZ's nullifier public key and ML-KEM-768 viewing public key (1,184 bytes), as LEZ's wallet takes them (--to-npk, --to-vpk)."
+      ]
+    },
+    {
+      "name": "NameRecord",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "owner",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "target",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "receiver",
+          "type": {
+            "option": {
+              "defined": "PrivateReceiver"
+            }
+          }
+        },
+        {
+          "name": "registered_ms",
+          "type": "u64"
+        },
+        {
+          "name": "expires_ms",
+          "type": "u64"
+        },
+        {
+          "name": "offer",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ],
+      "docs": [
+        "The state of name(n); empty when the name is free. Resolves while block time < expires_ms."
+      ]
+    },
+    {
+      "name": "PendingCommit",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "not_before_ms",
+          "type": "u64"
+        },
+        {
+          "name": "expires_ms",
+          "type": "u64"
+        }
+      ],
+      "docs": [
+        "A commitment waiting for its reveal: the reveal's now_ms must be in [not_before_ms, expires_ms)."
+      ]
+    },
+    {
+      "name": "UserState",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "owned",
+          "type": "u8"
+        },
+        {
+          "name": "primary",
+          "type": {
+            "option": "string"
+          }
+        },
+        {
+          "name": "commit",
+          "type": {
+            "option": {
+              "defined": "PendingCommit"
+            }
+          }
+        }
+      ],
+      "docs": [
+        "The state of user(a): names held, and the primary name (counts only while that name is live and points at a)."
+      ]
+    },
+    {
+      "name": "NameEvent",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "owner",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "target",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "expires_ms",
+          "type": "u64"
+        }
+      ],
+      "docs": [
+        "ProgramEvent data of every change; selector = sha256(\"ferrata_names::<kind>\")[..8], kind one of Registered, Renewed, Offered, Transferred, Updated, Released."
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 230,
+      "name": "NO_COMMIT",
+      "msg": "`Register` by an account with no pending commitment (a reveal copied by another account that has none)."
+    },
+    {
+      "code": 231,
+      "name": "COMMIT_MISMATCH",
+      "msg": "account (the commitment binds the owner)."
+    },
+    {
+      "code": 232,
+      "name": "TOO_EARLY",
+      "msg": "`Register` before the commitment's reveal window opens."
+    },
+    {
+      "code": 233,
+      "name": "COMMIT_EXPIRED",
+      "msg": "`Register` after the commitment's reveal window closed (the commitment is void)."
+    },
+    {
+      "code": 240,
+      "name": "BAD_MESSAGE",
+      "msg": "The message does not decode, a time out of range, or a private receiver's keys of the wrong size."
+    },
+    {
+      "code": 241,
+      "name": "BAD_STATE",
+      "msg": "Stored state that does not decode."
+    },
+    {
+      "code": 242,
+      "name": "NOT_SIGNED",
+      "msg": "A root message to `user(a)` that `a` did not sign."
+    },
+    {
+      "code": 243,
+      "name": "WRONG_SENDER",
+      "msg": "A message from another program, or bookkeeping from an actor other than the name's."
+    },
+    {
+      "code": 244,
+      "name": "WRONG_RECEIVER",
+      "msg": "A forwarded action at an actor other than `name(n)`."
+    },
+    {
+      "code": 245,
+      "name": "INVALID_NAME",
+      "msg": "A name that breaks the rules (length, characters, hyphens)."
+    },
+    {
+      "code": 246,
+      "name": "RESERVED_NAME",
+      "msg": "A reserved name."
+    },
+    {
+      "code": 247,
+      "name": "TAKEN",
+      "msg": "`Register` of a name that is held (live, or expired but within the grace period)."
+    },
+    {
+      "code": 248,
+      "name": "NOT_OWNER",
+      "msg": "An action on a name by an account that does not own it."
+    },
+    {
+      "code": 249,
+      "name": "EXPIRED",
+      "msg": "`Transfer`, `Accept`, `SetTarget` or `SetPrimary` of an expired name."
+    },
+    {
+      "code": 250,
+      "name": "LAPSED",
+      "msg": "`Renew` after the grace period."
+    },
+    {
+      "code": 251,
+      "name": "TOO_MANY",
+      "msg": "The account would hold more than `MAX_NAMES` names."
+    },
+    {
+      "code": 252,
+      "name": "NOT_FOUND",
+      "msg": "An action on a name that is not registered."
+    },
+    {
+      "code": 253,
+      "name": "SAME_OWNER",
+      "msg": "`Transfer` to the owner with no offer pending to withdraw."
+    },
+    {
+      "code": 254,
+      "name": "NOT_TARGET",
+      "msg": "`SetPrimary` of a name that does not point at the signer, or `Accept` of a name not offered to it."
+    }
+  ]
+}

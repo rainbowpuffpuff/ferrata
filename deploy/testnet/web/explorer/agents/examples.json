@@ -1,0 +1,402 @@
+{
+ "source": "this network's public RPC",
+ "recorded": "2026-11-23 09:32Z",
+ "head": 36,
+ "calls": {
+  "getLastBlockId": {
+   "request": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getLastBlockId",
+    "params": []
+   },
+   "response": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": 36
+   }
+  },
+  "checkHealth": {
+   "request": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "checkHealth",
+    "params": []
+   },
+   "response": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": null
+   }
+  },
+  "getFeeState": {
+   "request": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getFeeState",
+    "params": []
+   },
+   "response": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+     "height": 36,
+     "base_fee_exec": 8,
+     "base_fee_stor": 8,
+     "next_base_fee_exec_floor": 8,
+     "next_base_fee_exec_ceiling": 9,
+     "next_base_fee_stor_floor": 8,
+     "next_base_fee_stor_ceiling": 9,
+     "max_gas_exec": 10000000,
+     "max_gas_stor": 1000000
+    }
+   }
+  },
+  "getChannelId": {
+   "request": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getChannelId",
+    "params": []
+   },
+   "response": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": "0101010101010101010101010101010101010101010101010101010101010101"
+   }
+  },
+  "getProgramIds": {
+   "request": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getProgramIds",
+    "params": []
+   },
+   "response": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+     "privacy_preserving_circuit": [
+      2517376867,
+      3464899159,
+      3300512099,
+      2206436585,
+      1795275722,
+      388007228,
+      "\u2026(2 more)"
+     ]
+    }
+   }
+  },
+  "getBlock": {
+   "request": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getBlock",
+    "params": [
+     36
+    ]
+   },
+   "response": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": "JAAAAAAAAAC9kn42ZthftfinOiZyCDDG668wViyhqDwz+JD6ylvT0DUMrbZJ0uxyXweOtJqREAx/6gDLM0s86wNyrTgAE96jF9G/B6IBAAACAAAAAAQAAAAZ\u2026(948 chars)"
+   }
+  },
+  "getBlockRange": {
+   "request": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getBlockRange",
+    "params": [
+     35,
+     36
+    ]
+   },
+   "response": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": [
+     "IwAAAAAAAAC68CbnGhuBaq1WGzFoprJQnt6zpwvtHCrX+pEzpc2v6b2SfjZm2F+1+Kc6JnIIMMbrrzBWLKGoPDP4kPrKW9PQB6q/B6IBAAACAAAAAAQAAAAZ\u2026(948 chars)",
+     "JAAAAAAAAAC9kn42ZthftfinOiZyCDDG668wViyhqDwz+JD6ylvT0DUMrbZJ0uxyXweOtJqREAx/6gDLM0s86wNyrTgAE96jF9G/B6IBAAACAAAAAAQAAAAZ\u2026(948 chars)"
+    ]
+   }
+  },
+  "getTransaction": {
+   "request": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getTransaction",
+    "params": [
+     "a04d987623c39dd9a7a2beb4d41983f761f2641fd5cc8e354b48d24571b60636"
+    ]
+   },
+   "response": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": [
+     "AAMAAAAL7ympEyXTDpyj3DVTn+7B9NdrVNDoY81EX70AOLMt8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAjK2oJ40ott2uc2JYF+vAToipaZae\u2026(612 chars)",
+     1
+    ]
+   }
+  },
+  "getAccountView": {
+   "request": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getAccountView",
+    "params": [
+     {
+      "account_id": "ob15kRVNHFC2VxygSRqk55tLDeQ5bwTrvrbSYWkN1Gs",
+      "program_account_id": "11111111111111111111111111111111"
+     }
+    ]
+   },
+   "response": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+     "nonce": 0,
+     "data": {
+      "actor_states": {
+       "11111111111111111111111111111111": [
+        0,
+        128,
+        198,
+        164,
+        126,
+        141,
+        "\u2026(10 more)"
+       ]
+      }
+     }
+    }
+   }
+  },
+  "getAccount": {
+   "request": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getAccount",
+    "params": [
+     "ob15kRVNHFC2VxygSRqk55tLDeQ5bwTrvrbSYWkN1Gs"
+    ]
+   },
+   "response": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+     "nonce": 0,
+     "data": {
+      "actor_states": {
+       "11111111111111111111111111111111": [
+        0,
+        128,
+        198,
+        164,
+        126,
+        141,
+        "\u2026(10 more)"
+       ]
+      }
+     }
+    }
+   }
+  },
+  "getAccountBalance": {
+   "request": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getAccountBalance",
+    "params": [
+     "ob15kRVNHFC2VxygSRqk55tLDeQ5bwTrvrbSYWkN1Gs"
+    ]
+   },
+   "response": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": 1000000000000000
+   }
+  },
+  "getAccountsNonces": {
+   "request": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getAccountsNonces",
+    "params": [
+     [
+      "ob15kRVNHFC2VxygSRqk55tLDeQ5bwTrvrbSYWkN1Gs"
+     ]
+    ]
+   },
+   "response": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": [
+     0
+    ]
+   }
+  },
+  "getRecoveryBinding": {
+   "request": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getRecoveryBinding",
+    "params": [
+     "ob15kRVNHFC2VxygSRqk55tLDeQ5bwTrvrbSYWkN1Gs"
+    ]
+   },
+   "response": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": null
+   }
+  },
+  "getPublications": {
+   "request": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getPublications",
+    "params": [
+     0,
+     2
+    ]
+   },
+   "response": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": []
+   }
+  },
+  "getMessagePath": {
+   "request": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getMessagePath",
+    "params": [
+     0
+    ]
+   },
+   "response": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": [
+     0,
+     [
+      [
+       41,
+       207,
+       4,
+       189,
+       189,
+       211,
+       156,
+       29,
+       219,
+       43,
+       135,
+       229,
+       58,
+       9,
+       222,
+       254,
+       "\u2026(32 bytes)"
+      ],
+      [
+       172,
+       1,
+       168,
+       146,
+       218,
+       154,
+       228,
+       10,
+       203,
+       64,
+       96,
+       51,
+       70,
+       50,
+       201,
+       105,
+       "\u2026(32 bytes)"
+      ],
+      [
+       73,
+       42,
+       230,
+       37,
+       7,
+       188,
+       231,
+       240,
+       27,
+       168,
+       5,
+       24,
+       231,
+       83,
+       165,
+       161,
+       "\u2026(32 bytes)"
+      ]
+     ]
+    ]
+   }
+  },
+  "getProofsAndRoot": {
+   "request": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getProofsAndRoot",
+    "params": [
+     [],
+     []
+    ]
+   },
+   "response": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": [
+     [],
+     [],
+     [
+      220,
+      95,
+      36,
+      186,
+      85,
+      131,
+      158,
+      108,
+      156,
+      77,
+      98,
+      20,
+      163,
+      236,
+      12,
+      106,
+      "\u2026(32 bytes)"
+     ]
+    ]
+   }
+  },
+  "getCrossZoneDeadLetters": {
+   "request": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getCrossZoneDeadLetters",
+    "params": []
+   },
+   "response": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+     "total_retired": 0,
+     "retained": []
+    }
+   }
+  }
+ }
+}
