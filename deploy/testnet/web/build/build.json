@@ -1,5 +1,5 @@
 {
- "commit": "26ab7fdb79178ea1c23b4897980c92b8baff0140",
+ "commit": "33e3115572486c4b508b6132f62c574855842a78",
  "date": "2026-11-24",
  "dirty": false,
  "statuses_from": "26ab7fdb79178ea1c23b4897980c92b8baff0140",
@@ -38,7 +38,7 @@
   "RFP-022": 66
  },
  "rows": 137,
- "evidence_rows": 253,
+ "evidence_rows": 255,
  "warnings": [],
  "files": [
   "assets/logo.svg",
