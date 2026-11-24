@@ -46,9 +46,14 @@ GENERATED = {
                  "the host's limits",
 }
 PREFIXES = ("deploy/testnet/", "names/js/")
-# Files deploy/testnet/install-web.sh installs under another name than the repository's.
-RENAMED = {"network.html": "deploy/testnet/web/explorer/index.html", "health.html": "deploy/testnet/host/www/status.html"}
-RENAMED_DIRS = {"names/": "names/js/"}
+# Files the host serves under another name than the repository's (install-web.sh; the Android page's install).
+RENAMED = {"network.html": "deploy/testnet/web/explorer/index.html", "health.html": "deploy/testnet/host/www/status.html",
+           # The Android page's records and the site's Digital Asset Links (deploy/testnet/web/android/README.md).
+           "android/apk.json": "deploy/testnet/web/android/published/apk.json",
+           "android/SHA256SUMS": "deploy/testnet/web/android/published/SHA256SUMS",
+           "android/measure.json": "deploy/testnet/web/android/published/measure.json",
+           ".well-known/assetlinks.json": "deploy/testnet/web/android/published/assetlinks.json"}
+RENAMED_DIRS = {"names/": "names/js/", "android/": "deploy/testnet/web/android/site/"}
 
 
 def sha256(b: bytes) -> str:
@@ -105,7 +110,10 @@ def build(a) -> int:
     files, unmatched, generated, pub = [], [], [], {}
     for line in Path(a.served).read_text().splitlines():
         h, path = line.split("\t") if "\t" in line else line.split(None, 1)
-        path = path.strip().lstrip("./")
+        path = path.strip()
+        path = (path[2:] if path.startswith("./") else path).lstrip("/")  # not lstrip("./"): ".well-known" keeps its dot
+        if "/" + path == SERVED_PATH:  # the manifest cannot list its own hash
+            continue
         if path in GENERATED:
             generated.append({"path": "/" + path, "why": GENERATED[path]})
             continue
