@@ -4,30 +4,40 @@ November 2026), checked from public chain data alone. Python 3 standard library 
 signed or sent).
 
     python3 -I scripts/verify-live-roundtrip.py --check [RECORD] [--rpc URL] [--lez-rpc URL]
-        Re-read every fact of RECORD (default e2e/runs/live-roundtrip-2026-11-24/record.json) and compare. One line per
-        fact: PASS (the chains agree with the record) or FAIL; exit 1 on a FAIL, 2 when an endpoint cannot be read.
+        Read every fact again from the chains, rebuild the record from them exactly as --record does, and compare it
+        with RECORD (default e2e/runs/live-roundtrip-2026-11-24/record.json) field by field; then check the links
+        between the legs on what the chains returned, not on the record's copies. One line per part: PASS or FAIL
+        (with the fields that differ); exit 1 on a FAIL, 2 when an endpoint cannot be read.
     python3 -I scripts/verify-live-roundtrip.py --record OUT [--rpc URL] [--lez-rpc URL]
         The maintainer's step: read the same facts and write them to OUT.
 
-Sepolia (any public JSON-RPC that serves state at old blocks; scripts/pubnet.py's endpoints after --rpc): each
-transaction's receipt (block, status, gas, sender, target), the vault's events in it (and that its block holds no other
-vault event), and the vault's state by eth_call at the end of the block before and of the transaction's own block, with
-the balances involved. The LEZ zone (its public JSON-RPC, by default the network named in
-scripts/reproduce/deployed-programs.json): each transaction's bytes (their SHA-256 is the transaction's id), the block
-that holds it and whether it reverted there, and its bridge message decoded with idl/ferrata_bridge.idl.json by
-idl/check.py's decoder, every byte used. Then the links that make it one round trip:
+What is read. Sepolia (any public JSON-RPC that serves state at old blocks; scripts/pubnet.py's endpoints after
+--rpc): each transaction's receipt (block, status, gas, sender and its nonce, target, calldata), its block's time, the
+vault's events in it and that its block holds no other vault event, the vault's state by eth_call at the end of the
+block before and of its own block with the balances involved, and the vault's image ids. The LEZ zone (its public
+JSON-RPC, by default the network named in scripts/reproduce/deployed-programs.json): each transaction's bytes (their
+SHA-256 is its id), the block holding it (its hash recomputed from its bytes) and whether it reverted there, its bridge
+message decoded with idl/ferrata_bridge.idl.json by idl/check.py's decoder (every byte used); and the zone's blocks
+from the claim's to the checkpoint's tip, each hash recomputed and each linked to the one before. Off chain: the
+prover client's records of the two GPU proofs, proofs.json beside the record.
 
-  1. the import: the zone's root(cid, 1) is the vault's depositRoot after the deposit (the claim proves its leaf under
-     the root actor root(cid, 1), and that root is folded below);
-  2. the claim opens the deposit: SHA-256("ferrata/C/v1" || s || kind || dest), from the claim's own witness, is the
-     Deposit event's commitment; dest is the account the claim credits (kind 2: a public destination); the leaf the
-     vault hashed (FerrataVault._leafHash: depositor, token, amount, that commitment, leaf 0) folded with the claim's
-     path is the vault's depositRoot after the deposit;
-  3. the burn is the checkpoint's: its burn leaf (encoding.rs, burn index 0, from the burn's own fields) folded with an
-     empty path is the burnRoot of the candidate, of the finalized checkpoint and of the release;
-  4. the proofs: the candidate's journalDigest on the vault equals the checkpoint proof's journal digest in the prover
-     client's record, and the release journal (FerrataVault._releaseJournalDigest, from the release's own calldata and
-     amount) hashes to the release proof's journal digest. The proof times are the prover client's (not on chain).
+The links, each from the chains' answers:
+
+  1. the import and the claim: the root import_root wrote as root(cid, 1) is the vault's depositRoot at the end of the
+     deposit's block; the claim's witness opens the deposit (SHA-256("ferrata/C/v1" || s || kind || dest) is the
+     Deposit event's commitment; its depositor, token, amount and leaf index are the event's; dest, kind 2, is the
+     account that signed the claim), and the vault's leaf (FerrataVault._leafHash) folded with the claim's path is
+     that depositRoot;
+  2. the burn: its burn leaf (encoding.rs, burn index 0, from the burn's own fields) folded with an empty path is the
+     burnRoot of the candidate, of the finalized checkpoint and of the release, and the checkpoint counts one burn;
+  3. the proofs: each proof record's image id is the vault's (checkpointImageId, releaseImageId), its seal is the one
+     in the transaction that carried it (submitCandidate, release), and its journal is the one the vault verified (the
+     candidate's journalDigest; the release journal, FerrataVault._releaseJournalDigest, rebuilt from the release's
+     calldata and amount, byte for byte);
+  4. the zone's blocks: the hash of LEZ block tipId (the candidate's tip) is the candidate's tipHash, and the
+     prev-hash chain from it reaches the claim's and the burn's blocks, so both are in the history the checkpoint
+     proof covers. The imports' blocks (2,276 and 2,278) are not walked (1,490 blocks); the claim, applied under
+     root(cid, 1), rests on the import.
 """
 
 from __future__ import annotations
@@ -71,22 +81,10 @@ LEZ_STEPS = [
     ("claim", "28771fd510b26758f39ee2b1b5e921568a6b0c14857267d58e91ffb8ef1c2e2f"),
     ("burn", "5c89d209852ee257bad4191cdd176e11dfea6b83b35a12f8a9487c6fa2e727cf"),
 ]
-# Not on chain: the prover client's own records of the two GPU proofs (deploy/testnet/host/bin/ferrata-bridge-prover,
-# requests/done/). Their journal digests are checked against the chain (link 4); the times are as it measured them,
-# from the request's pickup to the proof's return, Modal's start included.
-PROOFS = {
-    "checkpoint": {"name": "zone-1225-3767", "kind": "checkpoint-b", "program": "checkpoint_b_0_3_5",
-                   "image_id": "0x8917f58e76aa805dedc04fc5e2b70404f5078b66b271ec44aaa0c78d9f5eaf04", "seconds": 1307.0,
-                   "journal_bytes": 544,
-                   "journal_sha256": "0xd71cefb9bc52b8e6b5d8d17b6a07b986c1223a2d3bd285aae7c8c5f0d332b0c6",
-                   "done_utc": "2026-11-23T21:03:16Z", "lez_blocks": "1226..=3767 (2,542 blocks)",
-                   "input_bytes": 3064586, "where": "a Modal GPU (deploy/testnet/host/bin/ferrata-bridge-prover)"},
-    "release": {"name": "release-0", "kind": "release", "program": "release_31",
-                "image_id": "0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd", "seconds": 425.6,
-                "journal_bytes": 352,
-                "journal_sha256": "0x54ee277200b23ba02de5ad49c0f4112feac41a9b16579997495b31f70e1147e4",
-                "done_utc": "2026-11-24T09:09:10Z", "where": "a Modal GPU (Groth16)"},
-}
+# Not on chain: the prover client's own records of the two GPU proofs, beside the record (journal, seal, image id, times).
+PROOFS_FILE = os.path.join(os.path.dirname(RECORD), "proofs.json")
+# The zone's blocks walked back from the checkpoint's tip to the claim's (link 4).
+ANCHOR_FROM = 3746
 LEAF_TAG = bytes.fromhex("17b9508a0d0cbf61207c0fcb66f06ed92a6aeec110a54860479f0bf3cd6aff0b")  # sha256("ferrata/vault/leaf/v2")
 BURN_TAG = bytes.fromhex("93474c5ad2f57f5fc610ad22e3f6d50e51b98a4c0eb611dde536a7317c0e8cf2")  # sha256("ferrata/burn/leaf/v2")
 RELEASE_DOMAIN = bytes.fromhex("6e04f4b1fa66535e182a1ef2e4f5bfdfe44f7257f1663ef81ffa4f38d7696e51")
@@ -241,13 +239,18 @@ def read_tx(r: Reader) -> dict:
 
 
 def read_block(raw: bytes) -> dict:
-    """getBlock's bytes: header (id, prev, hash, timestamp ms), the transactions, the reverted indices, Bedrock status."""
+    """getBlock's bytes: header (id, prev, hash, timestamp ms), the transactions, the reverted indices, Bedrock status.
+    The hash is recomputed: SHA-256("/LEE/v0.3/Message/Block/" padded || id || prev || timestamp || body)."""
     r = Reader(raw)
-    block_id, _prev, block_hash, ts = r.u(8), r.take(32), r.take(32), r.u(8)
+    block_id, prev, block_hash, ts = r.u(8), r.take(32), r.take(32), r.u(8)
     txs = r.vec(lambda: read_tx(r))
     reverted = r.vec(lambda: r.u(8))
     r.u(1)
-    return {"id": block_id, "hash": block_hash.hex(), "timestamp_ms": ts, "tx_ids": [t["id"] for t in txs], "reverted": reverted}
+    if r.pos != len(raw):
+        raise Failed(f"block {block_id}: {len(raw) - r.pos} byte(s) after the status")
+    computed = sha256("/LEE/v0.3/Message/Block/".encode().ljust(32, b"\0"), raw[0:40], raw[72:80], raw[80:-1])
+    return {"id": block_id, "hash": block_hash.hex(), "prev": prev.hex(), "hash_recomputed": computed.hex(),
+            "timestamp_ms": ts, "tx_ids": [t["id"] for t in txs], "reverted": reverted}
 
 
 def plain(v):
@@ -328,8 +331,16 @@ def release_journal(calldata: str, amount: int, config_id: str) -> dict:
     token, _denom, recipient, relayer, fee, burn_root, nullifier = f
     j = bytes.fromhex(word(RELEASE_DOMAIN.hex()) + word(CHAIN_ID) + word(VAULT) + word(config_id) + burn_root + nullifier
                       + token + word(amount) + recipient + relayer + fee)
-    return {"journal_bytes": len(j), "journal_sha256": h(sha256(j)), "relayer_field": "0x" + relayer[24:],
+    return {"journal": h(j), "journal_sha256": h(sha256(j)), "relayer_field": "0x" + relayer[24:],
             "nullifier": "0x" + nullifier, "burnRoot": "0x" + burn_root}
+
+
+def calldata_bytes_arg(calldata: str, head_words: int) -> str:
+    """The `bytes` argument (the seal) of a call whose static head is `head_words` words then that argument's offset."""
+    d = calldata[10:]
+    off = int(d[head_words * 64:(head_words + 1) * 64], 16) * 2
+    n = int(d[off:off + 64], 16)
+    return "0x" + d[off + 64:off + 64 + 2 * n]
 
 
 # ---- reading the facts --------------------------------------------------------------------------------------------
@@ -411,6 +422,8 @@ def read_lez(lez: Lez) -> list:
             blocks[block] = read_block(base64.b64decode(lez("getBlock", block)))
         b = blocks[block]
         idx = b["tx_ids"].index(t["id"]) if t["id"] in b["tx_ids"] else None
+        if b["hash_recomputed"] != b["hash"]:
+            raise Failed(f"LEZ block {block}: its hash is not the SHA-256 of its bytes")
         out.append({"step": name, "tx": tx, "id_of_bytes": t["id"], "block": block, "block_hash": b["hash"],
                     "block_timestamp_ms": b["timestamp_ms"], "index_in_block": idx,
                     "reverted": idx in b["reverted"] if idx is not None else None, "program": t["program"],
@@ -419,31 +432,159 @@ def read_lez(lez: Lez) -> list:
     return out
 
 
-def links(sep: list, lezs: list) -> dict:
-    by = {s["step"]: s for s in sep}
-    lz = {s["step"]: s for s in lezs}
-    dep = next(e for e in by["deposit"]["vault_events"] if e["event"] == "Deposit")
-    cand = next(e for e in by["submitCandidate"]["vault_events"] if e["event"] == "CandidateSubmitted")
-    fin = next(e for e in by["finalizeAttested"]["vault_events"] if e["event"] == "CheckpointFinalized")
-    rel = next(e for e in by["release"]["vault_events"] if e["event"] == "Release")
-    c = claim_links(lz["claim"]["message"])
-    b = burn_links(lz["burn"]["message"])
-    config_id = lz["claim"]["message"]["args"]["config_id"]
-    j = release_journal(by["release"]["input"], rel["amount"], config_id)
+def load_proofs(path: str = PROOFS_FILE) -> dict:
+    with open(path, encoding="utf-8") as f:
+        d = json.load(f)
+    return {k: d[k] for k in ("checkpoint", "release")}
+
+
+def proof_facts(proofs: dict) -> dict:
+    """What the record shows of the prover client's records (all of it derived from proofs.json)."""
+    out = {}
+    for k, r in proofs.items():
+        j, seal = bytes.fromhex(r["journal"][2:]), bytes.fromhex(r["seal"][2:])
+        out[k] = {"name": r["name"], "kind": r["kind"], "image_id": r["image_id"], "ok": r["ok"], "seconds": r["seconds"],
+                  "prover_wall_s": r["prover"]["wall_s"], "journal_bytes": len(j), "journal_sha256": h(sha256(j)),
+                  "seal_bytes": len(seal), "seal_sha256": h(sha256(seal))}
+    return out
+
+
+def read_immutables(eth: Sepolia) -> dict:
+    head = int(eth("eth_blockNumber"), 16)
+    return {k: "0x" + eth.call(head, k + "()")[2:66] for k in ("checkpointImageId", "releaseImageId", "lezConfigId")}
+
+
+def read_anchor(lez: Lez, tip_id: int, lo: int = ANCHOR_FROM) -> dict:
+    """The zone's blocks lo..=tip_id: each hash, whether it is the SHA-256 of the block's bytes, the previous hash."""
+    blocks = []
+    for i in range(lo, tip_id + 1):
+        b = read_block(base64.b64decode(lez("getBlock", i)))
+        blocks.append({"id": b["id"], "hash": b["hash"], "prev": b["prev"], "hash_ok": b["hash_recomputed"] == b["hash"]})
+    return {"from": lo, "to": tip_id, "blocks": blocks}
+
+
+def _step(rec: dict, part: str, name: str) -> dict:
+    return next(x for x in rec[part] if x["step"] == name)
+
+
+def _event(rec: dict, step: str, event: str) -> dict:
+    return next(e for e in _step(rec, "sepolia", step)["vault_events"] if e["event"] == event)
+
+
+def links(rec: dict, proofs: dict) -> dict:
+    """The link facts, for reading; link_* below check them, on whatever the record's sections hold."""
+    claim, imp, burn = _step(rec, "lez", "claim"), _step(rec, "lez", "import_root"), _step(rec, "lez", "burn")
+    rel, rel_step = _event(rec, "release", "Release"), _step(rec, "sepolia", "release")
+    j = release_journal(rel_step["input"], rel["amount"], rec["vault_immutables"]["lezConfigId"])
     return {
-        "claim_opens_deposit": {**c, "deposit_commitment": dep["commitment"],
-                                "deposit_root_after_deposit": by["deposit"]["vault_after"]["depositRoot"],
-                                "imported_root": lz["import_root"]["message"]["args"]["root"],
-                                "imported_leaf_count": lz["import_root"]["message"]["args"]["leaf_count"],
-                                "claim_leaf_count": lz["claim"]["message"]["args"]["leaf_count"],
-                                "claim_signer": lz["claim"]["signers"][0]},
-        "burn_is_the_checkpoints": {**b, "candidate_burnRoot": cand["burnRoot"], "finalized_burnRoot": fin["burnRoot"],
-                                    "release_burnRoot": rel["burnRoot"], "burnCount": cand["burnCount"]},
-        "proofs": {"checkpoint_journalDigest_on_chain": by["submitCandidate"]["vault_after"]["candidates(newState).journalDigest"],
-                   "checkpoint_journal_sha256_prover": PROOFS["checkpoint"]["journal_sha256"],
-                   **{"release_" + k: v for k, v in j.items()},
-                   "release_journal_sha256_prover": PROOFS["release"]["journal_sha256"]},
+        "claim": {**claim_links(claim["message"]), "deposit_commitment": _event(rec, "deposit", "Deposit")["commitment"],
+                  "deposit_root_after_deposit": _step(rec, "sepolia", "deposit")["vault_after"]["depositRoot"],
+                  "imported_root": imp["message"]["args"]["root"], "imported_leaf_count": imp["message"]["args"]["leaf_count"],
+                  "claim_signer": claim["signers"][0]},
+        "burn": {**burn_links(burn["message"]), "candidate_burnRoot": _event(rec, "submitCandidate", "CandidateSubmitted")["burnRoot"],
+                 "finalized_burnRoot": _event(rec, "finalizeAttested", "CheckpointFinalized")["burnRoot"], "release_burnRoot": rel["burnRoot"]},
+        "proofs": {"candidate_journalDigest": _step(rec, "sepolia", "submitCandidate")["vault_after"]["candidates(newState).journalDigest"],
+                   "checkpoint_journal_sha256": h(sha256(bytes.fromhex(proofs["checkpoint"]["journal"][2:]))),
+                   "release_journal_rebuilt_sha256": j["journal_sha256"], "release_relayer_field": j["relayer_field"]},
+        "anchor": {"blocks": f"{rec['anchor']['from']}..={rec['anchor']['to']}", "tip_hash": "0x" + rec["anchor"]["blocks"][-1]["hash"]},
     }
+
+
+def link_claim(rec: dict, proofs: dict) -> str:
+    dep, claim, imp = _event(rec, "deposit", "Deposit"), _step(rec, "lez", "claim"), _step(rec, "lez", "import_root")
+    need(not claim["reverted"] and not imp["reverted"], "the claim or the import did not apply")
+    root = _step(rec, "sepolia", "deposit")["vault_after"]["depositRoot"]
+    c, w, ia = claim_links(claim["message"]), claim["message"]["args"]["witness"], imp["message"]["args"]
+    need(c["commitment"] == dep["commitment"], "the claim's opening is not the Deposit event's commitment")
+    need((w["depositor"], w["token"], int(w["amount"], 16), w["leaf_index"]) == (dep["depositor"], dep["token"], dep["amount"], dep["leafIndex"]),
+         "the claim's leaf is not the deposit's (depositor, token, amount, index)")
+    need(c["root"] == root, "the claim's path does not reach the vault's depositRoot after the deposit")
+    need(ia["root"] == root and ia["leaf_count"] == claim["message"]["args"]["leaf_count"] == dep["leafIndex"] + 1,
+         "the imported root(cid, n) is not the vault's depositRoot after the deposit")
+    need(ia["config_id"] == claim["message"]["args"]["config_id"] == rec["vault_immutables"]["lezConfigId"],
+         "the import or the claim is of another configuration than the vault's")
+    need(c["kind"] == 2 and c["dest_account"] == claim["signers"][0], "the claim's destination is not the account that signed it")
+    return (f"commitment {c['commitment'][:12]}… = the Deposit event's; leaf {w['leaf_index']} + path -> {root[:12]}… = depositRoot "
+            f"after the deposit = the root import_root wrote; dest = the signer {c['dest_account'][:8]}…")
+
+
+def link_burn(rec: dict, proofs: dict) -> str:
+    burn = _step(rec, "lez", "burn")
+    need(not burn["reverted"], "the burn did not apply")
+    b = burn_links(burn["message"])
+    cand, fin = _event(rec, "submitCandidate", "CandidateSubmitted"), _event(rec, "finalizeAttested", "CheckpointFinalized")
+    rel = _event(rec, "release", "Release")
+    need(b["root"] == cand["burnRoot"] == fin["burnRoot"] == rel["burnRoot"], "the burn's leaf is not the burnRoot of the candidate, the checkpoint and the release")
+    need(cand["burnCount"] == fin["burnCount"] == 1 and cand["newState"] == fin["newState"], "the finalized checkpoint is not the candidate, or counts other burns")
+    a = burn["message"]["args"]
+    need((int(a["amount"], 16), a["token"]) == (rel["amount"], rel["token"]), "the release is not of the burn's token and amount")
+    return f"burn leaf {b['leaf'][:12]}… alone -> {b['root'][:12]}… = the candidate's, the checkpoint's and the release's burnRoot; 1 burn"
+
+
+def link_proofs(rec: dict, proofs: dict) -> str:
+    imm, cp, rp = rec["vault_immutables"], proofs["checkpoint"], proofs["release"]
+    sub, rel_step, rel = _step(rec, "sepolia", "submitCandidate"), _step(rec, "sepolia", "release"), _event(rec, "release", "Release")
+    need((cp["image_id"], rp["image_id"]) == (imm["checkpointImageId"], imm["releaseImageId"]), "a proof's image id is not the vault's")
+    need(calldata_bytes_arg(sub["input"], 13) == cp["seal"], "the submitted candidate's seal is not the checkpoint proof's")
+    need(calldata_bytes_arg(rel_step["input"], 7) == rp["seal"], "the release's seal is not the release proof's")
+    need(h(sha256(bytes.fromhex(cp["journal"][2:]))) == sub["vault_after"]["candidates(newState).journalDigest"],
+         "the candidate's journalDigest on the vault is not the checkpoint proof's journal")
+    j = release_journal(rel_step["input"], rel["amount"], imm["lezConfigId"])
+    need(j["journal"] == rp["journal"], "the release journal rebuilt from the release's calldata is not the release proof's")
+    need(j["nullifier"] == rel["nullifier"] and rel_step["vault_after"]["nullifierUsed(NOut)"] and not rel_step["vault_before"]["nullifierUsed(NOut)"],
+         "the release proof's nullifier is not the one the vault marked used")
+    return "image ids = the vault's; each seal = the one in its transaction; journals = the candidate's digest and the release's, rebuilt"
+
+
+def link_anchor(rec: dict, proofs: dict) -> str:
+    a, cand = rec["anchor"], _event(rec, "submitCandidate", "CandidateSubmitted")
+    bl = a["blocks"]
+    need([b["id"] for b in bl] == list(range(a["from"], a["to"] + 1)) and a["to"] == cand["tipId"], "the walked blocks do not end at the candidate's tip")
+    need(all(b["hash_ok"] for b in bl), "a block's hash is not the SHA-256 of its bytes")
+    need(all(bl[i]["prev"] == bl[i - 1]["hash"] for i in range(1, len(bl))), "the prev-hash chain is broken")
+    need("0x" + bl[-1]["hash"] == cand["tipHash"], "the last block's hash is not the candidate's tipHash")
+    by_id = {b["id"]: b["hash"] for b in bl}
+    for name in ("claim", "burn"):
+        s = _step(rec, "lez", name)
+        need(by_id.get(s["block"]) == s["block_hash"], f"the {name}'s block is not on the chain to the checkpoint's tip")
+    return f"blocks {a['from']}..={a['to']}: hashes recomputed, linked; block {a['to']} = the candidate's tipHash; the claim's and the burn's on it"
+
+
+LINKS = [("the import and the claim are the deposit's", link_claim), ("the burn is the checkpoint's only burn, the one released", link_burn),
+         ("the GPU proofs are the ones the vault verified", link_proofs), ("the claim and the burn are in the checkpoint's history", link_anchor)]
+ABOUT = ("The first full round trip on the Ferrata LEZ test network, as public chain data: Sepolia (the vault) and the "
+         "network's LEZ v0.4.0-rc3 zone. Written and re-checked field by field by scripts/verify-live-roundtrip.py; "
+         "README.md beside this file says what each part shows; proofs.json holds the prover client's records.")
+
+
+def build_record(eth: Sepolia, lez: Lez) -> dict:
+    """The record, from the chains (and proofs.json) alone: what --record writes and --check compares with."""
+    sep, keys = read_sepolia(eth)
+    lezs = read_lez(lez)
+    rec = {"about": ABOUT, "vault": VAULT, "chain_id": int(eth("eth_chainId"), 16), "keys": keys, "sepolia": sep, "lez": lezs}
+    rec["anchor"] = read_anchor(lez, _event(rec, "submitCandidate", "CandidateSubmitted")["tipId"])
+    rec["vault_immutables"] = read_immutables(eth)
+    proofs = load_proofs()
+    rec["proofs"] = proof_facts(proofs)
+    rec["links"] = links(rec, proofs)
+    return json.loads(json.dumps(rec))  # tuples as lists, as the file holds them
+
+
+def deep_diff(got, want, path: str = "") -> list:
+    """Every path where two JSON values differ (a missing key, another length, another leaf)."""
+    if isinstance(got, dict) and isinstance(want, dict):
+        out = []
+        for k in sorted(set(got) | set(want)):
+            if k not in got or k not in want:
+                out.append(f"{path}.{k} ({'not in the record' if k not in want else 'not on the chains'})")
+            else:
+                out += deep_diff(got[k], want[k], f"{path}.{k}")
+        return out
+    if isinstance(got, list) and isinstance(want, list):
+        if len(got) != len(want):
+            return [f"{path} (length {len(got)} on the chains, {len(want)} in the record)"]
+        return [d for i, (a, b) in enumerate(zip(got, want)) for d in deep_diff(a, b, f"{path}[{i}]")]
+    return [] if (got == want and type(got) is type(want)) else [path or "."]
 
 
 # ---- check -----------------------------------------------------------------------------------------------------------
@@ -453,7 +594,7 @@ def check(name: str, fn) -> None:
         status, detail = "PASS", fn() or ""
     except Failed as e:
         status, detail = "FAIL", str(e)
-    except (Unreadable, KeyError, ValueError, TypeError, IndexError, idl_check.DecodeError) as e:
+    except (Unreadable, KeyError, ValueError, TypeError, IndexError, StopIteration, idl_check.DecodeError) as e:
         status, detail = ("UNREAD" if isinstance(e, Unreadable) else "FAIL"), f"{type(e).__name__}: {e}"
     RESULTS.append(status)
     print(f"{status:<8} {name}{': ' + detail if detail else ''}", flush=True)
@@ -464,97 +605,39 @@ def need(cond: bool, msg: str) -> None:
         raise Failed(msg)
 
 
-def same(label: str, got, want) -> str:
-    need(got == want, f"{label}: chain {got!r}, record {want!r}")
+def no_diff(got, want) -> str:
+    d = deep_diff(got, want)
+    need(not d, f"{len(d)} field(s) differ: " + ", ".join(d[:4]) + (" …" if len(d) > 4 else ""))
     return ""
 
 
 def run_check(record: dict, eth: Sepolia, lez: Lez) -> int:
-    rec_sep = {s["step"]: s for s in record["sepolia"]}
-    rec_lez = {s["step"]: s for s in record["lez"]}
-    keys = record["keys"]
-    check("Sepolia: the endpoint is Sepolia", lambda: same("chain id", int(eth("eth_chainId"), 16), CHAIN_ID))
-    for name, tx in SEPOLIA_STEPS:
-        r = rec_sep[name]
-
-        def tx_facts(tx=tx, r=r):
-            rc = eth("eth_getTransactionReceipt", tx, anywhere=True)
-            same("block", int(rc["blockNumber"], 16), r["block"])
-            same("status", int(rc["status"], 16), r["status"])
-            same("gas used", int(rc["gasUsed"], 16), r["gas_used"])
-            same("from", rc["from"].lower(), r["from"])
-            same("to", (rc["to"] or "").lower(), r["to"])
-            same("vault events", [decode_log(lg) for lg in rc["logs"] if lg["address"].lower() == VAULT], r["vault_events"])
-            t = eth("eth_getTransactionByHash", tx, anywhere=True)
-            same("calldata", t["input"], r["input"])
-            same("sender's nonce", int(t["nonce"], 16), r["nonce"])
-            return (f"block {r['block']}, status {r['status']}, gas {r['gas_used']:,}, nonce {r['nonce']} of {r['from'][:10]}…, "
-                    + ", ".join(e["event"] for e in r["vault_events"]))
-        check(f"Sepolia {name} {tx[:12]}…: receipt and the vault's events", tx_facts)
-
-        def alone(r=r, tx=tx):
-            others = [lg["transactionHash"] for lg in eth("eth_getLogs", {"address": VAULT, "fromBlock": hex(r["block"]), "toBlock": hex(r["block"])})
-                      if lg["transactionHash"].lower() != tx]
-            same("other vault transactions in the block", others, r["other_vault_txs_in_block"])
-            return "no other vault event in its block" if not others else f"{len(others)} other"
-        check(f"Sepolia {name}: the vault's only event in block {r['block']}", alone)
-        for when, block in (("before", r["block"] - 1), ("after", r["block"])):
-            check(f"Sepolia {name}: the vault's state {when} (eth_call at block {block})",
-                  lambda block=block, when=when, r=r: same("state", vault_state(eth, block, keys), r["vault_" + when]))
-    for name, tx in LEZ_STEPS:
-        r = rec_lez[name]
-
-        def lez_facts(tx=tx, r=r):
-            raw_b64, block = lez("getTransaction", tx)
-            same("bytes", raw_b64, r["bytes_base64"])
-            t = read_tx(Reader(base64.b64decode(raw_b64)))
-            same("SHA-256 of the bytes (the transaction's id)", t["id"], tx)
-            same("block", block, r["block"])
-            b = read_block(base64.b64decode(lez("getBlock", block)))
-            idx = b["tx_ids"].index(tx) if tx in b["tx_ids"] else None
-            same("index in the block", idx, r["index_in_block"])
-            same("reverted in its block", idx in b["reverted"], r["reverted"])
-            same("program", t["program"], r["program"])
-            same("signers", t["signers"], r["signers"])
-            same("decoded message", decode_bridge(t["message"]), r["message"])
-            return (f"block {block}, {'REVERTED' if r['reverted'] else 'applied'}, {r['message']['instruction']} "
-                    f"(every byte decoded by the bridge IDL), signed by {r['signers'][0][:8]}…")
-        check(f"LEZ {name} {tx[:12]}…: bytes, block, outcome, decoded message", lez_facts)
-    lk = record["links"]
-
-    def l1():
-        c = claim_links(rec_lez["claim"]["message"])
-        same("recomputed", c, {k: lk["claim_opens_deposit"][k] for k in c})
-        need(c["commitment"] == lk["claim_opens_deposit"]["deposit_commitment"], "the commitment is not the deposit's")
-        x = lk["claim_opens_deposit"]
-        need(c["root"] == x["deposit_root_after_deposit"], "the path does not reach the vault's root")
-        imp = rec_lez["import_root"]["message"]["args"]
-        need(imp["root"] == x["deposit_root_after_deposit"] == x["imported_root"] and imp["leaf_count"] == x["claim_leaf_count"] == 1,
-             "the imported root(cid, 1) is not the vault's root after the deposit")
-        need(c["kind"] == 2 and c["dest_account"] == lk["claim_opens_deposit"]["claim_signer"], "the destination is not the claimer")
-        return (f"commitment {c['commitment'][:12]}… = the Deposit event's; leaf 0 + path -> {c['root'][:12]}… = depositRoot after "
-                f"the deposit = the root import_root wrote as root(cid, 1); dest = {c['dest_account'][:8]}…")
-    check("link: the import and the claim (the imported root, the claim's commitment, leaf and path)", l1)
-
-    def l2():
-        b = burn_links(rec_lez["burn"]["message"])
-        x = lk["burn_is_the_checkpoints"]
-        same("recomputed", b, {k: x[k] for k in b})
-        need(b["root"] == x["candidate_burnRoot"] == x["finalized_burnRoot"] == x["release_burnRoot"] and x["burnCount"] == 1,
-             "the burn root differs between the burn, the checkpoint and the release")
-        return f"burn leaf {b['leaf'][:12]}… alone -> {b['root'][:12]}… = the candidate's, the checkpoint's and the release's burnRoot"
-    check("link: the burn is the checkpoint's only burn, the one released", l2)
-
-    def l3():
-        x = lk["proofs"]
-        j = release_journal(rec_sep["release"]["input"], next(e for e in rec_sep["release"]["vault_events"] if e["event"] == "Release")["amount"],
-                            rec_lez["claim"]["message"]["args"]["config_id"])
-        same("release journal", {"release_" + k: v for k, v in j.items()}, {k: x[k] for k in x if k.startswith("release_") and k != "release_journal_sha256_prover"})
-        need(j["journal_sha256"] == PROOFS["release"]["journal_sha256"] == x["release_journal_sha256_prover"], "the release journal is not the proof's")
-        need(x["checkpoint_journalDigest_on_chain"] == PROOFS["checkpoint"]["journal_sha256"] == x["checkpoint_journal_sha256_prover"],
-             "the candidate's journalDigest is not the checkpoint proof's")
-        return "the candidate's journalDigest = the checkpoint proof's; the release journal (from its calldata) hashes to the release proof's"
-    check("link: the two GPU proofs are the ones the vault verified", l3)
+    check("Sepolia: the endpoint is Sepolia", lambda: need(int(eth("eth_chainId"), 16) == CHAIN_ID, "another chain"))
+    try:
+        fresh = build_record(eth, lez)
+    except Unreadable as e:
+        print(f"UNREAD   the chains could not be read: {e}")
+        return 2
+    except (Failed, KeyError, ValueError, IndexError, StopIteration, idl_check.DecodeError) as e:
+        print(f"FAIL     the chains' answers do not make a record: {type(e).__name__}: {e}")
+        return 1
+    check("the record's parts and the steps, in order", lambda: (
+        need(sorted(record) == sorted(fresh), f"parts {sorted(record)}, expected {sorted(fresh)}"),
+        need([s["step"] for s in record["sepolia"]] == [n for n, _ in SEPOLIA_STEPS], "the Sepolia steps differ"),
+        need([s["step"] for s in record["lez"]] == [n for n, _ in LEZ_STEPS], "the LEZ steps differ")) and "")
+    for i, (name, tx) in enumerate(SEPOLIA_STEPS):
+        f = fresh["sepolia"][i]
+        check(f"Sepolia {name} {tx[:12]}…: every field = the chain (block {f['block']}, status {f['status']}, gas {f['gas_used']:,}, "
+              f"nonce {f['nonce']}; the vault's state before and after)", lambda i=i: no_diff(fresh["sepolia"][i], record["sepolia"][i]))
+    for i, (name, tx) in enumerate(LEZ_STEPS):
+        f = fresh["lez"][i]
+        check(f"LEZ {name} {tx[:12]}…: every field = the zone (block {f['block']}, {'reverted' if f['reverted'] else 'applied'}, "
+              f"{f['message']['instruction']} decoded whole)", lambda i=i: no_diff(fresh["lez"][i], record["lez"][i]))
+    for part in ("about", "vault", "chain_id", "keys", "vault_immutables", "anchor", "proofs", "links"):
+        check(f"the record's {part} = what the chains and proofs.json give", lambda part=part: no_diff(fresh[part], record[part]))
+    proofs = load_proofs()
+    for name, fn in LINKS:
+        check(f"link, on the chains' answers: {name}", lambda fn=fn: fn(fresh, proofs))
     fail, unread = RESULTS.count("FAIL"), RESULTS.count("UNREAD")
     print(f"{len(RESULTS)} checks: {RESULTS.count('PASS')} PASS, {fail} FAIL, {unread} could not be read")
     return 1 if fail else (2 if unread else 0)
@@ -577,19 +660,15 @@ def main() -> int:
     if a.check:
         with open(a.check, encoding="utf-8") as f:
             return run_check(json.load(f), eth, lez)
-    sep, keys = read_sepolia(eth)
-    lezs = read_lez(lez)
-    record = {
-        "about": "The first full round trip on the Ferrata LEZ test network, as public chain data: Sepolia (the vault) "
-                 "and the network's LEZ v0.4.0-rc3 zone. Written and re-checked by scripts/verify-live-roundtrip.py; "
-                 "README.md beside this file says what each part shows.",
-        "vault": VAULT, "chain_id": CHAIN_ID, "keys": keys, "sepolia": sep, "lez": lezs,
-        "proofs_offchain": PROOFS, "links": links(sep, lezs),
-    }
+    record = build_record(eth, lez)
+    proofs = load_proofs()
+    for name, fn in LINKS:  # never written unless every link holds
+        print(f"link: {name}: {fn(record, proofs)}")
     with open(a.record, "w", encoding="utf-8") as f:
         json.dump(record, f, indent=1)
         f.write("\n")
-    print(f"wrote {a.record}: {len(sep)} Sepolia transactions, {len(lezs)} LEZ transactions")
+    print(f"wrote {a.record}: {len(record['sepolia'])} Sepolia transactions, {len(record['lez'])} LEZ transactions, "
+          f"{len(record['anchor']['blocks'])} LEZ blocks walked")
     return 0
 
 
