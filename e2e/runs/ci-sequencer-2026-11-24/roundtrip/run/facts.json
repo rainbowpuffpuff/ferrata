@@ -1,0 +1,40 @@
+{
+  "fork": {
+    "block": 12200361,
+    "hash": "0x56d10a8725f576d93fa1be580163fb8cd79eb1a523ddfa4f778edd57dadc749e",
+    "time": "2026-11-24T04:43:00Z"
+  },
+  "standInSlot": 11640896,
+  "vault": "0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516",
+  "configId": "0xa62fb073bd6f4022aab5bf1df9efd607c083283264aaf2ec8fe6eaf5bb46d2ab",
+  "deposit": {
+    "tx": "0x361f55b2772b4101dbd8ca21def839021e6ef2ab6de886b42caa333210d09c1e",
+    "denominationWei": "1000000000000000"
+  },
+  "claim": {
+    "tx": "73417d65fff98c84e969de481d220069b0739fbf03077ec3f4a79d1b195ed8ce",
+    "holdingAfterClaim": "1000000000000000"
+  },
+  "burn": {
+    "tx": "b9d3c862ca68d872fe55aca72711eef7cb7228550fe41a87deec6ec1a2a166c5",
+    "recipient": "0xF74077965351A6fe64cA1124762ceA9D22d1cE2e",
+    "holdingAfterBurn": "0"
+  },
+  "checkpoint": {
+    "burnRoot": "0xedac98ed007261fa1a5af3ca961f89bd9bb71e02ae7013b52248b495607867dc",
+    "burnCount": "1",
+    "newState": "0x75037d4d2d4080a62476f6ce8e0a4b09797310044c75bfa8bbf7cfb6e113b962",
+    "tipId": "30",
+    "vaultFinalState": "0x75037d4d2d4080a62476f6ce8e0a4b09797310044c75bfa8bbf7cfb6e113b962",
+    "burnRootAccepted": true
+  },
+  "release": {
+    "tx": "0x05288fac33825493d194b91ee8794f777c1f41a436eee1b1fcbb060b871ef684",
+    "amountWei": "1000000000000000",
+    "relayFeeWei": "2000000000000",
+    "creditedFeesWei": "1000000000000",
+    "recipientBalanceWei": "997000000000000",
+    "nullifier": "0x5f4aa3df33d51f50c0c852e7fac18a00fd10bc950aaae7a150a95dc1800342f1",
+    "replayRefused": true
+  }
+}

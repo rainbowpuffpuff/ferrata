@@ -79,12 +79,12 @@ jobs:
       - name: Sepolia checkpoint (public beacon endpoints; fails if none answers)
         timeout-minutes: 15
         run: scripts/ci/sequencer-attest.sh e2e/runs/ci-sequencer-attest checkpoint
-      # The guests build into lez/target; LEZ rc3's sequencer and the driver into one target directory beside the
-      # repository (lez/live/env.sh: tmp/sequencer-v0.4.0-rc3/target), cached as the driver's workspace.
+      # LEZ rc3's sequencer and the driver build into one target directory beside the repository (lez/live/env.sh:
+      # tmp/sequencer-v0.4.0-rc3/target; 3.0 GB on the build box), cached as the driver's workspace: 13 of the build's
+      # 17 minutes there. The guests (lez/target, 5 minutes) are not cached: GitHub keeps 10 GB per repository.
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           workspaces: |
-            lez -> target
             lez/live/driver -> ../../../../tmp/sequencer-v0.4.0-rc3/target
           shared-key: sequencer-attest
           cache-on-failure: true
@@ -162,14 +162,14 @@ jobs:
         with:
           path: ~/.cache/ferrata/native
           key: native-${{ hashFiles('scripts/native-deps.json') }}
-      # bridge/ and checkpoint/ build in their own target directories; LEZ's sequencer, crown-driver and cli/ in one
-      # beside the repository (tmp/ci-seq-roundtrip/target), cached as cli's workspace.
+      # LEZ's sequencer, crown-driver and cli/ build into one target directory beside the repository
+      # (tmp/ci-seq-roundtrip/target; 4.0 GB on the build box, 27 of the cold build's 41 minutes there), cached as
+      # cli's workspace, and checkpoint/ (ci_zone, 8 minutes). bridge/ (2 minutes) and the LEZ guests (lez/target,
+      # 5 minutes) are not cached: GitHub keeps 10 GB per repository.
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           workspaces: |
-            bridge -> target
             checkpoint -> target
-            lez -> target
             cli -> ../../tmp/ci-seq-roundtrip/target
           shared-key: sequencer-roundtrip
           cache-on-failure: true

@@ -1,0 +1,25 @@
+phase	step	tx_hash	block	position	status	exit	exec_gas	stor_gas	gas_limit	base_fee_exec	base_fee_stor	fee	payer_debit	block_txs	block_exec_gas	block_stor_gas	harness_exec_gas	harness_stor_gas	harness_result	note
+crown-a	deploy attest: WriteSegment 7 of 7 (4816 bytes)	ca04d0a0ad010a3c45714bf7be5cea587da55173c3b74bb078b5b94ed81196a4	3	0	applied	-	0	5396	2000000	8	8	43168	-	1	0	5396	-	-	-	-
+crown-a	deploy attest: WriteSegment 6 of 7 (98304 bytes)	dd06aa28fb4f42b538e98fd462253015b47e9cf91a513b8c829ca98861b67b9b	4	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy attest: WriteSegment 5 of 7 (98304 bytes)	289ce48bb62e9673b58c70dc12fdba0473474d8cf7f70a09b073ffa7d5157ba0	5	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy attest: WriteSegment 4 of 7 (98304 bytes)	336d75873249340593fab78fdf303f10bb78d418dce6a11202119edf1a1eedc5	6	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy attest: WriteSegment 3 of 7 (98304 bytes)	6c8082f48dcc6e9c9fc9c037ae48a9b96304c46cb06b1a6ebcfa4a6ebb3a6f5f	7	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy attest: WriteSegment 2 of 7 (98304 bytes)	ddc9e805c5f76d73877e45711afbfac218036956dd91cefe95d2a54dcf869bd4	8	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy attest: WriteSegment 1 of 7 (98304 bytes)	d7019c44ed4f707a74ee596228715fe9c4c96e44df65e955ddafa92e1cf2e50c	9	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy attest: CreateHeader (immutable) at A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX	2a28db6065eed722aeed117d462cd1844135add130a0a882e5d396dcb3ef107a	10	0	applied	-	0	608	2000000	8	8	4864	4796000	1	0	608	-	-	-	payer_debit is for the whole deployment; its fees sum to 4796000
+crown-a	deploy bridge: WriteSegment 6 of 6 (83504 bytes)	73b3000e3fd11f22914cd52c3704ad39edc4d40386ca09402b9433cdb7707c5a	11	0	applied	-	0	84084	2000000	8	8	672672	-	1	0	84084	-	-	-	-
+crown-a	deploy bridge: WriteSegment 5 of 6 (98304 bytes)	3d80c59e59b666425f3525e7f2069a9d57e8f5ab64d6066c966a7dbe004401cf	12	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy bridge: WriteSegment 4 of 6 (98304 bytes)	c75418b2ca832e8f574d1b1c9559f828a80eb7c34d68e6b80fb9884580bc9139	13	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy bridge: WriteSegment 3 of 6 (98304 bytes)	f55b9a21d1472cbaaa7bca2219041af94b84278d0a2187b096cda7f8adefe01a	14	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy bridge: WriteSegment 2 of 6 (98304 bytes)	814d683361f339431fb24f1ff0885bd82f3a5f36b8dbc46c488b95b8ea886f8c	15	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy bridge: WriteSegment 1 of 6 (98304 bytes)	b67fe075cc8880f8407b142f4108d6a4f442475854c68378a170a10131c8a180	16	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy bridge: CreateHeader (immutable) at AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp	16033766ac9d7b30497eb4bbcd63ed5676f29b1732ffa2d9e370ea25e0ef945a	17	0	applied	-	0	608	2000000	8	8	4864	4634176	1	0	608	-	-	-	payer_debit is for the whole deployment; its fees sum to 4634176
+crown-a	crown STAND-IN Init Init	53096067ee7841289b54aba2c34a17ec3e1202b1e56e93a31a21f89af1668133	18	0	applied	-	114811	1764	4000000	8	8	932600	932600	1	114811	1764	-	-	-	-
+crown-a	crown STAND-IN Init adopt 1/2	563dcc6654f2f06d9c5f77972c01206e74ba6a4dda77c0342557410900be9d44	19	0	applied	-	3397076	24980	4000000	8	8	27376448	27376448	1	3397076	24980	-	-	-	-
+crown-a	crown STAND-IN Init adopt 2/2	7ab8c65493ed3d9d465b9b1a3b0e124126c33bb3d14cd75db696e8e1667984f8	20	0	applied	-	3480132	25173	4000000	8	8	28042440	28042440	1	3480132	25173	-	-	-	-
+crown-b	stage 1 finality update (block 12200370) Open (step 1)	9f02b52e981f9544975f726d1b5201baa6478e13418aad864d5adfcdd2847492	24	0	applied	-	1996051	2348	4000000	8	8	15987192	15987192	1	1996051	2348	-	-	-	-
+crown-b	stage 1 finality update (block 12200370) Miller (step 2)	a41b2aab6c7f82ec61d75a1875c2abdf1201fff2d726288b66bfd3f6c8829564	25	0	applied	-	3305374	399	4000000	8	8	26446184	26446184	1	3305374	399	-	-	-	-
+crown-b	stage 1 finality update (block 12200370) Finish (step 3)	f681f4d7ce276121ec259bd7e77d15b9ee048ab5b5cfe5f0e991f92a7f4fc3d2	26	0	applied	-	3718957	592	4000000	8	8	29756392	29756392	1	3718957	592	-	-	-	-
+crown-b	bridge Init (pairing: configId in the vault's slot 2)	c8f433d648bd3a78a2b589feac57ce809057c786a520a422ab102994d187797d	27	0	applied	-	225338	3003	4000000	8	8	1826728	1826728	1	225338	3003	-	-	-	-
+crown-b	bridge Register ETH (registry entry, schedules 0 and 1, leaf count)	0b2ed84cb39d6fc17db5e8c484f1a04730f3e790802ef827abe7a0122835b766	28	0	applied	-	461350	5413	4000000	8	8	3734104	3734104	1	461350	5413	-	-	-	-
+crown-b	bridge ImportRoot n=1 (stage 1, block 12200370)	3ece86b8568bb315ee2de905c00fbdb986300e75a6ccae6dd9619d22b6b169d9	29	0	applied	-	304690	3425	4000000	8	8	2464920	2464920	1	304690	3425	-	-	-	-

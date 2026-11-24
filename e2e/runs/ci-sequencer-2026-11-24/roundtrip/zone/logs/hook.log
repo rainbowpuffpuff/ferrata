@@ -1,0 +1,36 @@
+[hook 04:57:24] == fork
+[hook 04:57:25] ok: fork: Sepolia block 12200361 (2026-11-24T04:43:00Z), hash 0x56d10a8725f576d93fa1be580163fb8cd79eb1a523ddfa4f778edd57dadc749e; anvil forks it, chain id 11155111
+[hook 04:57:25] == zone: programs and the stand-in instance
+[hook 04:58:22] ok: zone: programs and the stand-in instance: attestation program 0x816d1fef46… and bridge program 0x847a4336c2… deployed through LEZ's loader; stand-in instance 0x84b80e2777… (bootstrap slot 11640896); zone tip 20
+[hook 04:58:22] == vault deployed on the fork
+[hook 04:58:29] ok: vault deployed on the fork: vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 (rule B), configId 0xa62fb073bd6f4022aab5bf1df9efd607c083283264aaf2ec8fe6eaf5bb46d2ab, genesisState 0x8e54c7d6a8de29730ff8874b4f6ab32653c3d6f85274cc44fa19057391a3efb8 (ci_zone's test committee); RISC Zero's Groth16 verifier 0x25Fa4286d401bdc4AC7657bc7a1ebdE1B737F4b1 (code hash 0x47dfdcd8969f76d298cd5c4bc1f2889a6bc042b8c0f1e428f526cce1316b9970) deployed by DeployVault, its code then replaced on the fork by MockRiscZeroVerifier's; checkpoint guest 0xdafa6ab9a26841681fd071b8e4cdfae514371f82902426dc9fb1e2c80d29cda0, release guest 0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd
+[hook 04:58:29] == deposit
+[hook 04:58:30] ok: deposit: 0.001 ETH to the user's public /0, Ethereum tx 0x361f55b2772b4101dbd8ca21def839021e6ef2ab6de886b42caa333210d09c1e; the vault's tree holds 1 leaf
+[hook 04:58:30] == operator import
+[hook 04:58:49] ok: operator import: the stand-in committee finalized the fork's block 12200370; bridge Init (pairing: configId in the vault's slot 2), bridge Register ETH (registry entry, schedules 0 and 1, leaf count), bridge ImportRoot n=1 (stage 1, block 12200370): 3 of 3 applied
+[hook 04:58:49] == fees
+[hook 04:58:51] ok: fees: native LEZ to the user's public /0 (0x8a7162a5acc0f2c0beab5a9d07dfab129e7dc9b18cd9c14b3090fe2cc40154b0): 3000000000000
+[hook 04:58:51] == claim (plaintext)
+[hook 04:58:51] the claim's delay let pass on the fork's clock: 2701 blocks
+[hook 04:58:55] ok: claim (plaintext): LEZ tx 73417d65fff98c84e969de481d220069b0739fbf03077ec3f4a79d1b195ed8ce applied; the user's public /0 holds 1000000000000000 (0.001 ETH)
+[hook 04:58:55] == claim again refused
+[hook 04:58:56] ok: claim again refused: refused: error: refused: LEZ bridge program exit code 250 ALREADY_CLAIMED (checked before sending: the zone's history shows it claimed): the deposit's nullifier is spent; the holding unchanged
+[hook 04:58:56] == burn
+[hook 04:59:00] ok: burn: LEZ tx b9d3c862ca68d872fe55aca72711eef7cb7228550fe41a87deec6ec1a2a166c5 applied: 0.001 ETH burnt to 0xF74077965351A6fe64cA1124762ceA9D22d1cE2e; the holding is 0
+[hook 04:59:00] == checkpoint journal
+[hook 04:59:05] ok: checkpoint journal: 34 applied zone transactions in 28 blocks; the guest's journal equals the native one ({"executor_wall_s":0.434881854,"image_id":"0xdafa6ab9a26841681fd071b8e4cdfae514371f82902426dc9fb1e2c80d29cda0","input_by); 1 burn, root 0xedac98ed007261fa1a5af3ca961f89bd9bb71e02ae7013b52248b495607867dc
+[hook 04:59:05] == checkpoint accepted
+[hook 04:59:05] the fork's clock moved on 3601 s: the candidate's wait (Delta 3600 s)
+[hook 04:59:06] ok: checkpoint accepted: submitCandidate, Delta let pass, finalizeAttested by ferrata-relayer; finalState 0x75037d4d2d4080a62476f6ce8e0a4b09797310044c75bfa8bbf7cfb6e113b962; burn root accepted
+[hook 04:59:06] == release journal
+[hook 04:59:06] the release was held (its delay after the checkpoint)
+[hook 04:59:06] the fork's clock moved on 121 s: the release delay (120 s after finalizeAttested)
+[hook 04:59:07] ok: release journal: release guest 0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd: journal equal to the native one (RISC0_DEV_MODE: executed, receipt fake)
+[hook 04:59:07] == release paid
+[hook 04:59:08] ok: release paid: Ethereum tx 0x05288fac33825493d194b91ee8794f777c1f41a436eee1b1fcbb060b871ef684: the Release event pays out the burnt 1000000000000000 wei: 997000000000000 to the fresh address, 2000000000000 relay fee to the relayer, 1000000000000 credited (OwedCredited: the checkpoint fee)
+[hook 04:59:08] == release again refused
+[hook 04:59:08] ok: release again refused: eth_call of the same release reverts with NullifierAlreadyUsed (0xcad2ae02); nullifierUsed(0x5f4aa3df33d51f50c0c852e7fac18a00fd10bc950aaae7a150a95dc1800342f1) = true
+[hook 04:59:12] ethtxs.py failed:   File "<repo>/e2e/seqnet/ethtxs.py", line 20, in rpc
+    raise RuntimeError(f"{method}: {out['error']}")
+RuntimeError: eth_getBlockTransactionCountByNumber: {'code': 4444, 'message': 'pruned history unavailable: requested 0, earliest available 1000000'}
+[hook 04:59:12] the round trip: every step ok (14 steps)

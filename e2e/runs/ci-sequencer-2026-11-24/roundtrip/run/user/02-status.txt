@@ -1,0 +1,14 @@
+$ ferrata --seed <work>/user/seed.txt --eth-rpc http://127.0.0.1:18547 --chain-id 11155111 --vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 --from-block 12200361 status
+
+vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516: 0 deposits, root 0x782d35b1fdad7d54e7a1b36a2ab1021e872c7692bb80fdd12bfc321e9e420409, configId 0xa62fb073bd6f4022aab5bf1df9efd607c083283264aaf2ec8fe6eaf5bb46d2ab
+  retired false; deposits frozen until 0; releases frozen until 0
+  checkpoints 0; final imported leaf count 0
+  global deposit cap: capacity 1030000000000 value units, refill 11921297 value units/s, available 1030000000000 value units
+  global release cap: capacity 1030000000000 value units, refill 11921297 value units/s, available 1030000000000 value units
+token 0x0000000000000000000000000000000000000000 (ETH): registered true, deposits enabled true, lezUnit 1000000000000
+  [0] 0.001 ETH (1000000000000000 base units, 18 decimals)  mint fee 0 ETH (0 base units, 18 decimals)  relay fee 0.000002 ETH (2000000000000 base units, 18 decimals)  burn fee 0 ETH (0 base units, 18 decimals)  checkpoint fee 0.000001 ETH (1000000000000 base units, 18 decimals)
+  [1] 0.01 ETH (10000000000000000 base units, 18 decimals)  mint fee 0 ETH (0 base units, 18 decimals)  relay fee 0.00002 ETH (20000000000000 base units, 18 decimals)  burn fee 0 ETH (0 base units, 18 decimals)  checkpoint fee 0.00001 ETH (10000000000000 base units, 18 decimals)
+  [2] 0.1 ETH (100000000000000000 base units, 18 decimals)  mint fee 0 ETH (0 base units, 18 decimals)  relay fee 0.0002 ETH (200000000000000 base units, 18 decimals)  burn fee 0 ETH (0 base units, 18 decimals)  checkpoint fee 0.0001 ETH (100000000000000 base units, 18 decimals)
+  deposits frozen until 0; releases frozen until 0; release delay 120 s after a checkpoint
+  deposit cap: capacity 10 ETH (10000000000000000000 base units, 18 decimals), refill 0.000115740740740741 ETH (115740740740741 base units, 18 decimals)/s, available 10 ETH (10000000000000000000 base units, 18 decimals)
+  release cap: capacity 10 ETH (10000000000000000000 base units, 18 decimals), refill 0.000115740740740741 ETH (115740740740741 base units, 18 decimals)/s, available 10 ETH (10000000000000000000 base units, 18 decimals)
