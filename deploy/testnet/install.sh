@@ -27,7 +27,7 @@ install -d -o ferrata -g ferrata -m 750 "$LOG"
 # systemd opens an `append:` file as root and would create it root-owned, which logrotate as ferrata cannot
 # truncate (copytruncate), so it would never be rotated. Mode 644: the CloudWatch agent reads them.
 LOGS="node sequencer sequencer-run indexer explorer gateway updater monitor status topup bedrock-split
-      bridge-attestor bridge-import bridge-monitor bridge-prover bridge-relayer bridge-lez-init bridge-lez-import
+      bridge-attestor bridge-import bridge-monitor bridge-prover bridge-relayer bridge-lez-init bridge-lez-import gasdrop
       bridge-checkpoint"
 for f in $LOGS; do [ -e "$LOG/$f.log" ] || install -o ferrata -g ferrata -m 644 /dev/null "$LOG/$f.log"; done
 chown ferrata:ferrata "$LOG"/*.log

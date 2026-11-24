@@ -99,6 +99,43 @@ export function burnRecipient(typed, connected) {
 }
 
 
+// ------------------------------------------------------------------ the fee payer: the network's gas-drop relayer
+/** Where the network publishes its gas-drop relayer: the origin of the page's RPC, `/relayer/gas-drop` (the `ferrata`
+ *  tool reads the same URL, from its sequencer's origin, and uses that relayer by default: RFP-022 U.5, Priv.7). */
+export const gasDropUrl = (rpc, base) => new URL('/relayer/gas-drop', new URL(rpc, base)).href;
+/** The page's fee-payer line for an answer of that URL (`status`, its JSON `terms`, or `null` when unreachable). */
+export function gasDropLine(status, terms, url) {
+  if (status === 200 && terms && /^0x[0-9a-f]{64}$/.test(terms.relayer ?? '')) {
+    const covers = Array.isArray(terms.covers) && terms.covers.length ? terms.covers.join(' and ') : 'claim';
+    return { state: 'on', text: `Fee payer (private claim${covers.includes('burn') ? ' and burn' : ''}, by default): this network's gas-drop relayer ${terms.relayer}. `
+      + `With no setting, the ferrata tool asks it for one credit of ${terms.amount} native LEZ per deposit, sealed to a fresh one-time private account, `
+      + `which pays the LEZ fee of your private ${covers}; the relayer learns the deposit's nullifier, that account, a time and your address, never which deposit. `
+      + `Published at ${url}. Opt out: --no-gas-drop (the fee then comes from your own private account, and where its native LEZ came from can link the claim to you).` };
+  }
+  if (status === 503) {
+    return { state: 'paused', text: `Fee payer: this network's gas-drop relayer is paused (${terms?.error ?? 'no reason given'}): the ferrata tool stops a private claim until it is back, or pays from your own private account with --no-gas-drop.` };
+  }
+  if (status === null || status >= 500) {
+    return { state: 'unreachable', text: `Fee payer: this network's gas-drop relayer could not be read (${url}): the ferrata tool stops a private claim until it can, or pays from your own private account with --no-gas-drop.` };
+  }
+  return { state: 'none', text: 'Fee payer: this network publishes no gas-drop relayer, so a private claim\'s LEZ fee is paid from your own private account; where its native LEZ came from (a faucet, a purchase) can link the claim to you.' };
+}
+
+/** Fills `node` with the fee-payer line, read from the network (its `data-state`: on, paused, unreachable, none). */
+export async function showGasDrop(node, rpc, base, fetchFn = fetch) {
+  const url = gasDropUrl(rpc, base);
+  let status = null, terms = null;
+  try {
+    const r = await fetchFn(url, { cache: 'no-store' });
+    status = r.status;
+    try { terms = await r.json(); } catch { terms = null; }
+  } catch { status = null; }
+  const l = gasDropLine(status, terms, url);
+  node.textContent = l.text;
+  node.dataset.state = l.state;
+  return l;
+}
+
 export function mountBridge(root, c) {
   const B = c.cfg.bridge ?? {};
   root.textContent = '';
@@ -143,6 +180,8 @@ export function mountBridge(root, c) {
   const burnGo = el('button', { 'data-testid': 'bridge-burn-go', text: 'Sign and burn' }); burnGo.disabled = true;
   const burnSum = el('dl', { 'data-testid': 'bridge-burn-summary' });
   const burnOut = el('div', { class: 'msg', role: 'status', 'data-testid': 'bridge-burn-out' });
+  const gasDrop = el('p', { class: 'privacy', 'data-testid': 'bridge-gas-drop', text: 'Fee payer: reading this network\'s gas-drop relayer…' });
+  showGasDrop(gasDrop, c.cfg.rpc, location.href);
   root.append(status, el('div', { class: 'row' }, connect), el('label', {}, 'Asset', assetSel), el('div', { class: 'row' }, mint),
     el('label', {}, 'Amount', denom), el('label', {}, 'Destination on LEZ', kind),
     el('div', { class: 'row' }, review, go), out, sum,
@@ -154,7 +193,8 @@ export function mountBridge(root, c) {
     el('div', { class: 'row' }, burnBtn, burnGo), burnSum, burnOut,
     el('div', { class: 'privacy' }, el('b', { text: 'Public on LEZ: ' }), 'the selected account, the asset, the amount, the time and the burn note (its tag r, the commitment COut). ',
       el('b', { text: 'Private: ' }), 'the Ethereum recipient, encrypted in the note\'s memo (only this phrase opens it). The release on Sepolia shows the recipient and the amount but, proven, not which burn it is.'),
-    el('p', { class: 'fine', text: 'The public claim and the public burn run in this page (no proof). A private claim, a private burn and the release need a proof: the `ferrata` tool proves them on your machine from the same phrase (ferrata status, ferrata claim, ferrata burn, ferrata release); see the Private tab.' }));
+    el('p', { class: 'fine', text: 'The public claim and the public burn run in this page (no proof). A private claim, a private burn and the release need a proof: the `ferrata` tool proves them on your machine from the same phrase (ferrata status, ferrata claim, ferrata burn, ferrata release); see the Private tab.' }),
+    gasDrop);
   if (B.lezReady === false) {
     root.insertBefore(el('p', { class: 'msg warn', 'data-testid': 'bridge-not-ready', text: 'The LEZ side of this bridge is still being set up (its configuration and token registration). Deposits open here when it is done; until then nothing can be claimed on LEZ.' }), status);
   }

@@ -7,6 +7,7 @@
 #   /explorer/ /status/ /agents/ /registry/ /AGENTS.md /config.json /idl/   the explorer bundle (its explorer/)
 #   /wallet/             the web wallet (its wallet/), its own strict CSP
 #   /rpc /faucet         the gateway (JSON-RPC allowlist, per-IP limits, CORS; faucet)
+#   /relayer/gas-drop    the gateway: the network's gas-drop relayer (terms, guest, inbox)
 #   /status/status.json /status/history.json /programs.json /health   this host's own status (ferrata-status)
 {
 	# No admin API, so that a local process cannot load a new configuration. Change the site with
@@ -83,6 +84,12 @@
 	}
 	@faucet path /faucet /faucet/
 	handle @faucet {
+		import gateway
+	}
+	# The network's gas-drop relayer (RFP-022 U.5, Priv.7): its terms, its guest and its inbox, through the gateway's
+	# checks and caps (ferrata-gateway, "gas drops"); `ferrata claim` reads the terms from its sequencer's origin.
+	@gasdrop path /relayer/gas-drop /relayer/gas-drop/ /relayer/gas-drop/guest
+	handle @gasdrop {
 		import gateway
 	}
 

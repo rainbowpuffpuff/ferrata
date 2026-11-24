@@ -5,6 +5,14 @@
                                             allowlist, batch, range and list caps, CORS, and limits (below)
   POST /faucet {"account": "<LEZ public account id>", "public_key": "<64 hex, for an account never used>"}
   GET  /faucet   the faucet's terms, its account and balance (cached for a few seconds)
+  GET  /relayer/gas-drop        the network's gas-drop relayer (RFP-022 U.5, Priv.7): its LEZ account, the guest's image
+                                id, the native LEZ per drop, the inbox and the guest's URL; `ferrata claim` reads it by
+                                default (from its sequencer's origin). 404 when GASDROP_INFO is unset; 503 when paused
+  GET  /relayer/gas-drop/guest  the gas-drop guest (ELF) the relayer verifies receipts of (the tool checks its image id
+                                against the ids it pins)
+  POST /relayer/gas-drop        a gas-drop job ({"kind": "gas-drop", "receipt", "oneTimeNpk", "oneTimeVpk"}) into the
+                                relayer's inbox (GASDROP_INBOX), after its checks (below); the relayer
+                                (`ferrata-relayer --gas-drops-only`) verifies the receipt and sends one credit per deposit
 
 Limits:
 - per IP, a token bucket charged by work: one token per request, a getBlockRange one more per GATEWAY_RANGE_PER_TOKEN
@@ -43,6 +51,13 @@ Limits:
   (the same nonce: at most one is ever applied). An account with a claim still pending is refused until that claim is
   decided, which its next claim looks up first. No claim is made with a tool that does not record its transfers. The
   tool's output is logged, never returned; claims older than FAUCET_KEEP_DAYS are deleted with their records.
+
+- gas drops: a job is at most GASDROP_MAX_BODY bytes, of the exact shape above, its receipt's journal 212 bytes of the
+  gas-drop statement naming this relayer; one job per deposit nullifier N held at a time (409 while the inbox holds it);
+  at most GASDROP_MAX_PENDING in the inbox (429); per IP GASDROP_PER_IP_PER_DAY jobs, per /24 (IPv6 /64)
+  GASDROP_PER_NET_PER_DAY, every caller together GASDROP_GLOBAL_PER_HOUR (429; kept in memory: a restart forgets them).
+  The bound that matters is the relayer's: one drop per N, and a receipt proves a deposit under a root the zone
+  imported, so a drop costs its asker a deposit on Ethereum (a denomination and the vault's fees).
 
 Standard library only. Configuration: environment (see DEFAULTS); the faucet's ledger is a SQLite file.
 """
@@ -101,6 +116,16 @@ DEFAULTS = {
     "FAUCET_TOOL_GRACE": "30",                # seconds the tool may run beyond FAUCET_WAIT before the claim gets 504
     "FAUCET_RESEND_AFTER": "60",              # a transfer still pending this long after its claim is sent again
     "FAUCET_KEEP_DAYS": "30",
+    "GASDROP_INFO": "",                       # the relayer's terms (JSON: relayer, imageId, amount, covers[, paused]);
+    "GASDROP_INBOX": "/var/lib/ferrata/gasdrop/inbox",  # empty GASDROP_INFO: no gas drop is published
+    "GASDROP_GUEST": "/opt/ferrata/share/gasdrop.bin",
+    "GASDROP_MAX_BODY": "1048576",            # a real receipt's job is about 585 KB (lez/results/v0.4.0-rc3/gas-drop)
+    "GASDROP_MAX_PENDING": "8",
+    "GASDROP_PER_IP_PER_DAY": "3",
+    "GASDROP_PER_NET_PER_DAY": "10",
+    "GASDROP_GLOBAL_PER_HOUR": "12",
+    "GASDROP_GET_RATE": "0.2",                # the terms and the guest, per IP
+    "GASDROP_GET_BURST": "10",
 }
 CFG = {k: os.environ.get(k, v) for k, v in DEFAULTS.items()}
 F = {k: float(v) for k, v in CFG.items() if re.fullmatch(r"[0-9.]+", v)}
@@ -343,6 +368,86 @@ def cost_of(reqs):
     return cost, sends, None
 
 
+# ---- the gas drop ---------------------------------------------------------------------------------------------------
+HEX_RE = re.compile(r"^0x[0-9a-f]+$")
+
+
+def _drop_domain():
+    import hashlib
+    return hashlib.sha256(b"ferrata/gas-drop/v1").digest()
+
+
+DROP_DOMAIN = _drop_domain()
+
+
+class DropLimits:
+    """Per-IP, per-network and network-wide counts of accepted gas-drop jobs, in memory (a restart forgets them)."""
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.seen = []  # (time, ip)
+
+    def admit(self, ip, now=None):
+        now = time.time() if now is None else now
+        with self.lock:
+            self.seen = [(t, i) for t, i in self.seen if now - t < 86400]
+            if sum(1 for t, i in self.seen if i == ip) >= F["GASDROP_PER_IP_PER_DAY"]:
+                return "this address has posted its gas-drop jobs for today"
+            if sum(1 for t, i in self.seen if same_net(i, ip)) >= F["GASDROP_PER_NET_PER_DAY"]:
+                return "this network has posted its gas-drop jobs for today"
+            if sum(1 for t, i in self.seen if now - t < 3600) >= F["GASDROP_GLOBAL_PER_HOUR"]:
+                return "the relayer takes no more gas-drop jobs this hour"
+            self.seen.append((now, ip))
+            return None
+
+
+DROP_LIMITS = DropLimits()
+DROP_LOCK = threading.Lock()
+
+
+def gasdrop_terms():
+    """The relayer's published terms, or None when no gas drop is published (GASDROP_INFO unset or unreadable)."""
+    path = CFG["GASDROP_INFO"]
+    if not path:
+        return None
+    try:
+        with open(path) as f:
+            t = json.load(f)
+        bytes.fromhex(t["relayer"].removeprefix("0x"))
+        return t
+    except (OSError, ValueError, KeyError, AttributeError):
+        return None
+
+
+def pending_jobs():
+    try:
+        return sorted(n for n in os.listdir(CFG["GASDROP_INBOX"]) if n.endswith(".json"))
+    except OSError:
+        return []
+
+
+def check_drop_job(job, relayer):
+    """The job's shape and its receipt's journal (the relayer verifies the receipt itself). Returns (N hex, error)."""
+    if not isinstance(job, dict) or set(job) != {"kind", "receipt", "oneTimeNpk", "oneTimeVpk"}:
+        return None, "a gas-drop job is {\"kind\": \"gas-drop\", \"receipt\", \"oneTimeNpk\", \"oneTimeVpk\"} and nothing else"
+    if job["kind"] != "gas-drop":
+        return None, "kind must be gas-drop"
+    for k, lo, hi in (("oneTimeNpk", 64, 64), ("oneTimeVpk", 2, 200)):
+        v = job[k]
+        if not isinstance(v, str) or not HEX_RE.match(v) or not lo <= len(v) - 2 <= hi:
+            return None, f"{k} must be 0x-prefixed lower-case hex"
+    receipt = job["receipt"]
+    jb = receipt.get("journal", {}).get("bytes") if isinstance(receipt, dict) else None
+    if not isinstance(jb, list) or len(jb) != 212 or not all(isinstance(b, int) and 0 <= b < 256 for b in jb):
+        return None, "the receipt's journal is not the gas-drop statement's 212 bytes"
+    jb = bytes(jb)
+    if jb[:32] != DROP_DOMAIN:
+        return None, "the receipt's journal is not a gas-drop statement"
+    if jb[180:212] != relayer:
+        return None, "the receipt is bound to another relayer"
+    return jb[116:148].hex(), None
+
+
 class Handler(http.server.BaseHTTPRequestHandler):
     server_version = "ferrata-gateway"
     sys_version = ""
@@ -422,6 +527,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         path = self.path.split("?")[0]
         if path in ("/faucet", "/faucet/"):
             return self.faucet_info()
+        if path in ("/relayer/gas-drop", "/relayer/gas-drop/", "/relayer/gas-drop/guest"):
+            return self.gasdrop_get(path)
         if path in ("/rpc", "/"):
             return self.send(200, {"jsonrpc": "LEZ v0.4.0-rc3 sequencer JSON-RPC: POST here",
                                    "methods": sorted(READ_METHODS | SEND_METHODS)})
@@ -434,8 +541,105 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return self.rpc()
         if path in ("/faucet", "/faucet/"):
             return self.faucet()
+        if path in ("/relayer/gas-drop", "/relayer/gas-drop/"):
+            return self.gasdrop_post()
         self.close_connection = True
         self.send(404, {"error": "not found"})
+
+    # ---- the gas drop ---------------------------------------------------------------------------------------------
+    def gasdrop_get(self, path):
+        terms = gasdrop_terms()
+        if terms is None:
+            return self.send(404, {"error": "this network publishes no gas-drop relayer"})
+        if not BUCKETS.take(("gasdrop-get", self.client_ip()), F["GASDROP_GET_RATE"], F["GASDROP_GET_BURST"]):
+            return self.limited("too many gas-drop reads from this address", 10)
+        if terms.get("paused"):
+            return self.send(503, {"error": f"the gas-drop relayer is paused: {terms['paused']}"}, {"Retry-After": "600"})
+        if path.endswith("/guest"):
+            try:
+                with open(CFG["GASDROP_GUEST"], "rb") as f:
+                    body = f.read()
+            except OSError:
+                return self.send(503, {"error": "the gas-drop guest is not available"})
+            self.send_response(200)
+            self.send_header("Content-Type", "application/octet-stream")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "public, max-age=3600")
+            for k, v in CORS.items():
+                self.send_header(k, v)
+            self.end_headers()
+            self.wfile.write(body)
+            return None
+        pending = len(pending_jobs())
+        return self.send(200, {
+            "relayer": terms["relayer"],
+            "imageId": terms["imageId"],
+            "amount": str(terms["amount"]),
+            "covers": terms.get("covers", ["claim"]),
+            "inbox": "/relayer/gas-drop",
+            "guest": "/relayer/gas-drop/guest",
+            "pending": pending,
+            "accepting": pending < F["GASDROP_MAX_PENDING"],
+            "limits": {k.removeprefix("GASDROP_").lower(): CFG[k] for k in (
+                "GASDROP_MAX_BODY", "GASDROP_MAX_PENDING", "GASDROP_PER_IP_PER_DAY", "GASDROP_PER_NET_PER_DAY",
+                "GASDROP_GLOBAL_PER_HOUR")},
+            "how": "ferrata claim uses this relayer by default: it proves a gas-drop receipt (the guest above, if the "
+                   "tool pins its image id) and posts {kind, receipt, oneTimeNpk, oneTimeVpk} here; the relayer sends "
+                   "one sealed native-LEZ credit per deposit to that one-time account, which pays the claim's fee and, "
+                   "with what is left, a later burn's. It learns the deposit's nullifier, the one-time account, a time "
+                   "and your address; never which deposit. Opt out: ferrata claim --no-gas-drop",
+            "operator": terms.get("operator", ""),
+        })
+
+    def gasdrop_post(self):
+        terms = gasdrop_terms()
+        if terms is None:
+            self.close_connection = True
+            return self.send(404, {"error": "this network publishes no gas-drop relayer"})
+        if terms.get("paused"):
+            self.close_connection = True
+            return self.send(503, {"error": f"the gas-drop relayer is paused: {terms['paused']}"}, {"Retry-After": "600"})
+        ip = self.client_ip()
+        body, n = self.read_body(int(CFG["GASDROP_MAX_BODY"]))
+        if body is None:
+            return self.send(413 if n > 0 else 400, {"error": f"a gas-drop job is 1 to {CFG['GASDROP_MAX_BODY']} bytes"})
+        try:
+            job = json.loads(body)
+        except ValueError:
+            return self.send(400, {"error": "not JSON"})
+        nul, why = check_drop_job(job, bytes.fromhex(terms["relayer"].removeprefix("0x")))
+        if why:
+            return self.send(400, {"error": why})
+        name = f"gas-drop-{nul}.json"
+        with DROP_LOCK:
+            pending = pending_jobs()
+            if name in pending:
+                return self.send(409, {"error": "the inbox holds this deposit's job already", "job": name})
+            if len(pending) >= F["GASDROP_MAX_PENDING"]:
+                return self.send(429, {"error": "the relayer's inbox is full: try again later"}, {"Retry-After": "300"})
+            refused = DROP_LIMITS.admit(ip)
+            if refused:
+                return self.send(429, {"error": refused}, {"Retry-After": "3600"})
+            inbox = CFG["GASDROP_INBOX"]
+            tmp = os.path.join(inbox, f".{name}.{os.getpid()}.{threading.get_ident()}.part")
+            try:
+                fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o640)
+                os.fchmod(fd, 0o640)  # the unit's UMask 0077 would leave the relayer (the group) unable to read it
+                with os.fdopen(fd, "wb") as f:
+                    f.write(json.dumps(job, separators=(",", ":")).encode())
+                    f.flush()
+                    os.fsync(f.fileno())
+                os.rename(tmp, os.path.join(inbox, name))
+            except OSError as e:
+                try:
+                    os.unlink(tmp)
+                except OSError:
+                    pass
+                print(f"gas-drop inbox write failed: {e}", flush=True)
+                return self.send(503, {"error": "the relayer's inbox cannot take jobs now"})
+        print(f"gas-drop job {name} from {ip}", flush=True)
+        return self.send(202, {"accepted": True, "job": name, "nullifier": "0x" + nul,
+                               "next": "the relayer verifies the receipt and sends one sealed credit to the one-time account"})
 
     # ---- JSON-RPC -------------------------------------------------------------------------------------------------
     def rpc(self):
