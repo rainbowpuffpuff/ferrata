@@ -1,18 +1,26 @@
-# Ferrata catalog: the base catalog's rebuild-index.yml (logos-modules-release-base@33fb564), with the
-# action pinned to the same commit as _release-module.yml. Without it nothing listens for the
-# `rebuild-index` dispatch the release job sends, the rolling `index` release is never written, and
-# logos-repo.json's indexUrl (.../releases/download/index/index.json) answers 404: the catalog would
-# not be installable. The owner's step: modules/catalog/RELEASE.md.
+# Ferrata catalog: the base catalog's rebuild-index.yml (logos-modules-release-base@33fb564) can not be
+# used here, because it calls logos-modules-release-action's rebuild-index.yml, whose last step
+# (softprops/action-gh-release) rewrites the rolling `index` release in place: it PATCHes the release,
+# which GitHub counts as republishing it, so in a repository with immutable releases (lambda-prize rule 3)
+# the release turns immutable and the index.json upload is refused ("Cannot upload asset index.json to an
+# immutable release"). A tag of an immutable release can never be reused, so no release-hosted index
+# can be rewritten here.
+#
+# This workflow therefore runs the same steps as that workflow at the pinned commit
+# (logos-modules-release-action@bbdc52871dc4305c8007923e1b08738ad2dd6b50 = v1.8): the same checkout, Nix
+# cache, lgx and index.py (logos-modules-release-tool v1.3, pinned here to its commit), the same
+# collection of every release's .lgx URL, the same `index.py build`. Only the last step differs: it
+# commits the result to this repository's `main` as index/index.json (icons under index/icons/, the
+# layout index.py uses for a catalog served from a directory), the file logos-repo.json's indexUrl names
+# (https://raw.githubusercontent.com/<org>/<repo>/refs/heads/main/index/index.json). It commits only
+# when the index changed (ignoring generatedAt, which every build stamps). The packages it lists stay in
+# the immutable `<module>-v<version>` releases; the index is a list of them, as the rolling release was.
+# The owner's step: modules/catalog/RELEASE.md.
 name: Rebuild index
 
-# Regenerates the rolling `index` release (index.json — the catalog
-# clients fetch) whenever a per-module release fires the
-# `rebuild-index` repository_dispatch event. Also runs on a six-hourly
-# schedule as a catch-up so a missed dispatch can't strand the catalog,
-# and can be kicked manually from the Actions UI.
-#
-# Thin passthrough to the versioned action — nothing to configure here.
-
+# Runs when a per-module release fires the `rebuild-index` repository_dispatch event (the pinned
+# release.yml sends it after publishing, and on its skip path), on a six-hourly schedule as a
+# catch-up, and by hand from the Actions UI.
 on:
   workflow_dispatch: {}
   repository_dispatch:
@@ -20,16 +28,133 @@ on:
   schedule:
     - cron: '17 */6 * * *'
 
-# Forked repos default to a read-only GITHUB_TOKEN; the rebuild replaces
-# the `index` release's asset, so contents: write, and nothing else.
+# One rebuild at a time: a release-all burst fires one dispatch per module, and a newer rebuild rescans
+# every release, so it supersedes an older one in flight.
+concurrency:
+  group: rebuild-index-${{ github.repository }}
+  cancel-in-progress: true
+
+# Least privilege: contents alone, to read the releases and push the index commit to main.
 permissions:
   contents: write
 
 jobs:
   rebuild:
+    # Unset means GitHub-hosted; a label, or a JSON array of labels (as the pinned action reads `runner`).
+    runs-on: ${{ startsWith(vars.RELEASE_RUNNER, '[') && fromJSON(vars.RELEASE_RUNNER) || vars.RELEASE_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: write
-    uses: logos-co/logos-modules-release-action/.github/workflows/rebuild-index.yml@bbdc52871dc4305c8007923e1b08738ad2dd6b50 # v1 (= v1.8)
-    with:
-      # Unset means GitHub-hosted; see "Runners and the Nix cache" in the README.
-      runner: ${{ vars.RELEASE_RUNNER }}
+    steps:
+      # The catalog's checkout: index.py reads ./logos-repo.json for repositoryName, and the last step
+      # commits to it.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      # lgx on PATH (index.py runs it per package), as the pinned action installs it.
+      - uses: logos-co/setup-nix-cache-action@781f072122f4df6af0e33a7d355ebd20283e019e # v1.2.0
+      - name: Set up lgx CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          nix build github:logos-co/logos-package#lgx --out-link "$RUNNER_TEMP/lgx-tool"
+          echo "$RUNNER_TEMP/lgx-tool/bin" >> "$GITHUB_PATH"
+
+      # index.py: the ref the pinned action uses (v1.3), as its commit.
+      - name: Checkout logos-modules-release-tool (for index.py)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          repository: logos-co/logos-modules-release-tool
+          ref: 94462e6633f2b536424c10ceda3c371f7ec8e09d # v1.3
+          path: _tool
+
+      # The pinned action's step (urls.txt created up front, so an empty catalog fails in index.py, not
+      # in wc): every published (non-draft) release's uploaded .lgx assets, the old `index` release
+      # excluded, with a logos:<network>:<cid> source when the sidecar has one.
+      - name: Collect `.lgx` URLs from this repo's releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > lgx.txt
+          : > urls.txt
+          gh api \
+            "repos/${{ github.repository }}/releases" --paginate \
+            --jq '
+              .[]
+              | select(.draft != true)
+              | select(.tag_name != "index")
+              | .id
+            ' |
+          while read -r release_id; do
+            gh api \
+              "repos/${{ github.repository }}/releases/${release_id}/assets" --paginate \
+              --jq '
+                .[]
+                | select(.state == "uploaded")
+                | select(.name | endswith(".lgx"))
+                | .browser_download_url
+              ' >> lgx.txt
+          done
+
+          while read -r lgx_url; do
+            sidecar_url="${lgx_url%/*}/sidecar.json"
+
+            if ! sidecar=$(curl -fsSL "$sidecar_url"); then
+              echo "::warning::cannot read $sidecar_url, listing $lgx_url without a CID"
+              sidecar=""
+            fi
+
+            if [[ -n "$sidecar" ]]; then
+              cid=$(jq -r '.cid' <<<"$sidecar")
+
+              for network in $(jq -r '.networks // [] | .[]' <<<"$sidecar"); do
+                echo -n "logos:$network:$cid " >> urls.txt
+              done
+            fi
+
+            echo "$lgx_url" >> urls.txt
+          done < lgx.txt
+
+          echo "::notice::collected $(wc -l < urls.txt) .lgx URL(s) from releases"
+
+      # The pinned action's build, written outside the checkout: index.json, icons in icons/ beside it
+      # (index.py's default; icon.path is resolved relative to indexUrl).
+      - name: Build index.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/index"
+          python3 _tool/index.py build urls.txt -o "$RUNNER_TEMP/index/index.json"
+          jq '{ schemaVersion, repositoryName, packageCount: (.packages | length) }' "$RUNNER_TEMP/index/index.json"
+
+      # The one step of our own: replace index/ on main with the new build, when it changed. main's
+      # ruleset blocks deletion and force-pushes only, so this fast-forward push is allowed; a push
+      # refused because main moved meanwhile is retried on the new main.
+      - name: Commit index/ to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          new="$RUNNER_TEMP/index"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3; do
+            git fetch -q origin +refs/heads/main:refs/remotes/origin/main
+            git checkout -q -B main origin/main
+            if [ -f index/index.json ] \
+               && cmp -s <(jq -S 'del(.generatedAt)' index/index.json) <(jq -S 'del(.generatedAt)' "$new/index.json") \
+               && diff -rq -x index.json index "$new" > /dev/null; then
+              echo "::notice::index unchanged on main $(git rev-parse --short HEAD); nothing to commit"
+              exit 0
+            fi
+            rm -rf index
+            cp -R "$new" index
+            git add -A index
+            git commit -q -m "index: $(jq '.packages | length' index/index.json) package(s), rebuilt by rebuild-index.yml"
+            if git push -q origin HEAD:refs/heads/main; then
+              echo "::notice::index committed to main as $(git rev-parse HEAD)"
+              exit 0
+            fi
+            echo "::warning::push refused (attempt $attempt); retrying on the current main"
+          done
+          echo "::error::could not push the index to main"
+          exit 1

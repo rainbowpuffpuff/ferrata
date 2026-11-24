@@ -7,7 +7,7 @@ The proposal (§B7) releases Ferrata's Logos modules from a catalog of its own w
 
 | File | What | From the base |
 |---|---|---|
-| `logos-repo.json` | how clients (`lgpd`, the `package_downloader` module, the package-manager UI) identify the catalog; `indexUrl` names the rolling `index` release | the base's template, filled in |
+| `logos-repo.json` | how clients (`lgpd`, the `package_downloader` module, the package-manager UI) identify the catalog; `indexUrl` names `index/index.json` on the catalog's `main`, which its `rebuild-index.yml` commits after every release | the base's template, filled in |
 | `.github/workflows/_release-module.yml` | calls `logos-co/logos-modules-release-action/.github/workflows/release.yml` pinned to the commit its `v1` tag names (`bbdc528…`, with the variants list and `signing_mode: inline`, the secret the workflows pass named `signing_key` from the repository's `LOGOS_SIGNING_KEY`) | the base's, with signing on, the pin, and a header; least-privilege `permissions:` per job in every file |
 | `.github/workflows/release-<module>.yml` (six: `ferrata_attest_module`, `ferrata_bridge_module`, `ferrata_attestor_module`, `ferrata_monitor_module`, `ferrata_updater_module`, `ferrata_relayer_module`) | one per module: `module_path: submodules/<module>` | the base's `release-module.yml.template`, as `scripts/add-module.sh` writes it |
 | `.github/workflows/release-all.yml` | releases every submodule | the base's, with least-privilege `permissions:` per job and the checkout pinned to a commit |

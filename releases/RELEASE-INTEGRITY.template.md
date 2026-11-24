@@ -65,11 +65,11 @@ Checks the manifest itself should record, once filled:
 - [ ] every `rootHash` equals the one in that release's sidecar (the command above prints it)
 - [ ] every source commit SHA is the catalog repository's submodule pointer, not a paste from the build log
 - [ ] the URLs resolve (the release exists at `releases/tag/<module>-v<version>`, assets `.lgx` + `sidecar.json`)
-- [ ] `indexUrl` (`https://github.com/<ORG>/<CATALOG_REPO>/releases/download/index/index.json`) lists all six:
+- [ ] `indexUrl` (`https://raw.githubusercontent.com/<ORG>/<CATALOG_REPO>/refs/heads/main/index/index.json`) lists all six:
 
 ```sh
-gh release download index --repo '<ORG>/<CATALOG_REPO>' --pattern 'index.json' --output - \
-  | jq '{repositoryName, packages: [.packages[].name]}'     # the rolling index the clients read
+curl -fsSL 'https://raw.githubusercontent.com/<ORG>/<CATALOG_REPO>/refs/heads/main/index/index.json' \
+  | jq '{repositoryName, packages: [.packages[].name]}'     # the index the clients read
 ```
 
 ## Integrity notes

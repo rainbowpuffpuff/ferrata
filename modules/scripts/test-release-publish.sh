@@ -195,7 +195,9 @@ git -C "$S/clone" -c protocol.file.allow=always submodule -q update --init 2> /d
 check "dry run: the submodules check out at the exported commits" test -f "$S/clone/submodules/ferrata_monitor_module/metadata.json"
 check "dry run: logos-repo.json declares the key's DID" test "$(jq -r '.trustedSigners[0].did' "$S/clone/logos-repo.json")" = "$DID"
 check "dry run: logos-repo.json's indexUrl" \
-  test "$(jq -r .indexUrl "$S/clone/logos-repo.json")" = "https://github.com/$ORG/$CAT/releases/download/index/index.json"
+  test "$(jq -r .indexUrl "$S/clone/logos-repo.json")" = "https://raw.githubusercontent.com/$ORG/$CAT/refs/heads/main/index/index.json"
+check "dry run: the owner's steps create no index release (the index is index/index.json on main)" \
+  sh -c '! grep -q -F "gh release create" "$1"' sh "$S/runs/dry.out"
 check "dry run: README says to add the key to the keyring" grep -q -F "logosctl key add ferrata --did $DID" "$S/clone/README.md"
 check "dry run: README says to require signatures" grep -q -F "signature_policy: require" "$S/clone/README.md"
 check "dry run: module tags pushed" test -n "$(git -C "$DRY/ferrata_monitor_module.git" tag -l 'v*')"
