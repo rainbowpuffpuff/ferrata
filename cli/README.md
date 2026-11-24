@@ -351,9 +351,19 @@ deposit still in its claim delay is held (refused with the block it opens at) un
   locally; the fee is paid inside the proof. A private-kind deposit is proven by its destination; a
   public-kind one by the wallet's private account `/0` (the mint still lands at the public destination).
 - **Plaintext**: the wallet sends a public transaction; refused without `--i-accept-plaintext-links-deposit`.
-- **The gas drop** (bridge.md §6; on by default once a relayer's inbox is known: `--gas-drop-inbox DIR` or
-  `FERRATA_GAS_DROP_INBOX`, with `--relayer` naming that relayer's LEZ account and `--gas-drop-elf` the gas-drop
-  guest): a private claim's LEZ fee is paid from the relayer's credit rather than from your own account. The tool
+- **The gas drop** (bridge.md §6; **on by default, with no setting**: the relayer the network publishes at its
+  sequencer's origin, `/relayer/gas-drop` (on the test network, its gateway: the relayer's LEZ account, the guest's
+  image id, the native LEZ per drop, the inbox URL); or one the user names, `--gas-drop-inbox DIR|URL` or
+  `FERRATA_GAS_DROP_INBOX` with `--relayer` and `--gas-drop-elf`; off with `--no-gas-drop` or `FERRATA_NO_GAS_DROP=1`,
+  `cli/src/gasdrop_net.rs`): a private claim's LEZ fee is paid from the relayer's credit rather than from your own
+  account. With the network's relayer the tool downloads the guest it serves only if its image id is one the tool
+  pins (`gasdrop`, `gasdrop_31` of docs/image-ids.md), checks that the receipt verifies with exactly the journal it
+  computed before posting the job, and the dry run's `fee payer:` line names the relayer, where it was published and
+  the opt-out. A network that publishes no relayer (an answer 4xx: a bare sequencer) leaves the fee to your own
+  account, with the line saying what that reveals; one that cannot be read (5xx, transport) stops the claim. A drop is
+  sized for the claim and one burn: `ferrata burn` (private) pays its fee from a drop's one-time account that still holds
+  native LEZ (`ferrata-gas-drops.json`), asking nothing new of any relayer (LEZ's private nonce and nullifier need the
+  account's own secret key, so the relayer cannot recognise that spend); `--no-gas-drop` pays from the proving account. The tool
   makes a one-time private account (a new child of private account `/0` in LEZ's wallet), records it for the
   deposit's `N` beside the wallet (`ferrata-gas-drops.json`), proves the gas-drop receipt over the claim's witness,
   writes the relayer's job (the receipt and the account's public keys) to its inbox, waits for the relayer's credit
@@ -373,7 +383,9 @@ deposit still in its claim delay is held (refused with the block it opens at) un
   `gas-drop-given-up`, after `--drop-max-sends` credits or once the deposit is claimed without it). The drop itself is
   run end to end in [`e2e/runs/seqnet-robust-1/`](../e2e/runs/seqnet-robust-1/robust.md); the journal, with the
   daemon killed inside a credit's send and a send failing, in
-  [`e2e/runs/seqnet-robust-2/`](../e2e/runs/seqnet-robust-2/robust.md). Burns do not use a drop yet.
+  [`e2e/runs/seqnet-robust-2/`](../e2e/runs/seqnet-robust-2/robust.md); the network's relayer by default (claim and
+  burn, no setting, behind the test network's gateway) by `e2e/seqnet/run.sh gasdrop`. `ferrata-relayer --gas-drops-only`
+  runs drops with no Ethereum key (the test network's `ferrata-gasdrop.service`).
 - **Anonymity set** (RFP-022 F.8): the `anonymity` line counts the deposits a private claim cannot be told apart from
   on chain: those of the same token and amount, under the root it reads and within the fee schedule range it names,
   less those a plaintext claim has already published (its witness names the leaf and `s`, under any configuration of

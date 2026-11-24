@@ -21,6 +21,7 @@ costs: the network's own landing page and `/AGENTS.md`.
 | `ferrata-monitor` | `attest-monitor watch` against Lodestar's and publicnode's Sepolia beacon APIs | - |
 | `ferrata-topup.timer` | `host/bin/ferrata-topup`: claims the leader's rewards (`POST /leader/claim`) into the sequencer's Bedrock funding key when it runs low; never spends the SDP key (that can halt the chain for good: Operating notes) | - |
 | `ferrata-status.timer` | `host/bin/ferrata-status`: `status.json`, `history.json`, CloudWatch metrics (`Ferrata/Testnet`) | - |
+| `ferrata-gasdrop` | `ferrata-relayer --gas-drops-only` (cli/, built against LEZ v0.4.0-rc3 by `cli-rc3/build.sh`), user `ferrata-gasdrop`: the network's gas-drop relayer (RFP-022 U.5, Priv.7). The gateway publishes its terms at `/relayer/gas-drop` (its LEZ account, the guest's image id, the native LEZ per drop, for a claim and one burn), serves the guest at `/relayer/gas-drop/guest` and writes posted jobs into its inbox after its checks and caps; it verifies each receipt and sends one sealed credit per deposit from its private account /0, proven on this host. No Ethereum key. `ferrata claim` and `ferrata burn` use it with no setting; the web wallet's bridge tab names it. Set up by `host/bin/ferrata-gasdrop-setup` (below) | - (the gateway on 8090 fronts it) |
 | `caddy` | TLS (Let's Encrypt; the domain and `a-b-c-d.sslip.io`), the site, the `rpc.` name; admin API off, timeouts, 1.1 MB request bodies, `script-src 'self'` on every page | 80, 443 |
 
 Two problems of LEZ rc3 zones met in this repository's earlier runs are handled here, not in LEZ: an inscription funded
@@ -200,6 +201,9 @@ monitor's, top-up's, gateway's and Caddy's go to CloudWatch Logs. Restarts are s
   before sending it: a lost answer, a transfer applied after the gateway looked, another source paying the same
   amount, claims interrupted before and after their record, a transfer whose nonce another spent, one sent again,
   one that does not settle in time, an older tool refused).
+- `python3 -I deploy/testnet/tests/test_gateway_gasdrop.py`: the gateway's gas-drop routes (terms 404/200/503, the guest,
+  a job into the inbox as 0640 named by its N, the same N again 409, malformed jobs 400, 413, the inbox cap and the
+  per-IP, per-/24 and hourly caps 429), 26 checks.
 - `python3 -I deploy/testnet/tests/test_units.py`: the units read as files (the relayer's inbox and state on one
   mount, every bridge unit sandboxed, every unit's log created for logrotate, the node API guard) and, where
   `unshare -rm` is allowed, the EXDEV mechanism itself.
@@ -222,3 +226,21 @@ monitor's, top-up's, gateway's and Caddy's go to CloudWatch Logs. Restarts are s
   state of one over the same blocks).
 - `deploy/testnet/tests/relayer-replay/replay.sh FERRATA_RELAYER`: the relayer's stall and its fix on an anvil fork of
   Sepolia.
+
+## The gas-drop relayer: deploying it (as root over SSM, after review)
+
+1. Build `ferrata`, `ferrata-relayer` and `seqnet-fund` against LEZ v0.4.0-rc3 (`cli-rc3/build.sh SRC`, and
+   `cargo build --release --locked --features lez-rc3,seqnet --bin seqnet-fund` in the same tree) and the gas-drop guest
+   whose image id the tool pins (`bridge/`'s `gasdrop`, `0x89580416…`, docs/image-ids.md); install them in `/opt/ferrata/bin`.
+2. `host/bin/ferrata-gasdrop-setup init GUEST 200000000 BRIDGE_ACCOUNT_HEX`: the user, `/var/lib/ferrata/gasdrop`, a fresh
+   seed, `/etc/ferrata/gasdrop.env`, the terms (`/etc/ferrata/gasdrop-terms.json`, paused) and the gateway's `GASDROP_*`;
+   it prints the relayer's LEZ public account /0.
+3. Pay that account native LEZ from the operator's account (the faucet's tool: `ferrata-day1 transfer --from-key ... --to
+   <account> --amount 20000000000 --rpc http://127.0.0.1:3040 ...`), then `ferrata-gasdrop-setup fund 15000000000` (public
+   /0 to the drop account, private /0, proven here; the terms lose "paused").
+4. Install the new gateway, its unit (the inbox's `BindPaths`) and the Caddyfile (`/relayer/gas-drop` to the gateway),
+   then `ferrata-gasdrop-setup start`; check `curl -s https://<host>/relayer/gas-drop` and `ferrata-gasdrop-setup status`.
+
+Pause it by setting `"paused": "<reason>"` in the terms (the tool then stops a claim, with the reason, rather than pay
+from the user's own account); stop with `systemctl disable --now ferrata-gasdrop`.
+
