@@ -12,6 +12,10 @@ The proposal (§B7) releases Ferrata's Logos modules from a catalog of its own w
 | `.github/workflows/release-<module>.yml` (six: `ferrata_attest_module`, `ferrata_bridge_module`, `ferrata_attestor_module`, `ferrata_monitor_module`, `ferrata_updater_module`, `ferrata_relayer_module`) | one per module: `module_path: submodules/<module>` | the base's `release-module.yml.template`, as `scripts/add-module.sh` writes it |
 | `.github/workflows/release-all.yml` | releases every submodule | the base's, with least-privilege `permissions:` per job and the checkout pinned to a commit |
 
+Left out of the base: `unpublish.yml` (it deletes releases, which the release-integrity rules freeze), `validate-repo.yml`
+(it checks a hand-edited `logos-repo.json`; ours is generated) and the maintainer's `scripts/`; every difference and
+why: [`RELEASE.md`](RELEASE.md), "The base's files".
+
 In the catalog's own repository these files sit at its root (GitHub runs workflows only from the
 root's `.github/`, so nothing here runs from this repository). Each module is a git submodule under
 `submodules/`, pointing at the module's own repository; `modules/scripts/export.sh MODULE DEST`
