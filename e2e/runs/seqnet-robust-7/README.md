@@ -1,6 +1,6 @@
 # seqnet-robust-7: the robust run with the fault cases of RFP-022 R.6 and R.7 (33 of 33)
 
-`bash e2e/seqnet/run.sh robust robust-7` on the Modal build box, branch recovery-022 at `0b0ad3c7`'s parent tree
+`bash e2e/seqnet/run.sh robust robust-7` on the Modal build box, branch recovery-022 at `6483625b`
 (`e2e/seqnet/hook-robust.sh`, `deposit-leg.sh`, `robust-r06.sh`; cases a-l in the hook's header), 24-25 Nov 2026:
 LEZ v0.4.0-rc1 sequencer and node (one validator, dev-mode leader proofs), anvil with chain id 11155111, the vault
 over risc0-ethereum 3.1.0's verifier address with the mock's code (`anvil_setCode`), dev-mode private proofs, the
