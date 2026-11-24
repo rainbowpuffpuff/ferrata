@@ -2,7 +2,7 @@
  "about": "Every file the Ferrata LEZ test network's host serves from the repository, with its SHA-256 and the commit it comes from. Check it with `python3 -I scripts/site-manifest.py verify` from a clone. A file whose commit is not public (\"public\": false) can be checked against this manifest but not yet against its source.",
  "site": "https://54-156-116-24.sslip.io",
  "made": "2026-11-23T22:43Z",
- "made_how": "the host's file list of 23 November 2026, 14:54 UTC (sha256sum of its web root), each path re-hashed over HTTPS at 2026-11-23T22:43Z, plus the basecamp page's bundle and this branch's pages as they are to be deployed; a fresh list could not be read (the deploy account's session had expired), so files the host gained since 14:54 outside those two bundles are not listed. Re-pinned on 24 November 2026 to this repository's public history (main): the trust pages and the Basecamp bundle as this tree has them; files the host served from commits that are not in public history are listed as unmatched until the next deploy",
+ "made_how": "the host's file list of 23 November 2026, 14:54 UTC (sha256sum of its web root), each path re-hashed over HTTPS at 2026-11-23T22:43Z, plus the basecamp page's bundle and this branch's pages as they are to be deployed; a fresh list could not be read (the deploy account's session had expired), so files the host gained since 14:54 outside those two bundles are not listed. Re-pinned on 24 November 2026 to this repository's public history (main): the trust pages and the Basecamp bundle as this tree has them; files the host served from commits that are not in public history are listed as unmatched until the next deploy; on 24 November 2026 /apps/index.html as the testers-page branch has it (the build page's row of its apps table lists /testers/), at a commit no public branch holds yet",
  "public_checked": {
   "utc": "2026-11-24T05:53Z",
   "refs": {
@@ -84,12 +84,12 @@
   },
   {
    "path": "/apps/index.html",
-   "sha256": "6806c9a4d7b00896c9373a11f823dd184f2a1ad51bf4ff8cf4e85556135a2a26",
-   "bytes": 21082,
-   "commit": "361298c4e45d31b3a184fa558dcd9c9ab4e837bc",
+   "sha256": "59bb4bf480cda604a915de28def22176c6ed21d0e27c4cb2bb33cd78ca7e494f",
+   "bytes": 21125,
+   "commit": "7345dd835310794d3901ee11cf7c3fd1a8ab7f76",
    "repo_path": "deploy/testnet/web/trust/apps/index.html",
-   "branch": "main",
-   "public": true
+   "branch": "testers-page",
+   "public": false
   },
   {
    "path": "/apps/rebuild.json",
