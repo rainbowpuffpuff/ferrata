@@ -86,8 +86,8 @@ times are sums over a transaction's transitions; each transition's machine is in
 hosts; eight actions sum transitions proven on different hosts, `Init`, `Init` adopt 2/2, both `Finish` rows, the
 succession (`Succeed` on Intel, `Spawn` on Zen 3), the public `VerifyAll` transaction (its `Record` on AMD Zen 2),
 the read and the padded read (three of their transitions on Zen 4); the slot, absent-slot and four-facts statements
-ran on Zen 4: compression times differ by up to about 40 % between hosts, and the smallest proofs by more than three
-times, the same 17,350-cycle `Record` proven in 6.4 s on Zen 4, 6.8 s on Intel and 21.4 s on Zen 2):
+ran on Zen 4: between hosts, compression differs up to 2.5 times (the same 17,350-cycle `Record`: 6.4 s on Intel, 8.4 s
+on Zen 4, 16.1 s on Zen 2), proving more than three times (6.4 s on Zen 4 to 21.4 s on Zen 2)):
 
 | action | transitions | exec gas | stor gas | user cycles proven | segments | prove (composite) s | compress to succinct s | composite B | succinct B (one per transition) | peak RSS GiB |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -131,7 +131,7 @@ gas. Earlier images: 3,240.5 s on the laptop CPU (16 threads, shared), 49.5 s on
 (`lez/results/stage1-one-transaction.md`), and LEZ v0.4 does not prove it; its three executions are proven all the
 same (the table's row): `VerifyAll` itself, the private transition's 9,049,362 user cycles in the same 10 segments,
 **1,079.3 s** composite and 189.7 s to compress on a 16-CPU container (AMD Zen 3), peak 9.20 GiB, succinct receipt
-**231,713 B** (inner 227,408 B). **The proven committee handoff** (`prove_private
+**227,408 B** (InnerReceipt, the table's measure; 231,713 B as a whole `Receipt`). **The proven committee handoff** (`prove_private
 --handoff`: update_1 as served, its 512 keys adopted in the same private call, no new header): 15,796,512 user cycles in
 17 segments, `execute_and_prove` **2,254.2 s** on a 16-CPU container (AMD Zen 4), peak 9.20 GiB, receipt **227,347 B**,
 transaction 231,568 B; settled with the receipt verified, charged **451,895** execution gas (409,764 + a 42,131-cycle

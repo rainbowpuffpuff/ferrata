@@ -175,9 +175,10 @@ STAGE/dump/index.tsv --only 40,41,42,43,44,45,46,47,48,49,50`, the r0vm 3.0.5 of
   one a prover of the same execution would make.
 - The accumulator leaf's only earlier proof (EVIDENCE row 71, `prove_vault`) was of the program image
   `0x8fe18f74…`: 391,291 user cycles, 67.2 s on the build box (16 cores, 32 threads, proving straight to a succinct
-  receipt), 240,913 B. On this tree's image the same request (slots 0 and 1, both leaves) is 392,358 cycles, 109.1 s
-  composite and 20.8 s to compress on a 16-CPU container, a 240,977-byte succinct receipt; with one leaf, 327,016
-  cycles, 108.5 s and 20.8 s, 238,769 B. The two timings are of different machines and are not compared.
+  receipt), 240,913 B as a whole `Receipt`. On this tree's image the same request (slots 0 and 1, both leaves) is
+  392,358 cycles, 109.1 s composite and 20.8 s to compress on a 16-CPU container, a succinct receipt of 232,040 B
+  (InnerReceipt, the tables' measure; 240,977 B as a whole `Receipt`); with one leaf, 327,016 cycles, 108.5 s and
+  20.8 s, 230,936 B (238,769 B whole). The two timings are of different machines and are not compared.
 
 **Rows 38–39 and the private handoff, 21 November 2026** (`bench/perf/results/p2-b/`): staged with
 `P2_WITH_PRIVATE=1` at `beaf71e9` (its `perf_prove --dump` rows 1–37 byte-identical to `p2-a/index.tsv`; rows
