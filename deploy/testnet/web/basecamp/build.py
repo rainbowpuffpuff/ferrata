@@ -108,6 +108,11 @@ def main():
     repro = load("tests/reproduce.json", required=False)
     commit = rel["source_commit"]
     short = commit[:8]
+    # A release re-signed in part (spike's resign.sh, release_records.py annotate): source_commits {commit: [files]},
+    # each package its source_commit. A release from one commit has neither, and the page reads as it always did.
+    mixed = rel.get("source_commits") or {}
+    from_text = " and ".join(f'<code>{c[:8]}</code> ({len(fs)} package{"s" if len(fs) != 1 else ""})'
+                             for c, fs in sorted(mixed.items(), key=lambda kv: kv[0] != commit))
     key = rel["key"]
     pkgs = rel["packages"]
     by = {(p["name"], p["platform"]): p for p in pkgs}
@@ -144,7 +149,7 @@ def main():
 <ul class="chips">
 <li class="chip"><span class="dot ok"></span><b>{n_lin + n_mac}</b> packages: {n_lin} Linux x86-64, {n_mac} macOS arm64</li>
 <li class="chip"><span class="dot ok"></span>every one signed: in the package (Logos checks it) and beside it (ssh-keygen, minisign)</li>
-<li class="chip"><span class="dot ok"></span>built from <a href="{REPO}/commit/{commit}"><code>{short}</code></a>, public main</li>
+<li class="chip"><span class="dot ok"></span>built from {" and ".join(f'<a href="{REPO}/commit/{c}"><code>{c[:8]}</code></a>' for c in sorted(mixed, key=lambda c: c != commit)) if mixed else f'<a href="{REPO}/commit/{commit}"><code>{short}</code></a>'}, public main</li>
 <li class="chip"><span class="dot part"></span>prototype, not audited</li>
 </ul>
 <nav aria-label="On this page" class="onpage"><a href="#download">Download</a> · <a href="#verify">Verify</a> · <a href="#install">Install</a> · <a href="#covers">What each does</a> · <a href="#withdrawal">Withdrawal</a> · <a href="#tested">Tested</a> · <a href="#reproduce">Reproduce</a> · <a href="#live">Live or not</a></nav>
@@ -176,7 +181,7 @@ def main():
     for pid, label in PLATFORMS:
         info = plat.get(pid, {})
         w(f'<div class="panel" role="tabpanel" id="p-{pid}" aria-labelledby="t-{pid}"><h3>{E(label)}</h3>')
-        w(f'<p class="small">{built_text(info, commit)}</p>')
+        w(f'<p class="small">{built_text(info, info.get("source_commit", commit))}</p>')
         w('<div class="scroll"><table><thead><tr><th>Package</th><th class="num">Size</th><th>SHA-256</th><th>Get</th></tr></thead><tbody>')
         for name in ORDER:
             p = by.get((name, pid))
@@ -190,6 +195,12 @@ def main():
             f = p["file"]
             origin = (f'<br><span class="small">{E(p["origin"])}; its variant\'s hash (<code>lgx manifest --json</code>) equals '
                       "the Linux package's.</span>") if p.get("origin") else ""
+            pc = p.get("source_commit", info.get("source_commit", commit))
+            if pc != info.get("source_commit", commit):
+                origin += (f'<br><span class="small">From commit <a href="{REPO}/commit/{pc}"><code>{pc[:8]}</code></a>, '
+                           f'signed {E(rel.get("signed_utc", ""))}; the other packages here are from '
+                           f'<code>{info.get("source_commit", commit)[:8]}</code>. '
+                           + (built_text({"built_by": p["built_by"]}, pc) if p.get("built_by") else "") + "</span>")
             w(f'<tr><td><span class="pkg-name">{E(PACKAGES.get(name, {}).get("title", name))}</span><br>'
               f'<span class="pkg-mod">{E(name)} {E(p["version"])}</span>{origin}</td>'
               f'<td class="num" title="{p["size"]:,} bytes">{mb(p["size"])}</td>'
@@ -367,6 +378,9 @@ def main():
       "Linux the updater also needs LEZ's guests built first, with Rust and RISC Zero 3.0.5 and a RISC Zero home holding "
       "guest Rust 1.91.1 (<code>RISC0_HOME</code>, as <code>lez/RESULTS.md</code> says). On a Mac the updater is left "
       "out and <code>RISC0_HOME</code> is not needed.</p>")
+    if mixed:
+        w(f"<p>These packages come from more than one commit: {from_text}. Check out the commit of the package you "
+          "rebuild: release.json gives each package its <code>source_commit</code>.</p>")
     w(term([
         f"git clone {REPO} && cd ferrata && git checkout {commit}",
         "scripts/fetch-upstream.sh",
@@ -375,21 +389,22 @@ def main():
     ]))
     if repro:
         n = len(repro["packages"])
+        rshort = repro.get("source_commit", commit)[:8]
         if repro["differ"] == 0:
             w(f'<p><span class="st ok">{repro["same"]} of {n} byte-identical</span> The Linux packages were built twice from '
-              f'commit <code>{short}</code> in two Modal containers of two workspaces, each with its own Nix store '
+              f'commit <code>{rshort}</code> in two Modal containers of two workspaces, each with its own Nix store '
               f'({E(repro["a"])}; {E(repro["b"])}; both fetch from cache.nixos.org and the same pinned sources): every '
               'package came out with the same SHA-256 (<a href="tests/reproduce.json">tests/reproduce.json</a>).</p>')
         else:
             diff = ", ".join(E(r["file"].split("/")[-1]) for r in repro["packages"] if not r["same"])
-            w(f'<p><span class="st part">{repro["same"]} of {n} byte-identical</span> Two builds of commit <code>{short}</code> '
+            w(f'<p><span class="st part">{repro["same"]} of {n} byte-identical</span> Two builds of commit <code>{rshort}</code> '
               f'({E(repro["a"])}; {E(repro["b"])}) differ in: {diff} (<a href="tests/reproduce.json">tests/reproduce.json</a>).</p>')
     else:
         w('<p class="small"><span class="st part">second build not yet compared</span></p>')
     if mac_run:
         w(f'<p class="small">macOS: the packages are the artifact of the repository\'s <code>macos</code> workflow, run '
           f'<a href="{REPO}/actions/runs/{mac_run}">{mac_run}</a> on GitHub\'s <code>macos-15</code> runner (Apple silicon), '
-          f"at commit <code>{short}</code>.</p>")
+          f"at commit <code>{plat['darwin-arm64'].get('source_commit', commit)[:8]}</code>.</p>")
     w("</section>")
 
     # Live or not
@@ -411,7 +426,7 @@ def main():
     w("</main>")
     w(f'<footer class="foot"><div class="wrap"><p>Built by <code>deploy/testnet/web/basecamp/build.py</code> from '
       f'<a href="release.json">release.json</a>, which <code>modules/scripts/basecamp_release.py</code> wrote from the signed '
-      f'packages; packages from commit <code>{short}</code>; SHA256SUMS written {E(rel.get("signed_utc", ""))}. No cookies, no '
+      f'packages; packages from {('commits ' + from_text) if mixed else f'commit <code>{short}</code>'}; SHA256SUMS written {E(rel.get("signed_utc", ""))}. No cookies, no '
       "analytics; the page reads only this host.</p><p>This page's code and text: MIT OR Apache-2.0. The packages contain "
       'third-party code under its own licences: <a href="dl/notices/NOTICES.md">dl/notices/NOTICES.md</a>.</p></div></footer>')
     w("</body>\n</html>\n")
