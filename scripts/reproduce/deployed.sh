@@ -4,7 +4,8 @@
 #
 #   scripts/reproduce/deployed.sh build   --out DIR [--work DIR]
 #       for each source of deployed-programs.json: `git archive` of its commit into WORK/src-<commit> (skipped when that
-#       directory exists, or unpacked from WORK/src-<commit>.tar.gz where git is not at hand), the LEZ tag it was built against selected,
+#       directory exists, or unpacked from WORK/src-<commit>.tar.gz where git is not at hand), its "overlay" files copied in place,
+#       the LEZ tag it was built against selected,
 #       its build command run, scripts/reproduce/guest_ids.py's table of every guest written to DIR/<source>.tsv.
 #   scripts/reproduce/deployed.sh compare --out DIR [--network URL]
 #       one line per deployed program: recorded id, rebuilt id, binary sha256; exit 1 on any difference. With --network,
@@ -67,6 +68,11 @@ case "$mode" in
           rm -rf "$d"; log "$s: cannot archive $commit (fetch it, or copy its tree to $d)"; fail=1; continue
         fi
       fi
+      # deployed-programs.json "overlay" (FROM:TO, copied within the copy before the build): a deployed program's source
+      # kept beside its successor is built at the path it was built at, since paths enter a guest's build.
+      for pair in $(src_field "$s" overlay); do
+        cp "$d/${pair%%:*}" "$d/${pair#*:}" || { log "$s: overlay $pair failed"; fail=1; continue 2; }
+      done
       [ -d "$BESIDE/upstream/lez-$tag" ] || { log "$s: missing $BESIDE/upstream/lez-$tag"; fail=1; continue; }
       if [ "$tag" != "v0.4.0-rc1" ] && grep -rlq --include=Cargo.toml 'upstream/lez-v0.4.0-rc1' "$d/lez"; then
         # names/e2e/box.sh copy_tree: select the tag, then the manifests lez-select.sh does not list follow it.
