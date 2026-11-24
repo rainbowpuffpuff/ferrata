@@ -9,6 +9,14 @@
   "view": "qml/Main.qml",
   "icon": "icons/ferrata.png",
   "dependencies": [],
+  "optional_dependencies": [
+    "ferrata_bridge_module"
+  ],
+  "dependency_overrides": {
+    "ferrata_bridge_module": {
+      "file": "lidl/ferrata_bridge_module.lidl"
+    }
+  },
   "provides": [],
   "uses": [],
   "nix": {

@@ -34,7 +34,12 @@ function pct(used, capacity) {
 var MESSAGES = [
     // Inside Logos the bridge module's wallet session is opened with a chain service (the stand-in for Logos's Ethereum
     // and LEZ modules), which the view does not open: in Basecamp a person meets this on the first call.
-    [/no wallet session/, "Not connected to a network: the bridge module has no session. It reads and sends only through a chain service (a stand-in for Logos's Ethereum and LEZ modules), and none is open here. Nothing was read or sent."],
+    [/no wallet session|no network session/, "Not connected to a network: open a session above (the test network's address and your recovery phrase). Nothing was read or sent."],
+    // The network session (ferrata_bridge_module's open_network): what it does not do, and what a step needs first.
+    [/needs a proof of LEZ's privacy circuit/, "A private claim or burn needs a proof made on your machine with your keys: run it with the ferrata tool from the same phrase, or choose the plaintext claim or the public burn here (each after its acknowledgement). Nothing was sent."],
+    [/use the faucet first/, "Not enough LGO for the LEZ fee: get test LGO with the faucet button above, then try again. Nothing was sent."],
+    [/a deposit needs your Sepolia address/, "A deposit needs your Sepolia address (the account Logos's signer sends it from): close the session and open it again with that address. Nothing was sent."],
+    [/this session reads and sends through the network|this session's endpoints are the network's|admin calls are its operator's/, "Not in a network session: it uses the network's own endpoints, and the bridge's admin calls are its operator's. Nothing was changed."],
     // The module's jobs (its private claim and burn run for minutes): busy while one is proven, one at a time, a job the
     // module does not know (it was restarted).
     [/^busy: job \d+/, "Busy: a private transaction is being proven. This can be done once it is finished."],

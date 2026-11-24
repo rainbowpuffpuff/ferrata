@@ -139,6 +139,23 @@ the next claim runs into, and the wallet seam with an injected provider. Each st
 `results/screenshots/`. `FERRATA_DEVNET_PROOFS=real QT_TIMEOUT=3000 scripts/box-test.sh` runs the same test
 with the private claim and burn proven for real; its results go to `results-real-proofs/`.
 
+## In Logos Basecamp on the test network (the network session)
+
+Inside Logos the view opens a session on a Ferrata test network itself (the panel at the top): the network's address,
+a Sepolia RPC (a public one by default), the person's recovery phrase (a masked field; or a new 24-word phrase, its
+words shown once) and, to plan deposits, their Sepolia address. `ferrata_bridge_module` (`open_network`,
+`calls/src/net.rs`) accepts only the deployment it knows and checks it before it derives anything: the network's
+`/wallet/config.json`, the chain, the vault's configuration, the bridge program's image id and its paired configuration
+on LEZ; then it keeps the keys of public accounts `/0`-`/7` and the bridge seed in Basecamp's memory for the session
+only (nothing written, nothing logged; `close` drops them). What works there: the registry and the vault read, the
+positions found from the phrase, the faucet and the LGO balances, a deposit planned up to the approval prompt (C, the
+vault call, the vault's own simulation; approving hands it to Logos Core's `tx_sender_module` and the Logos signer), the
+plaintext claim of a deposit to one of the phrase's public accounts, the public burn, and the release handed to the
+`ferrata` tool (its proof says which burn it is, so it is made on the person's machine). A private claim or burn needs a
+proof of LEZ's privacy circuit, which the module does not make: the view says to use the `ferrata` tool. The view
+declares `ferrata_bridge_module` as an optional dependency (`metadata.json`, its contract in `lidl/`), so Basecamp loads
+the module before it opens the view.
+
 ## Not done
 
 - **Inside Basecamp with Ethereum through a stand-in.** The private round trip ran in this view inside Logos

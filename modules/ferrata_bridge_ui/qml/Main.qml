@@ -55,6 +55,55 @@ Rectangle {
     property bool endpointsEdited: false
     property string endpointsVia: ""
 
+    // ---- the network session (inside Logos): this view on a Ferrata test network's public endpoints --------------
+    // ferrata_bridge_module opens it (open_network) with the network's address, an Ethereum endpoint and the person's
+    // recovery phrase, checks the network against the deployment it knows, and keeps the keys it derives for the session
+    // only. The view sends the phrase once and clears its field; a new phrase's words are shown once.
+    property bool netOpen: false
+    property var netSession: null
+    property var netWords: []
+    property string netStatus: ""
+    property bool netStatusBad: false
+    property string faucetText: ""
+    property var depositPlan: null
+    function netOpenSession(generate) {
+        var p = { network: fNet.text.trim(), eth_rpc: fNetEth.text.trim() };
+        if (fDepositor.text.trim() !== "") p.depositor = fDepositor.text.trim();
+        if (generate) p.generate = true; else p.phrase = fPhrase.text;
+        netStatus = "Checking the network: its configuration, the vault on Sepolia, the bridge on LEZ…";
+        netStatusBad = false;
+        call("open_network", p, function (ok, v) {
+            fPhrase.text = "";
+            if (!ok) { netStatus = "Not opened: " + String(v); netStatusBad = true; return; }
+            netSession = v; netOpen = true;
+            netStatus = "Open. Checked: " + v.checks.join("; ") + ".";
+            if (v.words) netWords = v.words;
+            refreshInfo(); refreshRegistry();
+        }, true);
+    }
+    function netClose() {
+        call("close", {}, function () {
+            netOpen = false; netSession = null; netWords = []; info = null; positions = null; registry = null;
+            connectedAccount = ""; depositPlan = null; faucetText = "";
+            netStatus = "Session closed: the module dropped the keys."; netStatusBad = false;
+        }, true);
+    }
+    function netFaucet(i) {
+        faucetText = "Asking the network's faucet for account /" + i + "…";
+        call("faucet", { account: i }, function (ok, v) {
+            faucetText = ok ? "Faucet: account /" + v.account + " now holds " + Fmt.units(v.balance, 9, "LGO") + " (was " + Fmt.units(v.balance_before, 9, "LGO") + "; transaction " + Fmt.short(String(v.tx_hash)) + ")."
+                            : "Faucet: " + String(v);
+        }, true);
+    }
+    function netReadBalances() {
+        call("balances", {}, function (ok, v) {
+            faucetText = ok ? "LGO for LEZ fees: " + v.accounts.map(function (a) { return "/" + a.index + " " + Fmt.units(a.balance, 9, ""); }).join(", ") : String(v);
+        }, true);
+    }
+    // A burn in the positions list: by the zone's index, or (network session) by the wallet's counter.
+    function burnKey(b) { return (b.burn_index !== null && b.burn_index !== undefined) ? b.burn_index : b.i; }
+    Component.onDestruction: if (netOpen) call("close", {}, null, true)
+
     // ---- state ---------------------------------------------------------------------------------
     property var info: null
     property var registry: null
@@ -548,6 +597,48 @@ Rectangle {
             }
         }
 
+        Box {
+            objectName: "net.panel"
+            visible: transport === "module"
+            RowLayout {
+                Layout.fillWidth: true
+                Label { text: netOpen ? "Network: " + netSession.network : "Open a session on a Ferrata test network"; font.bold: true; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+                Button { objectName: "net.close"; visible: netOpen; text: "Close the session"; enabled: !jobRunning(); onClicked: netClose() }
+            }
+            ColumnLayout {
+                visible: !netOpen
+                Layout.fillWidth: true
+                RowLayout { Label { text: "Network address"; Layout.preferredWidth: 170 } TextField { id: fNet; objectName: "net.address"; placeholderText: "https://… (the test network's address, as its /basecamp/ page names it)"; Layout.preferredWidth: 560 } }
+                RowLayout { Label { text: "Sepolia RPC"; Layout.preferredWidth: 170 } TextField { id: fNetEth; objectName: "net.eth"; text: "https://ethereum-sepolia-rpc.publicnode.com"; Layout.preferredWidth: 560 } }
+                RowLayout { Label { text: "Recovery phrase"; Layout.preferredWidth: 170 } TextField { id: fPhrase; objectName: "net.phrase"; echoMode: TextInput.Password; placeholderText: "12 or 24 words (BIP-39): a phrase for the test network, never one that holds value"; Layout.preferredWidth: 560 } }
+                RowLayout { Label { text: "Your Sepolia address"; Layout.preferredWidth: 170 } TextField { id: fDepositor; objectName: "net.depositor"; placeholderText: "0x… (optional: the account Logos's signer sends your deposits from)"; Layout.preferredWidth: 560 } }
+                RowLayout {
+                    Button { objectName: "net.open"; text: "Open with this phrase"; enabled: busy === 0 && fNet.text.trim() !== "" && fPhrase.text.trim() !== ""; onClicked: netOpenSession(false) }
+                    Button { objectName: "net.generate"; text: "New phrase"; enabled: busy === 0 && fNet.text.trim() !== ""; onClicked: netOpenSession(true) }
+                }
+                Note { text: "The phrase goes once to ferrata_bridge_module, which keeps what it derives from it (the keys of public accounts /0-/7 and the bridge seed) in Basecamp's memory for this session only: nothing is written to disk or logged, and closing the session or Basecamp drops them. The network sees signatures and account ids only. Ethereum transactions are never signed here: Logos's signer signs a deposit after you approve it. The module accepts only the deployment it knows (bridge program, configuration, vault, Sepolia) and refuses any other." }
+            }
+            Label { objectName: "net.status"; text: netStatus; visible: netStatus !== ""; wrapMode: Text.WordWrap; Layout.fillWidth: true; color: netStatusBad ? "#b3261e" : "#1b6b3a" }
+            ColumnLayout {
+                visible: netWords.length > 0
+                Layout.fillWidth: true
+                Label { text: "Your new recovery phrase, shown once: write it down, then hide it. The module keeps no copy of the words."; font.bold: true; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                Label { objectName: "net.words"; text: netWords.map(function (w, i) { return (i + 1) + ". " + w; }).join("   "); wrapMode: Text.WordWrap; Layout.fillWidth: true; font.family: "monospace" }
+                Button { objectName: "net.wordsDone"; text: "I have written them down"; onClicked: netWords = [] }
+            }
+            ColumnLayout {
+                visible: netOpen
+                Layout.fillWidth: true
+                Label { objectName: "net.accounts"; text: netOpen ? "LEZ public /0: " + netSession.public_accounts[0].id + "  ·  Sepolia address: " + (netSession.depositor ? netSession.depositor : "none (planning a deposit needs one)") : ""; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                RowLayout {
+                    Button { objectName: "net.faucet"; text: "Get test LGO for /0 (the network's faucet)"; enabled: busy === 0 && !jobRunning(); onClicked: netFaucet(0) }
+                    Button { objectName: "net.balances"; text: "LGO balances"; enabled: busy === 0 && !jobRunning(); onClicked: netReadBalances() }
+                }
+                Label { objectName: "net.faucetText"; text: faucetText; visible: faucetText !== ""; wrapMode: Text.WordWrap; Layout.fillWidth: true; font.pixelSize: 12 }
+                Note { text: "In this session: the registry and the vault read, your positions found from your phrase, a deposit planned up to its approval (Logos's signer sends it), the plaintext claim of a deposit to one of your public accounts, the public burn, and the release handed to the ferrata tool. A private claim or burn needs a proof made on your machine (the ferrata tool, same phrase)." }
+            }
+        }
+
         Rectangle {
             objectName: "error.banner"
             visible: lastError !== ""
@@ -757,8 +848,8 @@ Rectangle {
                             objectName: "release.pick." + modelData.burn_index
                             enabled: !modelData.released
                             text: Fmt.eth(modelData.amount) + " to " + Fmt.short(modelData.recipient) + (modelData.released ? ": released" : ": not released") + (!modelData.released && releaseHeld(modelData.burn_index) ? " (held by your delay)" : "")
-                            checked: releaseBurn === modelData.burn_index
-                            onClicked: releaseBurn = modelData.burn_index
+                            checked: releaseBurn === burnKey(modelData)
+                            onClicked: releaseBurn = burnKey(modelData)
                         }
                     }
                     Label {
@@ -769,7 +860,7 @@ Rectangle {
                     }
                     CheckBox { objectName: "release.skipDelay"; visible: releaseBurn >= 0 && releaseHeld(releaseBurn); text: "Release now anyway (less private)"; checked: false; onClicked: releaseSkipDelay = checked }
                     Button { objectName: "release.wait"; visible: transport === "devnet" && releaseBurn >= 0 && releaseHeld(releaseBurn); text: "Devnet: let the delay pass (moves the devnet clock " + hoursLeft(releaseHeldUntil[releaseBurn]) + " h on)"; onClicked: letTimePass(releaseHeldUntil[releaseBurn]) }
-                    Button { objectName: "release.submit"; text: logosEth() ? "Release from your release account" : "Release through a relayer"; enabled: busy === 0 && !jobRunning() && releaseBurn >= 0 && connectedAccount !== "" && (!releaseHeld(releaseBurn) || releaseSkipDelay); onClicked: reviewRelease() }
+                    Button { objectName: "release.submit"; text: netOpen ? "How to release (the ferrata tool proves it)" : (logosEth() ? "Release from your release account" : "Release through a relayer"); enabled: busy === 0 && !jobRunning() && releaseBurn >= 0 && connectedAccount !== "" && (!releaseHeld(releaseBurn) || releaseSkipDelay); onClicked: reviewRelease() }
                 }
                 Label { objectName: "release.result"; text: releaseText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 RowLayout {
@@ -1094,6 +1185,7 @@ Rectangle {
 
     // again: the person sends a deposit although the module refused it while their earlier one is not mined yet.
     function reviewDeposit(again) {
+        if (netOpen) { reviewDepositNet(again); return; }
         call("price", { denomination: denomIndex }, function (ok, p) {
             if (!ok) return;
             var effects = ["Moves " + Fmt.eth(p.total) + " from your address into the vault's escrow", "Publishes a commitment C; the LEZ destination stays hidden", "Grants no token approval"];
@@ -1102,25 +1194,43 @@ Rectangle {
                 title: again ? "Deposit again anyway (your earlier deposit is not mined yet)" : "Deposit to the Ferrata vault",
                 rows: [["Requested by", "Ferrata Bridge (ferrata_bridge_ui)"], ["Account", info.user.depositor + " (Ethereum)"], ["Asset", "ETH"], ["Amount", Fmt.eth(p.denomination) + " + fees = " + Fmt.eth(p.total)], ["Destination", "the Ferrata vault " + info.vault + " on chain " + info.chain_id], ["Then on LEZ", destKind + " account /" + destAccount + ", hidden inside C"]],
                 effects: effects
-            }, function () {
-                var params = { denomination: denomIndex, kind: destKind, account: destAccount };
-                if (again) params.again = true;
-                if (receiptWaitS > 0) params.receipt_timeout_s = receiptWaitS;
-                depositAgainOffered = false;
-                ethStep("deposit", "deposit", params, function (ok2, v, job) {
-                    if (!ok2) {
-                        depositText = notDone("Not deposited", v, job);
-                        // Refused because the earlier deposit is unmined (nothing was asked or signed): offer it anyway.
-                        depositAgainOffered = !(job && job.state === "unconfirmed") && String(v).indexOf("refused: your earlier deposit") >= 0;
-                        return;
-                    }
-                    var h = {}; for (var k in heldUntil) h[k] = heldUntil[k];
-                    if (delayOn) h[v.leaf_index] = now() + delayHours * 3600 * 1000;
-                    heldUntil = h;
-                    depositText = "Deposited " + Fmt.eth(v.amount) + " to a " + v.kind + " account (/" + v.account + "): transaction " + Fmt.short(v.tx_hash) + " in block " + v.block + ", position #" + v.leaf_index + (v.send ? ", sent through Logos Core's tx_sender_module after your approval (request " + v.send.requestId + ")" : "") + ". Public on Ethereum: " + v.public_on_ethereum.join(", ") + ". Hidden: " + v.hidden.join(", ") + ".";
-                    refreshPositions();
-                });
-            });
+            }, function () { sendDeposit(again); });
+        });
+    }
+    // The network session: the module plans the deposit (C, the vault call, the vault's own simulation) and the prompt
+    // shows that plan; approving hands it to Logos's signer, which asks once more before anything is signed.
+    function reviewDepositNet(again) {
+        call("deposit_plan", { denomination: denomIndex, kind: destKind, account: destAccount }, function (ok, p) {
+            if (!ok) return;
+            depositPlan = p;
+            propose({
+                title: again ? "Deposit again anyway (your earlier deposit is not mined yet)" : "Deposit to the Ferrata vault on Sepolia",
+                rows: [["Requested by", "Ferrata Bridge (ferrata_bridge_ui)"], ["From", p.from + " (your Sepolia account: Logos's signer signs, not this app)"], ["Asset", "ETH"],
+                       ["Amount", Fmt.eth(p.amount_wei) + " + fees = " + Fmt.eth(p.value_wei)], ["To", "the Ferrata vault " + p.to + " on chain " + p.chain_id],
+                       ["Call", p.function + ", deposit #" + p.j + " of this address"], ["Commitment C", p.commitment], ["Then on LEZ", p.destination],
+                       ["Vault's check", p.preflight]],
+                effects: ["Moves " + Fmt.eth(p.value_wei) + " from your address into the vault's escrow", "Publishes the commitment C; the LEZ destination stays hidden",
+                          "Grants no token approval", "Approving hands it to Logos's signer (tx_sender_module), which asks you again before signing"]
+            }, function () { sendDeposit(again); });
+        });
+    }
+    function sendDeposit(again) {
+        var params = { denomination: denomIndex, kind: destKind, account: destAccount };
+        if (again) params.again = true;
+        if (receiptWaitS > 0) params.receipt_timeout_s = receiptWaitS;
+        depositAgainOffered = false;
+        ethStep("deposit", "deposit", params, function (ok2, v, job) {
+            if (!ok2) {
+                depositText = notDone("Not deposited", v, job);
+                // Refused because the earlier deposit is unmined (nothing was asked or signed): offer it anyway.
+                depositAgainOffered = !(job && job.state === "unconfirmed") && String(v).indexOf("refused: your earlier deposit") >= 0;
+                return;
+            }
+            var h = {}; for (var k in heldUntil) h[k] = heldUntil[k];
+            if (delayOn) h[v.leaf_index] = now() + delayHours * 3600 * 1000;
+            heldUntil = h;
+            depositText = "Deposited " + Fmt.eth(v.amount) + " to a " + v.kind + " account (/" + v.account + "): transaction " + Fmt.short(v.tx_hash) + " in block " + v.block + ", position #" + v.leaf_index + (v.send ? ", sent through Logos Core's tx_sender_module after your approval (request " + v.send.requestId + ")" : "") + ". Public on Ethereum: " + v.public_on_ethereum.join(", ") + ". Hidden: " + v.hidden.join(", ") + ".";
+            refreshPositions();
         });
     }
 
@@ -1164,7 +1274,7 @@ Rectangle {
         var delay = (v.release_delay_ms !== undefined && v.release_delay_ms !== null) ? Number(v.release_delay_ms) : (releaseDelayOn ? releaseDelayHours * 3600 * 1000 : 0);
         var from = job && job.finished_ms ? job.finished_ms + clockOffset : now();
         var h = {}; for (var k in releaseHeldUntil) h[k] = releaseHeldUntil[k];
-        if (v.settled && delay > 0 && v.burn_index !== undefined) h[v.burn_index] = from + delay;
+        if (v.settled && delay > 0 && v.i !== undefined) h[burnKey(v)] = from + delay;
         releaseHeldUntil = h;
         var after = " Release to " + Fmt.short(v.recipient) + " after the next checkpoint" + (delay > 0 ? " and your random delay (" + Math.round(delay / 3600000) + " h)." : ".");
         if (v.settled && v.private) burnText = "Burned privately " + Fmt.eth(v.amount) + " (" + v.what + "); private balance /" + v.account + " " + Fmt.eth(v.balance) + ". Proof: " + proofText(v.proof) + ". Public on LEZ: " + v.public_on_lez.join(", ") + "." + after;
@@ -1174,6 +1284,10 @@ Rectangle {
     }
 
     function reviewRelease() {
+        if (netOpen) {
+            call("release", { i: releaseBurn }, function (ok, v) { if (ok) releaseText = (v.released ? "Released already. " : "") + v.what + "."; });
+            return;
+        }
         propose({
             title: "Release on Ethereum",
             rows: [["Requested by", "Ferrata Bridge (ferrata_bridge_ui)"], ["Account", info && info.eth ? "your release account, through Logos Core's tx_sender_module (you approve it in the Logos signer; the relay fee comes back to it)" : "a permissionless relayer sends it and pays the gas"], ["Asset", "ETH"], ["Destination", "the recipient in your burn note"], ["Program", "the Ferrata vault " + (info ? info.vault : "")]],
@@ -1205,8 +1319,8 @@ Rectangle {
                 Label { text: "Ferrata Bridge asks to connect"; font.pixelSize: 18; font.bold: true }
                 Label { text: "Choose the account it may use. It can read this account's positions and propose transactions; each one needs your approval."; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 Repeater {
-                    model: info ? [info.user.depositor] : []
-                    Button { objectName: "wallet.account." + index; text: "Ethereum " + modelData + " · LEZ accounts /0–/7 of the same seed"; Layout.fillWidth: true; onClicked: { connectedAccount = modelData; selecting = false; refreshPositions(); } }
+                    model: info ? (info.network_session ? [info.network_session.public_accounts[0]] : [info.user.depositor]) : []
+                    Button { objectName: "wallet.account." + index; text: info && info.network_session ? "LEZ public /0 " + modelData + " · accounts /0–/7 of your phrase" : "Ethereum " + modelData + " · LEZ accounts /0–/7 of the same seed"; Layout.fillWidth: true; onClicked: { connectedAccount = modelData; selecting = false; refreshPositions(); } }
                 }
                 Label { visible: !info && connectError === "" && !connectSlow; text: "Waiting for the backend…"; color: "#8a6d00" }
                 Label {
