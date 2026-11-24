@@ -32,7 +32,8 @@
 #   run         lez/live/run.sh run: the standalone sequencer (blocks every 3 s, RISC0_DEV_MODE unset, so it verifies
 #               private proofs) and the driver's phases `info deploy fresh-follow fresh-scenarios fresh-consume
 #               fresh-private export` (lez/live/driver/src/fresh.rs; FERRATA_CI_PRIVATE=skip leaves out the private
-#               attestation and its real proof), each capped at FERRATA_LIVE_PHASE_SECONDS (default 2,700).
+#               attestation and its real proof), each capped at FERRATA_LIVE_PHASE_SECONDS (default 3,600: the proof
+#               took 1,222 s with 4 threads on the build box).
 #   check       the records: every transaction's outcome as designed, by count and by name, phase by phase; the
 #               deployed images equal docs/image-ids.md's; instance A holds the finality update's block, with the
 #               root the second provider reports.
@@ -140,11 +141,13 @@ toolchains() {
 unset RISC0_DEV_MODE   # the sequencer verifies receipts; the private attestation's proof is real
 
 # Parallelism: lez/live/env.sh defaults to 4 build jobs under nice 19; a bigger machine gets more, a small runner 4.
+# The private attestation's prover threads likewise: each holds a segment in memory, so a 4-core runner with 16 GB
+# proves with 4 (measured on the build box with 4: 1,222 s, e2e/runs/ci-sequencer-2026-11-24/attest/).
 NPROC="$(nproc)"
 if [ "$NPROC" -lt 4 ]; then NPROC=4; fi
 if [ "$NPROC" -gt 16 ]; then NPROC=16; fi
 export FERRATA_LIVE_JOBS="${FERRATA_LIVE_JOBS:-$NPROC}"
-export FERRATA_LIVE_PROOF_THREADS="${FERRATA_LIVE_PROOF_THREADS:-16}"
+export FERRATA_LIVE_PROOF_THREADS="${FERRATA_LIVE_PROOF_THREADS:-$NPROC}"
 
 guest_bin() {
   local b
@@ -252,7 +255,7 @@ stage_run() {
   export FERRATA_PROGRAM_BIN="$program" FERRATA_SCRIPTED_BIN="$scripted"
   export FERRATA_LIVE_DRIVER_EXTRA="--consumer-bin $consumer --fresh-checkpoint $FRESH/checkpoint --fresh-attest $FRESH/attest"
   export FERRATA_LIVE_PHASES="$phases" FERRATA_LIVE_OUT="$RECORDS"
-  export FERRATA_LIVE_PHASE_SECONDS="${FERRATA_LIVE_PHASE_SECONDS:-2700}"
+  export FERRATA_LIVE_PHASE_SECONDS="${FERRATA_LIVE_PHASE_SECONDS:-3600}"
   rm -rf "$RECORDS"
   say "== run: LEZ $LEZ_TAG's sequencer (standalone: its mock Bedrock, no Logos Blockchain node), blocks every 3 s; phases: $phases (each at most $FERRATA_LIVE_PHASE_SECONDS s)"
   run_logged "run: LEZ sequencer (standalone) + the driver's phases" bash "$REPO/lez/live/run.sh" run

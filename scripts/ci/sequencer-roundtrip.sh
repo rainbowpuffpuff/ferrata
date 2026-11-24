@@ -66,10 +66,12 @@ touch "$LOG"
 trap 'scrub_paths "$OUT" "$BESIDE" "$HOME" "$REPO"' EXIT
 
 export LEZ_TAG=v0.4.0-rc1
-export FERRATA_LIVE_TMP="${FERRATA_LIVE_TMP:-$BESIDE/tmp/sequencer}"
-T="${FERRATA_CI_ROUNDTRIP_TMP:-$BESIDE/tmp/ci-seq-roundtrip}"   # the tools, the work directory of a run
-TOOLS="$T/bin"
-TGT="$T/target-lez"                                             # cli/ and lez/crown/driver: LEZ's crates once
+# One scratch directory beside the repository, and one target directory in it for LEZ's sequencer, crown-driver and
+# cli/: they build LEZ v0.4.0-rc1's crates from the same sources, which cargo then shares.
+T="${FERRATA_CI_ROUNDTRIP_TMP:-$BESIDE/tmp/ci-seq-roundtrip}"
+export FERRATA_LIVE_TMP="$T"
+TOOLS="$T/tools"
+TGT="$T/target"
 export PATH="$HOME/.foundry/bin:$HOME/.cargo/bin:$HOME/.risc0/bin:$PATH" FOUNDRY_DISABLE_NIGHTLY_WARNING=1
 export CARGO_PROFILE_DEV_DEBUG="${CARGO_PROFILE_DEV_DEBUG:-0}" CARGO_PROFILE_TEST_DEBUG="${CARGO_PROFILE_TEST_DEBUG:-0}"
 export CARGO_INCREMENTAL="${CARGO_INCREMENTAL:-0}"

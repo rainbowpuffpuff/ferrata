@@ -95,7 +95,7 @@ jobs:
         timeout-minutes: 30
         run: scripts/ci/sequencer-attest.sh e2e/runs/ci-sequencer-attest data
       - name: Run (the standalone sequencer and the driver's phases)
-        timeout-minutes: 120
+        timeout-minutes: 150
         run: scripts/ci/sequencer-attest.sh e2e/runs/ci-sequencer-attest run
       - name: Check (every phase's outcomes, the images, instance A at Sepolia's root)
         timeout-minutes: 5
