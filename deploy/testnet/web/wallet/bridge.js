@@ -103,22 +103,28 @@ export function burnRecipient(typed, connected) {
 /** Where the network publishes its gas-drop relayer: the origin of the page's RPC, `/relayer/gas-drop` (the `ferrata`
  *  tool reads the same URL, from its sequencer's origin, and uses that relayer by default: RFP-022 U.5, Priv.7). */
 export const gasDropUrl = (rpc, base) => new URL('/relayer/gas-drop', new URL(rpc, base)).href;
-/** The page's fee-payer line for an answer of that URL (`status`, its JSON `terms`, or `null` when unreachable). */
+/** The page's fee-payer line for an answer of that URL (`status`, its JSON `terms`, or `null` when unreachable), as the
+ *  `ferrata` tool reads the same answer: only 404 and 410 mean "no relayer published"; anything else it cannot use
+ *  (429, other errors, a malformed document, a paused or unreadable relayer) stops a private claim there. */
 export function gasDropLine(status, terms, url) {
-  if (status === 200 && terms && /^0x[0-9a-f]{64}$/.test(terms.relayer ?? '')) {
+  if (status === 200 && terms && /^0x[0-9a-f]{64}$/.test(terms.relayer ?? '') && /^[0-9]+$/.test(String(terms.amount ?? ''))) {
     const covers = Array.isArray(terms.covers) && terms.covers.length ? terms.covers.join(' and ') : 'claim';
     return { state: 'on', text: `Fee payer (private claim${covers.includes('burn') ? ' and burn' : ''}, by default): this network's gas-drop relayer ${terms.relayer}. `
       + `With no setting, the ferrata tool asks it for one credit of ${terms.amount} native LEZ per deposit, sealed to a fresh one-time private account, `
       + `which pays the LEZ fee of your private ${covers}; the relayer learns the deposit's nullifier, that account, a time and your address, never which deposit. `
+      + `Relay fee: the claim names this relayer, so the deposit's registered relay fee (the same amount whoever is named) is paid to it rather than to the configuration's fee recipient. `
       + `Published at ${url}. Opt out: --no-gas-drop (the fee then comes from your own private account, and where its native LEZ came from can link the claim to you).` };
   }
-  if (status === 503) {
-    return { state: 'paused', text: `Fee payer: this network's gas-drop relayer is paused (${terms?.error ?? 'no reason given'}): the ferrata tool stops a private claim until it is back, or pays from your own private account with --no-gas-drop.` };
+  if (status === 404 || status === 410) {
+    return { state: 'none', text: 'Fee payer: this network publishes no gas-drop relayer, so a private claim\'s LEZ fee is paid from your own private account; where its native LEZ came from (a faucet, a purchase) can link the claim to you.' };
   }
-  if (status === null || status >= 500) {
-    return { state: 'unreachable', text: `Fee payer: this network's gas-drop relayer could not be read (${url}): the ferrata tool stops a private claim until it can, or pays from your own private account with --no-gas-drop.` };
+  if (status === 503 && /paused/.test(terms?.error ?? '')) {
+    return { state: 'paused', text: `Fee payer: this network's gas-drop relayer is paused (${terms.error}): the ferrata tool stops a private claim until it is back, or pays from your own private account with --no-gas-drop.` };
   }
-  return { state: 'none', text: 'Fee payer: this network publishes no gas-drop relayer, so a private claim\'s LEZ fee is paid from your own private account; where its native LEZ came from (a faucet, a purchase) can link the claim to you.' };
+  if (status === 429) {
+    return { state: 'limited', text: `Fee payer: this network's gas-drop relayer answered "too many requests" (${url}): the ferrata tool stops a private claim until it can read it, or pays from your own private account with --no-gas-drop.` };
+  }
+  return { state: 'unreachable', text: `Fee payer: this network's gas-drop relayer could not be read (${url}${status ? `: ${status}` : ''}): the ferrata tool stops a private claim until it can, or pays from your own private account with --no-gas-drop.` };
 }
 
 /** Fills `node` with the fee-payer line, read from the network (its `data-state`: on, paused, unreachable, none). */
