@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Each of the four attestors of the recorded four-sequencer zone (runs/zone, as zone-attest.sh replays it) SIGKILLed at
 # random moments of its rounds and started again (RFP-022 R.6): KILLS rounds per attestor are killed after a random
-# 5 to 400 ms (`timeout -s KILL`), then one round runs to its end. Checked: the state file is whole after every kill
+# 1 to 12 ms (`timeout -s KILL`; a round over the saved answers takes about 10 ms), then one round runs to its end. Checked: the state file is whole after every kill
 # (it is replaced atomically, before the attestation is written); every attestation an attestor wrote, killed or not,
 # carries the same signed bytes (`encoded`): one signature per key and tip, also when a kill fell between the state's
 # write and the attestation's; those bytes equal the zone run's own records; the collector's 3 of 4 is the zone run's
@@ -26,7 +26,7 @@ for i in 0 1 2 3; do
   $bin certify --channel-key "$dev/seq-$i/channel_signing_key" --att-pub "$a" --deployment "$work/deployment.json" --out "$work/cert-$i.json" > /dev/null
   rm -f "$work/state-$i.json"
   for k in $(seq 1 "$kills"); do
-    ms=$(( 5 + RANDOM % 396 )); out="$work/att-$i-k$k.json"; before="$( { sha256sum "$work/state-$i.json" 2>/dev/null || true; } | cut -c1-16)"
+    ms=$(( 1 + RANDOM % 12 )); out="$work/att-$i-k$k.json"; before="$( { sha256sum "$work/state-$i.json" 2>/dev/null || true; } | cut -c1-16)"
     rc=0; timeout -s KILL "0.$(printf '%03d' "$ms")" "$bin" attest --deployment "$work/deployment.json" --cert "$work/cert-$i.json" \
       --att-key "$work/attestation-$i.key" --answers "$z/answers" --lez-answers "$work" --state "$work/state-$i.json" --out "$out" \
       > /dev/null 2>> "$work/attest-$i.log" || rc=$?
