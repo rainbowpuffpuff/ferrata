@@ -20,7 +20,7 @@
 //!   fresh-check      no sequencer: the whole chain natively (bootstrap, the period updates, the finality update,
 //!                    which must advance the store; the facts evaluated under the record it makes); one JSON line.
 //!                    Exit 3 when the finality update does not advance the store (fetch it again after the next
-//!                    finalized epoch), 4 when the bootstrap is over 30 h or the finalized block over 2 h old by this
+//!                    finalized epoch), 4 when the bootstrap is over 32 h or the finalized block over 2 h old by this
 //!                    machine's clock (a stale endpoint), 1 on any other failure
 //!   fresh-follow     instance A of the `main` deployment: `Init`, the period updates, the finality update; its
 //!                    finalized root must be the one the second provider reports
@@ -92,9 +92,10 @@ pub const STALE_EXIT: i32 = 4;
 /// and a light-client endpoint serves its newest finality update; two hours of lag is an endpoint (or a chain) that has
 /// stopped, not data to attest.
 pub const MAX_FINALIZED_AGE_S: u64 = 2 * 3600;
-/// The oldest the bootstrap may be: the period's first checkpoint (or the finalized one) is at most one period (27.3 h)
-/// old when fetched, plus the job's build; 30 hours.
-pub const MAX_BOOTSTRAP_AGE_S: u64 = 30 * 3600;
+/// The oldest the bootstrap may be: the first checkpoint of the finality update's period (or a later finalized one) is
+/// at most one period (27.3 h) old, and CI fetches it before the build: with the steps' limits (checkpoint 15 min,
+/// build 170 min, data 50 min) at most 31.2 h when checked; 32 hours.
+pub const MAX_BOOTSTRAP_AGE_S: u64 = 32 * 3600;
 
 /// The light-client layout of the fork that `config`'s schedule puts at `slot`.
 fn layout_at(config: &Config, slot: u64) -> Option<LcFork> {

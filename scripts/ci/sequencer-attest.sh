@@ -30,7 +30,7 @@
 #               RPC, a second RPC's copy), eth_getProof of Sepolia USDC's totalSupply_ at that block, its first ERC-20
 #               Transfer, the second beacon provider's root of the finalized block. `live-driver fresh-check` runs
 #               the whole chain natively on it; until its finality update advances the checkpoint's store, it is
-#               fetched again every two minutes, at most 12 times; a bootstrap over 30 h or a finalized block over
+#               fetched again every two minutes, at most 12 times; a bootstrap over 32 h or a finalized block over
 #               2 h old (a stale endpoint, fresh-check's exit 4) stops the run at once.
 #   run         lez/live/run.sh run: the standalone sequencer (blocks every 3 s, RISC0_DEV_MODE unset, so it verifies
 #               private proofs) and the driver's phases `info deploy fresh-follow fresh-scenarios fresh-consume
@@ -328,9 +328,10 @@ stage_check() {
   for f in run.tsv summary.txt chain.tsv programs.tsv instances.tsv environment.md logs/driver.log logs/sequencer.log; do
     check "records/$f is written" test -s "$RECORDS/$f"
   done
-  # The data's age: the run's own fresh-check refused anything over its bound (2 h, 30 h) when it fetched; here, by
-  # this check's clock, the finalized block must be under 6 h old and the bootstrap under 36 h (the build and the run
-  # take at most 5.4 h by the step timeouts), so that no older record can pass for this run.
+  # The data's age: the run's own fresh-check refused anything over its bound (2 h, 32 h) when it fetched; here, by
+  # this check's clock, the finalized block must be under 6 h old (2 h, then the run's 2.5 h at most) and the bootstrap
+  # under 36 h (a period, 27.3 h, then the steps from the checkpoint to the check: 6.4 h by their timeouts), so that no
+  # older record can pass for this run.
   local now ages
   now="${FERRATA_CI_NOW:-$(date -u +%s)}"
   ages="$(python3 -I - "$FRESH/check.json" "$now" <<'PY'
@@ -344,9 +345,9 @@ PY
 )" || die "fresh/check.json does not read"
   local fin_age boot_age fin_at boot_at nperiods periods
   read -r fin_age boot_age fin_at boot_at nperiods periods <<< "$ages"
-  [ "$fin_at" -ge 0 ] && [ "$fin_at" -le 7200 ] && [ "$boot_at" -ge 0 ] && [ "$boot_at" -le 108000 ] \
-    && echo "  ok: fresh when fetched (fresh-check): the finalized block $fin_at s old, the bootstrap $boot_at s old (bounds 7,200 and 108,000 s)" \
-    || { echo "  MISSING: fresh-check's ages within its bounds (7,200 and 108,000 s), got $fin_at and $boot_at" >&2; fail=1; }
+  [ "$fin_at" -ge 0 ] && [ "$fin_at" -le 7200 ] && [ "$boot_at" -ge 0 ] && [ "$boot_at" -le 115200 ] \
+    && echo "  ok: fresh when fetched (fresh-check): the finalized block $fin_at s old, the bootstrap $boot_at s old (bounds 7,200 and 115,200 s)" \
+    || { echo "  MISSING: fresh-check's ages within its bounds (7,200 and 115,200 s), got $fin_at and $boot_at" >&2; fail=1; }
   [ "$fin_age" -le 21600 ] && [ "$boot_age" -le 129600 ] \
     && echo "  ok: this run's data by this check's clock: the finalized block $fin_age s old, the bootstrap $boot_age s old (bounds 21,600 and 129,600 s)" \
     || { echo "  MISSING: this run's data: the finalized block $fin_age s old (bound 21,600 s), the bootstrap $boot_age s old (bound 129,600 s)" >&2; fail=1; }
