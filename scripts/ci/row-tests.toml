@@ -842,8 +842,13 @@ tests = [
   { path = "lez/results/v0.4.0-rc3/gas-drop/README.md", kind = "record" },
   { path = "cli/tests/gasdrop.rs", kind = "test", ci = "box", run = "cd cli && cargo test --test gasdrop" },
   { path = "e2e/runs/seqnet-robust-2/robust.md", kind = "record" },
+  { path = "cli/src/gasdrop_net.rs", kind = "test", ci = "roundtrip" },
+  { path = "deploy/testnet/tests/test_gateway_gasdrop.py", kind = "test", ci = "links" },
+  { path = "deploy/testnet/web/wallet/test/gasdrop.test.mjs", kind = "test", ci = "msg" },
+  { path = "e2e/seqnet/hook-gasdrop.sh", kind = "test", ci = "box", run = "e2e/seqnet/run.sh gasdrop NAME" },
+  { path = "e2e/runs/seqnet-gasdrop-4/gasdrop.md", kind = "record" },
 ]
-note = "fixed denominations, the claim delay and the relayer release preselected; each dry run prints the exposure of the choices; the fee-payer gas drop ran on rc3 with real proofs (EVIDENCE row 124, M0 check 2 GO) and in the relayer daemon and the tool on rc1's sequencer with dev-mode proofs (row 205); not in the mini-app's claim or for burns"
+note = "fixed denominations, the claim delay and the relayer release preselected; each dry run prints the exposure of the choices; the fee-payer gas drop ran on rc3 with real proofs (EVIDENCE row 124, M0 check 2 GO); the tool now uses the network's relayer by default for the claim and pays a later private burn from the drop's remainder, the relayer read from the network's gateway, only 404/410 read as none published, every other answer stopping the claim or burn (gasdrop_net tests; seqnet-gasdrop-4, rc1's sequencer, dev-mode proofs); the gateway verifies a job's receipt before it counts against its caps; not in the mini-app's claim, not yet live on the test network"
 
 [[row]]
 id = "RFP-022 U.6"
@@ -1331,5 +1336,8 @@ id = "RFP-022 Priv.7"
 tests = [
   { path = "cli/tests/e2e.rs", kind = "test", ci = "roundtrip" },
   { path = "modules/ferrata_bridge_ui/scripts/box-test.sh", kind = "test", ci = "box", run = "modules/ferrata_bridge_ui/scripts/box-test.sh" },
+  { path = "cli/src/gasdrop_net.rs", kind = "test", ci = "roundtrip" },
+  { path = "e2e/seqnet/hook-gasdrop.sh", kind = "test", ci = "box", run = "e2e/seqnet/run.sh gasdrop NAME" },
+  { path = "e2e/runs/seqnet-gasdrop-4/gasdrop.md", kind = "record" },
 ]
-note = "on the defaults a deposit goes to the wallet's private account, the claim is private and delayed, the burn private to a fresh address; a public destination, a plaintext claim and a public burn each print a WARNING and are refused without their own acknowledgement (rows 62, 84-86)"
+note = "on the defaults a deposit goes to the wallet's private account, the claim is private and delayed, the burn private to a fresh address; a public destination, a plaintext claim and a public burn each print a WARNING and are refused without their own acknowledgement (rows 62, 84-86); the fee payer: the network's gas-drop relayer by default, the user's own account only where none is published (404/410) or with --no-gas-drop, every other answer (429, 5xx, timeouts, paused, unreadable) stopping the claim or burn (gasdrop_net tests; seqnet-gasdrop-4's failure paths and opt-out)"

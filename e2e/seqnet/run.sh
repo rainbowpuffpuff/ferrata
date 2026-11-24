@@ -80,9 +80,9 @@ build() {
   local gid; gid="$(r0vm --id --elf "$gd" 2>/dev/null | tail -n 1)"; case "$gid" in 0x*) ;; *) gid="0x$gid" ;; esac
   [ "${#gid}" = 66 ] || die "the gas-drop guest's image id ($gid)"
   say "the gas-drop guest $gid, pinned in this build of the tool"
-  say "cli: ferrata, ferrata-relayer, seqnet-fund, seqnet-txs"
+  say "cli: ferrata, ferrata-relayer, ferrata-gasdrop, seqnet-fund, seqnet-txs"
   ( cd "$REPO/cli" && FERRATA_GASDROP_PINS="$gid" CARGO_TARGET_DIR="$TGT" cargo build --release --features seqnet --bin ferrata --bin ferrata-relayer \
-      --bin seqnet-fund --bin seqnet-txs ) > "$L/cli.log" 2>&1 || { grep -E -A7 '^error' "$L/cli.log" | head -60; die "cli build"; }
+      --bin ferrata-gasdrop --bin seqnet-fund --bin seqnet-txs ) > "$L/cli.log" 2>&1 || { grep -E -A7 '^error' "$L/cli.log" | head -60; die "cli build"; }
   say "crown-driver"
   ( cd "$REPO/lez/crown/driver" && { [ -f Cargo.lock ] || cp "$REPO/lez/live/driver/Cargo.lock" Cargo.lock; } \
       && CARGO_TARGET_DIR="$TGT" cargo build --release ) > "$L/driver.log" 2>&1 \
@@ -94,7 +94,7 @@ build() {
     || { grep -E -A7 '^error' "$L/e2e.log" | head -40; die "ferrata-e2e build"; }
   mkdir -p "$T/bin"
   cp "$gd" "$T/bin/gasdrop.bin"
-  cp "$TGT/release/ferrata" "$TGT/release/ferrata-relayer" "$TGT/release/seqnet-fund" "$TGT/release/seqnet-txs" \
+  cp "$TGT/release/ferrata" "$TGT/release/ferrata-relayer" "$TGT/release/ferrata-gasdrop" "$TGT/release/seqnet-fund" "$TGT/release/seqnet-txs" \
      "$TGT/release/crown-driver" "$REPO/checkpoint/target/release/realblocks-crown" "$REPO/bridge/target/release/ferrata-e2e" "$T/bin/"
   say "the zone's bundle: $(basename "$BUNDLE"), with this tree's crown-driver and session.sh (lez/crown/build.sh repack)"
   mkdir -p "$T/crown-lez/bin"; cp "$T/bin/crown-driver" "$T/crown-lez/bin/crown-driver"
