@@ -15,11 +15,12 @@ What is read. Sepolia (any public JSON-RPC that serves state at old blocks; scri
 --rpc): each transaction's receipt (block, status, gas, sender and its nonce, target, calldata), its block's time, the
 vault's events in it and that its block holds no other vault event, the vault's state by eth_call at the end of the
 block before and of its own block with the balances involved, and the vault's image ids. The LEZ zone (its public
-JSON-RPC, by default the network named in scripts/reproduce/deployed-programs.json): each transaction's bytes (their
-SHA-256 is its id), the block holding it (its hash recomputed from its bytes) and whether it reverted there, its bridge
-message decoded with idl/ferrata_bridge.idl.json by idl/check.py's decoder (every byte used); and the zone's blocks
-from the claim's to the checkpoint's tip, each hash recomputed and each linked to the one before. Off chain: the
-prover client's records of the two GPU proofs, proofs.json beside the record.
+JSON-RPC, by default the network named in scripts/reproduce/deployed-programs.json): each transaction as the block
+getTransaction names holds it (the block's hash recomputed from its bytes; in it, the transaction's bytes, the ones
+getTransaction serves, hash to its id; a block that does not hold it is refused) and whether that block lists it as
+reverted; its bridge message decoded with idl/ferrata_bridge.idl.json by idl/check.py's decoder (every byte used);
+and the zone's blocks from the claim's to the checkpoint's tip, each hash recomputed and each linked to the one
+before. Off chain: the prover client's records of the two GPU proofs, proofs.json beside the record.
 
 The links, each from the chains' answers:
 
@@ -27,7 +28,8 @@ The links, each from the chains' answers:
      deposit's block; the claim's witness opens the deposit (SHA-256("ferrata/C/v1" || s || kind || dest) is the
      Deposit event's commitment; its depositor, token, amount and leaf index are the event's; dest, kind 2, is the
      account that signed the claim), and the vault's leaf (FerrataVault._leafHash) folded with the claim's path is
-     that depositRoot;
+     that depositRoot; the import and the claim applied, and a second sender's import of the same root under the same
+     record, later in the import's block, reverted;
   2. the burn: its burn leaf (encoding.rs, burn index 0, from the burn's own fields) folded with an empty path is the
      burnRoot of the candidate, of the finalized checkpoint and of the release, and the checkpoint counts one burn;
   3. the proofs: each proof record's image id is the vault's (checkpointImageId, releaseImageId), its seal is the one
@@ -243,14 +245,19 @@ def read_block(raw: bytes) -> dict:
     The hash is recomputed: SHA-256("/LEE/v0.3/Message/Block/" padded || id || prev || timestamp || body)."""
     r = Reader(raw)
     block_id, prev, block_hash, ts = r.u(8), r.take(32), r.take(32), r.u(8)
-    txs = r.vec(lambda: read_tx(r))
+
+    def tx():
+        at = r.pos
+        t = read_tx(r)
+        return t["id"], raw[at:r.pos]
+    txs = r.vec(tx)
     reverted = r.vec(lambda: r.u(8))
     r.u(1)
     if r.pos != len(raw):
         raise Failed(f"block {block_id}: {len(raw) - r.pos} byte(s) after the status")
     computed = sha256("/LEE/v0.3/Message/Block/".encode().ljust(32, b"\0"), raw[0:40], raw[72:80], raw[80:-1])
     return {"id": block_id, "hash": block_hash.hex(), "prev": prev.hex(), "hash_recomputed": computed.hex(),
-            "timestamp_ms": ts, "tx_ids": [t["id"] for t in txs], "reverted": reverted}
+            "timestamp_ms": ts, "tx_ids": [i for i, _ in txs], "tx_bytes": [b for _, b in txs], "reverted": reverted}
 
 
 def plain(v):
@@ -412,21 +419,27 @@ def read_sepolia(eth: Sepolia) -> tuple[list, dict]:
 
 
 def read_lez(lez: Lez) -> list:
+    """Each step's transaction as its block holds it. getTransaction names the block; that block's bytes (its hash
+    recomputed from them) must hold a transaction whose bytes hash to the step's id, the very bytes getTransaction
+    served; the block's reverted list says whether it applied. A zone RPC that names another block, or serves other
+    bytes, is refused here."""
     out = []
     blocks = {}
     for name, tx in LEZ_STEPS:
         raw_b64, block = lez("getTransaction", tx)
-        raw = base64.b64decode(raw_b64)
-        t = read_tx(Reader(raw))
         if block not in blocks:
             blocks[block] = read_block(base64.b64decode(lez("getBlock", block)))
         b = blocks[block]
-        idx = b["tx_ids"].index(t["id"]) if t["id"] in b["tx_ids"] else None
-        if b["hash_recomputed"] != b["hash"]:
-            raise Failed(f"LEZ block {block}: its hash is not the SHA-256 of its bytes")
+        need(b["hash_recomputed"] == b["hash"], f"LEZ block {block}: its hash is not the SHA-256 of its bytes")
+        need(tx in b["tx_ids"], f"LEZ {name}: {tx[:12]}… is not in block {block}, the block the RPC names")
+        idx = b["tx_ids"].index(tx)
+        raw = b["tx_bytes"][idx]  # the transaction's bytes as the hashed block holds them
+        need(base64.b64decode(raw_b64) == raw, f"LEZ {name}: the bytes getTransaction serves are not the ones block {block} holds")
+        t = read_tx(Reader(raw))
+        need(t["id"] == tx, f"LEZ {name}: the bytes do not hash to {tx[:12]}…")
         out.append({"step": name, "tx": tx, "id_of_bytes": t["id"], "block": block, "block_hash": b["hash"],
                     "block_timestamp_ms": b["timestamp_ms"], "index_in_block": idx,
-                    "reverted": idx in b["reverted"] if idx is not None else None, "program": t["program"],
+                    "reverted": idx in b["reverted"], "program": t["program"],
                     "root_actor": t["actor"], "signers": t["signers"], "nonces": t["nonces"],
                     "message": decode_bridge(t["message"]), "bytes_base64": raw_b64})
     return out
@@ -490,11 +503,28 @@ def links(rec: dict, proofs: dict) -> dict:
     }
 
 
+def in_block(s: dict) -> bool:
+    """The step's transaction is in the block named (an index there) and its bytes hash to its id."""
+    return s["id_of_bytes"] == s["tx"] and isinstance(s["index_in_block"], int) and not isinstance(s["index_in_block"], bool)
+
+
+def applied(s: dict) -> bool:
+    return in_block(s) and s["reverted"] is False
+
+
 def link_claim(rec: dict, proofs: dict) -> str:
     dep, claim, imp = _event(rec, "deposit", "Deposit"), _step(rec, "lez", "claim"), _step(rec, "lez", "import_root")
-    need(not claim["reverted"] and not imp["reverted"], "the claim or the import did not apply")
+    need(applied(claim) and applied(imp), "the claim or the import is not an applied transaction of the block named")
     root = _step(rec, "sepolia", "deposit")["vault_after"]["depositRoot"]
     c, w, ia = claim_links(claim["message"]), claim["message"]["args"]["witness"], imp["message"]["args"]
+    # F.3's refusal: a second sender's import of the same root under the same record, later in the same block, reverted.
+    ref = _step(rec, "lez", "import_root, a second sender (refused)")
+    ra = ref["message"]["args"]
+    need(in_block(ref) and ref["reverted"] is True and ref["block"] == imp["block"] and ref["block_hash"] == imp["block_hash"]
+         and ref["index_in_block"] > imp["index_in_block"] and ref["signers"] != imp["signers"]
+         and ref["message"]["instruction"] == imp["message"]["instruction"] == "import_root"
+         and all(ra[k] == ia[k] for k in ("config_id", "record_slot", "root", "leaf_count")),
+         "the second sender's import of the same root is not a later, reverted transaction of the import's block")
     need(c["commitment"] == dep["commitment"], "the claim's opening is not the Deposit event's commitment")
     need((w["depositor"], w["token"], int(w["amount"], 16), w["leaf_index"]) == (dep["depositor"], dep["token"], dep["amount"], dep["leafIndex"]),
          "the claim's leaf is not the deposit's (depositor, token, amount, index)")
@@ -505,12 +535,13 @@ def link_claim(rec: dict, proofs: dict) -> str:
          "the import or the claim is of another configuration than the vault's")
     need(c["kind"] == 2 and c["dest_account"] == claim["signers"][0], "the claim's destination is not the account that signed it")
     return (f"commitment {c['commitment'][:12]}… = the Deposit event's; leaf {w['leaf_index']} + path -> {root[:12]}… = depositRoot "
-            f"after the deposit = the root import_root wrote; dest = the signer {c['dest_account'][:8]}…")
+            f"after the deposit = the root import_root wrote; dest = the signer {c['dest_account'][:8]}…; a second sender's import "
+            f"of that root, later in block {imp['block']}, reverted")
 
 
 def link_burn(rec: dict, proofs: dict) -> str:
     burn = _step(rec, "lez", "burn")
-    need(not burn["reverted"], "the burn did not apply")
+    need(applied(burn), "the burn is not an applied transaction of the block named")
     b = burn_links(burn["message"])
     cand, fin = _event(rec, "submitCandidate", "CandidateSubmitted"), _event(rec, "finalizeAttested", "CheckpointFinalized")
     rel = _event(rec, "release", "Release")

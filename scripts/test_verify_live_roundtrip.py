@@ -113,6 +113,97 @@ bad = copy.deepcopy(PROOFS)
 bad["release"]["journal"] = flip(bad["release"]["journal"], 300)
 check("a release proof whose journal is not the release's: the proofs link fails", fails(vlr.link_proofs, REC, bad))
 
+
+# A record whose LEZ transactions are not applied transactions of the blocks named (what a planted zone RPC used to
+# make the record say): each fails its link, also where the block named is on the chain to the tip.
+def moved(r, step, block, how="elsewhere"):
+    s = vlr._step(r, "lez", step)
+    s["block"], s["block_hash"] = block, next((b["hash"] for b in r["anchor"]["blocks"] if b["id"] == block),
+                                              next((x["block_hash"] for x in r["lez"] if x["block"] == block), s["block_hash"]))
+    s["index_in_block"], s["reverted"] = None, None
+
+
+cases = [
+    ("the claim said to be in block 3,750 (on the chain to the tip; it is not there)", vlr.link_claim, lambda r: moved(r, "claim", 3750)),
+    ("the burn said to be in block 3,760", vlr.link_burn, lambda r: moved(r, "burn", 3760)),
+    ("the claim's bytes not its id's (a signature byte changed)", vlr.link_claim,
+     lambda r: vlr._step(r, "lez", "claim").__setitem__("id_of_bytes", flip(vlr._step(r, "lez", "claim")["id_of_bytes"]))),
+    ("the refused second import said to be in block 2,276", vlr.link_claim, lambda r: moved(r, "import_root, a second sender (refused)", 2276)),
+    ("the second import applied, not refused", vlr.link_claim,
+     lambda r: vlr._step(r, "lez", "import_root, a second sender (refused)").__setitem__("reverted", False)),
+]
+for name, fn, edit in cases:
+    check(f"a record where {name}: its link fails", fails(fn, mutated(edit)))
+
+# The zone's answers replayed offline (lez-blocks.json: getBlock's answers for the steps' blocks and two others;
+# getTransaction's as the record holds them): read_lez rebuilds the record's LEZ section exactly, and refuses planted
+# answers, so --check refuses them before any comparison (the reviewer's planted zone RPC, round 2).
+with open(os.path.join(os.path.dirname(vlr.RECORD), "lez-blocks.json"), encoding="utf-8") as f:
+    BLOCKS = {int(k): v for k, v in json.load(f)["blocks"].items()}
+TXS = {s["tx"]: [s["bytes_base64"], s["block"]] for s in REC["lez"]}
+TX_OF = {s["step"]: s["tx"] for s in REC["lez"]}
+
+
+class Zone:
+    """A stand-in for the zone's RPC: getTransaction and getBlock answered from TXS and BLOCKS (as planted)."""
+
+    def __init__(self, plant=None):
+        self.txs, self.blocks = copy.deepcopy(TXS), dict(BLOCKS)
+        if plant:
+            plant(self)
+
+    def __call__(self, method, *params):
+        if method == "getTransaction":
+            return copy.deepcopy(self.txs[params[0]])
+        if method == "getBlock":
+            return self.blocks[params[0]]
+        raise vlr.Unreadable(method)
+
+
+def refused(plant):
+    try:
+        vlr.read_lez(Zone(plant))
+    except vlr.Failed:
+        return True
+    return False
+
+
+want = {s["block"]: s["block_hash"] for s in REC["lez"]} | {b["id"]: b["hash"] for b in REC["anchor"]["blocks"]}
+check("each replayed block's hash, recomputed from its bytes, is the record's",
+      all(vlr.read_block(base64.b64decode(v))["hash_recomputed"] == want[k] for k, v in BLOCKS.items()))
+check("the zone's answers replayed: read_lez gives the record's LEZ section, field for field (as the record holds it: JSON)",
+      vlr.deep_diff(json.loads(json.dumps(vlr.read_lez(Zone()))), REC["lez"]) == [])
+
+
+def other_bytes(z):
+    raw = bytearray(base64.b64decode(z.txs[TX_OF["claim"]][0]))
+    raw[len(raw) - 32 - 10] ^= 1  # inside the last witness's signature
+    z.txs[TX_OF["claim"]][0] = base64.b64encode(bytes(raw)).decode()
+
+
+def rehashed_block(z):
+    """Block 3,746 with a byte of another of its transactions changed and its hash recomputed: a block the zone never made."""
+    raw = bytearray(base64.b64decode(z.blocks[3746]))
+    raw[len(raw) - 1 - 4 - 1 - 40] ^= 1
+    raw[40:72] = vlr.sha256("/LEE/v0.3/Message/Block/".encode().ljust(32, b"\0"), bytes(raw[0:40]), bytes(raw[72:80]), bytes(raw[80:-1]))
+    z.blocks[3746] = base64.b64encode(bytes(raw)).decode()
+
+
+planted = [
+    ("the claim said to be in block 3,750, which does not hold it", lambda z: z.txs[TX_OF["claim"]].__setitem__(1, 3750)),
+    ("the burn said to be in block 3,760", lambda z: z.txs[TX_OF["burn"]].__setitem__(1, 3760)),
+    ("the claim's bytes with a signature byte changed (another id: a transaction the zone never took)", other_bytes),
+    ("the refused second import said to be in block 2,276", lambda z: z.txs[TX_OF["import_root, a second sender (refused)"]].__setitem__(1, 2276)),
+    ("the claim's block with a byte changed, its served hash kept", lambda z: z.blocks.__setitem__(
+        3746, base64.b64encode(bytes([b ^ (i == 100) for i, b in enumerate(base64.b64decode(z.blocks[3746]))])).decode())),
+]
+for name, plant in planted:
+    check(f"a planted zone RPC: {name}: read_lez refuses it (--check fails)", refused(plant))
+r = vlr.read_lez(Zone(rehashed_block))  # accepted here: only the anchor can tell, and it does
+check("a planted block 3,746 (another of its transactions changed, its hash recomputed): read_lez takes the claim from it, "
+      "but it is not the block on the chain to the tip (link_anchor fails)",
+      fails(vlr.link_anchor, mutated(lambda x: x.__setitem__("lez", r))))
+
 # 4. every field compared: each leaf altered alone makes --check's comparison fail
 def leaves(v, path=()):
     if isinstance(v, dict):

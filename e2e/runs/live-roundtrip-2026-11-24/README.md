@@ -6,11 +6,14 @@ zone's first checkpoint (rule (B)) proven, submitted and finalized on Sepolia, a
 2026. Public chain data only: [`record.json`](record.json) holds every fact below as both chains give it, and
 [`scripts/verify-live-roundtrip.py`](../../../scripts/verify-live-roundtrip.py) reads each one again, rebuilds the record
 from the chains' answers and compares it field by field, then checks the links between the legs on those answers;
-[`proofs.json`](proofs.json) is the prover client's record of the two GPU proofs, checked against the chain too:
+[`proofs.json`](proofs.json) is the prover client's record of the two GPU proofs, checked against the chain too;
+[`lez-blocks.json`](lez-blocks.json) holds the zone's answers for the blocks the LEZ transactions are in (and two
+others), which the offline test replays:
 
 ```sh
 python3 -I scripts/verify-live-roundtrip.py --check     # online, read-only: 24 checks, every field (Sepolia's public RPCs, the zone's /rpc)
-python3 -I scripts/test_verify_live_roundtrip.py        # offline (CI): the links on the record, chains that do not link, each field altered
+python3 -I scripts/test_verify_live_roundtrip.py        # offline (CI): the links on the record, chains that do not link, each field
+                                                        # altered, the zone's answers replayed and planted ones refused
 ```
 
 The zone is ours (one validator, Logos Blockchain node 0.3.5-rc.1 with dev-mode leader proofs; docs/EVIDENCE.md row
@@ -34,14 +37,16 @@ The zone is ours (one validator, Logos Blockchain node 0.3.5-rc.1 with dev-mode 
 
 Each Sepolia transaction is the vault's only event in its block, so the vault's state read by `eth_call` at the end of
 the block before and of its own block (in the record, for every leg) is that transaction's doing. Each LEZ transaction
-is the one whose bytes hash to its id, in the block `getTransaction` names, applied or reverted as that block's
-reverted list says, and its bridge message decodes with `idl/ferrata_bridge.idl.json` (idl/check.py's decoder) with
-every byte used.
+is taken from the block `getTransaction` names, as that block's bytes hold it (the block's hash recomputed from them):
+its bytes, the ones `getTransaction` serves, hash to its id, a block that does not hold it is refused, and it applied or
+reverted as that block's reverted list says; its bridge message decodes with `idl/ferrata_bridge.idl.json`
+(idl/check.py's decoder) with every byte used.
 
 ## What links the legs (checked on the chains' answers, not on the record's copy of them)
 
 1. **The import carries the deposit.** The root `import_root` wrote as root(cid, 1) is the vault's `depositRoot` at the
-   end of the deposit's block.
+   end of the deposit's block. The import applied in its block; the second sender's import of the same root, under the
+   same record (Sepolia slot 11,643,072), is a later transaction of that block and reverted.
 2. **The claim is this deposit's.** The claim's witness opens the deposit: SHA-256("ferrata/C/v1" ‖ s ‖ kind ‖ dest)
    is the `Deposit` event's commitment, dest (kind 2, a public destination) is the account that signed the claim, and
    the vault's leaf (`FerrataVault._leafHash`: leaf 0, the depositor, ETH, 0.001 ETH, that commitment) folded with the
@@ -58,7 +63,8 @@ every byte used.
    for byte (SHA-256 `0x54ee2772…47e4`). The release proof's nullifier is the one the vault marked used.
 5. **The claim and the burn are in the checkpoint's history.** The zone's blocks 3,746 to 3,767 are read, each hash
    recomputed from the block's bytes and each linked to the block before; block 3,767's hash is the candidate's
-   `tipHash` (the tip the checkpoint proof covers), and the claim's and the burn's blocks are on that chain. The
+   `tipHash` (the tip the checkpoint proof covers), and the claim's and the burn's blocks, which hold them (each taken
+   from its block's own bytes) as applied transactions, are on that chain. The
    imports' blocks (2,276, 2,278) are not walked (1,490 more blocks); the claim, applied under root(cid, 1), rests on
    the import.
 
@@ -66,10 +72,11 @@ every byte used.
 
 The checkpoint and the release were proven on Modal GPUs by the host's prover client
 (`deploy/testnet/host/bin/ferrata-bridge-prover`); its own records, [`proofs.json`](proofs.json) (their journals, seals
-and image ids checked against the chain above), give the times, from picking the request up to the proof's return,
-Modal's start included: **checkpoint `checkpoint_b_0_3_5`** (image `0x8917f58e…af04`) over LEZ blocks
-1,226-3,767 (2,542 blocks, input 3,064,586 bytes) in **1,307.0 s**; **release `release_31`** (image `0xf279af41…a6fd`,
-Groth16) in **425.6 s**. The host's checkpoint watcher built the checkpoint's input from the zone's blocks; its relayer
+and image ids checked against the chain above), give two times each: from picking the request up to the proof's
+return, Modal's start included, and the prover's own run on the GPU (the proof and its Groth16 wrap, `prover.wall_s`):
+**checkpoint `checkpoint_b_0_3_5`** (image `0x8917f58e…af04`) over LEZ blocks 1,226-3,767 (2,542 blocks, input
+3,064,586 bytes) in **1,307.0 s**, of which the prover **87.1 s**; **release `release_31`** (image `0xf279af41…a6fd`,
+Groth16) in **425.6 s**, of which the prover **9.9 s**. The host's checkpoint watcher built the checkpoint's input from the zone's blocks; its relayer
 (`0x1862d98b06B0aB2e201B2C224232225deaD441ba`) submitted and finalized the checkpoint, sent the release and claimed its
 fee. The release was requested by the holder with the `ferrata` CLI (`ferrata release`), whose input the prover saw.
 
