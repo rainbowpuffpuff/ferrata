@@ -9,9 +9,12 @@
 #                   program loader (their image ids those of docs/image-ids.md), the stand-in light-client instance
 #                   initialised (a committee this run holds: anvil has no beacon chain)
 #   vault deployed on the fork
-#                   the vault tests' MockRiscZeroVerifier, then FerrataVault v5 under rule (B) by vault/script/deploy.sh
-#                   (e2e/crown/sepolia.sh deploy) with the configuration's configId (crown-driver config-id) and the
-#                   genesis checkpoint state of ci_zone's test committee (ci_zone genesis; the same configId)
+#                   FerrataVault v5 under rule (B) by vault/script/deploy.sh (e2e/crown/sepolia.sh deploy: RISC Zero's
+#                   Groth16 verifier 3.1.0, the emergency stop, the library, the vault) with the configuration's
+#                   configId (crown-driver config-id) and the genesis checkpoint state of ci_zone's test committee
+#                   (ci_zone genesis; the same configId); then, STAND-IN for the Groth16 proofs, the verifier's code
+#                   replaced on the fork (anvil_setCode, as vault/script/fork-rehearsal-31.sh) by the vault tests'
+#                   MockRiscZeroVerifier, which accepts exactly the (image id, journal digest) pairs it is told to
 #   deposit         `ferrata deposit`: one denomination (0.001 ETH) to the user's public account /0
 #   operator import the vault captured at the deposit's block; crown-driver crown-b --operator-only: the stand-in
 #                   committee finalizes that block, the bridge's Init (pairing: configId in the vault's slot 2),
@@ -142,11 +145,9 @@ ok "attestation program $(jq -r .attestation.imageId "$SA" | cut -c1-12)… and 
 
 # ---- the vault on the fork -----------------------------------------------------------------------------------------
 begin "vault deployed on the fork"
-MOCK="$(cd "$REPO/vault" && forge create test/mocks/MockVerifiers.sol:MockRiscZeroVerifier --rpc-url "$RPC" --unlocked \
-  --from "$DEPLOYER" --broadcast --json 2>"$W/mock.err" | jq -r .deployedTo)"
-[ -n "$MOCK" ] && [ "$MOCK" != null ] || { tail -n 10 "$W/mock.err"; die "the mock verifier was not deployed"; }
+# DeployVault deploys RISC Zero's Groth16 verifier first, then the stop, the library and the vault: the fourth creation.
 N="$(cast nonce "$DEPLOYER" --rpc-url "$RPC")"
-VAULT="$(cast compute-address "$DEPLOYER" --nonce $(( N + 2 )) | awk '{print $NF}')"
+VAULT="$(cast compute-address "$DEPLOYER" --nonce $(( N + 3 )) | awk '{print $NF}')"
 "$B/crown-driver" config-id --identity "$SA" --vault "$VAULT" > "$W/config.json" 2>"$W/config.err" || { cat "$W/config.err"; die "crown-driver config-id"; }
 CID="$(jq -r .configId "$W/config.json")"
 jq -n --arg v "$VAULT" --argjson s "$(cat "$SA")" --argjson c "$CHAIN" '{evm_chain_id: $c, vault: $v,
@@ -164,15 +165,23 @@ jq -n --arg c "$CID" --arg g "$GS" --arg a "$(docs_id checkpoint_31)" --arg b "$
   '{_source: "CI sequencer round trip (scripts/ci/sequencer-roundtrip.sh): rule (B); the checkpoint key set is ci_zone test committee (n = 4, nMin 3, tMin 2)",
     checkpointImageIdA: $a, checkpointImageIdB: $b, releaseImageId: $r, lezConfigId: $c, genesisState: $g, nMin: 3, tMin: 2,
     postingTimeframe: 0, ethLezDefinition: $z, tokenLezDefinition: $z}' > "$R/params.json"
-jq -n --arg v "$VAULT" --arg c "$CID" --arg g "$GS" --arg m "$MOCK" --argjson ch "$CHAIN" \
-  '{label: "CI: anvil forking Sepolia; the vault uses the vault tests MockRiscZeroVerifier behind the emergency stop",
-    chainId: $ch, vault: $v, configId: $c, genesisState: $g, groth16Verifier: $m, delta: 3600}' > "$R/identity.json"
+jq -n --arg v "$VAULT" --arg c "$CID" --arg g "$GS" --argjson ch "$CHAIN" \
+  '{label: "CI: anvil forking Sepolia; DeployVault deploys RISC Zero Groth16 verifier, whose code is then replaced on the fork by the vault tests MockRiscZeroVerifier",
+    chainId: $ch, vault: $v, configId: $c, genesisState: $g, delta: 3600}' > "$R/identity.json"
 jq -n --arg v "$VAULT" --argjson ch "$CHAIN" '{chainId: $ch, vault: $v, deposits: []}' > "$R/crown.json"
 SEPOLIA_RPC_URL="$RPC" ETH_FROM="$DEPLOYER" FERRATA_UNLOCKED=1 FERRATA_NONCE_GAP=0 bash "$REPO/e2e/crown/sepolia.sh" "$R" deploy \
   > "$W/deploy.log" 2>&1 || { tail -n 30 "$W/deploy.log"; die "the vault's deployment (e2e/crown/sepolia.sh deploy)"; }
 rm -f "$REPO/vault/deployments/crown-$(basename "$R").json"
 [ "$(call 'mode()(uint8)')" = 1 ] || die "the vault does not run rule (B)"
-ok "vault $VAULT (rule B), configId $CID, genesisState $GS (ci_zone's test committee), mock verifier $MOCK; checkpoint guest $CPB_ID, release guest $REL_ID"
+G16="$(jq -r '.groth16Verifier // empty' "$R/deploy.json")"
+[ -n "$G16" ] || die "deploy.json names no Groth16 verifier"
+REAL_CODEHASH="$(cast keccak "$(cast code "$G16" --rpc-url "$RPC")")"
+MOCK_CODE="$(cd "$REPO/vault" && forge inspect test/mocks/MockVerifiers.sol:MockRiscZeroVerifier deployedBytecode 2>"$W/inspect.err")"
+[ -n "$MOCK_CODE" ] && [ "$MOCK_CODE" != 0x ] || { cat "$W/inspect.err"; die "forge inspect gave no MockRiscZeroVerifier code"; }
+cast rpc anvil_setCode "$G16" "$MOCK_CODE" --rpc-url "$RPC" > /dev/null || die "anvil_setCode"
+MOCK="$G16"
+[ "$(cast call "$MOCK" 'accepted(bytes32,bytes32)(bool)' "$CPB_ID" "$CPB_ID" --rpc-url "$RPC")" = false ] || die "the mock's code is not at the verifier's address"
+ok "vault $VAULT (rule B), configId $CID, genesisState $GS (ci_zone's test committee); RISC Zero's Groth16 verifier $G16 (code hash $REAL_CODEHASH) deployed by DeployVault, its code then replaced on the fork by MockRiscZeroVerifier's; checkpoint guest $CPB_ID, release guest $REL_ID"
 
 # ---- the user's deposit --------------------------------------------------------------------------------------------
 begin "deposit"
