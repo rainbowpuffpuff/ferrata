@@ -30,7 +30,7 @@ What is here are prototypes and their measurements. **Not audited. Not for produ
 | see every result, with the command that re-checks it | [docs/EVIDENCE.md](docs/EVIDENCE.md) |
 | check the live Sepolia round trip yourself | [docs/guides/verify.md](docs/guides/verify.md) |
 | find where each RFP requirement is met | [docs/traceability.md](docs/traceability.md) |
-| see the status of each requirement | [docs/requirements-status.md](docs/requirements-status.md): of the 59 and 68 hard requirements of RFP-021 and RFP-022, 43 and 42 shown, 12 and 23 in part, 1 and 1 not yet, 3 and 2 waiting on Logos (our own strict count, 23 November 2026) |
+| see the status of each requirement | [docs/requirements-status.md](docs/requirements-status.md): of the 59 and 68 hard requirements of RFP-021 and RFP-022, 45 and 42 shown, 10 and 23 in part, 1 and 1 not yet, 3 and 2 waiting on Logos (our own strict count, 23 November 2026) |
 | see the light client on the public LEZ testnet's version (v0.3.1) | [lez-v03/](lez-v03/README.md): an experimental, unaudited port; a finality update in one transaction (6,647,546 gas, 66.5% of the cap), run on a v0.3.1 sequencer we started with the image `8d3b59ff…` ([EVIDENCE](docs/EVIDENCE.md) row 131), the reviewed image deployed on the public testnet on 19 November (`Init`, two finality updates, an attestation of the vault; [EVIDENCE](docs/EVIDENCE.md) row 150). This branch's image `bac768a8…` adds a committee handoff in one transaction, sound only under the light client's honest-supermajority assumption (the next committee adopted by its summary; at most 6,737,794 gas on the mainnet replay and 6,682,541 on Sepolia's 32, in v0.3.1's block application in our harness, [EVIDENCE](docs/EVIDENCE.md) row 137); that image has not run on a sequencer. Its image `155b7317…` also freezes an instance on evidence that a sync committee it holds signed finality contradicting its records (one transaction, 6,656,148 gas at 510 of 512 signers; never produced by an honest network for an instance started from a finalized checkpoint, the assumption of [trust.md](docs/trust.md) §2.1; it must land while the instance is in the signing committee's period; experimental, unaudited, deployed nowhere, [`bench/MISBEHAVIOUR.md`](bench/MISBEHAVIOUR.md), [EVIDENCE](docs/EVIDENCE.md) row 144) |
 | see the bridge's inbound leg and burns on LEZ v0.3.1 | [lez-v03-bridge/](lez-v03-bridge/README.md): an experimental, unaudited port; on a v0.3.1 sequencer we started, a private claim and a private burn proven for real; it already carries the fix of the two v0.4 known issues of [row 136](docs/EVIDENCE.md); reviewed twice ([EVIDENCE](docs/EVIDENCE.md) rows 132, 133) |
 | see the leg back from the public LEZ testnet (a testnet stand-in) | [lez-v03-return/](lez-v03-return/README.md): **a stand-in, not the design**: the unchanged vault and real release proofs, the burn root attested by keys we hold (no checkpoint proof can exist for a v0.3.1 zone today); the attestor signs only after it has compared the burns with the bridge's state on the LEZ node at a Finalized block; rehearsed on a fork of Sepolia ([run](e2e/runs/testnet-return-fork-2/README.md)), not sent; and how far a real checkpoint gets on that network's own data ([EVIDENCE](docs/EVIDENCE.md) rows 134, 135) |
@@ -136,9 +136,10 @@ status.
 On 12 November 2026 the whole round trip ran on the final programs of [`docs/image-ids.md`](docs/image-ids.md),
 Sepolia to LEZ and back, as `crown-live-3` (EVIDENCE rows 91–92): FerrataVault v5 deployed in mode (B) at
 [`0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c`](https://sepolia.etherscan.io/address/0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c),
-the vault reviewers should check. The LEZ side was a devnet we ran (one validator): no public LEZ network runs
-any of it. The first live run, `crown-live-1` (11 November, EVIDENCE rows 41–42), made the same round trip on
-earlier versions of these programs.
+the vault reviewers should check. The LEZ side was a devnet we ran (one validator). No LEZ network Logos runs carries
+any of it; the attestation program and the bridge program at B1 also run on a LEZ v0.4.0-rc3 network we run that is
+reachable publicly ([row 237](docs/EVIDENCE.md)). The first live run, `crown-live-1` (11 November, EVIDENCE rows 41–42),
+made the same round trip on earlier versions of these programs.
 
 On 18 November 2026 the same round trip ran live with the LEZ side on LEZ v0.4.0-rc3, the newest tag: rc3's own
 sequencer and its Logos Blockchain node 0.3.5-rc.1, one sequencer and one validator we ran, the same LEZ programs, and a
@@ -220,8 +221,7 @@ The design notes specify these; there is no code for them here. In short (in ful
 - **Rule (B):** the watchers' `monitor` reading attestations.
 - **Daemons:** the relayer module's root imports on a running LEZ sequencer (the standalone daemon ran them:
   `e2e/runs/seqnet-robust-1/`), `monitor`'s client of the LEZ and Logos
-  Blockchain nodes' RPCs, the attestation side's monitor against public providers (built on recorded answers:
-  `monitor/attest/`), the A3 gate's three daemons on a running sequencer.
+  Blockchain nodes' RPCs, the A3 gate's three daemons on a running sequencer.
 - **Logos modules:** Ethereum transactions through Logos Core's own modules beyond anvil and inside Basecamp (on anvil
   the two daemons' sends and the bridge module's user and admin sends go through Logos's send stack),
   LEZ through an unpatched `lez_core` (the bridge module's wallet session and, patched, the attestation module's reads
@@ -244,9 +244,12 @@ The design notes specify these; there is no code for them here. In short (in ful
 ## Not audited. Not for production.
 
 No part of this repository has been audited. Four vaults are deployed on a public network, all on Sepolia, with
-testnet parameters ([docs/sepolia.md](docs/sepolia.md)). On a public LEZ network only the light client's experimental v0.3.1 port is deployed, on the public LEZ testnet
-([row 150](docs/EVIDENCE.md)); none of the proposal's v0.4 programs is: LEZ testnet 0.4 does not exist. The deployment for the day it opens is one command, built and rehearsed on our own LEZ v0.4.0-rc3 zone
-([lez/testnet04/](lez/testnet04/README.md), [row 148](docs/EVIDENCE.md)). The prototypes exist to measure and to test the design; the audit is planned for the code the
+testnet parameters ([docs/sepolia.md](docs/sepolia.md)). On a LEZ network Logos runs only the light client's
+experimental v0.3.1 port is deployed, on the public LEZ testnet ([row 150](docs/EVIDENCE.md)); none of the proposal's
+v0.4 programs is: LEZ testnet 0.4 does not exist. The attestation program and the bridge program at B1 run on a LEZ
+v0.4.0-rc3 network we run that is reachable publicly ([row 237](docs/EVIDENCE.md)). The deployment for the day it opens
+is one command, built and rehearsed on our own LEZ v0.4.0-rc3 zone ([lez/testnet04/](lez/testnet04/README.md), [row
+148](docs/EVIDENCE.md)). The prototypes exist to measure and to test the design; the audit is planned for the code the
 proposal would deliver. A security review by an agent in a separate context (11 November 2026) is not an audit,
 and Slither, Aderyn, Halmos, cargo-audit, cargo-deny and fuzzing are tooling, not an audit. Every proof here is made
 with RISC Zero 3.0.5, whose verifiers accept forged claims (RISC Zero's advisories of 11 November 2026); the move to 3.1.0

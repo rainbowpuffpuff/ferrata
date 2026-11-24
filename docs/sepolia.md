@@ -34,7 +34,7 @@ vault, resumed), verify 14 of 14 ([`e2e/runs/crown-live-3/`](../e2e/runs/crown-l
 were path-independent) through the vault
 [`0xfE3199fa2634413CbAC317371076Cae3EB2d9E54`](https://sepolia.etherscan.io/address/0xfE3199fa2634413CbAC317371076Cae3EB2d9E54)
 ([`e2e/runs/crown-live-1/`](../e2e/runs/crown-live-1/README.md)). The LEZ side was a devnet we ran (one validator): no
-public LEZ network runs any of it ("Not audited. Not for production.", below).
+LEZ network Logos runs carries any of it ("Not audited. Not for production.", below).
 
 On 18 November 2026 (EVIDENCE rows 141–142) the same round trip ran live with the LEZ side on LEZ v0.4.0-rc3, as
 `crown-live-4`: rc3's own `sequencer_service` and its Logos Blockchain node 0.3.5-rc.1 (one sequencer, one validator,
@@ -94,14 +94,15 @@ transaction `0x0a5c3a64b6357c76e273f3ecd91ad58078f9c872f3ab90e68dba521de0589f12`
 (transaction `0xf3235de7115886851c2a92b6471e1cdce9c8aa9fa3c39558d60cade17a5789a0`, block 12,107,901, 0.001 ETH).
 Deposit 0 was claimed on LEZ by the plaintext path: on a LEZ v0.4.0-rc1 sequencer we run, from a capture
 of Sepolia's finalized state, with the frozen bridge program, not this tree's
-([`lez/live/inbound/README.md`](../lez/live/inbound/README.md), "The real session"). On a public LEZ network only the
-light client's experimental v0.3.1 port is deployed, on the public LEZ testnet, where it attested slots 0 and 1 of the
-v5 vault `0x04eE…e44c` above (EVIDENCE row 150); none of the proposal's v0.4 programs is: LEZ testnet 0.4 does not
-exist, and the round trip's LEZ side was a devnet we ran (one validator). The prototypes exist to measure and to test
-the design; the audit is planned for the code the proposal would deliver. A security review by an agent in a separate
-context (11 November 2026) is not an audit; its fixes are in this tree (EVIDENCE row 30), and the frozen bridge
-program of the real session predates them and the time fix. Slither, Aderyn, Halmos, cargo-audit, cargo-deny and
-fuzzing (EVIDENCE rows 35, 36, 40 and 78) are tooling, not an audit.
+([`lez/live/inbound/README.md`](../lez/live/inbound/README.md), "The real session"). On a LEZ network Logos runs only
+the light client's experimental v0.3.1 port is deployed, on the public LEZ testnet, where it attested slots 0 and 1 of
+the v5 vault `0x04eE…e44c` above (EVIDENCE row 150); none of the proposal's v0.4 programs is: LEZ testnet 0.4 does not
+exist, and the round trip's LEZ side was a devnet we ran (one validator). The attestation program and the bridge program
+at B1 run on a LEZ v0.4.0-rc3 network we run that is reachable publicly (EVIDENCE row 237). The prototypes exist to
+measure and to test the design; the audit is planned for the code the proposal would deliver. A security review by an
+agent in a separate context (11 November 2026) is not an audit; its fixes are in this tree (EVIDENCE row 30), and the
+frozen bridge program of the real session predates them and the time fix. Slither, Aderyn, Halmos, cargo-audit,
+cargo-deny and fuzzing (EVIDENCE rows 35, 36, 40 and 78) are tooling, not an audit.
 
 **Source verification.** Since 16 November 2026 every contract of the three deployments is verified on Sourcify as an
 exact match, compiler metadata hash included, and Blockscout shows each as fully verified: the two v5 vaults

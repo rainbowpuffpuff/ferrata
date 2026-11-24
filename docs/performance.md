@@ -258,12 +258,17 @@ update's job: much of the fall is updates skipped, not the window alone; [`perf-
 | **the updater daemon** (`ferrata-updater`, sequencer backend), two or three instances following 20–30 recorded mainnet updates on a LEZ v0.4.0-rc1 zone, configured to poll every 4 s (the adversary 2 s; rounds took 4.6–17.6 s), gates G2–G5 | **0.043–0.092 of one core** per daemon (G2: 151 CPU-seconds in 1,849 s, 0.08) | **57.3–57.8 MiB peak**, 33–38 MiB median resident | beacon API: G2's honest daemons 650 and 666 requests, **10.3 and 10.4 MB** (the adversary 604, 9.0 MB); sequencer RPC **0.57–2.07 MB up, 7.4–19.6 MB down** per daemon (the least for G2's honest daemons, which applied 5 and 1 steps; the most for daemons that did the work: G4 about 1.8 MB up and 19.0–19.6 MB down each in 1,545 s, G2's adversary 2.07 / 19.0 MB) | measured, gates G2–G5 ([`perf-gate-sequencer.md`](../lez/results/perf-gate-sequencer.md)) |
 | the proven path's prover (one private transaction per update) | 16 CPUs for 1,673.6 s (7.4 CPU-hours allocated; 6.76 used) per update | 9.21 GiB peak | 49.5 s on one L4 (earlier image) | measured (P.2, [`perf-proofs.md`](../lez/results/perf-proofs.md)) |
 | the lab zone (sequencer, Bedrock node, driver) | two physical cores requested | — | a session 83–142 s over 85 sessions; state 20–31 MB compressed per generation; 0.0064 USD per scheduled session, about 0.08 USD a day (derived) | [`lez/lab/README.md`](../lez/lab/README.md) |
+| **the updater as a Logos module** (`ferrata_updater_module` in a headless Logos Core, sequencer backend, its light-client sources through `beacon_api_module`), on a LEZ v0.4.0-rc3 network we run, 90 min | **0.040 of one core** after its start (216.7 CPU s in 5,391.5 s, 15 jobs); its start, the follower from the network's genesis: 492.9 CPU s in 531.4 s | **148.1 MiB median, 270.9 MiB peak** (its host process with the executor it starts) | the network's RPC 22.1 MB an hour down, 1.5 up (it applies every block of the network), 5.2 MB an hour from each of the two light-client providers (uncompressed, TLS not counted); each transaction final 15.1–26.8 s after sent | measured (`modules/results/live-testnet-2026-11-23/`, session 1) |
+| the same with an execution source through `eth_rpc_module`, reaching the network directly, 46 min | 0.031 of one core after its start (84.1 CPU s in 2,734.9 s, 8 jobs); its start from session 1's state 345.6 CPU s in 525.9 s; 165.1 MiB median, 296.3 MiB peak | | the execution checks through `eth_rpc_module`: 16 requests, 3,512 B up, 225,915 B down | measured (same record, session 2) |
+| `ferrata attest` (cli/, release), on the network | `status` from a new state (following the network from genesis, about 4,190 blocks) 1,259.6 s wall, 827.6 CPU s, 137.1 MiB peak; with its state kept 44.1 s; `config` 1.3 s; an attestation 28.5 s as a dry run, 23.2 s sent (until final); a finality update 1.6 s as a dry run, 70.0 s sent (three steps) | | | measured (same record, session 2) |
+| `ferrata_attest_module` | 0.0002 of a core (its calls 0.07–5.31 s: `verify_checkpoint` 5.31 s, `fetch_log_proof` through `eth_rpc_module` 1.16 s) | its host process 58.7 MiB resident (shared pages counted) | | measured (session 1) |
+| attest-monitor (the §8 `monitor`), polling every 60 s; Logos Core itself | attest-monitor 0.0033 of a core (18.0 CPU s in 5,391.5 s); Logos Core's daemon 0.0001 | attest-monitor 22.2 MiB peak, 4.2 MiB median; Logos Core's daemon 58.2 MiB; each module host process 57–60 MiB resident, shared pages counted in each | attest-monitor 0.15 MB an hour from the network, 0.14 and 0.17 MB from its two providers | measured (session 1) |
 
 The gates replayed recorded updates 81 to 122 times faster than the lab recorded them (one every 60 or 90 s; the lab
 recorded one about every two hours, its session schedule), about 40–60 times the design's hourly cadence, so their traffic is that of a daemon busier than in operation; per-day figures from them would
-overstate a real day, and none is given. The live Sepolia daemon polled every 24 s. **Not measured:** the
-`ferrata-attest` CLI and the `ferrata_attest_module` (a consumer's off-chain side, [`attestation.md`](design/attestation.md)
-§8); the §8 `monitor` (`monitor/attest`, built since) is not measured; the updater as the design runs it, a Logos module under `logosctl daemon` (`ferrata_updater_module`; it ran inside a headless Logos Core, [EVIDENCE](EVIDENCE.md) row 104), is not measured: the binary is.
+overstate a real day, and none is given. The live Sepolia daemon polled every 24 s. Measured as a Logos module on a LEZ
+v0.4.0-rc3 network we run, with `ferrata attest`, the attestation module and attest-monitor on that network (above); the
+gates' figures are the binary's.
 
 ### P.7 State growth
 
@@ -557,12 +562,13 @@ min from the burns to the first release ([`e2e/runs/crown-live-1/README.md`](../
 | `monitor` (the watchers' daemon), idle and while it checks a candidate, polling every 12 s | 0.53 CPU-seconds in 1,284 s (0.0004 of a core) | **14.0 MiB peak** | JSON-RPC 86 KB up, 254 KB down (about 23 MB a day, *derived*) | measured ([`perf-daemons.md`](../lez/results/perf-daemons.md)) |
 | `ferrata-relayer run` (releases and finalisations), idle and while it finalises a checkpoint | 0.87 CPU-seconds in 1,284 s (0.0007 of a core) | **20.3 MiB peak** | JSON-RPC 408 KB up, 976 KB down (about 93 MB a day, *derived*) | measured ([`perf-daemons.md`](../lez/results/perf-daemons.md)) |
 | the updater, whose records the root imports need | 0.043–0.092 of one core | 57.3–57.8 MiB peak | 10.3–10.4 MB from the beacon API in 31 min (gate G2, replayed about 122 times faster than the lab recorded them, 60 times the design's hourly cadence) | RFP-021 P.6 |
+| `monitor` and the relayer as Logos modules (`ferrata_monitor_module`, `ferrata_relayer_module` in one headless Logos Core), the same anvil run | monitor 0.33 CPU s in 1,278.5 s (0.0003 of a core); relayer 0.70 (0.0005) | 66.4 and 73.9 MiB resident (each host process, shared pages counted; about 57 MiB of it a host process's own) | JSON-RPC 86,279 / 254,039 B and 411,356 / 983,811 B, the binaries' to within 1% | measured (`modules/results/live-testnet-2026-11-23/`, `bench/perf/daemons-anvil-modules.sh`) |
 
 Both Ethereum-side daemons ran against a local anvil with a rule (B) FerrataVault v5 (12-s blocks; ten idle minutes, a
 candidate checked and finalised, ten idle minutes). **Gaps:** the importer's LEZ-side work (the relayer's root imports,
 a prototype, EVIDENCE row 106) was not measured as a daemon (the relayer ran with `importRoots: false`); one import
 transaction is P.2's. `ferrata_attestor` (rule (B): an attestor beside every sequencer) was not measured. `monitor`'s
-LEZ view came from a file (`--node file:`), so its traffic to a LEZ node is not measured. `monitor` and the relayer as Logos modules under `logosctl daemon` (`ferrata_monitor_module`, `ferrata_relayer_module`) are not measured: the binaries are.
+LEZ view came from a file (`--node file:`), so its traffic to a LEZ node is not measured.
 
 ### P.7 State growth at 1M and 10M operations
 

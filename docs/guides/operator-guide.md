@@ -26,8 +26,10 @@ daemon` with the binary's own code: the **updater** `ferrata-updater` ([`lez/upd
 releases, wrapping, fee collection, the gas drop's checks; `ferrata_relayer_module`), the watchers' **`monitor`** (§7,
 [`monitor/`](../../monitor/README.md); `ferrata_monitor_module`) and rule (B)'s **attestor** (§5.4,
 `ferrata_attestor_module`). They log structured lines, stop cleanly on SIGTERM and take their endpoints and depths
-from configuration ([`modules/README.md`](../../modules/README.md)). None has run on a public LEZ network (none
-exists for v0.4); each has run on zones we ran, on anvil and on forks of Sepolia, as §0 lists.
+from configuration ([`modules/README.md`](../../modules/README.md)). None has run on a LEZ network Logos runs (none
+exists for v0.4); each has run on zones we ran, on anvil and on forks of Sepolia, as §0 lists, and the updater, as a
+binary and as a Logos module, on a LEZ v0.4.0-rc3 network we run that is reachable publicly
+([`modules/results/live-testnet-2026-11-23/`](../../modules/results/live-testnet-2026-11-23/README.md)).
 
 ## 0. The operator's journey: install, configure, run, monitor, stop
 
@@ -275,8 +277,21 @@ in-process chain, or a running sequencer through `lez/updater/sequencer/`'s libr
 (`daemon.ledger = "sequencer"`, `[sequencer]`); `start`, `status`, `metrics` and `stop` through Logos Core, `/health`
 and `/metrics` on `daemon.listen` as the binary's. It ran inside a headless Logos Core on a crown zone following
 Sepolia, with a restart mid-job through `stop` and `start` (EVIDENCE row 104,
-[`modules/results/updater-sequencer-2026-11-13/`](../../modules/results/updater-sequencer-2026-11-13/README.md)). The
-module's host process needs `curl` on its `PATH` (the beacon sources) and `libpcsclite` (LEZ's wallet links it). Not
+[`modules/results/updater-sequencer-2026-11-13/`](../../modules/results/updater-sequencer-2026-11-13/README.md)). With
+its Ethereum data through Logos Core: `logosctl call beacon_api_module init_defaults`, then the operator's providers,
+`logosctl call beacon_api_module add_provider 11155111 '{"endpoint":"https://…","id":"NAME"}'`, and in the updater's
+file one source per provider with `via = "beacon_api_module"`, `chain_id = 11155111` and `provider = "NAME"` (an answer
+from another provider, after a failover, is not taken). For an execution endpoint: `logosctl call eth_rpc_module
+set_chain_config 11155111 '{"endpoint":"https://…","name":"sepolia","testnet":true,"timeoutSecs":60}'` and a source with
+`kind = "execution"`, `via = "eth_rpc_module"`, `chain_id = 11155111`; with `min_agreeing` equal to the number of
+sources, no update is sent before the endpoint holds its block canonical. For a sequencer not on this machine, start
+Logos Core with `FERRATA_SEQUENCER_REMOTE` set to the `[sequencer] rpc` URL exactly and `FERRATA_TESTNET_SEND=yes` in
+its environment (the module refuses another address). `start` answers once its set-up is done, which on a new state
+directory means following the network from its genesis (about 9 minutes and 1,700 requests on our network on 23
+November): give the call a long timeout and keep the state directory. Pass `"quiet": false` to `start` for the daemon's
+own job lines in Logos Core's log (record:
+[`modules/results/live-testnet-2026-11-23/`](../../modules/results/live-testnet-2026-11-23/README.md), both sessions).
+The module's host process needs `curl` on its `PATH` (the beacon sources) and `libpcsclite` (LEZ's wallet links it). Not
 built: the proven path.
 
 ## 4. The root importer (RFP-022 P.2)
@@ -661,12 +676,18 @@ Sources: [`bridge.md`](../design/bridge.md) §8.3, §14; [`vault/README.md`](../
 | Checkpoint prover | GPU advised | ~10.9 GiB GPU, ≤ 1.08 GiB host | 24.1 s per idle hour, 219.3 s per busy hour on one L4 | [`gpu-prover/RESULTS.md`](../../gpu-prover/RESULTS.md) |
 | Groth16 wrap | x86 | ~7.3 GiB | 195–215 s per checkpoint seal, 78–80 s per release seal (laptop) | [`checkpoint/RESULTS.md`](../../checkpoint/RESULTS.md); [`bridge.md`](../design/bridge.md) §18.2 |
 | The whole lab zone (sequencer, node, driver) | 2 physical cores requested | state 20–31 MB compressed per generation, growing with write-ahead logs | a session 83–142 s over 85 sessions; 0.08 USD a day at a two-hour cadence | [`lez/lab/README.md`](../../lez/lab/README.md) |
+| **the updater as a Logos module** (`ferrata_updater_module` in a headless Logos Core, sequencer backend, its light-client sources through `beacon_api_module`), on a LEZ v0.4.0-rc3 network we run, 90 min | **0.040 of one core** after its start (216.7 CPU s in 5,391.5 s, 15 jobs); its start, the follower from the network's genesis: 492.9 CPU s in 531.4 s | **148.1 MiB median, 270.9 MiB peak** (its host process with the executor it starts) | the network's RPC 22.1 MB an hour down, 1.5 up (it applies every block of the network), 5.2 MB an hour from each of the two light-client providers (uncompressed, TLS not counted); each transaction final 15.1–26.8 s after sent | measured (`modules/results/live-testnet-2026-11-23/`, session 1) |
+| the same with an execution source through `eth_rpc_module`, reaching the network directly, 46 min | 0.031 of one core after its start (84.1 CPU s in 2,734.9 s, 8 jobs); its start from session 1's state 345.6 CPU s in 525.9 s; 165.1 MiB median, 296.3 MiB peak | | the execution checks through `eth_rpc_module`: 16 requests, 3,512 B up, 225,915 B down | measured (same record, session 2) |
+| `ferrata attest` (cli/, release), on the network | `status` from a new state (following the network from genesis, about 4,190 blocks) 1,259.6 s wall, 827.6 CPU s, 137.1 MiB peak; with its state kept 44.1 s; `config` 1.3 s; an attestation 28.5 s as a dry run, 23.2 s sent (until final); a finality update 1.6 s as a dry run, 70.0 s sent (three steps) | | | measured (same record, session 2) |
+| `ferrata_attest_module` | 0.0002 of a core (its calls 0.07–5.31 s: `verify_checkpoint` 5.31 s, `fetch_log_proof` through `eth_rpc_module` 1.16 s) | its host process 58.7 MiB resident (shared pages counted) | | measured (session 1) |
+| attest-monitor (the §8 `monitor`), polling every 60 s; Logos Core itself | attest-monitor 0.0033 of a core (18.0 CPU s in 5,391.5 s); Logos Core's daemon 0.0001 | attest-monitor 22.2 MiB peak, 4.2 MiB median; Logos Core's daemon 58.2 MiB; each module host process 57–60 MiB resident, shared pages counted in each | attest-monitor 0.15 MB an hour from the network, 0.14 and 0.17 MB from its two providers | measured (session 1) |
+| `monitor` and the relayer as Logos modules (`ferrata_monitor_module`, `ferrata_relayer_module` in one headless Logos Core), the same anvil run | monitor 0.33 CPU s in 1,278.5 s (0.0003 of a core); relayer 0.70 (0.0005) | 66.4 and 73.9 MiB resident (each host process, shared pages counted; about 57 MiB of it a host process's own) | JSON-RPC 86,279 / 254,039 B and 411,356 / 983,811 B, the binaries' to within 1% | measured (`modules/results/live-testnet-2026-11-23/`, `bench/perf/daemons-anvil-modules.sh`) |
 
 Measured as binaries: the updater (above), and the bridge's `monitor` and relayer
 ([`perf-daemons.md`](../../lez/results/perf-daemons.md)); earlier, the watchers' daemon at 34,216 kB resident at its kill and a
-two-poll run with a full rescan in 1.04 s ([`monitor/README.md`](../../monitor/README.md)). **Not measured:** the daemons as Logos
-modules under `logosctl daemon` (`ferrata_updater_module`, `ferrata_monitor_module`, `ferrata_relayer_module`), and the
-`ferrata-attest` CLI and its module ([`performance.md`](../performance.md) P.6).
+two-poll run with a full rescan in 1.04 s ([`monitor/README.md`](../../monitor/README.md)). As Logos modules, and
+`ferrata attest` with its module and attest-monitor on a network: the rows above ([`performance.md`](../performance.md)
+P.6).
 
 ## 10. Failure modes and recovery
 
@@ -732,7 +753,6 @@ checkpoints after a sunset until holders have released ([`bridge.md`](../design/
 The relayer module's root imports on a running LEZ sequencer (the standalone daemon ran them on rc1's sequencer,
 `e2e/runs/seqnet-robust-1/`; the module's ran on the mini-app's devnet, §6.6); the gas drop for burns and in the
 mini-app's claim (the daemon's sealed credit ran on rc1's sequencer, §6.4, EVIDENCE row 205); `verify_checkpoint` as an API of Logos Core's Ethereum module (its execution check runs through `verified_proxy_module`); the attestation side's `monitor`; job clean-up; the acceptance run at 100 updates and on a sequencer (it ran on 58 recorded updates in process, §3.4);
-daemon resource measurements; the amortised costs at the recommended
-cadence with real proving (milestones A4, B4); a deployment on a public LEZ network. Sources:
-[`attestation.md`](../design/attestation.md) §15; [`bridge.md`](../design/bridge.md) §1, §18.6, §19;
-[`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §9.
+the amortised costs at the recommended cadence with real proving (milestones A4, B4); a deployment on a LEZ network
+Logos runs. Sources: [`attestation.md`](../design/attestation.md) §15; [`bridge.md`](../design/bridge.md) §1, §18.6,
+§19; [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §9.

@@ -195,9 +195,11 @@ id = "RFP-021 U.3"
 tests = [
   { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/updater/dev/demo.sh", kind = "test", ci = "box", run = "lez/updater/dev/demo.sh" },
+  { path = "modules/scripts/test_live_testnet.py", kind = "test", ci = "links" },
+  { path = "modules/results/live-testnet-2026-11-23/README.md", kind = "record" },
   { path = "lez/updater/README.md", kind = "document" },
 ]
-note = "the daemon and its Logos module follow Sepolia from the checkpoint, defer, survive liars, laggards, a down source and a restart (rows 79, 81, 97, 99, 104); the operator journey is lez/updater/README.md and the operator guide"
+note = "the daemon and its Logos module follow Sepolia from the checkpoint, defer, survive liars, laggards, a down source and a restart (rows 79, 81, 97, 99, 104); the module in a headless Logos Core on a LEZ v0.4.0-rc3 network we run, its light-client data through beacon_api_module and an execution endpoint through eth_rpc_module (row 237; the record's figures and checks computed again by modules/scripts/test_live_testnet.py in CI's links job); the operator journey is lez/updater/README.md and the operator guide"
 
 [[row]]
 id = "RFP-021 U.4"
@@ -396,9 +398,11 @@ note = "measured parts: each update transaction final on Bedrock 6.9-16.4 s afte
 id = "RFP-021 P.6"
 tests = [
   { path = "lez/harness/src/bin/prove_private.rs", kind = "test", ci = "box", run = "cd lez && cargo build -p harness --locked --bin prove_private && RISC0_DEV_MODE=0 target/debug/prove_private" },
+  { path = "modules/scripts/test_live_testnet.py", kind = "test", ci = "links" },
+  { path = "modules/results/live-testnet-2026-11-23/README.md", kind = "record" },
   { path = "lez/lab/README.md", kind = "document" },
 ]
-note = "the proven-path prover measured (54 min, 9.18 GiB peak on a laptop CPU; 887.3 s on the build box's 32 threads, EVIDENCE row 123); the lab's zone a scheduled session in 83-142 s; the updater daemon's CPU, memory and bandwidth: none yet. No CI test: the documented resources are those of real proving on stated hardware (the proven path 54 min, 9.18 GiB on a laptop CPU) and of daemons on a stated machine; CI runs dev mode on GitHub's hosted runner, which is neither, and the updater daemon's CPU, memory and bandwidth are not measured anywhere yet"
+note = "the proven-path prover measured (54 min, 9.18 GiB peak on a laptop CPU; 887.3 s on the build box's 32 threads, EVIDENCE row 123); the lab's zone a scheduled session in 83-142 s; the updater daemon (row 172); on a LEZ v0.4.0-rc3 network we run, the updater as a Logos module, `ferrata attest`, its module, attest-monitor and Logos Core itself (row 237). The documented resources are those of real proving on stated hardware and of daemons on a stated machine, which CI's hosted runner is not; CI's links job computes the live record's figures again from its files (modules/scripts/test_live_testnet.py)"
 
 [[row]]
 id = "RFP-021 P.7"
