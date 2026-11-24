@@ -52,10 +52,11 @@ at_start() {
 }
 at_kill_mid() { # inside a round when one runs within 10 s
   local i mid=0
-  for i in $(seq 1 100); do pgrep -f "$(at_pat)" > /dev/null && { mid=1; break; }; sleep 0.1; done
-  sleep "0.$((RANDOM % 4))"
-  pgrep -f "$(at_pat)" > /dev/null || mid=0
-  pkill -9 -f "$(at_pat)" 2>/dev/null; kill -9 "$(cat "$AT/loop.pid")" 2>/dev/null
+  local pat; pat="$(at_pat)"
+  for i in $(seq 1 1000); do pgrep -f "$pat" > /dev/null && { mid=1; break; }; sleep 0.01; done
+  sleep "0.0$((RANDOM % 6))"
+  pkill -9 -f "$pat" 2>/dev/null || mid=0   # nothing to kill: the round had ended
+  kill -9 "$(cat "$AT/loop.pid")" 2>/dev/null
   at_ev "kill\tmid-round=$mid\tstate=$(jq -c '{tip_id, slot}' "$AT/state.json" 2>/dev/null | tr -d '\t')"
   sleep 3; at_run; at_ev restart
 }
