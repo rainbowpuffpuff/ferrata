@@ -2305,6 +2305,7 @@ dependencies = [
  "env_logger",
  "fee_core",
  "ferrata-core",
+ "ferrata-lez-bridge-wire",
  "ferrata-lez-wire",
  "ferrata-updater",
  "hex",
