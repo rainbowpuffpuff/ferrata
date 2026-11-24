@@ -1,0 +1,4 @@
+23:59:45 release: executing, then proving (log <OUT_DIR>/release/prove.log)
+00:01:54 release: exit 0, wall 129.1 s settle exit 0 
+{"image_id":"0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd","input_sha256":"2b1210e90d4da82a9749f469d3c2e1fc414576219aaa11287318486de2be3b8e","journal_equals_native":true,"loadavg_after":"11.70 8.38 7.32 4/4384 268654",
+records in <OUT_DIR>; next: python3 -I bench/perf/summarize_p4.py --owner <OUT_DIR>

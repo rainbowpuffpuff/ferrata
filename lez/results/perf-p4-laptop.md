@@ -62,12 +62,14 @@ An x86-64 Linux laptop with 16 GB or more, on mains power, nothing else busy, ab
 (the rehearsal below: 50 minutes):
 
 1. The staged folder that `bench/perf/p4-laptop-build.sh` writes on the build box (`attest-pad/`, `bridge-pad/`,
-   `r0vm/r0vm` and its `SHA256SUMS`; 136 MB, 136,438,291 B), brought to the laptop with `mrun --get`.
+   `r0vm/r0vm` and its `SHA256SUMS`; 136 MB, 136,438,291 B), brought to the laptop with `mrun --get`. With
+   `P4_RELEASE_BIN` set to `release_31`'s binary it also holds `release/`, the release's succinct proof (RFP-022's
+   third user-device proof), which the script then runs last (224,022,502 B in all at `3ae7bab2`).
 2. `bash bench/perf/p4-laptop-owner.sh STAGE_DIR OUT_DIR`: the same three proofs and settlements, GNU time's peak
    and the machine's used memory every second, `lscpu` and the power state in `OUT_DIR/machine.txt`. The provers take
    every hardware thread at nice 10; `P4_CPUS=8` holds them to the first 8 (CPU affinity with `taskset`, and
    `RAYON_NUM_THREADS`: the circuits' C++ kernels start one thread per hardware thread whatever rayon is told), which
-   `machine.txt` and the summary record.
+   `machine.txt` and the summary record. `P4_JOBS="attest-pad bridge-pad release"` (any of them) runs only those.
 3. `python3 -I bench/perf/summarize_p4.py --owner OUT_DIR` prints the rows for the table above.
 
 A Mac follows [`p4-macos`](p4-macos/README.md) (M1 16 GB: 857.4 s padded attestation, EVIDENCE row 88).
@@ -87,4 +89,74 @@ OUT`. Both exited 0; records `bench/perf/results/p4-owner-rehearsal/` (`owner.lo
 | private burn | 868.1 | 2,903,241 (5) | 9.19 / 9.23 | 239,046 | 254,966 | yes |
 
 The whole step took 50 minutes at 8 CPUs (the prover at nice 10). The 8-CPU "medians" of the claim and the burn above
-are the means of one Intel and one AMD run. The owner's real laptop remains to be run.
+are the means of one Intel and one AMD run. The owner's real laptop remains to be run for these three (next section).
+
+## The owner's laptop, 24–25 November 2026
+
+The owner's step on the owner's laptop, run by an agent with the owner's approval for that night: the bundle of this
+tree staged on the build box, then `P4_CPUS=8 bash bench/perf/p4-laptop-owner.sh` behind a gate and under a watchdog.
+**The release's succinct proof ran and verified. The private attestation, claim and burn did not finish:** each of
+four attempts was stopped within 2–4.25 minutes by the owner's rule for that night (stop if the load stays above 10),
+because other local work ran beside the provers' 8 threads. Records: [`p4-laptop-owner/`](p4-laptop-owner/README.md).
+
+**The laptop.** AMD Ryzen 9 7940HS (Zen 4, 8 cores / 16 threads, 16 MiB L3; `lscpu`: 4.0 GHz at most), 54.7 GiB of
+memory, Fedora with kernel 7.3.4, on mains power (charging), platform profile `low-power`, energy preference `power`,
+governor `powersave` (all as found, not changed). The provers were held to CPUs 0–7 (`P4_CPUS=8`), which on this CPU
+are cores 0–3 with both threads of each: half the machine, the CPU of a 4-core, 8-thread laptop. Their niceness was 19:
+the shell that started them already ran at 19, which the script's `nice -n 10` cannot lower.
+
+**The bundle** ([`bench/perf/p4-laptop-build.sh`](../../bench/perf/p4-laptop-build.sh) on the build box at commit
+`3ae7bab2`, whose sources are those of `861c1c0d`; 224,022,502 B): `prove_attest` (attestation program `0x816d1fef…`,
+reference consumer `0x8464603b…`, the mainnet fixture of 10 November), `prove_bridge` (the bridge program since
+milestone B1, `0x847a4336…`; the containers above proved the deployed `0xccde6171…`), r0vm 3.0.5 (sha256 `36c016a5…`,
+the rehearsal's), and `release/`: `ferrata-e2e` (RISC Zero 3.1's client, without the wrap), `release_31`
+(`0xf279af41…`; its sha256 and id checked against [`docs/image-ids.md`](../../docs/image-ids.md)), the crown rehearsal
+3's burn `private-1` as the witness, and r0vm 3.1.0 (`990c7e55…`). The build box ran both LEZ binaries' dev-mode dry
+runs and one real release proof (13.1 s on 32 threads, verified); on the laptop the script checked every staged file
+against its manifest before running.
+
+### The release's succinct proof (the holder's proof) on the laptop
+
+`P4_JOBS=release P4_CPUS=8 bash bench/perf/p4-laptop-owner.sh STAGE OUT`, 25 November 2026 at 00:00 CET, after two
+quiet minutes:
+
+| proof | `ferrata-e2e prove` (s) | user cycles (segments) | peak GiB: GNU time RSS / r0vm sampled | receipt (B) | verified |
+|---|---:|---:|---:|---:|---|
+| release, succinct (`release_31`, RISC Zero 3.1) | **129.0** | 77,736 (1 of 2^17) | **1.39** / 1.37 | 223,930 | yes: against the image id, the journal equal to the native one (`ferrata-e2e verify`) |
+
+Beside it, other processes kept 1.1–5.9 busy threads (median 2.6) on CPUs 8–15, and the load average reached 12.0. The
+prover used 983.2 CPU-seconds (763 % of one CPU). The same proof took 344.9 and 345.8 CPU-seconds in the second
+pass's 8-CPU containers (46.0 s; [`p4-minimum`](p4-minimum/README.md)) and 330.8 on the 32-thread build box (13.1 s):
+each of the laptop's threads did about a third of a server thread's work that night (*derived*). Likely causes, not
+separated: the `low-power` profile, both threads of each core busy, and the other work. The earlier release image took
+37.1–48.6 s on all 16 threads of this laptop ([`bridge.md`](../../docs/design/bridge.md) §18.2).
+
+### The whole run: four attempts, each stopped by the load rule
+
+| attempt | started (CET) | stopped after | busy threads, median: all / CPUs 8–15 | load average, max | memory available, min |
+|---|---|---:|---|---:|---:|
+| 1 | 24 Nov 23:21:28 | 131 s | 13.1 / 5.1 | 15.1 | 20.8 GiB |
+| 2 | 23:26:13 | 131 s | 14.0 / 6.0 | 19.1 | 20.1 GiB |
+| 3 | 23:35:45 | 251 s | 11.3 / 3.3 | 26.1 | 16.9 GiB |
+| 4 | 23:50:33 | 255 s | 12.7 / 4.8 | 16.2 | 17.4 GiB |
+
+Each attempt started after the gate saw a quiet machine (for 1, 2, 3 and 10 minutes, 2–3 busy threads on average) and
+was stopped because the busy threads stayed above 10 for 120 s. The provers stayed on their CPUs (a 60 s probe: all 25
+r0vm threads on CPUs 0–7, allowed only those, [`pinning-probe.txt`](p4-laptop-owner/pinning-probe.txt)), so the excess
+was other work: other sessions' test runs and scripts (one `cargo test` of 8 threads, Python checks) and the desktop,
+2–8 threads at a time. r0vm had reached 4.25 GiB when attempts 3 and 4 were stopped; no proof finished. With the
+provers at 8 threads, the rule holds only while everything else stays under about 2 threads for the whole run; and at
+the release's rate the three proofs would take about 2.5 hours in the `low-power` profile, not the rehearsal's 50
+minutes (*estimated*: 3,280.6 s at the containers' 8-CPU rate, times 2.8).
+
+### What the laptop run still needs
+
+On this laptop, with the bundle above (kept beside the repository) or a new one from `p4-laptop-build.sh`:
+
+1. Other local work stopped for the length of the run (other sessions' builds and tests included).
+2. Mains power and, the owner's choice, a faster platform profile (`powerprofilesctl set balanced`, or `performance`);
+   `machine.txt` records it either way.
+3. `P4_CPUS=8 bash bench/perf/p4-laptop-owner.sh STAGE OUT`, then `python3 -I bench/perf/summarize_p4.py --owner OUT`.
+   Where the machine can be kept quiet only for shorter stretches, one job at a time, each into its own `OUT`:
+   `P4_JOBS=attest-pad` (the attestation, 21 minutes at the containers' 8-CPU rate), `P4_JOBS=bridge-pad` (the claim
+   and the burn, 34 minutes at that rate).

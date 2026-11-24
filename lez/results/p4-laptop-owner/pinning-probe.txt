@@ -1,0 +1,21 @@
+# 2026-11-24 ~23:57 CET, between attempts 4 and 5, this laptop: the private attestation's prover started as the owner's
+# script starts it (nice -n 10, taskset -c 0-7, RAYON_NUM_THREADS=8, RISC0_DEV_MODE=0, the staged prove_attest and
+# r0vm 3.0.5), sampled every 5 s for 60 s, then stopped. Per sample: busy hardware threads on CPUs 0-7 and on CPUs 8-15
+# (/proc/stat), where r0vm's threads were (ps -L psr), and each thread's Cpus_allowed_list (/proc/<pid>/task/*/status).
+# Just before it: 2.06 busy threads on the whole machine, the prover not running (two other sessions' python3 processes,
+# a browser, the desktop).
+cpu0-7 busy 4.18, cpu8-15 busy 2.49 | threads on 0-7: 25, on 8-15: 0 | allowed:      25 0-7
+cpu0-7 busy 7.57, cpu8-15 busy 4.90 | threads on 0-7: 25, on 8-15: 0 | allowed:      25 0-7
+cpu0-7 busy 8.00, cpu8-15 busy 4.51 | threads on 0-7: 25, on 8-15: 0 | allowed:      25 0-7
+cpu0-7 busy 8.00, cpu8-15 busy 3.52 | threads on 0-7: 25, on 8-15: 0 | allowed:      25 0-7
+cpu0-7 busy 7.47, cpu8-15 busy 3.60 | threads on 0-7: 25, on 8-15: 0 | allowed:      25 0-7
+cpu0-7 busy 8.00, cpu8-15 busy 3.62 | threads on 0-7: 25, on 8-15: 0 | allowed:      25 0-7
+cpu0-7 busy 8.00, cpu8-15 busy 3.61 | threads on 0-7: 25, on 8-15: 0 | allowed:      25 0-7
+cpu0-7 busy 8.00, cpu8-15 busy 5.54 | threads on 0-7: 25, on 8-15: 0 | allowed:      25 0-7
+cpu0-7 busy 8.00, cpu8-15 busy 4.82 | threads on 0-7: 25, on 8-15: 0 | allowed:      25 0-7
+cpu0-7 busy 8.00, cpu8-15 busy 3.64 | threads on 0-7: 25, on 8-15: 0 | allowed:      25 0-7
+cpu0-7 busy 8.00, cpu8-15 busy 4.76 | threads on 0-7: 25, on 8-15: 0 | allowed:      25 0-7
+cpu0-7 busy 8.00, cpu8-15 busy 6.15 | threads on 0-7: 25, on 8-15: 0 | allowed:      25 0-7
+# Right after: the top processes on CPUs 8-15 were two python3 processes of other sessions (98 % and 64 %) and a browser.
+# Reading: the provers stay on CPUs 0-7 (cores 0-3, both threads of each); the 2.5-6 busy threads on CPUs 8-15 are the
+# other processes of the machine.

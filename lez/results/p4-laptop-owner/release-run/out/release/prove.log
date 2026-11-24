@@ -1,0 +1,45 @@
+[2m2026-11-24T22:59:45.395893Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::exec::executor[0m[2m:[0m execution time: 4.646956ms
+[2m2026-11-24T22:59:45.395933Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m number of segments: 1
+[2m2026-11-24T22:59:45.395948Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 131072 total cycles
+[2m2026-11-24T22:59:45.395955Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 77736 user cycles (59.31%)
+[2m2026-11-24T22:59:45.395969Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 21767 paging cycles (16.61%)
+[2m2026-11-24T22:59:45.395975Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 31569 reserved cycles (24.09%)
+[2m2026-11-24T22:59:45.395982Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m ecalls
+[2m2026-11-24T22:59:45.395994Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	75 Sha2 calls, 5890 cycles, (4.49%)
+[2m2026-11-24T22:59:45.396001Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	10 Read calls, 109 cycles, (0.08%)
+[2m2026-11-24T22:59:45.396008Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	1 Terminate calls, 2 cycles, (0.00%)
+[2m2026-11-24T22:59:45.396014Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 Write calls, 0 cycles, (0.00%)
+[2m2026-11-24T22:59:45.396020Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 User calls, 0 cycles, (0.00%)
+[2m2026-11-24T22:59:45.396026Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 Poseidon2 calls, 0 cycles, (0.00%)
+[2m2026-11-24T22:59:45.396032Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 BigInt calls, 0 cycles, (0.00%)
+[2m2026-11-24T22:59:45.396038Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m syscalls
+[2m2026-11-24T22:59:45.396044Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	2 Read calls
+[2m2026-11-24T22:59:45.396050Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	1 Write calls
+[2m2026-11-24T22:59:45.396056Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 VerifyIntegrity2 calls
+[2m2026-11-24T22:59:45.396062Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 VerifyIntegrity calls
+[2m2026-11-24T22:59:45.396068Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 ProveKeccak calls
+[2m2026-11-24T22:59:45.396074Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 Keccak calls
+{"image_id":"0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd","input_sha256":"2b1210e90d4da82a9749f469d3c2e1fc414576219aaa11287318486de2be3b8e","journal_equals_native":true,"loadavg_after":"11.70 8.38 7.32 4/4384 268654","loadavg_before":"2.90 6.30 6.61 2/4411 264189","paging_cycles":21767,"program_sha256":"d0fdcac9fa71ee87d22014ccfbb90f4ac543ae2559838d85a9dd0315c7cae2ac","prover":"r0vm, CPU","rayon_num_threads":"8","receipt_bytes":223930,"receipt_kind":"succinct","receipt_sha256":"1f77f5db1d63ee998f130198604de7eb641d79496f22c2caa29dae231622323e","reserved_cycles":31569,"risc0_zkvm":"3.1.0","segments":1,"threads":8,"total_cycles":131072,"user_cycles":77736,"verifies":true,"wall_s":129.022584384}
+	Command being timed: "<STAGE_DIR>/release/ferrata-e2e prove --program <STAGE_DIR>/release/release.bin --input <STAGE_DIR>/release/witness/release-private-1.input --meta <STAGE_DIR>/release/witness/release-private-1.json --out-dir <OUT_DIR>/release/prove"
+	User time (seconds): 983.18
+	System time (seconds): 2.43
+	Percent of CPU this job got: 763%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 2:09.06
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 1456868
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 669071
+	Voluntary context switches: 3450
+	Involuntary context switches: 191819
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 624
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

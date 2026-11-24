@@ -1,0 +1,2 @@
+STOPPED 2026-11-24T23:28:24: CPU demand above 10 hardware threads for 120 s (last 10.52)
+owner exit 143 2026-11-24T23:28:29
