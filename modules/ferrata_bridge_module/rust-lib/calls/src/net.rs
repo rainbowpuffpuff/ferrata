@@ -109,13 +109,13 @@ account's keys, which this session does not make: run it with the `ferrata` tool
 ferrata burn), or choose the plaintext claim or public burn here";
 
 pub(crate) const ALREADY_OPEN: &str = "refused: a network session is open in this module; close it first (Close the session in \
-the view that opened it, or quit Basecamp; it also ends after 15 minutes without a call)";
+the view that opened it, or quit Basecamp; a session left 15 minutes without a call ends at its next call)";
 
 /// What the person is told about their phrase (open_network's reply, the panel).
 pub(crate) const PHRASE_NOTE: &str = "your phrase reached ferrata_bridge_module sealed to its one-time key (never in clear on \
 Logos Core's IPC), was opened there only to derive the keys of public accounts /0-/7 and the bridge keys, and was wiped; those \
-keys stay in the module's memory (its process not dumpable or readable by other processes) until you close the session, quit \
-Basecamp, or 15 minutes pass without a call. What you typed or pasted passed through Basecamp's window (its keyboard events, \
+keys stay in the module's memory (its process not dumpable or readable by other processes) until you close the session or quit \
+Basecamp (a session left 15 minutes without a call ends at its next call). What you typed or pasted passed through Basecamp's window (its keyboard events, \
 a paste through the clipboard), whose memory the module cannot wipe";
 
 // ------------------------------------------------------------------------------------------------ endpoints

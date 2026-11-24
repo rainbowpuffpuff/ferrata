@@ -154,9 +154,10 @@ What protects the phrase and the session (review of 24 Nov 2026):
   seals the phrase to the module's one-time X25519 key (`qml/js/seal.js`: X25519, HMAC-SHA256; checked against the
   RFCs' vectors and the module's own implementation by `tests/seal-test.mjs`); a new phrase's words come back sealed to
   the view. Qt's own debug logging (`QT_LOGGING_RULES="*.debug=true"`, `qt.gui.shortcutmap`) writes every key typed in
-  Basecamp's window to its log, outside the view's reach: the module tells the view on load when that logging is on,
-  and the view then warns before anything is typed, takes no keys in the phrase field, and takes the phrase by its
-  Paste button (no key events).
+  Basecamp's window to its log, unless the focused item takes the key's shortcut override: the phrase field takes it,
+  so its keys are never logged. The module tells the view on load when that logging is on; the view then says what the
+  log holds (the session's calls in clear: addresses, amounts) and turns New phrase off. The sealed phrase is padded to
+  256 bytes, so it does not tell its length.
 - **Typed into bytes, not a string.** The phrase field is not a text field: each key goes into a byte buffer (shown as
   dots and a word count), which is wiped once the phrase is sealed, on Clear and on close. A paste passes through the
   clipboard and one hidden field emptied at once; keystrokes and a paste pass through Basecamp's window, whose memory
@@ -164,7 +165,8 @@ What protects the phrase and the session (review of 24 Nov 2026):
 - **The view's session.** The module answers `seal_key` and `open_network` only to `ferrata_bridge_ui` as Logos Core
   names the caller (token-bound, from Logos protocol 0.6), refuses a second session while one is open, and once open
   takes a call only with a MAC under the key agreed then (each counter once); every reply names the session's public
-  account /0, which the view checks against the one it opened. An idle session ends after 15 minutes.
+  account /0, which the view checks against the one it opened. A session left 15 minutes without a call ends at its
+  next call.
 - **Signed only after approval.** A claim or burn is built by the module and shown in the view's prompt (the call, the
   amount, the address, the signer, the LEZ fee ceiling, the message hash) before anything is signed; Approve sends
   `confirm` with that record's id, and the module signs exactly that, once.

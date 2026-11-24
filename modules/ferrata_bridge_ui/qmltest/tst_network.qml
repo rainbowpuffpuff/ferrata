@@ -10,8 +10,8 @@
 //   M4  the deposit button is off in the network session and the panel sends the person to the web wallet.
 //   L1  every label shows its text as plain text.
 //   L2  when open_network's answer is lost (Basecamp's 20 s), the view closes the session with its key.
-//   M1  with Qt's debug logging on (it logs every key typed), the view warns before anything is typed, the phrase field
-//       takes no keys, and the phrase comes in by Paste the phrase.
+//   M1  with Qt's debug logging on, the view says what its log holds before anything is typed and New phrase is off; the
+//       phrase field takes each key's shortcut override, so Qt's key logging never sees its keys (round 2, L1).
 // Run as `qmltestrunner -input qmltest/tst_network.qml` from the module's directory (scripts/network-ui-test.sh).
 import QtQuick
 import QtTest
@@ -43,6 +43,7 @@ Item {
         property bool debugLog: false
         property bool noEntropy: false
         property int opens: 0
+        property int sealedBytes: 0
         property int jobId: 7
 
         function reply(result) {
@@ -97,7 +98,8 @@ Item {
                     if (Seal.hex(Seal.hmac(keys.phraseMac, ct)) !== params.phrase_sealed.mac) return refuse("the sealed phrase does not verify");
                     Seal.streamXor(keys.phraseEnc, ct);
                     var s = ""; for (var k = 0; k < ct.length; k++) s += String.fromCharCode(ct[k]);
-                    opened = s;
+                    sealedBytes = ct.length;
+                    opened = s.replace(/ +$/, "");
                 }
                 lastN = 0;
                 if (loseOpen) { open = true; return JSON.stringify({ error: "timeout", message: "the call timed out after 20000 ms" }); }
@@ -211,6 +213,7 @@ Item {
             for (var i = 0; i < host.app.phraseBuf.length; i++) if (host.app.phraseBuf[i] !== 0) zero = false;
             verify(zero, "the typed bytes are wiped");
             compare(logos.opened, phrase, "the module opened exactly the typed words, normalised");
+            compare(logos.sealedBytes, 256, "sealed at a fixed length (round 2, L5)");
             for (var k = before; k < logos.requests.length; k++)
                 verify(logos.requests[k].indexOf("abandon") < 0, "no request carries the phrase in clear: " + logos.requests[k].slice(0, 120));
             compare(host.app.netAccount0, logos.account0);
@@ -318,16 +321,17 @@ Item {
             compare(logos.methods[logos.methods.length - 1], "close");
             verify(!host.app.netOpen);
         }
-        // M1: Qt's debug logging on: warned before typing, no keys taken, the phrase pasted.
-        function test_10_with_qt_debug_logging_the_phrase_is_pasted_not_typed() {
+        // M1: Qt's debug logging on: said what its log holds, New phrase off; typing and pasting the phrase both work.
+        function test_10_with_qt_debug_logging_the_view_says_what_its_log_holds() {
             logos.debugLog = true;
             host.app.resumeJobs();
             tryVerify(function () { return host.app.qtDebugLog; }, 2000, "the module said so");
-            verify(el("net.qtlog").visible && el("net.qtlog").text.indexOf("every key typed") >= 0, el("net.qtlog").text);
+            verify(el("net.qtlog").visible && el("net.qtlog").text.indexOf("holds this session's calls in clear") >= 0, el("net.qtlog").text);
             verify(!el("net.generate").enabled, "no New phrase while Qt debug logging is on (round 2, MF2)");
             el("net.address").text = "https://n.example";
             typePhrase("abandon");
-            compare(host.app.phraseLen, 0, "no keys taken");
+            compare(host.app.phraseLen, 7, "typed (its keys are kept from Qt's key logging: test_12)");
+            click("net.phraseClear");
             clip.text = phrase; clip.selectAll(); clip.copy(); clip.text = "";
             click("net.paste");
             compare(host.app.phraseWords, 12, "pasted");
@@ -348,6 +352,18 @@ Item {
             verify(!host.app.netOpen && String(host.app.netStatus).indexOf("the module's key is not usable") >= 0, host.app.netStatus);
             compare(logos.opens, opensBefore, "no open_network sent");
             logos.noEntropy = false;
+        }
+        // Round 2, L1: the phrase field takes each key's shortcut override, so the key never goes through Qt's shortcut
+        // map (whose debug logging writes its text): a shortcut on the same key does not fire, and the key reaches the field.
+        function test_12_the_phrase_fields_keys_never_reach_the_shortcut_map() {
+            var sc = Qt.createQmlObject('import QtQuick; Shortcut { property int hits: 0; sequence: "q"; context: Qt.ApplicationShortcut; onActivated: hits += 1 }', host);
+            host.app.phraseClear();
+            mouseClick(el("net.phrase"));
+            keyClick("q");
+            compare(sc.hits, 0, "the shortcut map never saw the key");
+            compare(host.app.phraseLen, 1, "the field got it");
+            host.app.phraseClear();
+            sc.destroy();
         }
         function openWithoutWait() {
             el("net.address").text = "https://n.example";

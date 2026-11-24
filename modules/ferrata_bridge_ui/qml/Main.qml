@@ -76,8 +76,9 @@ Rectangle {
     property string faucetText: ""
     // The recovery phrase as typed or pasted: bytes in phraseBuf, never one string (a JavaScript or Qt string cannot be
     // wiped); keys go straight from the keyboard into it, and it is wiped once sealed, on Clear, and on close.
-    // Qt's debug logging is on in this Basecamp (the module says so on load: `jobs`): Qt then writes every key typed in
-    // Basecamp's window to its log, so the phrase field takes no keys, only a paste (Paste the phrase: no key events).
+    // Qt's debug logging is on in this Basecamp (the module says so on load: `jobs`): its log then holds the session's
+    // calls in clear (not the phrase or a key: sealed), and New phrase is off. The phrase field's keys never reach Qt's
+    // key logging (it takes their shortcut override), with or without that logging.
     property bool qtDebugLog: false
     property var phraseBuf: new Uint8Array(512)
     property int phraseLen: 0
@@ -120,8 +121,11 @@ Rectangle {
         if (!generate) {
             var len = phraseLen;
             while (len > 0 && phraseBuf[len - 1] === 32) len--;
-            phrase = new Uint8Array(len);
-            phrase.set(phraseBuf.subarray(0, len));
+            // Padded with spaces to 256 bytes (24 words take at most 215), so the sealed phrase does not tell its length
+            // in a log (review round 2, L5); the module drops the spaces.
+            phrase = new Uint8Array(256);
+            phrase.fill(32);
+            phrase.set(phraseBuf.subarray(0, Math.min(len, 256)));
             phraseClear();
         }
         var p = { network: fNet.text.trim(), eth_rpc: fNetEth.text.trim() };
@@ -748,15 +752,17 @@ Rectangle {
                         implicitHeight: 34
                         color: "white"; radius: 4
                         border.color: activeFocus ? "#3b6fd4" : "#c4cbd4"; border.width: activeFocus ? 2 : 1
-                        activeFocusOnTab: !qtDebugLog
-                        Keys.onPressed: function (event) { if (!qtDebugLog) phraseKey(event); else event.accepted = true }
-                        MouseArea { anchors.fill: parent; onClicked: if (!qtDebugLog) fPhrase.forceActiveFocus() }
+                        activeFocusOnTab: true
+                        // Each key's shortcut override is taken here, so Qt never runs the key through its shortcut map,
+                        // whose debug logging writes the key's text to Basecamp's log (review round 2, L1).
+                        Keys.onShortcutOverride: function (event) { event.accepted = true }
+                        Keys.onPressed: function (event) { phraseKey(event) }
+                        MouseArea { anchors.fill: parent; onClicked: fPhrase.forceActiveFocus() }
                         Text {
                             anchors.fill: parent; anchors.margins: 8
                             textFormat: Text.PlainText; elide: Text.ElideRight; verticalAlignment: Text.AlignVCenter
                             color: phraseLen > 0 ? "#1d2733" : "#8a93a0"
                             text: phraseLen > 0 ? "●".repeat(Math.min(phraseLen, 40)) + "   " + phraseWords + (phraseWords === 1 ? " word" : " words")
-                                  : qtDebugLog ? "typing is off here (see the warning below): copy the phrase, then Paste the phrase"
                                   : "12 or 24 words (BIP-39): click here, then type or paste them (a test phrase, never one that holds value)"
                         }
                     }
@@ -767,7 +773,7 @@ Rectangle {
                 PlainLabel {
                     objectName: "net.qtlog"
                     visible: qtDebugLog
-                    text: "Qt debug logging is on in this Basecamp (QT_LOGGING_RULES or a qtlogging.ini): Qt writes every key typed in Basecamp's window to its log file, so a typed phrase could be read back from it. Typing is off for the phrase: copy it, then use Paste the phrase (no keys are pressed), or quit Basecamp and start it without that logging."
+                    text: "Qt debug logging is on in this Basecamp (QT_LOGGING_RULES or a qtlogging.ini): its log file holds this session's calls in clear (the network's address, your Sepolia address, a burn's address and amount) and keys typed in other fields; never your phrase or a key (the phrase is sealed, and its field's keys are kept from Qt's key logging). New phrase is off: make one in the network's web wallet. To keep the log clean, quit Basecamp and start it without that logging."
                     color: "#b3261e"; font.bold: true; wrapMode: Text.WordWrap; Layout.fillWidth: true
                 }
                 RowLayout { PlainLabel { text: "Your Sepolia address"; Layout.preferredWidth: 170 } TextField { id: fDepositor; objectName: "net.depositor"; placeholderText: "0x… (optional: shown in the header with its Sepolia balance)"; Layout.preferredWidth: 560 } }
@@ -776,7 +782,7 @@ Rectangle {
                     // Off while Qt debug logging is on (review round 2, MF2): make a new phrase in the web wallet then.
                     Button { objectName: "net.generate"; text: "New phrase"; enabled: busy === 0 && !netOpening && fNet.text.trim() !== "" && !qtDebugLog; onClicked: netOpenSession(true) }
                 }
-                Note { objectName: "net.note"; text: "Where your phrase goes: it is kept here as bytes as you type it (a paste passes through the clipboard), then sealed to ferrata_bridge_module's one-time key, so it never crosses Logos Core's IPC in clear, and wiped from this view. The module opens it only to derive the keys of public accounts /0-/7 and the bridge keys, wipes it, and keeps those keys in its memory (not dumpable, not readable by other processes) until you close the session, quit Basecamp, or 15 minutes pass without a call. What passed through Basecamp's window (your keystrokes, a paste) may stay in its memory until reused: use a test phrase, never one that holds value. Only this view can use the session (each call is signed with a key agreed when it opens). Every LEZ transaction is shown to you before the module signs it. The module accepts only the deployment it knows (bridge program, configuration, vault, Sepolia) and refuses any other; the network's own answers (positions, balances) are trusted as they come." }
+                Note { objectName: "net.note"; text: "Where your phrase goes: it is kept here as bytes as you type it (a paste passes through the clipboard), then sealed to ferrata_bridge_module's one-time key, so it never crosses Logos Core's IPC in clear, and wiped from this view. The module opens it only to derive the keys of public accounts /0-/7 and the bridge keys, wipes it, and keeps those keys in its memory (not dumpable, not readable by other processes) until you close the session or quit Basecamp (a session left 15 minutes without a call ends at its next call). What passed through Basecamp's window (your keystrokes, a paste) may stay in its memory until reused: use a test phrase, never one that holds value. Only this view can use the session (each call is signed with a key agreed when it opens). Every LEZ transaction is shown to you before the module signs it. The module accepts only the deployment it knows (bridge program, configuration, vault, Sepolia) and refuses any other; the network's own answers (positions, balances) are trusted as they come." }
             }
             PlainLabel { objectName: "net.status"; text: netStatus; visible: netStatus !== ""; wrapMode: Text.WordWrap; Layout.fillWidth: true; color: netStatusBad ? "#b3261e" : "#1b6b3a" }
             ColumnLayout {
