@@ -732,11 +732,17 @@ fn open_network(params: &Value) -> Result<Value, String> {
     *SESSION.lock().unwrap_or_else(|p| p.into_inner()) = Some(Session { chain, s, calls: 0 });
     if qt_debug_logging() {
         if let Some(c) = summary["checks"].as_array_mut() {
-            c.push(json!("note: Qt debug logging is on in this Basecamp (QT_LOGGING_RULES or a qtlogging.ini): its log holds this session's calls and answers (account ids, positions, balances; the phrase and the keys are sealed) and every key typed in Basecamp's window (Qt's own key logging): a phrase typed rather than pasted can be read back from it"));
+            c.push(json!(QT_LOG_NOTE));
         }
     }
     Ok(summary)
 }
+
+/// What open_network says when Qt's debug logging is on (review round 2, L1 and L3: the phrase field's keys are kept from
+/// Qt's key logging; the calls are not).
+const QT_LOG_NOTE: &str = "note: Qt debug logging is on in this Basecamp (QT_LOGGING_RULES or a qtlogging.ini): its log holds this \
+session's calls and answers in clear (addresses, account ids, positions, balances, amounts) and keys typed in Basecamp's other \
+fields; never the phrase or a key (the phrase is sealed, and its field's keys are kept from Qt's key logging)";
 
 /// Whether Qt's debug logging looks enabled in this process's environment for Qt's own categories (`*`, `qt.*`): the
 /// remote-objects transport's (what crosses it is sealed or MAC'd; the answers are private but not secret) and the
@@ -2368,6 +2374,23 @@ mod tests {
         assert_eq!(seen(Some("*.debug=false")), json!(false));
         assert_eq!(seen(Some("ferrata.debug=true")), json!(false));
         assert_eq!(seen(None), json!(false));
+    }
+
+    /// Review round 2, L1: with Qt's debug logging on, the open's note says what its log holds, and that the phrase is not
+    /// in it (its field's keys never reach Qt's key logging).
+    #[test]
+    fn r2_l1_the_opens_note_says_what_the_debug_log_holds() {
+        let _s = serial();
+        close();
+        std::env::set_var("QT_LOGGING_RULES", "*.debug=true");
+        let net = stand_in_lez([0u8; 32], 0, Duration::ZERO);
+        SKIP_CHECKS.store(true, Ordering::SeqCst);
+        let (r, _) = ViewClient::new(VIEW).open(&json!({ "network": net.url, "eth_rpc": "http://127.0.0.1:9" }), Some(PHRASE));
+        SKIP_CHECKS.store(false, Ordering::SeqCst);
+        std::env::remove_var("QT_LOGGING_RULES");
+        let checks = v(&r)["result"]["checks"].to_string();
+        assert!(checks.contains("its field's keys are kept from Qt's key logging") && !checks.contains("can be read back"), "{checks}");
+        close();
     }
 
     /// Review round 2, MF2: seal_key gives the view 32 fresh bytes of the operating system's randomness for its secret,
