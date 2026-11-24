@@ -1,0 +1,11 @@
+{
+  "channel_id": "0101010101010101010101010101010101010101010101010101010101010101",
+  "final_msg_id": "1cf04ac650090ce1a0a329f6a50c97d768717e86a1ad6e8eca74b894e075e33d",
+  "fork_digest": null,
+  "tip_hash": "c7b81252e95f6fc30e36f9f3564e27c3660e1358089d062e55c489092765b01e",
+  "tip_id": 30,
+  "tip_node_block": "081d8a29aee1f65d5fa7310840ed4e9b83507094a05710e059a7731784504a47",
+  "tip_signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+  "tip_slot": 8930834,
+  "version": "ferrata-attestor-state/v2"
+}
