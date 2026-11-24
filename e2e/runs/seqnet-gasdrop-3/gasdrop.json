@@ -1,0 +1,28 @@
+{
+  "relayer": {
+    "lez": "0xbe4749d897560029caac6c340ab2d38409dc10755067b1fb97cdcf513840b551",
+    "guest": "0xce3ad533d2c72b38c9779f1c692dd784e3fd754612808696e1362da49c7f8125",
+    "amount": "200000000",
+    "terms": "http://127.0.0.1:<gw>/relayer/gas-drop"
+  },
+  "claim": {
+    "oneTime": "0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3",
+    "job": "went to http://127.0.0.1:18084/relayer/gas-drop (job gas-drop-cd6efdc213344cb4703558dba09755f76699b31837e3c6f271bad16311b1adad.json)",
+    "relayer": {
+      "amount": "200000000",
+      "applied": true,
+      "kind": "gas-drop",
+      "nullifier": "0xcd6efdc213344cb4703558dba09755f76699b31837e3c6f271bad16311b1adad",
+      "oneTimeAddress": "0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3",
+      "resolvedLater": true,
+      "sealed": true,
+      "sends": 1,
+      "tx": "48c1cd515473c683328bfcd3f6d7afa46ed2bce63ff463e4bd0b6a66e6162de4"
+    },
+    "tx": "42121a36f9e8edff139df8640f8e04d7f1347f4624576be2f0c41c82f2a92f83"
+  },
+  "burn": {
+    "tx": "dfcf79b46772f274640d6d9ad34183abc42c7199307156a3e76d3ae94b477aed",
+    "feeFrom": "0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3"
+  }
+}
