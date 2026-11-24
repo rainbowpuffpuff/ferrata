@@ -17,10 +17,12 @@ set -u
 S=${P4_BUILD_DIR:-../../tmp/perf-p4}
 rm -rf "$S"; mkdir -p "$S/stripped" "$S/dry" "$S/stage/r0vm"
 export RISC0_HOME=$PWD/../../risc0-home-lez RISC0_BUILD_LOCKED=1
-R0=$(readlink -f "$(command -v r0vm)")
+# r0vm 3.0.5 (LEZ's RISC Zero): rzup's copy in ~/.risc0, else the one on PATH
+R0=$(ls "$HOME"/.risc0/extensions/v3.0.5-cargo-risczero-*/r0vm 2> /dev/null | head -1)
+[ -n "$R0" ] || R0=$(readlink -f "$(command -v r0vm)")
 {
   date -u +%FT%TZ; echo "nproc --all $(nproc --all)"; grep -m1 'model name' /proc/cpuinfo; grep MemTotal /proc/meminfo
-  rustc --version; cargo --version; r0vm --version; ldd --version | head -1; echo "r0vm $R0"; sha256sum "$R0"
+  rustc --version; cargo --version; "$R0" --version; ldd --version | head -1; echo "r0vm $R0"; sha256sum "$R0"
   echo "FERRATA_HEAD=${FERRATA_HEAD:-} FERRATA_DIRTY=${FERRATA_DIRTY:-}"
 } > "$S/box-env.txt" 2>&1
 cargo build -p harness --locked --bin prove_attest --bin prove_bridge > "$S/build.log" 2>&1
@@ -51,10 +53,11 @@ for l in open(sys.argv[1]):
         c = [x.strip().strip("`") for x in l.split("|")]
         print(c[2], c[3]); break' ../docs/image-ids.md)
   echo "docs/image-ids.md release_31: $WANT_ID $WANT_SHA"
-  R31=$S.risc0-31   # beside S (kept between runs, not part of what is brought back)
+  R31=$(realpath -m "$S.risc0-31")   # beside S (kept between runs, not part of what is brought back)
   R0_31=$(find "$R31" -maxdepth 4 -type f -name r0vm 2> /dev/null | head -1)
   if [ -z "$R0_31" ]; then
-    RISC0_HOME=$R31 rzup install r0vm 3.1.0 > "$S/release/rzup.log" 2>&1; echo "rzup r0vm 3.1.0 exit $?"
+    # HOME too: rzup points ~/.cargo/bin/r0vm and cargo-risczero at what it installs, whatever RISC0_HOME says
+    HOME=$R31.home RISC0_HOME=$R31 rzup install r0vm 3.1.0 > "$S/release/rzup.log" 2>&1; echo "rzup r0vm 3.1.0 exit $?"
     R0_31=$(find "$R31" -maxdepth 4 -type f -name r0vm | head -1)
   fi
   echo "r0vm 3.1.0: $("$R0_31" --version) $(sha256sum "$R0_31" | cut -c1-64)"
