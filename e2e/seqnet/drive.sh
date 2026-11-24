@@ -10,6 +10,7 @@
 #      stand-in, the user's private claim and private burn, the checkpoint, the release, the records.
 #   5. Ethereum's transactions listed (ethtxs.py); anvil stopped.
 # Records: e2e/runs/seqnet-NAME/ (committed); work: spike/tmp/miniapp-sequencer/w-NAME/ (not committed).
+# MODE gasdrop (hook-gasdrop.sh): the cli mode's deposit; the network's gas-drop relayer by default, behind the gateway.
 # MODE robust (hook-robust.sh): the cli mode's deposit twice; the relayer's root import and interrupted user commands.
 set -euo pipefail
 REPO="$SEQNET_REPO"; T="$SEQNET_T"; NAME="$SEQNET_NAME"; MODE="$SEQNET_MODE"
@@ -147,7 +148,7 @@ EOF
 F=("$BIN/ferrata" --seed "$U/seed.txt" --eth-rpc $RPC --chain-id 11155111 --vault "$VAULT" --from-block "$FROM")
 
 # ---- 3b. cli: the private deposit with the tool, then capture-1 (miniapp: both in the hook, through the view) ------
-if [ "$MODE" = cli ] || [ "$MODE" = deployer ] || [ "$MODE" = robust ]; then
+if [ "$MODE" = cli ] || [ "$MODE" = deployer ] || [ "$MODE" = robust ] || [ "$MODE" = gasdrop ]; then
   u 01-keys "${F[@]}" keys --accounts 2 || die "keys"
   u 02-status "${F[@]}" status || die "status"
   u 03-deposit-dry-run "${F[@]}" deposit --denomination 0 --from "$DEPOSITOR" || die "deposit dry run"
