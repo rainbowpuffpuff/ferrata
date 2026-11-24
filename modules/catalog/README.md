@@ -7,10 +7,14 @@ The proposal (§B7) releases Ferrata's Logos modules from a catalog of its own w
 
 | File | What | From the base |
 |---|---|---|
-| `logos-repo.json` | how clients (`lgpd`, the `package_downloader` module, the package-manager UI) identify the catalog; `indexUrl` names the rolling `index` release | the base's template, filled in |
+| `logos-repo.json` | how clients (`lgpd`, the `package_downloader` module, the package-manager UI) identify the catalog; `indexUrl` names `index/index.json` on the catalog's `main`, which its `rebuild-index.yml` commits after every release | the base's template, filled in |
 | `.github/workflows/_release-module.yml` | calls `logos-co/logos-modules-release-action/.github/workflows/release.yml` pinned to the commit its `v1` tag names (`bbdc528…`, with the variants list and `signing_mode: inline`, the secret the workflows pass named `signing_key` from the repository's `LOGOS_SIGNING_KEY`) | the base's, with signing on, the pin, and a header; least-privilege `permissions:` per job in every file |
 | `.github/workflows/release-<module>.yml` (six: `ferrata_attest_module`, `ferrata_bridge_module`, `ferrata_attestor_module`, `ferrata_monitor_module`, `ferrata_updater_module`, `ferrata_relayer_module`) | one per module: `module_path: submodules/<module>` | the base's `release-module.yml.template`, as `scripts/add-module.sh` writes it |
 | `.github/workflows/release-all.yml` | releases every submodule | the base's, with least-privilege `permissions:` per job and the checkout pinned to a commit |
+
+Left out of the base: `unpublish.yml` (it deletes releases, which the release-integrity rules freeze), `validate-repo.yml`
+(it checks a hand-edited `logos-repo.json`; ours is generated) and the maintainer's `scripts/`; every difference and
+why: [`RELEASE.md`](RELEASE.md), "The base's files".
 
 In the catalog's own repository these files sit at its root (GitHub runs workflows only from the
 root's `.github/`, so nothing here runs from this repository). Each module is a git submodule under
@@ -18,9 +22,11 @@ root's `.github/`, so nothing here runs from this repository). Each module is a 
 writes that repository from this one (the module's directory with its staged crate committed, since
 the builder copies only `rust-lib/` and a flake sees only tracked files).
 
-**Not done:** no catalog repository, module repositories, release, tag or index has been created or
-published (no push, no public network). The action itself has not run. Publishing is one owner step,
-prepared by [`RELEASE.md`](RELEASE.md): `modules/scripts/release-publish.sh ORG CATALOG_REPO
+**Published once,** by the owner, from `98375f82`: [`landclimber/ferrata-modules`](https://github.com/landclimber/ferrata-modules)
+(24 November 2026), the six modules as signed, immutable `<module>-v0.1.0` releases built by the action, the index
+on the catalog's `main`; read back in [`releases/RELEASE-INTEGRITY.md`](../../releases/RELEASE-INTEGRITY.md) and
+installed from in [`install-test-landclimber-2026-11-24/`](install-test-landclimber-2026-11-24/README.md). The mini-app
+(`ferrata_bridge_ui`, a ui module) is not in it. Publishing is one owner step, prepared by [`RELEASE.md`](RELEASE.md): `modules/scripts/release-publish.sh ORG CATALOG_REPO
 SIGNING_KEY_FILE --yes` generates the published catalog's `logos-repo.json` (the signer's `did:jwk` under
 `trustedSigners`, the `indexUrl`), exports the module repositories, assembles the catalog, checks the
 remote side read-only, then creates the repositories, pushes them and sets the signing secret, and stops:
@@ -52,4 +58,7 @@ module's log end to end and `advance` (`e2e.sh`), and the bridge module on the m
 (`bridge_e2e.sh`, with `RELEASE_ELF`). Its log, with those runs' check lines, is in `install-test/`
 (`modules/RESULTS.md`). `install-test-relayer/` is the relayer module's: installed by name from its own dry run's
 catalog, loaded, called, and its root imports on the mini-app's devnet through the installed module
-(`CATALOG_E2E_SCRIPTS=relayer-e2e.sh PARTS=roots`), 10 checks passed.
+(`CATALOG_E2E_SCRIPTS=relayer-e2e.sh PARTS=roots`), 10 checks passed. `install-test-landclimber-2026-11-24/` is the
+install from the published catalog: the six installed by name from its raw `logos-repo.json` URL with
+`signature_policy: require`, loaded and called, after an unsigned, an other-signer and a tampered copy and the
+catalog's package before its key was trusted were refused (56 of 56 steps).

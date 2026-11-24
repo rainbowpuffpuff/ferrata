@@ -1,0 +1,377 @@
+$ curl -fsSL https://raw.githubusercontent.com/landclimber/ferrata-modules/refs/heads/main/logos-repo.json | jq -r '.trustedSigners[0].did'
+did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6ImNLVmpDSnFiWEFqYTBtenc1VFBOODhqWUs2QXkwTmtpRWNldUduekN6bGsifQ
+$ git ls-remote https://github.com/landclimber/ferrata-modules.git refs/heads/main | awk '{print $1}'
+9738dd099435979df64eb746905ab73344d2cfc7
+$ git -c core.hooksPath=/dev/null clone -q https://github.com/landclimber/ferrata-modules WORK/ferrata-modules && git -C WORK/ferrata-modules rev-parse HEAD
+9738dd099435979df64eb746905ab73344d2cfc7
+$ git -C WORK/ferrata-modules show HEAD:logos-repo.json | jq -r '.trustedSigners[0].did'
+did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6ImNLVmpDSnFiWEFqYTBtenc1VFBOODhqWUs2QXkwTmtpRWNldUduekN6bGsifQ
+$ git -C WORK/ferrata-modules show HEAD:logos-repo.json | jq -r .indexUrl
+https://raw.githubusercontent.com/landclimber/ferrata-modules/refs/heads/main/index/index.json
+$ git -C WORK/ferrata-modules log --reverse --format='%h %an: %s' | head -n 4
+c9bdb66 ferrata-release-publish: Ferrata module catalog: 6 modules, signing on, action pinned (assembled by modules/scripts/release-publish.sh)
+6c85ede rainbowpuffpuff: Index on main: rebuild-index.yml commits index/index.json; indexUrl points at it
+4408d28 rainbowpuffpuff: rebuild-index.yml: lgx built from logos-package at a pinned commit (4bdd9041, the revision the last run used)
+9738dd0 github-actions[bot]: index: 6 package(s), rebuilt by rebuild-index.yml
+$ git -C WORK/ferrata-modules rev-list --max-parents=0 HEAD
+c9bdb6644b38bc333dd39110df6eeadd435e396d
+$ git -C WORK/ferrata-modules diff --quiet c9bdb6644b38bc333dd39110df6eeadd435e396d HEAD -- submodules .gitmodules && echo unchanged || echo CHANGED
+unchanged
+$ curl -fsSL 'https://raw.githubusercontent.com/landclimber/ferrata-modules/refs/heads/main/index/index.json' | jq -c '{repositoryName, packages: [.packages[].name]}'
+{"repositoryName":"ferrata-modules","packages":["ferrata_updater_module","ferrata_relayer_module","ferrata_monitor_module","ferrata_bridge_module","ferrata_attestor_module","ferrata_attest_module"]}
+$ git -C WORK/ferrata-modules show HEAD:submodules/ferrata_attest_module/metadata.json 2>/dev/null || curl -fsSL https://raw.githubusercontent.com/landclimber/ferrata_attest_module/refs/heads/main/metadata.json
+{
+  "name": "ferrata_attest_module",
+  "display_name": "Ferrata attestation",
+  "version": "0.1.0",
+  "type": "core",
+  "interface": "cdylib",
+  "category": "ethereum",
+  "description": "Ferrata (prototype, unaudited, not for production): dry-run an Ethereum attestation against a header record and verify a light-client checkpoint, with the program's verification core",
+  "main": "ferrata_attest_module_plugin",
+  "dependencies": [],
+
+  "codegen": {
+    "rust": { "crate": "rust-lib", "trait": "FerrataAttestModule" }
+  },
+
+  "nix": {
+    "packages": {
+      "build": [],
+      "runtime": []
+    },
+    "external_libraries": [],
+    "cmake": {
+      "find_packages": [],
+      "extra_sources": [],
+      "extra_include_dirs": [],
+      "extra_link_libraries": []
+    }
+  }
+}
+$ gh release view 'ferrata_attest_module-v0.1.0' --repo 'landclimber/ferrata-modules' --json url,isImmutable --jq '.url + " " + (.isImmutable|tostring)'
+https://github.com/landclimber/ferrata-modules/releases/tag/ferrata_attest_module-v0.1.0 true
+$ git -C WORK/ferrata-modules ls-tree HEAD submodules/ferrata_attest_module | awk '{print $3}'
+06580ba155284ee3bf1759c07bcc74e1a062ad75
+$ curl -fsSL https://raw.githubusercontent.com/landclimber/ferrata_attest_module/06580ba155284ee3bf1759c07bcc74e1a062ad75/rust-lib/staged/STAGED.json | jq -r .commit
+98375f82c754f2fa4a56e20418687a89b321228f
+$ gh release download 'ferrata_attest_module-v0.1.0' --repo 'landclimber/ferrata-modules' --pattern 'sidecar.json' --output - | jq -c '{rootHash, sha256, builtVariants, missingVariants, signerDid: .signature.did}'
+{"rootHash":"2a879a4df2278c3d09a366d1a77a0d89ffe8855b8df2d4f292a80571f25a8736","sha256":"28e2b00194ab9aba7b32d9dd82a846fe87499c98d61ecf242eea9f3f7febe92b","builtVariants":["darwin-arm64","linux-amd64","linux-arm64"],"missingVariants":[],"signerDid":"did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6ImNLVmpDSnFiWEFqYTBtenc1VFBOODhqWUs2QXkwTmtpRWNldUduekN6bGsifQ"}
+$ gh release download 'ferrata_attest_module-v0.1.0' --repo 'landclimber/ferrata-modules' --pattern '*.lgx' --dir WORK/pkgs
+
+$ sha256sum WORK/pkgs/ferrata_attest_module-0.1.0.lgx | cut -d' ' -f1
+28e2b00194ab9aba7b32d9dd82a846fe87499c98d61ecf242eea9f3f7febe92b
+$ curl -fsSL 'https://raw.githubusercontent.com/landclimber/ferrata-modules/refs/heads/main/index/index.json' | jq -c --arg t 'ferrata_attest_module-v0.1.0' '.packages[].versions[] | select(.publisherRef == $t) | {rootHash, sha256}'
+{"rootHash":"2a879a4df2278c3d09a366d1a77a0d89ffe8855b8df2d4f292a80571f25a8736","sha256":"28e2b00194ab9aba7b32d9dd82a846fe87499c98d61ecf242eea9f3f7febe92b"}
+$ git -C DRY/ferrata_attest_module.git rev-parse refs/heads/main
+06580ba155284ee3bf1759c07bcc74e1a062ad75
+$ git -C WORK/ferrata-modules show HEAD:submodules/ferrata_bridge_module/metadata.json 2>/dev/null || curl -fsSL https://raw.githubusercontent.com/landclimber/ferrata_bridge_module/refs/heads/main/metadata.json
+{
+  "name": "ferrata_bridge_module",
+  "display_name": "Ferrata bridge",
+  "version": "0.1.0",
+  "type": "core",
+  "interface": "cdylib",
+  "category": "bridge",
+  "description": "Ferrata (prototype, unaudited, not for production): the user side of the Ferrata bridge between Ethereum and LEZ: deposit commitments and vault calls, claims, burns, release witnesses and journals, recovery and status, with the bridge core",
+  "main": "ferrata_bridge_module_plugin",
+  "dependencies": [],
+
+  "codegen": {
+    "rust": { "crate": "rust-lib", "trait": "FerrataBridgeModule" }
+  },
+
+  "nix": {
+    "packages": {
+      "build": [],
+      "runtime": []
+    },
+    "external_libraries": [],
+    "cmake": {
+      "find_packages": [],
+      "extra_sources": [],
+      "extra_include_dirs": [],
+      "extra_link_libraries": []
+    }
+  }
+}
+$ gh release view 'ferrata_bridge_module-v0.1.0' --repo 'landclimber/ferrata-modules' --json url,isImmutable --jq '.url + " " + (.isImmutable|tostring)'
+https://github.com/landclimber/ferrata-modules/releases/tag/ferrata_bridge_module-v0.1.0 true
+$ git -C WORK/ferrata-modules ls-tree HEAD submodules/ferrata_bridge_module | awk '{print $3}'
+1728fa13777d92de8e2fcb9dfff1eea20f558a54
+$ curl -fsSL https://raw.githubusercontent.com/landclimber/ferrata_bridge_module/1728fa13777d92de8e2fcb9dfff1eea20f558a54/rust-lib/staged/STAGED.json | jq -r .commit
+98375f82c754f2fa4a56e20418687a89b321228f
+$ gh release download 'ferrata_bridge_module-v0.1.0' --repo 'landclimber/ferrata-modules' --pattern 'sidecar.json' --output - | jq -c '{rootHash, sha256, builtVariants, missingVariants, signerDid: .signature.did}'
+{"rootHash":"0e46fbecf4c39caa9880bac11bc53c9abab4a4c703b9af9fa34db6a4f166fdd8","sha256":"b160668aa824c8f08dc42d20a071c4f92173625a521671b7e4ec3028acdb7f7d","builtVariants":["darwin-arm64","linux-amd64","linux-arm64"],"missingVariants":[],"signerDid":"did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6ImNLVmpDSnFiWEFqYTBtenc1VFBOODhqWUs2QXkwTmtpRWNldUduekN6bGsifQ"}
+$ gh release download 'ferrata_bridge_module-v0.1.0' --repo 'landclimber/ferrata-modules' --pattern '*.lgx' --dir WORK/pkgs
+
+$ sha256sum WORK/pkgs/ferrata_bridge_module-0.1.0.lgx | cut -d' ' -f1
+b160668aa824c8f08dc42d20a071c4f92173625a521671b7e4ec3028acdb7f7d
+$ curl -fsSL 'https://raw.githubusercontent.com/landclimber/ferrata-modules/refs/heads/main/index/index.json' | jq -c --arg t 'ferrata_bridge_module-v0.1.0' '.packages[].versions[] | select(.publisherRef == $t) | {rootHash, sha256}'
+{"rootHash":"0e46fbecf4c39caa9880bac11bc53c9abab4a4c703b9af9fa34db6a4f166fdd8","sha256":"b160668aa824c8f08dc42d20a071c4f92173625a521671b7e4ec3028acdb7f7d"}
+$ git -C DRY/ferrata_bridge_module.git rev-parse refs/heads/main
+1728fa13777d92de8e2fcb9dfff1eea20f558a54
+$ git -C WORK/ferrata-modules show HEAD:submodules/ferrata_attestor_module/metadata.json 2>/dev/null || curl -fsSL https://raw.githubusercontent.com/landclimber/ferrata_attestor_module/refs/heads/main/metadata.json
+{
+  "name": "ferrata_attestor_module",
+  "display_name": "Ferrata attestor (rule B)",
+  "version": "0.1.0",
+  "type": "core",
+  "interface": "cdylib",
+  "category": "bridge",
+  "description": "Ferrata (prototype, unaudited, not for production): ferrata_attestor as a module, the rule (B) signer a LEZ sequencer runs beside its Logos Blockchain node (reads the node's final tier, checks the channel's inscription chain, signs the final-tier message v2 with a key its channel key certified, once or as a loop) and the collector of t of n attestations into a checkpoint_b input",
+  "main": "ferrata_attestor_module_plugin",
+  "dependencies": [],
+
+  "codegen": {
+    "rust": { "crate": "rust-lib", "trait": "FerrataAttestorModule" }
+  },
+
+  "nix": {
+    "packages": {
+      "build": [],
+      "runtime": []
+    },
+    "external_libraries": [],
+    "cmake": {
+      "find_packages": [],
+      "extra_sources": [],
+      "extra_include_dirs": [],
+      "extra_link_libraries": []
+    }
+  }
+}
+$ gh release view 'ferrata_attestor_module-v0.1.0' --repo 'landclimber/ferrata-modules' --json url,isImmutable --jq '.url + " " + (.isImmutable|tostring)'
+https://github.com/landclimber/ferrata-modules/releases/tag/ferrata_attestor_module-v0.1.0 true
+$ git -C WORK/ferrata-modules ls-tree HEAD submodules/ferrata_attestor_module | awk '{print $3}'
+9937299ceca69c365995c4761e4e7481d213d298
+$ curl -fsSL https://raw.githubusercontent.com/landclimber/ferrata_attestor_module/9937299ceca69c365995c4761e4e7481d213d298/rust-lib/attestor/STAGED.json | jq -r .commit
+98375f82c754f2fa4a56e20418687a89b321228f
+$ gh release download 'ferrata_attestor_module-v0.1.0' --repo 'landclimber/ferrata-modules' --pattern 'sidecar.json' --output - | jq -c '{rootHash, sha256, builtVariants, missingVariants, signerDid: .signature.did}'
+{"rootHash":"85dcae24795b94e5e21484f43bf367d79fe7e6cc11071f1379d48203ad6f2359","sha256":"8bef9d31d44a806c3b6a0a53c0a37203dac50bcb5c4e0b03d2fc9ccda9a84dd8","builtVariants":["darwin-arm64","linux-amd64","linux-arm64"],"missingVariants":[],"signerDid":"did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6ImNLVmpDSnFiWEFqYTBtenc1VFBOODhqWUs2QXkwTmtpRWNldUduekN6bGsifQ"}
+$ gh release download 'ferrata_attestor_module-v0.1.0' --repo 'landclimber/ferrata-modules' --pattern '*.lgx' --dir WORK/pkgs
+
+$ sha256sum WORK/pkgs/ferrata_attestor_module-0.1.0.lgx | cut -d' ' -f1
+8bef9d31d44a806c3b6a0a53c0a37203dac50bcb5c4e0b03d2fc9ccda9a84dd8
+$ curl -fsSL 'https://raw.githubusercontent.com/landclimber/ferrata-modules/refs/heads/main/index/index.json' | jq -c --arg t 'ferrata_attestor_module-v0.1.0' '.packages[].versions[] | select(.publisherRef == $t) | {rootHash, sha256}'
+{"rootHash":"85dcae24795b94e5e21484f43bf367d79fe7e6cc11071f1379d48203ad6f2359","sha256":"8bef9d31d44a806c3b6a0a53c0a37203dac50bcb5c4e0b03d2fc9ccda9a84dd8"}
+$ git -C DRY/ferrata_attestor_module.git rev-parse refs/heads/main
+9937299ceca69c365995c4761e4e7481d213d298
+$ git -C WORK/ferrata-modules show HEAD:submodules/ferrata_monitor_module/metadata.json 2>/dev/null || curl -fsSL https://raw.githubusercontent.com/landclimber/ferrata_monitor_module/refs/heads/main/metadata.json
+{
+  "name": "ferrata_monitor_module",
+  "display_name": "Ferrata monitor (watchers)",
+  "version": "0.1.0",
+  "type": "core",
+  "interface": "cdylib",
+  "category": "bridge",
+  "description": "Ferrata (prototype, unaudited, not for production): the watchers' monitor as a module: follows a Ferrata vault, checks every candidate checkpoint against its own node views and cancels a wrong one in time, pauses checkpoints, alerts on and revokes a wrong finalised one, audits rule (B)'s published attestations, as a loop under Logos Core or for a given number of polls, and offline verdicts",
+  "main": "ferrata_monitor_module_plugin",
+  "dependencies": [],
+
+  "codegen": {
+    "rust": { "crate": "rust-lib", "trait": "FerrataMonitorModule" }
+  },
+
+  "nix": {
+    "packages": {
+      "build": [],
+      "runtime": []
+    },
+    "rust": {
+      "toolchain": "1.93.0"
+    },
+    "external_libraries": [],
+    "cmake": {
+      "find_packages": [],
+      "extra_sources": [],
+      "extra_include_dirs": [],
+      "extra_link_libraries": []
+    }
+  }
+}
+$ gh release view 'ferrata_monitor_module-v0.1.0' --repo 'landclimber/ferrata-modules' --json url,isImmutable --jq '.url + " " + (.isImmutable|tostring)'
+https://github.com/landclimber/ferrata-modules/releases/tag/ferrata_monitor_module-v0.1.0 true
+$ git -C WORK/ferrata-modules ls-tree HEAD submodules/ferrata_monitor_module | awk '{print $3}'
+834f0d893db29f289e555f463ce84d471490cf74
+$ curl -fsSL https://raw.githubusercontent.com/landclimber/ferrata_monitor_module/834f0d893db29f289e555f463ce84d471490cf74/rust-lib/monitor/STAGED.json | jq -r .commit
+98375f82c754f2fa4a56e20418687a89b321228f
+$ gh release download 'ferrata_monitor_module-v0.1.0' --repo 'landclimber/ferrata-modules' --pattern 'sidecar.json' --output - | jq -c '{rootHash, sha256, builtVariants, missingVariants, signerDid: .signature.did}'
+{"rootHash":"161a90a4985bd0b1351635ab5031aef70a1a0390b3c9657bb2d4d9e02a18a301","sha256":"667107ffdfe9322e249a4b386d8b05a5538c7d10cf72e6ab9ca5e416ae8bb062","builtVariants":["linux-amd64","linux-arm64"],"missingVariants":["darwin-arm64"],"signerDid":"did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6ImNLVmpDSnFiWEFqYTBtenc1VFBOODhqWUs2QXkwTmtpRWNldUduekN6bGsifQ"}
+$ gh release download 'ferrata_monitor_module-v0.1.0' --repo 'landclimber/ferrata-modules' --pattern '*.lgx' --dir WORK/pkgs
+
+$ sha256sum WORK/pkgs/ferrata_monitor_module-0.1.0.lgx | cut -d' ' -f1
+667107ffdfe9322e249a4b386d8b05a5538c7d10cf72e6ab9ca5e416ae8bb062
+$ curl -fsSL 'https://raw.githubusercontent.com/landclimber/ferrata-modules/refs/heads/main/index/index.json' | jq -c --arg t 'ferrata_monitor_module-v0.1.0' '.packages[].versions[] | select(.publisherRef == $t) | {rootHash, sha256}'
+{"rootHash":"161a90a4985bd0b1351635ab5031aef70a1a0390b3c9657bb2d4d9e02a18a301","sha256":"667107ffdfe9322e249a4b386d8b05a5538c7d10cf72e6ab9ca5e416ae8bb062"}
+$ git -C DRY/ferrata_monitor_module.git rev-parse refs/heads/main
+834f0d893db29f289e555f463ce84d471490cf74
+$ git -C WORK/ferrata-modules show HEAD:submodules/ferrata_updater_module/metadata.json 2>/dev/null || curl -fsSL https://raw.githubusercontent.com/landclimber/ferrata_updater_module/refs/heads/main/metadata.json
+{
+  "name": "ferrata_updater_module",
+  "display_name": "Ferrata updater (light client)",
+  "version": "0.1.0",
+  "type": "core",
+  "interface": "cdylib",
+  "category": "ethereum",
+  "description": "Ferrata (prototype, unaudited, not for production): ferrata-updater as a module: keeps Ferrata light-client instances on LEZ following Ethereum from several beacon API sources, verifies every candidate with the program's own steps before paying for it, and drives the attestation program's public job, on a running LEZ v0.4.0-rc1 sequencer (its RPC on this machine, every result read from blocks final on Bedrock) or on the in-process LEZ chain of its tests",
+  "main": "ferrata_updater_module_plugin",
+  "dependencies": [],
+
+  "codegen": {
+    "rust": { "crate": "rust-lib", "trait": "FerrataUpdaterModule" }
+  },
+
+  "nix": {
+    "packages": {
+      "build": [],
+      "runtime": ["pcsclite"]
+    },
+    "rust": {
+      "toolchain": "1.98.0",
+      "packages": {
+        "build": ["pkg-config", "rustPlatform.bindgenHook"],
+        "runtime": ["pcsclite", "zlib"]
+      }
+    },
+    "external_libraries": [],
+    "cmake": {
+      "find_packages": [],
+      "extra_sources": [],
+      "extra_include_dirs": [],
+      "extra_link_libraries": []
+    }
+  }
+}
+$ gh release view 'ferrata_updater_module-v0.1.0' --repo 'landclimber/ferrata-modules' --json url,isImmutable --jq '.url + " " + (.isImmutable|tostring)'
+https://github.com/landclimber/ferrata-modules/releases/tag/ferrata_updater_module-v0.1.0 true
+$ git -C WORK/ferrata-modules ls-tree HEAD submodules/ferrata_updater_module | awk '{print $3}'
+c3266a324df29984fb992f4981be1dcc05395ad6
+$ curl -fsSL https://raw.githubusercontent.com/landclimber/ferrata_updater_module/c3266a324df29984fb992f4981be1dcc05395ad6/rust-lib/vendor/STAGED.json | jq -r .commit
+98375f82c754f2fa4a56e20418687a89b321228f
+$ gh release download 'ferrata_updater_module-v0.1.0' --repo 'landclimber/ferrata-modules' --pattern 'sidecar.json' --output - | jq -c '{rootHash, sha256, builtVariants, missingVariants, signerDid: .signature.did}'
+{"rootHash":"0f23ee4c1eeabbfaa950aec7ab83ecb487a8cb44ae54f8101aac6257c651f867","sha256":"e693c9b2c966bc80dd22d5d994a8533c579bc8cbeac6d4797300c0ec81eda736","builtVariants":["linux-amd64"],"missingVariants":["darwin-arm64","linux-arm64"],"signerDid":"did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6ImNLVmpDSnFiWEFqYTBtenc1VFBOODhqWUs2QXkwTmtpRWNldUduekN6bGsifQ"}
+$ gh release download 'ferrata_updater_module-v0.1.0' --repo 'landclimber/ferrata-modules' --pattern '*.lgx' --dir WORK/pkgs
+
+$ sha256sum WORK/pkgs/ferrata_updater_module-0.1.0.lgx | cut -d' ' -f1
+e693c9b2c966bc80dd22d5d994a8533c579bc8cbeac6d4797300c0ec81eda736
+$ curl -fsSL 'https://raw.githubusercontent.com/landclimber/ferrata-modules/refs/heads/main/index/index.json' | jq -c --arg t 'ferrata_updater_module-v0.1.0' '.packages[].versions[] | select(.publisherRef == $t) | {rootHash, sha256}'
+{"rootHash":"0f23ee4c1eeabbfaa950aec7ab83ecb487a8cb44ae54f8101aac6257c651f867","sha256":"e693c9b2c966bc80dd22d5d994a8533c579bc8cbeac6d4797300c0ec81eda736"}
+$ git -C DRY/ferrata_updater_module.git rev-parse refs/heads/main
+c3266a324df29984fb992f4981be1dcc05395ad6
+$ git -C WORK/ferrata-modules show HEAD:submodules/ferrata_relayer_module/metadata.json 2>/dev/null || curl -fsSL https://raw.githubusercontent.com/landclimber/ferrata_relayer_module/refs/heads/main/metadata.json
+{
+  "name": "ferrata_relayer_module",
+  "display_name": "Ferrata relayer",
+  "version": "0.1.0",
+  "type": "core",
+  "interface": "cdylib",
+  "category": "bridge",
+  "description": "Ferrata (prototype, unaudited, not for production): ferrata-relayer as a module: imports the vault's deposit roots on LEZ (ImportRoot under the newest record of the configuration's light client, built and dry-run with the bridge module's code), submits rule (B) checkpoints and finalises them, relays and wraps users' releases for its fee, collects its fees and watches the zone's burns, as a loop under Logos Core or for a given number of rounds",
+  "main": "ferrata_relayer_module_plugin",
+  "dependencies": [],
+
+  "codegen": {
+    "rust": { "crate": "rust-lib", "trait": "FerrataRelayerModule" }
+  },
+
+  "nix": {
+    "packages": {
+      "build": [],
+      "runtime": []
+    },
+    "rust": {
+      "toolchain": "1.98.0"
+    },
+    "external_libraries": [],
+    "cmake": {
+      "find_packages": [],
+      "extra_sources": [],
+      "extra_include_dirs": [],
+      "extra_link_libraries": []
+    }
+  }
+}
+$ gh release view 'ferrata_relayer_module-v0.1.0' --repo 'landclimber/ferrata-modules' --json url,isImmutable --jq '.url + " " + (.isImmutable|tostring)'
+https://github.com/landclimber/ferrata-modules/releases/tag/ferrata_relayer_module-v0.1.0 true
+$ git -C WORK/ferrata-modules ls-tree HEAD submodules/ferrata_relayer_module | awk '{print $3}'
+4560ecdb11b1e92f77aef766e0b635cbcc059aaf
+$ curl -fsSL https://raw.githubusercontent.com/landclimber/ferrata_relayer_module/4560ecdb11b1e92f77aef766e0b635cbcc059aaf/rust-lib/vendor/STAGED.json | jq -r .commit
+98375f82c754f2fa4a56e20418687a89b321228f
+$ gh release download 'ferrata_relayer_module-v0.1.0' --repo 'landclimber/ferrata-modules' --pattern 'sidecar.json' --output - | jq -c '{rootHash, sha256, builtVariants, missingVariants, signerDid: .signature.did}'
+{"rootHash":"aac37f8b4a5ba583940c8f2b2ff5a258740a4dc618eb4a20212262f5967b846f","sha256":"53750b24f07b311343bcbde1bfe727d92258c8aa3a075120fdf203806c3baf64","builtVariants":["darwin-arm64","linux-amd64","linux-arm64"],"missingVariants":[],"signerDid":"did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6ImNLVmpDSnFiWEFqYTBtenc1VFBOODhqWUs2QXkwTmtpRWNldUduekN6bGsifQ"}
+$ gh release download 'ferrata_relayer_module-v0.1.0' --repo 'landclimber/ferrata-modules' --pattern '*.lgx' --dir WORK/pkgs
+
+$ sha256sum WORK/pkgs/ferrata_relayer_module-0.1.0.lgx | cut -d' ' -f1
+53750b24f07b311343bcbde1bfe727d92258c8aa3a075120fdf203806c3baf64
+$ curl -fsSL 'https://raw.githubusercontent.com/landclimber/ferrata-modules/refs/heads/main/index/index.json' | jq -c --arg t 'ferrata_relayer_module-v0.1.0' '.packages[].versions[] | select(.publisherRef == $t) | {rootHash, sha256}'
+{"rootHash":"aac37f8b4a5ba583940c8f2b2ff5a258740a4dc618eb4a20212262f5967b846f","sha256":"53750b24f07b311343bcbde1bfe727d92258c8aa3a075120fdf203806c3baf64"}
+$ git -C DRY/ferrata_relayer_module.git rev-parse refs/heads/main
+4560ecdb11b1e92f77aef766e0b635cbcc059aaf
+# settings and assets (read-only GETs with the owner's login)
+$ gh api -X GET repos/landclimber/ferrata-modules/immutable-releases
+{"enabled":true,"enforced_by_owner":false}
+$ gh api -X GET repos/landclimber/ferrata_attest_module/immutable-releases
+{"enabled":true,"enforced_by_owner":false}
+$ gh api -X GET repos/landclimber/ferrata_attestor_module/immutable-releases
+{"enabled":true,"enforced_by_owner":false}
+$ gh api -X GET repos/landclimber/ferrata_bridge_module/immutable-releases
+{"enabled":true,"enforced_by_owner":false}
+$ gh api -X GET repos/landclimber/ferrata_monitor_module/immutable-releases
+{"enabled":true,"enforced_by_owner":false}
+$ gh api -X GET repos/landclimber/ferrata_relayer_module/immutable-releases
+{"enabled":true,"enforced_by_owner":false}
+$ gh api -X GET repos/landclimber/ferrata_updater_module/immutable-releases
+{"enabled":true,"enforced_by_owner":false}
+$ gh api -X GET repos/landclimber/ferrata-modules/rulesets --jq '.[] | {id, name, target, enforcement}'
+{"enforcement":"active","id":28000803,"name":"main","target":"branch"}
+{"enforcement":"active","id":28000802,"name":"release-tags","target":"tag"}
+$ gh api -X GET repos/landclimber/ferrata-modules/rulesets/28000802 --jq '{name, created_at, include: .conditions.ref_name.include, rules: [.rules[].type], bypass_actors}'
+{"bypass_actors":[],"created_at":"2026-11-24T17:29:04.279+01:00","include":["~ALL"],"name":"release-tags","rules":["update","deletion","non_fast_forward"]}
+$ gh api -X GET repos/landclimber/ferrata-modules/rulesets/28000803 --jq '{name, created_at, include: .conditions.ref_name.include, rules: [.rules[].type], bypass_actors}'
+{"bypass_actors":[],"created_at":"2026-11-24T17:29:04.893+01:00","include":["~DEFAULT_BRANCH"],"name":"main","rules":["deletion","non_fast_forward"]}
+$ gh api -X GET orgs/landclimber --jq '{login, two_factor_requirement_enabled}'
+{"login":"landclimber","two_factor_requirement_enabled":true}
+$ gh release view ferrata_attest_module-v0.1.0 --repo landclimber/ferrata-modules --json publishedAt,isImmutable,assets --jq '{publishedAt, isImmutable, assets: [.assets[].name]}'
+{"assets":["ferrata_attest_module-0.1.0.lgx","sidecar.json"],"isImmutable":true,"publishedAt":"2026-11-24T17:09:31Z"}
+$ gh release view ferrata_bridge_module-v0.1.0 --repo landclimber/ferrata-modules --json publishedAt,isImmutable,assets --jq '{publishedAt, isImmutable, assets: [.assets[].name]}'
+{"assets":["ferrata_bridge_module-0.1.0.lgx","sidecar.json"],"isImmutable":true,"publishedAt":"2026-11-24T17:01:05Z"}
+$ gh release view ferrata_attestor_module-v0.1.0 --repo landclimber/ferrata-modules --json publishedAt,isImmutable,assets --jq '{publishedAt, isImmutable, assets: [.assets[].name]}'
+{"assets":["ferrata_attestor_module-0.1.0.lgx","sidecar.json"],"isImmutable":true,"publishedAt":"2026-11-24T16:58:29Z"}
+$ gh release view ferrata_monitor_module-v0.1.0 --repo landclimber/ferrata-modules --json publishedAt,isImmutable,assets --jq '{publishedAt, isImmutable, assets: [.assets[].name]}'
+{"assets":["ferrata_monitor_module-0.1.0.lgx","sidecar.json"],"isImmutable":true,"publishedAt":"2026-11-24T17:14:07Z"}
+$ gh release view ferrata_updater_module-v0.1.0 --repo landclimber/ferrata-modules --json publishedAt,isImmutable,assets --jq '{publishedAt, isImmutable, assets: [.assets[].name]}'
+{"assets":["ferrata_updater_module-0.1.0.lgx","sidecar.json"],"isImmutable":true,"publishedAt":"2026-11-24T17:36:52Z"}
+$ gh release view ferrata_relayer_module-v0.1.0 --repo landclimber/ferrata-modules --json publishedAt,isImmutable,assets --jq '{publishedAt, isImmutable, assets: [.assets[].name]}'
+{"assets":["ferrata_relayer_module-0.1.0.lgx","sidecar.json"],"isImmutable":true,"publishedAt":"2026-11-24T17:16:23Z"}
+$ gh release view index --repo landclimber/ferrata-modules --json publishedAt,isImmutable,assets --jq '{publishedAt, isImmutable, assets: [.assets[].name]}'
+{"assets":[],"isImmutable":true,"publishedAt":"2026-11-24T16:28:52Z"}
+$ gh run view 45438763159 --repo landclimber/ferrata-modules --json conclusion,headSha,workflowName
+{"conclusion":"failure","headSha":"c9bdb6644b38bc333dd39110df6eeadd435e396d","workflowName":"Release all modules"}
+$ gh run view 45454593821 --repo landclimber/ferrata-modules --json conclusion,headSha,workflowName
+{"conclusion":"success","headSha":"4408d28604a754ab4ae4cac3b31d65fe76cb0f00","workflowName":"Rebuild index"}
+$ gh run view 45438763159 --repo landclimber/ferrata-modules --json jobs --jq '.jobs[] | select(.name | test("/ build")) | [.conclusion, .name, .startedAt, .completedAt] | @tsv'
+success	release (submodules/ferrata_updater_module) / release / build (linux-amd64)	2026-11-24T16:35:11Z	2026-11-24T16:57:27Z
+failure	release (submodules/ferrata_updater_module) / release / build (linux-arm64)	2026-11-24T16:35:13Z	2026-11-24T16:51:56Z
+failure	release (submodules/ferrata_updater_module) / release / build (darwin-arm64)	2026-11-24T17:03:36Z	2026-11-24T17:35:44Z
+success	release (submodules/ferrata_attestor_module) / release / build (linux-arm64)	2026-11-24T16:42:09Z	2026-11-24T16:46:45Z
+success	release (submodules/ferrata_attestor_module) / release / build (linux-amd64)	2026-11-24T16:35:14Z	2026-11-24T16:42:05Z
+success	release (submodules/ferrata_attestor_module) / release / build (darwin-arm64)	2026-11-24T16:40:14Z	2026-11-24T16:47:39Z
+success	release (submodules/ferrata_bridge_module) / release / build (darwin-arm64)	2026-11-24T16:46:47Z	2026-11-24T16:59:54Z
+success	release (submodules/ferrata_bridge_module) / release / build (linux-amd64)	2026-11-24T16:35:17Z	2026-11-24T16:42:26Z
+success	release (submodules/ferrata_bridge_module) / release / build (linux-arm64)	2026-11-24T16:42:30Z	2026-11-24T16:48:18Z
+success	release (submodules/ferrata_attest_module) / release / build (linux-arm64)	2026-11-24T16:52:01Z	2026-11-24T16:57:29Z
+success	release (submodules/ferrata_attest_module) / release / build (darwin-arm64)	2026-11-24T16:59:11Z	2026-11-24T17:08:22Z
+success	release (submodules/ferrata_attest_module) / release / build (linux-amd64)	2026-11-24T16:47:42Z	2026-11-24T16:52:35Z
+success	release (submodules/ferrata_relayer_module) / release / build (linux-amd64)	2026-11-24T16:48:20Z	2026-11-24T16:59:09Z
+success	release (submodules/ferrata_relayer_module) / release / build (darwin-arm64)	2026-11-24T16:57:29Z	2026-11-24T17:14:58Z
+success	release (submodules/ferrata_relayer_module) / release / build (linux-arm64)	2026-11-24T16:52:39Z	2026-11-24T17:00:04Z
+success	release (submodules/ferrata_monitor_module) / release / build (linux-amd64)	2026-11-24T16:51:52Z	2026-11-24T16:57:51Z
+success	release (submodules/ferrata_monitor_module) / release / build (linux-arm64)	2026-11-24T16:57:33Z	2026-11-24T17:03:46Z
+cancelled	release (submodules/ferrata_monitor_module) / release / build (darwin-arm64)	2026-11-24T16:35:16Z	2026-11-24T17:12:52Z
+$ gh api repos/landclimber/ferrata-modules/check-runs/138604058963/annotations --jq '.[0].message'
+The job was not acquired by Runner of type hosted even after multiple attempts
+$ gh run view 45438763159 --repo landclimber/ferrata-modules --job 138603948519 --log-failed | grep -o 'error adding symbols: file in wrong format' | head -n 1
+error adding symbols: file in wrong format
+$ gh run view 45438763159 --repo landclimber/ferrata-modules --job 138603948626 --log-failed | grep -o "archive member 'poc_local.o' with length [0-9]* is not mach-o or llvm bitcode file" | head -n 1
+archive member 'poc_local.o' with length 1359200 is not mach-o or llvm bitcode file

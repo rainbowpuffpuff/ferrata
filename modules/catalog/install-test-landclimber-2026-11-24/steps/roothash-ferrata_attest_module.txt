@@ -1,0 +1,1 @@
+installed ferrata_attest_module rootHash: 2a879a4df2278c3d09a366d1a77a0d89ffe8855b8df2d4f292a80571f25a8736; release sidecar: 2a879a4df2278c3d09a366d1a77a0d89ffe8855b8df2d4f292a80571f25a8736

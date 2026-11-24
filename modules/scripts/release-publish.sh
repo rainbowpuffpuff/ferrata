@@ -159,7 +159,9 @@ for m in "${modules[@]}"; do
 done
 
 # ── 2. The generated logos-repo.json: identity kept, indexUrl and trustedSigners written ───────
-index_url="https://github.com/$org/$catalog_repo/releases/download/index/index.json"
+# The index is index/index.json on the catalog's main, which the catalog's rebuild-index.yml commits
+# after every release: a rolling release cannot hold it under immutable releases (RELEASE.md, rule 2).
+index_url="https://raw.githubusercontent.com/$org/$catalog_repo/refs/heads/main/index/index.json"
 mkdir -p "$ws/catalog/.github/workflows"
 cp "$CATALOG_DIR/.github/workflows/"*.yml "$ws/catalog/.github/workflows/"
 jq --arg indexUrl "$index_url" --arg did "$did" \
@@ -170,11 +172,13 @@ python3 -I -m json.tool "$ws/catalog/logos-repo.json" > /dev/null   # generated 
 cat > "$ws/catalog/README.md" <<EOF
 # Ferrata modules
 
-Ferrata's Logos module catalog: \`logos-repo.json\` (identity, the rolling \`index\` release in
-\`indexUrl\`, the signer the releases are signed by in \`trustedSigners\`), the modules as git
-submodules under \`submodules/\`, and the release workflows that build, sign, verify and publish each one with
+Ferrata's Logos module catalog: \`logos-repo.json\` (identity, the index in \`indexUrl\`, the signer the
+releases are signed by in \`trustedSigners\`), the modules as git submodules under \`submodules/\`, the
+release workflows that build, sign, verify and publish each one with
 [\`logos-co/logos-modules-release-action\`](https://github.com/logos-co/logos-modules-release-action)
-(pinned to a commit). How it is published, and each lambda-prize release-integrity rule it meets:
+(pinned to a commit), and \`index/index.json\`, the list of every published package that
+\`rebuild-index.yml\` commits after each release (the packages themselves are in the immutable
+\`<module>-v<version>\` releases). How it is published, and each lambda-prize release-integrity rule it meets:
 \`modules/catalog/RELEASE.md\` in the source repository (https://github.com/rainbowpuffpuff/ferrata).
 
 The modules are prototype, unaudited, not for production.
@@ -339,19 +343,16 @@ else
   echo "After those commands:"
 fi
 echo "The owner's remaining steps, in this order (the release must come last):"
-echo "  1. The rolling index release, created empty while releases are still mutable: rebuild-index.yml"
-echo "     replaces its index.json after every module release, which an immutable release refuses: it must"
-echo "     exist before immutability is turned on):"
-show gh release create index --repo "$org/$catalog_repo" --title "Catalog index (auto-updated)" \
-  --notes "Auto-generated index of every per-module release in this repository." --latest=false
-echo "  2. [in the browser] in $org/$catalog_repo and each module repository: turn on immutable releases;"
+echo "  1. [in the browser] in $org/$catalog_repo and each module repository: turn on immutable releases;"
 echo "     add a ruleset protecting refs/tags/* (the release tags <module>-v<version>; updates and deletions"
-echo "     restricted, creations allowed: the workflows create them); require 2FA for the $org organization."
+echo "     restricted, creations allowed: the workflows create them) and one protecting main from deletion"
+echo "     and force-pushes (not from pushes: rebuild-index.yml commits index/index.json to it); require"
+echo "     2FA for the $org organization. No index release is created: the index lives on main."
 echo "     Tokens stay least-privilege: the workflows use the built-in GITHUB_TOKEN with contents alone"
 echo "     (modules/catalog/RELEASE.md, rules 2 and 6)."
-echo "  3. Only then, the release: builds, signs, verifies and publishes every module, then the index:"
+echo "  2. Only then, the release: builds, signs, verifies and publishes every module, then the index:"
 show gh workflow run release-all.yml --repo "$org/$catalog_repo"
-echo "  4. Fill releases/RELEASE-INTEGRITY.template.md (each value's command is in it) with the release"
+echo "  3. Fill releases/RELEASE-INTEGRITY.template.md (each value's command is in it) with the release"
 echo "     URLs, the source commits, the signer DID and the rootHashes the sidecars give."
 echo
 echo "release-publish.sh: done.${dry_dir:+ Dry run: repositories under $dry_dir.}"
