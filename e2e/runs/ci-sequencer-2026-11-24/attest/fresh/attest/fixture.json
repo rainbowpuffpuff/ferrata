@@ -1,0 +1,43 @@
+{
+  "network": "sepolia",
+  "chain_id": 11155111,
+  "period": 1421,
+  "attested_slot": 11646400,
+  "signature_slot": 11646401,
+  "participants": 486,
+  "finalized_slot": 11646336,
+  "finalized_root": "0x18ee938f06b720bc37a2e00517063f8a1ddc2efbdeb032ff85a481acca82f4fe",
+  "block": 12199909,
+  "block_hash": "0xc19a5b4a93b314918604f2a3c5bcfe8fd21b924b697a650c1db427a62e21faa0",
+  "state_root": "0x659e7b6c237e7972a6eb30b3209d6199ad2c2de0a8f5e5a98d3e384fb169b84c",
+  "receipts_root": "0xa538d9847ed70ddd08444e3460df2fd1c792c5d27035628845a12bae6f59d105",
+  "receipts": 137,
+  "head_when_fetched": 12199997,
+  "storage": [
+    {
+      "address": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+      "slots": [
+        {
+          "slot": "0x000000000000000000000000000000000000000000000000000000000000000b",
+          "value": "0x000000000000000000000000000000000000000000000000951404989cd91159",
+          "getter": "totalSupply()"
+        }
+      ]
+    }
+  ],
+  "same_address": null,
+  "transfer": {
+    "tx_index": 0,
+    "log_index": 0,
+    "block_log_index": 0,
+    "logs_in_receipt": 1,
+    "token": "0xd4778aa86d4ef3513a5a1c4d8d6e121f3ba58236",
+    "from": "0x81a1ed90703d0fbd8fa097d4a42420363f936cfc",
+    "to": "0x9749ced506ad8431f793628615b0a1c351e9d718",
+    "value": "0x000000000000000000000000000000000000000000000000000000000027885e"
+  },
+  "deposits": null,
+  "updates": [],
+  "hops": null,
+  "absent": null
+}
