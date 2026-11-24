@@ -81,5 +81,5 @@ body:
     attributes:
       label: Safety
       options:
-        - label: I have not included any recovery phrase, private key or password
+        - label: I have not included a recovery phrase, a private key, a passphrase or a PIN, in the text or in a screenshot
           required: true

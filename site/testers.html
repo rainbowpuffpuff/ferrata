@@ -33,7 +33,7 @@ the page works under any host name. -->
 <!-- source: deploy/testnet/web/wallet/test/results/live-2026-11-23/record.json | "faucet_seconds": 6.5, --></li>
 
 <li id="step-transfer"><h3>Send a transfer: public, then private</h3>
-<p><b>Public.</b> Add a second account (“+ New account”), copy its id from Home, switch back to the first and send it 1 LGO from Send.</p>
+<p><b>Public.</b> Add a second account (“+ New account”; it opens selected). On Receive, press “Copy the code”: an account’s first payment needs its receive code, not only its id. Switch back to the first account; in Send, paste the code into To, enter 1, press “Review”, then “Sign and send”.</p>
 <p class="t-ok"><b>You should see</b> “In block N, applied” within a block or two (a block every 10 s; 8.8 s when we measured it), and both balances change. The fee is a few millionths of an LGO.</p>
 <!-- source: deploy/testnet/README.md | LEZ's `local.json` with 10 s blocks -->
 <!-- source: deploy/testnet/web/wallet/test/results/live-2026-11-23/record.json | "send1_seconds_to_block": 8.8, -->
@@ -44,20 +44,22 @@ the page works under any host name. -->
 <p class="t-ok"><b>You should see</b> it in the explorer as a private transaction: only its public parts, no amount and no accounts.</p></li>
 
 <li id="step-names"><h3>Names and messages</h3>
-<p><b>A name.</b> On Home, type a name and press “Claim”. The button then counts down for about 4 minutes and becomes “Reveal”: press it within the hour. A name lasts 180 days.</p>
-<!-- source: names/js/names.js | export const COMMIT_SLACK_MS = 120_000; -->
-<!-- source: names/js/names.js | export const MIN_REVEAL_DELAY_MS = 120_000; -->
-<!-- source: names/js/names.js | export const MAX_REVEAL_WINDOW_MS = 3_600_000; -->
-<!-- source: names/js/names.js | async commitCall(signer, name, { salt = newSalt(), nowMs = Date.now() - 30_000 } = {}) { -->
+<p><b>A name.</b> On Home, type a name and press “Claim”. The button then reads “Reveal NAME in N s”, counting down from about 4 minutes; when it reads “Reveal NAME”, press it (within 24 hours). A name lasts 180 days.</p>
+<!-- source: deploy/testnet/web/wallet/vendor/names.js | export const COMMIT_SLACK_MS = 120_000; -->
+<!-- source: deploy/testnet/web/wallet/vendor/names.js | export const MIN_REVEAL_DELAY_MS = 120_000; -->
+<!-- source: deploy/testnet/web/wallet/vendor/names.js | export const MAX_REVEAL_WINDOW_MS = 86_400_000; -->
+<!-- source: deploy/testnet/web/wallet/vendor/names.js | async commitCall(signer, name, { salt = newSalt(), nowMs = Date.now() - 30_000 } = {}) { -->
 <!-- source: deploy/testnet/web/wallet/app.js | const left = p.revealFrom + 31000 - Date.now(); -->
-<!-- source: names/js/names.js | export const TERM_MS = 180 * DAY_MS; -->
+<!-- source: deploy/testnet/web/wallet/app.js | btn.textContent = left > 0 ? `Reveal ${p.name} in ${Math.ceil(left / 1000)} s` : `Reveal ${p.name}`; -->
+<!-- source: deploy/testnet/web/wallet/vendor/names.js | export const TERM_MS = 180 * DAY_MS; -->
 <p class="t-ok"><b>You should see</b> “NAME.lez is yours” and the name on Home.</p>
 <p><b>A message.</b> In Inbox, press “Publish my messaging key” on both accounts, then write from one to the other (by account id, receive code or name). Messages are encrypted, but they stay on a public chain: write test text only.</p>
 <p class="t-ok"><b>You should see</b> the message in the other account’s Inbox.</p></li>
 
 <li id="step-explorer"><h3>Look it up in the explorer</h3>
 <p>Open the <a href="/explorer/">explorer</a> and search for your account id, a transaction hash or <code>@name</code>.</p>
-<p class="t-ok"><b>You should see</b> each of your transactions in its block, marked applied. The explorer recomputes every block’s hash in your browser.</p></li>
+<p class="t-ok"><b>You should see</b> your account’s transactions of the last 300 blocks (about 50 minutes), each in its block and marked applied; an older one opens by its hash. The explorer recomputes every block’s hash in your browser.</p></li>
+<!-- source: deploy/testnet/web/explorer/config.json | "scan_blocks": 300, -->
 
 <li id="step-bridge"><h3>The bridge: Sepolia to LEZ and back</h3>
 <p>You need MetaMask, or another browser wallet, on Sepolia with a little Sepolia ETH of your own (<a href="#limits">Limits</a>). How long each stage takes: <a href="#bridge-times">the table below</a>.</p>
@@ -66,7 +68,7 @@ the page works under any host name. -->
 <span class="t-ok"><b>You should see</b> “Deposited: leaf N in block M”.</span></li>
 <li><b>Wait for the import, then claim.</b> About 20 minutes later, press “Find my deposits on the vault”, then “Claim on LEZ” (the wallet imports the deposit first if nobody has yet).
 <span class="t-ok"><b>You should see</b> “Claimed in LEZ block N: 0.001 ETH now held by your account on LEZ”.</span></li>
-<li><b>Burn.</b> Under “Burn to Ethereum”, pick 0.001 ETH. Leave the recipient empty to use your MetaMask address. Press “Review the burn”, check the address character by character, then “Sign and burn”.
+<li><b>Burn.</b> Under “Burn to Ethereum”, press “Show this account’s bridge holdings”, then pick 0.001 ETH. Leave the recipient empty to use your MetaMask address. Press “Review the burn”, check the address character by character, then “Sign and burn”.
 <span class="t-ok"><b>You should see</b> “Burned 0.001 ETH in LEZ block N (burn counter i …)”, with the release command.</span></li>
 <li><b>Release on Sepolia (command line).</b> Not in the web wallet yet, and the hardest step: it needs the <code>ferrata</code> tool built for this network (<a href="{{src:deploy/testnet/cli-rc3}}">deploy/testnet/cli-rc3/</a>), your phrase on your own computer, and a Groth16 proof of the release. You can make that proof with RISC Zero’s prover on an x86 computer with Docker; this network’s GPU prover can make it too, but today only its operator can reach it.
 <span class="t-ok"><b>You should see</b> the vault’s Release event pay your address 0.000997 ETH: 0.001 less its relay fee (0.2 %) and checkpoint fee (0.1 %), as the first release here did.</span>
@@ -84,8 +86,9 @@ This is the least-tested step: tell us where it stops.</li>
 
 <section class="wrap band" id="bridge-times" aria-labelledby="h-times">
 <h2 id="h-times">How long the bridge takes</h2>
-<p class="lede">Expected times come from the code and the deployment’s configuration; measured ones are from the first deposit, burn and release on this network, on 23 and 24 November 2026 (UTC).</p>
-<!-- measured: the operator's notes (not in the repository), for now: their record will be e2e/runs/live-roundtrip-2026-11-24/. -->
+<p class="lede">Expected times come from the code and the deployment’s configuration; measured ones are from the first deposit, burn and release on this network, on 23 and 24 November 2026 (UTC). A relayer fault held up the way back, so its times are not typical.</p>
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | # live-roundtrip-2026-11-24: the first full round trip on the Ferrata LEZ test network -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | so the outbound timings here are not a measurement -->
 <div class="scroll"><table class="stack t-table">
 <caption>The bridge’s stages, one deposit there and back</caption>
 <thead><tr><th scope="col">Stage</th><th scope="col">Expected</th><th scope="col">Measured on this network</th></tr></thead>
@@ -93,15 +96,17 @@ This is the least-tested step: tell us where it stops.</li>
 <tr><th scope="row">Sepolia finalizes your deposit, and the network’s light client records it</th>
 <td data-label="Expected">13–19 min</td>
 <!-- source: docs/traceability.md | Ethereum finality (13–19 min, *estimate*) -->
-<td data-label="Measured">19 min: deposited 16:12, final 16:29, recorded on LEZ 16:30</td></tr>
-<!-- measured: 23 Nov 2026, the operator's notes (round 6); the deposit is Sepolia tx 0x44709f7c31561f1682b67b95a1a01b774246fcdcbdb4f049d482e8284857e9e1 in block 12,196,757 (16:12 UTC); Sepolia finalized past it at 16:29; the light client's record of slot 11,643,072 was applied in LEZ block 2271 at 16:30:48. -->
-<!-- source: deploy/testnet/web/wallet/test/results/live-claim-2026-11-23/record.json | "block": 12196757, -->
+<td data-label="Measured">about 20 min: deposited 16:11:00; at 16:31:22 an import was applied under the light client’s record that covers it</td></tr>
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | | Deposit | Sepolia 12,196,757 (23 Nov 16:11:00) | -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/record.json | "timestamp": 1795450260, -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | | Fee import | LEZ 2,276 (16:31:22) | -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | under the attested Sepolia record slot 11,643,072 -->
 <tr><th scope="row">The deposit is imported on LEZ</th>
 <td data-label="Expected">when you claim, the wallet imports it itself; the network also imports every 10 min</td>
 <!-- source: deploy/testnet/host/systemd/ferrata-bridge-import.timer | OnUnitInactiveSec=10min -->
-<td data-label="Measured">21 min after the deposit (16:33)</td></tr>
-<!-- measured: 23 Nov 2026, the operator's notes (top section, round 6): ImportRoot applied in LEZ block 2278 (tx f2fb461e534c17fbcca0de06ff8091542744bbfb7aee27d641e72bfc1213b1e3), confirmed 16:33 UTC. -->
-<!-- source: deploy/testnet/web/wallet/test/results/live-claim-2026-11-23/record.json | "lez_block": 2278, -->
+<td data-label="Measured">21 min after the deposit: its root imported at 16:31:42, sent by the wallet’s own claim flow</td></tr>
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | | Root import | LEZ 2,278 (16:31:42) | -->
+<!-- source: deploy/testnet/web/wallet/test/results/live-claim-2026-11-23/record.json | sent from the page's own prepareClaim (claim.js) -->
 <tr><th scope="row">Claim, then burn</th>
 <td data-label="Expected">one LEZ block each, a block every 10 s</td>
 <td data-label="Measured">8.8 s from sending to the block (a transfer)</td></tr>
@@ -112,27 +117,33 @@ This is the least-tested step: tell us where it stops.</li>
 <!-- source: deploy/testnet/host/bin/ferrata-bridge-checkpoint | SETTLE_S="${SETTLE_S:-120}" -->
 <!-- source: deploy/testnet/host/bin/ferrata-bridge-checkpoint | A request is refused while the last one is not final -->
 <!-- source: deploy/testnet/README.md | signs the node's final tier every 60 s. -->
-<td data-label="Measured">on Sepolia 25 min after the burn (20:38 to 21:03)</td></tr>
-<!-- measured: 23 Nov 2026, the operator's notes (top section, round 7): the burn in LEZ block 3749 at 20:38:08 UTC; the proof requested 20:41:25; submitCandidate in Sepolia block 12,198,162 at 21:03:24 (tx 0xcaa00efa1ec41cf7dfe7ebc20e35368784535fc0e6ec49934644148e13aea0d1). -->
-<!-- source: deploy/testnet/results/2026-11-24-relayer-exdev-replay.txt | the relayer sent submitCandidate (block 12,198,162, 21:03:24Z) -->
+<td data-label="Measured">on Sepolia 26½ min after the burn (20:36:52 to 21:03:24); the GPU proof took 1,307 s of it</td></tr>
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | | Burn | LEZ 3,749 (20:36:52) | -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | | Checkpoint submitted | Sepolia 12,198,162 (21:03:24) | -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | in **1,307.0 s** -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/record.json | "seconds": 1307.0, -->
 <tr><th scope="row">The vault’s window, then the finalize</th>
 <td data-label="Expected">60 min after the checkpoint is submitted</td>
 <!-- source: vault/deployments/sepolia-31-B.json | "delta": 3600, -->
-<td data-label="Measured">the first checkpoint was finalized on 24 Nov at 08:30, about 10½ h late: the relayer had stalled (fixed)</td></tr>
-<!-- measured: the operator's notes (top section, round 11): due 23 Nov 2026 22:03:24 UTC; finalizeAttested in Sepolia block 12,201,456 at 24 Nov 08:30:12 (tx 0x643d0c687b782aad00618d0d50bbaa3cd6aaa01908e0fcf2f2e724b09c5390f8), after the relayer's fix. -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/record.json | "deltaAtSubmit": 3600, -->
+<td data-label="Measured">the first checkpoint was finalized on 24 Nov at 08:30:12, about 10½ h after its window ended (22:03:24): the relayer had stalled (fixed)</td></tr>
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | | Checkpoint finalized | Sepolia 12,201,456 (24 Nov 08:30:12) | -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | The finalisation came about 10.5 hours after the 1-hour window had passed (22:03:24 on 23 November) -->
 <!-- source: deploy/testnet/results/2026-11-24-relayer-exdev-replay.txt | Fix: the inbox inside the relayer's directory (one mount), a start check. -->
 <tr><th scope="row">Release delay</th>
 <td data-label="Expected">2 min after the finalize</td>
 <!-- source: vault/script/DeployVault.s.sol | releaseDelay: vm.envOr("FERRATA_RELEASE_DELAY", uint256(120)), -->
-<td data-label="Measured">2 min, the vault’s own setting: finalized 08:30:12, releasable from 08:32:12</td></tr>
-<!-- measured: 24 Nov 2026, the operator's notes (top section): finalizeAttested in Sepolia block 12,201,456 at 08:30:12 UTC; the vault's release delay 120 s (ferrata status, 23 Nov), so the burn was releasable from 08:32:12. -->
+<td data-label="Measured">the release came 39 min after the finalize (08:30:12 to 09:09:24)</td></tr>
 <tr><th scope="row">The release: proof and transaction</th>
 <td data-label="Expected">the proof from your phrase, 18–46 s on our computers; its Groth16 form, 78–80 s on x86 with Docker; then one Sepolia transaction</td>
 <!-- source: docs/performance.md | **46.0 s** at 8 CPUs, **26.4–27.0 s** at 16 -->
 <!-- source: docs/performance.md | the release's succinct proof **31.7 s** / **18.4 s** -->
 <!-- source: docs/performance.md | | Groth16 wrap of a release | 77.5–79.9 s; about 7.3 GiB; seal 260 B; **x86 only** | -->
-<td data-label="Measured">on the network’s GPU prover: the input queued at 09:01:55, its Groth16 proof 425.6 s, the release on Sepolia at 09:09:24 (7½ min in all); the recipient got 0.000997 ETH</td></tr>
-<!-- measured: 24 Nov 2026, the operator's notes (top section, "Release (Sepolia)"), for now; the record will be e2e/runs/live-roundtrip-2026-11-24/: the holder's release input queued on the host at 09:01:55 UTC; release_31 proven (Groth16) on the network's GPU prover in 425.6 s; the relayer's release, tx 0x48b78ad406eae9c05eb665a1ce06e205cacc45f5905769425b4abbc700886f65, in Sepolia block 12,201,646 at 09:09:24; the recipient's balance +0.000997 ETH (0.001 less the relay fee 0.000002 and the checkpoint fee 0.000001). -->
+<td data-label="Measured">on the network’s GPU prover, its Groth16 proof in 425.6 s; the release on Sepolia at 09:09:24 (block 12,201,646); the recipient got 0.000997 ETH</td></tr>
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | Groth16) in **425.6 s** -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/record.json | "seconds": 425.6, -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | | Release | Sepolia 12,201,646 (09:09:24) | -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | the recipient's balance **+0.000997 ETH** in that block -->
 </tbody></table></div>
 </section>
 
