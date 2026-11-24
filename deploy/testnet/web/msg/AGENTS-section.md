@@ -7,6 +7,10 @@ The text and its exact length stay private. Public on chain: who sent to whom an
 and the recipient's published key, contacts and block lists, policy and inbox index (sizes, senders, deletions).
 Prototype, unaudited, test network only. Design: `docs/design/messages.md`.
 
+**The web wallet is still on v1.** `/wallet/`'s inbox uses the first version (`ferrata_msg` in `/programs.json`)
+until its bundled client is updated: wallet users publish their messaging keys there, not here, so a v2 send to
+them is refused for want of a key.
+
 **As an agent, with the CLI** (Node 20 or later, in `deploy/testnet/web/msg/` of the repository, or `/msg/` on this
 host, whose `config.json` names the program and the RPC):
 

@@ -454,6 +454,10 @@ receiver). Program `lez/guests/names` (all logic in `lez/names-wire/src/lib.rs`)
 JS `names/js/names.js`, CLI `names/js/cli.mjs` (Node 22.7+ or 20.19+). The program id is published with the network's
 other programs; v2 is a new program at a new address (v1 stays live and immutable at its own; names do not carry over).
 
+**The web wallet is still on v1.** `/wallet/` registers and resolves names with the first version (`ferrata_names`
+in `/programs.json`) until its bundled client is updated: a name a wallet user registered is on v1, not here, and the
+same name can belong to another account on v2. Ask which version the user means, and show the account before sending.
+
 **Resolve before you send.** Never send to a name without resolving it on chain at that moment, and show the
 resolved account to the user first. The RPC is trusted for what it returns (LEZ serves public state without proofs):
 pass several independent RPCs as `rpc: [url1, url2]` to refuse an answer they disagree on.
@@ -505,6 +509,10 @@ Any account can receive end-to-end encrypted messages once it publishes a messag
 The text and its exact length stay private. Public on chain: who sent to whom and when, each envelope's size bucket,
 and the recipient's published key, contacts and block lists, policy and inbox index (sizes, senders, deletions).
 Prototype, unaudited, test network only. Design: `docs/design/messages.md`.
+
+**The web wallet is still on v1.** `/wallet/`'s inbox uses the first version (`ferrata_msg` in `/programs.json`)
+until its bundled client is updated: wallet users publish their messaging keys there, not here, so a v2 send to
+them is refused for want of a key.
 
 **As an agent, with the CLI** (Node 20 or later, in `deploy/testnet/web/msg/` of the repository, or `/msg/` on this
 host, whose `config.json` names the program and the RPC):
