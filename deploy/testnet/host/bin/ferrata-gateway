@@ -432,7 +432,7 @@ def check_drop_job(job, relayer):
         return None, "a gas-drop job is {\"kind\": \"gas-drop\", \"receipt\", \"oneTimeNpk\", \"oneTimeVpk\"} and nothing else"
     if job["kind"] != "gas-drop":
         return None, "kind must be gas-drop"
-    for k, lo, hi in (("oneTimeNpk", 64, 64), ("oneTimeVpk", 2, 200)):
+    for k, lo, hi in (("oneTimeNpk", 64, 64), ("oneTimeVpk", 2, 8192)):  # LEZ's viewing key is longer than 100 bytes
         v = job[k]
         if not isinstance(v, str) or not HEX_RE.match(v) or not lo <= len(v) - 2 <= hi:
             return None, f"{k} must be 0x-prefixed lower-case hex"
