@@ -6,6 +6,8 @@
 # does); the answer carries the mock's seal. From the server: PROGRAM INPUT META NAME; from the hook: BIN RPC MOCK
 # DEPLOYER CHECKPOINT_B_ID STANDIN_DELAY (seconds the "GPU" takes before the executor runs).
 set -euo pipefail
+# ferrata-e2e is built with risc0-zkvm 3.1 (bridge/): its executor needs r0vm 3.1 (R0VM31), not the zone's 3.0.5.
+[ -n "${R0VM31:-}" ] && export RISC0_SERVER_PATH="$R0VM31"
 d="$(dirname "$META")"
 jq '.kind = (if .kind == "checkpoint-b" then "checkpoint" else .kind end)' "$META" > "$d/meta-exec.json"
 sleep "${STANDIN_DELAY:-0}"

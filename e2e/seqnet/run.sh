@@ -47,6 +47,8 @@
 # must be the program of lez/guests/bridge (0x847a4336..., sha256 537cbe7a..., docs/image-ids.md), which drive.sh checks:
 # the CLI of this tree keys its accounts by the configuration and no longer talks to the 0xccde6171... program.
 #
+# R0VM31: an r0vm 3.1.0 for the tools built with risc0-zkvm 3.1 (ferrata-e2e, realblocks-crown: checkpoint/ and bridge/
+# since the RISC Zero 3.1 migration); the zone's r0vm (3.0.5) stays for LEZ's wallet and the zone.
 # Environment: SEQNET_PROOFS=dev (default: the sequencer accepts RISC Zero dev-mode receipts and LEZ's wallet makes
 # fake ones) or real (the sequencer verifies, LEZ's wallet proves every private transaction on this machine's CPU).
 set -euo pipefail

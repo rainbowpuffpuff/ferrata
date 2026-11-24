@@ -127,7 +127,7 @@ checkpoint_robust() {
   for i in $(seq 1 30); do
     if node_dump; then
       rm -rf "$C/input"
-      "$BIN/realblocks-crown" --node "$W/node" --genesis "$ZONE_STATE/bedrock/deployment-settings.yaml" --session-a "$SA" \
+      RISC0_SERVER_PATH="${R0VM31:-$RISC0_SERVER_PATH}" "$BIN/realblocks-crown" --node "$W/node" --genesis "$ZONE_STATE/bedrock/deployment-settings.yaml" --session-a "$SA" \
         --vault "$VAULT" --config-id "$CID" --genesis-state "$GS" --tip "$tip" --att "$W/attestation-final.json" \
         --name "$name" --out "$C/input" > "$C/realblocks-crown.txt" 2>&1 && break
     fi
@@ -144,7 +144,7 @@ checkpoint_robust() {
   mkdir -p "$PS/requests"; echo pass > "$PS/ctl"
   jq -n --arg id "$CHECKPOINT_B_ID" --arg sha "$(sha256sum "$R0BF/checkpoint_b.bin" | cut -c1-64)" \
     '{"checkpoint-b": ["checkpoint_b.bin", $id, $sha, "checkpoint"]}' > "$PS/pins.json"
-  BIN="$BIN" RPC="$RPC" MOCK="$MOCK" DEPLOYER="$DEPLOYER" CHECKPOINT_B_ID="$CHECKPOINT_B_ID" STANDIN_DELAY=15 \
+  BIN="$BIN" RPC="$RPC" MOCK="$MOCK" DEPLOYER="$DEPLOYER" CHECKPOINT_B_ID="$CHECKPOINT_B_ID" STANDIN_DELAY=15 R0VM31="${R0VM31:-}" \
     python3 -I "$REPO/deploy/testnet/tests/standin_modal/server.py" --port-file "$PS/port" --log "$PS/prover.jsonl" --work "$PS/work" \
     --prove-cmd "bash $REPO/e2e/seqnet/standin-prove.sh" --ctl "$PS/ctl" > "$PS/server.out" 2>&1 &
   local SPID=$!
