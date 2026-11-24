@@ -874,9 +874,12 @@ note = "the tool (e2e.rs, CI's roundtrip job): every U.08 mode refused with sour
 id = "RFP-022 U.9"
 tests = [
   { path = "cli/tests/e2e.rs", kind = "test", ci = "roundtrip" },
+  { path = "modules/ferrata_bridge_module/rust-lib/calls/tests/endpoints.rs", kind = "test", ci = "modules-resolve" },
+  { path = "cli/src/bin/seqnet_chain.rs", kind = "test", ci = "roundtrip" },
+  { path = "e2e/endpoints/run.sh", kind = "test", ci = "box", run = "e2e/endpoints/run.sh build && e2e/endpoints/run.sh live NAME" },
   { path = "modules/ferrata_bridge_ui/scripts/box-test.sh", kind = "test", ci = "box", run = "modules/ferrata_bridge_ui/scripts/box-test.sh" },
 ]
-note = "--eth-rpc, --sequencer (and the vault, bridge account and chain id) by option or environment variable; a silent RPC, another chain's RPC and an address with no vault each reported (row 85); the mini-app switches endpoints in the view (row 62)"
+note = "--eth-rpc, --sequencer (and the vault, bridge account and chain id) by option or environment variable; a silent RPC, another chain's RPC and an address with no vault each reported (row 85). Inside Logos Core the view's Apply and test switches the LEZ sequencer at the chain service and the Ethereum RPC at eth_rpc_module (or the chain service), each only after the new one answered for the deployment, both kept otherwise: natively against stand-ins in CI (modules-resolve), and live in one headless Logos Core on the build box (e2e/endpoints: three of a zone's four sequencers, two anvil endpoints; with U9_PUBLIC=1 and our test network's RPC URL from the owner, U9_LIVE_LEZ_URL, also two public Sepolia RPCs, read only). The LEZ sequencer is switched at seqnet-chain, the stand-in for Logos Core's LEZ module: with LEZ through lez_core a sequencer change is refused (in part)"
 
 [[row]]
 id = "RFP-022 U.10"

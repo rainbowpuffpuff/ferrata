@@ -1,0 +1,2 @@
+seqnet-chain: no Ethereum key held (--user 0x000000000000000000000000000000000000dEaD): the user's Ethereum sends go through Logos Core's send stack
+seqnet-chain: http://127.0.0.1:18701/ (vault 0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787, configId 0x3773b58836d2fa242e16b3eb580a15630de2a437218a432f52e5b01152ae67cd, user 0x000000000000000000000000000000000000dEaD)

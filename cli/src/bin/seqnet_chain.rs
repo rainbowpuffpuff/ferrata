@@ -16,6 +16,11 @@
 //!   `lez::visible_calls`), the wallet's own private accounts after a sync, and the module's messages sent
 //!   as public transactions or as private ones executed and proven by the wallet.
 //!
+//! The endpoints are this service's (RFP-022 U.9): `module.set_endpoints {eth_rpc?, sequencer?, dry_run?}` switches the
+//! Ethereum RPC and the LEZ sequencer it reads and sends through, each only after the new one answered for this
+//! deployment (the chain, the vault and its `lezConfigId`; the configuration on the zone), both or neither; a refused
+//! switch keeps the endpoints in use. `module.endpoints` names them.
+//!
 //! The method names and shapes are those of the mini-app devnet's `module.*` methods
 //! (`cli/examples/miniapp_devnet.rs`), so the module's code runs over either. HTTP on 127.0.0.1:
 //! `POST {"method", "params"}` -> `{"ok": true, "result"}` or `{"ok": false, "error"}`; every call is
@@ -37,7 +42,7 @@ use std::{
 use alloy::{
     network::TransactionBuilder as _,
     primitives::{Address, Bytes, B256, U256},
-    providers::Provider as _,
+    providers::{DynProvider, Provider as _},
     rpc::types::TransactionRequest,
 };
 use anyhow::{anyhow, bail, ensure, Context as _, Result};
@@ -54,8 +59,9 @@ use ferrata_cli::{
 use ferrata_lez_bridge_wire::{self as bw, config_actor, token_actor, BridgeMessage};
 use lee::AccountId;
 use lee_core::{account::Actor, program::PdaSeed};
+use sequencer_service_rpc::{SequencerClient, SequencerClientBuilder};
 use serde_json::{json, Value};
-use wallet::WalletSequencerClient as _;
+use wallet::{WalletCore, WalletSequencerClient as _};
 
 alloy::sol! {
     #[allow(missing_docs)]
@@ -325,6 +331,78 @@ fn derived_key(label: &str) -> lee::PrivateKey {
     }
 }
 
+/// The role keys of `--lez-role-key`, imported into the LEZ wallet (at the start, and again when the wallet is opened on
+/// another sequencer); their accounts.
+fn import_role_keys(wallet: &mut WalletCore<SequencerClient>, labels: &[String], say: bool) -> Vec<[u8; 32]> {
+    let mut accounts = Vec::new();
+    for label in labels {
+        let key = derived_key(label);
+        let account = AccountId::from(&lee::PublicKey::new_from_private_key(&key));
+        accounts.push(*account.value());
+        wallet.storage_mut().key_chain_mut().add_imported_public_account(key);
+        if say {
+            eprintln!("seqnet-chain: the LEZ wallet holds the role key {label} (account {account}); its messages wait for approval");
+        }
+    }
+    accounts
+}
+
+/// How long one reading of a candidate endpoint may take: a closed port answers at once, a silent host does not, and a
+/// view's call to a core module is cut at 20 s in Basecamp.
+const PROBE: Duration = Duration::from_secs(6);
+
+/// `f`, or an error once [`PROBE`] has passed.
+async fn probe<T>(what: &str, f: impl std::future::Future<Output = Result<T>>) -> Result<T> {
+    match tokio::time::timeout(PROBE, f).await {
+        Ok(r) => r.with_context(|| what.to_string()),
+        Err(_) => bail!("{what}: no answer within {} s", PROBE.as_secs()),
+    }
+}
+
+/// `config(cid)`'s actor state as a candidate sequencer holds it (`state`), checked against the session's deployment: a
+/// bridge configuration whose `BridgeConfig` hashes to `cid` under `program` and names `vault` and `chain_id`. Its
+/// phase (`pairing` or `ready`) and the zone's channel the configuration names.
+fn check_config_state(state: &[u8], program: AccountId, cid: &[u8; 32], vault: &[u8; 20], chain_id: u64) -> Result<(&'static str, [u8; 32])> {
+    ensure!(
+        !state.is_empty(),
+        "its zone holds no configuration {} of the bridge program {}: another zone, or a sequencer that has not synced it",
+        hx(cid),
+        hx(program.value())
+    );
+    let config = match bw::BridgeState::try_from_slice(state) {
+        Ok(bw::BridgeState::Config(c)) => c,
+        _ => bail!("the account of config({}) there holds no bridge configuration", hx(cid)),
+    };
+    let phase = match &config {
+        bw::ConfigState::Pairing { .. } => "pairing",
+        bw::ConfigState::Ready { .. } => "ready",
+    };
+    let c = config.config();
+    ensure!(c.id(program) == *cid, "the configuration there hashes to {}, not {}", hx(&c.id(program)), hx(cid));
+    ensure!(
+        c.vault == *vault && c.evm_chain_id == chain_id,
+        "the configuration there pairs vault {} on chain {}, not the session's",
+        hx(&c.vault),
+        c.evm_chain_id
+    );
+    Ok((phase, c.channel_id))
+}
+
+/// The block an Ethereum endpoint holds final (`finalized`): its number and hash.
+async fn final_block(p: &DynProvider) -> Result<(u64, String)> {
+    let b: Value = p.raw_request("eth_getBlockByNumber".into(), ("finalized", false)).await?;
+    let n = b["number"].as_str().and_then(|t| u64::from_str_radix(t.trim_start_matches("0x"), 16).ok()).context("the final block's number")?;
+    let h = b["hash"].as_str().context("the final block's hash")?.to_lowercase();
+    Ok((n, h))
+}
+
+/// An endpoint as given: trimmed, `http://` or `https://`.
+fn endpoint_of(params: &Value, key: &str) -> Result<Option<String>> {
+    let Some(u) = params[key].as_str().map(str::trim).filter(|u| !u.is_empty()) else { return Ok(None) };
+    ensure!(u.starts_with("http://") || u.starts_with("https://"), "{key} {u}: an http:// or https:// URL");
+    Ok(Some(u.to_string()))
+}
+
 struct Chain {
     a: Args,
     eth: flow::Eth,
@@ -401,6 +479,8 @@ impl Chain {
             "module.vault_roots" => self.vault_roots(params).await,
             "module.vault_release" => self.vault_release(params).await,
             "module.prove_release" => self.prove_release(params).await,
+            "module.endpoints" => Ok(self.endpoints()),
+            "module.set_endpoints" => self.set_endpoints(params).await,
             "module.stop" => Ok(json!({ "stopping": true })),
             m => bail!("unknown method {m}"),
         }
@@ -433,7 +513,7 @@ impl Chain {
     async fn info(&self, params: &Value) -> Result<Value> {
         let head = self.seq.wallet.client().get_last_block_id().await.map_err(|e| anyhow!("get_last_block_id: {e}"))?;
         if params["lez_only"] == true {
-            return Ok(json!({ "lez_head": head, "relayer": self.a.relayer.to_string() }));
+            return Ok(json!({ "lez_head": head, "relayer": self.a.relayer.to_string(), "sequencer": self.a.sequencer }));
         }
         Ok(json!({
             "eth_block": self.eth.p.get_block_number().await?,
@@ -441,6 +521,163 @@ impl Chain {
             "eth_balance_wei": self.eth.p.get_balance(self.user).await?.to_string(),
             "lez_head": head,
             "relayer": self.a.relayer.to_string(),
+            "eth_rpc": self.a.eth_rpc,
+            "sequencer": self.a.sequencer,
+        }))
+    }
+
+    /// The endpoints this service reads and sends through, and the deployment they serve.
+    fn endpoints(&self) -> Value {
+        json!({
+            "eth_rpc": self.a.eth_rpc,
+            "sequencer": self.a.sequencer,
+            "chain_id": self.eth.chain_id,
+            "vault": hx(&self.ctx.vault),
+            "config_id": hx(&self.ctx.cid),
+            "program": hx(self.ctx.program.value()),
+        })
+    }
+
+    /// A candidate Ethereum RPC, read without switching to it: it answers, serves the session's chain, holds the
+    /// session's vault, whose `lezConfigId` is the session's configuration, and, when the endpoint in use answers, has
+    /// the block that one holds final (not a fork, not another network with a copy of the vault). A check of the
+    /// endpoint's configuration, not of its honesty: an endpoint that answers all of this falsely is not detected.
+    async fn check_eth_rpc(&self, url: &str) -> Result<(DynProvider, Value)> {
+        let p = eth::provider(url)?;
+        let chain = probe("eth_chainId", async { anyhow::Ok(p.get_chain_id().await?) }).await?;
+        ensure!(chain == self.eth.chain_id, "it serves chain {chain}, not the session's chain {}", self.eth.chain_id);
+        let vault = self.eth.vault;
+        let code = probe("eth_getCode", async { anyhow::Ok(p.get_code_at(vault).await?) }).await?;
+        ensure!(!code.is_empty(), "chain {chain} there has no contract at the session's vault {vault}: not this deployment's network");
+        let cid = probe("lezConfigId()", eth::view(&p, vault, IVault::lezConfigIdCall {}, None)).await?;
+        ensure!(cid.0 == self.ctx.cid, "the vault {vault} there names configuration {}, not the session's {}", hx(&cid.0), hx(&self.ctx.cid));
+        // The history: the endpoint in use's final block, the same on the candidate. Skipped when the endpoint in use
+        // does not answer (a person often switches away from one that does not).
+        let anchor = match probe("the final block of the endpoint in use", final_block(&self.eth.p)).await {
+            Ok((n, h)) => {
+                let b: Value = probe("eth_getBlockByNumber", async {
+                    anyhow::Ok(p.raw_request::<_, Value>("eth_getBlockByNumber".into(), (format!("0x{n:x}"), false)).await?)
+                })
+                .await?;
+                ensure!(!b.is_null(), "it has no block {n}, final on the endpoint in use: behind, or another network");
+                let got = b["hash"].as_str().unwrap_or("").to_lowercase();
+                ensure!(got == h, "its block {n} is {got}, not {h} as on the endpoint in use: another history (a fork, or another network)");
+                json!({ "number": n, "hash": h })
+            }
+            Err(e) => json!({ "compared": false, "error": format!("{e:#}") }),
+        };
+        let block = probe("eth_blockNumber", async { anyhow::Ok(p.get_block_number().await?) }).await?;
+        Ok((p, json!({ "url": url, "chain_id": chain, "vault": vault.to_string(), "vault_code_bytes": code.len(),
+                       "config_id": hx(&cid.0), "block": block, "final_block_of_the_endpoint_in_use": anchor })))
+    }
+
+    /// A candidate LEZ sequencer, read without switching to it: it answers, its zone holds the session's configuration
+    /// (`config(cid)` of the session's bridge program, whose `BridgeConfig` hashes to `cid` under that program and names
+    /// the session's vault and chain: [`check_config_state`]), and its channel (`getChannelId`) is the one the
+    /// configuration names. Two zones on one channel id (two devnets with upstream's default) are told apart only by the
+    /// configuration's presence.
+    async fn check_sequencer(&self, url: &str) -> Result<Value> {
+        let client: SequencerClient =
+            SequencerClientBuilder::default().request_timeout(PROBE).build(url).map_err(|e| anyhow!("not a sequencer URL: {e}"))?;
+        let head = probe("getLastBlockId", async { client.get_last_block_id().await.map_err(|e| anyhow!("{e}")) }).await?;
+        let (program, cid) = (self.ctx.program, self.ctx.cid);
+        let actor = config_actor(program, &cid);
+        let account = probe("getAccount", async { client.get_account(actor.account_id).await.map_err(|e| anyhow!("{e}")) }).await?;
+        let state = account.map(|a| a.data.actor_state(actor.program_account_id).to_vec()).unwrap_or_default();
+        let (phase, channel) = check_config_state(&state, program, &cid, &self.ctx.vault, self.ctx.chain_id)
+            .with_context(|| format!("head {head}"))?;
+        // The jsonrpsee client trait by path: in scope it would make the wallet trait's methods above ambiguous.
+        let zone = probe("getChannelId", async {
+            sequencer_service_rpc::RpcClient::get_channel_id(&client).await.map_err(|e| anyhow!("{e}"))
+        })
+        .await?;
+        ensure!(zone.0 == channel, "its zone's channel is {}, not {}, the one the configuration names", hx(&zone.0), hx(&channel));
+        Ok(json!({ "url": url, "head": head, "config_id": hx(&cid), "program": hx(program.value()), "phase": phase,
+                   "channel_id": hx(&channel) }))
+    }
+
+    /// An endpoint in use, read once (reported, not required: a switch of the other one does not wait for it).
+    async fn in_use(&self) -> Value {
+        let eth = probe("eth_blockNumber", async { anyhow::Ok(self.eth.p.get_block_number().await?) }).await;
+        let lez = probe("getLastBlockId", async {
+            self.seq.wallet.client().get_last_block_id().await.map_err(|e| anyhow!("{e}"))
+        })
+        .await;
+        json!({
+            "eth_rpc": match eth { Ok(b) => json!({ "url": self.a.eth_rpc, "block": b }),
+                                   Err(e) => json!({ "url": self.a.eth_rpc, "error": format!("{e:#}") }) },
+            "sequencer": match lez { Ok(h) => json!({ "url": self.a.sequencer, "head": h }),
+                                     Err(e) => json!({ "url": self.a.sequencer, "error": format!("{e:#}") }) },
+        })
+    }
+
+    /// `module.set_endpoints {eth_rpc?, sequencer?, dry_run?}`: each endpoint given that is not the one in use is read
+    /// first ([`Self::check_eth_rpc`], [`Self::check_sequencer`]); only when every one of them answers for this deployment
+    /// does the service switch (the LEZ wallet opened again on the new sequencer, its role keys imported again; the
+    /// Ethereum provider replaced), else it keeps both endpoints in use and says why. `dry_run`: read only, the
+    /// refusals listed in the reply (`refused`) rather than returned as the error.
+    async fn set_endpoints(&mut self, params: &Value) -> Result<Value> {
+        let eth_new = endpoint_of(params, "eth_rpc")?.filter(|u| *u != self.a.eth_rpc);
+        let seq_new = endpoint_of(params, "sequencer")?.filter(|u| *u != self.a.sequencer);
+        let mut refused = Vec::new();
+        let mut checks = json!({});
+        let mut provider = None;
+        if let Some(u) = &eth_new {
+            match self.check_eth_rpc(u).await {
+                Ok((p, c)) => {
+                    checks["eth_rpc"] = c;
+                    provider = Some(p);
+                }
+                Err(e) => refused.push(format!("the Ethereum RPC {u}: {e:#}")),
+            }
+        }
+        if let Some(u) = &seq_new {
+            match self.check_sequencer(u).await {
+                Ok(c) => checks["sequencer"] = c,
+                Err(e) => refused.push(format!("the LEZ sequencer {u}: {e:#}")),
+            }
+        }
+        if params["dry_run"] == true {
+            return Ok(json!({ "dry_run": true, "refused": refused, "would_switch": { "eth_rpc": eth_new, "sequencer": seq_new },
+                              "checks": checks, "eth_rpc": self.a.eth_rpc, "sequencer": self.a.sequencer }));
+        }
+        if !refused.is_empty() {
+            bail!(
+                "not switched: {}. Kept: Ethereum RPC {}, LEZ sequencer {}",
+                refused.join("; "),
+                self.a.eth_rpc,
+                self.a.sequencer
+            );
+        }
+        let before = json!({ "eth_rpc": self.a.eth_rpc, "sequencer": self.a.sequencer });
+        // LEZ first: opening the wallet on the new sequencer is the step that can fail; the provider swap cannot.
+        if let Some(u) = &seq_new {
+            match lez::open_wallet(&self.a.lez_wallet, u, &self.a.lez_password_file, &self.seed) {
+                Ok(mut w) => {
+                    import_role_keys(&mut w, &self.a.lez_role_keys, false);
+                    self.seq.wallet = w;
+                    self.seq.synced = false;
+                    self.a.sequencer = u.clone();
+                }
+                Err(e) => {
+                    // open_wallet wrote the new address into the wallet's config: write the one in use back.
+                    let back = lez::open_wallet(&self.a.lez_wallet, &self.a.sequencer, &self.a.lez_password_file, &self.seed);
+                    bail!("not switched: the LEZ wallet did not open on {u}: {e:#} (its config written back: {}). Kept: Ethereum RPC {}, LEZ sequencer {}",
+                          back.is_ok(), self.a.eth_rpc, self.a.sequencer);
+                }
+            }
+        }
+        if let (Some(u), Some(p)) = (&eth_new, provider) {
+            self.eth.p = p;
+            self.a.eth_rpc = u.clone();
+        }
+        Ok(json!({
+            "eth_rpc": self.a.eth_rpc,
+            "sequencer": self.a.sequencer,
+            "switched": { "eth_rpc": eth_new.is_some(), "sequencer": seq_new.is_some() },
+            "before": before,
+            "checks": checks,
+            "in_use": self.in_use().await,
         }))
     }
 
@@ -952,14 +1189,7 @@ fn main() -> Result<()> {
         };
         ensure!(a.lez_role_keys.is_empty() || password.is_some(),
                 "--lez-role-key needs --lez-role-password-file: a role's message is signed only after a person approves it with that password");
-        let mut role_accounts = Vec::new();
-        for label in &a.lez_role_keys {
-            let key = derived_key(label);
-            let account = AccountId::from(&lee::PublicKey::new_from_private_key(&key));
-            role_accounts.push(*account.value());
-            wallet.storage_mut().key_chain_mut().add_imported_public_account(key);
-            eprintln!("seqnet-chain: the LEZ wallet holds the role key {label} (account {account}); its messages wait for approval");
-        }
+        let role_accounts = import_role_keys(&mut wallet, &a.lez_role_keys, true);
         let gate = RoleGate::new(role_accounts, password.as_deref());
         let program = AccountId::new(h32(&a.bridge_account)?);
         let cid = eth::view(&eth.p, eth.vault, IVault::lezConfigIdCall {}, None).await?;
@@ -1028,6 +1258,43 @@ fn main() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn config(vault: [u8; 20], chain: u64) -> bw::BridgeConfig {
+        let cap = bw::CapParams { capacity: 10, refill_per_second: 1 };
+        bw::BridgeConfig {
+            bedrock_genesis_id: [1; 32],
+            channel_id: [5; 32],
+            bridge_image_id: [2; 32],
+            attestation: AccountId::new([3; 32]),
+            instance_id: [4; 32],
+            evm_chain_id: chain,
+            vault,
+            controls: bw::Controls { admin: [6; 32], freeze_authority: [7; 32], fee_recipient: [8; 32], floor: cap, token_cap: cap, global_cap: cap },
+        }
+    }
+
+    /// RFP-022 U.9: a candidate sequencer's `config(cid)` is accepted only when it is this deployment's configuration.
+    #[test]
+    fn a_candidate_sequencers_configuration_must_be_the_sessions() {
+        let program = AccountId::new([9; 32]);
+        let (vault, chain) = ([0x11; 20], 11_155_111);
+        let c = config(vault, chain);
+        let cid = c.id(program);
+        let state = |c: bw::BridgeConfig| borsh::to_vec(&bw::BridgeState::Config(bw::ConfigState::Pairing { config: c, record_slot: 2 })).unwrap();
+        assert_eq!(check_config_state(&state(c.clone()), program, &cid, &vault, chain).unwrap(), ("pairing", [5; 32]));
+        let refused = |r: Result<(&'static str, [u8; 32])>, part: &str| {
+            let e = format!("{:#}", r.unwrap_err());
+            assert!(e.contains(part), "{part:?} not in {e:?}");
+        };
+        refused(check_config_state(&[], program, &cid, &vault, chain), "holds no configuration");
+        refused(check_config_state(&[0xff, 1, 2], program, &cid, &vault, chain), "holds no bridge configuration");
+        refused(check_config_state(&state(c.clone()), AccountId::new([8; 32]), &cid, &vault, chain), "hashes to");
+        refused(check_config_state(&state(c.clone()), program, &[0; 32], &vault, chain), "hashes to");
+        refused(check_config_state(&state(c.clone()), program, &cid, &[0x22; 20], chain), "pairs vault");
+        refused(check_config_state(&state(c.clone()), program, &cid, &vault, 560_048), "pairs vault");
+        // Another configuration of the same program (its own vault) at that account: its id is not `cid`.
+        refused(check_config_state(&state(config([0x33; 20], chain)), program, &cid, &vault, chain), "hashes to");
+    }
 
     fn req(signer: &[u8; 32]) -> (Value, Vec<u8>) {
         let message = BridgeMessage::Sunset { config_id: [7; 32] };

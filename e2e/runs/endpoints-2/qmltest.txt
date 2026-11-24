@@ -1,0 +1,15 @@
+********* Start testing of ferrata_miniapp_logos *********
+Config: Using QtTest library 6.4.2, Qt 6.4.2 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 13.2.0), ubuntu 24.04
+PASS   : ferrata_miniapp_logos::FerrataEndpointsLogos::initTestCase()
+QDEBUG : ferrata_miniapp_logos::FerrataEndpointsLogos::test_1_local() qml: APPLY eth=http://127.0.0.1:8546 sequencer=http://127.0.0.1:19301 -> Switched the Ethereum RPC and the LEZ sequencer. Connected: chain 11155111, block 9 through http://127.0.0.1:8546; LEZ: http://127.0.0.1:19301, head 38
+QDEBUG : ferrata_miniapp_logos::FerrataEndpointsLogos::test_1_local() qml: APPLY eth=http://127.0.0.1:8545 sequencer=http://127.0.0.1:19302 -> Switched the Ethereum RPC and the LEZ sequencer. Connected: chain 11155111, block 9 through http://127.0.0.1:8545; LEZ: http://127.0.0.1:19302, head 38
+QDEBUG : ferrata_miniapp_logos::FerrataEndpointsLogos::test_1_local() qml: APPLY eth=http://127.0.0.1:8545 sequencer=http://127.0.0.1:19399 -> Not switched: the LEZ sequencer http://127.0.0.1:19399: getLastBlockId: client error (Connect). Kept: Ethereum RPC http://127.0.0.1:8545 (the chain service (seqnet-chain)), LEZ sequencer http://127.0.0.1:19302 (the chain service (seqnet-chain))
+QDEBUG : ferrata_miniapp_logos::FerrataEndpointsLogos::test_1_local() qml: APPLY eth=http://127.0.0.1:39708 sequencer=http://127.0.0.1:19302 -> Not switched: the Ethereum RPC http://127.0.0.1:39708: eth_chainId: error sending request for url (http://127.0.0.1:39708/): error sending request for url (http://127.0.0.1:39708/): client error (Connect): tcp connect error: Connection refused (os error 111). Kept: Ethereum RPC http://127.0.0.1:8545 (the chain service (seqnet-chain)), LEZ sequencer http://127.0.0.1:19302 (the chain service (seqnet-chain))
+QDEBUG : ferrata_miniapp_logos::FerrataEndpointsLogos::test_1_local() qml: APPLY eth=http://127.0.0.1:39708 sequencer=http://127.0.0.1:19300 -> Not switched: the Ethereum RPC http://127.0.0.1:39708: eth_chainId: error sending request for url (http://127.0.0.1:39708/): error sending request for url (http://127.0.0.1:39708/): client error (Connect): tcp connect error: Connection refused (os error 111). Kept: Ethereum RPC http://127.0.0.1:8545 (the chain service (seqnet-chain)), LEZ sequencer http://127.0.0.1:19302 (the chain service (seqnet-chain))
+QDEBUG : ferrata_miniapp_logos::FerrataEndpointsLogos::test_1_local() qml: APPLY eth=http://127.0.0.1:8545 sequencer=http://127.0.0.1:19300 -> Switched the LEZ sequencer. Connected: chain 11155111, block 9 through http://127.0.0.1:8545; LEZ: http://127.0.0.1:19300, head 38
+PASS   : ferrata_miniapp_logos::FerrataEndpointsLogos::test_1_local()
+SKIP   : ferrata_miniapp_logos::FerrataEndpointsLogos::test_2_live() U9_PUBLIC=1 runs the live deployment's endpoints (public Sepolia RPCs, our public LEZ network), read only
+   Loc: [modules/ferrata_bridge_ui/qmltest-logos/tst_endpoints_logos.qml(129)]
+PASS   : ferrata_miniapp_logos::FerrataEndpointsLogos::cleanupTestCase()
+Totals: 3 passed, 0 failed, 1 skipped, 0 blacklisted, 3219ms
+********* Finished testing of ferrata_miniapp_logos *********

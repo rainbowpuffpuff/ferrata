@@ -1,0 +1,1 @@
+{"config":{"enabled":true,"endpoint":"https://ethereum-sepolia-rpc.publicnode.com","name":"Sepolia","nativeDecimals":18,"nativeSymbol":"ETH","proxy":null,"proxyRequired":false,"source":"external","testnet":true,"timeoutSecs":8,"verifiedMaxSecs":45,"verifiedProxyMode":"off","verifiedTimeoutSecs":15},"ok":true}

@@ -1,0 +1,9 @@
+{
+  "label": "STAND-IN Ethereum side: a local anvil (no fork, Sepolia chain id because crown-driver pins it); the zone, its sequencers and programs are real",
+  "chainId": 11155111,
+  "vault": "0x0012962bc1b196D230cB1a466f5d39409A6ec0a5",
+  "configId": "0xae4fc07b281473feb6b892cfe981f35adf2acd903b9675ee6f55cb1319f2887d",
+  "genesisState": "0x48f193e812e038c18a870e72f3e357ebf46f71491bb8a5821c422b887a6f4528",
+  "delta": 3600,
+  "deployer": "0x521bF834A484762B014f5801F85A20a60816BF4B"
+}

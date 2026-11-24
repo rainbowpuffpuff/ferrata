@@ -178,6 +178,16 @@ jobs:
           cargo test --locked --lib relayer
           cargo test --locked --lib burns
           cargo test --locked --test gasdrop -- --nocapture
+      # RFP-022 U.9: seqnet-chain, the chain service the mini-app's endpoints test runs inside Logos Core with
+      # (e2e/endpoints), compiles with its feature, and its own checks run: a candidate sequencer's configuration
+      # (src/bin/seqnet_chain.rs's tests; the live switch itself runs on the build box). Debug, as LEZ's state machine
+      # refuses its test helpers in a release build. Local only.
+      - name: The chain service's endpoint checks (RFP-022 U.9)
+        timeout-minutes: 30
+        working-directory: cli
+        run: |
+          export RISC0_HOME="$HOME/risc0-home-lez"
+          cargo test --locked --features seqnet --bin seqnet-chain
       # RFP-021 R.5 and U.5: `ferrata attest` against a stand-in LEZ sequencer (LEZ's own block application on
       # 127.0.0.1) and a scripted Ethereum endpoint failing on demand, killed mid-command and run again with nothing
       # sent twice; LEZ's validity-window refusal of a stale checkpoint shown as code 53's message, on a real
@@ -383,6 +393,13 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq libpcsclite-dev protobuf-compiler
       - name: cli/'s library compiles as ferrata_relayer_module builds it (without lez-wallet)
         run: cd cli && cargo +1.98.1 check --locked --no-default-features --lib
+      # RFP-022 U.9: the bridge module's set_endpoints (the mini-app's "Apply and test") through the modules that hold the
+      # connections (a chain service, eth_rpc_module, lez_core), against stand-ins on 127.0.0.1: switched only after the
+      # new endpoint answered for the deployment, both kept on a refusal, put back after a failed reading. Local only; the
+      # live run inside Logos Core is e2e/endpoints/run.sh (build box).
+      - name: The bridge module's endpoint switching through their owners (RFP-022 U.9)
+        working-directory: modules/ferrata_bridge_module/rust-lib
+        run: cargo test --locked -p ferrata-bridge-calls --test endpoints -- --nocapture
 
   links:
     runs-on: ubuntu-latest

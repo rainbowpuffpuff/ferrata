@@ -1,0 +1,4 @@
+6f9ab34d02b5ad0e0294a8a4b36791a916268bef674ef990252e1e675001575b  stack/lgx-eth_rpc_module/logos-eth_rpc_module-module-lib.lgx
+9e88b425620501d6375b96ef3db72038fcb83c044981b932a85023c46a698282  logos/lgx-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx
+d149a1b6476bdd48a69706291f286084d59184ce2e3698b2413911d0d6b7849e  bin/seqnet-chain
+71fe3f88c859e12f9ecc3216825ad7dba9d32d19efe9852e8d1a83a33a1302b5  bin/crown-driver

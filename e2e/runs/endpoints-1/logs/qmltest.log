@@ -1,0 +1,2 @@
+QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to 'tmp/runtime-root'
+WARNING: xunitxml is deprecated. Please use junitxml.

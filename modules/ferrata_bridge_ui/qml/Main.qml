@@ -49,6 +49,11 @@ Rectangle {
     property string ethRpc: "http://127.0.0.1:18545"
     property string sequencer: "harness"
     property string endpointStatus: ""
+    // Inside Logos the endpoints are the ones the modules holding the connections use (the module's `info`): the fields
+    // show them until the person edits one; "Apply and test" asks the module to switch (set_endpoints), which keeps the
+    // endpoints in use when a new one does not answer for this deployment.
+    property bool endpointsEdited: false
+    property string endpointsVia: ""
 
     // ---- state ---------------------------------------------------------------------------------
     property var info: null
@@ -189,7 +194,44 @@ Rectangle {
         }
         finish(true, (r && r.result !== undefined) ? r.result : r);
     }
-    function refreshInfo(done) { call("info", {}, function (ok, v) { if (ok) info = v; if (done) done(ok, v); }); }
+    function refreshInfo(done) { call("info", {}, function (ok, v) { if (ok) { info = v; showEndpoints(); } if (done) done(ok, v); }); }
+    // Inside Logos: the fields and the property values follow the endpoints in use (info), unless the person is editing.
+    function showEndpoints() {
+        if (transport !== "module" || !info) return;
+        if (info.endpoints) endpointsVia = "Ethereum RPC: " + info.endpoints.eth_rpc.via + ". LEZ sequencer: " + info.endpoints.sequencer.via + ".";
+        if (endpointsEdited) return;
+        if (info.eth_rpc) { ethRpc = info.eth_rpc; fRpc.text = info.eth_rpc; }
+        if (info.sequencer) { sequencer = info.sequencer; fSeq.text = info.sequencer; }
+    }
+    function applyEndpoints() {
+        backendUrl = fBackend.text;
+        var want = { eth_rpc: fRpc.text.trim(), sequencer: fSeq.text.trim() };
+        if (transport !== "module") { ethRpc = want.eth_rpc; sequencer = want.sequencer; }
+        call("set_endpoints", want, function (ok, v) {
+            if (transport === "module") {
+                endpointsEdited = false;
+                if (!ok) {
+                    // The module's reason names the refused endpoint and the endpoints kept (no position of the person).
+                    endpointStatus = "Not switched: " + String(lastError).replace(/^not switched: /, "");
+                    refreshInfo();
+                    return;
+                }
+                refreshInfo(function (ok2, i) {
+                    var what = v.switched && (v.switched.eth_rpc || v.switched.sequencer)
+                        ? "Switched " + [v.switched.eth_rpc ? "the Ethereum RPC" : "", v.switched.sequencer ? "the LEZ sequencer" : ""].filter(function (x) { return x; }).join(" and ") + ". "
+                        : "Nothing to switch: these are the endpoints in use. ";
+                    endpointStatus = ok2 ? what + "Connected: chain " + i.chain_id + ", block " + i.eth_block + " through " + v.eth_rpc + "; LEZ: " + v.sequencer + ", head " + i.lez_head
+                                         : what + "Then reading the chains failed: " + Fmt.friendly(lastError);
+                });
+                return;
+            }
+            if (!ok) { endpointStatus = "Not switched: " + Fmt.friendly(lastError); return; }
+            refreshInfo(function (ok2, i) {
+                endpointStatus = ok2 ? "Connected: chain " + i.chain_id + ", block " + i.eth_block + " through " + v.eth_rpc + "; LEZ: " + v.sequencer
+                                     : "Switched to " + v.eth_rpc + ", which does not answer: " + Fmt.friendly(lastError);
+            });
+        });
+    }
     // While a job runs, the module answers neither (they would wait for LEZ's wallet, busy proving): the positions are read
     // once the job is done.
     function refreshRegistry(done) {
@@ -1007,22 +1049,14 @@ Rectangle {
                         RadioButton { objectName: "settings.transport.module"; text: "Logos core module ferrata_bridge_module"; checked: transport === "module"; enabled: inLogos; onClicked: transport = "module" }
                     }
                     RowLayout { Label { text: "Devnet backend URL"; Layout.preferredWidth: 170 } TextField { id: fBackend; objectName: "settings.backend"; text: backendUrl; Layout.preferredWidth: 420 } }
-                    RowLayout { Label { text: "Ethereum RPC"; Layout.preferredWidth: 170 } TextField { id: fRpc; objectName: "settings.ethRpc"; text: ethRpc; Layout.preferredWidth: 420 } }
-                    RowLayout { Label { text: "LEZ sequencer or zone"; Layout.preferredWidth: 170 } TextField { id: fSeq; objectName: "settings.sequencer"; text: sequencer; Layout.preferredWidth: 420 } }
-                    Button {
-                        objectName: "settings.apply"; text: "Apply and test"; enabled: busy === 0
-                        onClicked: {
-                            backendUrl = fBackend.text; ethRpc = fRpc.text; sequencer = fSeq.text;
-                            call("set_endpoints", { eth_rpc: ethRpc, sequencer: sequencer }, function (ok, v) {
-                                if (!ok) { endpointStatus = "Not switched: " + Fmt.friendly(lastError); return; }
-                                refreshInfo(function (ok2, i) {
-                                    endpointStatus = ok2 ? "Connected: chain " + i.chain_id + ", block " + i.eth_block + " through " + v.eth_rpc + "; LEZ: " + v.sequencer
-                                                         : "Switched to " + v.eth_rpc + ", which does not answer: " + Fmt.friendly(lastError);
-                                });
-                            });
-                        }
+                    RowLayout { Label { text: "Ethereum RPC"; Layout.preferredWidth: 170 } TextField { id: fRpc; objectName: "settings.ethRpc"; text: ethRpc; Layout.preferredWidth: 420; onTextEdited: endpointsEdited = true } }
+                    RowLayout { Label { text: "LEZ sequencer or zone"; Layout.preferredWidth: 170 } TextField { id: fSeq; objectName: "settings.sequencer"; text: sequencer; Layout.preferredWidth: 420; onTextEdited: endpointsEdited = true } }
+                    RowLayout {
+                        Button { objectName: "settings.apply"; text: "Apply and test"; enabled: busy === 0; onClicked: applyEndpoints() }
+                        Button { objectName: "settings.reload"; text: "Show the endpoints in use"; visible: transport === "module"; enabled: busy === 0; onClicked: { endpointsEdited = false; refreshInfo(); } }
                     }
                     Label { objectName: "settings.status"; text: endpointStatus; wrapMode: Text.WordWrap; Layout.fillWidth: true; font.bold: true }
+                    Label { objectName: "settings.via"; text: endpointsVia; visible: transport === "module" && endpointsVia !== ""; wrapMode: Text.WordWrap; Layout.fillWidth: true; color: "#4a5563"; font.pixelSize: 12 }
                 }
                 Note {
                     objectName: "settings.sandboxNote"
@@ -1030,7 +1064,12 @@ Rectangle {
                     color: "#8a6d00"
                     text: "Inside Logos a ui module may not use the network (Basecamp's sandbox refuses it): the devnet backend is for running this view outside Logos; here the calls go to ferrata_bridge_module."
                 }
-                Note { text: "The devnet backend is anvil (chain id 1, local) and the LEZ harness; in Logos the same calls go to ferrata_bridge_module, which reads Ethereum through eth_rpc_module and LEZ through lez_core at the endpoints set here." }
+                Note {
+                    objectName: "settings.note"
+                    text: transport === "module"
+                          ? "Inside Logos each endpoint is switched by the module that holds the connection: the LEZ sequencer by the chain service ferrata_bridge_module reads LEZ through; the Ethereum RPC by Logos Core's eth_rpc_module when the session reads Ethereum through it (its endpoint for the chain, which every Logos app on this device that reads that chain uses), else by the chain service. A new endpoint is used only after it has answered for this deployment: the chain, the vault and its configuration on Ethereum; the configuration on the LEZ zone. Otherwise the endpoints in use are kept."
+                          : "The devnet backend is anvil (chain id 1, local) and the LEZ harness; in Logos the same calls go to ferrata_bridge_module, which switches each endpoint where its connection is held (eth_rpc_module or the chain service), after testing it."
+                }
                 Item { Layout.fillHeight: true }
             }
         }

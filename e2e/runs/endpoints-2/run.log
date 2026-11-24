@@ -1,0 +1,20 @@
+[22:14:03] endpoints-2: commit 3fcd6220; U9_PUBLIC=0
+[22:14:04] bundle 0013bab125141c9d…; programs: ferrata_lez.bin ddfde69bea89a5b8…, ferrata_bridge.bin 537cbe7a4c690041… (B1)
+[22:14:13] seq-0 start 1: scheduler 4 s after the launch; its blocks fall 6 s after an epoch second
+[22:15:10] seq-1 start 1: scheduler 56 s after the launch; its blocks fall 3 s after an epoch second
+[22:16:08] seq-2 start 1: scheduler 58 s after the launch; its blocks fall 1 s after an epoch second
+[22:17:09] seq-3 start 1: scheduler 61 s after the launch; its blocks fall 2 s after an epoch second
+[22:17:10] a zone of four sequencers: heights 11/12/11/11
+[22:20:27] session A: bridge program 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d; T0 = 30; heights 30/30/30/30
+[22:20:37] vault 0x0012962bc1b196D230cB1a466f5d39409A6ec0a5 (anvil, chain 11155111), configId 0xae4fc07b281473feb6b892cfe981f35adf2acd903b9675ee6f55cb1319f2887d; one deposit; capture checked
+[22:21:40] operator: [["bridge Init (pairing: configId in the vault's slot 2)","applied","35"],["bridge Register ETH (registry entry, schedules 0 and 1, leaf count)","applied","36"],["bridge ImportRoot n=1 (stage 1, block 9)","applied","37"]]; heights 37/37/37/37
+[22:21:41] anvil fork on http://127.0.0.1:8546: chain 11155111, vault code 48741 hex chars
+[22:21:42] chain service local on 127.0.0.1:18700: {"chain_id":11155111,"config_id":"0xae4fc07b281473feb6b892cfe981f35adf2acd903b9675ee6f55cb1319f2887d","eth_rpc":"http://127.0.0.1:8545","program":"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d","sequencer":"http://127.0.0.1:19300","vault":"0x0012962bc1b196d230cb1a466f5d39409a6ec0a5"}
+[22:21:44] Logos Core: ferrata_bridge_module, eth_rpc_module, package_manager, storage_module, package_downloader, modules_state, capability_module; eth_rpc_module chain 11155111: "https://ethereum-sepolia-rpc.publicnode.com"
+[22:21:44] the view (Qt Quick Test, offscreen): scenario L
+[22:21:48] qmltest: exit 0 in 4 s: Totals: 3 passed, 0 failed, 1 skipped, 0 blacklisted, 3219ms
+PASS   : ferrata_miniapp_logos::FerrataEndpointsLogos::initTestCase()
+PASS   : ferrata_miniapp_logos::FerrataEndpointsLogos::test_1_local()
+SKIP   : ferrata_miniapp_logos::FerrataEndpointsLogos::test_2_live() U9_PUBLIC=1 runs the live deployment's endpoints (public Sepolia RPCs, our public LEZ network), read only
+PASS   : ferrata_miniapp_logos::FerrataEndpointsLogos::cleanupTestCase()
+[22:21:48] endpoints-2: done

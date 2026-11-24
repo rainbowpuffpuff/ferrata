@@ -156,6 +156,14 @@ fn module_call(method: &str, args: Value) -> Result<Value, String> {
     Ok(serde_json::from_str(&text).unwrap_or_else(|_| json!({ "ok": false, "error": text })))
 }
 
+/// One call of `method` of another Logos module by name (session.rs: `eth_rpc_module`'s chain registry for the
+/// endpoints): its reply as JSON (a reply that is not JSON as `{"ok": false, "error": text}`), or why it did not reach it.
+pub(crate) fn call_module(module: &str, method: &str, args: Value, timeout_ms: u64) -> Result<Value, String> {
+    let f = CALL.get().ok_or_else(|| format!("{module}.{method}: reachable only from inside Logos Core"))?;
+    let text = f(module, method, &args, timeout_ms)?;
+    Ok(serde_json::from_str(&text).unwrap_or_else(|_| json!({ "ok": false, "error": text })))
+}
+
 fn why(v: &Value) -> String {
     let code = v["code"].as_str().map(|c| format!("{c}: ")).unwrap_or_default();
     let error = v.get("error").or_else(|| v.get("reason")).map(|e| e.as_str().map_or(e.to_string(), str::to_string));

@@ -1,0 +1,13 @@
+{
+  "_source": "u9-endpoints (e2e/endpoints/run.sh): the zone of four sequencers; image ids of docs/image-ids.md",
+  "checkpointImageIdA": "0xb9c1e6a834879f6be79d09d728523565846018629b82f66986eb58fab4f52c84",
+  "checkpointImageIdB": "0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e",
+  "releaseImageId": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+  "lezConfigId": "0xae4fc07b281473feb6b892cfe981f35adf2acd903b9675ee6f55cb1319f2887d",
+  "genesisState": "0x48f193e812e038c18a870e72f3e357ebf46f71491bb8a5821c422b887a6f4528",
+  "nMin": 4,
+  "tMin": 3,
+  "postingTimeframe": 0,
+  "ethLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "tokenLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000"
+}

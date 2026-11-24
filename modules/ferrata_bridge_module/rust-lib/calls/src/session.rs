@@ -19,6 +19,11 @@
 //! a job the view polls while the person approves. The chain service then answers for LEZ alone (`lez_only`) and
 //! stands in for the release's prover only (the vault's verifier is the tests' mock: no Groth16 wrap here).
 //!
+//! `set_endpoints` (the view's "Apply and test", RFP-022 U.9) switches the endpoints where the connections are held: the
+//! LEZ sequencer at the chain service (`module.set_endpoints`), the Ethereum RPC at `eth_rpc_module` (its endpoint for
+//! the session's chain) on the `eth` path or at the chain service on the plain path. A new endpoint is used only once
+//! it has answered for this deployment; otherwise the endpoints in use are kept (`set_endpoints` below).
+//!
 //! Every reply is `{"ok": true, "result"}` or `{"ok": false, "error"}`, the envelope the view reads.
 
 use std::io::{Read, Write};
@@ -127,8 +132,9 @@ fn dispatch(method: &str, params: &Value) -> Result<Value, String> {
         return Ok(crate::jobs::list());
     }
     // While a job runs, a call that would call lez_core or reread the chains on the module's Qt thread is refused at
-    // once (jobs.rs: it would wait there for lez_core, busy proving). `info`, `price` and `deposit` read and send
-    // through the chain service only; `claim` and `burn` answer the running job, or are refused.
+    // once (jobs.rs: it would wait there for lez_core, busy proving). `info` and `price` read through the chain service
+    // and, on the `eth` path, eth_rpc_module, never lez_core; `deposit` sends through the chain service, or is itself a
+    // job on the `eth` path; `claim` and `burn` answer the running job, or are refused. `set_endpoints` is refused.
     if let Some(job) = crate::jobs::active() {
         // A deposit or a vault admin call through the send stack is itself a job: started again it answers that job,
         // and jobs.rs refuses it while another job runs.
@@ -156,6 +162,9 @@ fn dispatch(method: &str, params: &Value) -> Result<Value, String> {
     if method == "lez_probe" {
         let s = SESSION.lock().ok().and_then(|g| g.as_ref().map(|s| s.s.clone())).ok_or("open the session first")?;
         return crate::lez::probe(&s);
+    }
+    if method == "set_endpoints" {
+        return set_endpoints(params);
     }
     let (chain, s) = {
         let mut g = SESSION.lock().map_err(|_| "the session lock is poisoned")?;
@@ -187,7 +196,6 @@ fn dispatch(method: &str, params: &Value) -> Result<Value, String> {
             let m = method.to_string();
             crate::jobs::start("admin_lez", params, move |p| c.admin_lez(&m, p))
         }
-        "set_endpoints" => Err("the endpoints are the chain service's (seqnet-chain): set them where it starts".into()),
         m if m.starts_with("admin.") => Err(format!(
             "{m}: not on this path. The module answers admin.status and admin.vault once the session's Ethereum path goes through Logos Core (`eth`), and builds the LEZ role messages (admin.set_cap, admin.lez: SetCap, Freeze, Pause, Tick, Sunset), each sent only after a person approves it at the role's wallet. A LEZ Freeze, Pause or Tick needs a time record whose Gloas layout carries the execution block's RLP header, which the module does not fetch"
         )),
@@ -196,6 +204,340 @@ fn dispatch(method: &str, params: &Value) -> Result<Value, String> {
         }
         m => Err(format!("unknown method {m}")),
     }
+}
+
+// ---- the endpoints (RFP-022 U.9) ------------------------------------------------------------------------------------
+
+const ETH_RPC_MODULE: &str = "eth_rpc_module";
+/// A call about eth_rpc_module's chain registry (no network).
+const REGISTRY_MS: u64 = 10_000;
+/// One reading of a candidate endpoint: a closed port answers at once, a silent host does not, and Basecamp cuts a
+/// view's call to a core module at 20 s.
+const PROBE_MS: u64 = 6_000;
+
+/// Who holds the session's Ethereum connection.
+enum EthOwner {
+    /// Logos Core's `eth_rpc_module`: its endpoint for the chain (`chains.json`, the device's own: every Logos app that
+    /// reads the chain uses it). The session's `eth` path.
+    Module { chain_id: u64 },
+    /// The module's own HTTP client (`eth {"via": "http"}`: natively).
+    Http,
+    /// The chain service (the plain path).
+    Service,
+}
+
+impl EthOwner {
+    fn of_session() -> Self {
+        match eth_path() {
+            Some(e) if e["eth"]["via"] == "eth_rpc_module" => {
+                EthOwner::Module { chain_id: e["eth"]["chain_id"].as_u64().or_else(|| e["chain_id"].as_u64()).unwrap_or(0) }
+            }
+            Some(_) => EthOwner::Http,
+            None => EthOwner::Service,
+        }
+    }
+
+    fn label(&self) -> String {
+        match self {
+            EthOwner::Module { chain_id } => format!(
+                "Logos Core's eth_rpc_module, its endpoint for chain {chain_id} (this device's: every Logos app that reads chain {chain_id} uses it)"
+            ),
+            EthOwner::Http => "the module's own HTTP client".into(),
+            EthOwner::Service => "the chain service (seqnet-chain)".into(),
+        }
+    }
+
+    /// The endpoint in use: eth_rpc_module's (from its registry), the module's own, or the chain service's (`svc`: its
+    /// `module.endpoints` or `module.info`).
+    fn endpoint(&self, svc: &Value) -> Result<String, String> {
+        match self {
+            EthOwner::Module { chain_id } => module_endpoint(*chain_id),
+            EthOwner::Http => Ok(eth_path().and_then(|e| e["eth"]["rpc_url"].as_str().map(str::to_string)).unwrap_or_default()),
+            EthOwner::Service => Ok(svc["eth_rpc"].as_str().unwrap_or("").to_string()),
+        }
+    }
+}
+
+const SEQUENCER_OWNER: &str = "the chain service (seqnet-chain)";
+
+fn short(v: &Value) -> String {
+    let t = v["error"].as_str().map_or_else(|| v.to_string(), str::to_string);
+    let code = v["code"].as_str().map(|c| format!("{c}: ")).unwrap_or_default();
+    format!("{code}{}", t.chars().take(300).collect::<String>())
+}
+
+/// eth_rpc_module's endpoint for `chain_id`.
+fn module_endpoint(chain_id: u64) -> Result<String, String> {
+    let v = crate::send::call_module(ETH_RPC_MODULE, "get_chain_config", json!([chain_id]), REGISTRY_MS)?;
+    v["config"]["endpoint"].as_str().map(str::to_string).ok_or_else(|| format!("eth_rpc_module holds no endpoint for chain {chain_id}: {}", short(&v)))
+}
+
+/// eth_rpc_module's endpoint for `chain_id` replaced by `url`, nothing else of the chain's record changed (its proxy,
+/// verified-proxy mode and timeouts stay).
+fn patch_endpoint(chain_id: u64, url: &str) -> Result<(), String> {
+    let v = crate::send::call_module(ETH_RPC_MODULE, "patch_chain_endpoint", json!([chain_id, url]), REGISTRY_MS)?;
+    if v["ok"] == true {
+        Ok(())
+    } else {
+        Err(short(&v))
+    }
+}
+
+/// One JSON-RPC call to `url` through eth_rpc_module's client for `chain_id` (its proxy policy), nothing stored
+/// (`raw_rpc_url`); an error starts with eth_rpc_module's code (`verified_bypass`: a proof-backed read eth_rpc_module
+/// sends only through the verified proxy, on a chain set to `required`).
+fn probe_url(chain_id: u64, url: &str, method: &str, params: Value) -> Result<Value, String> {
+    let v = crate::send::call_module(ETH_RPC_MODULE, "raw_rpc_url", json!([chain_id, url, method, params.to_string()]), PROBE_MS)?;
+    if v["ok"] == true {
+        Ok(v["result"].clone())
+    } else {
+        Err(short(&v))
+    }
+}
+
+fn quantity(v: &Value, what: &str) -> Result<u64, String> {
+    let t = v.as_str().ok_or_else(|| format!("{what}: not a quantity: {v}"))?;
+    u64::from_str_radix(t.trim_start_matches("0x"), 16).map_err(|e| format!("{what} {t}: {e}"))
+}
+
+fn same_hex(a: &str, b: &str) -> bool {
+    let n = |h: &str| h.trim().trim_start_matches("0x").to_lowercase();
+    n(a) == n(b) && !n(a).is_empty()
+}
+
+/// An endpoint as the view gives it: trimmed, `http://` or `https://`; absent or empty: unchanged.
+fn endpoint_param(params: &Value, key: &str) -> Result<Option<String>, String> {
+    match params[key].as_str().map(str::trim).filter(|u| !u.is_empty()) {
+        None => Ok(None),
+        Some(u) if u.starts_with("http://") || u.starts_with("https://") => Ok(Some(u.to_string())),
+        Some(u) => Err(format!("{key} {u:?}: an http:// or https:// URL")),
+    }
+}
+
+/// The block the endpoint in use holds final (`finalized`), read through `call`: its number and hash.
+fn final_block(mut call: impl FnMut(&str, Value) -> Result<Value, String>) -> Result<(u64, String), String> {
+    let b = call("eth_getBlockByNumber", json!(["finalized", false]))?;
+    let n = quantity(&b["number"], "the final block's number")?;
+    let h = b["hash"].as_str().ok_or("the final block has no hash")?.to_string();
+    Ok((n, h))
+}
+
+/// `anchor` (the endpoint in use's final block) the same block on the endpoint `call` reaches.
+fn same_history(anchor: &(u64, String), mut call: impl FnMut(&str, Value) -> Result<Value, String>) -> Result<(), String> {
+    let (n, h) = anchor;
+    let b = call("eth_getBlockByNumber", json!([format!("0x{n:x}"), false]))?;
+    if b.is_null() {
+        return Err(format!("it has no block {n}, final on the endpoint in use: behind, or another network"));
+    }
+    let got = b["hash"].as_str().unwrap_or("");
+    if !same_hex(got, h) {
+        return Err(format!("its block {n} is {got}, not {h} as on the endpoint in use: another history (a fork, or another network)"));
+    }
+    Ok(())
+}
+
+/// A candidate Ethereum RPC, read without switching to it (`call` reaches it): it serves the session's chain, holds the
+/// session's vault, whose `lezConfigId` is the session's configuration, and, when the endpoint in use answered
+/// (`anchor`), has the block that endpoint holds final. A check of the endpoint's configuration, not of its honesty: an
+/// endpoint that answers all of this falsely is not detected. A read eth_rpc_module sends only through its verified
+/// proxy is left to the reading after the switch (`after_switch`).
+fn check_eth(chain_id: u64, s: &Value, anchor: Option<&(u64, String)>, mut call: impl FnMut(&str, Value) -> Result<Value, String>) -> Result<Value, String> {
+    let vault = s["vault"].as_str().ok_or("the session names no vault")?;
+    let cid = s["config_id"].as_str().ok_or("the session names no configuration")?;
+    let id = quantity(&call("eth_chainId", json!([]))?, "eth_chainId")?;
+    if id != chain_id {
+        return Err(format!("it serves chain {id}, not the session's chain {chain_id}"));
+    }
+    let mut after_switch = Vec::new();
+    match call("eth_getCode", json!([vault, "latest"])) {
+        Ok(code) if code.as_str().map_or(true, |c| c.trim_start_matches("0x").is_empty()) => {
+            return Err(format!("chain {id} there has no contract at the session's vault {vault}: not this deployment's network"));
+        }
+        Ok(_) => {}
+        Err(e) if e.starts_with("verified_bypass") => after_switch.push("eth_getCode"),
+        Err(e) => return Err(format!("eth_getCode: {e}")),
+    }
+    let data = hex(&crate::evm::selector("lezConfigId()"));
+    match call("eth_call", json!([{ "to": vault, "data": data }, "latest"])) {
+        Ok(r) => {
+            let got = r.as_str().unwrap_or("");
+            if !same_hex(got, cid) {
+                return Err(format!("the vault {vault} there names configuration {got}, not the session's {cid}"));
+            }
+        }
+        Err(e) if e.starts_with("verified_bypass") => after_switch.push("lezConfigId()"),
+        Err(e) => return Err(format!("lezConfigId(): {e}")),
+    }
+    if let Some(a) = anchor {
+        match same_history(a, &mut call) {
+            Ok(()) => {}
+            Err(e) if e.starts_with("verified_bypass") => after_switch.push("the final block"),
+            Err(e) => return Err(e),
+        }
+    }
+    let block = call("eth_blockNumber", json!([])).ok().and_then(|b| quantity(&b, "eth_blockNumber").ok());
+    Ok(json!({ "chain_id": id, "vault": vault, "config_id": cid, "block": block, "same_final_block": anchor.map(|(n, _)| n),
+               "after_switch": after_switch }))
+}
+
+/// The session's Ethereum side read again through its own path (eth_rpc_module's route, for the session's chain) after
+/// a switch, with the block the old endpoint held final (`anchor`).
+fn recheck_eth(s: &Value, anchor: Option<&(u64, String)>) -> Result<Value, String> {
+    let e = eth_path().ok_or("the session has no Ethereum path through Logos Core")?;
+    let session_chain = s["chain_id"].as_u64().ok_or("the session names no chain")?;
+    if let Some(route_chain) = e["eth"]["chain_id"].as_u64() {
+        if route_chain != session_chain {
+            return Err(format!("the route reads eth_rpc_module's record for chain {route_chain}, not the session's chain {session_chain}"));
+        }
+    }
+    let vault: [u8; 20] = fixed(&s["vault"], "vault")?;
+    let mut v = crate::evm::Vault::new(&e["eth"], vault, 0)?;
+    let id = v.chain_id()?;
+    if id != session_chain {
+        return Err(format!("it serves chain {id}, not the session's chain {session_chain}"));
+    }
+    let cid = hex(&v.getter("lezConfigId")?);
+    if !same_hex(&cid, s["config_id"].as_str().unwrap_or("")) {
+        return Err(format!("the vault there names configuration {cid}, not the session's {}", s["config_id"]));
+    }
+    if let Some(a) = anchor {
+        same_history(a, |m, p| v.rpc.call(m, p))?;
+    }
+    let block = v.block_number()?;
+    Ok(json!({ "chain_id": id, "config_id": cid, "block": block, "reads": v.report() }))
+}
+
+/// `set_endpoints {eth_rpc?, sequencer?}`, the view's "Apply and test" (RFP-022 U.9), through the modules that hold the
+/// connections: the LEZ sequencer is the chain service's; the Ethereum RPC is Logos Core's eth_rpc_module's endpoint for
+/// the session's chain when the session reads Ethereum through it (`eth`), else the chain service's. Every endpoint
+/// given that is not the one in use is read first without switching (the chain service's `module.set_endpoints` dry
+/// run; `eth_rpc_module.raw_rpc_url`). Only when all of them answer for this deployment does anything switch, and an
+/// eth_rpc_module endpoint is read again through that module's own route afterwards: if that fails, both endpoints are
+/// put back. A refused switch keeps the endpoints in use and names them. While a job runs it is refused (dispatch).
+fn set_endpoints(params: &Value) -> Result<Value, String> {
+    let (url, s) = {
+        let g = SESSION.lock().map_err(|_| "the session lock is poisoned")?;
+        let sess = g.as_ref().ok_or("no wallet session: open it first (wallet {\"method\":\"open\",\"params\":{\"chain\":URL}})")?;
+        (sess.chain.clone(), sess.s.clone())
+    };
+    let c = Chain { url, s: s.clone() };
+    let eth_want = endpoint_param(params, "eth_rpc")?;
+    let seq_want = endpoint_param(params, "sequencer")?;
+    let svc = c.post("module.endpoints", json!({}))?;
+    let seq_cur = svc["sequencer"].as_str().unwrap_or("").to_string();
+    let owner = EthOwner::of_session();
+    // The Ethereum path names its chain; eth_rpc_module's record of that chain is what would be switched. Open keeps the
+    // path only for the same deployment, so this holds; refused rather than switch another chain's record (M-1).
+    if let EthOwner::Module { chain_id: path_chain } = &owner {
+        if Some(*path_chain) != s["chain_id"].as_u64() {
+            return Err(format!(
+                "not switched: the session's Ethereum path reads eth_rpc_module's record for chain {path_chain}, but the session is on chain {}: configure the path again (wallet eth)",
+                s["chain_id"]
+            ));
+        }
+    }
+    let eth_cur = owner.endpoint(&svc)?;
+    let kept = |why: &str| format!("not switched: {why}. Kept: Ethereum RPC {eth_cur} ({}), LEZ sequencer {seq_cur} ({SEQUENCER_OWNER})", owner.label());
+    let eth_new = eth_want.filter(|u| *u != eth_cur);
+    let seq_new = seq_want.filter(|u| *u != seq_cur);
+    if seq_new.is_some() && crate::lez::active() {
+        return Err(kept(
+            "the session's LEZ goes through Logos Core's lez_core, whose wallet holds its own connection (the sequencer its \
+             wallet config names): turn that path off first (wallet {\"method\": \"lez\", \"params\": {\"via\": \"plain\"}})",
+        ));
+    }
+    let svc_eth = if matches!(owner, EthOwner::Service) { eth_new.clone() } else { None };
+
+    // 1. Every new endpoint read, nothing switched.
+    let mut refused = Vec::new();
+    let mut checks = json!({});
+    if seq_new.is_some() || svc_eth.is_some() {
+        let dry = c.post("module.set_endpoints", json!({ "sequencer": seq_new, "eth_rpc": svc_eth, "dry_run": true }))?;
+        refused.extend(dry["refused"].as_array().into_iter().flatten().filter_map(|r| r.as_str().map(str::to_string)));
+        checks["chain_service"] = dry["checks"].clone();
+    }
+    // The endpoint in use's final block, which the new one must have too (when the one in use answers: a person often
+    // switches away from an endpoint that does not). The chain service reads its own (seqnet-chain).
+    let mut anchor = None;
+    if let (Some(_), Some(e)) = (&eth_new, eth_path()) {
+        let read = crate::rpc::Rpc::from_request(&json!({ "eth": e["eth"] }), PROBE_MS).and_then(|mut r| final_block(|m, p| r.call(m, p)));
+        checks["eth_rpc_in_use_final"] = match &read {
+            Ok((n, h)) => json!({ "number": n, "hash": h }),
+            Err(e) => json!({ "error": e, "compared": false }),
+        };
+        anchor = read.ok();
+    }
+    if let Some(u) = &eth_new {
+        let chain_id = s["chain_id"].as_u64().ok_or("the session names no chain")?;
+        let read = match &owner {
+            EthOwner::Module { chain_id: id } => Some(check_eth(chain_id, &s, anchor.as_ref(), |m, p| probe_url(*id, u, m, p))),
+            EthOwner::Http => Some(
+                crate::rpc::Rpc::new(u, PROBE_MS).and_then(|mut rpc| check_eth(chain_id, &s, anchor.as_ref(), |m, p| rpc.call(m, p))),
+            ),
+            EthOwner::Service => None,
+        };
+        match read {
+            Some(Ok(v)) => checks["eth_rpc"] = v,
+            Some(Err(e)) => refused.push(format!("the Ethereum RPC {u}: {e}")),
+            None => {}
+        }
+    }
+    if !refused.is_empty() {
+        return Err(kept(&refused.join("; ")));
+    }
+
+    // 2. The switch: the chain service first (LEZ, and Ethereum on the plain path: it reads each again and switches
+    //    both or neither), then eth_rpc_module's endpoint, read again through its own route.
+    let mut seq_switched = false;
+    if seq_new.is_some() || svc_eth.is_some() {
+        let r = c.post("module.set_endpoints", json!({ "sequencer": seq_new, "eth_rpc": svc_eth }))?;
+        seq_switched = r["switched"]["sequencer"] == true;
+        checks["chain_service_in_use"] = r["in_use"].clone();
+    }
+    if let (Some(u), EthOwner::Module { chain_id }) = (&eth_new, &owner) {
+        let undo = |why: String| -> String {
+            let eth_back = patch_endpoint(*chain_id, &eth_cur).map_or_else(|e| format!(" (putting it back failed: {e})"), |_| String::new());
+            let seq_back = if seq_switched {
+                c.post("module.set_endpoints", json!({ "sequencer": seq_cur }))
+                    .map_or_else(|e| format!(" (putting it back failed: {e})"), |_| String::new())
+            } else {
+                String::new()
+            };
+            format!("not switched: {why}. Put back: Ethereum RPC {eth_cur} ({}){eth_back}, LEZ sequencer {seq_cur}{seq_back}", owner.label())
+        };
+        if let Err(e) = patch_endpoint(*chain_id, u) {
+            return Err(undo(format!("eth_rpc_module did not take {u}: {e}")));
+        }
+        match recheck_eth(&s, anchor.as_ref()) {
+            Ok(v) => checks["eth_rpc_after"] = v,
+            Err(e) => return Err(undo(format!("the Ethereum RPC {u}, read through eth_rpc_module after the switch: {e}"))),
+        }
+    }
+    if let (Some(u), EthOwner::Http) = (&eth_new, &owner) {
+        if let Ok(mut g) = ETH_PATH.lock() {
+            if let Some(cfg) = g.as_mut() {
+                cfg["eth"]["rpc_url"] = json!(u);
+            }
+        }
+    }
+    let eth_now = eth_new.clone().unwrap_or_else(|| eth_cur.clone());
+    let seq_now = seq_new.clone().unwrap_or_else(|| seq_cur.clone());
+    if let Ok(mut g) = SESSION.lock() {
+        if let Some(sess) = g.as_mut() {
+            sess.s["sequencer"] = json!(seq_now);
+            if svc_eth.is_some() {
+                sess.s["eth_rpc"] = json!(eth_now);
+            }
+        }
+    }
+    Ok(json!({
+        "eth_rpc": eth_now,
+        "sequencer": seq_now,
+        "switched": { "eth_rpc": eth_new.is_some(), "sequencer": seq_new.is_some() },
+        "before": { "eth_rpc": eth_cur, "sequencer": seq_cur },
+        "via": { "eth_rpc": owner.label(), "sequencer": SEQUENCER_OWNER },
+        "checks": checks,
+    }))
 }
 
 /// Opens the session: the chain service's account of the wallet (its bridge seed, accounts, the
@@ -209,6 +551,24 @@ fn open(params: &Value) -> Result<Value, String> {
             return Err(format!("the chain service's session has no `{k}`"));
         }
     }
+    // The session's Ethereum path (`eth`) and LEZ path (`lez`) were configured for one deployment: its chain, its vault,
+    // the user's accounts there. Opened on another deployment (another chain service, or another configuration), the
+    // session drops them, so that nothing reads, sends or switches an endpoint on the old one's behalf (review-u9 M-1:
+    // a kept path switched eth_rpc_module's endpoint of the old chain to an RPC of the new one). The same deployment
+    // opened again (the view opened again) keeps them.
+    let same = SESSION.lock().map_err(|_| "the session lock is poisoned")?.as_ref().is_some_and(|old| {
+        old.chain == url && ["chain_id", "vault", "config_id", "program", "depositor"].iter().all(|k| old.s[*k] == s[*k])
+    });
+    let mut reset = Vec::new();
+    if !same {
+        if ETH_PATH.lock().map_err(|_| "the eth path lock is poisoned")?.take().is_some() {
+            reset.push("eth");
+        }
+        if crate::lez::active() {
+            crate::lez::configure(&json!({ "via": "plain" }), None)?;
+            reset.push("lez");
+        }
+    }
     let summary = json!({
         "chain": url,
         "chain_id": s["chain_id"],
@@ -218,6 +578,7 @@ fn open(params: &Value) -> Result<Value, String> {
         "depositor": s["depositor"],
         "proofs": s["proofs"],
         "module": "ferrata_bridge_module wallet session",
+        "paths_reset": reset,
     });
     *SESSION.lock().map_err(|_| "the session lock is poisoned")? = Some(Session { chain: url, s, calls: 0 });
     Ok(summary)
@@ -377,15 +738,32 @@ impl Chain {
             }
             None => self.post("module.info", json!({}))?,
         };
+        // The endpoints in use, each from the module that holds the connection (RFP-022 U.9): the chain service's
+        // sequencer; eth_rpc_module's endpoint for the chain on the `eth` path, else the chain service's.
+        let owner = EthOwner::of_session();
+        // On the `eth` path the endpoint is eth_rpc_module's: when its record cannot be read, that is said, never the
+        // chain service's endpoint in its place (review-u9 L-7).
+        let module_path = matches!(owner, EthOwner::Module { .. });
+        let (eth_rpc, eth_error) = match owner.endpoint(&i) {
+            Ok(u) if !u.is_empty() => (json!(u), Value::Null),
+            Ok(_) if module_path => (Value::Null, json!("eth_rpc_module named no endpoint for the chain")),
+            Err(e) if module_path => (Value::Null, json!(e)),
+            _ => (self.s["eth_rpc"].clone(), Value::Null),
+        };
+        let sequencer = if i["sequencer"].is_string() { i["sequencer"].clone() } else { self.s["sequencer"].clone() };
         Ok(json!({
-            "network": format!("a running LEZ devnet (sequencer {} and a Logos Blockchain node) and a local anvil ({})",
-                               self.s["sequencer"].as_str().unwrap_or("?"), self.s["eth_rpc"].as_str().unwrap_or("?")),
+            "network": format!("LEZ through the sequencer {} and Ethereum chain {} through {}",
+                               sequencer.as_str().unwrap_or("?"), self.s["chain_id"], eth_rpc.as_str().unwrap_or("?")),
+            "endpoints": {
+                "eth_rpc": { "url": eth_rpc, "via": owner.label(), "error": eth_error },
+                "sequencer": { "url": sequencer, "via": SEQUENCER_OWNER },
+            },
             "private_proofs": match self.s["proofs"].as_str() {
                 Some("real") => "real: LEZ's wallet proves each private transaction on the CPU; the sequencer verifies it",
                 _ => "dev mode: LEZ's wallet makes a fake receipt (RISC0_DEV_MODE=1), which this devnet's sequencer accepts",
             },
-            "eth_rpc": self.s["eth_rpc"],
-            "sequencer": self.s["sequencer"],
+            "eth_rpc": eth_rpc,
+            "sequencer": sequencer,
             "chain_id": self.s["chain_id"],
             "vault": self.s["vault"],
             "config_id": self.s["config_id"],
@@ -406,7 +784,7 @@ impl Chain {
                 "ferrata_bridge_module in Logos Core; the chains through seqnet-chain (the stand-in for Logos Core's own modules)"
             },
             "eth": i["eth"],
-            "stand_in": "the vault's verifier is the vault tests' mock (no Groth16 wrap); Ethereum is a local anvil whose blocks a stand-in committee finalizes for LEZ",
+            "stand_in": "the chain service stands in for Logos Core's own LEZ module (and, on the plain path, its Ethereum modules); on the e2e/seqnet devnets the vault's verifier is the vault tests' mock (no Groth16 wrap) and a stand-in committee finalizes anvil's blocks for LEZ",
         }))
     }
 

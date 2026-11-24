@@ -1,0 +1,23 @@
+[16:29:32] endpoints-1: commit ; U9_PUBLIC=1
+[16:29:34] bundle 0013bab125141c9d…; programs: ferrata_lez.bin ddfde69bea89a5b8…, ferrata_bridge.bin 537cbe7a4c690041… (B1)
+[16:30:26] seq-0 start 1: scheduler 46 s after the launch; its blocks fall 9 s after an epoch second
+[16:31:18] seq-0 start 2: scheduler 44 s after the launch; its blocks fall 1 s after an epoch second
+[16:32:43] seq-1 start 1: scheduler 84 s after the launch; its blocks fall 5 s after an epoch second
+[16:34:15] seq-2 start 1: scheduler 91 s after the launch; its blocks fall 7 s after an epoch second
+[16:34:21] seq-2 start 2: scheduler 1 s after the launch; its blocks fall 3 s after an epoch second
+[16:35:51] seq-3 start 1: scheduler 90 s after the launch; its blocks fall 4 s after an epoch second
+[16:35:53] a zone of four sequencers: heights 16/16/16/16
+[16:39:11] session A: bridge program 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d; T0 = 35; heights 35/35/35/35
+[16:39:25] vault 0x0012962bc1b196D230cB1a466f5d39409A6ec0a5 (anvil, chain 11155111), configId 0xae4fc07b281473feb6b892cfe981f35adf2acd903b9675ee6f55cb1319f2887d; one deposit; capture checked
+[16:40:28] operator: [["bridge Init (pairing: configId in the vault's slot 2)","applied","40"],["bridge Register ETH (registry entry, schedules 0 and 1, leaf count)","applied","41"],["bridge ImportRoot n=1 (stage 1, block 9)","applied","42"]]; heights 42/42/42/42
+[16:40:29] anvil fork on http://127.0.0.1:8546: chain 11155111, vault code 48741 hex chars
+[16:40:30] chain service local on 127.0.0.1:18700: {"chain_id":11155111,"config_id":"0xae4fc07b281473feb6b892cfe981f35adf2acd903b9675ee6f55cb1319f2887d","eth_rpc":"http://127.0.0.1:8545","program":"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d","sequencer":"http://127.0.0.1:19300","vault":"0x0012962bc1b196d230cb1a466f5d39409a6ec0a5"}
+[16:40:31] chain service live on 127.0.0.1:18701: {"chain_id":11155111,"config_id":"0x3773b58836d2fa242e16b3eb580a15630de2a437218a432f52e5b01152ae67cd","eth_rpc":"https://ethereum-sepolia-rpc.publicnode.com","program":"0x1f2e94ffdf25a3feca4e0750be66700be3812434c8cf53e0eb301bc493336195","sequencer":"https://public-lez.example/rpc","vault":"0x19499061cec0bac2a3e1869ba5ae6b403aa82787"}
+[16:40:34] Logos Core: ferrata_bridge_module, eth_rpc_module, package_manager, storage_module, package_downloader, modules_state, capability_module; eth_rpc_module chain 11155111: "https://ethereum-sepolia-rpc.publicnode.com"
+[16:40:35] the view (Qt Quick Test, offscreen): scenario L and scenario E (read only)
+[16:40:47] qmltest: exit 0 in 12 s: Totals: 4 passed, 0 failed, 0 skipped, 0 blacklisted, 12449ms
+PASS   : ferrata_miniapp_logos::FerrataEndpointsLogos::initTestCase()
+PASS   : ferrata_miniapp_logos::FerrataEndpointsLogos::test_1_local()
+PASS   : ferrata_miniapp_logos::FerrataEndpointsLogos::test_2_live()
+PASS   : ferrata_miniapp_logos::FerrataEndpointsLogos::cleanupTestCase()
+[16:40:47] endpoints-1: done
