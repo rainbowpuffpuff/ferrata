@@ -12,7 +12,7 @@
 #    vault's logs tried again while a load-balanced Ethereum endpoint's backend lags the head another reported;
 #    `release --input-out FILE` also writes FILE with extension .json: {"kind": "release", "journal": hex}, the journal
 #    the remote prover holds the proof to (ferrata-bridge-prover --meta);
-# 4. cli/Cargo.lock replaced by Cargo.lock here (resolved for rc3's crates once, 23 Nov 2026), then
+# 4. cli/Cargo.lock replaced by Cargo.lock.v0.4.0-rc3 here (resolved for rc3's crates once, 23 Nov 2026), then
 #    cargo build --release --locked --bin ferrata.
 # The binary is linked to glibc and libpcsclite.so.1 (pcsc-lite) of the build machine.
 set -euo pipefail
@@ -21,6 +21,6 @@ SRC="$(cd "${1:?usage: $0 SRC}" && pwd)"; HERE="$(cd "$(dirname "${BASH_SOURCE[0
 ( cd "$SRC/lez" && { [ "$(scripts/lez-select.sh --show)" = v0.4.0-rc3 ] || scripts/lez-select.sh v0.4.0-rc3; } )
 grep -rl --include=Cargo.toml 'upstream/lez-v0.4.0-rc1/' "$SRC" | xargs -r sed -i 's#upstream/lez-v0.4.0-rc1/#upstream/lez-v0.4.0-rc3/#'
 ( cd "$SRC" && { patch -p1 -R --dry-run -s < "$HERE/cli-rc3.patch" > /dev/null 2>&1 || patch -p1 < "$HERE/cli-rc3.patch"; } )
-install -m 644 "$HERE/Cargo.lock" "$SRC/cli/Cargo.lock"
+install -m 644 "$HERE/Cargo.lock.v0.4.0-rc3" "$SRC/cli/Cargo.lock"
 ( cd "$SRC/cli" && cargo build --release --locked --bin ferrata )
 sha256sum "${CARGO_TARGET_DIR:-$SRC/cli/target}/release/ferrata"
