@@ -7,7 +7,7 @@ workflows (which tests CI really runs), site/data/rfp-requirements.json (the RFP
 (the filed milestones, budget and timeline), site/content.toml (which runs and screenshots to feature) and the run
 records it names, and site/testers.html (the testers' start page, written by hand: each of its numbers names the file it
 comes from, which must still hold it); writes a static site to deploy/testnet/web/build/ (index.html, evidence.html,
-testers/index.html, assets, images, build.json). No server code. At run time the page requests, besides its own files: github.com (four workflow badge
+testers/index.html, llms.txt, assets, images, build.json). No server code. At run time the page requests, besides its own files: github.com (four workflow badge
 images), api.github.com (each workflow's latest run on main and the proposal's state: five calls, cached five
 minutes), and its own host (/rpc, /status/status.json or /status.json, /status/programs.json or /programs.json,
 /faucet).
@@ -845,7 +845,8 @@ def render_index(site, model):
                  '<div><dt>Behind Sepolia</dt><dd data-live="net-lag">–</dd></div>'
                  '</dl><p class="small">'
                  f'<a href="{h(t["explorer"])}">Explorer</a> · <a href="{h(t["wallet"])}">Wallet</a> · '
-                 f'<a href="{h(t["agents"])}">For agents</a> · <a href="{h(t["status"])}">Status page</a></p>'
+                 f'<a href="{h(t["agents"])}">For agents</a> (<a href="{h(t["agents_md"])}">AGENTS.md</a>) · '
+                 f'<a href="{h(t["status"])}">Status page</a></p>'
                  '<p class="small">A LEZ network we run for the bid, not LEZ testnet 0.4 (not released).</p></article>')
     parts.append('<article class="card" id="live-facts" aria-labelledby="h-facts"><h3 id="h-facts">Latest attested Ethereum facts</h3>'
                  '<div data-live="facts"><p class="small">Read from the test network’s status when it lists them.</p></div></article>')
@@ -1421,6 +1422,32 @@ def render_testers(site, model):
                 + "\n</main>\n" + footer, desc, root="../", script=False)
 
 
+def llms_txt(site):
+    """/llms.txt: a plain-text index of the site for language models, in the llms.txt convention (a title, a one-line
+    summary, then lists of links). Links are root-relative, like the pages', so it names no host."""
+    t = site.content["testnet"]
+    links = {
+        "For agents": [("AGENTS.md", t["agents_md"], "the JSON-RPC endpoint, every method with a request and a response, "
+                        "the programs, how to attest a fact and use the bridge, the limits, scripts in Python and JavaScript"),
+                       ("For agents", f'{t["agents"]}/', "AGENTS.md as a page, with its example scripts"),
+                       ("Programs", t["programs_json"][1], "the deployed programs' accounts and image ids, and the "
+                        "Sepolia light-client instance"),
+                       ("JSON-RPC", t["rpc"], "POST, JSON-RPC 2.0: LEZ v0.4.0-rc3's read methods and sendTransaction, "
+                        "limited per address")],
+        "For people": [("Testers: start here", f"/{TESTERS_DIR}/", "what to try, in order, the bridge's waiting times, "
+                        "the limits, safety, how to report")],
+        "Source": [("Repository", site.gh, "the code, the documents and this site's sources, MIT OR Apache-2.0")],
+    }
+    out = ["# Ferrata LEZ test network", "",
+           "> A LEZ v0.4.0-rc3 network we run for Ferrata's bid for Logos RFP-021 and RFP-022, bridged to Sepolia; "
+           "not Logos's LEZ testnet 0.4. Prototype, unaudited: its tokens have no value, and it may be reset.", "",
+           "Reading needs no key and no account. Never give an agent a recovery phrase or a private key: nothing here "
+           "asks for one."]
+    for section, items in links.items():
+        out += ["", f"## {section}", ""] + [f"- [{name}]({url}): {note}" for name, url, note in items]
+    return "\n".join(out) + "\n"
+
+
 def evidence_json(site):
     md = site.md("docs/EVIDENCE.md")
     out = {}
@@ -1499,6 +1526,7 @@ def build():
     files["evidence.html"] = render_evidence(site, model).encode()
     files["evidence.json"] = evidence_json(site).encode()
     files[f"{TESTERS_DIR}/index.html"] = render_testers(site, model).encode()
+    files["llms.txt"] = llms_txt(site).encode()
     css = (SITE / "assets" / "site.css").read_text(encoding="utf-8") + "\n" + generated_css(site)
     files["assets/site.css"] = css.encode()
     for name in ("site.js", "logo.svg", "nojs.css"):

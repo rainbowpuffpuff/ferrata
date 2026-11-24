@@ -13,6 +13,8 @@
    network's paths are the ones its server serves; the report form is a tracked issue form; any other external URL is
    one the repository's own documents give. No http:// link, no inline script or style, no event-handler attribute.
    The build page links to the testers' page from its header and its hero; the testers' page loads no script.
+   llms.txt is a title, a one-line summary and lists of links: AGENTS.md, the agents' page, the testers' page,
+   /programs.json, the RPC and the repository, nothing else.
 3. Freshness. A build in memory equals the bundle on disk (deploy/testnet/web/build/).
 4. Privacy. No e-mail address and no home-directory path in the bundle's text; no text or metadata chunk in its PNGs.
 5. Sources. Every number of the testers' page names its source in a `<!-- source: PATH | TEXT -->` comment: PATH is
@@ -44,7 +46,7 @@ import urllib.request
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 BUNDLE = ROOT / "deploy" / "testnet" / "web" / "build"
 REPO = "https://github.com/rainbowpuffpuff/ferrata"
-TESTNET_PATHS = {"/explorer/", "/wallet/", "/agents", "/status", "/rpc", "/AGENTS.md", "/faucet", "/android/"}
+TESTNET_PATHS = {"/explorer/", "/wallet/", "/agents", "/agents/", "/status", "/rpc", "/AGENTS.md", "/faucet", "/android/"}
 STATUSES = ("shown", "in part", "not yet", "waits on Logos")
 SKEY = {"shown": "shown", "in part": "part", "not yet": "notyet", "waits on Logos": "waits"}
 
@@ -200,6 +202,15 @@ def main(argv):
         if not got or not got[0][2] or why not in got[0][2]:
             problems.append(f"self-check: the source note {fake!r} gave {got!r}, expected a refusal naming {why!r}")
 
+    # /llms.txt: the llms.txt convention, its links the six it is for
+    llms = files["llms.txt"].decode("utf-8").splitlines()
+    if not llms or not llms[0].startswith("# ") or not any(line.startswith("> ") for line in llms[1:4]):
+        problems.append("llms.txt: not a title followed by a one-line summary")
+    got = set(re.findall(r"\]\(([^)\s]+)\)", "\n".join(llms)))
+    want = {"/AGENTS.md", "/agents/", "/testers/", "/programs.json", "/rpc", REPO}
+    if got != want:
+        problems.append(f"llms.txt: links {sorted(got)}, expected {sorted(want)}")
+
     # 1. Counts
     idx = pages["index.html"]
     want = doc_counts()
@@ -351,7 +362,7 @@ def main(argv):
 
     # 4. Privacy
     for name, data in files.items():
-        if not name.endswith((".html", ".json", ".js", ".css")):
+        if not name.endswith((".html", ".json", ".js", ".css", ".txt")):
             continue
         text = data.decode("utf-8")
         for m in re.finditer(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}", text):

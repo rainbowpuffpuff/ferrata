@@ -16,6 +16,7 @@ the documents say at the commit it was built from, and nothing else:
 | "Specified but not built" | [`README.md`](../README.md) |
 | Which runs, screenshots and commands to feature, with their captions | [`content.toml`](content.toml) (every path in it must be tracked) |
 | The runs' Sepolia transactions, stage times and LEZ transactions | the run records `content.toml` names (`manifest.json`, `deploy.json`, the README's stage table, `txs.tsv`) |
+| `/llms.txt`, an index of the site for language models (the llms.txt convention) | `llms_txt()` in [`build.py`](build.py), from `content.toml`'s paths: AGENTS.md, the agents' page, the testers' page, `/programs.json`, the RPC and the repository |
 | The testers' start page (`testers/index.html`, linked from the header and the hero) | [`testers.html`](testers.html), written by hand: what to try, the bridge's waiting times, the limits, safety, how to report; each number names its source in a `<!-- source: PATH \| TEXT -->` comment, which the build and `test_site.py` check against that file; the report form is [`.github/ISSUE_TEMPLATE/tester-report.yml`](../.github/ISSUE_TEMPLATE/tester-report.yml) |
 
 ## Commands
@@ -67,7 +68,7 @@ row.
    exist (relative links resolved from their page's directory); links into this repository name tracked files and
    directories at an existing line or heading; Actions links name real workflows; links into logos-co/rfp name the
    extracted commit and its files; Etherscan links name the recorded runs' transactions and contracts; the test
-   network's paths are the eight it serves; the report form is a tracked issue form; any other external URL is one the
+   network's paths are the nine it serves; the report form is a tracked issue form; any other external URL is one the
    repository's documents give (`--online` also requests each). A self-check feeds it links it must refuse.
 3. No inline script or style attribute, no event-handler attribute, a Content-Security-Policy on every page, unique ids,
    every image with its alt text and size.

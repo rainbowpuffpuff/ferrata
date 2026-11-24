@@ -35,7 +35,7 @@ for f in wallet msg; do [ -f "$SERVED/$f-config.json" ] || [ ! -f "$WWW/$f/confi
 install -d -m 755 "$WWW" "$WWW/wallet"
 install -d -o ferrata -g ferrata -m 755 "$WWW/status"
 # 1. the build page owns /index.html, /evidence.*, /build.json, /assets/{site.css,site.js,logo.svg,nojs.css}, /img/ and
-#    /testers/ (the testers' start page): everything build.json's "files" lists
+#    /testers/ (the testers' start page) and /llms.txt: everything build.json's "files" lists
 cp -r "$STAGE/build/." "$WWW/"
 # 2. the explorer bundle: its landing becomes /network.html, the rest keeps its paths (/explorer/, /status/index.html,
 #    /agents/, /registry/, /assets/*.js, /idl/, /config.json, /AGENTS.md)
