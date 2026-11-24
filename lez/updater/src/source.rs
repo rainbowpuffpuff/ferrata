@@ -36,8 +36,9 @@ pub const MAX_OBJECT_BYTES: usize = 1 << 20;
 pub const MAX_JSON_BYTES: usize = 64 << 10;
 /// The longest reply text accepted from `beacon_api_module` (the provider's JSON for 128 updates is about 8 MB).
 pub const MAX_MODULE_REPLY_BYTES: usize = 16 << 20;
-/// The most bytes read from an execution endpoint's JSON-RPC answer (a block without its transactions: a few KB).
-pub const MAX_RPC_BYTES: usize = 256 << 10;
+/// The most bytes read from an execution endpoint's JSON-RPC answer (a block with its transaction hashes, about 69 B
+/// each: about 200 KB for a 60M-gas block of simple transfers, more above).
+pub const MAX_RPC_BYTES: usize = 2 << 20;
 /// Characters of a provider's or curl's message kept in an error (errors reach the log and `/health`).
 pub const MAX_MESSAGE_CHARS: usize = 200;
 
