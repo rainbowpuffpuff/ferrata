@@ -2,8 +2,9 @@
 # The round trip of scripts/ci/sequencer-roundtrip.sh (RFP-022 Reliability #10), run by lez/live/run.sh's phase `hook`
 # while LEZ v0.4.0-rc1's standalone sequencer runs on 127.0.0.1 (ZONE_RPC; its records in ZONE_OUT). Every step is a
 # line of steps.tsv (name, ok or FAILED, seconds, what it showed); the first failure stops the run. Steps:
-#   fork            anvil forks Sepolia at Sepolia's finalized block of the moment (a public Sepolia RPC); the fork's
-#                   copy of that block has Sepolia's hash
+#   fork            anvil forks Sepolia at Sepolia's finalized block of the moment, read from the first public Sepolia
+#                   RPC of CI_RT_SEPOLIA_RPCS that answers with a block under an hour old by this machine's clock
+#                   (three attempts each, 30 s apart); the fork's copy of that block has Sepolia's hash
 #   zone: programs and the stand-in instance
 #                   crown-driver crown-a: the attestation program and the bridge program deployed through LEZ's
 #                   program loader (their image ids those of docs/image-ids.md), the stand-in light-client instance
@@ -37,12 +38,16 @@
 #   release paid    the mock accepts exactly that journal; ferrata-relayer sends the release; the fresh address holds
 #                   the Release event's amount, and amount + relay fee = the denomination
 #   release again refused
-#                   the same release call again: the vault refuses it (eth_call reverts; nullifierUsed)
+#                   the same release call again: the vault refuses it (eth_call reverts with NullifierAlreadyUsed, its
+#                   output kept in eth/replay.txt; nullifierUsed true)
 # Records in CI_RT_OUT: steps.tsv, facts.json, identity.json, params.json, deploy.json, user/ (each command of the user
 # and what it printed), lez/ (session A's identity, the operator's steps, every zone transaction), eth/ (the fork's
 # transactions), checkpoint/ (ci_zone's journal and fields). Nothing is sent to Sepolia: anvil keeps every transaction.
+# A failed step stops the run: `die` in a command substitution ends only that subshell, so every assignment from a
+# function that can fail is followed by its own `|| die`.
 set -uo pipefail
-REPO="$CI_RT_REPO"; R="$CI_RT_OUT"; W="$CI_RT_WORK"; B="$CI_RT_TOOLS"; SEQ="$ZONE_RPC"; UPSTREAM_RPC="$CI_RT_SEPOLIA_RPC"
+REPO="$CI_RT_REPO"; R="$CI_RT_OUT"; W="$CI_RT_WORK"; B="$CI_RT_TOOLS"; SEQ="$ZONE_RPC"; SEPOLIA_RPCS="$CI_RT_SEPOLIA_RPCS"
+FORK_MAX_AGE=3600                                                    # s: the finalized block's age when forked
 PORT=18547
 RPC="http://127.0.0.1:$PORT"
 CHAIN=11155111
@@ -62,10 +67,13 @@ CURRENT=start; STEP_T0=$(date +%s); ANVIL=""
 say() { echo "[hook $(date -u +%T)] $*"; }
 begin() { CURRENT="$1"; STEP_T0=$(date +%s); say "== $1"; }
 ok() { printf '%s\tok\t%s\t%s\n' "$CURRENT" "$(( $(date +%s) - STEP_T0 ))" "${1:-}" >> "$STEPS"; say "ok: $CURRENT${1:+: $1}"; }
-die() { printf '%s\tFAILED\t%s\t%s\n' "$CURRENT" "$(( $(date +%s) - STEP_T0 ))" "$*" >> "$STEPS"; say "STOP in \"$CURRENT\": $*"; exit 1; }
+die() { printf '%s\tFAILED\t%s\t%s\n' "$CURRENT" "$(( $(date +%s) - STEP_T0 ))" "$*" >> "$STEPS"; say "STOP in \"$CURRENT\": $*" >&2; exit 1; }
 cleanup() { if [ -n "$ANVIL" ]; then kill "$ANVIL" 2>/dev/null; wait "$ANVIL" 2>/dev/null; fi; }
 trap cleanup EXIT
 lower() { tr 'A-F' 'a-f'; }
+# int TEXT: TEXT as a decimal integer if it is one (decimal or 0x hex), else nothing and status 1; never arithmetic on
+# other text (bash evaluates subscripts such as a[$(cmd)] in $(( ))).
+int() { [[ "$1" =~ ^(0x[0-9a-fA-F]+|0|[1-9][0-9]*)$ ]] && echo $(( $1 )); }
 # u NAME CMD...: one command of the user; what it printed in user/NAME.txt
 u() {
   local n="$1" rc; shift
@@ -110,9 +118,23 @@ holding() {
 
 # ---- fork ----------------------------------------------------------------------------------------------------------
 begin "fork"
-fin="$(cast block finalized --json --rpc-url "$UPSTREAM_RPC" 2>"$W/fork.err")" || { cat "$W/fork.err"; die "Sepolia's finalized block could not be read from the public RPC"; }
-FORK_BLOCK=$(( $(echo "$fin" | jq -r .number) )); FORK_HASH="$(echo "$fin" | jq -r .hash)"; FORK_TIME=$(( $(echo "$fin" | jq -r .timestamp) ))
-anvil --fork-url "$UPSTREAM_RPC" --fork-block-number "$FORK_BLOCK" --port "$PORT" --auto-impersonate --gas-limit 100000000 \
+FORK_RPC=""
+for rpc in $SEPOLIA_RPCS; do
+  for attempt in 1 2 3; do
+    [ "$attempt" = 1 ] || sleep 30
+    if fin="$(cast block finalized --json --rpc-url "$rpc" 2>>"$W/fork.err")" \
+       && FORK_BLOCK="$(int "$(echo "$fin" | jq -r .number)")" && FORK_TIME="$(int "$(echo "$fin" | jq -r .timestamp)")" \
+       && FORK_HASH="$(echo "$fin" | jq -r .hash)" && [[ "$FORK_HASH" =~ ^0x[0-9a-fA-F]{64}$ ]]; then
+      FORK_AGE=$(( $(date +%s) - FORK_TIME ))
+      if [ "$FORK_AGE" -le "$FORK_MAX_AGE" ] && [ "$FORK_AGE" -ge -300 ]; then FORK_RPC="$rpc"; break 2; fi
+      say "$rpc: its finalized block $FORK_BLOCK is $FORK_AGE s old by this machine's clock (bound $FORK_MAX_AGE s; attempt $attempt of 3)"
+    else
+      say "$rpc: no finalized block (attempt $attempt of 3): $(tail -n 1 "$W/fork.err" | cut -c1-200)"
+    fi
+  done
+done
+[ -n "$FORK_RPC" ] || die "no public Sepolia RPC answered with a finalized block under $FORK_MAX_AGE s old ($SEPOLIA_RPCS)"
+anvil --fork-url "$FORK_RPC" --fork-block-number "$FORK_BLOCK" --port "$PORT" --auto-impersonate --gas-limit 100000000 \
   --retries 10 --fork-retry-backoff 2000 --silent > "$W/anvil.log" 2>&1 & ANVIL=$!
 for _ in $(seq 120); do cast chain-id --rpc-url "$RPC" > /dev/null 2>&1 && break; sleep 1; done
 [ "$(cast chain-id --rpc-url "$RPC" 2>/dev/null)" = "$CHAIN" ] || { tail -n 20 "$W/anvil.log"; die "anvil did not fork Sepolia (chain id $CHAIN)"; }
@@ -122,7 +144,7 @@ for a in "$DEPLOYER" "$RELAYER" "$DEPOSITOR"; do cast rpc anvil_setBalance "$a" 
 # The fresh release address, read once now: the public RPC keeps the fork block's state for a limited time only.
 FRESH="$(cast wallet new --json | jq -r '.[0].address')"
 [ "$(cast balance "$FRESH" --rpc-url "$RPC")" = 0 ] || die "the fresh address holds ETH on the fork"
-ok "Sepolia block $FORK_BLOCK ($(date -u -d "@$FORK_TIME" +%FT%TZ)), hash $FORK_HASH; anvil forks it, chain id $CHAIN"
+ok "Sepolia block $FORK_BLOCK ($(date -u -d "@$FORK_TIME" +%FT%TZ), $FORK_AGE s old), hash $FORK_HASH, from $FORK_RPC; anvil forks it, chain id $CHAIN"
 
 # ---- zone: the programs and the stand-in instance ------------------------------------------------------------------
 begin "zone: programs and the stand-in instance"
@@ -255,15 +277,15 @@ else
 fi
 u 07-claim-dry-run "${F[@]}" "${C[@]}" || die "the claim's dry run"
 u 08-claim "${F[@]}" "${C[@]}" --send --yes || die "the claim"
-CLAIM_TX="$(wait_tx "$R/user/08-claim.txt")"
-HOLD_CLAIM="$(holding public 09-recover)"
+CLAIM_TX="$(wait_tx "$R/user/08-claim.txt")" || die "the claim was not applied"
+HOLD_CLAIM="$(holding public 09-recover)" || die "the holding after the claim could not be read"
 [ "$HOLD_CLAIM" = "$DENOM" ] || die "the user's public /0 holds $HOLD_CLAIM after the claim, not $DENOM"
 ok "LEZ tx $CLAIM_TX applied; the user's public /0 holds $HOLD_CLAIM (0.001 ETH)"
 
 begin "claim again refused"
 if u 10-claim-again "${F[@]}" "${C[@]}" --leaf 0 --send --yes; then die "a second claim of leaf 0 was not refused"; fi
 grep -q -i -E 'claimed|nullifier|spent' "$R/user/10-claim-again.txt" || die "the second claim failed for another reason (user/10-claim-again.txt)"
-HOLD_AGAIN="$(holding public 11-recover)"
+HOLD_AGAIN="$(holding public 11-recover)" || die "the holding after the refused claim could not be read"
 [ "$HOLD_AGAIN" = "$DENOM" ] || die "the holding changed after the refused claim: $HOLD_AGAIN"
 ok "refused: $(grep -i -m1 -E 'claimed|nullifier|spent' "$R/user/10-claim-again.txt" | cut -c1-160); the holding unchanged"
 
@@ -272,8 +294,8 @@ begin "burn"
 BR=(burn --from public --i-accept-public-account --account 0 --amount 0.001 --recipient "$FRESH" --payer "$PUB0")
 u 12-burn-dry-run "${F[@]}" "${BR[@]}" || die "the burn's dry run"
 u 13-burn "${F[@]}" "${BR[@]}" --send --yes || die "the burn"
-BURN_TX="$(wait_tx "$R/user/13-burn.txt")"
-HOLD_BURN="$(holding public 14-recover)"
+BURN_TX="$(wait_tx "$R/user/13-burn.txt")" || die "the burn was not applied"
+HOLD_BURN="$(holding public 14-recover)" || die "the holding after the burn could not be read"
 [ "$HOLD_BURN" = 0 ] || die "the user's public /0 holds $HOLD_BURN after burning all of it"
 ok "LEZ tx $BURN_TX applied: 0.001 ETH burnt to $FRESH; the holding is 0"
 
@@ -351,9 +373,12 @@ ok "Ethereum tx $RELEASE_TX: the Release event pays out the burnt $AMOUNT wei: $
 
 begin "release again refused"
 [ -n "$CALLDATA" ] || die "the release's calldata was not printed (user/16-release.txt)"
-if cast call "$VAULT" "$CALLDATA" --from "$RELAYER" --rpc-url "$RPC" > "$W/replay.txt" 2>&1; then die "the vault accepts the same release again"; fi
+REPLAY_EXIT=0
+cast call "$VAULT" "$CALLDATA" --from "$RELAYER" --rpc-url "$RPC" > "$R/eth/replay.txt" 2>&1 || REPLAY_EXIT=$?
+[ "$REPLAY_EXIT" != 0 ] || die "the vault accepts the same release again"
 want_sel="$(cast sig 'NullifierAlreadyUsed()')"
-grep -q -i -- "$want_sel" "$W/replay.txt" || die "the same release reverted, but not with NullifierAlreadyUsed ($want_sel): $(head -c 300 "$W/replay.txt")"
+REPLAY_SEL="$(grep -o -i -- "$want_sel" "$R/eth/replay.txt" | head -n 1 | lower)"
+[ -n "$REPLAY_SEL" ] || die "the same release reverted, but not with NullifierAlreadyUsed ($want_sel): $(head -c 300 "$R/eth/replay.txt")"
 NULLIFIER="$(json_of "$R/user/16-release.txt" | jq -r .result.nullifier 2>/dev/null)"
 if [ -z "$NULLIFIER" ] || [ "$NULLIFIER" = null ]; then NULLIFIER="$(grep -o -E 'nullifier[^0-9a-fx]*0x[0-9a-f]{64}' "$R/user/16-release.txt" | grep -o -E '0x[0-9a-f]{64}' | head -n 1)"; fi
 USED="$([ -n "$NULLIFIER" ] && call 'nullifierUsed(bytes32)(bool)' "$NULLIFIER" || echo "?")"
@@ -367,13 +392,17 @@ python3 -I "$REPO/e2e/seqnet/ethtxs.py" --rpc "$RPC" --vault-out "$REPO/vault/ou
   --names "deployer=$DEPLOYER,relayer=$RELAYER,user=$DEPOSITOR,vault=$VAULT,mock verifier=$MOCK" \
   > "$R/eth/transactions.tsv" 2> "$W/ethtxs.err" || say "ethtxs.py failed: $(tail -n 3 "$W/ethtxs.err")"
 jq -n --arg fb "$FORK_BLOCK" --arg fh "$FORK_HASH" --arg ft "$(date -u -d "@$FORK_TIME" +%FT%TZ)" --arg v "$VAULT" --arg c "$CID" \
+  --arg fa "$FORK_AGE" --arg frpc "$FORK_RPC" --arg rx "$REPLAY_EXIT" --arg rs "$REPLAY_SEL" --arg nu "$USED" \
   --arg dtx "$DEPOSIT_TX" --arg den "$DENOM" --arg ctx "$CLAIM_TX" --arg hc "$HOLD_CLAIM" --arg btx "$BURN_TX" --arg hb "$HOLD_BURN" \
   --arg fr "$FRESH" --arg br "$(jq -r .burnRoot "$CP")" --arg bc "$(jq -r .burnCount "$CP")" --arg ns "$(jq -r .newState "$CP")" \
   --arg tip "$(jq -r .tipId "$CP")" --arg vf "$FINAL" --arg acc "$ACCEPTED" --arg rtx "$RELEASE_TX" --arg am "$AMOUNT" \
   --arg rf "$RELAY_FEE" --arg cr "$CREDITED" --arg fb2 "$FRESH_BAL" --arg nul "$NULLIFIER" --arg ss "$STAND_IN_SLOT" \
-  '{fork: {block: ($fb | tonumber), hash: $fh, time: $ft}, standInSlot: ($ss | tonumber), vault: $v, configId: $c,
+  '{fork: {block: ($fb | tonumber), hash: $fh, time: $ft, ageS: ($fa | tonumber), maxAgeS: 3600, rpc: $frpc},
+    standInSlot: ($ss | tonumber), vault: $v, configId: $c,
     deposit: {tx: $dtx, denominationWei: $den}, claim: {tx: $ctx, holdingAfterClaim: $hc},
     burn: {tx: $btx, recipient: $fr, holdingAfterBurn: $hb},
     checkpoint: {burnRoot: $br, burnCount: $bc, newState: $ns, tipId: $tip, vaultFinalState: $vf, burnRootAccepted: ($acc == "true")},
-    release: {tx: $rtx, amountWei: $am, relayFeeWei: $rf, creditedFeesWei: $cr, recipientBalanceWei: $fb2, nullifier: $nul, replayRefused: true}}' > "$R/facts.json"
+    release: {tx: $rtx, amountWei: $am, relayFeeWei: $rf, creditedFeesWei: $cr, recipientBalanceWei: $fb2, nullifier: $nul,
+      replay: {callExit: ($rx | tonumber), revertSelector: $rs, nullifierUsed: ($nu == "true")},
+      replayRefused: (($rx | tonumber) != 0 and $rs == "0xcad2ae02" and $nu == "true")}}' > "$R/facts.json"
 say "the round trip: every step ok ($(wc -l < "$STEPS") steps)"

@@ -18,7 +18,10 @@
 #            Logos Blockchain node; blocks every 3 s; RISC0_DEV_MODE unset), and while it runs
 #            scripts/ci/sequencer-roundtrip-hook.sh: anvil forking Sepolia at its finalized block of the moment, the
 #            vault and the round trip, every step asserted (that script's header lists them)
-#   check    the records the hook left: every step's line in steps.tsv, the facts it asserted (facts.json)
+#   check    the records the hook left: steps.tsv is exactly the hook's steps in order, each once and ok (no FAILED
+#            line); the facts it asserted (facts.json, and the replay's eth_call output, eth/replay.txt); the fork's
+#            block under an hour old when forked and under three hours by this check's clock (FERRATA_CI_NOW, unix
+#            seconds, stands for the clock in the tests of the check)
 #   summary  RESULTS-DIR/README.md and, under GitHub Actions, the job summary; written whatever happened; never fails
 #
 # What is real and what stands in, exactly (also in the README it writes):
@@ -43,7 +46,7 @@
 #
 # Needs: Rust 1.93.0 and 1.98.1, RISC Zero's toolchains (scripts/ci/install-risc0.sh: ~/.risc0 for bridge/ and
 # checkpoint/, $RISC0_HOME_LEZ for LEZ), Foundry 1.3.6 (forge, anvil, cast), the upstream sources beside the
-# repository (scripts/fetch-upstream.sh), libpcsclite-dev, protobuf-compiler, python3, jq, curl, bc.
+# repository (scripts/fetch-upstream.sh), libpcsclite-dev, protobuf-compiler, python3, jq, curl.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -88,9 +91,9 @@ run_logged() {
   "$@" >> "$STEP_LOG" 2>&1 || rc=$?
   if [ "$rc" != 0 ]; then
     echo "== $name FAILED (exit $rc); the last 40 lines of ${STEP_LOG#"$REPO"/}:" >&2
-    tail -n 40 "$STEP_LOG" >&2
+    tail -n 40 "$STEP_LOG" | sed -e "s/::/: :/g" >&2
     for f in "$OUT"/zone/logs/hook.log "$OUT"/zone/logs/sequencer.log; do
-      if [ -f "$f" ]; then echo "-- ${f#"$REPO"/}:" >&2; tail -n 25 "$f" >&2; fi
+      if [ -f "$f" ]; then echo "-- ${f#"$REPO"/}:" >&2; tail -n 25 "$f" | sed -e "s/::/: :/g" >&2; fi
     done
     bash "$REPO/lez/live/run.sh" stop > /dev/null 2>&1 || true
     exit "$rc"
@@ -129,16 +132,28 @@ stage_build() {
     bash -c 'cd "$1/bridge" && env -u RISC0_HOME cargo build --release --locked -p methods && env -u RISC0_HOME cargo build --release --locked -p ferrata-e2e' _ "$REPO"
   run_logged "checkpoint: the rule (B) guest (guest Rust 1.88.0)" \
     bash -c 'cd "$1/checkpoint" && env -u RISC0_HOME cargo build --release --locked -p methods' _ "$REPO"
-  local vars; vars=$(python3 -I "$REPO/scripts/fetch_native.py" env) && eval "$vars"
+  # The native archives that LEZ's crates link (rapidsnark, the Logos Blockchain circuits): fetched once and checked
+  # against scripts/native-deps.json, as e2e/ci/run.sh does, instead of the build scripts' own unchecked downloads;
+  # after each build, fetch_native.py check-build reads cargo's JSON messages: nothing else was linked.
+  local vars
+  vars="$(python3 -I "$REPO/scripts/fetch_native.py" env 2>> "$STEP_LOG")" || die "scripts/fetch_native.py env failed (build.log)"
+  eval "$vars"
+  local zone_msgs="$T/ci_zone-build.jsonl" lez_msgs="$T/lez-build.jsonl"
+  rm -f "$zone_msgs" "$lez_msgs"
   run_logged "checkpoint: ci_zone (Rust 1.98.1)" \
-    bash -c 'cd "$1/checkpoint/fidelity" && cargo +1.98.1 build --release --locked --bin ci_zone' _ "$REPO"
+    bash -c 'cd "$1/checkpoint/fidelity" && cargo +1.98.1 build --release --locked --bin ci_zone --message-format=json-render-diagnostics > "$2"' _ "$REPO" "$zone_msgs"
+  run_logged "checkpoint: ci_zone linked native code only from the checked archives (fetch_native.py check-build)" \
+    python3 -I "$REPO/scripts/fetch_native.py" check-build "$zone_msgs" --target-dir "$REPO/checkpoint/target"
   run_logged "LEZ guests: the attestation and bridge programs (the committed v0.4.0-rc1 manifests)" \
     bash -c 'cd "$1/lez" && RISC0_HOME="$2" RISC0_BUILD_LOCKED=1 RUSTC_WRAPPER="$1/scripts/guest-rustc" cargo build -p methods --locked' _ "$REPO" "$LH"
-  run_logged "LEZ v0.4.0-rc1's sequencer_service (standalone)" bash "$REPO/lez/live/run.sh" build-standalone
+  run_logged "LEZ v0.4.0-rc1's sequencer_service (standalone)" \
+    env FERRATA_LIVE_CARGO_MESSAGES="$lez_msgs" bash "$REPO/lez/live/run.sh" build-standalone
   run_logged "crown-driver (lez/crown/driver)" \
-    bash -c 'cd "$1/lez/crown/driver" && CARGO_TARGET_DIR="$2" cargo build --release --locked' _ "$REPO" "$TGT"
+    bash -c 'cd "$1/lez/crown/driver" && CARGO_TARGET_DIR="$2" cargo build --release --locked --message-format=json-render-diagnostics >> "$3"' _ "$REPO" "$TGT" "$lez_msgs"
   run_logged "cli: ferrata, ferrata-relayer, seqnet-fund, seqnet-txs" \
-    bash -c 'cd "$1/cli" && RISC0_HOME="$3" CARGO_TARGET_DIR="$2" cargo build --release --locked --features seqnet --bin ferrata --bin ferrata-relayer --bin seqnet-fund --bin seqnet-txs' _ "$REPO" "$TGT" "$LH"
+    bash -c 'cd "$1/cli" && RISC0_HOME="$3" CARGO_TARGET_DIR="$2" cargo build --release --locked --features seqnet --bin ferrata --bin ferrata-relayer --bin seqnet-fund --bin seqnet-txs --message-format=json-render-diagnostics >> "$4"' _ "$REPO" "$TGT" "$LH" "$lez_msgs"
+  run_logged "the sequencer, crown-driver and cli linked native code only from the checked archives (fetch_native.py check-build)" \
+    python3 -I "$REPO/scripts/fetch_native.py" check-build "$lez_msgs" --target-dir "$TGT"
   local f
   for f in ferrata ferrata-relayer seqnet-fund seqnet-txs crown-driver; do cp "$TGT/release/$f" "$TOOLS/"; done
   cp "$REPO/checkpoint/target/release/ci_zone" "$REPO/bridge/target/release/ferrata-e2e" "$TOOLS/"
@@ -174,7 +189,8 @@ stage_run() {
   rm -rf "$OUT/zone" "$OUT/run"
   mkdir -p "$OUT/run"
   export CI_RT_REPO="$REPO" CI_RT_OUT="$OUT/run" CI_RT_WORK="$T/work" CI_RT_TOOLS="$TOOLS" CI_RT_LEZ_HOME="$LH"
-  export CI_RT_SEPOLIA_RPC="${FERRATA_CI_SEPOLIA_RPC:-https://ethereum-sepolia-rpc.publicnode.com}"
+  # Public Sepolia RPCs, tried in this order (three attempts each, 30 s apart); anvil forks the one that answered.
+  export CI_RT_SEPOLIA_RPCS="${FERRATA_CI_SEPOLIA_RPCS:-https://ethereum-sepolia-rpc.publicnode.com https://rpc.sepolia.ethpandaops.io}"
   export FERRATA_LIVE_BEDROCK=mock FERRATA_LIVE_BLOCK_TIME=3s FERRATA_LIVE_PHASES=hook
   export FERRATA_LIVE_HOOK="$REPO/scripts/ci/sequencer-roundtrip-hook.sh" FERRATA_LIVE_OUT="$OUT/zone"
   export FERRATA_PROGRAM_BIN="$TOOLS/ferrata_lez.bin" FERRATA_SCRIPTED_BIN="$TOOLS/scripted.bin"
@@ -192,18 +208,29 @@ stage_check() {
            checkpoint/cp-ci-b.json; do
     if [ -s "$R/$f" ]; then echo "  ok: run/$f is written"; else echo "  MISSING: run/$f" >&2; fail=1; fi
   done
-  local want
-  for want in "fork" "zone: programs and the stand-in instance" "vault deployed on the fork" "deposit" "operator import" \
-              "claim (plaintext)" "claim again refused" "burn" "checkpoint journal" "checkpoint accepted" "release journal" \
-              "release paid" "release again refused"; do
-    if awk -F'\t' -v s="$want" '$1 == s && $2 == "ok" { f = 1 } END { exit !f }' "$R/steps.tsv"; then echo "  ok: step \"$want\""
-    else echo "  MISSING: step \"$want\" ok in steps.tsv" >&2; fail=1; fi
-  done
-  python3 -I - "$R/facts.json" <<'PY' || fail=1
-import json, sys
+  # The hook's steps, in its order, each exactly once and ok: a step that failed and went on would leave a FAILED line.
+  local want="fork|zone: programs and the stand-in instance|vault deployed on the fork|deposit|operator import|fees|claim (plaintext)|claim again refused|burn|checkpoint journal|checkpoint accepted|release journal|release paid|release again refused"
+  local got
+  got="$(awk -F'\t' '{ printf "%s%s", (NR > 1 ? "|" : ""), $1 }' "$R/steps.tsv")"
+  if [ "$got" = "$want" ]; then echo "  ok: the 14 steps of the round trip, in order, once each"
+  else echo "  MISSING: the steps \"${want//|/\", \"}\" in this order, once each; steps.tsv has \"${got//|/\", \"}\"" >&2; fail=1; fi
+  if awk -F'\t' '$2 != "ok" { bad = 1; print "  MISSING: a step not ok: " $0 > "/dev/stderr" } END { exit bad }' "$R/steps.tsv"; then
+    echo "  ok: every line of steps.tsv is ok"
+  else fail=1; fi
+  python3 -I - "$R/facts.json" "$R/eth/replay.txt" "${FERRATA_CI_NOW:-$(date -u +%s)}" <<'PY' || fail=1
+import datetime, json, os, sys
 f = json.load(open(sys.argv[1]))
-r, c, d = f["release"], f["checkpoint"], f["deposit"]
+replay_out = open(sys.argv[2]).read().lower() if os.path.exists(sys.argv[2]) else ""
+now = int(sys.argv[3])
+r, c, d, k = f["release"], f["checkpoint"], f["deposit"], f["fork"]
+fork_t = datetime.datetime.strptime(k["time"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc).timestamp()
+rp = r.get("replay", {})
+# NullifierAlreadyUsed() (vault/src), `cast sig`: 0xcad2ae02
+refused = rp.get("callExit", 0) != 0 and rp.get("revertSelector") == "0xcad2ae02" and "0xcad2ae02" in replay_out
 need = {
+    "the fork's block was under an hour old when the run forked it (the hook's clock)":
+        -300 <= int(k.get("ageS", 10**9)) <= 3600,
+    "the fork's block is under three hours old by this check's clock": now - fork_t <= 3 * 3600,
     "the holder was minted the denomination, then debited all of it":
         f["claim"]["holdingAfterClaim"] == d["denominationWei"] and f["burn"]["holdingAfterBurn"] == "0",
     "the checkpoint counted the one burn": int(c["burnCount"]) == 1,
@@ -213,7 +240,10 @@ need = {
     "the fresh address holds that amount less the relay fee and the credited fees":
         int(r["recipientBalanceWei"]) == int(r["amountWei"]) - int(r["relayFeeWei"]) - int(r["creditedFeesWei"])
         and int(r["recipientBalanceWei"]) > 0,
-    "the same release again refused": r["replayRefused"] is True,
+    "the same release again refused: its eth_call reverted with NullifierAlreadyUsed (eth/replay.txt)": refused,
+    "the release's nullifier is marked used": rp.get("nullifierUsed") is True,
+    "facts.json's replayRefused agrees with the replay's own result":
+        r.get("replayRefused") is (refused and rp.get("nullifierUsed") is True),
 }
 bad = [k for k, v in need.items() if not v]
 for k, v in need.items():
@@ -243,7 +273,7 @@ if os.path.exists(facts):
     f = json.load(open(facts))
     k = f.get("fork", {})
     lines += ["| | |", "|---|---|",
-              "| Sepolia fork | block %s (%s), hash `%s`, read from a public Sepolia RPC |" % (k.get("block"), k.get("time"), k.get("hash")),
+              "| Sepolia fork | block %s (%s, %s s old when forked), hash `%s`, read from %s |" % (k.get("block"), k.get("time"), k.get("ageS", "?"), k.get("hash"), k.get("rpc", "a public Sepolia RPC")),
               "| vault | `%s` (rule B), configId `%s` |" % (f.get("vault"), f.get("configId")),
               "| deposit | %s wei, Ethereum tx `%s` |" % (f["deposit"]["denominationWei"], f["deposit"]["tx"]),
               "| claim | LEZ tx `%s`; holding %s |" % (f["claim"]["tx"], f["claim"]["holdingAfterClaim"]),
