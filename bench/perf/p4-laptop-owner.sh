@@ -86,7 +86,7 @@ get() { python3 -I -c 'import json, sys; print(json.load(open(sys.argv[1]))[sys.
   echo "energy performance preference: $(cat /sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference 2>/dev/null || echo unknown)"
   echo "platform profile: $(cat /sys/firmware/acpi/platform_profile 2>/dev/null || echo unknown)"
   echo "battery: $(cat /sys/class/power_supply/BAT*/status 2>/dev/null | head -1 || echo none) $(cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -1)"
-  echo "prover niceness: 10"
+  echo "prover niceness: $(nice -n 10 nice) (nice -n 10 on top of the shell's $(nice))"
   if [ -n "$cpus" ]; then echo "prover CPUs: $cpus of $(nproc --all) (P4_CPUS: taskset -c 0-$((cpus - 1)), RAYON_NUM_THREADS=$cpus)"
   else echo "prover CPUs: all $(nproc --all)"; fi
   echo "r0vm: $("$r0vm" --version) $(sha256sum "$r0vm" | cut -c1-64)"
