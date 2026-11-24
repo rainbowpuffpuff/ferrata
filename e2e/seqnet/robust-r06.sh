@@ -210,8 +210,8 @@ release_robust() {
   rels() { cast logs --rpc-url "$RPC" --address "$VAULT" --from-block "$FROM" "$REL_T" --json | jq length; }
   rel0="$(rels)"; bal0="$(cast balance "$FRESH" --rpc-url "$RPC")"; inn0="$(cast nonce "$RELAYER" --rpc-url "$RPC")"
   cp "$job" "$W/relayer-inbox/release-robust.json"
-  rp_start() {
-    "$BIN/ferrata-relayer" --eth-rpc "$PU" --vault "$VAULT" --chain-id 11155111 --unlocked "$RELAYER" --from-block "$FROM" \
+  rp_start() { # exec: run in the background (rp_start &), $! is the relayer itself, whom the kills must reach
+    exec "$BIN/ferrata-relayer" --eth-rpc "$PU" --vault "$VAULT" --chain-id 11155111 --unlocked "$RELAYER" --from-block "$FROM" \
       --state "$W/relayer" run --inbox "$W/relayer-inbox" --poll-secs 1 "$@" >> "$RUN/eth/relayer.jsonl" 2>> "$W/relayer.err"
   }
   phits() { [ -f "$PE/ctl.hit" ] && wc -l < "$PE/ctl.hit" || echo 0; }
@@ -235,7 +235,7 @@ release_robust() {
   else bad "R.07 release: after the held send: Release events $(rels) (was $rel0), in flight '$f2'"; fi
   # 3. started again, straight through: booked from the chain
   echo pass > "$PE/ctl"
-  rp_start --rounds 2
+  ( rp_start --rounds 2 )
   rel1="$(rels)"; bal1="$(cast balance "$FRESH" --rpc-url "$RPC")"
   nul="$(cast logs --rpc-url "$RPC" --address "$VAULT" --from-block "$FROM" "$REL_T" --json | jq -c '[.[].topics[1]] | group_by(.) | map(length) | max')"
   local sends; sends="$(jq -s '[.[] | select(.method == "eth_sendTransaction" and (.action | test("^forwarded")))] | length' "$PE/log.jsonl")"
