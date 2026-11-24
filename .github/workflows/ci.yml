@@ -532,6 +532,11 @@ jobs:
         run: python3 -I scripts/test_deny_all.py
       # RFP-022 R.10, S.1: the live round trip's committed record re-derived offline (its LEZ bytes decoded and
       # hashed, the claim's opening, the burn leaf and the release journal linked); online: --check (README there).
+      # RFP-022 R.6: the checkpoint and release prover's client killed mid-proof and started again (it waits for the same
+      # call), the prover dying mid-proof (proven again), its service down (the request kept), a restart after delivery
+      # (no second job), a proof of another journal (failed at once); a stand-in for Modal's call model.
+      - name: The prover client under faults (deploy/testnet/tests/test_prover_client.py)
+        run: python3 -I deploy/testnet/tests/test_prover_client.py
       - name: The live round trip's record, offline (scripts/test_verify_live_roundtrip.py)
         run: python3 -I scripts/test_verify_live_roundtrip.py
       - name: The Sepolia fixture's Transfer selection, offline (lez/scripts/test_fetch_attest_fixture.py)

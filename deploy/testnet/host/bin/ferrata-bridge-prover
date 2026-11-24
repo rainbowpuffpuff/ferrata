@@ -15,12 +15,23 @@ relayer checks with the vault's own eth_call before it sends anything.
 
 `watch` takes requests, `<requests>/<name>.json` = {"kind": ..., "input": "<file>", "journal": "0x.."}, one at a time;
 the answer goes to `<requests>/done/<name>.json` (or `failed/`), the job to `<inbox>/<name>.json`.
+
+Restarts and failures (RFP-022 R.6): the proof is started with `spawn` and its call id kept in `<requests>/calls/<name>.json`
+before the client waits for it, so a client killed mid-proof and started again waits for the same call (Modal keeps
+running it and keeps its result) instead of paying for a second proof. A proof that fails on the prover's side (its
+container gone, a time limit, the app unreachable, the endpoint down) keeps the request: the call id is dropped and the
+next poll starts it again, up to FERRATA_PROVE_ATTEMPTS (5) attempts; a request that cannot succeed (an unreadable request,
+a program that is not the pinned one, no journal, a proof of another journal) goes to `failed/` at once. The inbox job is
+written once: the call record notes the delivery, and a restart after it only finishes the request.
+FERRATA_PROVER_PROGRAMS_JSON names a JSON file {kind: [file, image id, sha256, job kind]} that replaces the pinned
+programs (another deployment's, or a test's).
 """
 import argparse
 import hashlib
 import json
 import os
 import pathlib
+import signal
 import sys
 import time
 
@@ -32,14 +43,28 @@ KINDS = {
     "checkpoint-b": ("checkpoint_b_0_3_5.bin", "0x8917f58e76aa805dedc04fc5e2b70404f5078b66b271ec44aaa0c78d9f5eaf04",
                      "86eaa5502bffbb85d8661e18d24ae83a797cab5e2cdc4db70c01b6a7ae20bbdc", "checkpoint"),
 }
+if os.environ.get("FERRATA_PROVER_PROGRAMS_JSON"):
+    KINDS = {k: tuple(v) for k, v in json.loads(pathlib.Path(os.environ["FERRATA_PROVER_PROGRAMS_JSON"]).read_text()).items()}
 APP, FUNCTION = os.environ.get("FERRATA_PROVER_APP", "ferrata-prover"), "prove_bytes"
+ATTEMPTS = int(os.environ.get("FERRATA_PROVE_ATTEMPTS", "5"))
+
+
+class Permanent(Exception):
+    """A request that cannot succeed by trying again."""
+
+
+def write_atomic(path, text):
+    path = pathlib.Path(path)
+    tmp = path.with_name(f".{path.name}.tmp")
+    tmp.write_text(text)
+    os.replace(tmp, path)
 
 
 def program(kind):
     name, image, sha, job = KINDS[kind]
     data = (PROGRAMS / name).read_bytes()
     if hashlib.sha256(data).hexdigest() != sha:
-        raise SystemExit(f"{PROGRAMS / name}: not the binary of docs/image-ids.md ({sha[:16]}...)")
+        raise Permanent(f"{PROGRAMS / name}: not the binary of docs/image-ids.md ({sha[:16]}...)")
     return data, image, job
 
 
@@ -47,7 +72,9 @@ def hex0(s):
     return "0x" + s.removeprefix("0x").lower()
 
 
-def prove(kind, input_path, journal, name, inbox=None, meta_path=None):
+def prove(kind, input_path, journal, name, inbox=None, meta_path=None, calls=None):
+    """One proof. `calls`: the directory of call records (watch): the call id is kept there before waiting, and a record
+    left by a killed client is waited for again instead of starting a second proof."""
     import modal  # the client only; the token is the no-secret workspace's (MODAL_CONFIG_PATH)
     data, image, job_kind = program(kind)
     # The input's own meta (realblocks-crown's, crown-release's) when there is one, as the prover's local runs pass it.
@@ -55,22 +82,45 @@ def prove(kind, input_path, journal, name, inbox=None, meta_path=None):
     # The journal the proof must carry: --journal, else the meta's (the CLI's `release --input-out` writes it beside).
     journal = journal or meta.get("journal") or ""
     if not journal:
-        raise ValueError("no journal: --journal 0x.., or a --meta file with \"journal\"")
+        raise Permanent("no journal: --journal 0x.., or a --meta file with \"journal\"")
     meta.update({"kind": kind, "journal": journal.removeprefix("0x"), "name": name})
-    f = modal.Function.from_name(APP, FUNCTION)
+    limit = int(os.environ.get("FERRATA_PROVE_LIMIT_S", "6600"))
+    rec_path = pathlib.Path(calls) / f"{name}.json" if calls else None
+    rec = json.loads(rec_path.read_text()) if rec_path and rec_path.exists() else {}
     t0 = time.time()
-    r = f.remote(data, pathlib.Path(input_path).read_bytes(), meta, limit_s=int(os.environ.get("FERRATA_PROVE_LIMIT_S", "6600")), groth16=True)
+    resumed = bool(rec.get("call_id"))
+    if resumed:
+        call = modal.FunctionCall.from_id(rec["call_id"])
+        print(json.dumps({"event": "resumed", "name": name, "call_id": rec["call_id"], "attempt": rec.get("attempts", 1)}), flush=True)
+    else:
+        call = modal.Function.from_name(APP, FUNCTION).spawn(data, pathlib.Path(input_path).read_bytes(), meta, limit_s=limit, groth16=True)
+        rec = {"call_id": call.object_id, "attempts": rec.get("attempts", 0) + 1, "started": round(t0, 1)}
+        if rec_path:
+            write_atomic(rec_path, json.dumps(rec))
+        print(json.dumps({"event": "spawned", "name": name, "call_id": call.object_id, "attempt": rec["attempts"]}), flush=True)
+    r = rec.get("result") or call.get(timeout=limit + 600)
     out = {"name": name, "kind": kind, "image_id": image, "ok": bool(r.get("ok")), "seconds": round(time.time() - t0, 1),
            "journal": hex0(r.get("journal_hex") or ""), "seal": hex0(r.get("seal_hex") or ""),
-           "prover": {k: r.get(k) for k in ("exit_code", "wall_s") if k in r}}
+           "prover": {k: r.get(k) for k in ("exit_code", "wall_s") if k in r}, "call_id": rec.get("call_id"),
+           "attempts": rec.get("attempts", 1), "resumed": resumed}
     if out["ok"] and out["journal"] != hex0(journal):
         out["ok"], out["error"] = False, "the proof's journal is not the one asked for"
-    if out["ok"] and inbox:
-        job = {"kind": job_kind, "journal": out["journal"], "seal": out["seal"]}
-        tmp = pathlib.Path(inbox) / f".{name}.json.tmp"
-        tmp.write_text(json.dumps(job))
-        tmp.rename(pathlib.Path(inbox) / f"{name}.json")
-        out["job"] = str(pathlib.Path(inbox) / f"{name}.json")
+    if not out["ok"]:
+        # The prover answered, and not with this journal's proof: trying again proves the same input again.
+        raise Permanent(out.get("error") or f"the prover refused: {json.dumps(r.get('error') or r.get('exit_code'))[:300]}")
+    if rec_path and not rec.get("result"):
+        rec["result"] = {k: r.get(k) for k in ("ok", "journal_hex", "seal_hex", "exit_code", "wall_s") if k in r}
+        write_atomic(rec_path, json.dumps(rec))
+    if inbox:
+        dest = pathlib.Path(inbox) / f"{name}.json"
+        if rec.get("delivered"):
+            out["job"], out["delivered_before"] = str(dest), True
+        else:
+            write_atomic(dest, json.dumps({"kind": job_kind, "journal": out["journal"], "seal": out["seal"]}))
+            out["job"] = str(dest)
+            if rec_path:
+                rec["delivered"] = True
+                write_atomic(rec_path, json.dumps(rec))
     return out
 
 
@@ -102,21 +152,47 @@ def main():
         print(json.dumps(r))
         sys.exit(0 if r["ok"] else 1)
     req = pathlib.Path(a.requests)
-    for d in ("done", "failed"):
+    for d in ("done", "failed", "calls"):
         (req / d).mkdir(exist_ok=True)
+    stop = []
+    signal.signal(signal.SIGTERM, lambda *_: stop.append(1))
     print(json.dumps({"event": "started", "requests": str(req), "inbox": a.inbox}), flush=True)
-    while True:
+    while not stop:
         for f in sorted(req.glob("*.json")):
-            name = f.stem
+            name, rec_path = f.stem, req / "calls" / f.name
             try:
                 q = json.loads(f.read_text())
-                r = prove(q["kind"], q["input"], q.get("journal"), name, a.inbox, q.get("meta"))
-            except Exception as e:  # a bad request or a failed call: kept with the reason, the loop goes on
-                r = {"name": name, "ok": False, "error": repr(e)[:500]}
-            (req / ("done" if r["ok"] else "failed") / f.name).write_text(json.dumps(r))
+                r = prove(q["kind"], q["input"], q.get("journal"), name, a.inbox, q.get("meta"), calls=req / "calls")
+                where = "done"
+            except Exception as e:  # noqa: BLE001
+                rec = json.loads(rec_path.read_text()) if rec_path.exists() else {}
+                permanent = isinstance(e, (Permanent, ValueError, KeyError, OSError)) and not _transient(e)
+                r = {"name": name, "ok": False, "error": repr(e)[:500], "attempts": rec.get("attempts", 0)}
+                if not permanent and rec.get("attempts", 0) < ATTEMPTS:
+                    # The prover's side failed (or the client could not reach it): the request stays, the call id goes,
+                    # and the next poll starts the proof again.
+                    rec.pop("call_id", None)
+                    rec.setdefault("errors", []).append(r["error"][:200])
+                    write_atomic(rec_path, json.dumps(rec))
+                    print(json.dumps({"event": "retry", "name": name, "attempts": rec.get("attempts", 0), "error": r["error"][:200]}), flush=True)
+                    continue
+                where = "failed"
+            write_atomic(req / where / f.name, json.dumps(r))
             f.unlink()
-            print(json.dumps({k: r.get(k) for k in ("name", "kind", "ok", "seconds", "job", "error")}), flush=True)
-        time.sleep(a.poll)
+            rec_path.unlink(missing_ok=True)
+            print(json.dumps({k: r.get(k) for k in ("name", "kind", "ok", "seconds", "job", "error", "call_id", "attempts", "resumed")}), flush=True)
+            if stop:
+                break
+        if not stop:
+            time.sleep(a.poll)
+    print(json.dumps({"event": "stop", "reason": "SIGTERM"}), flush=True)
+
+
+def _transient(e):
+    """An error of the network or of the prover's side, not of the request: worth another attempt."""
+    names = {c.__name__ for c in type(e).__mro__}
+    return bool(names & {"ConnectionError", "TimeoutError", "RemoteError", "FunctionTimeoutError", "OutputExpiredError",
+                         "InputCancellation", "InternalFailure", "ExecutionError", "URLError"})
 
 
 if __name__ == "__main__":
