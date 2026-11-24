@@ -446,13 +446,13 @@ note = "waits on Logos: LEZ testnet 0.4 does not exist. Shown instead: the recor
 [[row]]
 id = "RFP-021 S.2"
 tests = [
-  { path = "e2e/ci/run.sh", kind = "test", ci = "roundtrip" },
   { path = "scripts/ci/sequencer-attest.sh", kind = "test", ci = "sequencer-attest" },
-  { path = "e2e/runs/ci-sequencer-attest-2026-11-21/README.md", kind = "record" },
+  { path = "e2e/runs/ci-sequencer-2026-11-24/attest/README.md", kind = "record" },
+  { path = "e2e/ci/run.sh", kind = "test", ci = "roundtrip" },
   { path = "lez/live/verify-run.sh", kind = "test", ci = "local", run = "cd lez/live && ./verify-run.sh" },
   { path = "lez/lab/lab.sh", kind = "test", ci = "local", run = "lez/lab/lab.sh verify" },
 ]
-note = "CI runs the round trip over LEZ's state transition and anvil (job roundtrip, EVIDENCE row 76); against LEZ's standalone sequencer built from source: scripts/ci/sequencer-attest.sh in sequencer.yml, a workflow started by hand only, whose box run of 21 Nov 2026 deployed through the sequencer's loader and stopped in scenarios on aged recorded data; the sequencer runs are recorded and re-checked by hand (lez/live/, lez/lab/)"
+note = "CI runs attestation production and consumption against LEZ v0.4.0-rc3's standalone sequencer built from source, on Sepolia data fetched when the job runs (job sequencer-attest of sequencer.yml: on pushes to main, daily and by hand): instance A initialised from a recent finalized checkpoint and advanced by the newest finality update, its root the one a second provider reports; the twin's 21 designed refusals and 2 designed reverts on that data; the attestation consumed publicly (root Attest, the reference consumer's CallAttest and Claim) and privately, with a real proof the sequencer verifies; its build-box run of 24 Nov 2026 is recorded; the round trip over LEZ's state transition stays in roundtrip; the recorded sequencer runs are re-checked by hand (lez/live/, lez/lab/)"
 
 [[row]]
 id = "RFP-021 S.3"
@@ -985,11 +985,13 @@ note = "the participant table (each role, what it can do if it lies or stops, wh
 [[row]]
 id = "RFP-022 R.10"
 tests = [
+  { path = "scripts/ci/sequencer-roundtrip.sh", kind = "test", ci = "sequencer-roundtrip" },
+  { path = "e2e/runs/ci-sequencer-2026-11-24/roundtrip/README.md", kind = "record" },
   { path = "e2e/ci/run.sh", kind = "test", ci = "roundtrip" },
   { path = "e2e/runs/crown-live-3/README.md", kind = "record" },
   { path = "e2e/runs/zone-bridge-1/README.md", kind = "record" },
 ]
-note = "CI runs the round trip over LEZ's state transition and anvil, every step asserted (row 76); the sequencer round trips - live on Sepolia twice, the four- and five-sequencer zones, the tool, the mini-app and Basecamp on a running sequencer - are by hand (rows 41, 91, 100-103, 125, 126)"
+note = "CI runs the full deposit and redemption round trip through LEZ v0.4.0-rc1's standalone sequencer built from source and anvil forking Sepolia at its finalized block of the moment, every step asserted (job sequencer-roundtrip of sequencer.yml: on pushes to main, daily and by hand); the stand-ins are the roundtrip job's: the vault tests' mock verifier accepting exactly the journals the rule (B) and release guests computed (executed, dev mode), a light-client committee the run holds (anvil has no beacon chain), ci_zone's test committee inscribing the sequencer's applied transactions; its build-box run of 24 Nov 2026 is recorded; CI also runs the round trip over LEZ's state transition (row 76); the sequencer round trips live on Sepolia (rows 41, 91) and on zones (rows 100-103, 125, 126) are by hand"
 
 [[row]]
 id = "RFP-022 R.11"
