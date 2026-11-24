@@ -384,7 +384,7 @@ check "alerts: all $crit critical alerts reached the pager command" '[ "$crit" -
   echo
   echo '| Scenario | Reason | After submission | Before deadline | cancelCandidate gas |'
   echo '|---|---|---|---|---|'
-  jq -r 'select(.scenario != "S7") | "| \(.scenario) | \(.reason) | \(.secondsAfterSubmission) | \(.secondsBeforeDeadline) | \(.gasUsed) |"' "$scen"
+  jq -r 'select(.scenario != "S7" and .scenario != "S12") | "| \(.scenario) | \(.reason) | \(.secondsAfterSubmission) | \(.secondsBeforeDeadline) | \(.gasUsed) |"' "$scen"
   jq -r 'select(.scenario == "S7") | "\nS7: checkpoint \(.index) (\(.reason)) finalised at \(.finalizedAt), revoked at \(.revokedAt), revocable until \(.revokeBy)."' "$scen"
   echo
   echo "Alerts: $(jq -s 'group_by(.kind) | map("\(.[0].kind) \(length)") | join(", ")' "$alerts")."

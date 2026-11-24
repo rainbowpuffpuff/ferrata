@@ -26,11 +26,11 @@ for i in 0 1 2 3; do
   $bin certify --channel-key "$dev/seq-$i/channel_signing_key" --att-pub "$a" --deployment "$work/deployment.json" --out "$work/cert-$i.json" > /dev/null
   rm -f "$work/state-$i.json"
   for k in $(seq 1 "$kills"); do
-    ms=$(( 5 + RANDOM % 396 )); out="$work/att-$i-k$k.json"; before="$(sha256sum "$work/state-$i.json" 2>/dev/null | cut -c1-16)"
+    ms=$(( 5 + RANDOM % 396 )); out="$work/att-$i-k$k.json"; before="$( { sha256sum "$work/state-$i.json" 2>/dev/null || true; } | cut -c1-16)"
     rc=0; timeout -s KILL "0.$(printf '%03d' "$ms")" "$bin" attest --deployment "$work/deployment.json" --cert "$work/cert-$i.json" \
       --att-key "$work/attestation-$i.key" --answers "$z/answers" --lez-answers "$work" --state "$work/state-$i.json" --out "$out" \
       > /dev/null 2>> "$work/attest-$i.log" || rc=$?
-    after="$(sha256sum "$work/state-$i.json" 2>/dev/null | cut -c1-16)"
+    after="$( { sha256sum "$work/state-$i.json" 2>/dev/null || true; } | cut -c1-16)"
     whole=yes; [ -e "$work/state-$i.json" ] && { python3 -I -c 'import json,sys; json.load(open(sys.argv[1]))' "$work/state-$i.json" 2>/dev/null || whole=no; }
     printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$i" "$k" "$ms" "$rc" "${before:--}" "${after:--}" "$([ -e "$out" ] && echo written || echo none)	$whole" >> "$o/rounds.tsv"
   done

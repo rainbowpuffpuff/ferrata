@@ -79,11 +79,15 @@ if [ "$MODE" = deployer ]; then
   MOCK=""; N="$(cast nonce $DEPLOYER --rpc-url $RPC)"
   VAULT="$(cast compute-address $DEPLOYER --nonce $((N + 3)) | awk '{print $NF}')"
 else
-  MOCK="$(cd "$REPO/vault" && forge create test/mocks/MockVerifiers.sol:MockRiscZeroVerifier --rpc-url $RPC --unlocked \
+  # Since the RISC Zero 3.1 deployment (DeployVault's _checkVerifier) the vault is deployed only over risc0-ethereum
+  # v3.1.0's verifier, checked by its code: DeployVault deploys it first (the vault is the fourth creation), and the
+  # vault tests' MockRiscZeroVerifier's runtime code is then put at that verifier's address on this local anvil
+  # (anvil_setCode, after the deployment), so that the stand-in prover can tell it which journals to accept.
+  MOCK_SRC="$(cd "$REPO/vault" && forge create test/mocks/MockVerifiers.sol:MockRiscZeroVerifier --rpc-url $RPC --unlocked \
     --from $DEPLOYER --broadcast --json 2>/dev/null | jq -r .deployedTo)"
-  [ -n "$MOCK" ] && [ "$MOCK" != null ] || die "the mock verifier was not deployed"
-  N="$(cast nonce $DEPLOYER --rpc-url $RPC)"
-  VAULT="$(cast compute-address $DEPLOYER --nonce $((N + 2)) | awk '{print $NF}')"
+  [ -n "$MOCK_SRC" ] && [ "$MOCK_SRC" != null ] || die "the mock verifier was not deployed"
+  MOCK=""; N="$(cast nonce $DEPLOYER --rpc-url $RPC)"
+  VAULT="$(cast compute-address $DEPLOYER --nonce $((N + 3)) | awk '{print $NF}')"
 fi
 if [ "$MODE" = deployer ] && [ -z "${CROWN_ADMIN:-}${CROWN_FREEZE_AUTHORITY:-}${CROWN_ROLES_LABEL:-}" ]; then
   # The LEZ configuration's admin and freeze authority, unless the deployer names its own accounts (CROWN_ADMIN and
@@ -120,6 +124,14 @@ if [ "$MODE" = logoseth ]; then
   say "logoseth: the vault's freeze authority $(cast call "$VAULT" 'freezeAuthority()(address)' --rpc-url $RPC), pending admin $(cast call "$VAULT" 'pendingAdmin()(address)' --rpc-url $RPC)"
 fi
 tail -n 1 "$W/deploy.log" | scrub | tee -a "$RUN/run.log"
+if [ "$MODE" != deployer ]; then
+  GV="$(jq -r '.groth16Verifier // empty' "$RUN/deploy.json")"; [ -n "$GV" ] || die "deploy.json names no Groth16 verifier"
+  cast rpc anvil_setCode "$GV" "$(cast code "$MOCK_SRC" --rpc-url $RPC)" --rpc-url $RPC > /dev/null || die "anvil_setCode (the mock's code)"
+  MOCK="$GV"
+  jq --arg g "$GV" '.groth16Verifier = $g | .label += "; the mock'"'"'s runtime code put at the address of the risc0-ethereum v3.1.0 verifier DeployVault deployed (anvil_setCode)"' \
+    "$RUN/identity.json" > "$W/identity.json" && mv "$W/identity.json" "$RUN/identity.json"
+  say "the mock verifier's code at $GV, the verifier the vault's emergency stop wraps (anvil_setCode; local anvil only)"
+fi
 rm -f "$REPO/vault/deployments/crown-seqnet-$NAME.json"   # the same record is $RUN/deploy.json
 if [ "$MODE" = deployer ]; then
   # The verifier DeployVault deployed, from its record, into the run's identity.
