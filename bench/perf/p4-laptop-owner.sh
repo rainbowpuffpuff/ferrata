@@ -24,6 +24,8 @@
 # ferrata-e2e with release_31 and its own r0vm (RISC Zero 3.1.0, the client ferrata-e2e is built with), the crown
 # rehearsal 3's burn private-1 as witness; about a minute at 8 threads, 1.5 GiB. Its "settlement" is ferrata-e2e
 # verify: the receipt against release_31's image id and the journal against the native one.
+# P4_JOBS="attest-pad bridge-pad release" (any of them) runs only those jobs, for a machine that cannot be kept quiet
+# for the whole hour; machine.txt records the selection.
 set -euo pipefail
 usage="usage: p4-laptop-owner.sh STAGE_DIR OUT_DIR"
 stage="$(realpath "${1:?$usage}")"
@@ -57,6 +59,7 @@ if [ -d "$stage/release" ]; then
   done
 fi
 # Every staged file against the sha256 its manifest recorded (the bundle as the build box staged it).
+want() { [ -z "${P4_JOBS:-}" ] || case " $P4_JOBS " in *" $1 "*) true;; *) false;; esac; }
 python3 -I - "$stage" "${jobs[@]}" <<'EOF' || die "the bundle does not match its manifests"
 import hashlib, json, pathlib, sys
 stage = pathlib.Path(sys.argv[1])
@@ -72,6 +75,11 @@ if got != want:
     print(f"r0vm/r0vm: sha256 {got}, SHA256SUMS {want}", file=sys.stderr); bad += 1
 sys.exit(1 if bad else 0)
 EOF
+if [ -n "${P4_JOBS:-}" ]; then
+  sel=(); for j in "${jobs[@]}"; do want "$j" && sel+=("$j"); done
+  [ ${#sel[@]} -gt 0 ] || die "P4_JOBS=$P4_JOBS selects none of the staged jobs: ${jobs[*]}"
+  jobs=("${sel[@]}")
+fi
 mkdir -p "$out"
 chmod +x "$r0vm" "$stage/attest-pad/prove_attest" "$stage/bridge-pad/prove_bridge"
 [ -d "$stage/release" ] && chmod +x "$stage/release/ferrata-e2e" "$stage/release/r0vm"
@@ -86,6 +94,7 @@ get() { python3 -I -c 'import json, sys; print(json.load(open(sys.argv[1]))[sys.
   echo "energy performance preference: $(cat /sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference 2>/dev/null || echo unknown)"
   echo "platform profile: $(cat /sys/firmware/acpi/platform_profile 2>/dev/null || echo unknown)"
   echo "battery: $(cat /sys/class/power_supply/BAT*/status 2>/dev/null | head -1 || echo none) $(cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -1)"
+  echo "jobs: ${jobs[*]}${P4_JOBS:+ (P4_JOBS)}"
   echo "prover niceness: $(nice -n 10 nice) (nice -n 10 on top of the shell's $(nice))"
   if [ -n "$cpus" ]; then echo "prover CPUs: $cpus of $(nproc --all) (P4_CPUS: taskset -c 0-$((cpus - 1)), RAYON_NUM_THREADS=$cpus)"
   else echo "prover CPUs: all $(nproc --all)"; fi
@@ -162,11 +171,11 @@ run_release() {  # the release's succinct proof, then its verification (the sett
 fixture="$(basename "$(get "$stage/attest-pad/MANIFEST.json" fixtures_from)")"
 ENVS=("FERRATA_EXPECT_CONSUMER_IMAGE_ID=$(get "$stage/attest-pad/MANIFEST.json" expected_consumer_image_id)"
       "FERRATA_ATTEST_FIXTURE_DIR=$stage/attest-pad/$fixture")
-run attest-pad "$stage/attest-pad/prove_attest" --shape wallet --tx-out tx-attest.borsh -- tx-attest.borsh
+want attest-pad && run attest-pad "$stage/attest-pad/prove_attest" --shape wallet --tx-out tx-attest.borsh -- tx-attest.borsh
 ENVS=("FERRATA_EXPECT_BRIDGE_IMAGE_ID=$(get "$stage/bridge-pad/MANIFEST.json" expected_bridge_image_id)")
-run bridge-pad "$stage/bridge-pad/prove_bridge" --shape wallet --claim-out tx-claim.borsh --burn-out tx-burn.borsh \
+want bridge-pad && run bridge-pad "$stage/bridge-pad/prove_bridge" --shape wallet --claim-out tx-claim.borsh --burn-out tx-burn.borsh \
   -- tx-claim.borsh tx-burn.borsh
-[ -d "$stage/release" ] && run_release
+[ -d "$stage/release" ] && want release && run_release
 fail=0
 for job in "${jobs[@]}"; do
   grep -q '^exit 0,' "$out/$job/exit.txt" && grep -qx 'settle exit 0' "$out/$job/exit.txt" \
