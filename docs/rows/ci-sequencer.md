@@ -104,7 +104,7 @@ state under the fork.
 
 ## Proposed EVIDENCE rows
 
-Numbers to be assigned by the integrator (A and B below); links relative to `docs/`.
+Numbers to be assigned by the integrator (A and B below); the Details column to be linked as `docs/EVIDENCE.md` links (relative to `docs/`).
 
 > | A | **Attestation production and consumption against a standalone LEZ sequencer on fresh Sepolia data, in CI
 > (RFP-021 S.2)**: `scripts/ci/sequencer-attest.sh` (job `sequencer-attest`, `sequencer.yml`: pushes to `main`, daily,
@@ -117,7 +117,7 @@ Numbers to be assigned by the integrator (A and B below); links relative to `doc
 > 90 transactions: 67 applied, 21 refused with the designed codes, 2 designed reverts, none dropped; the private proof
 > 1,222.1 s with 4 threads; build 17 min, run 26 min; GitHub run `<RUN-ID>`: `<its numbers>` | Modal build box,
 > 24 Nov 2026; GitHub Actions (`ubuntu-latest`), `<date>` | the private attestation's real (the sequencer verifies);
-> the rest none needed | `scripts/ci/sequencer-attest.sh RESULTS-DIR` | [`e2e/runs/ci-sequencer-2026-11-24/attest/`](../e2e/runs/ci-sequencer-2026-11-24/attest/README.md) |
+> the rest none needed | `scripts/ci/sequencer-attest.sh RESULTS-DIR` | `e2e/runs/ci-sequencer-2026-11-24/attest/README.md` |
 
 > | B | **The full deposit and redemption round trip through a standalone LEZ sequencer and a local fork of Sepolia, in
 > CI (RFP-022 R.10)**: `scripts/ci/sequencer-roundtrip.sh` (job `sequencer-roundtrip`, `sequencer.yml`) builds LEZ
@@ -131,7 +131,7 @@ Numbers to be assigned by the integrator (A and B below); links relative to `doc
 > released 0.000997 ETH + 0.000002 relay fee + 0.000001 checkpoint fee = 0.001 ETH; the replay refused with
 > `NullifierAlreadyUsed`; cold build 41 min, run 1 min 52 s; GitHub run `<RUN-ID>`: `<its numbers>` | Modal build
 > box, 24 Nov 2026; GitHub Actions (`ubuntu-latest`), `<date>` | none (dev mode; mock verifier) |
-> `scripts/ci/sequencer-roundtrip.sh RESULTS-DIR` (under `e2e/runs/`) | [`e2e/runs/ci-sequencer-2026-11-24/roundtrip/`](../e2e/runs/ci-sequencer-2026-11-24/roundtrip/README.md) |
+> `scripts/ci/sequencer-roundtrip.sh RESULTS-DIR` (under `e2e/runs/`) | `e2e/runs/ci-sequencer-2026-11-24/roundtrip/README.md` |
 
 Amendment: EVIDENCE row 164's "Details" or "What it shows" gains "superseded in CI by row A (the job on fresh data,
 LEZ v0.4.0-rc3, on pushes to `main`)".
