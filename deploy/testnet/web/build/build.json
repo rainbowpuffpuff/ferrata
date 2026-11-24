@@ -1,8 +1,8 @@
 {
- "commit": "bdc38ad521bbf73d2883e2a342054bc6ec0055bd",
+ "commit": "2f38cf321ee792b6525ed071c4a96852d92be3b3",
  "date": "2026-11-24",
  "dirty": false,
- "statuses_from": "816dfb73448e83daf5888fb4020b63f224de70c5",
+ "statuses_from": "2f38cf321ee792b6525ed071c4a96852d92be3b3",
  "hard": {
   "RFP-021": {
    "shown": 45,
