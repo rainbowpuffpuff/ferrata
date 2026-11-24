@@ -13,11 +13,14 @@ URLs and the programs and instances it deployed (programs.json), and /AGENTS.md 
                install-web.sh keeps them outside the stage and writes them only after this step succeeds, so a run
                stopped half way does not lose them
 
-The messaging module and the wallet's inbox and names panels are the programs' second versions' clients: they are
-pointed at `ferrata_msg_v2` and `ferrata_names_v2` (programs.json), the first versions, live and immutable, named as
-legacy (the module reads their old inboxes). On a host without the second versions they are left off (program null:
-the wallet says no program is configured), never pointed at a first version, whose messages they would misread. The
-explorer's catalogue keeps the first versions, whose IDLs and images it reads. A value the host set in a served config
+The messaging module is the messages program's second version's client: it is pointed at `ferrata_msg_v2`
+(programs.json), the first version, live and immutable, named as legacy (the module reads its old inboxes); on a host
+without the second version it is left off (program null), never pointed at the first, whose messages it would misread.
+The wallet's inbox and names panels are pointed at the program their bundled client is written for, which the client's
+own seed domains tell (wallet/msg/ferrata-msg.js, wallet/vendor/names.js): the first versions for the wallet as it is
+bundled now, the second ones once its clients are; a panel whose program is not deployed, or whose client is not
+recognised, is left off (the wallet says no program is configured). The explorer's catalogue keeps the first
+versions, whose IDLs and images it reads. A value the host set in a served config
 and the bundle leaves empty (null, or a key it does not have) is kept (the wallet's bridge settings); the module's rpc
 is the site's own, written each run (absolute: its command-line tool reads the file outside a browser). Each file is
 written whole (a new file renamed over the old).
@@ -52,8 +55,27 @@ def account(progs, name):
 
 
 def current(progs, name):
-    """(the second version, whose clients these are, or None; the first version, as legacy, or None)."""
+    """(the second version, whose client the messaging module is, or None; the first version, as legacy, or None)."""
     return account(progs, name + "_v2"), account(progs, name)
+
+
+# The wallet's panels and the client each bundles: (the panel, the client's file under wallet/, (the program it is
+# written for, a seed domain only that version's client holds), the second version first: its messages client also
+# holds the first's key salt, to read old inboxes).
+WALLET_CLIENTS = (("names", "vendor/names.js", (("ferrata_names_v2", "'ferrata-names/v2/name/'"),
+                                                ("ferrata_names", "'ferrata-names/v1/name/'"))),
+                  ("msg", "msg/ferrata-msg.js", (("ferrata_msg_v2", "'ferrata-msg/v2/'"),
+                                                 ("ferrata_msg", "'ferrata-msg/v1'"))))
+
+
+def written_for(path, markers):
+    """The program (its programs.json name) the client at `path` is written for; None if missing or not recognised."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            src = f.read()
+    except OSError:
+        return None
+    return next((name for name, marker in markers if marker in src), None)
 
 
 def served_before(served, name):
@@ -135,12 +157,17 @@ def wallet(www, progs, served):
     b = account(progs, "ferrata_bridge_b1")
     if b:
         c.setdefault("bridge", {})["program"] = b
-    # The encrypted inbox and names panels turn on when their program is set: the second version only (their code's).
-    for key, prog in (("msg", "ferrata_msg"), ("names", "ferrata_names")):
-        program, legacy = current(progs, prog)
-        c.setdefault(key, {})["program"] = program
-        if legacy and key == "msg":
-            c[key]["legacyProgram"] = legacy
+    # The encrypted inbox and names panels turn on when their program is set: the one their bundled client is written
+    # for, never another version, whose accounts and messages the client would misread.
+    for key, client, markers in WALLET_CLIENTS:
+        name = written_for(os.path.join(www, "wallet", client), markers)
+        p = c[key] = c[key] if isinstance(c.get(key), dict) else {}
+        p["program"] = account(progs, name) if name else None
+        legacy = account(progs, "ferrata_msg") if name == "ferrata_msg_v2" else None
+        if legacy:
+            p["legacyProgram"] = legacy
+        else:
+            p.pop("legacyProgram", None)
     save(w, c)
 
 
