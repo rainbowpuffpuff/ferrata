@@ -8,7 +8,9 @@ repository it comes from; and the check that catches a host serving something el
           2. the manifest committed in the repository (this checkout's copy, --manifest FILE, or --github REF:
              the copy at REF of the public repository, fetched from GitHub, not from the host);
           3. every listed file as the host serves it, hashed here, and, where this clone has the listed commit, the
-             same file read from git.
+             same file read from git; every served file the repository does not hold (release packages, the APK,
+             source archives) hashed too, equal to the manifest and listed in a committed SHA256SUMS under
+             deploy/testnet/web/.
         Also fetched a second time under the host's other name (--second URL: the domain in your browser's address
         bar when --site is the sslip.io name, or the reverse) with a browser's User-Agent, and the security headers
         checked. Exit 1 on any difference. Standard library only; GET requests only.
@@ -60,6 +62,19 @@ def sha256(b: bytes) -> str:
     return hashlib.sha256(b).hexdigest()
 
 
+def committed_sums() -> dict:
+    """{sha256: the committed SHA256SUMS under deploy/testnet/web/ that lists it}: where a served file the repository
+    does not hold (a release package, the APK, a source archive) is pinned."""
+    out = {}
+    for rel in git("ls-files", "deploy/testnet/web/").decode().split():
+        if rel.endswith("/SHA256SUMS"):
+            for line in (ROOT / rel).read_text(encoding="ascii").splitlines():
+                parts = line.split()
+                if len(parts) == 2 and len(parts[0]) == 64:
+                    out[parts[0]] = rel
+    return out
+
+
 def git(*args, inp=None) -> bytes:
     return subprocess.run(["git", "-C", str(ROOT), *args], input=inp, capture_output=True, check=True).stdout
 
@@ -107,6 +122,7 @@ def is_public(commit: str, cache: dict) -> bool:
 
 def build(a) -> int:
     idx = blob_index(a.ref)
+    sums = committed_sums()
     files, unmatched, generated, pub = [], [], [], {}
     for line in Path(a.served).read_text().splitlines():
         h, path = line.split("\t") if "\t" in line else line.split(None, 1)
@@ -120,7 +136,7 @@ def build(a) -> int:
         want = RENAMED.get(path) or next((v + path[len(k):] for k, v in RENAMED_DIRS.items() if path.startswith(k)), None)
         cands = [x for x in idx.get(h, []) if x[1] == want or (not want and (x[1] == path or x[1].endswith("/" + path)))]
         if not cands:
-            unmatched.append({"path": "/" + path, "sha256": h})
+            unmatched.append({"path": "/" + path, "sha256": h, **({"listed_in": sums[h]} if h in sums else {})})
             continue
         # The same bytes often sit in several commits: name a published one when there is one.
         c, rpath, ref, size = next((x for x in cands if is_public(x[0], pub)), cands[0])
@@ -140,7 +156,7 @@ def build(a) -> int:
     print(f"{len(files)} files matched to the repository ({npub} at public commits), {len(generated)} generated on "
           f"the host, {len(unmatched)} unmatched")
     for u in unmatched:
-        print(f"  unmatched {u['path']}")
+        print(f"  unmatched {u['path']}" + (f" (listed in {u['listed_in']})" if u.get("listed_in") else " (in no committed SHA256SUMS)"))
     return 0
 
 
@@ -253,13 +269,30 @@ def verify(a) -> int:
         if want not in hdr.get(name, ""):
             bad(f"header {name}: {hdr.get(name)!r} lacks {want!r}" + (f" ({err})" if err else ""))
     print(f"{ok} of {len(m['files'])} files equal the manifest; {len(m.get('generated', []))} generated on the host "
-          f"(not hashed); {len(m.get('unmatched', []))} served files the repository does not hold")
+          f"(not hashed); {len(m.get('unmatched', []))} served files the repository does not hold (hashed below)")
     if unpublished:
         print(f"note  {unpublished} of the equal files are at commits no public branch holds yet: they match the "
               f"manifest, but nobody outside the project can check them against their source until those commits "
               f"are published")
+    # Files the repository does not hold (release packages, the APK, source archives): hashed too, each against the
+    # manifest and a committed SHA256SUMS that lists it.
+    sums, held = committed_sums(), 0
     for u in m.get("unmatched", []):
-        print(f"note  {u['path']}: served when the manifest was made, matched to no committed file")
+        body, _, err = fetch(site + u["path"])
+        if body is None:
+            bad(f"{u['path']}: cannot fetch ({err})")
+            continue
+        h = sha256(body)
+        if h != u["sha256"]:
+            bad(f"{u['path']}: served {h[:16]}…, manifest {u['sha256'][:16]}…")
+        elif h not in sums:
+            bad(f"{u['path']}: its SHA-256 is in no committed SHA256SUMS under deploy/testnet/web/")
+        else:
+            held += 1
+            if a.verbose:
+                print(f"ok    {u['path']:44} {h[:16]}  in {sums[h]}")
+    print(f"{held} of {len(m.get('unmatched', []))} served files the repository does not hold equal the manifest and a "
+          f"committed SHA256SUMS")
     print("VERDICT: " + ("PASS" if not fails else f"FAIL ({len(fails)})"))
     return 1 if fails else 0
 

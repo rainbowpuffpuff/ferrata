@@ -4,7 +4,7 @@
  "made": "2026-11-24T14:21Z",
  "made_how": "the host's own file list (sha256sum of its web root) at 2026-11-24T14:21Z: the site redeployed from public main 98375f82 on 24 November, after the removal of two pages left from 23 November (/agents.html, /status.html)",
  "public_checked": {
-  "utc": "2026-11-24T14:23Z",
+  "utc": "2026-11-24T14:54Z",
   "refs": {
    "origin": "98375f82c754f2fa4a56e20418687a89b321228f",
    "origin/ci-sequencer": "a0a8106c7f798c04b76042340dcd28d03bab871e",
@@ -2094,67 +2094,83 @@
  "unmatched": [
   {
    "path": "/android/ferrata-wallet-0.1.0.apk",
-   "sha256": "51257de9da1156c737b200956b237b7a38c0c19745d3645f98ef8bf268fb9e3f"
+   "sha256": "51257de9da1156c737b200956b237b7a38c0c19745d3645f98ef8bf268fb9e3f",
+   "listed_in": "deploy/testnet/web/android/published/SHA256SUMS"
   },
   {
    "path": "/basecamp/dl/darwin-arm64/ferrata_attest_module-0.1.0.lgx",
-   "sha256": "809b3b6983b38158755746e5b3b6838c413b9e05df527b68bb953576320648f4"
+   "sha256": "809b3b6983b38158755746e5b3b6838c413b9e05df527b68bb953576320648f4",
+   "listed_in": "deploy/testnet/web/basecamp/dl/SHA256SUMS"
   },
   {
    "path": "/basecamp/dl/darwin-arm64/ferrata_attestor_module-0.1.0.lgx",
-   "sha256": "514471ab4c8429c5edb460c314f4fd3a1c3800a61555c4546f679e6642a5005c"
+   "sha256": "514471ab4c8429c5edb460c314f4fd3a1c3800a61555c4546f679e6642a5005c",
+   "listed_in": "deploy/testnet/web/basecamp/dl/SHA256SUMS"
   },
   {
    "path": "/basecamp/dl/darwin-arm64/ferrata_bridge_module-0.1.0.lgx",
-   "sha256": "39ca0578aebc601a44991581396694ccc98a1067b532dae30e4f03b19ae70ed8"
+   "sha256": "39ca0578aebc601a44991581396694ccc98a1067b532dae30e4f03b19ae70ed8",
+   "listed_in": "deploy/testnet/web/basecamp/dl/SHA256SUMS"
   },
   {
    "path": "/basecamp/dl/darwin-arm64/ferrata_bridge_ui-0.1.0.lgx",
-   "sha256": "645f30c22db93d92aaa9bb8365b0b3923450a3ba78a8cefc94ee9fc424fc5728"
+   "sha256": "645f30c22db93d92aaa9bb8365b0b3923450a3ba78a8cefc94ee9fc424fc5728",
+   "listed_in": "deploy/testnet/web/basecamp/dl/SHA256SUMS"
   },
   {
    "path": "/basecamp/dl/darwin-arm64/ferrata_monitor_module-0.1.0.lgx",
-   "sha256": "8cb3da0175b3059b9d7f5a2d661cbd608a40dd0940325f530d3d759a8f339c6b"
+   "sha256": "8cb3da0175b3059b9d7f5a2d661cbd608a40dd0940325f530d3d759a8f339c6b",
+   "listed_in": "deploy/testnet/web/basecamp/dl/SHA256SUMS"
   },
   {
    "path": "/basecamp/dl/darwin-arm64/ferrata_relayer_module-0.1.0.lgx",
-   "sha256": "8e71bb94630dd77a52130de5c9ddb87e51f2443cdc25614f39910faf0689bd57"
+   "sha256": "8e71bb94630dd77a52130de5c9ddb87e51f2443cdc25614f39910faf0689bd57",
+   "listed_in": "deploy/testnet/web/basecamp/dl/SHA256SUMS"
   },
   {
    "path": "/basecamp/dl/linux-amd64/ferrata_attest_module-0.1.0.lgx",
-   "sha256": "c7a1021dc3259c25def0f700b16faeeb6e523f9680eaac71c29c3de93f39a4fa"
+   "sha256": "c7a1021dc3259c25def0f700b16faeeb6e523f9680eaac71c29c3de93f39a4fa",
+   "listed_in": "deploy/testnet/web/basecamp/dl/SHA256SUMS"
   },
   {
    "path": "/basecamp/dl/linux-amd64/ferrata_attestor_module-0.1.0.lgx",
-   "sha256": "dcf72dbd6d61caedc5b6ce4331034626ba2cf61a698e57c8003abfe2a7c64686"
+   "sha256": "dcf72dbd6d61caedc5b6ce4331034626ba2cf61a698e57c8003abfe2a7c64686",
+   "listed_in": "deploy/testnet/web/basecamp/dl/SHA256SUMS"
   },
   {
    "path": "/basecamp/dl/linux-amd64/ferrata_bridge_module-0.1.0.lgx",
-   "sha256": "93f4db0ca15e28a5a2123b6ec94d060ca48261f75d7e3d3a04749cdcf0cab7f2"
+   "sha256": "93f4db0ca15e28a5a2123b6ec94d060ca48261f75d7e3d3a04749cdcf0cab7f2",
+   "listed_in": "deploy/testnet/web/basecamp/dl/SHA256SUMS"
   },
   {
    "path": "/basecamp/dl/linux-amd64/ferrata_bridge_ui-0.1.0.lgx",
-   "sha256": "df9777cbaec3a84f6f2a5b6cfb8c19f8ac6f0aa98d28dd299a4372a525c4ec01"
+   "sha256": "df9777cbaec3a84f6f2a5b6cfb8c19f8ac6f0aa98d28dd299a4372a525c4ec01",
+   "listed_in": "deploy/testnet/web/basecamp/dl/SHA256SUMS"
   },
   {
    "path": "/basecamp/dl/linux-amd64/ferrata_monitor_module-0.1.0.lgx",
-   "sha256": "a059ac72bba757d3ea4d99da1f4af13771bcd463e1a39043fb3e24ccf8766810"
+   "sha256": "a059ac72bba757d3ea4d99da1f4af13771bcd463e1a39043fb3e24ccf8766810",
+   "listed_in": "deploy/testnet/web/basecamp/dl/SHA256SUMS"
   },
   {
    "path": "/basecamp/dl/linux-amd64/ferrata_relayer_module-0.1.0.lgx",
-   "sha256": "9fd0f67970acc3e940a092db220ff2c98fbb6af0b8e947f13b2086618fa962ee"
+   "sha256": "9fd0f67970acc3e940a092db220ff2c98fbb6af0b8e947f13b2086618fa962ee",
+   "listed_in": "deploy/testnet/web/basecamp/dl/SHA256SUMS"
   },
   {
    "path": "/basecamp/dl/linux-amd64/ferrata_updater_module-0.1.0.lgx",
-   "sha256": "4315ff2c151ba7d3c4e4d9e2fb0e5dd6a871e33d32aedd3b4556ac550178df81"
+   "sha256": "4315ff2c151ba7d3c4e4d9e2fb0e5dd6a871e33d32aedd3b4556ac550178df81",
+   "listed_in": "deploy/testnet/web/basecamp/dl/SHA256SUMS"
   },
   {
    "path": "/basecamp/dl/notices/sources/gmp-6.2.1.tar.xz",
-   "sha256": "fd4829912cddd12f84181c3451cc752be224643e87fac497b69edddadc49b4f2"
+   "sha256": "fd4829912cddd12f84181c3451cc752be224643e87fac497b69edddadc49b4f2",
+   "listed_in": "deploy/testnet/web/basecamp/dl/notices/sources/SHA256SUMS"
   },
   {
    "path": "/basecamp/dl/notices/sources/gmp-6.3.0.tar.xz",
-   "sha256": "a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898"
+   "sha256": "a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898",
+   "listed_in": "deploy/testnet/web/basecamp/dl/notices/sources/SHA256SUMS"
   }
  ]
 }
