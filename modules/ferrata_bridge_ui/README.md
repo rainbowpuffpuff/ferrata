@@ -142,19 +142,43 @@ with the private claim and burn proven for real; its results go to `results-real
 ## In Logos Basecamp on the test network (the network session)
 
 Inside Logos the view opens a session on a Ferrata test network itself (the panel at the top): the network's address,
-a Sepolia RPC (a public one by default), the person's recovery phrase (a masked field; or a new 24-word phrase, its
-words shown once) and, to plan deposits, their Sepolia address. `ferrata_bridge_module` (`open_network`,
-`calls/src/net.rs`) accepts only the deployment it knows and checks it before it derives anything: the network's
-`/wallet/config.json`, the chain, the vault's configuration, the bridge program's image id and its paired configuration
-on LEZ; then it keeps the keys of public accounts `/0`-`/7` and the bridge seed in Basecamp's memory for the session
-only (nothing written, nothing logged; `close` drops them). What works there: the registry and the vault read, the
-positions found from the phrase, the faucet and the LGO balances, a deposit planned up to the approval prompt (C, the
-vault call, the vault's own simulation; approving hands it to Logos Core's `tx_sender_module` and the Logos signer), the
-plaintext claim of a deposit to one of the phrase's public accounts, the public burn, and the release handed to the
-`ferrata` tool (its proof says which burn it is, so it is made on the person's machine). A private claim or burn needs a
-proof of LEZ's privacy circuit, which the module does not make: the view says to use the `ferrata` tool. The view
-declares `ferrata_bridge_module` as an optional dependency (`metadata.json`, its contract in `lidl/`), so Basecamp loads
-the module before it opens the view.
+a Sepolia RPC (a public one by default), and the person's recovery phrase, or a new 24-word phrase whose words are shown
+once. `ferrata_bridge_module` (`seal_key`, `open_network`; `calls/src/net.rs`, `seal.rs`) accepts only the deployment it
+knows and checks it before it derives anything: the network's `/wallet/config.json`, the chain, the vault's
+configuration, the bridge program's image id and its paired configuration on LEZ (these last two as the network's own
+host reports them).
+
+What protects the phrase and the session (review of 24 Nov 2026):
+
+- **Never in clear on Logos Core's IPC** (which Qt's remote-objects debug logging writes to Basecamp's log). The view
+  seals the phrase to the module's one-time X25519 key (`qml/js/seal.js`: X25519, HMAC-SHA256; checked against the
+  RFCs' vectors and the module's own implementation by `tests/seal-test.mjs`); a new phrase's words come back sealed to
+  the view.
+- **Typed into bytes, not a string.** The phrase field is not a text field: each key goes into a byte buffer (shown as
+  dots and a word count), which is wiped once the phrase is sealed, on Clear and on close. A paste passes through the
+  clipboard and one hidden field emptied at once; keystrokes and a paste pass through Basecamp's window, whose memory
+  the view cannot wipe.
+- **The view's session.** The module answers `seal_key` and `open_network` only to `ferrata_bridge_ui` as Logos Core
+  names the caller (token-bound, from Logos protocol 0.6), refuses a second session while one is open, and once open
+  takes a call only with a MAC under the key agreed then (each counter once); every reply names the session's public
+  account /0, which the view checks against the one it opened. An idle session ends after 15 minutes.
+- **Signed only after approval.** A claim or burn is built by the module and shown in the view's prompt (the call, the
+  amount, the address, the signer, the LEZ fee ceiling, the message hash) before anything is signed; Approve sends
+  `confirm` with that record's id, and the module signs exactly that, once.
+- **Wiped.** The module keeps the keys of public accounts `/0`-`/7` and the bridge keys in its memory for the session
+  only (its process made non-dumpable), wipes the phrase and the seeds once they are derived, and wipes the keys when the
+  session ends (close, idle, Basecamp quitting).
+
+What works there: the registry and the vault read, the positions found from the phrase, the faucet and the LGO balances,
+the plaintext claim of a deposit to one of the phrase's public accounts, the public burn to an address the person enters
+in its checksummed form, and the release handed to the `ferrata` tool (its proof says which burn it is, so it is made on
+the person's machine). Deposits are made in the network's web wallet with the same phrase: Basecamp 0.4.0-rc.2 has no
+Logos signer for Sepolia (`tx_sender_module`, `keystore_module`), so the deposit button is off in the session. A private
+claim or burn needs a proof of LEZ's privacy circuit, which the module does not make: the view says to use the `ferrata`
+tool. Every label shows its text as plain text. The view declares `ferrata_bridge_module` as an optional dependency
+(`metadata.json`, its contract in `lidl/`), so Basecamp loads the module before it opens the view. The panel's own test:
+`scripts/network-ui-test.sh` (`qmltest/tst_network.qml`, a stand-in module that opens the sealed phrase and checks each
+MAC; Qt 6's `qmltestrunner`, offscreen).
 
 ## Not done
 
