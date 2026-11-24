@@ -8,14 +8,14 @@
 # catalog (the URL users add), its installed rootHash compared with the release sidecar's, loaded, `version` called.
 # lgx (logos-package 4bdd904) verifies every downloaded .lgx against a keyring holding only the DID.
 #   box-install.sh ORG CATALOG_REPO DID TAG/ASSET/ROOTHASH...
-# Record: box/ beside this script (steps.tsv: name, expected, exit code, ms, pass, output; out/<step>.txt; log.txt;
+# Record: box/ beside this script (steps.tsv: name, expected, exit code, ms, pass, output; steps/<step>.txt; log.txt;
 # versions.txt; daemon.log), absolute paths replaced by "spike".
 set -uo pipefail
 org=$1 repo=$2 did=$3; shift 3
 here=$(cd "$(dirname "$0")" && pwd)
 spike=$(cd "$here/../../../.." && pwd)
-W="$here/box"; rm -rf "$W"; mkdir -p "$W/home" "$W/out" "$W/pkgs"
-S="$SOCK"; rm -rf "$S"; mkdir -p "$S"      # Logos Core's socket dir: at most 62 bytes
+W="$here/box"; rm -rf "$W"; mkdir -p "$W/home" "$W/steps" "$W/pkgs"
+S="$spike/tmp/ck-s"; rm -rf "$S"; mkdir -p "$S"      # Logos Core's socket dir: at most 62 bytes
 export TMPDIR="$S" LOGOS_TMPDIR="$S"
 if [ -z "${SSL_CERT_FILE:-}" ] && [ -f /etc/ssl/certs/ca-certificates.crt ]; then export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt; fi
 if [ "$(ulimit -s)" = unlimited ]; then ulimit -s 1048576; fi
@@ -37,14 +37,14 @@ ctl() { HOME="$W/home" RISC0_DEV_MODE=1 "$ctl_bin" --config-dir "$W/session" "$@
 step() {
   local name=$1 expect=$2 s e rc pass; shift 2
   s=$(date +%s%3N)
-  "$@" > "$W/out/$name.txt" 2>&1; rc=$?
+  "$@" > "$W/steps/$name.txt" 2>&1; rc=$?
   e=$(date +%s%3N)
   case "$expect" in
     ok) [ $rc = 0 ] && pass=1 || pass=0 ;;
-    "refused: "*) [ $rc != 0 ] && grep -q -F -- "${expect#refused: }" "$W/out/$name.txt" && pass=1 || pass=0 ;;
+    "refused: "*) [ $rc != 0 ] && grep -q -F -- "${expect#refused: }" "$W/steps/$name.txt" && pass=1 || pass=0 ;;
   esac
   printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$name" "$expect" "$rc" "$(( e - s ))" "$pass" \
-    "$(tr '\n\t' '  ' < "$W/out/$name.txt" | cut -c1-400)" >> "$W/steps.tsv"
+    "$(tr '\n\t' '  ' < "$W/steps/$name.txt" | cut -c1-400)" >> "$W/steps.tsv"
   echo "$([ $pass = 1 ] && echo PASS || echo FAIL) $name (exit $rc, $(( e - s )) ms)" | tee -a "$log"
 }
 : > "$W/steps.tsv"
