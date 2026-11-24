@@ -235,19 +235,31 @@ def main():
     # Install
     w('<section id="install"><h2>Install</h2><div class="grid2">')
     w('<div class="card"><h3>In Logos Basecamp (desktop)</h3><ol class="steps">'
-      "<li>In Basecamp's Package Manager, install a local file: <code>ferrata_bridge_module-0.1.0.lgx</code> first, then "
-      "<code>ferrata_bridge_ui-0.1.0.lgx</code>.</li>"
-      f"<li>The install dialog names the signer: “Ferrata release (test network)” · key {E(key['basecamp_key'])}. Compare the "
+      "<li>Basecamp <b>0.4.0-rc.2</b>, a pre-release: tag <code>pre-release-4cea4bb-1433</code> on "
+      "github.com/logos-co/logos-basecamp/releases. For Linux x86-64, <code>logos-basecamp-x86_64.AppImage</code> "
+      "(293,951,992 bytes, SHA-256 <code>e59e14cddd211bed763c49e6a9bdfea462b91123b368386bdb8f700527b747a0</code>): make it "
+      "executable and run it (without FUSE: <code>--appimage-extract-and-run</code>). The stable 0.3.2 installs these "
+      "packages too, but names no signer.</li>"
+      "<li>Package Manager (the cube in the sidebar) → <b>Install Local Package</b>: <code>ferrata_bridge_module-0.1.0.lgx</code> "
+      "first, then <code>ferrata_bridge_ui-0.1.0.lgx</code>.</li>"
+      f"<li>The first dialog names the signer: “Ferrata release (test network)” · key {E(key['basecamp_key'])}. Compare the "
       "key with the one at the top of this page, then choose <b>Trust &amp; install</b>: Basecamp adds the key to its "
-      "keyring, and an update signed by another key will ask again.</li>"
+      "keyring (Settings → Trusted Publishers), the mini-app then installs as “signed by Ferrata release (test network)”, "
+      "and an update signed by another key will ask again.</li>"
+      "<li>Settings → Module Inspector → <b>Ferrata bridge</b> → <b>Load</b>. The mini-app does not declare the module as its "
+      "dependency yet, so Basecamp does not start it; without it the mini-app waits for its backend.</li>"
       "<li>Open <b>Ferrata Bridge</b> from the sidebar.</li>"
-      "</ol><p class=\"small\">The dialog's wording and the key's form are from Basecamp's source (logos-basecamp "
-      "<code>a1d3dc7</code>, 18 November 2026; <code>app/utils/InstallTrust.cpp</code>); we have not yet run that dialog "
-      "ourselves. An older Basecamp installs with a warning instead.</p>"
-      "<p class=\"small\"><b>What the mini-app can do there today:</b> its screens open and explain each step; its flows "
-      "need the bridge module's wallet session opened with a chain service (in this repository, a stand-in for Logos's "
-      "Ethereum and wallet modules). We ran the whole round trip that way inside Basecamp on our own LEZ sequencer "
-      "(<a href=\"#withdrawal\">below</a>); against this network and Sepolia it has not been run yet.</p></div>")
+      "</ol><p class=\"small\">Run by us on 24 November 2026 with the 0.4.0-rc.2 and 0.3.2 AppImages on Linux x86-64: both "
+      "installed both packages from these files and opened the mini-app. 0.4.0-rc.2 showed the dialog above, and refuses to "
+      "start an installed app whose files changed after the install; 0.3.2 names no signer (its dialog only says the request "
+      "came from its unsigned Package Manager) and installs on <b>Install</b>.</p>"
+      "<p class=\"small\"><b>What the mini-app can do there today:</b> its eight screens open and explain each step and what "
+      "it makes public. It cannot reach this network or Sepolia yet: every call answers “no wallet session”. The bridge "
+      "module's session is opened with a chain service (in this repository a stand-in for Logos's Ethereum and LEZ modules, "
+      "which we run beside our own LEZ sequencer), the mini-app has no control that opens one, and the module in these "
+      "packages reads only <code>http://</code> endpoints. So in Basecamp it does not yet read the registry or the vault, plan "
+      "a deposit or recover positions from a seed, and Endpoints' “Apply and test” answers “Not switched”. We ran the whole "
+      "round trip inside Basecamp on our own LEZ sequencer with that stand-in (<a href=\"#withdrawal\">below</a>).</p></div>")
     w('<div class="card"><h3>In a headless Logos Core (<code>logosctl</code>)</h3>')
     w(term([
         "printf 'signature_policy: require\\n' > node.yaml     # refuse unsigned packages and unknown signers",
@@ -389,6 +401,8 @@ def main():
       "<li>The RISC Zero 3.1 vault on Sepolia, named in this network's bridge configuration (see the withdrawal table).</li></ul></div>")
     w('<div class="card"><h3>Not yet</h3><ul>'
       "<li>A withdrawal on this network recorded in this repository: the bridge is paired; <a href=\"/status/\">/status/</a> says where the network stands.</li>"
+      "<li>The mini-app on this network inside Basecamp: it installs and opens (0.4.0-rc.2, 24 November 2026), but cannot open "
+      "its session here or on Sepolia, so in Basecamp it reads and sends nothing yet (<a href=\"#install\">Install</a>).</li>"
       "<li>The mini-app for macOS built by the macOS workflow: the one here is assembled from the Linux build's files (it has no native code), and nobody has opened it in Basecamp on a Mac yet.</li>"
       "<li>A second macOS build to compare bytes with (the Linux packages were built twice, byte-identical).</li>"
       "<li>A published Logos catalog: these packages are installed from files, not from a catalog.</li>"
