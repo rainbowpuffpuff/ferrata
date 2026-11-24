@@ -340,8 +340,8 @@ else
 fi
 echo "The owner's remaining steps, in this order (the release must come last):"
 echo "  1. The rolling index release, created empty while releases are still mutable: rebuild-index.yml"
-echo "     replaces its index.json after every module release, which an immutable release refuses (the"
-echo "     lambda-prize rule: it must exist before immutability is turned on):"
+echo "     replaces its index.json after every module release, which an immutable release refuses: it must"
+echo "     exist before immutability is turned on):"
 show gh release create index --repo "$org/$catalog_repo" --title "Catalog index (auto-updated)" \
   --notes "Auto-generated index of every per-module release in this repository." --latest=false
 echo "  2. [in the browser] in $org/$catalog_repo and each module repository: turn on immutable releases;"

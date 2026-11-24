@@ -63,10 +63,11 @@ What it does, in order:
 3. **Exports each module repository** with [`export.sh`](../scripts/export.sh) (the module's directory with
    its staged crate committed; reproducible: the same source commit gives the same commit SHA, its date
    being the source commit's) and **assembles the catalog repository**: the catalog files at its root
-   (`logos-repo.json`, the release workflows and `rebuild-index.yml`, which writes the rolling `index` release `indexUrl` names, a `README.md` with the install instructions of rule 5), each
-   module a git submodule pointing at `https://github.com/ORG/<module>`. (`ferrata_updater_module`'s
-   export additionally needs lez/methods' risc0-build output, `lez/target` — `cd lez && cargo build
-   --locked -p methods`, `RISC0_HOME` as `lez/RESULTS.md` says; on the machine the publish runs from.)
+   (`logos-repo.json`, the release workflows and `rebuild-index.yml`, which writes the rolling `index` release
+   `indexUrl` names, a `README.md` with the install instructions of rule 5), each module a git submodule pointing at
+   `https://github.com/ORG/<module>`. (`ferrata_updater_module`'s export additionally needs lez/methods' risc0-build
+   output, `lez/target` — `cd lez && cargo build --locked -p methods`, `RISC0_HOME` as `lez/RESULTS.md` says; on the
+   machine the publish runs from.)
 4. **With `--yes`, checks the remote side before creating anything**, read-only: `gh` is there and logged
    in, `ORG` is an organization, and every one of the seven that already exists can be read by git and
    holds no different `main` and no different version tag. Any failure stops it with nothing created.
@@ -78,8 +79,8 @@ What it does, in order:
 6. **Stops, and prints the owner's remaining steps in order.** First the rolling `index` release, created
    empty while releases are still mutable (`gh release create index --repo ORG/CATALOG_REPO …`): the
    catalog's `rebuild-index.yml` replaces its `index.json` after every module release, which an immutable
-   release refuses, so it must exist before immutability is turned on (the lambda-prize rule 3 says so).
-   Then the three settings this offline
+   release refuses, so it must exist before immutability is turned on (immutability must be on before any submitted
+   release is published: PR #189's rule 3; so the index release comes first). Then the three settings this offline
    setup has no verified `gh` command for, done in the browser (rules 2 and 6 below): immutable releases on
    the catalog and module repositories, a ruleset protecting `refs/tags/*`, organization 2FA. Only then
    the release, which the script prints and does not run:
