@@ -20,9 +20,9 @@
 <h1>Verify this site</h1>
 <p class="lead">Every file this host serves from the repository is listed, with its SHA-256 and the commit it comes from,
 in <a href="manifest.json">manifest.json</a>. The same manifest is committed in the repository. A check that matters
-compares three things from outside this host. The commits it names are in the public repository; a file the host
-served from a commit that never became public is listed as unmatched until the next deploy. The manifest marks each
-file's commit public or not.</p>
+compares three things from outside this host. Every commit it names is in the repository's public history, so each file
+can be checked against its source. Files the host still serves from earlier builds, whose commits are not public, are
+listed apart as unmatched until the next deploy. The manifest marks each file's commit public or not.</p>
 
 <div class="note warn" role="note">
 <p><strong>A check run by this page proves nothing if this host is compromised</strong>: a host that alters the wallet

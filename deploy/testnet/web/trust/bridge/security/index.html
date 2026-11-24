@@ -129,8 +129,8 @@ cast call $V "verifier()(address)"         --rpc-url $SEPOLIA_RPC_URL
 cast call $V "retired()(bool)"             --rpc-url $SEPOLIA_RPC_URL</code></pre>
 <p>The LEZ side, from a clone of the repository: <code>python3 -I scripts/reproduce/check_network.py chain</code>
 reads every deployed program's loader header on this network and compares it with the image ids that
-<code>scripts/reproduce/deployed.sh</code> rebuilds from source (<a href="/apps/">/apps/</a>; two of the nine sources are
-not public yet).</p>
+<code>scripts/reproduce/deployed.sh</code> rebuilds from source (<a href="/apps/">/apps/</a>; all nine
+from public commits).</p>
 <p>Related: <a href="/bridge/privacy/">what the bridge reveals</a> · <a href="/bridge/verify/">verify this site's files</a> · <a href="https://github.com/rainbowpuffpuff/ferrata/blob/main/SECURITY.md">report a vulnerability</a></p>
 </main>
 <footer class="site"><div class="wrap">

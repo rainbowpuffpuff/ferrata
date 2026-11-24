@@ -121,23 +121,32 @@ def apps_tables(reg: dict, rebuild: dict) -> str:
     return "\n".join(rows)
 
 
-RUN = ROOT / "scripts/reproduce/runs/2026-11-23-deployed-testnet"
+RUN = ROOT / "scripts/reproduce/runs/2026-11-23-deployed-testnet"  # the chain read: each program's loader header
+PUBLIC_RUN = ROOT / "scripts/reproduce/runs/2026-11-24-all-from-public"  # the rebuild from the list's public commits
 
 
 def rebuild_record() -> dict:
-    """apps/rebuild.json, derived from the committed run (result.json, steps.txt, compare.txt): never written by hand."""
-    res = json.loads((RUN / "result.json").read_text())
-    steps = (RUN / "steps.txt").read_text().split("\n")
-    t0, t1 = steps[0].split()[0], [x for x in steps if x.strip()][-1].split()[0]
+    """apps/rebuild.json, derived from the committed runs: the rebuild from the list's public source commits (PUBLIC_RUN:
+    result.json, steps.txt) and the chain read of each program's loader header (RUN: result.json, compare.txt); never
+    written by hand."""
+    chain = {p["name"]: p for p in json.loads((RUN / "result.json").read_text())["programs"]}
+    res = json.loads((PUBLIC_RUN / "result.json").read_text())
+    steps = [x for x in (PUBLIC_RUN / "steps.txt").read_text().split("\n") if x.strip()]
+    t0, t1 = steps[0].split()[0], steps[-1].split()[0]
     checked = next((x for x in (RUN / "compare.txt").read_text().splitlines() if x.startswith("checked ")), "")
-    progs = [{"name": p["name"], "ok": bool(p.get("ok")) and p.get("rebuilt") == p["recorded"]
-              and p.get("rebuilt_sha256") == p["binary_sha256"] and p.get("r0vm") == "= id"
-              and p.get("chain_image_id") == p["recorded"] and p.get("immutable") is True} for p in res["programs"]]
+    progs = []
+    for p in res["programs"]:
+        c = chain.get(p["name"], {})
+        progs.append({"name": p["name"], "ok": bool(p.get("ok")) and p.get("rebuilt") == p["recorded"]
+                      and p.get("rebuilt_sha256") == p["binary_sha256"] and p.get("r0vm") == "= id"
+                      and c.get("chain_image_id") == p["recorded"] and c.get("immutable") is True})
     n = sum(x["ok"] for x in progs)
-    return {"record": str(RUN.relative_to(ROOT)) + "/",
-            "when": f"build 23 November 2026, {t0}–{t1} UTC (steps.txt); chain read {checked.split(';')[0].removeprefix('checked ')} (compare.txt)",
-            "summary": (f"{n} of {len(progs)} deployed programs rebuilt from their source commits to the recorded image id and "
-                        f"binary SHA-256, r0vm agreeing, each equal to its immutable loader header on this network"
+    return {"record": str(PUBLIC_RUN.relative_to(ROOT)) + "/", "chain_record": str(RUN.relative_to(ROOT)) + "/",
+            "when": f"rebuilt from the commits listed, 24 November 2026, {t0}–{t1} UTC (steps.txt); chain read "
+                    f"{checked.split(';')[0].removeprefix('checked ')} (the 23 November run's compare.txt)",
+            "summary": (f"{n} of {len(progs)} deployed programs rebuilt from their public source commits to the recorded "
+                        f"image id and binary SHA-256, r0vm agreeing (24 November 2026), each equal to its immutable "
+                        f"loader header on this network (23 November 2026)"
                         + ("" if not res.get("not_in_list") else f"; deployed but not rebuilt: {', '.join(res['not_in_list'])}")
                         + "."),
             "programs": progs}

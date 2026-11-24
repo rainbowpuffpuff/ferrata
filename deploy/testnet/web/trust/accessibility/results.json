@@ -3,6 +3,7 @@
  "tools": "axe-core 4.14.1 (sha512-pinned), Playwright 1.58.0 with Chromium 145.0.7632.6 and Firefox 146.0.1",
  "site": "this commit's trust pages served locally over the live host (54-156-116-24.sslip.io), whose other pages are as it served them",
  "summary": "8 of 18 pages pass every axe-core rule in all four runs; the table lists the rest.",
+ "relabelled": "owner labels renamed on 24 November 2026 (the part of the site that owns each page, not a branch); the run's results unchanged",
  "pages": [
   {
    "path": "/",

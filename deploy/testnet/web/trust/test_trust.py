@@ -46,6 +46,21 @@ check([q["name"] for q in res["programs"]] == [p["name"] for p in reg["programs"
 check(all(q.get("ok") and q.get("immutable") is True and q.get("r0vm") == "= id" for q in res["programs"]),
       "result.json: a program is not ok (rebuilt, r0vm, published and immutable on chain)")
 check(res.get("not_in_list") == [], "result.json: deployed programs missing from the list")
+# 3b. the rebuild the apps page shows: every program from the list's public commits, equal to the list
+prun = ROOT / "scripts/reproduce/runs/2026-11-24-all-from-public"
+prows = {}
+for t in prun.glob("*.tsv"):
+    lines = t.read_text().splitlines()
+    for line in lines[1:]:
+        c = dict(zip(lines[0].split("\t"), line.split("\t")))
+        prows[(t.stem, c["name"])] = c
+for p in reg["programs"]:
+    c = prows.get((p["source"], p["guest"]))
+    check(c is not None and c["image_id"].removeprefix("0x") == p["image_id"][2:] and c["sha256_bin"] == p["binary_sha256"]
+          and c["r0vm_id"] == "= id", f"{p['name']}: the public-source rebuild does not equal the list")
+pres = json.loads((prun / "result.json").read_text())
+check([q["name"] for q in pres["programs"]] == [p["name"] for p in reg["programs"]] and all(q.get("ok") for q in pres["programs"]),
+      "the public-source rebuild's result.json: not the list's programs, or one not ok")
 check(json.loads((HERE / "apps/rebuild.json").read_text())["summary"].startswith(f"{len(reg['programs'])} of {len(reg['programs'])} "),
       "apps/rebuild.json does not say every program was rebuilt")
 # 4. the manifest: well formed, no duplicates, every trust page listed with its committed bytes
