@@ -340,9 +340,9 @@ for phase in $PHASES; do
         if [ -n "${FERRATA_LIVE_PROOF_THREADS:-}" ]; then export RAYON_NUM_THREADS="$FERRATA_LIVE_PROOF_THREADS"; fi
         renice -n "${FERRATA_LIVE_PROOF_NICE:-10}" -p $BASHPID > /dev/null
         driver "$phase" ) 2>&1 | tee -a "$LOG/driver.log"; rc=${PIPESTATUS[0]} ;;
-    attest-private)   # driver/src/attest.rs: the private attestation, proven for real in the driver; its threads and
-      # priority as private-real's (FERRATA_LIVE_PROOF_THREADS, FERRATA_LIVE_PROOF_NICE); --consumer-bin through
-      # FERRATA_LIVE_DRIVER_EXTRA
+    attest-private|fresh-private)   # driver/src/attest.rs, driver/src/fresh.rs: the private attestation, proven for
+      # real in the driver; its threads and priority as private-real's (FERRATA_LIVE_PROOF_THREADS,
+      # FERRATA_LIVE_PROOF_NICE); --consumer-bin through FERRATA_LIVE_DRIVER_EXTRA
       ( unset RISC0_DEV_MODE
         if [ -n "${FERRATA_LIVE_PROOF_THREADS:-}" ]; then export RAYON_NUM_THREADS="$FERRATA_LIVE_PROOF_THREADS"; fi
         renice -n "${FERRATA_LIVE_PROOF_NICE:-10}" -p $BASHPID > /dev/null
