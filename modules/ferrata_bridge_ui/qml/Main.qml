@@ -542,9 +542,23 @@ Rectangle {
         }
     }
 
-    ColumnLayout {
+    // The page scrolls when the window is shorter than it (Basecamp's window, with the network session's panel above the
+    // tabs); a window tall enough shows it as before.
+    Flickable {
+        id: page
+        objectName: "page.flick"
         anchors.fill: parent
-        anchors.margins: 14
+        contentWidth: width
+        contentHeight: Math.max(height, mainCol.implicitHeight + 28)
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+    ColumnLayout {
+        id: mainCol
+        x: 14
+        y: 14
+        width: page.width - 28
+        height: page.contentHeight - 28
         spacing: 8
 
         // ---- header ----
@@ -1172,6 +1186,7 @@ Rectangle {
                 Item { Layout.fillHeight: true }
             }
         }
+    }
     }
 
     // ---- flows -----------------------------------------------------------------------------------
