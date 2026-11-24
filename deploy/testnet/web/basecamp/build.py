@@ -249,28 +249,39 @@ def main():
       "<li>Basecamp <b>0.4.0-rc.2</b>, a pre-release: tag <code>pre-release-4cea4bb-1433</code> on "
       "github.com/logos-co/logos-basecamp/releases. For Linux x86-64, <code>logos-basecamp-x86_64.AppImage</code> "
       "(293,951,992 bytes, SHA-256 <code>e59e14cddd211bed763c49e6a9bdfea462b91123b368386bdb8f700527b747a0</code>): make it "
-      "executable and run it (without FUSE: <code>--appimage-extract-and-run</code>). The stable 0.3.2 installs these "
-      "packages too, but names no signer.</li>"
+      "executable and run it (without FUSE: <code>--appimage-extract-and-run</code>). The stable 0.3.2 installed the previous "
+      "release's packages too, but names no signer.</li>"
       "<li>Package Manager (the cube in the sidebar) → <b>Install Local Package</b>: <code>ferrata_bridge_module-0.1.0.lgx</code> "
       "first, then <code>ferrata_bridge_ui-0.1.0.lgx</code>.</li>"
       f"<li>The first dialog names the signer: “Ferrata release (test network)” · key {E(key['basecamp_key'])}. Compare the "
       "key with the one at the top of this page, then choose <b>Trust &amp; install</b>: Basecamp adds the key to its "
       "keyring (Settings → Trusted Publishers), the mini-app then installs as “signed by Ferrata release (test network)”, "
       "and an update signed by another key will ask again.</li>"
-      "<li>Settings → Module Inspector → <b>Ferrata bridge</b> → <b>Load</b>. The mini-app does not declare the module as its "
-      "dependency yet, so Basecamp does not start it; without it the mini-app waits for its backend.</li>"
-      "<li>Open <b>Ferrata Bridge</b> from the sidebar.</li>"
-      "</ol><p class=\"small\">Run by us on 24 November 2026 with the 0.4.0-rc.2 and 0.3.2 AppImages on Linux x86-64: both "
-      "installed both packages from these files and opened the mini-app. 0.4.0-rc.2 showed the dialog above, and refuses to "
-      "start an installed app whose files changed after the install; 0.3.2 names no signer (its dialog only says the request "
-      "came from its unsigned Package Manager) and installs on <b>Install</b>.</p>"
-      "<p class=\"small\"><b>What the mini-app can do there today:</b> its eight screens open and explain each step and what "
-      "it makes public. It cannot reach this network or Sepolia yet: every call answers “no wallet session”. The bridge "
-      "module's session is opened with a chain service (in this repository a stand-in for Logos's Ethereum and LEZ modules, "
-      "which we run beside our own LEZ sequencer), the mini-app has no control that opens one, and the module in these "
-      "packages reads only <code>http://</code> endpoints. So in Basecamp it does not yet read the registry or the vault, plan "
-      "a deposit or recover positions from a seed, and Endpoints' “Apply and test” answers “Not switched”. We ran the whole "
-      "round trip inside Basecamp on our own LEZ sequencer with that stand-in (<a href=\"#withdrawal\">below</a>).</p></div>")
+      "<li>Open <b>Ferrata Bridge</b> from the sidebar. The mini-app names <code>ferrata_bridge_module</code> as an optional "
+      "dependency, so Basecamp 0.4.0-rc.2 starts the module before it opens the view (if yours does not: Settings → Module "
+      "Inspector → <b>Ferrata bridge</b> → <b>Load</b>).</li>"
+      "<li>In the panel at the top: this network's address (<code data-host>https://&lt;this host&gt;</code>), a Sepolia RPC "
+      "(a public one is filled in) and a recovery phrase made for this test network, or <b>New phrase</b>; then "
+      "<b>Open with this phrase</b>. Before it derives anything the module checks the deployment it knows: this network's "
+      "<code>/wallet/config.json</code>, the chain, the vault's configuration, the bridge program's image id and its paired "
+      "configuration on LEZ; it refuses any other.</li>"
+      "</ol><p class=\"small\">Run by us on 24 November 2026 with the 0.4.0-rc.2 AppImage on Linux x86-64, with builds made "
+      "before this release and signed by a test key (the mini-app byte-identical to this one): Basecamp started the module "
+      "when the app opened, and the session opened on this network with a test phrase, also with Qt's debug logging on (the "
+      "phrase in none of Basecamp's log lines). The previous release's files, signed with this key, installed in 0.4.0-rc.2, "
+      "which showed the dialog above and refuses to start an installed app whose files changed after the install, and in "
+      "0.3.2, which names no signer (its dialog only says the request came from its unsigned Package Manager) and installs "
+      "on <b>Install</b>.</p>"
+      "<p class=\"small\"><b>What the mini-app does there:</b> with the session open it reads the registry and the vault, finds "
+      "your positions from the phrase, shows the faucet and the LGO balances, makes the plaintext claim of a deposit to one of "
+      "the phrase's public accounts and the public burn to an address you enter in its checksummed form, and hands the release "
+      "to the <code>ferrata</code> tool. A claim or burn is shown to you before anything is signed, and the module signs "
+      "exactly what you approved. Deposits are made in the <a href=\"/wallet/\">web wallet</a> with the same phrase "
+      "(Basecamp 0.4.0-rc.2 has no Logos signer for Sepolia, so the deposit button is off), and a private claim or burn with "
+      "the <code>ferrata</code> tool. The phrase reaches the module sealed, never in clear on Logos Core's connection, and the "
+      f"session's keys are wiped when it ends ({gh('modules/ferrata_bridge_ui/README.md', commit, 'the mini-app’s README')} "
+      "says what protects them). We ran the whole round trip inside Basecamp on our own LEZ sequencer with a stand-in for "
+      "Logos's Ethereum and LEZ modules (<a href=\"#withdrawal\">below</a>).</p></div>")
     w('<div class="card"><h3>In a headless Logos Core (<code>logosctl</code>)</h3>')
     w(term([
         "printf 'signature_policy: require\\n' > node.yaml     # refuse unsigned packages and unknown signers",
@@ -387,7 +398,14 @@ def main():
         "RISC0_HOME=<RISC Zero home with guest Rust 1.91.1> modules/scripts/basecamp-release.sh build . ../out",
         "jq -r '.packages[] | \"\\(.sha256)  \\(.file)\"' ../out/build.json     # compare with release.json's unsigned_sha256",
     ]))
-    if repro:
+    if repro and repro.get("source_commit", commit) not in {commit, *mixed}:
+        # The second build is a previous release's: none of these packages was built twice.
+        n = len(repro["packages"])
+        w(f'<p><span class="st part">not built twice yet</span> These packages have not been built a second time to compare '
+          f'bytes. The previous release\'s {n} Linux packages, from commit <code>{repro["source_commit"][:8]}</code>, were '
+          f'built twice, in two Modal containers of two workspaces, each with its own Nix store ({E(repro["a"])}; '
+          f'{E(repro["b"])}): {repro["same"]} of {n} byte-identical (<a href="tests/reproduce.json">tests/reproduce.json</a>).</p>')
+    elif repro:
         n = len(repro["packages"])
         rshort = repro.get("source_commit", commit)[:8]
         if repro["differ"] == 0:
@@ -416,10 +434,15 @@ def main():
       "<li>The RISC Zero 3.1 vault on Sepolia, named in this network's bridge configuration (see the withdrawal table).</li></ul></div>")
     w('<div class="card"><h3>Not yet</h3><ul>'
       "<li>A withdrawal on this network recorded in this repository: the bridge is paired; <a href=\"/status/\">/status/</a> says where the network stands.</li>"
-      "<li>The mini-app on this network inside Basecamp: it installs and opens (0.4.0-rc.2, 24 November 2026), but cannot open "
-      "its session here or on Sepolia, so in Basecamp it reads and sends nothing yet (<a href=\"#install\">Install</a>).</li>"
+      "<li>Sending to Sepolia from Basecamp: a deposit needs Logos's signer for Sepolia (<code>tx_sender_module</code>, "
+      "<code>keystore_module</code>), which Basecamp 0.4.0-rc.2 does not have, so deposits are made in the "
+      "<a href=\"/wallet/\">web wallet</a>; a private claim or burn, and the release, need the <code>ferrata</code> tool "
+      "(<a href=\"#install\">Install</a>).</li>"
       "<li>The mini-app for macOS built by the macOS workflow: the one here is assembled from the Linux build's files (it has no native code), and nobody has opened it in Basecamp on a Mac yet.</li>"
-      "<li>A second macOS build to compare bytes with (the Linux packages were built twice, byte-identical).</li>"
+      + ("<li>A second build of these packages to compare bytes with (the previous release's Linux packages were built twice, "
+         "byte-identical: <a href=\"#reproduce\">Reproduce</a>).</li>"
+         if repro and repro.get("source_commit", commit) not in {commit, *mixed} else
+         "<li>A second macOS build to compare bytes with (the Linux packages were built twice, byte-identical).</li>") +
       "<li>A published Logos catalog: these packages are installed from files, not from a catalog.</li>"
       "<li>An audit: everything here is a prototype.</li></ul></div>")
     w("</div></section>")

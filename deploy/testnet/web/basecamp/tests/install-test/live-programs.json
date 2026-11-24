@@ -23,7 +23,9 @@
    "segments": 3,
    "immutable": true,
    "deployed_with": "LEZ v0.4.0-rc3 wallet program-loader deploy",
-   "seconds": 120
+   "seconds": 120,
+   "superseded_by": "ferrata_msg_v2",
+   "note": "v1: live and immutable, read only (its inboxes stay readable); new clients use ferrata_msg_v2"
   },
   "ferrata_holdings": {
    "program_account": "GPLcbyzsNpFZwsrPdWpMBX4D3yGNWjaLAKJGp4piosEX",
@@ -77,7 +79,29 @@
    "segments": 3,
    "immutable": true,
    "deployed_with": "LEZ v0.4.0-rc3 wallet program-loader deploy",
-   "seconds": 120
+   "seconds": 120,
+   "superseded_by": "ferrata_names_v2",
+   "note": "v1: live and immutable; its names stay on it; v2 starts empty"
+  },
+  "ferrata_msg_v2": {
+   "program_account": "GnqrrGrAHRLP9mPWPUsG484rbRqamVWgbKVAXxKeorpW",
+   "image_id": "0x480f5c4eedb3bde85c26e3e408c962d91cdea4941391b3e5ac63aefdb2eb4f59",
+   "binary_sha256": "ebcc609a1bd79cb924813f8ce856b6ae6b0465a80d5e3311693ac8e922091e95",
+   "segments": 3,
+   "immutable": true,
+   "deployed_with": "LEZ v0.4.0-rc3 wallet program-loader deploy",
+   "seconds": 120,
+   "version": 2
+  },
+  "ferrata_names_v2": {
+   "program_account": "JCx9sLNbXo2ibCFYiJpqMeSWZjunQomwy3Udzkz28sf",
+   "image_id": "0x28d63f2075ffb92d653149f9da00b20c85ab77a365f31263c6483387cd43be9d",
+   "binary_sha256": "d6f7c2497a5aa671f4fa6b53ddc51cc9c80310ee6c2d67d55385bd089e52c293",
+   "segments": 3,
+   "immutable": true,
+   "deployed_with": "LEZ v0.4.0-rc3 wallet program-loader deploy",
+   "seconds": 120,
+   "version": 2
   }
  },
  "instances": {
