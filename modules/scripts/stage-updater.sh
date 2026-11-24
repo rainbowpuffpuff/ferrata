@@ -9,7 +9,8 @@
 #                                  layout, with the workspace manifests they inherit from (the root's,
 #                                  bridge/'s, lez/'s), so every path dependency resolves unchanged:
 #                                  lez/{updater,updater/sequencer,advance,wire,bridge-wire,holdings-wire,harness,
-#                                  statements-wire,rebate-wire} (the last two: wire crates the harness depends on)
+#                                  statements-wire,rebate-wire,msg-wire,msg-v2-wire} (the last four: wire crates the
+#                                  harness depends on)
 #                                  (advance: the update's job planning the updater shares with
 #                                  ferrata_attest_module; updater/sequencer: the backend for a running LEZ
 #                                  sequencer, a library the module links, with the live driver's modules it
@@ -69,7 +70,7 @@ copy() { # SOURCE_DIR (relative to the repository): its Cargo.toml, README.md, b
 }
 crates="lez/updater lez/updater/sequencer lez/advance lez/wire lez/bridge-wire lez/holdings-wire lez/harness crates/ferrata-core crates/ferrata-spectests
         bridge/crates/ferrata-bridge-core checkpoint/crates/checkpoint-core checkpoint/crates/attestor-core
-        lez/statements-wire lez/rebate-wire"
+        lez/statements-wire lez/rebate-wire lez/msg-wire lez/msg-v2-wire"
 for c in $crates; do copy "$c"; done
 # The live driver's modules the sequencer backend compiles in by path (lez/updater/sequencer/src/lib.rs), and the
 # URL guards' parser the updater compiles in by path (lez/updater/src/chain.rs: rpcurl.rs, since 18 November 2026).
