@@ -1,28 +1,112 @@
 #!/usr/bin/env python3
-"""The build page in a real browser: the requirements overview, a requirement's sheet, deep links, the full table.
+"""The build page in a real browser: the requirements overview, a requirement's sheet, deep links, the full table, and
+the layout at five widths.
 
-Serves deploy/testnet/web/build/ on 127.0.0.1 (a random port) and drives Chromium with Playwright; every request to
-another origin is aborted, so it reads nothing from the network. Checks:
+Serves deploy/testnet/web/build/ (or the bundle directory given) on 127.0.0.1 (a random port) and drives Chromium with
+Playwright; every request to another origin is aborted, so it reads nothing from the network (for the layout, the live
+readings are answered from the fixtures below: GitHub's API, /rpc, /status/status.json with attested facts whose values
+are long hex words, /status/programs.json and /faucet). Checks:
   - the overview fits one desktop screen (1366 x 768) and its 137 tiles are keyboard-reachable links;
   - a click, Enter or Space on a tile opens that requirement's sheet (the RFP's words, status and reason, tests,
     milestone), sets #req-RFP-…, and Escape closes it, returning focus to the tile;
   - a deep link #req-RFP-021-F.12 opens its sheet on load; the sheet's previous/next buttons and arrow keys step;
   - "Show the full table" shows the table with its filters (?view=table) and "Back to the overview" returns;
-    ?status=waits opens the table filtered; #rfp-021-s-8 opens the table at that row;
-  - the legend highlights one status; without JavaScript the full table shows (assets/nojs.css);
+    ?status=waits opens the table filtered (on a phone too); #rfp-021-s-8 opens the table at that row;
+  - the legend highlights one status; without JavaScript the full table shows (assets/nojs.css) and the controls that
+    need JavaScript (copy buttons, the filters, the faucet's form) stay hidden;
+  - at 375, 768, 1024, 1450 and 1920 px, with the live readings in: the page does not scroll sideways; in the hero's
+    summary no piece of text overlaps another and each stays inside its card, chip or bar part; no Live card has
+    content wider than the card; no box clips its text;
   - no script error on any of these pages.
 
-Usage: python3 site/test_ui.py  (exit 0 pass, 1 fail, 77 when Playwright with Chromium is not installed)
+Usage: python3 site/test_ui.py [BUNDLE_DIR]  (exit 0 pass, 1 fail, 77 when Playwright with Chromium is not installed)
 """
 
 import functools
 import http.server
+import json
 import pathlib
 import sys
 import threading
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-BUNDLE = ROOT / "deploy" / "testnet" / "web" / "build"
+BUNDLE = pathlib.Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "deploy" / "testnet" / "web" / "build"
+WIDTHS = (375, 768, 1024, 1450, 1920)
+
+# The live readings, as the test network and GitHub's API give them (values from the test network's records)
+TX = "a568dcb852637a001b772e258c260a1e9775aa47a987f7e62518198a6cc3674d"
+FACT = {"address": "0x04ee8ff19cc11cee4ae65d03e12b9888043de44c", "predicate": "eq", "block": 12194951, "record_slot": 11641184,
+        "tx": TX, "time": "2026-11-23T10:24:35Z"}
+LIVE = {
+    "/status/status.json": {"network": "ferrata-lez-testnet", "attestation": {"updater": [
+        {"chain": "sepolia", "status": "ok", "finalized_slot": 11644864, "period": 1421, "sources_head_slot": 11644896,
+         "reasons": [], "last_applied_utc": "2026-11-23T22:29:56Z"}]},
+        "attestations": [dict(FACT, kind="storage", slot="0x" + "0" * 63 + "1",
+                              value="0xa67ef5a18a4399b82912087c326e1d4ca21f076d349707b8a100e6c09ac97469"),
+                         dict(FACT, kind="account")]},
+    "/status/programs.json": {"network": "ferrata-lez-testnet", "lez": "v0.4.0-rc3",
+                              "programs": {"ferrata_attestation": {"program_account": "6f9zuRR63bSN5AEeffqZeACYCwFmqfe5JJhPshuJfYNg"}},
+                              "instances": {"sepolia": {"instance_id": "0xc741a1f16012516529529814da7a7ebc2d18a8cdcba2a3e7f58710f52630782e"}}},
+    "/faucet": {"faucet_account": "6f9zuRR63bSN5AEeffqZeACYCwFmqfe5JJhPshuJfYNg", "balance": 987654321000, "amount": 5000000000,
+                "unit": "1 LGO = 10^9"},
+}
+RUN = {"workflow_runs": [{"status": "completed", "conclusion": "failure", "run_number": 63, "head_sha": "98375f82" + "0" * 32,
+                          "html_url": "https://github.com/rainbowpuffpuff/ferrata/actions/runs/1", "updated_at": "2026-11-23T22:00:00Z"}]}
+ISSUE = {"state": "open", "comments": 7, "updated_at": "2026-11-23T12:00:00Z"}
+
+# The layout at one width: what overflows, overlaps or is clipped (an empty list when nothing is)
+LAYOUT = """() => {
+  const out = [], de = document.documentElement;
+  if (de.scrollWidth > de.clientWidth + 1) out.push(`the page scrolls sideways (${de.scrollWidth} px wide in ${de.clientWidth})`);
+  const shown = (e) => e.checkVisibility({ visibilityProperty: true, opacityProperty: true }) && !e.closest(".vh");
+  const label = (t) => JSON.stringify(t.trim().replace(/\\s+/g, " ").slice(0, 32));
+  const inside = (q, b) => q.left >= b.left - 1 && q.right <= b.right + 1 && q.top >= b.top - 1 && q.bottom <= b.bottom + 1;
+  const isBox = (e) => { const c = getComputedStyle(e); return parseFloat(c.borderTopWidth) > 0 || c.backgroundColor !== "rgba(0, 0, 0, 0)"; };
+  const textRects = (root) => {
+    const list = [], walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+      if (!n.nodeValue.trim() || !shown(n.parentElement)) continue;
+      const r = document.createRange();
+      r.selectNodeContents(n);
+      for (const q of r.getClientRects()) if (q.width > 0 && q.height > 0) list.push({ n, q });
+    }
+    return list;
+  };
+  // The hero: no text over other text; each piece of text and each box inside its nearest box (card, chip, bar part)
+  const hero = document.querySelector(".hero");
+  const ht = textRects(hero);
+  for (let i = 0; i < ht.length; i++) for (let j = i + 1; j < ht.length; j++) {
+    const a = ht[i], b = ht[j];
+    if (a.n === b.n) continue;
+    const w = Math.min(a.q.right, b.q.right) - Math.max(a.q.left, b.q.left);
+    const h = Math.min(a.q.bottom, b.q.bottom) - Math.max(a.q.top, b.q.top);
+    if (w > 1 && h > 0.25 * Math.min(a.q.height, b.q.height)) out.push(`hero: ${label(a.n.nodeValue)} overlaps ${label(b.n.nodeValue)}`);
+  }
+  const boxOf = (e) => { for (let x = e.parentElement; x && x !== hero; x = x.parentElement) if (isBox(x)) return x; return null; };
+  for (const t of ht) {
+    const b = boxOf(t.n);
+    if (b && !inside(t.q, b.getBoundingClientRect())) out.push(`hero: ${label(t.n.nodeValue)} runs out of its ${b.className || b.tagName}`);
+  }
+  for (const e of hero.querySelectorAll("*")) {
+    if (!isBox(e) || !shown(e) || !e.getClientRects().length) continue;
+    const b = boxOf(e);
+    if (b && !inside(e.getBoundingClientRect(), b.getBoundingClientRect())) out.push(`hero: a ${e.className || e.tagName} runs out of its ${b.className || b.tagName}`);
+  }
+  // Live: no card holds anything wider than itself
+  for (const card of document.querySelectorAll("#live .card")) {
+    const c = card.getBoundingClientRect();
+    const wide = [...card.querySelectorAll("*")].filter((e) => shown(e) && e.getClientRects().length).map((e) => e.getBoundingClientRect())
+      .concat(textRects(card).map((t) => t.q)).filter((q) => q.left < c.left - 1 || q.right > c.right + 1);
+    if (wide.length || card.scrollWidth > card.clientWidth + 1) out.push(`live: #${card.id} has content wider than the card (${Math.round(Math.max(card.scrollWidth, ...wide.map((q) => q.right - c.left)))} px in ${Math.round(c.width)})`);
+  }
+  // No box clips its text sideways (scrolling boxes and visually hidden text aside)
+  for (const e of document.querySelectorAll("main *")) {
+    const c = getComputedStyle(e);
+    if ((c.overflowX === "hidden" || c.overflowX === "clip") && c.clip === "auto" && shown(e) && e.scrollWidth > e.clientWidth + 1)
+      out.push(`clipped: ${e.tagName.toLowerCase()}.${e.className} ${label(e.textContent)} (${e.scrollWidth} px in ${e.clientWidth})`);
+  }
+  return out;
+}"""
 
 
 def serve():
@@ -58,10 +142,26 @@ def main():
             httpd.shutdown()
             return 77
 
-        def page(js=True, width=1366, height=768):
+        def live(route):
+            """The live readings from the fixtures; the bundle from the server; nothing from anywhere else."""
+            url = route.request.url
+            if url.startswith(base):
+                path = "/" + url[len(base):].split("?")[0].split("#")[0]
+                if path == "/rpc":
+                    method = json.loads(route.request.post_data or "{}").get("method")
+                    result = 4447 if method == "getLastBlockId" else {"header": {"timestamp": 1795473192239}, "bedrock_status": "Finalized"}
+                    return route.fulfill(json={"jsonrpc": "2.0", "id": 1, "result": result})
+                if path in LIVE:
+                    return route.fulfill(json=LIVE[path])
+                return route.continue_()
+            if url.startswith("https://api.github.com/"):
+                return route.fulfill(json=RUN if "/actions/workflows/" in url else ISSUE)
+            return route.abort()
+
+        def page(js=True, width=1366, height=768, readings=False):
             ctx = browser.new_context(viewport={"width": width, "height": height}, java_script_enabled=js)
             pg = ctx.new_page()
-            pg.route("**/*", lambda r: r.continue_() if r.request.url.startswith(base) else r.abort())
+            pg.route("**/*", live if readings else lambda r: r.continue_() if r.request.url.startswith(base) else r.abort())
             pg.on("pageerror", lambda e: errors.append(str(e)))
             return pg
 
@@ -131,12 +231,31 @@ def main():
         pg3.goto(base, wait_until="load")
         check(pg3.locator("#req-table").is_visible(), "without JavaScript the full table is hidden")
         check(pg3.locator("a.tile").count() == 137, "without JavaScript the tiles are missing")
+        for sel in ("button.copy", "#filters", "#faucet-form"):
+            check(pg3.locator(sel).first.is_hidden(), f"without JavaScript {sel} shows, though it needs JavaScript")
 
         mob = page(width=390, height=844)
         mob.goto(base + "#req-RFP-022-Sec.1", wait_until="load")
         mob.wait_for_timeout(300)
         sb = mob.locator("#req-dialog").bounding_box()
         check(sb and sb["width"] >= 380, "on a phone the sheet is not full width")
+        mob.goto(base + "?status=waits", wait_until="load")
+        mob.wait_for_timeout(200)
+        n = mob.locator("#req-table tbody tr:visible").count()
+        check(n == 5, f"on a phone ?status=waits shows {n} rows of the table, not 5")
+
+        for width in WIDTHS:
+            lp = page(width=width, height=900, readings=True)
+            lp.goto(base, wait_until="load")
+            try:
+                lp.wait_for_function("document.querySelector('#live-facts .facts') && "
+                                     "document.querySelector('[data-live=ci-chip]').textContent !== 'see below'", timeout=10000)
+            except Exception:
+                problems.append(f"{width} px: the live readings (CI, attested facts) did not show")
+            lp.wait_for_timeout(200)
+            for what in lp.evaluate(LAYOUT):
+                problems.append(f"{width} px: {what}")
+            lp.context.close()
         browser.close()
     httpd.shutdown()
     problems += [f"script error: {e}" for e in errors]

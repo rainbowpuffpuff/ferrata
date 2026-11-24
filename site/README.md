@@ -24,7 +24,7 @@ python3 -I site/build.py            # writes deploy/testnet/web/build/ (about 1.
 python3 -I site/build.py --check    # exit 1 if the bundle differs from a fresh build
 python3 -I site/test_site.py        # counts, every emitted link, freshness, privacy (also: --strict, --online)
 python3 -I site/test_site.py --skip-freshness   # the same on a fresh build only: the mode for CI
-python3 site/test_ui.py             # the page in Chromium (Playwright, optional): overview, sheet, deep links, table
+python3 site/test_ui.py             # the page in Chromium (Playwright, optional): overview, sheet, deep links, table, layout
 python3 -I site/extract_rfp.py RFP_CHECKOUT                   # after logos-co/rfp changes an RFP
 gh issue view 257 -R logos-co/rfp --json title,state,createdAt,updatedAt,labels,url,body,comments > ISSUE.json
 python3 -I site/snapshot_proposal.py ISSUE.json               # after the proposal is edited or updated
@@ -109,3 +109,12 @@ in both themes and requires at least 3:1 (WCAG 1.4.11). Yellow and orange are li
 would need on its own, so every mark is a bordered box with its symbol, every count sits in text, and a status never
 rests on colour alone: tiles carry their status in their name, chips and legends carry the word. The requirements
 table becomes one card per requirement on narrow screens.
+
+The hero gives each RFP one card (its name, the count shown, a bar of its four statuses and a legend with every count);
+the two cards share their rows, so they align side by side. A count also sits inside its part of the bar, but only
+while the bar is wide enough for it: `build.py` works out, from the part's share and the count's digits, the bar width
+it needs and emits a container query for it, so this holds at every width and without JavaScript. On narrow screens
+the tables of prose (milestones, what is not done, a run's Sepolia transactions) become one card per row, and the
+timeline one cell, then one row, per milestone with its weeks. `test_ui.py` checks the layout at 375, 768, 1024, 1450
+and 1920 px with the live readings answered from fixtures: no sideways scroll, no text over text or out of its box in
+the hero, nothing wider than its card in Live, no box clipping its text.

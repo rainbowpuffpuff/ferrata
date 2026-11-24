@@ -80,7 +80,7 @@ class Page(html.parser.HTMLParser):
             self.scripts.append(a)
         if tag == "tr" and "data-status" in a and "data-rfp" in a:
             self.rows.append(a)
-        if tag == "p" and a.get("class") == "tile-value":
+        if tag == "p" and "sum-value" in (a.get("class") or "").split():
             self._tile = True
             self.tiles.append("")
         if tag == "use":

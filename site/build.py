@@ -23,6 +23,7 @@ import hashlib
 import html
 import importlib.util
 import json
+import math
 import pathlib
 import posixpath
 import re
@@ -347,7 +348,7 @@ class Site:
         self.gh = self.content["site"]["repo"]
         self.ref = self.content["site"]["ref"]
         self.warnings = []
-        self.css_flex, self.css_grid = set(), set()
+        self.css_flex, self.css_grid, self.css_fit = set(), set(), set()
         self.evidence = {}
         self.images = {}
 
@@ -658,22 +659,37 @@ def flex(site, n):
     return f"g{n}"
 
 
+# A count inside its part of a bar needs this much of the part's width, in px at a 16 px root: the part's left
+# padding (7), the label's padding (2 x .3rem) and a margin, plus each digit (bold, at .82rem, rounded up).
+LABEL_PX, DIGIT_PX = 20, 9
+
+
+def label_fit(site, n, share, parts):
+    """The class that shows count n inside its part once the bar is wide enough: fitN, for a container query on the
+    bar's width (N rem); None when no bar on the page is ever that wide."""
+    need = (LABEL_PX + DIGIT_PX * len(str(n))) / share + 2 * (parts - 1)
+    rem = math.ceil(need / 16)
+    if rem > 80:
+        return None
+    site.css_fit.add(rem)
+    return f"fit{rem}"
+
+
 def seg_bar(site, label, counts, total, compact=False):
-    """A tall segmented bar (one whole split into the four statuses), its legend and accessible name."""
+    """A segmented bar (one whole split into the four statuses), its legend with every count, and its accessible name.
+    In the tall bar a part also carries its count, shown only while the bar is wide enough for it (label_fit)."""
     parts, legend = [], []
     aria = f"{label}: " + ", ".join(f"{counts[s]} {s}" for s in STATUSES if counts[s]) + f", of {total}"
-    for s in STATUSES:
+    present = [s for s in STATUSES if counts[s]]
+    for s in present:
         n = counts[s]
-        if not n:
-            continue
         share = n / total
         tip = f"{n} {s} · {share:.0%} of {total}"
-        inside = not compact and share >= 0.055
+        fit = None if compact else label_fit(site, n, share, len(present))
         parts.append(
-            f'<span class="seg-part st-{SKEY[s]} {flex(site, n)}" tabindex="0" role="img" '
-            f'aria-label="{h(tip)}" data-tip="{h(tip)}">{f"<span class=seg-n>{n}</span>" if inside else ""}</span>')
-        legend.append(f'<li>{box(s)}{h(s)}'
-                      f'{"" if inside else f" <b>{n}</b>"}</li>')
+            f'<span class="seg-part st-{SKEY[s]} {flex(site, n)}{" " + fit if fit else ""}" tabindex="0" role="img" '
+            f'aria-label="{h(tip)}" data-tip="{h(tip)}">{f"<span class=seg-n>{n}</span>" if fit else ""}</span>')
+        legend.append(f'<li>{box(s)}{h(s)} <b>{n}</b></li>')
     return (f'<div class="seg{" seg-thin" if compact else ""}" role="group" aria-label="{h(aria)}">{"".join(parts)}</div>'
             f'<ul class="legend{" legend-compact" if compact else ""}" aria-hidden="true">{"".join(legend)}</ul>')
 
@@ -745,12 +761,16 @@ def render_index(site, model):
     parts.append('<li><a class="chip chip-warn" href="#security"><span class="dot dot-warn" aria-hidden="true"></span>Not audited</a></li>')
     parts.append("</ul>")
 
-    parts.append('<div class="tiles">')
+    # One card per RFP: its name, the count shown, the bar of its four statuses and their counts (rows aligned
+    # across the two cards)
+    parts.append('<div class="sums">')
     for rfp in RFPS:
         cnt = count_rows(hard[rfp])
         total = len(hard[rfp])
-        parts.append(f'<div class="tile"><p class="tile-label">{rfp} · {h(RFP_NAMES[rfp])}</p>'
-                     f'<p class="tile-value">{cnt["shown"]}<span> of {total} hard requirements shown</span></p>'
+        slug = rfp.lower()
+        parts.append(f'<div class="sum" role="group" aria-labelledby="sum-{slug}">'
+                     f'<p class="sum-name" id="sum-{slug}"><b>{rfp}</b> {h(RFP_NAMES[rfp])}</p>'
+                     f'<p class="sum-value"><b>{cnt["shown"]}</b><span> of {total} hard requirements shown</span></p>'
                      + seg_bar(site, f"{rfp} hard requirements", cnt, total) + "</div>")
     parts.append("</div>")
     softline = "; ".join(
@@ -1061,13 +1081,14 @@ def render_runs(site, model):
                 + (f' · record <a href="{h(site.src(r["record"]))}"><code>{h(posixpath.dirname(r["record"]) + "/")}</code></a>' if r.get("record") else "")
                 + "</p>")
         if r.get("tx_rows"):
-            out.append('<div class="scroll"><table class="tx"><caption>Sepolia transactions of the round trip '
+            out.append('<div class="scroll"><table class="tx stack stack-row"><caption>Sepolia transactions of the round trip '
                        '(the deployment’s are in the record)</caption><thead><tr><th scope="col">Step</th><th scope="col">Transaction</th>'
                        '<th scope="col">Block</th><th scope="col">Gas used</th><th scope="col">Result</th></tr></thead><tbody>')
             for t in r["tx_rows"]:
-                out.append(f'<tr><th scope="row">{h(t["stage"])}</th><td><a class="hash" href="https://sepolia.etherscan.io/tx/{t["hash"]}" '
-                           f'title="{t["hash"]}"><code>{short_hash(t["hash"])}</code></a></td><td class="n">{t["block"]:,}</td>'
-                           f'<td class="n">{t["gas"]:,}</td><td>{"success" if t["ok"] else "failed"}</td></tr>')
+                out.append(f'<tr><th scope="row">{h(t["stage"])}</th><td data-label="Transaction"><a class="hash" '
+                           f'href="https://sepolia.etherscan.io/tx/{t["hash"]}" title="{t["hash"]}"><code>{short_hash(t["hash"])}</code></a></td>'
+                           f'<td class="n" data-label="Block">{t["block"]:,}</td><td class="n" data-label="Gas used">{t["gas"]:,}</td>'
+                           f'<td data-label="Result">{"success" if t["ok"] else "failed"}</td></tr>')
             out.append("</tbody></table></div>")
         if r.get("contracts"):
             out.append('<p class="small contracts">Contracts: ' + " · ".join(
@@ -1155,6 +1176,10 @@ def image_size(data, ext):
     raise SystemExit("build.py: unknown image format")
 
 
+def weeks_label(start, n):
+    return f"week {start}" if n == 1 else f"weeks {start}–{start + n - 1}"
+
+
 def render_milestones(site, model):
     p = model["proposal"]
     rows = model["rows"]
@@ -1173,17 +1198,19 @@ def render_milestones(site, model):
         if key in MILESTONES and key != "R":
             n = int(weeks)
             site.css_grid.add((week, n))
-            cells.append(f'<li class="tl-{h(key[0])} gs{week}-{n}"><b>{h(key)}</b><span>{h(name)}</span></li>')
+            cells.append(f'<li class="tl-{h(key[0])} gs{week}-{n}"><b>{h(key)}</b><span>{h(name)}</span>'
+                         f'<small class="tl-wk">{weeks_label(week, n)}</small></li>')
             week += n
     total_weeks = 14
     if week <= total_weeks:
         site.css_grid.add((week, total_weeks - week + 1))
-        cells.append(f'<li class="tl-float gs{week}-{total_weeks - week + 1}"><b>float</b><span>{total_weeks - week + 1} weeks</span></li>')
+        cells.append(f'<li class="tl-float gs{week}-{total_weeks - week + 1}"><b>float</b><span>{total_weeks - week + 1} weeks</span>'
+                     f'<small class="tl-wk">{weeks_label(week, total_weeks - week + 1)}</small></li>')
     out.append('<figure class="timeline"><figcaption>Weeks from signing (the filed order; 11 paid build weeks in 14 calendar '
                'weeks, then R, a week after the audit reports)</figcaption><ol class="tl-weeks" aria-hidden="true">' +
                "".join(f"<li>{i}</li>" for i in range(1, total_weeks + 1)) + '</ol><ol class="tl">' + "".join(cells) +
                '</ol></figure>')
-    out.append('<div class="scroll"><table class="ms-table"><caption>The milestones as filed, with the state of the requirements each delivers</caption>'
+    out.append('<div class="scroll"><table class="ms-table stack"><caption>The milestones as filed, with the state of the requirements each delivers</caption>'
                '<thead><tr><th scope="col">#</th><th scope="col">Milestone and done gate (abridged, as filed)</th><th scope="col">RFP</th>'
                '<th scope="col">Weeks</th><th scope="col">Payout</th><th scope="col">Its requirements today</th></tr></thead><tbody>')
     for row in p["table"]:
@@ -1204,7 +1231,8 @@ def render_milestones(site, model):
                       f'(<a class="ev" href="evidence.html#e{n}" data-ev="{n}">evidence row {n}</a>)</p>')
         out.append(f'<tr><th scope="row">{h(key) or ""}</th><td><b>{md.render(name)}</b>'
                    + (f'<div class="gate">{md.block(gate)}</div>' if gate else "") + today +
-                   f'</td><td>{h(rfp)}</td><td class="n">{md.render(weeks)}</td><td class="n">{md.render(pay)}</td><td>{state}</td></tr>')
+                   f'</td><td class="inl" data-label="RFP">{h(rfp)}</td><td class="n inl" data-label="Weeks">{md.render(weeks)}</td>'
+                   f'<td class="n inl" data-label="Payout">{md.render(pay)}</td><td data-label="Its requirements today">{state}</td></tr>')
     out.append("</tbody></table></div>")
     out.append(f'<div class="two"><article class="card"><h3>Budget</h3><p class="small">As filed in <a href="{h(p["url"])}">the '
                f'proposal</a> (its sections and tables):</p><blockquote>{md.block(p["sections"]["budget"])}{md.block(p["bid"])}'
@@ -1264,7 +1292,7 @@ def render_not_done(site, model):
     part = [r for r in rows if r["status"] == "in part"]
     out = ['<section class="wrap band" id="not-done" aria-labelledby="h-nd"><h2 id="h-nd">Not done yet</h2>'
            '<p class="lede">The requirements that wait on Logos (an upstream release or LEZ testnet 0.4) or on an audit, '
-           'with what each needs, as their rows say.</p><div class="scroll"><table class="nd"><thead><tr>'
+           'with what each needs, as their rows say.</p><div class="scroll"><table class="nd stack"><thead><tr>'
            '<th scope="col">Requirement</th><th scope="col">Status</th><th scope="col">What it needs</th><th scope="col">Shown instead, today</th>'
            '</tr></thead><tbody>']
     for r in blocked:
@@ -1273,7 +1301,8 @@ def render_not_done(site, model):
         need, _, rest = why.partition("Shown instead:")
         need, rest = need.strip(), rest.strip()
         out.append(f'<tr><th scope="row"><a href="#{anchor}">{r["rfp"]} {h(r["id"])}</a><span class="small">{Md(site, None, (model["rfp_words"]["source"]["repository"], model["rfp_words"]["source"]["commit"], "RFPs", set(model["rfp_words"]["source"]["files"]))).render(first_sentence(r["words"], 160))}</span></th>'
-                   f'<td>{chip(r["status"])}</td><td>{md.render(need)}</td><td>{md.render(rest) if rest else "—"}</td></tr>')
+                   f'<td>{chip(r["status"])}</td><td data-label="What it needs">{md.render(need)}</td>'
+                   f'<td data-label="Shown instead, today">{md.render(rest) if rest else "—"}</td></tr>')
     out.append("</tbody></table></div>")
     out.append(f'<p>And {len(part)} requirements are <a href="#requirements" data-filter="status=part">in part</a>: each row '
                'says which clause is shown and which is not.</p>')
@@ -1336,11 +1365,14 @@ def evidence_json(site):
 
 
 def generated_css(site):
-    lines = ["/* generated by site/build.py: the proportions of this build's bars and timeline */"]
+    lines = ["/* generated by site/build.py: the proportions of this build's bars and timeline, and the bar widths from which "
+             "each count fits inside its part */"]
     for n in sorted(site.css_flex):
         lines.append(f".g{n}{{flex-grow:{n}}}")
     for start, span in sorted(site.css_grid):
         lines.append(f".gs{start}-{span}{{grid-column:{start} / span {span}}}")
+    for rem in sorted(site.css_fit):
+        lines.append(f"@container (min-width: {rem}rem) {{ .fit{rem} > .seg-n {{ display: inline-block }} }}")
     return "\n".join(lines) + "\n"
 
 
