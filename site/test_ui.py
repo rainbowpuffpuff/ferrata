@@ -19,7 +19,8 @@ are long hex words, /status/programs.json and /faucet). Checks:
     summary no piece of text overlaps another and each stays inside its card, chip or bar part; no Live card has
     content wider than the card; no box clips its text;
   - the testers' page (testers/): linked from the build page's header and hero at every width; seven steps, the
-    bridge's four, the report form's link; no script at all, so the same without JavaScript; at the six widths, light
+    bridge's four, the report form's link, the note for AI agents (near the top and in How to report: /AGENTS.md,
+    /agents/); no script at all, so the same without JavaScript; at the six widths, light
     and dark, it does not scroll sideways, nothing in it is wider than the screen, no table scrolls and no box clips
     its text;
   - no script error on any of these pages.
@@ -293,6 +294,9 @@ def main():
         check(tp.locator("#step-bridge ol.t-sub > li").count() == 4, "testers/: the bridge has not four steps")
         check(tp.locator("#report a.btn").get_attribute("href") == report, "testers/: the report link is not the tester-report form")
         check(tp.locator("#safety").is_visible() and tp.locator(".t-alert").is_visible(), "testers/: the safety notes do not show")
+        for where in ("#agents", "#report"):
+            check(tp.locator(f"{where} a[href='/AGENTS.md']").count() == 1 and tp.locator(f"{where} a[href='/agents/']").count() == 1,
+                  f"testers/: {where} does not link /AGENTS.md and /agents/")
         tp.locator(".top-in .brand").click()
         tp.wait_for_load_state("load")
         check(tp.url == base, f"testers/: the brand leads to {tp.url}, not the build page")

@@ -1,5 +1,5 @@
 {
- "commit": "2f38cf321ee792b6525ed071c4a96852d92be3b3",
+ "commit": "5cb0c118dfaa26cf47c1192c7ee69cd20a1e22ed",
  "date": "2026-11-24",
  "dirty": false,
  "statuses_from": "2f38cf321ee792b6525ed071c4a96852d92be3b3",
@@ -59,6 +59,7 @@
   "img/b1a6e3198ba1.png",
   "img/da5914b8949b.png",
   "index.html",
+  "llms.txt",
   "testers/index.html"
  ]
 }

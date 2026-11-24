@@ -1,0 +1,20 @@
+# Ferrata LEZ test network
+
+> A LEZ v0.4.0-rc3 network we run for Ferrata's bid for Logos RFP-021 and RFP-022, bridged to Sepolia; not Logos's LEZ testnet 0.4. Prototype, unaudited: its tokens have no value, and it may be reset.
+
+Reading needs no key and no account. Never give an agent a recovery phrase or a private key: nothing here asks for one.
+
+## For agents
+
+- [AGENTS.md](/AGENTS.md): the JSON-RPC endpoint, every method with a request and a response, the programs, how to attest a fact and use the bridge, the limits, scripts in Python and JavaScript
+- [For agents](/agents/): AGENTS.md as a page, with its example scripts
+- [Programs](/programs.json): the deployed programs' accounts and image ids, and the Sepolia light-client instance
+- [JSON-RPC](/rpc): POST, JSON-RPC 2.0: LEZ v0.4.0-rc3's read methods and sendTransaction, limited per address
+
+## For people
+
+- [Testers: start here](/testers/): what to try, in order, the bridge's waiting times, the limits, safety, how to report
+
+## Source
+
+- [Repository](https://github.com/rainbowpuffpuff/ferrata): the code, the documents and this site's sources, MIT OR Apache-2.0
