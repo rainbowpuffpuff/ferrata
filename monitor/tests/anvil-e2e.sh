@@ -10,6 +10,8 @@
 #   S5  the monitor is killed (SIGKILL) mid-window and restarted from its state file: it still cancels
 #       (and while it runs, a second monitor on the same state file is refused)
 #   S6  the state file is lost: a fresh monitor rescans the vault and still cancels, nothing else
+#   S12 its own endpoint fails (RFP-022 R.6): out while a wrong candidate arrives, the monitor keeps polling and
+#       alerting; back, it cancels, and its cancellation's answer lost (the transaction mined): one cancellation
 #   S7  a wrong checkpoint finalised while no monitor ran: the watcher alerts, the freeze authority's
 #       monitor revokes it within the window
 #   S9  failure paths: a dry run only alerts; a watcher without gas money alerts, then cancels once funded
@@ -215,6 +217,39 @@ check "S6 fresh monitor cancelled the pending wrong candidate" '[ "$(submitted_a
 check "S6 and nothing else (one cancellation in that run)" '[ $((after - before)) -eq 1 ]'
 check "S6 it audited the two finalised checkpoints as good" '[ "$(jq -r ".finalized[\"0\"], .finalized[\"1\"]" "$state" | sort -u)" = ok ]'
 record S6 "$n7"
+
+# S12: the monitor's own endpoint fails (e2e/netfault/holdproxy.py in front of anvil): an outage while a wrong
+# candidate arrives, then the endpoint back with the cancellation's answer lost (forwarded and mined, no answer).
+px="$run/holdproxy"; mkdir -p "$px"; echo pass > "$px/ctl"
+python3 -I "$here/../e2e/netfault/holdproxy.py" --upstream "$rpc" --port-file "$px/port" --ctl "$px/ctl" --log "$px/log.jsonl" \
+  > "$px/out" 2>&1 &
+px_pid=$!
+for _ in $(seq 1 40); do [ -s "$px/port" ] && break; sleep 0.25; done
+direct_rpc=$rpc; rpc="http://127.0.0.1:$(cat "$px/port")"; mon_cmd "$state" WATCHER_KEY; rpc=$direct_rpc
+"$mon" "${margs[@]}" 2>> "$run/monitor-stderr.log" &
+mon_pid=$!
+polls0=$(jq .polls "$state"); for _ in $(seq 1 100); do [ "$(jq .polls "$state" 2>/dev/null)" -gt "$polls0" ] 2>/dev/null && break; sleep 0.2; done
+echo outage > "$px/ctl"
+n12=$(label state/12); j12=$(journal "$n4" "$n12" 16 "$(label forged/12)" 4 3)
+submit "$j12"
+sleep 15
+outages=$(jq -s '[.[] | select(.action == "outage")] | length' "$px/log.jsonl")
+check "S12 the monitor kept running through its endpoint's outage ($outages requests refused) and alerted poll-failed" \
+  'kill -0 "$mon_pid" 2>/dev/null && [ "$outages" -ge 10 ] && [ -n "$(jq -c "select(.kind==\"poll-failed\")" "$alerts")" ] && [ "$(submitted_at "$n12")" != 0 ]'
+cancels0=$(cast logs --rpc-url "$rpc" --address "$vault" --from-block "$deploy_block" "$(cast keccak 'CandidateCancelled(bytes32,uint64,bytes32)')" "$n12" --json | jq length)
+echo "lose eth_sendRawTransaction" > "$px/ctl"
+for _ in $(seq 1 150); do [ "$(submitted_at "$n12")" = 0 ] && break; sleep 0.2; done
+sleep 4
+cancels1=$(cast logs --rpc-url "$rpc" --address "$vault" --from-block "$deploy_block" "$(cast keccak 'CandidateCancelled(bytes32,uint64,bytes32)')" "$n12" --json | jq length)
+sends=$(jq -s '[.[] | select(.method == "eth_sendRawTransaction" and (.action | test("^forwarded")))] | length' "$px/log.jsonl")
+check "S12 back, it cancelled the wrong candidate before the deadline, its cancellation's answer lost: one cancellation ($cancels0 -> $cancels1), one transaction sent ($sends)" \
+  '[ "$(submitted_at "$n12")" = 0 ] && [ "$cancels0" = 0 ] && [ "$cancels1" = 1 ] && [ "$sends" = 1 ] && grep -q "forwarded, answer lost" "$px/log.jsonl"'
+check "S12 it keeps running after the lost answer and stops cleanly on SIGTERM" 'kill -0 "$mon_pid" 2>/dev/null && kill -TERM "$mon_pid" && wait "$mon_pid"'
+mon_pid=
+check "S12 its state names the candidate as gone, not pending" 'jq -e --arg s "$n12" ".candidates[\$s].status != \"pending\"" "$state" > /dev/null'
+jq -n -c --arg s "$n12" --argjson o "$outages" --argjson c "$cancels1" --argjson t "$sends" \
+  '{scenario: "S12", newState: $s, outageRequests: $o, cancellations: $c, cancelSends: $t, status: "cancelled with the answer lost"}' >> "$scen"
+kill "$px_pid" 2>/dev/null || true
 
 # S7: a wrong checkpoint finalised while no monitor ran.
 n8=$(label state/8); j8=$(journal "$n4" "$n8" 17 "$(label forged/17)" 4 3)
