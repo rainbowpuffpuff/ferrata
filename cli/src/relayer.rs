@@ -609,6 +609,21 @@ pub fn check_gas_drop_receipt(
     receipt_json: &[u8],
     ctx: &DropContext<'_>,
 ) -> std::result::Result<GasDropJournal, DropRefusal> {
+    let j = check_gas_drop_receipt_offline(receipt_json, ctx)?;
+    if !ctx.imported_roots.contains(&j.root) {
+        return Err(DropRefusal::RootNotImported);
+    }
+    Ok(j)
+}
+
+/// [`check_gas_drop_receipt`] without the imported roots (`ctx.imported_roots` is not read): what a network's gateway
+/// checks before a job counts against its caps, reading neither Ethereum nor the zone's history. The receipt verifies
+/// against the gas-drop image id (a dev-mode receipt only where the verifier itself runs in dev mode) and its journal is
+/// a gas-drop journal naming this relayer, chain and vault.
+pub fn check_gas_drop_receipt_offline(
+    receipt_json: &[u8],
+    ctx: &DropContext<'_>,
+) -> std::result::Result<GasDropJournal, DropRefusal> {
     let receipt: risc0_zkvm::Receipt =
         serde_json::from_slice(receipt_json).map_err(|e| DropRefusal::BadReceipt(format!("not a receipt: {e}")))?;
     receipt
@@ -621,8 +636,23 @@ pub fn check_gas_drop_receipt(
     if j.chain_id != ctx.chain_id || j.vault != ctx.vault {
         return Err(DropRefusal::OtherConfiguration);
     }
-    if !ctx.imported_roots.contains(&j.root) {
-        return Err(DropRefusal::RootNotImported);
+    Ok(j)
+}
+
+/// A gas-drop job as a gateway is handed it (`{"kind": "gas-drop", "receipt", "oneTimeNpk", "oneTimeVpk"}`, [`Job`]):
+/// its receipt checked offline ([`check_gas_drop_receipt_offline`]) and its one-time keys deriving the receipt's one-time
+/// address (the relayer seals its credit to them). `ferrata-gasdrop check-job` runs it for the test network's gateway.
+pub fn check_drop_job(job_json: &[u8], ctx: &DropContext<'_>) -> std::result::Result<GasDropJournal, DropRefusal> {
+    let job: Job = serde_json::from_slice(job_json)
+        .map_err(|e| DropRefusal::BadReceipt(format!("not a relayer job: {e}")))?;
+    let Job::GasDrop { receipt, one_time_npk, one_time_vpk } = job else {
+        return Err(DropRefusal::NotGasDrop);
+    };
+    let keys = OneTimeKeys::from_hex(&one_time_npk, &one_time_vpk).map_err(|_| DropRefusal::KeysMismatch)?;
+    let receipt = serde_json::to_vec(&receipt).map_err(|e| DropRefusal::BadReceipt(e.to_string()))?;
+    let j = check_gas_drop_receipt_offline(&receipt, ctx)?;
+    if keys.account_id().map_err(|_| DropRefusal::KeysMismatch)? != j.one_time_address {
+        return Err(DropRefusal::KeysMismatch);
     }
     Ok(j)
 }
@@ -1450,6 +1480,70 @@ pub fn require_chain(view: &VaultView, chain_id: Option<u64>) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The rc3 gas-drop session's real receipt (gasdrop guest 0x89580416…, proven for real) and its one-time keys
+    /// (lez/results/v0.4.0-rc3/gas-drop/session/hook/), as the job a gateway is posted, with a context matching it.
+    fn recorded_job() -> (serde_json::Value, DropContext<'static>, GasDropJournal) {
+        let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../lez/results/v0.4.0-rc3/gas-drop/session/hook/");
+        let read = |f: &str| -> serde_json::Value {
+            serde_json::from_str(&std::fs::read_to_string(format!("{dir}{f}")).unwrap()).unwrap()
+        };
+        let (receipt, keys) = (read("gasdrop-receipt.json"), read("keys.json"));
+        let bytes: Vec<u8> =
+            receipt["journal"]["bytes"].as_array().unwrap().iter().map(|b| b.as_u64().unwrap() as u8).collect();
+        let j = GasDropJournal::decode(&bytes).unwrap();
+        let job = serde_json::json!({ "kind": "gas-drop", "receipt": receipt,
+            "oneTimeNpk": keys["oneTimeNpk"], "oneTimeVpk": keys["oneTimeVpk"] });
+        let roots: &'static HashSet<Hash> = Box::leak(Box::default());
+        let image_id = crate::h32("0x895804161df14b00e1cb02e5d27fe136efb82b178db511c7697c030676fc9eb4").unwrap();
+        (job, DropContext { image_id, me: j.relayer, chain_id: j.chain_id, vault: j.vault, imported_roots: roots }, j)
+    }
+
+    #[test]
+    fn a_gateway_admits_only_a_verified_job_of_this_relayer() {
+        let (job, ctx, j) = recorded_job();
+        let bytes = serde_json::to_vec(&job).unwrap();
+        assert_eq!(check_drop_job(&bytes, &ctx).unwrap(), j, "the recorded real job verifies offline");
+        // Without the imported roots the relayer's own check refuses it: the gateway's is the offline part only.
+        assert!(matches!(check_gas_drop_receipt(&serde_json::to_vec(&job["receipt"]).unwrap(), &ctx), Err(DropRefusal::RootNotImported)));
+        let other = |f: &dyn Fn(&mut DropContext<'static>)| { let mut c = ctx.clone(); f(&mut c); check_drop_job(&bytes, &c) };
+        assert!(matches!(other(&|c| c.me = [9; 32]), Err(DropRefusal::OtherRelayer)));
+        assert!(matches!(other(&|c| c.vault = [9; 20]), Err(DropRefusal::OtherConfiguration)));
+        assert!(matches!(other(&|c| c.chain_id[31] ^= 1), Err(DropRefusal::OtherConfiguration)));
+        assert!(matches!(other(&|c| c.image_id = [9; 32]), Err(DropRefusal::BadReceipt(_))));
+        // A journal byte changed (N): the receipt no longer verifies.
+        let mut tampered = job.clone();
+        let n = tampered["receipt"]["journal"]["bytes"][130].as_u64().unwrap();
+        tampered["receipt"]["journal"]["bytes"][130] = serde_json::json!((n + 1) % 256);
+        assert!(matches!(check_drop_job(&serde_json::to_vec(&tampered).unwrap(), &ctx), Err(DropRefusal::BadReceipt(_))));
+        // Keys of another account: the credit would go elsewhere than the receipt binds.
+        let mut keys = job.clone();
+        keys["oneTimeNpk"] = serde_json::json!(format!("0x{}", "11".repeat(32)));
+        assert!(matches!(check_drop_job(&serde_json::to_vec(&keys).unwrap(), &ctx), Err(DropRefusal::KeysMismatch)));
+        // Not a receipt at all; another kind of job.
+        let mut junk = job.clone();
+        junk["receipt"]["inner"] = serde_json::json!({ "Garbage": {} });
+        assert!(matches!(check_drop_job(&serde_json::to_vec(&junk).unwrap(), &ctx), Err(DropRefusal::BadReceipt(_))));
+        let release = serde_json::json!({ "kind": "release", "journal": "00", "seal": "00" });
+        assert!(matches!(check_drop_job(&serde_json::to_vec(&release).unwrap(), &ctx), Err(DropRefusal::NotGasDrop)));
+    }
+
+    #[test]
+    fn a_fake_receipt_passes_only_a_dev_mode_verifier() {
+        let (job, ctx, _) = recorded_job();
+        let bytes: Vec<u8> =
+            job["receipt"]["journal"]["bytes"].as_array().unwrap().iter().map(|b| b.as_u64().unwrap() as u8).collect();
+        let claim = risc0_zkvm::ReceiptClaim::ok(risc0_zkvm::sha::Digest::from_bytes(ctx.image_id), bytes.clone());
+        let fake = risc0_zkvm::Receipt::new(risc0_zkvm::InnerReceipt::Fake(risc0_zkvm::FakeReceipt::new(claim)), bytes);
+        let mut forged = job.clone();
+        forged["receipt"] = serde_json::to_value(&fake).unwrap();
+        let outcome = check_drop_job(&serde_json::to_vec(&forged).unwrap(), &ctx);
+        if risc0_zkvm::VerifierContext::default().dev_mode() {
+            assert!(outcome.is_ok(), "dev mode verifies fake receipts (why the gateway refuses to run under it)");
+        } else {
+            assert!(matches!(outcome, Err(DropRefusal::BadReceipt(_))), "{outcome:?}");
+        }
+    }
 
     #[test]
     fn header_rlp_rebuilds_the_block_hash() {

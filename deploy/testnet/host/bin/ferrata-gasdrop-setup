@@ -62,6 +62,10 @@ init)
   fi
   [ -s "$B/lez.pass" ] || ( umask 077; head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' > "$B/lez.pass" )
   chown ferrata-gasdrop:ferrata-gasdrop "$B/seed.txt" "$B/lez.pass"; chmod 600 "$B/seed.txt" "$B/lez.pass"
+  # The vault and its chain (bridge.env, ferrata-bridge-start): the gateway's checker refuses receipts of another.
+  CHAIN="$(sed -n 's/^FERRATA_CHAIN_ID=//p' /etc/ferrata/bridge.env)"; VAULT="$(sed -n 's/^FERRATA_VAULT=//p' /etc/ferrata/bridge.env)"
+  [ -n "$CHAIN" ] && [ -n "$VAULT" ] || { echo "no FERRATA_CHAIN_ID / FERRATA_VAULT in /etc/ferrata/bridge.env" >&2; exit 1; }
+  [ -x "$BIN/ferrata-gasdrop" ] || { echo "$BIN/ferrata-gasdrop (the gateway's receipt checker) is not installed" >&2; exit 1; }
   ID="$("$BIN/r0vm" --id --elf "$SRC" | tail -n 1)"
   case "$ID" in 0x*) ;; *) ID="0x$ID" ;; esac
   install -D -m 644 "$SRC" "$GUEST"
@@ -72,9 +76,10 @@ init)
     "$BRIDGE" "$RL" "$ID" "$AMOUNT" > "$ENVF"
   [ -f "$TERMS" ] || printf '{}' > "$TERMS"
   terms_set relayer "\"$RL\""; terms_set imageId "\"$ID\""; terms_set amount "\"$AMOUNT\""
-  terms_set covers '["claim", "burn"]'; terms_set paused '"the relayer is not funded yet"'
+  terms_set covers '["claim", "burn"]'; terms_set chainId "$CHAIN"; terms_set vault "\"$VAULT\""
+  terms_set paused '"the relayer is not funded yet"'
   grep -q '^GASDROP_INFO=' /etc/ferrata/gateway.env 2>/dev/null || \
-    printf 'GASDROP_INFO=%s\nGASDROP_GUEST=%s\nGASDROP_INBOX=%s\n' "$TERMS" "$GUEST" "$B/inbox" >> /etc/ferrata/gateway.env
+    printf 'GASDROP_INFO=%s\nGASDROP_GUEST=%s\nGASDROP_INBOX=%s\nGASDROP_CHECK=%s\n' "$TERMS" "$GUEST" "$B/inbox" "$BIN/ferrata-gasdrop" >> /etc/ferrata/gateway.env
   echo "relayer LEZ public account /0: $RL (fund it with native LEZ, then: $0 fund AMOUNT)"
   echo "guest $ID; $AMOUNT per drop; terms $TERMS (paused)"
   ;;

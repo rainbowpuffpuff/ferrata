@@ -18,7 +18,14 @@
 //! ferrata-gasdrop prove --elf GASDROP_BIN --input INPUT_HEX_FILE --out RECEIPT_JSON [--image-id HEX]
 //! ferrata-gasdrop relay --receipt RECEIPT_JSON --image-id HEX --me HEX --chain-id N --vault HEX --roots FILE
 //!                       --claimed FILE --book FILE --amount N --credit-command CMD [--now UNIX_S]
+//! ferrata-gasdrop check-job --image-id HEX --relayer HEX --chain-id N --vault HEX [--accept-dev-mode-receipts] < JOB
 //! ```
+//!
+//! - `check-job` (a network's gateway, deploy/testnet/host/bin/ferrata-gateway, before a posted job counts against its
+//!   caps): the job verified offline ([`ferrata_cli::relayer::check_drop_job`]: the receipt against the image id, this
+//!   relayer, chain and vault; the one-time keys deriving the receipt's one-time address); not the imported roots or the
+//!   claimed nullifiers, which the relayer checks. Prints `{"ok": true, "nullifier", "root"}` (exit 0) or `{"ok":
+//!   false, "reason"}` (exit 1). Under RISC0_DEV_MODE it refuses every job unless `--accept-dev-mode-receipts`.
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -53,6 +60,21 @@ enum Command {
         image_id: Option<String>,
     },
     /// The relayer's gas drop for a receipt: check it, record it, send the credit through CMD.
+    /// A gateway's check of a gas-drop job (standard input, at most 4 MiB) before it counts against its caps.
+    CheckJob {
+        #[arg(long)]
+        image_id: String,
+        /// The relayer the network publishes (its LEZ account, 32-byte hex): the receipt must name it.
+        #[arg(long)]
+        relayer: String,
+        #[arg(long)]
+        chain_id: u64,
+        #[arg(long)]
+        vault: String,
+        /// Accept RISC Zero dev-mode receipts (a local devnet whose proofs are fake too; only with RISC0_DEV_MODE set).
+        #[arg(long)]
+        accept_dev_mode_receipts: bool,
+    },
     Relay {
         #[arg(long)]
         receipt: PathBuf,
@@ -227,6 +249,26 @@ async fn main() -> Result<()> {
     match cli.command {
         Command::Prove { elf, input, out, image_id } => {
             println!("{}", prove(&elf, &input, &out, image_id.as_deref())?);
+        }
+        Command::CheckJob { image_id, relayer, chain_id, vault, accept_dev_mode_receipts } => {
+            let refuse = |reason: String| -> ! {
+                println!("{}", json!({ "ok": false, "reason": reason }));
+                std::process::exit(1)
+            };
+            if risc0_zkvm::VerifierContext::default().dev_mode() && !accept_dev_mode_receipts {
+                refuse("RISC0_DEV_MODE is set: a fake receipt would verify; unset it (or, on a local devnet, add --accept-dev-mode-receipts)".into());
+            }
+            let mut job = Vec::new();
+            std::io::Read::read_to_end(&mut std::io::Read::take(std::io::stdin(), 4 << 20), &mut job)?;
+            let none: &'static HashSet<Hash> = Box::leak(Box::default());
+            let ctx = DropContext { image_id: h32(&image_id)?, me: h32(&relayer)?, chain_id: word(chain_id), vault: h20(&vault)?, imported_roots: none };
+            match relayer::check_drop_job(&job, &ctx) {
+                Ok(j) => println!(
+                    "{}",
+                    json!({ "ok": true, "nullifier": format!("0x{}", hex::encode(j.nullifier)), "root": format!("0x{}", hex::encode(j.root)) })
+                ),
+                Err(r) => refuse(r.to_string()),
+            }
         }
         Command::Relay { receipt, image_id, me, chain_id, vault, roots, claimed, book, amount, credit_command, now } => {
             let (value, sent) =

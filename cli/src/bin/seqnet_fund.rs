@@ -58,6 +58,10 @@ struct Args {
     /// genesis keys are not LEZ's published ones (deploy/testnet: `ferrata-gasdrop-setup fund`). No --faucet-home.
     #[arg(long)]
     private_only: bool,
+    /// Send nothing: print the seed's public /0 and private /0 native balances, read from the zone through its own
+    /// wallet ({"public_0", "private_0"}). e2e/seqnet's check that nothing funded a user (hook-gasdrop.sh).
+    #[arg(long)]
+    balances: bool,
 }
 
 fn faucet_wallet(home: &PathBuf, rpc: &str) -> Result<(WalletCore<sequencer_service_rpc::SequencerClient>, AccountId)> {
@@ -95,6 +99,18 @@ async fn main() -> Result<()> {
     let private0 = seed.private_account_ids(1)?[0];
 
     ensure!(!(a.public_only && a.private_only), "--public-only and --private-only exclude each other");
+    if a.balances {
+        let mut user = lez::open_wallet(&a.lez_wallet, &a.sequencer, &a.lez_password_file, &seed)?;
+        user.sync_to_latest_block().await.map_err(|e| anyhow!("syncing the wallet: {e}"))?;
+        let public = user.get_account_balance(public0).await.map_err(|e| anyhow!("reading public /0: {e}"))?;
+        let private = user.get_account_private(private0).and_then(|acc| acc.data.native_balance().ok()).unwrap_or(0);
+        println!(
+            "{}",
+            json!({"step": "balances (nothing sent)", "public_0": public.to_string(), "private_0": private.to_string(),
+                   "public_0_id": public0.to_string(), "private_0_id": private0.to_string()})
+        );
+        return Ok(());
+    }
     if !a.private_only {
         step_faucet(&a, public0, public0_key).await?;
     }

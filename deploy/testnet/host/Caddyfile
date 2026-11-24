@@ -88,8 +88,11 @@
 	}
 	# The network's gas-drop relayer (RFP-022 U.5, Priv.7): its terms, its guest and its inbox, through the gateway's
 	# checks and caps (ferrata-gateway, "gas drops"); `ferrata claim` reads the terms from its sequencer's origin.
+	# No access log for these routes (review F5): a line with the client's address and the time of a job's POST would link
+	# that address to the claim's N, which the relayer's own log carries. The gateway logs neither.
 	@gasdrop path /relayer/gas-drop /relayer/gas-drop/ /relayer/gas-drop/guest
 	handle @gasdrop {
+		log_skip
 		import gateway
 	}
 
