@@ -433,10 +433,18 @@ Rectangle {
             });
             return;
         }
-        refreshInfo();
+        // The selection shows what the backend answered: its accounts, its refusal, or (inside Logos, after a few seconds
+        // without an answer) that the core module may not be loaded: Basecamp starts it only from its Module Inspector.
+        connectError = "";
+        connectSlow = false;
+        refreshInfo(function (ok, v) { if (!ok) connectError = String(v); });
         resumeJobs();
         selecting = true;
+        if (transport === "module") connectSlowTimer.restart();
     }
+    property string connectError: ""
+    property bool connectSlow: false
+    Timer { id: connectSlowTimer; interval: 8000; onTriggered: connectSlow = selecting && !info && connectError === "" }
     function approve() { var a = approval; approval = null; if (a && a.go) a.go(); }
     function reject() { approval = null; lastError = "Rejected in the wallet: nothing was signed or sent."; lastOk = false; }
 
@@ -1200,7 +1208,14 @@ Rectangle {
                     model: info ? [info.user.depositor] : []
                     Button { objectName: "wallet.account." + index; text: "Ethereum " + modelData + " · LEZ accounts /0–/7 of the same seed"; Layout.fillWidth: true; onClicked: { connectedAccount = modelData; selecting = false; refreshPositions(); } }
                 }
-                Label { visible: !info; text: "Waiting for the backend…"; color: "#8a6d00" }
+                Label { visible: !info && connectError === "" && !connectSlow; text: "Waiting for the backend…"; color: "#8a6d00" }
+                Label {
+                    objectName: "wallet.slow"
+                    visible: !info && connectError === "" && connectSlow
+                    text: "No answer from ferrata_bridge_module yet. In Basecamp it runs only once it is loaded: Settings → Module Inspector → Ferrata bridge → Load."
+                    wrapMode: Text.WordWrap; Layout.fillWidth: true; color: "#8a6d00"
+                }
+                Label { objectName: "wallet.error"; visible: !info && connectError !== ""; text: Fmt.friendly(connectError); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: "#b3261e" }
                 Button { objectName: "wallet.cancel"; text: "Cancel"; onClicked: selecting = false }
             }
         }

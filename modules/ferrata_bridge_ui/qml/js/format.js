@@ -32,6 +32,9 @@ function pct(used, capacity) {
 
 // The program's and the vault's codes, by name, mapped to what the user can do.
 var MESSAGES = [
+    // Inside Logos the bridge module's wallet session is opened with a chain service (the stand-in for Logos's Ethereum
+    // and LEZ modules), which the view does not open: in Basecamp a person meets this on the first call.
+    [/no wallet session/, "Not connected to a network: the bridge module has no session. It reads and sends only through a chain service (a stand-in for Logos's Ethereum and LEZ modules), and none is open here. Nothing was read or sent."],
     // The module's jobs (its private claim and burn run for minutes): busy while one is proven, one at a time, a job the
     // module does not know (it was restarted).
     [/^busy: job \d+/, "Busy: a private transaction is being proven. This can be done once it is finished."],

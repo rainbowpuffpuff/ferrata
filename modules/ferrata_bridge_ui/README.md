@@ -158,7 +158,10 @@ with the private claim and burn proven for real; its results go to `results-real
   - **Operator stand-ins.** The operator's import, the checkpoint and the gas drop are stand-ins run by the test
     (`ops.sh`); the vault's verifier is the mock.
   - **Not the Basecamp users run.** This was its dev build, headless, in standalone mode, with the modules
-    installed from local `.lgx` files.
+    installed from local `.lgx` files. In the release Basecamp (0.4.0-rc.2 AppImage, 24 Nov 2026) the signed packages
+    of `a0f38827` install and the view opens once the module is loaded in the Module Inspector, but every call stops
+    at the module's missing session (no chain service there): the connect dialog now says so, and says to load the
+    module when it does not answer (`deploy/testnet/web/basecamp/`, Install).
   - **The jobs' limits.** The module keeps its jobs in memory (at most 64): a module restarted during a proof loses
     them, and the view then says "Unknown job". One private transaction at a time, and while it is proven the module
     refuses at once the reads that would wait for `lez_core` (the view defers its refresh). A view opened again keeps
