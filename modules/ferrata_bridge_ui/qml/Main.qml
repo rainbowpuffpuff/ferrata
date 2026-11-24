@@ -14,6 +14,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import "js/privacy.js" as Privacy
 import "js/format.js" as Fmt
+import "js/seal.js" as Seal
 
 Rectangle {
     id: root
@@ -56,43 +57,123 @@ Rectangle {
     property string endpointsVia: ""
 
     // ---- the network session (inside Logos): this view on a Ferrata test network's public endpoints --------------
-    // ferrata_bridge_module opens it (open_network) with the network's address, an Ethereum endpoint and the person's
-    // recovery phrase, checks the network against the deployment it knows, and keeps the keys it derives for the session
-    // only. The view sends the phrase once and clears its field; a new phrase's words are shown once.
+    // ferrata_bridge_module opens it (seal_key, then open_network) with the network's address, an Ethereum endpoint and
+    // the person's recovery phrase, checks the network against the deployment it knows, and keeps the keys it derives for
+    // the session only. The phrase never crosses Logos Core's IPC in clear (which Qt's debug logging writes to
+    // Basecamp's log): the view seals it to the module's one-time X25519 key (js/seal.js), and a new phrase's words come
+    // back sealed to the view. The session is this view's: every later call carries a MAC under the key agreed then
+    // (netKeys, netN), and every reply names the session's public account /0, which must be the one this view opened.
     property bool netOpen: false
+    property bool netOpening: false
     property var netSession: null
-    property var netWords: []
+    property var netKeys: null
+    property int netN: 0
+    property string netAccount0: ""
+    property string netCaller: ""
+    property string netWordsText: ""
     property string netStatus: ""
     property bool netStatusBad: false
     property string faucetText: ""
     property var depositPlan: null
+    // The recovery phrase as typed or pasted: bytes in phraseBuf, never one string (a JavaScript or Qt string cannot be
+    // wiped); keys go straight from the keyboard into it, and it is wiped once sealed, on Clear, and on close.
+    property var phraseBuf: new Uint8Array(512)
+    property int phraseLen: 0
+    property int phraseWords: 0
+    function phraseAppend(c) { if (phraseLen < phraseBuf.length) { phraseBuf[phraseLen] = c; phraseLen += 1; } phraseCount(); }
+    function phraseBack() { if (phraseLen > 0) { phraseLen -= 1; phraseBuf[phraseLen] = 0; } phraseCount(); }
+    function phraseClear() { phraseBuf.fill(0); phraseLen = 0; phraseWords = 0; }
+    function phraseCount() {
+        var n = 0, inWord = false;
+        for (var i = 0; i < phraseLen; i++) { var sp = phraseBuf[i] === 32; if (!sp && !inWord) n++; inWord = !sp; }
+        phraseWords = n;
+    }
+    // One character: the English word list's letters (upper case taken as lower), and single spaces between words.
+    function phraseChar(c) {
+        if (c >= 65 && c <= 90) c += 32;
+        if (c === 9 || c === 10 || c === 13) c = 32;
+        if (c === 32) { if (phraseLen > 0 && phraseBuf[phraseLen - 1] !== 32) phraseAppend(32); return; }
+        if (c >= 97 && c <= 122) phraseAppend(c);
+    }
+    function phraseKey(event) {
+        if (event.key === Qt.Key_Backspace) { phraseBack(); event.accepted = true; return; }
+        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) { if (canOpen()) netOpenSession(false); event.accepted = true; return; }
+        if (event.matches(StandardKey.Paste)) {
+            // A paste: read once from the clipboard through a hidden field, which is emptied at once.
+            pasteBox.text = ""; pasteBox.paste();
+            var t = pasteBox.text; pasteBox.text = "";
+            for (var i = 0; i < t.length; i++) phraseChar(t.charCodeAt(i));
+            event.accepted = true; return;
+        }
+        if (event.text && event.text.length === 1) { phraseChar(event.text.charCodeAt(0)); event.accepted = true; }
+    }
+    function canOpen() { return busy === 0 && !netOpening && fNet.text.trim() !== "" && phraseWords >= 12; }
+    function bytesText(b) { var s = ""; for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return s; }
     function netOpenSession(generate) {
-        var p = { network: fNet.text.trim(), eth_rpc: fNetEth.text.trim() };
-        if (fDepositor.text.trim() !== "") p.depositor = fDepositor.text.trim();
-        if (generate) p.generate = true; else p.phrase = fPhrase.text;
+        netOpening = true;
         netStatus = "Checking the network: its configuration, the vault on Sepolia, the bridge on LEZ…";
         netStatusBad = false;
-        call("open_network", p, function (ok, v) {
-            fPhrase.text = "";
-            if (!ok) { netStatus = "Not opened: " + String(v); netStatusBad = true; return; }
-            netSession = v; netOpen = true;
-            netStatus = "Open. Checked: " + v.checks.join("; ") + ".";
-            if (v.words) netWords = v.words;
-            refreshInfo(); refreshRegistry();
+        // The phrase's bytes leave the field now: it is empty from here on, whatever the module answers.
+        var phrase = null;
+        if (!generate) {
+            var len = phraseLen;
+            while (len > 0 && phraseBuf[len - 1] === 32) len--;
+            phrase = new Uint8Array(len);
+            phrase.set(phraseBuf.subarray(0, len));
+            phraseClear();
+        }
+        var p = { network: fNet.text.trim(), eth_rpc: fNetEth.text.trim() };
+        if (fDepositor.text.trim() !== "") p.depositor = fDepositor.text.trim();
+        var fail = function (why) { Seal.wipe(phrase); netOpening = false; netStatus = "Not opened: " + why; netStatusBad = true; };
+        call("seal_key", {}, function (ok, k) {
+            if (!ok) { fail(String(k)); return; }
+            var a = generate ? Seal.viewKeyFor(k.public_key) : Seal.sealPhrase(k.public_key, phrase);
+            Seal.wipe(phrase);
+            if (!a) { fail("the module's key is not usable"); return; }
+            netCaller = String(k.caller);
+            p.key_id = k.key_id;
+            p.view_key = a.viewKey;
+            if (generate) p.generate = true; else p.phrase_sealed = { ct: a.ct, mac: a.mac };
+            call("open_network", p, function (ok2, v) {
+                netOpening = false;
+                if (!ok2) {
+                    netStatus = "Not opened: " + String(v);
+                    netStatusBad = true;
+                    Seal.wipeKeys(a.keys);
+                    return;
+                }
+                netKeys = a.keys; netN = 0; netAccount0 = String(v.account0);
+                netSession = v; netOpen = true;
+                netStatus = "Open (Logos Core named this view as the caller: " + netCaller + "). Checked: " + v.checks.join("; ") + ".";
+                if (v.words_sealed) {
+                    var w = Seal.openWords(a.keys, v.words_sealed.ct, v.words_sealed.mac);
+                    if (w) { netWordsText = bytesText(w); Seal.wipe(w); }
+                    else { netStatus += " The new phrase's words did not open: close this session and make another."; netStatusBad = true; }
+                }
+                refreshInfo(); refreshRegistry();
+            }, true);
         }, true);
+    }
+    // The view's side of the session dropped: its key wiped, everything it showed cleared.
+    function wipeNet() {
+        Seal.wipeKeys(netKeys);
+        netKeys = null; netN = 0; netAccount0 = ""; netOpen = false; netSession = null; netWordsText = "";
+        info = null; positions = null; registry = null; connectedAccount = ""; faucetText = "";
+        approval = null; depositPlan = null; phraseClear();
     }
     function netClose() {
         call("close", {}, function () {
-            netOpen = false; netSession = null; netWords = []; info = null; positions = null; registry = null;
-            connectedAccount = ""; depositPlan = null; faucetText = "";
-            netStatus = "Session closed: the module dropped the keys."; netStatusBad = false;
+            wipeNet();
+            netStatus = "Session closed: the module wiped the keys it held.";
+            netStatusBad = false;
         }, true);
     }
     function netFaucet(i) {
         faucetText = "Asking the network's faucet for account /" + i + "…";
         call("faucet", { account: i }, function (ok, v) {
-            faucetText = ok ? "Faucet: account /" + v.account + " now holds " + Fmt.units(v.balance, 9, "LGO") + " (was " + Fmt.units(v.balance_before, 9, "LGO") + "; transaction " + Fmt.short(String(v.tx_hash)) + ")."
-                            : "Faucet: " + String(v);
+            faucetText = !ok ? "Faucet: " + String(v)
+                : (v.seen ? "Faucet: account /" + v.account + " now holds " + Fmt.units(v.balance, 9, "LGO") + " (was " + Fmt.units(v.balance_before, 9, "LGO") + "; transaction " + Fmt.short(String(v.tx_hash)) + ")."
+                          : "Faucet: sent (transaction " + Fmt.short(String(v.tx_hash)) + "); not in the balance yet: read the balances in a moment.");
         }, true);
     }
     function netReadBalances() {
@@ -193,15 +274,20 @@ Rectangle {
             if (done) done(ok, value);
         };
         if (transport === "module") {
-            // One method of the module serves the view: `wallet`, with the call's name and parameters.
+            // One method of the module serves the view: `wallet`, with the call's name and parameters; in the network
+            // session with the call's counter and its MAC under the session's key (only this view holds it).
             var req = JSON.stringify({ method: method, params: params || {} });
+            if (netKeys) {
+                netN += 1;
+                req = JSON.stringify({ call: req, n: netN, mac: Seal.macCall(netKeys, netN, req) });
+            }
             try {
                 // Basecamp's bridge also calls asynchronously: the view then does not hold Basecamp's GUI thread
                 // while the module works (a host without it, such as the Qt Quick Test runner, is called synchronously).
                 if (typeof logos.callModuleAsync === "function")
-                    logos.callModuleAsync("ferrata_bridge_module", "wallet", [req], function (payload) { moduleReply(payload, finish); }, moduleTimeoutMs);
+                    logos.callModuleAsync("ferrata_bridge_module", "wallet", [req], function (payload) { moduleReply(payload, finish, method); }, moduleTimeoutMs);
                 else
-                    moduleReply(logos.callModule("ferrata_bridge_module", "wallet", [req]), finish);
+                    moduleReply(logos.callModule("ferrata_bridge_module", "wallet", [req]), finish, method);
             } catch (e) {
                 finish(false, "ferrata_bridge_module: " + e);
             }
@@ -225,13 +311,27 @@ Rectangle {
     // ({error, module, method, message}: the module not loaded or not reachable, a timeout) is reported as the host's;
     // after a timeout the call's outcome is unknown (the module may still complete it), so the message says to refresh
     // before repeating the step.
-    function moduleReply(raw, finish) {
+    function moduleReply(raw, finish, method) {
         var r = raw;
         try {
             for (var i = 0; i < 2 && typeof r === "string"; i++) r = JSON.parse(r);
         } catch (e) {
             finish(false, "ferrata_bridge_module: unreadable reply: " + String(raw).slice(0, 200));
             return;
+        }
+        // The network session's replies name its public account /0: it must be the one this view opened (review H1).
+        if (netOpen && r && r.ok !== undefined) {
+            if (r.session_account === undefined && method !== "close") {
+                wipeNet();
+                netStatus = "The module has no network session any more (15 minutes without a call, or the module restarted): open it again.";
+                netStatusBad = true;
+                finish(false, "ferrata_bridge_module: the network session ended");
+                return;
+            }
+            if (r.session_account !== undefined && r.session_account !== netAccount0) {
+                finish(false, "refused by the view: the module's network session is not the one this view opened (its account /0 is " + r.session_account + ", not " + netAccount0 + "): close the session and open it again");
+                return;
+            }
         }
         if (r && r.ok === false) { finish(false, r.error); return; }
         if (r && r.ok === undefined && r.error !== undefined) {
@@ -627,32 +727,55 @@ Rectangle {
                 Layout.fillWidth: true
                 RowLayout { PlainLabel { text: "Network address"; Layout.preferredWidth: 170 } TextField { id: fNet; objectName: "net.address"; placeholderText: "https://… (the test network's address, as its /basecamp/ page names it)"; Layout.preferredWidth: 560 } }
                 RowLayout { PlainLabel { text: "Sepolia RPC"; Layout.preferredWidth: 170 } TextField { id: fNetEth; objectName: "net.eth"; text: "https://ethereum-sepolia-rpc.publicnode.com"; Layout.preferredWidth: 560 } }
-                RowLayout { PlainLabel { text: "Recovery phrase"; Layout.preferredWidth: 170 } TextField { id: fPhrase; objectName: "net.phrase"; echoMode: TextInput.Password; placeholderText: "12 or 24 words (BIP-39): a phrase for the test network, never one that holds value"; Layout.preferredWidth: 560 } }
+                RowLayout {
+                    PlainLabel { text: "Recovery phrase"; Layout.preferredWidth: 170 }
+                    // Not a text field: each key goes into phraseBuf (bytes), so the phrase is never one string here.
+                    Rectangle {
+                        id: fPhrase
+                        objectName: "net.phrase"
+                        Layout.preferredWidth: 560
+                        implicitHeight: 34
+                        color: "white"; radius: 4
+                        border.color: activeFocus ? "#3b6fd4" : "#c4cbd4"; border.width: activeFocus ? 2 : 1
+                        activeFocusOnTab: true
+                        Keys.onPressed: function (event) { phraseKey(event) }
+                        MouseArea { anchors.fill: parent; onClicked: fPhrase.forceActiveFocus() }
+                        Text {
+                            anchors.fill: parent; anchors.margins: 8
+                            textFormat: Text.PlainText; elide: Text.ElideRight; verticalAlignment: Text.AlignVCenter
+                            color: phraseLen > 0 ? "#1d2733" : "#8a93a0"
+                            text: phraseLen > 0 ? "●".repeat(Math.min(phraseLen, 40)) + "   " + phraseWords + (phraseWords === 1 ? " word" : " words")
+                                                : "12 or 24 words (BIP-39): click here, then type or paste them (a test phrase, never one that holds value)"
+                        }
+                    }
+                    Button { objectName: "net.phraseClear"; text: "Clear"; visible: phraseLen > 0; onClicked: phraseClear() }
+                    TextInput { id: pasteBox; visible: false; echoMode: TextInput.Password }
+                }
                 RowLayout { PlainLabel { text: "Your Sepolia address"; Layout.preferredWidth: 170 } TextField { id: fDepositor; objectName: "net.depositor"; placeholderText: "0x… (optional: the account Logos's signer sends your deposits from)"; Layout.preferredWidth: 560 } }
                 RowLayout {
-                    Button { objectName: "net.open"; text: "Open with this phrase"; enabled: busy === 0 && fNet.text.trim() !== "" && fPhrase.text.trim() !== ""; onClicked: netOpenSession(false) }
-                    Button { objectName: "net.generate"; text: "New phrase"; enabled: busy === 0 && fNet.text.trim() !== ""; onClicked: netOpenSession(true) }
+                    Button { objectName: "net.open"; text: "Open with this phrase"; enabled: canOpen(); onClicked: netOpenSession(false) }
+                    Button { objectName: "net.generate"; text: "New phrase"; enabled: busy === 0 && !netOpening && fNet.text.trim() !== ""; onClicked: netOpenSession(true) }
                 }
-                Note { text: "The phrase goes once to ferrata_bridge_module, which keeps what it derives from it (the keys of public accounts /0-/7 and the bridge seed) in Basecamp's memory for this session only: nothing is written to disk or logged, and closing the session or Basecamp drops them. The network sees signatures and account ids only. Ethereum transactions are never signed here: Logos's signer signs a deposit after you approve it. The module accepts only the deployment it knows (bridge program, configuration, vault, Sepolia) and refuses any other." }
+                Note { objectName: "net.note"; text: "Where your phrase goes: it is kept here as bytes as you type it (a paste passes through the clipboard), then sealed to ferrata_bridge_module's one-time key, so it never crosses Logos Core's IPC in clear, and wiped from this view. The module opens it only to derive the keys of public accounts /0-/7 and the bridge keys, wipes it, and keeps those keys in its memory (not dumpable, not readable by other processes) until you close the session, quit Basecamp, or 15 minutes pass without a call. What passed through Basecamp's window (your keystrokes, a paste) may stay in its memory until reused: use a test phrase, never one that holds value. Only this view can use the session (each call is signed with a key agreed when it opens). Every LEZ transaction is shown to you before the module signs it. The module accepts only the deployment it knows (bridge program, configuration, vault, Sepolia) and refuses any other; the network's own answers (positions, balances) are trusted as they come." }
             }
             PlainLabel { objectName: "net.status"; text: netStatus; visible: netStatus !== ""; wrapMode: Text.WordWrap; Layout.fillWidth: true; color: netStatusBad ? "#b3261e" : "#1b6b3a" }
             ColumnLayout {
-                visible: netWords.length > 0
+                visible: netWordsText !== ""
                 Layout.fillWidth: true
-                PlainLabel { text: "Your new recovery phrase, shown once: write it down, then hide it. The module keeps no copy of the words."; font.bold: true; wrapMode: Text.WordWrap; Layout.fillWidth: true }
-                PlainLabel { objectName: "net.words"; text: netWords.map(function (w, i) { return (i + 1) + ". " + w; }).join("   "); wrapMode: Text.WordWrap; Layout.fillWidth: true; font.family: "monospace" }
-                Button { objectName: "net.wordsDone"; text: "I have written them down"; onClicked: netWords = [] }
+                PlainLabel { text: "Your new recovery phrase, shown once: write it down, then hide it. It came to this view sealed; the module kept only the keys it derived. This window's memory may hold the words until Basecamp quits."; font.bold: true; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                PlainLabel { objectName: "net.words"; text: netWordsText === "" ? "" : netWordsText.split(" ").map(function (w, i) { return (i + 1) + ". " + w; }).join("   "); wrapMode: Text.WordWrap; Layout.fillWidth: true; font.family: "monospace" }
+                Button { objectName: "net.wordsDone"; text: "I have written them down"; onClicked: netWordsText = "" }
             }
             ColumnLayout {
                 visible: netOpen
                 Layout.fillWidth: true
-                PlainLabel { objectName: "net.accounts"; text: netOpen ? "LEZ public /0: " + netSession.public_accounts[0].id + "  ·  Sepolia address: " + (netSession.depositor ? netSession.depositor : "none (planning a deposit needs one)") : ""; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                PlainLabel { objectName: "net.accounts"; text: netOpen ? "LEZ public /0: " + netAccount0 + "  ·  Sepolia address: " + (netSession.depositor ? netSession.depositor : "none given") : ""; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 RowLayout {
                     Button { objectName: "net.faucet"; text: "Get test LGO for /0 (the network's faucet)"; enabled: busy === 0 && !jobRunning(); onClicked: netFaucet(0) }
                     Button { objectName: "net.balances"; text: "LGO balances"; enabled: busy === 0 && !jobRunning(); onClicked: netReadBalances() }
                 }
                 PlainLabel { objectName: "net.faucetText"; text: faucetText; visible: faucetText !== ""; wrapMode: Text.WordWrap; Layout.fillWidth: true; font.pixelSize: 12 }
-                Note { text: "In this session: the registry and the vault read, your positions found from your phrase, a deposit planned up to its approval (Logos's signer sends it), the plaintext claim of a deposit to one of your public accounts, the public burn, and the release handed to the ferrata tool. A private claim or burn needs a proof made on your machine (the ferrata tool, same phrase)." }
+                Note { text: "In this session: the registry and the vault read, your positions found from your phrase, the plaintext claim of a deposit to one of your public accounts and the public burn (each shown to you before the module signs it), a deposit planned up to its approval (Logos's signer sends it), and the release handed to the ferrata tool. A private claim or burn needs a proof made on your machine (the ferrata tool, same phrase)." }
             }
         }
 
@@ -1253,7 +1376,31 @@ Rectangle {
         });
     }
 
+    // The network session: the module builds the transaction and signs nothing; the prompt shows what it would sign (the
+    // call, the amounts, the address, the signer, the fee ceiling, the message hash); Approve sends `confirm` with its id
+    // and the module signs exactly that, once; Reject leaves it unsigned (it lapses after five minutes).
+    function prepareNet(kind, params) {
+        call(kind, params, function (ok, v) {
+            if (!ok || !v || !v.to_approve) return;
+            var r = v.to_approve;
+            var rows = [["Requested by", "Ferrata Bridge (ferrata_bridge_ui)"], ["Call", r.what], ["Amount", Fmt.eth(r.amount)]];
+            if (kind === "burn") rows.push(["Release to", r.recipient + " on Sepolia (encrypted in the note)"]);
+            else rows.push(["To", r.destination], ["Deposit", "#" + r.leaf_index + " (a plaintext claim names it)"]);
+            rows.push(["Signed by", r.signers.join(", ") + ", by ferrata_bridge_module, once you approve"],
+                      ["LEZ fee", "paid by " + r.payer + ": at most " + Fmt.units(r.max_fee, 9, "LGO") + " (it holds " + Fmt.units(r.payer_balance, 9, "LGO") + ")"],
+                      ["Message hash", r.message_hash]);
+            propose({
+                title: kind === "burn" ? "Burn on LEZ (public)" : "Plaintext claim on LEZ",
+                rows: rows,
+                effects: kind === "burn"
+                    ? ["Debits " + Fmt.eth(r.amount) + " from public /" + r.account + "'s holding", "Publishes a burn note whose memo encrypts the address above; the release is then made with the ferrata tool", "Nothing is signed until you approve; then exactly this message"]
+                    : ["Spends the deposit's nullifier in public, naming the deposit", "Credits " + Fmt.eth(r.amount) + " to your public account /" + r.account, "Nothing is signed until you approve; then exactly this message"]
+            }, function () { step("confirm", { pending_id: r.pending_id }); });
+        });
+    }
+
     function reviewClaim() {
+        if (netOpen) { prepareNet("claim", { leaf_index: claimLeaf, private: false }); return; }
         var d = depositOf(claimLeaf);
         propose({
             title: claimMode === "private" ? "Private claim on LEZ" : "Plaintext claim on LEZ",
@@ -1274,6 +1421,11 @@ Rectangle {
     }
 
     function reviewBurn() {
+        if (netOpen) {
+            prepareNet("burn", { account: 0, amount: denomAmount(burnDenom), recipient: recipient.trim(), private: burnKind === "private",
+                                 release_delay_ms: releaseDelayOn ? releaseDelayHours * 3600 * 1000 : 0 });
+            return;
+        }
         propose({
             title: "Burn on LEZ",
             rows: [["Requested by", "Ferrata Bridge (ferrata_bridge_ui)"], ["Account", burnKind + " LEZ account /0"], ["Asset", "wrapped ETH"], ["Amount", denomText(burnDenom)], ["Destination", "release to " + recipient + " on Ethereum (encrypted in the note)"]],

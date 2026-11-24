@@ -122,6 +122,12 @@ pub(crate) fn phase(state: &'static str, detail: Value) {
 }
 
 /// The record of the job that is running, if one is.
+/// Forgets every job's record (a network session closed: its amounts, recipients and transactions are not kept for the
+/// next caller). A job still running finishes, unrecorded.
+pub(crate) fn forget() {
+    lock().list.clear();
+}
+
 pub(crate) fn active() -> Option<Value> {
     let g = lock();
     let now = now_ms();

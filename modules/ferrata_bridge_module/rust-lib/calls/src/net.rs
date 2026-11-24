@@ -7,21 +7,33 @@
 //! `ferrata` tool check it, and refused on any difference: the network's own `/wallet/config.json` must name the
 //! known bridge program, configuration, vault and chain; the Ethereum endpoint must answer that chain, with the vault's
 //! contract holding that configuration (`lezConfigId()`); on LEZ the bridge program's account must carry the known
-//! image id and the configuration must be paired (`config(cid)` ready) with that vault and chain.
+//! image id and the configuration must be paired (`config(cid)` ready) with that vault and chain. The LEZ checks are
+//! answered by the same host whose configuration they check: they catch a misconfigured network, not a compromised
+//! one. What protects the person against a lying host is that the program, the configuration, the vault and the chain
+//! are compiled in here and every message signed and every vault call built uses them, never a host's answer; a lying
+//! host can still misreport positions, holdings and settlement, or censor.
 //!
-//! Keys: the person's recovery phrase (BIP-39), entered in the mini-app or made here (its words returned once, in the
-//! reply that makes it). From it the session keeps, in this process's memory only and zeroized on `close`: the
-//! signing keys of public accounts `/0`..`/7` (LEZ's key tree, `lezkey.rs`) and the bridge seed. The phrase and the
-//! 64-byte seed are dropped as soon as those are derived. Nothing is written to disk; nothing is logged; no key leaves
-//! the module (the network sees signatures, public keys and account ids). Ethereum transactions are never signed here:
-//! a deposit goes through Logos Core's send stack (`tx_sender_module`, one approval in the Logos signer).
+//! Who may use it (session.rs): only the mini-app's view (`ferrata_bridge_ui`, as Logos Core names the caller), and
+//! once open only the view that opened it: every call carries a MAC under a key agreed when it opened (`seal.rs`).
+//! An open session is not replaced (close it first) and ends by itself after [`IDLE`] without a call. A LEZ
+//! transaction is signed in two steps: [`prepare`] builds it and returns what the person approves (the call, its payer,
+//! its fee ceiling, the message hash); [`confirm`] signs exactly that, once.
+//!
+//! Keys: the person's recovery phrase (BIP-39), sealed by the view to this module's one-time key (`seal.rs`) or made
+//! here (its words sealed back to the view, which shows them once). From it the session keeps, in this process's
+//! memory only, the signing keys of public accounts `/0`..`/7` (LEZ's key tree, `lezkey.rs`) and the bridge keys
+//! (kAuth, kView); the phrase, the 64-byte seed and the bridge seed are wiped as soon as those are derived, and the
+//! keys are wiped when the session ends (close, idle, Basecamp quitting). The process is made non-dumpable while it
+//! holds them (Linux: `PR_SET_DUMPABLE`, so no core dump and no ptrace or /proc reads by other processes of the user).
+//! Nothing is written to disk; no key leaves the module (the network sees signatures, public keys and account ids).
+//! Ethereum transactions are never signed here.
 //!
 //! What runs here: the public side, as the web wallet runs it in a page: the registry, the positions recovered from the
 //! phrase, the faucet, a deposit planned to its approval, the plaintext claim of a deposit to a public account, the
 //! public burn, and the release's hand-off (the release proof is the `ferrata` tool's, on the person's machine). A
 //! private claim or burn needs a proof of LEZ's privacy circuit, which this module does not make.
 
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
 use borsh::BorshDeserialize as _;
@@ -32,6 +44,7 @@ use serde_json::{json, Value};
 use zeroize::Zeroizing;
 
 use crate::lezkey::{self, Evidence, Fee, Message, PublicAccount};
+use crate::seal;
 use crate::{fixed, hex, unhex};
 
 /// One deployment this module serves: the bridge program, its configuration, the vault and the chain.
@@ -71,11 +84,32 @@ pub(crate) const GAP: u32 = 8;
 pub(crate) const CLAIM_GAS: u64 = 1_000_000;
 pub(crate) const BURN_GAS: u64 = 1_000_000;
 
+/// The most LEZ fee this module signs for one call, in 10^-9 LGO: 1 LGO. At the network's base fees a claim or a burn
+/// reserves about 0.064; a host that asks for more than this ceiling is refused, nothing signed.
+pub(crate) const MAX_FEE: u128 = 1_000_000_000;
+
+/// A session nobody has called for this long ends at the next call (its keys wiped): a view that went away without
+/// closing it leaves no keys behind for good, and a new session can be opened.
+pub(crate) const IDLE: Duration = Duration::from_secs(15 * 60);
+
+/// How long a transaction prepared for the person's approval waits for `confirm`.
+const PENDING_TTL: Duration = Duration::from_secs(300);
+
 const TIMEOUT: Duration = Duration::from_secs(30);
 
 pub(crate) const PRIVATE_NEEDS_PROOF: &str = "a private claim or burn needs a proof of LEZ's privacy circuit made with the \
 account's keys, which this session does not make: run it with the `ferrata` tool from the same phrase (ferrata claim, \
 ferrata burn), or choose the plaintext claim or public burn here";
+
+pub(crate) const ALREADY_OPEN: &str = "refused: a network session is open in this module; close it first (Close the session in \
+the view that opened it, or quit Basecamp; it also ends after 15 minutes without a call)";
+
+/// What the person is told about their phrase (open_network's reply, the panel).
+pub(crate) const PHRASE_NOTE: &str = "your phrase reached ferrata_bridge_module sealed to its one-time key (never in clear on \
+Logos Core's IPC), was opened there only to derive the keys of public accounts /0-/7 and the bridge keys, and was wiped; those \
+keys stay in the module's memory (its process not dumpable or readable by other processes) until you close the session, quit \
+Basecamp, or 15 minutes pass without a call. What you typed or pasted passed through Basecamp's window (its keyboard events, \
+a paste through the clipboard), whose memory the module cannot wipe";
 
 // ------------------------------------------------------------------------------------------------ endpoints
 
@@ -87,12 +121,12 @@ fn host_of(authority: &str) -> &str {
 }
 
 /// An endpoint the session may use: `https://`, or plain `http://` to this machine only (127.0.0.0/8, ::1,
-/// localhost). Returned without a trailing slash. No credentials in the URL.
+/// localhost). Returned without a trailing slash. No credentials, query or fragment in the URL.
 pub(crate) fn endpoint(url: &str, what: &str) -> Result<String, String> {
     let u = url.trim().trim_end_matches('/');
     let (scheme, rest) = u.split_once("://").ok_or_else(|| format!("{what} {u:?}: not a URL (https://…)"))?;
     let authority = rest.split('/').next().unwrap_or("");
-    if authority.is_empty() || authority.contains('@') || u.chars().any(char::is_whitespace) {
+    if authority.is_empty() || authority.contains('@') || u.chars().any(|c| c.is_whitespace() || c == '?' || c == '#') {
         return Err(format!("{what} {u:?}: not a usable address"));
     }
     match scheme.to_ascii_lowercase().as_str() {
@@ -206,18 +240,7 @@ impl Lez {
     /// The account's actor state under `program`, if it has one.
     pub(crate) fn state_of(&self, account: &[u8; 32], program: &[u8; 32]) -> Result<Option<Vec<u8>>, String> {
         let a = self.account(account)?;
-        let v = &a["data"]["actor_states"][lezkey::id_string(program)];
-        match v {
-            Value::Null => Ok(None),
-            Value::Array(bytes) => Ok(Some(
-                bytes.iter().map(|b| b.as_u64().filter(|x| *x < 256).map(|x| x as u8)).collect::<Option<Vec<u8>>>().ok_or("an actor state that is not bytes")?,
-            )),
-            Value::String(s) => {
-                use base64::Engine as _;
-                Ok(Some(base64::engine::general_purpose::STANDARD.decode(s).map_err(|_| "an actor state that is not base64")?))
-            }
-            _ => Err("an actor state in an unknown form".into()),
-        }
+        state_bytes(&a["data"]["actor_states"][lezkey::id_string(program)])
     }
 
     pub(crate) fn state(&self, actor: &WActor) -> Result<Option<Vec<u8>>, String> {
@@ -249,6 +272,21 @@ impl Lez {
     }
 }
 
+/// An actor state as the RPC gives it: bytes (each 0..=255) or base64; anything else is refused.
+fn state_bytes(v: &Value) -> Result<Option<Vec<u8>>, String> {
+    match v {
+        Value::Null => Ok(None),
+        Value::Array(bytes) => Ok(Some(
+            bytes.iter().map(|b| b.as_u64().filter(|x| *x < 256).map(|x| x as u8)).collect::<Option<Vec<u8>>>().ok_or("an actor state that is not bytes")?,
+        )),
+        Value::String(s) => {
+            use base64::Engine as _;
+            Ok(Some(base64::engine::general_purpose::STANDARD.decode(s).map_err(|_| "an actor state that is not base64")?))
+        }
+        _ => Err("an actor state in an unknown form".into()),
+    }
+}
+
 /// An amount the RPC sends as a JSON number or a decimal string.
 fn amount(v: &Value, what: &str) -> Result<u128, String> {
     match v {
@@ -260,6 +298,87 @@ fn amount(v: &Value, what: &str) -> Result<u128, String> {
 
 // ------------------------------------------------------------------------------------------------ the session
 
+/// The bridge keys (two HMAC-SHA256 states keyed with kAuth and kView: plain data, no heap, no destructor of their
+/// own), overwritten when the session ends: the bridge core's `BridgeKeys` has no zeroize.
+struct WipedKeys(Box<std::mem::ManuallyDrop<BridgeKeys>>);
+
+const _: () = assert!(!std::mem::needs_drop::<BridgeKeys>());
+
+impl WipedKeys {
+    fn new(k: BridgeKeys) -> Self {
+        Self(Box::new(std::mem::ManuallyDrop::new(k)))
+    }
+
+    fn wipe(&mut self) {
+        let p: *mut BridgeKeys = &mut **self.0;
+        // SAFETY: `p` is the box's live value, borrowed exclusively here; any byte pattern is a valid `MaybeUninit<u8>`.
+        // The value is not read again (wipe runs only on drop) and has no destructor (`ManuallyDrop`, and the assertion
+        // above), so nothing observes the zeroed bytes as a `BridgeKeys`.
+        let bytes = unsafe { std::slice::from_raw_parts_mut(p.cast::<std::mem::MaybeUninit<u8>>(), std::mem::size_of::<BridgeKeys>()) };
+        zeroize::Zeroize::zeroize(bytes);
+    }
+}
+
+impl Drop for WipedKeys {
+    fn drop(&mut self) {
+        self.wipe();
+    }
+}
+
+impl std::ops::Deref for WipedKeys {
+    type Target = BridgeKeys;
+    fn deref(&self) -> &BridgeKeys {
+        &self.0
+    }
+}
+
+/// The counters of the calls accepted (a window of 64 below the highest): no call is accepted twice.
+#[derive(Default)]
+struct Seen {
+    max: u64,
+    bits: u64,
+}
+
+impl Seen {
+    fn accept(&mut self, n: u64) -> bool {
+        if n == 0 {
+            return false;
+        }
+        if n > self.max {
+            let shift = n - self.max;
+            self.bits = if shift >= 64 { 0 } else { self.bits << shift };
+            self.bits |= 1;
+            self.max = n;
+            return true;
+        }
+        let d = self.max - n;
+        if d >= 64 || self.bits & (1u64 << d) != 0 {
+            return false;
+        }
+        self.bits |= 1u64 << d;
+        true
+    }
+}
+
+/// A LEZ transaction built for the person's approval and not yet signed.
+struct Pending {
+    id: String,
+    kind: &'static str,
+    /// The message's borsh, its fee ceiling included: what is signed.
+    bytes: Vec<u8>,
+    signers: Vec<[u8; 32]>,
+    hash: [u8; 32],
+    expect: Option<WActor>,
+    what: String,
+    payer: u32,
+    max_fee: u128,
+    /// The step's reply, completed once the transaction is in a block.
+    reply: Value,
+    /// The public account whose bridge holding the reply reads again afterwards.
+    holding_of: u32,
+    made: Instant,
+}
+
 struct Net {
     lez: Lez,
     faucet: String,
@@ -270,22 +389,99 @@ struct Net {
     eth: String,
     from_block: u64,
     accounts: Vec<PublicAccount>,
-    keys: BridgeKeys,
-    _bridge_seed: Zeroizing<[u8; 32]>,
+    keys: WipedKeys,
+    /// The view's channel (`seal.rs`): the calls' MAC key.
+    channel: seal::Keys,
+    seen: Seen,
+    last_call: Instant,
+    pending: Option<Pending>,
+    account0: String,
 }
 
 static NET: Mutex<Option<Net>> = Mutex::new(None);
 
+/// The session, also after a panic elsewhere held its lock: closing it must always work.
+fn lock_net() -> MutexGuard<'static, Option<Net>> {
+    NET.lock().unwrap_or_else(|p| p.into_inner())
+}
+
 fn with<T>(f: impl FnOnce(&Net) -> Result<T, String>) -> Result<T, String> {
-    let g = NET.lock().map_err(|_| "the network session's lock is poisoned")?;
+    let g = lock_net();
     f(g.as_ref().ok_or("no network session: open one first")?)
 }
 
-/// Ends the session: its keys are zeroized as they are dropped.
-pub(crate) fn close() {
-    if let Ok(mut g) = NET.lock() {
+fn with_mut<T>(f: impl FnOnce(&mut Net) -> Result<T, String>) -> Result<T, String> {
+    let mut g = lock_net();
+    f(g.as_mut().ok_or("no network session: open one first")?)
+}
+
+/// Whether a network session is open.
+pub(crate) fn is_open() -> bool {
+    lock_net().is_some()
+}
+
+/// The open session's public account /0 (base58): every reply names it, and the view checks it is the one it opened.
+pub(crate) fn account0() -> Option<String> {
+    lock_net().as_ref().map(|n| n.account0.clone())
+}
+
+/// Ends the session: its keys are wiped as they are dropped. Whether one was open.
+pub(crate) fn close() -> bool {
+    lock_net().take().is_some()
+}
+
+/// Ends a session nobody has called for [`IDLE`]. Whether it did.
+pub(crate) fn expire_idle() -> bool {
+    let mut g = lock_net();
+    if g.as_ref().is_some_and(|n| n.last_call.elapsed() >= idle_limit()) {
         *g = None;
+        return true;
     }
+    false
+}
+
+fn idle_limit() -> Duration {
+    #[cfg(test)]
+    {
+        let ms = tests::IDLE_MS.load(std::sync::atomic::Ordering::SeqCst);
+        if ms > 0 {
+            return Duration::from_millis(ms);
+        }
+    }
+    IDLE
+}
+
+/// Accepts call `n` of the session if its MAC holds under the view's key and `n` was not used before.
+pub(crate) fn verify_call(n: u64, body: &str, tag: &[u8]) -> Result<(), String> {
+    with_mut(|s| {
+        if !s.channel.verify_call(n, body, tag) {
+            return Err("refused: the call's MAC does not hold: only the view that opened this network session can call it".into());
+        }
+        if !s.seen.accept(n) {
+            return Err(format!("refused: call {n} of this session was made already (a replay)"));
+        }
+        s.last_call = Instant::now();
+        Ok(())
+    })
+}
+
+/// The session's bridge keys, for `crate::keys` (a request that says `"keys": "network_session"`): borrowed under the
+/// session's lock, never copied out. A caller holding it must not call back into this module's session functions.
+pub(crate) struct SessionKeys(MutexGuard<'static, Option<Net>>);
+
+impl std::ops::Deref for SessionKeys {
+    type Target = BridgeKeys;
+    fn deref(&self) -> &BridgeKeys {
+        &self.0.as_ref().expect("a SessionKeys holds an open session").keys
+    }
+}
+
+pub(crate) fn session_keys() -> Result<SessionKeys, String> {
+    let g = lock_net();
+    if g.is_none() {
+        return Err("no network session: open one first".into());
+    }
+    Ok(SessionKeys(g))
 }
 
 fn same_hex(a: &str, b: &str) -> bool {
@@ -317,31 +513,27 @@ pub(crate) fn address(s: &str, what: &str) -> Result<[u8; 20], String> {
     Ok(b)
 }
 
-/// Opens the session (see the file's comment for what is checked). Returns the session's record for `session.rs`
-/// (`s`, the same fields a chain service's `module.session` gives) and what the view shows.
-pub(crate) fn open(params: &Value) -> Result<(Value, Value), String> {
-    let base = endpoint(
-        params["network"].as_str().ok_or("open_network needs `network`: the test network's address (https://…)")?,
-        "network",
-    )?;
-    let eth = endpoint(params["eth_rpc"].as_str().filter(|s| !s.trim().is_empty()).unwrap_or(DEFAULT_SEPOLIA_RPC), "eth_rpc")?;
-    // The phrase, entered or made here; its words leave the module only in this reply, and only when made here.
-    let (phrase, made) = match (params["phrase"].as_str().filter(|s| !s.trim().is_empty()), params["generate"] == true) {
-        (Some(_), true) => return Err("open_network takes either a phrase or generate, not both".into()),
-        (Some(p), false) => (Zeroizing::new(p.to_string()), false),
-        (None, true) => (lezkey::new_phrase()?, true),
-        (None, false) => return Err("open_network needs your recovery phrase (or generate: true for a new one)".into()),
-    };
-    let seed = lezkey::seed_of_phrase(&phrase)?;
-    let depositor = match params["depositor"].as_str().filter(|s| !s.trim().is_empty()) {
-        Some(a) => Some(address(a, "depositor")?),
-        None => None,
-    };
-    if base.starts_with("https://") || eth.starts_with("https://") {
-        crate::rpc::set_https(https_post);
+/// What the network checks at open found: the deployment, its endpoints, and what was read.
+struct Checked {
+    dep: &'static Deployment,
+    lez: Lez,
+    faucet: String,
+    vault: [u8; 20],
+    cid: Hash,
+    program: AccountId,
+    head: u64,
+    eth_block: u64,
+    checks: Vec<String>,
+}
+
+/// The network's configuration, the vault on Ethereum and the bridge on LEZ, checked against [`KNOWN`] (the file's
+/// comment says what each is).
+fn check_network(base: &str, eth: &str) -> Result<Checked, String> {
+    #[cfg(test)]
+    if tests::SKIP_CHECKS.load(std::sync::atomic::Ordering::SeqCst) {
+        return tests::checked_stand_in(base);
     }
     let mut checks = Vec::new();
-
     // 1. The network's own configuration must name a deployment this module knows, field by field.
     let (status, text) = get(&format!("{base}/wallet/config.json"))?;
     if status != 200 {
@@ -369,8 +561,8 @@ pub(crate) fn open(params: &Value) -> Result<(Value, Value), String> {
         return Err("the network says its bridge is not set up yet (lezReady: false)".into());
     }
     checks.push(format!("the network's configuration names {} (program, configuration, vault, chain)", dep.name));
-    let lez = Lez { url: same_origin(&base, cfg["rpc"].as_str().unwrap_or("/rpc"), "its RPC")? };
-    let faucet = same_origin(&base, cfg["faucet"].as_str().unwrap_or("/faucet"), "its faucet")?;
+    let lez = Lez { url: same_origin(base, cfg["rpc"].as_str().unwrap_or("/rpc"), "its RPC")? };
+    let faucet = same_origin(base, cfg["faucet"].as_str().unwrap_or("/faucet"), "its faucet")?;
     let vault: [u8; 20] = fixed(&json!(dep.vault), "vault")?;
     let cid: Hash = fixed(&json!(dep.config_id), "config_id")?;
     let program = AccountId::new(lezkey::id_from_string(dep.bridge_program)?);
@@ -392,16 +584,16 @@ pub(crate) fn open(params: &Value) -> Result<(Value, Value), String> {
     let eth_block = v.block_number()?;
     checks.push(format!("Ethereum: {eth} answers chain {chain}; the vault holds this configuration (block {eth_block})"));
 
-    // 3. LEZ: the program's code and the configuration, paired with this vault and chain.
+    // 3. LEZ: the program's code and the configuration, paired with this vault and chain (read from the same host).
     let head = lez.head()?;
     let program_account = lez.account(program.value())?;
     let image: [u8; 32] = fixed(&json!(dep.bridge_image_id), "image id")?;
-    let carries = program_account["data"]["actor_states"].as_object().is_some_and(|m| {
-        m.values().any(|s| {
-            let bytes: Vec<u8> = s.as_array().map(|a| a.iter().filter_map(|x| x.as_u64().map(|y| y as u8)).collect()).unwrap_or_default();
-            bytes.len() >= 33 && bytes[1..33] == image
-        })
-    });
+    let mut carries = false;
+    for s in program_account["data"]["actor_states"].as_object().into_iter().flat_map(|m| m.values()) {
+        if let Some(bytes) = state_bytes(s)? {
+            carries |= bytes.len() >= 33 && bytes[1..33] == image;
+        }
+    }
     if !carries {
         return Err(format!("unknown program id: the bridge program's account on this LEZ network does not carry image id 0x{}; refused", dep.bridge_image_id));
     }
@@ -415,64 +607,123 @@ pub(crate) fn open(params: &Value) -> Result<(Value, Value), String> {
         Ok(BridgeState::Config(ConfigState::Pairing { .. })) => return Err("the bridge is still pairing with its vault: try again later".into()),
         _ => return Err("config(cid) on this LEZ network is not a bridge configuration; refused".into()),
     }
-    checks.push(format!("LEZ (head {head}): the bridge program carries its image id 0x{}…; its configuration is paired with this vault", &dep.bridge_image_id[..12]));
+    checks.push(format!("LEZ (head {head}): the bridge program carries its image id 0x{}…; its configuration is paired with this vault (as this host reports it)", &dep.bridge_image_id[..12]));
+    Ok(Checked { dep, lez, faucet, vault, cid, program, head, eth_block, checks })
+}
 
-    // 4. The keys, only now (nothing above read anything with the phrase).
+/// Opens the session (see the file's comment for what is checked) with the view's channel (`seal.rs`): the phrase
+/// sealed to it (`phrase_sealed: {ct, mac}`), or a new one made here (`generate: true`, its words sealed back in
+/// `words_sealed`). Returns the session's record for `session.rs` (`s`; it holds no secret) and what the view shows.
+pub(crate) fn open(params: &Value, channel: seal::Keys) -> Result<(Value, Value), String> {
+    if is_open() {
+        return Err(ALREADY_OPEN.into());
+    }
+    let base = endpoint(
+        params["network"].as_str().ok_or("open_network needs `network`: the test network's address (https://…)")?,
+        "network",
+    )?;
+    let eth = endpoint(params["eth_rpc"].as_str().filter(|s| !s.trim().is_empty()).unwrap_or(DEFAULT_SEPOLIA_RPC), "eth_rpc")?;
+    // The phrase, opened from its seal or made here; its bytes are wiped when this function returns.
+    let (phrase, made): (Zeroizing<Vec<u8>>, bool) = match (params.get("phrase_sealed").filter(|p| !p.is_null()), params["generate"] == true) {
+        (Some(_), true) => return Err("open_network takes either a sealed phrase or generate, not both".into()),
+        (Some(p), false) => {
+            let ct = unhex(p["ct"].as_str().ok_or("phrase_sealed.ct")?)?;
+            let tag = unhex(p["mac"].as_str().ok_or("phrase_sealed.mac")?)?;
+            (channel.open_phrase(&ct, &tag)?, false)
+        }
+        (None, true) => {
+            let words = lezkey::new_phrase()?;
+            (Zeroizing::new(words.as_bytes().to_vec()), true)
+        }
+        (None, false) => return Err("open_network needs your recovery phrase sealed (phrase_sealed), or generate: true for a new one".into()),
+    };
+    let seed = lezkey::seed_of_phrase(std::str::from_utf8(&phrase).map_err(|_| "not a valid BIP-39 English recovery phrase (not text)".to_string())?)?;
+    let depositor = match params["depositor"].as_str().filter(|s| !s.trim().is_empty()) {
+        Some(a) => Some(address(a, "depositor")?),
+        None => None,
+    };
+    if base.starts_with("https://") || eth.starts_with("https://") {
+        crate::rpc::set_https(https_post);
+    }
+    let c = check_network(&base, &eth)?;
+
+    // The keys, only now (nothing above read anything with the phrase). The process stops being dumpable first: no
+    // core dump of it, and no other process of the person reads its memory (ptrace, /proc/PID/mem).
+    #[cfg(target_os = "linux")]
+    // SAFETY: prctl(PR_SET_DUMPABLE, 0) changes only this process's own attribute and touches no memory.
+    unsafe {
+        libc::prctl(libc::PR_SET_DUMPABLE, 0, 0, 0, 0);
+    }
     let accounts = lezkey::public_accounts(&seed, GAP)?;
     let private = lezkey::private_account_ids(&seed, GAP);
-    let bridge_seed = Zeroizing::new(lezkey::hmac256(seed.as_ref(), crate::BRIDGE_SEED_LABEL));
+    let keys = {
+        let bridge_seed = Zeroizing::new(lezkey::hmac256(seed.as_ref(), crate::BRIDGE_SEED_LABEL));
+        WipedKeys::new(BridgeKeys::from_bridge_seed(bridge_seed.as_ref()))
+    };
     drop(seed);
-    let keys = BridgeKeys::from_bridge_seed(bridge_seed.as_ref());
+    let account0 = lezkey::id_string(&accounts[0].id);
     let s = json!({
-        "bridge_seed": hex(bridge_seed.as_ref()),
-        "chain_id": dep.evm_chain_id,
-        "vault": hex(&vault),
-        "config_id": hex(&cid),
-        "program": hex(program.value()),
+        "keys": "network_session",
+        "chain_id": c.dep.evm_chain_id,
+        "vault": hex(&c.vault),
+        "config_id": hex(&c.cid),
+        "program": hex(c.program.value()),
         "depositor": depositor.map(|d| hex(&d)),
         "gap": GAP,
         "public_accounts": accounts.iter().map(|a| hex(&a.id)).collect::<Vec<_>>(),
         "private_accounts": private.iter().map(|p| hex(p)).collect::<Vec<_>>(),
         "proofs": "none",
         "eth_rpc": eth,
-        "sequencer": lez.url,
+        "sequencer": c.lez.url,
         "network": base,
         "network_session": true,
-        "from_block": dep.from_block,
+        "from_block": c.dep.from_block,
     });
     let mut summary = json!({
-        "network": dep.name,
+        "network": c.dep.name,
         "address": base,
-        "lez_rpc": lez.url,
+        "lez_rpc": c.lez.url,
         "eth_rpc": eth,
-        "chain_id": dep.evm_chain_id,
-        "vault": hex(&vault),
-        "config_id": hex(&cid),
-        "program": dep.bridge_program,
-        "lez_head": head,
-        "eth_block": eth_block,
-        "checks": checks,
+        "chain_id": c.dep.evm_chain_id,
+        "vault": hex(&c.vault),
+        "config_id": hex(&c.cid),
+        "program": c.dep.bridge_program,
+        "lez_head": c.head,
+        "eth_block": c.eth_block,
+        "checks": c.checks,
+        "account0": account0,
         "public_accounts": accounts.iter().map(|a| json!({ "index": a.index, "id": lezkey::id_string(&a.id) })).collect::<Vec<_>>(),
         "private_accounts": private.iter().enumerate().map(|(i, p)| json!({ "index": i, "id": hex(p) })).collect::<Vec<_>>(),
         "depositor": depositor.map(|d| hex(&d)),
-        "phrase": "held by ferrata_bridge_module in this Basecamp's memory for this session only: the keys of public accounts /0-/7 and the bridge seed derived from it; the phrase itself is not kept; nothing is written to disk or logged; closing the session or Basecamp drops them",
+        "phrase": PHRASE_NOTE,
+        "idle_minutes": IDLE.as_secs() / 60,
     });
     if made {
-        // Shown once: the module keeps no copy of the words.
-        summary["words"] = json!(phrase.split(' ').collect::<Vec<_>>());
+        // Shown once by the view: sealed to it, the module keeps no copy of the words.
+        let (ct, tag) = channel.seal_words(&phrase);
+        summary["words_sealed"] = json!({ "ct": hex(&ct), "mac": hex(&tag) });
     }
-    *NET.lock().map_err(|_| "the network session's lock is poisoned")? = Some(Net {
-        lez,
-        faucet,
-        program,
-        cid,
-        vault,
-        chain_id: dep.evm_chain_id,
+    drop(phrase);
+    let mut g = lock_net();
+    if g.is_some() {
+        return Err(ALREADY_OPEN.into());
+    }
+    *g = Some(Net {
+        lez: c.lez,
+        faucet: c.faucet,
+        program: c.program,
+        cid: c.cid,
+        vault: c.vault,
+        chain_id: c.dep.evm_chain_id,
         eth,
-        from_block: dep.from_block,
+        from_block: c.dep.from_block,
         accounts,
         keys,
-        _bridge_seed: bridge_seed,
+        channel,
+        seen: Seen::default(),
+        last_call: Instant::now(),
+        pending: None,
+        account0,
     });
     Ok((s, summary))
 }
@@ -510,20 +761,25 @@ pub(crate) fn holding(index: u32, token: &[u8; 20]) -> Result<u128, String> {
 }
 
 /// The first burn counter whose `burn(cid, r_i)` is not written (a refused burn writes none), and the wallet's burns
-/// before it, read from their actors (no history scan): `(burn counter, note)`.
+/// before it, read from their actors (no history scan): `(burn counter, note)`. The tags are made under the session's
+/// lock, a few at a time; kView is never copied out of it.
 pub(crate) fn own_burns() -> Result<(u64, Vec<(u64, bw::Note)>), String> {
     let lez = lez()?;
-    let (program, cid, view) = with(|n| Ok((n.program, n.cid, n.keys.view.clone())))?;
+    let (program, cid) = with(|n| Ok((n.program, n.cid)))?;
     let mut out = Vec::new();
-    for i in 0..256u64 {
-        let r = outbound::burn_tag(&view, &cid, i);
-        match lez.state(&bw::burn_actor(program, &cid, &r))? {
-            Some(b) => match BridgeState::try_from_slice(&b) {
-                Ok(BridgeState::Burn(rec)) => out.push((i, rec.note)),
-                _ => return Err(format!("burn(cid, r_{i}) is not a burn record")),
-            },
-            None => return Ok((i, out)),
+    let mut from = 0u64;
+    while from < 256 {
+        let tags: Vec<(u64, Hash)> = with(|n| Ok((from..(from + 16).min(256)).map(|i| (i, outbound::burn_tag(&n.keys.view, &cid, i))).collect()))?;
+        for (i, r) in tags {
+            match lez.state(&bw::burn_actor(program, &cid, &r))? {
+                Some(b) => match BridgeState::try_from_slice(&b) {
+                    Ok(BridgeState::Burn(rec)) => out.push((i, rec.note)),
+                    _ => return Err(format!("burn(cid, r_{i}) is not a burn record")),
+                },
+                None => return Ok((i, out)),
+            }
         }
+        from += 16;
     }
     Ok((256, out))
 }
@@ -596,11 +852,21 @@ fn inputs(params: &Value) -> Result<Value, String> {
     Ok(out)
 }
 
-/// Signs and sends the module's message as a LEZ public transaction paid (and co-signed) by public account `/payer`,
-/// then waits for its block. `expect`: the actor the call writes (a claim's nullifier, a burn's record); written
-/// means applied, absent once the transaction is in a block means the program refused it (its fee was charged).
-pub(crate) fn submit(message: &[u8], accounts: &Value, root_index: usize, what: &str, payer: u32, expect: Option<WActor>,
-                     gas_limit: u64) -> Result<Value, String> {
+fn named(id: &[u8; 32]) -> String {
+    match index_of(id) {
+        Some(i) => format!("public /{i} ({})", lezkey::id_string(id)),
+        None => lezkey::id_string(id),
+    }
+}
+
+/// Builds the module's message as a LEZ public transaction paid (and co-signed) by public account `/payer`, for the
+/// person's approval, and signs nothing: the transaction waits under a new id (one at a time; a new one replaces it)
+/// until [`confirm`]. Returns what the approval shows: the call, its payer and signers, the fee ceiling, the message
+/// hash. `expect`: the actor the call writes (a claim's nullifier, a burn's record): written means applied. `reply`: the
+/// step's reply, completed by `confirm`; `holding_of`: the account whose bridge holding it reads again.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn prepare(kind: &'static str, message: &[u8], accounts: &Value, root_index: usize, what: &str, payer: u32,
+                      expect: Option<WActor>, gas_limit: u64, reply: Value, holding_of: u32) -> Result<Value, String> {
     let lez = lez()?;
     let (payer_id, _) = public_account(payer)?;
     let list = accounts.as_array().ok_or("accounts")?;
@@ -642,29 +908,79 @@ pub(crate) fn submit(message: &[u8], accounts: &Value, root_index: usize, what: 
     };
     let size = lezkey::encode_transaction(&lezkey::encode_message(&build(0)), &vec![([0u8; 64], [0u8; 32]); signers.len()]).len() + 1;
     let (_, max_fee) = lezkey::fee_for(gas_limit, size, be, bs);
-    let balance = lez.balance(&payer_id)?;
-    if balance < max_fee {
+    if max_fee > MAX_FEE {
         return Err(format!(
-            "{what} needs up to {max_fee} units (10^-9 LGO) in LEZ fees; account /{payer} holds {balance}: use the faucet first"
+            "refused: at the network's fee state this call may cost up to {max_fee} units (10^-9 LGO), above this module's ceiling of {MAX_FEE}: nothing was signed"
         ));
     }
+    let balance = lez.balance(&payer_id)?;
+    if balance < max_fee {
+        return Err(format!("{what} needs up to {max_fee} units (10^-9 LGO) in LEZ fees; account /{payer} holds {balance}: use the faucet first"));
+    }
     let bytes = lezkey::encode_message(&build(max_fee));
-    let h = lezkey::message_hash(&bytes);
-    let witnesses = with(|n| {
-        signers
+    let hash = lezkey::message_hash(&bytes);
+    let mut raw = [0u8; 16];
+    getrandom::getrandom(&mut raw).map_err(|e| format!("no randomness from the operating system: {e}"))?;
+    let id = hex(&raw)[2..].to_string();
+    let signer_names: Vec<String> = signers.iter().map(named).collect();
+    let record = json!({
+        "pending_id": id,
+        "kind": kind,
+        "what": what,
+        "payer": named(&payer_id),
+        "signers": signer_names,
+        "gas_limit": gas_limit,
+        "max_fee": max_fee.to_string(),
+        "fee_unit": "10^-9 LGO",
+        "payer_balance": balance.to_string(),
+        "message_hash": hex(&hash),
+        "expires_in_s": PENDING_TTL.as_secs(),
+        "signed": false,
+    });
+    with_mut(|n| {
+        n.pending = Some(Pending { id, kind, bytes, signers, hash, expect, what: what.to_string(), payer, max_fee, reply, holding_of, made: Instant::now() });
+        Ok(())
+    })?;
+    Ok(record)
+}
+
+const NOT_PENDING: &str = "refused: no transaction waits for approval under this id (it was sent, replaced by a newer one, or \
+the session closed): prepare it again";
+
+/// The kind ("claim", "burn") of the transaction waiting under `id`.
+pub(crate) fn pending_kind(id: &str) -> Result<&'static str, String> {
+    with(|n| n.pending.as_ref().filter(|p| p.id == id).map(|p| p.kind).ok_or_else(|| NOT_PENDING.to_string()))
+}
+
+/// Signs the transaction waiting under `id` exactly as [`prepare`] built it (once: it no longer waits), sends it to
+/// the network's RPC and waits for its block; the step's reply, completed. Run in a job's thread.
+pub(crate) fn confirm(id: &str) -> Result<Value, String> {
+    let lez = lez()?;
+    let (p, tx) = with_mut(|n| {
+        match &n.pending {
+            Some(p) if p.id == id => {}
+            _ => return Err(NOT_PENDING.into()),
+        }
+        let p = n.pending.take().expect("checked above");
+        if p.made.elapsed() >= PENDING_TTL {
+            return Err("refused: the approval waited more than five minutes (nonces and fees move): prepare it again".into());
+        }
+        let witnesses = p
+            .signers
             .iter()
             .map(|s| {
                 let a = n.accounts.iter().find(|a| &a.id == s).ok_or("a signer outside the session")?;
-                Ok((a.sign(&h)?, a.pk))
+                Ok((a.sign(&p.hash)?, a.pk))
             })
-            .collect::<Result<Vec<_>, String>>()
+            .collect::<Result<Vec<_>, String>>()?;
+        let tx = lezkey::encode_transaction(&p.bytes, &witnesses);
+        Ok((p, tx))
     })?;
-    let tx = lezkey::encode_transaction(&bytes, &witnesses);
     let (wire, hash) = lezkey::wire(&tx);
-    crate::jobs::phase("sent", json!({ "by": "ferrata_bridge_module (network session): signed here, sent to the network's RPC", "tx_hash": hash }));
+    crate::jobs::phase("sent", json!({ "by": "ferrata_bridge_module (network session): signed here after your approval, sent to the network's RPC", "tx_hash": hash }));
     let answered = lez.call("sendTransaction", json!([wire]))?;
     if answered.as_str().is_some_and(|a| !a.trim_start_matches("0x").eq_ignore_ascii_case(&hash)) {
-        return Err(format!("{what}: the RPC named the transaction {answered}, not {hash}"));
+        return Err(format!("{}: the RPC named the transaction {answered}, not {hash}", p.what));
     }
     let t0 = Instant::now();
     let block = loop {
@@ -672,30 +988,31 @@ pub(crate) fn submit(message: &[u8], accounts: &Value, root_index: usize, what: 
             break b;
         }
         if t0.elapsed() > Duration::from_secs(180) {
-            return Err(format!("{what}: transaction {hash} is not in a LEZ block after three minutes; check before trying again"));
+            return Err(format!("{}: transaction {hash} is not in a LEZ block after three minutes; check before trying again", p.what));
         }
         std::thread::sleep(Duration::from_secs(2));
     };
-    let applied = match &expect {
+    let applied = match &p.expect {
         Some(a) => Some(lez.state(a)?.is_some()),
         None => None,
     };
-    Ok(json!({
-        "settled": applied.unwrap_or(true),
-        "reverted": applied.map(|x| !x),
-        "private": false,
-        "what": what,
-        "tx_hash": hash,
-        "block": block,
-        "tx_bytes": tx.len(),
-        "max_fee": max_fee.to_string(),
-        "payer": format!("public /{payer} ({})", lezkey::id_string(&payer_id)),
-        "proof": Value::Null,
-    }))
+    let mut out = p.reply;
+    out["settled"] = json!(applied.unwrap_or(true));
+    out["reverted"] = json!(applied.map(|x| !x));
+    out["what"] = json!(format!("{} (block {block}, transaction {hash})", p.what));
+    out["tx_hash"] = json!(hash);
+    out["block"] = json!(block);
+    out["tx_bytes"] = json!(tx.len());
+    out["max_fee"] = json!(p.max_fee.to_string());
+    out["payer"] = json!(format!("public /{}", p.payer));
+    out["approved"] = json!({ "pending_id": p.id, "message_hash": hex(&p.hash) });
+    out["balance"] = json!(holding(p.holding_of, &[0u8; 20]).map_or_else(|e| format!("not read again: {e}"), |h| h.to_string()));
+    Ok(out)
 }
 
 /// One claim at the network's faucet for public account `/index` (its id and public key: a never-used account needs
-/// the key as LEZ's admission evidence). The faucet's limits are its own (one claim per account per day).
+/// the key as LEZ's admission evidence). The faucet's limits are its own (one claim per account per day). Its credit
+/// is looked for for 30 s; the reply says when it was not seen yet.
 pub(crate) fn faucet(index: u32) -> Result<Value, String> {
     let (id, pk) = public_account(index)?;
     let (url, lez) = with(|n| Ok((n.faucet.clone(), n.lez.clone())))?;
@@ -707,11 +1024,11 @@ pub(crate) fn faucet(index: u32) -> Result<Value, String> {
         let wait = retry.map(|s| format!(" (again in {s} s)")).unwrap_or_default();
         return Err(format!("the faucet answered: {}{wait}", reply["error"].as_str().unwrap_or("no reason given")));
     }
-    let mut after = lez.balance(&id).unwrap_or(0);
+    let mut after = lez.balance(&id).unwrap_or(before);
     let t0 = Instant::now();
     while after <= before && t0.elapsed() < Duration::from_secs(30) {
         std::thread::sleep(Duration::from_secs(2));
-        after = lez.balance(&id).unwrap_or(0);
+        after = lez.balance(&id).unwrap_or(after);
     }
     Ok(json!({
         "account": index,
@@ -720,6 +1037,7 @@ pub(crate) fn faucet(index: u32) -> Result<Value, String> {
         "credited": reply["credited"],
         "balance_before": before.to_string(),
         "balance": after.to_string(),
+        "seen": after > before,
         "unit": "10^-9 LGO",
         "faucet": url,
     }))
@@ -737,8 +1055,141 @@ pub(crate) fn lgo_balances() -> Result<Vec<Value>, String> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
+    use std::io::{Read as _, Write as _};
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
+
+    /// Tests that open the network session without a network (session.rs's): the checks are replaced by
+    /// [`checked_stand_in`] while this is set.
+    pub(crate) static SKIP_CHECKS: AtomicBool = AtomicBool::new(false);
+    /// A shorter idle limit for a test (milliseconds; 0: [`IDLE`]).
+    pub(crate) static IDLE_MS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+    pub(crate) const PHRASE: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+
+    /// The network as checked, for a stand-in LEZ RPC at `base/rpc` (no Ethereum side).
+    pub(crate) fn checked_stand_in(base: &str) -> Result<Checked, String> {
+        let dep = &KNOWN[0];
+        Ok(Checked {
+            dep,
+            lez: Lez { url: format!("{base}/rpc") },
+            faucet: format!("{base}/faucet"),
+            vault: fixed(&json!(dep.vault), "vault")?,
+            cid: fixed(&json!(dep.config_id), "config_id")?,
+            program: AccountId::new(lezkey::id_from_string(dep.bridge_program)?),
+            head: 5,
+            eth_block: 1,
+            checks: vec!["(a test: the network's checks were not run)".into()],
+        })
+    }
+
+    /// The view's side of a new channel: open_network's parameters (`params` with key_id, view_key and the sealed
+    /// phrase, or generate) and the view's keys; the module's one-time key waits in seal.rs.
+    pub(crate) fn sealed(mut params: Value, phrase: Option<&str>) -> (Value, seal::Keys) {
+        let (id, module_pk) = seal::new_key().unwrap();
+        let (view, view_pk) = seal::view_side(&[9u8; 32], &module_pk);
+        params["key_id"] = json!(id);
+        params["view_key"] = json!(hex(&view_pk));
+        match phrase {
+            Some(p) => {
+                let (ct, tag) = view.seal_phrase(p.as_bytes());
+                params["phrase_sealed"] = json!({ "ct": hex(&ct), "mac": hex(&tag) });
+            }
+            None => params["generate"] = json!(true),
+        }
+        (params, view)
+    }
+
+    /// `open` as the module runs it: the one-time key of `params` agreed first.
+    fn open_sealed(params: &Value) -> Result<(Value, Value), String> {
+        let view_pk: [u8; 32] = fixed(&params["view_key"], "view_key")?;
+        let (channel, _) = seal::agree(params["key_id"].as_u64().unwrap(), &view_pk)?;
+        open(params, channel)
+    }
+
+    /// A stand-in LEZ JSON-RPC at `<url>/rpc`: public account /0 of the test phrase holds `held` base units of ETH on
+    /// the bridge; any other account has no state until a `sendTransaction` arrives (then every one has, so that the
+    /// call's actor reads as written). Each request waits `delay` first. Returns the URL and the methods asked, with
+    /// the transactions sent.
+    pub(crate) struct StandIn {
+        pub url: String,
+        pub methods: Arc<Mutex<Vec<String>>>,
+        pub sent: Arc<Mutex<Vec<String>>>,
+        pub base_fee: Arc<std::sync::atomic::AtomicU64>,
+    }
+
+    pub(crate) fn stand_in_lez(holder: [u8; 32], held: u128, delay: Duration) -> StandIn {
+        let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}", l.local_addr().unwrap());
+        let methods = Arc::new(Mutex::new(Vec::new()));
+        let sent = Arc::new(Mutex::new(Vec::new()));
+        let base_fee = Arc::new(std::sync::atomic::AtomicU64::new(8));
+        let (m, tx, fee) = (methods.clone(), sent.clone(), base_fee.clone());
+        let dep = &KNOWN[0];
+        let cid: Hash = fixed(&json!(dep.config_id), "c").unwrap();
+        let holder_state = borsh::to_vec(&BridgeState::Holder(bw::HolderState {
+            holdings: vec![bw::Holding { config_id: cid, token: [0u8; 20], amount: held }],
+            pending: None,
+        }))
+        .unwrap();
+        std::thread::spawn(move || {
+            for s in l.incoming() {
+                let Ok(mut s) = s else { break };
+                let (m, tx, holder_state, fee) = (m.clone(), tx.clone(), holder_state.clone(), fee.clone());
+                std::thread::spawn(move || {
+                    let mut buf = Vec::new();
+                    let mut chunk = [0u8; 8192];
+                    let body = loop {
+                        let n = s.read(&mut chunk).unwrap_or(0);
+                        buf.extend_from_slice(&chunk[..n]);
+                        if let Some(h) = buf.windows(4).position(|w| w == b"\r\n\r\n") {
+                            let head = String::from_utf8_lossy(&buf[..h]).to_lowercase();
+                            let len = head.lines().find_map(|l| l.strip_prefix("content-length:").and_then(|v| v.trim().parse::<usize>().ok())).unwrap_or(0);
+                            if buf.len() >= h + 4 + len {
+                                break buf[h + 4..h + 4 + len].to_vec();
+                            }
+                        }
+                        if n == 0 {
+                            break Vec::new();
+                        }
+                    };
+                    std::thread::sleep(delay);
+                    let req: Value = serde_json::from_slice(&body).unwrap_or(Value::Null);
+                    let method = req["method"].as_str().unwrap_or("").to_string();
+                    m.lock().unwrap().push(method.clone());
+                    let program = KNOWN[0].bridge_program;
+                    let result = match method.as_str() {
+                        "getAccountsNonces" => json!([0]),
+                        "getFeeState" => json!({ "base_fee_exec": fee.load(Ordering::SeqCst), "base_fee_stor": 8 }),
+                        "getAccountBalance" => json!(10_000_000_000u64),
+                        "getLastBlockId" => json!(5),
+                        "getTransaction" => json!(["tx", 6]),
+                        "sendTransaction" => {
+                            tx.lock().unwrap().push(req["params"][0].as_str().unwrap_or("").to_string());
+                            Value::Null
+                        }
+                        "getAccount" => {
+                            let id = req["params"][0].as_str().unwrap_or("");
+                            let state = if id == lezkey::id_string(&holder) {
+                                json!(holder_state)
+                            } else if !tx.lock().unwrap().is_empty() {
+                                json!([5, 0, 0])
+                            } else {
+                                Value::Null
+                            };
+                            json!({ "data": { "actor_states": { program: state } } })
+                        }
+                        _ => Value::Null,
+                    };
+                    let text = json!({ "jsonrpc": "2.0", "id": req["id"], "result": result }).to_string();
+                    let _ = write!(s, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", text.len(), text);
+                });
+            }
+        });
+        StandIn { url, methods, sent, base_fee }
+    }
 
     #[test]
     fn endpoints_https_or_this_machine() {
@@ -747,7 +1198,7 @@ mod tests {
         assert!(endpoint("http://localhost:3040/rpc", "network").is_ok());
         assert!(endpoint("http://[::1]:3040", "network").is_ok());
         for bad in ["http://example.org", "http://10.0.0.5:8545", "http://192.168.1.2", "ftp://example.org", "example.org",
-                    "https://user@example.org", "http://127.0.0.1.example.org"] {
+                    "https://user@example.org", "http://127.0.0.1.example.org", "https://n.example/?x=1", "https://n.example/#a"] {
             assert!(endpoint(bad, "network").is_err(), "{bad}");
         }
         assert!(same_origin("https://n.example", "//evil.example/rpc", "its RPC").is_err());
@@ -755,12 +1206,9 @@ mod tests {
         assert_eq!(same_origin("https://n.example", "/rpc", "its RPC").unwrap(), "https://n.example/rpc");
     }
 
-    const PHRASE: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-
     /// A stand-in network on 127.0.0.1: its `/wallet/config.json`, and an Ethereum JSON-RPC (any other path) answering
     /// `chain` for eth_chainId and `held` for the vault's lezConfigId(). One request per connection.
     fn stand_in(config: Value, chain: &'static str, held: String) -> String {
-        use std::io::{Read as _, Write as _};
         let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let base = format!("http://{}", l.local_addr().unwrap());
         std::thread::spawn(move || {
@@ -809,7 +1257,9 @@ mod tests {
     }
 
     fn open_at(base: &str) -> String {
-        let e = open(&json!({ "network": base, "eth_rpc": format!("{base}/eth"), "phrase": PHRASE })).err().expect("refused");
+        let _s = crate::jobs::tests::serial();
+        let (params, _) = sealed(json!({ "network": base, "eth_rpc": format!("{base}/eth") }), Some(PHRASE));
+        let e = open_sealed(&params).err().expect("refused");
         assert!(!e.contains("abandon"), "the phrase must never appear in an error: {e}");
         e
     }
@@ -844,18 +1294,23 @@ mod tests {
 
     #[test]
     fn refuses_plain_http_to_another_host() {
-        let e = open(&json!({ "network": "http://example.org", "phrase": PHRASE })).err().unwrap();
+        let _s = crate::jobs::tests::serial();
+        let (params, _) = sealed(json!({ "network": "http://example.org" }), Some(PHRASE));
+        let e = open_sealed(&params).err().unwrap();
         assert!(e.contains("plain http:// is refused"), "{e}");
         let base = stand_in(live_config(), "0xaa36a7", format!("0x{}", KNOWN[0].config_id));
-        let e = open(&json!({ "network": base, "eth_rpc": "http://10.1.2.3:8545", "phrase": PHRASE })).err().unwrap();
+        let (params, _) = sealed(json!({ "network": base, "eth_rpc": "http://10.1.2.3:8545" }), Some(PHRASE));
+        let e = open_sealed(&params).err().unwrap();
         assert!(e.contains("eth_rpc") && e.contains("plain http:// is refused"), "{e}");
         // Neither reached anything: no session.
-        assert!(with(|_| Ok(())).is_err());
+        assert!(!is_open());
     }
 
     #[test]
     fn a_bad_phrase_is_refused_without_naming_a_word() {
-        let e = open(&json!({ "network": "https://n.example", "phrase": "abandon abandon zebra" })).err().unwrap();
+        let _s = crate::jobs::tests::serial();
+        let (params, _) = sealed(json!({ "network": "https://n.example" }), Some("abandon abandon zebra"));
+        let e = open_sealed(&params).err().unwrap();
         assert!(e.contains("not a valid BIP-39") && !e.contains("zebra") && !e.contains("abandon"), "{e}");
     }
 
@@ -866,5 +1321,98 @@ mod tests {
         assert!(address("0x19499061CEC0BaC2a3E1869Ba5AE6B403aA82787", "a").is_err());
         assert!(address("0x0000000000000000000000000000000000000000", "a").is_err());
         assert!(address("19499061cec0bac2a3e1869ba5ae6b403aa82787", "a").is_err());
+    }
+
+    #[test]
+    fn each_call_counter_is_accepted_once() {
+        let mut s = Seen::default();
+        assert!(!s.accept(0));
+        assert!(s.accept(1) && s.accept(3) && s.accept(2));
+        assert!(!s.accept(2) && !s.accept(3) && !s.accept(1));
+        assert!(s.accept(100));
+        assert!(!s.accept(36), "below the window");
+        assert!(s.accept(37) && !s.accept(37));
+    }
+
+    /// Review M2: the bridge keys are overwritten when the session ends.
+    #[test]
+    fn m2_the_bridge_keys_are_wiped() {
+        let mut k = WipedKeys::new(BridgeKeys::from_bridge_seed(&[0x5a; 32]));
+        let p: *const u8 = (&*k as *const BridgeKeys).cast();
+        let n = std::mem::size_of::<BridgeKeys>();
+        // SAFETY: the box is alive until `k` is dropped below; these reads are of its own bytes.
+        let before = unsafe { std::slice::from_raw_parts(p, n) }.iter().filter(|b| **b != 0).count();
+        assert!(before >= 32, "the keys are there: {before} of {n} bytes non-zero");
+        k.wipe();
+        // SAFETY: as above; `wipe` zeroed them in place.
+        assert!(unsafe { std::slice::from_raw_parts(p, n) }.iter().all(|b| *b == 0), "every byte of the keys is zero after wipe");
+        drop(k);
+    }
+
+    /// Review H1 and L3: a burn is built for the person's approval and signed only when confirmed, exactly as approved,
+    /// once; a fee above the ceiling is refused. Also review M2: the session's record holds no bridge seed, and the
+    /// process is not dumpable once keys are held.
+    #[test]
+    fn h1_a_lez_transaction_is_signed_only_when_confirmed_as_prepared() {
+        let _s = crate::jobs::tests::serial();
+        close();
+        SKIP_CHECKS.store(true, Ordering::SeqCst);
+        let seed = lezkey::seed_of_phrase(PHRASE).unwrap();
+        let id0 = lezkey::public_accounts(&seed, 1).unwrap()[0].id;
+        let dep = &KNOWN[0];
+        let program = AccountId::new(lezkey::id_from_string(dep.bridge_program).unwrap());
+        let cid: Hash = fixed(&json!(dep.config_id), "c").unwrap();
+        let holder = *bw::holder_actor(program, &cid, AccountId::new(id0)).account_id.value();
+        let net = stand_in_lez(holder, 1_000_000_000_000_000, Duration::ZERO);
+        let (methods, sent) = (net.methods.clone(), net.sent.clone());
+        let (params, _view) = sealed(json!({ "network": net.url }), Some(PHRASE));
+        let (s, summary) = open_sealed(&params).unwrap();
+        SKIP_CHECKS.store(false, Ordering::SeqCst);
+        assert!(s.get("bridge_seed").is_none() && !s.to_string().contains("43bff369"), "no bridge seed in the session's record: {s}");
+        assert_eq!(summary["account0"], json!(lezkey::id_string(&id0)));
+        #[cfg(target_os = "linux")]
+        // SAFETY: reads this process's own attribute.
+        assert_eq!(unsafe { libc::prctl(libc::PR_GET_DUMPABLE, 0, 0, 0, 0) }, 0, "not dumpable while keys are held");
+
+        let me = bw::own_actor(program, AccountId::new(id0));
+        let r = [7u8; 32];
+        let accounts = json!([
+            { "account": hex(me.account_id.value()), "program": hex(me.program_account_id.value()), "kind": "signer" },
+            { "account": hex(bw::config_actor(program, &cid).account_id.value()), "program": hex(program.value()), "kind": "pda",
+              "seed": hex(bw::config_seed(&cid).as_bytes()) },
+        ]);
+        let record = prepare("burn", b"a burn", &accounts, 0, "Burn (public) of /0", 0, Some(bw::burn_actor(program, &cid, &r)), BURN_GAS,
+                             json!({ "i": 0 }), 0).unwrap();
+        assert_eq!(record["signed"], false);
+        assert!(sent.lock().unwrap().is_empty(), "nothing is sent before the approval");
+        assert!(!methods.lock().unwrap().contains(&"sendTransaction".to_string()));
+        let id = record["pending_id"].as_str().unwrap().to_string();
+        assert_eq!(pending_kind(&id).unwrap(), "burn");
+        assert!(confirm("not-the-id").unwrap_err().starts_with("refused: no transaction waits"));
+        let done = confirm(&id).unwrap();
+        assert_eq!(done["settled"], true, "{done}");
+        assert_eq!(done["approved"]["message_hash"], record["message_hash"]);
+        // The one transaction sent is the message approved, signed by /0 over that hash.
+        let wires = sent.lock().unwrap().clone();
+        assert_eq!(wires.len(), 1);
+        use base64::Engine as _;
+        let raw = base64::engine::general_purpose::STANDARD.decode(&wires[0]).unwrap();
+        let tx = &raw[1..];
+        let (message, rest) = tx.split_at(tx.len() - 4 - 96);
+        assert_eq!(rest[..4], 1u32.to_le_bytes(), "one witness");
+        let hash = lezkey::message_hash(message);
+        assert_eq!(hex(&hash), record["message_hash"].as_str().unwrap());
+        let sig = k256::schnorr::Signature::try_from(&rest[4..68]).unwrap();
+        let vk = k256::schnorr::VerifyingKey::from_bytes(&rest[68..100]).unwrap();
+        assert!(vk.verify_raw(&hash, &sig).is_ok(), "signed by the payer over the approved hash");
+        assert!(confirm(&id).unwrap_err().starts_with("refused: no transaction waits"), "used once");
+        // Fees above the ceiling (review L3: the host sets the base fee): refused, nothing waits for approval.
+        net.base_fee.store(1_000, Ordering::SeqCst);
+        let e = prepare("burn", b"a burn", &accounts, 0, "Burn (public) of /0", 0, None, BURN_GAS, json!({}), 0).unwrap_err();
+        assert!(e.contains("above this module's ceiling") && e.contains("nothing was signed"), "{e}");
+        assert!(with(|n| Ok(n.pending.is_none())).unwrap());
+        assert_eq!(sent.lock().unwrap().len(), 1);
+        close();
+        assert!(!is_open());
     }
 }

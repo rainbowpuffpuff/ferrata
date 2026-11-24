@@ -55,18 +55,41 @@ const ACCOUNT_ID_PRIVATE_PREFIX: &str = "/LEE/v0.3/AccountId/Private/";
 /// The seed of a recovery phrase as LEZ's wallet makes it: BIP-39 English, any valid length, `to_seed("")`. The words
 /// are normalized as the web wallet does (trimmed, lowercased, single spaces). The error never names a word.
 pub(crate) fn seed_of_phrase(phrase: &str) -> Result<Zeroizing<[u8; 64]>, String> {
-    let words = Zeroizing::new(phrase.split_whitespace().map(str::to_lowercase).collect::<Vec<_>>().join(" "));
-    let m = bip39::Mnemonic::parse_in_normalized(bip39::Language::English, &words)
-        .map_err(|_| "not a valid BIP-39 English recovery phrase (a word, the word count or the checksum is wrong)".to_string())?;
+    const BAD: &str = "not a valid BIP-39 English recovery phrase (a word, the word count or the checksum is wrong)";
+    // The English word list is ASCII: anything else is refused before a copy is made. The words are normalized into
+    // one buffer sized once, so that no reallocation leaves a part of the phrase behind; it and the parsed mnemonic
+    // (bip39's `zeroize`) are wiped when dropped.
+    if !phrase.is_ascii() {
+        return Err(BAD.into());
+    }
+    let mut words = Zeroizing::new(String::with_capacity(phrase.len()));
+    for w in phrase.split_ascii_whitespace() {
+        if !words.is_empty() {
+            words.push(' ');
+        }
+        for c in w.chars() {
+            words.push(c.to_ascii_lowercase());
+        }
+    }
+    let m = bip39::Mnemonic::parse_in_normalized(bip39::Language::English, &words).map_err(|_| BAD.to_string())?;
     Ok(Zeroizing::new(m.to_seed_normalized("")))
 }
 
-/// A new 24-word phrase from 256 bits of the operating system's randomness (as LEZ's wallet makes one).
+/// A new 24-word phrase from 256 bits of the operating system's randomness (as LEZ's wallet makes one), built in one
+/// buffer sized once (24 words of at most 8 letters, and their spaces) and wiped when dropped.
 pub(crate) fn new_phrase() -> Result<Zeroizing<String>, String> {
     let mut entropy = Zeroizing::new([0u8; 32]);
     getrandom::getrandom(entropy.as_mut()).map_err(|e| format!("no randomness from the operating system: {e}"))?;
     let m = bip39::Mnemonic::from_entropy_in(bip39::Language::English, entropy.as_ref()).map_err(|e| e.to_string())?;
-    Ok(Zeroizing::new(m.to_string()))
+    let mut out = Zeroizing::new(String::with_capacity(24 * 9));
+    for w in m.words() {
+        if !out.is_empty() {
+            out.push(' ');
+        }
+        out.push_str(w);
+    }
+    debug_assert!(out.len() <= 24 * 9);
+    Ok(out)
 }
 
 // ---------------------------------------------------------------------------------------------- public keys

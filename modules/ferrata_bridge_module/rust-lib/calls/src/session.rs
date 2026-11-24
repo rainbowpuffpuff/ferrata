@@ -25,6 +25,16 @@
 //! it has answered for this deployment; otherwise the endpoints in use are kept (`set_endpoints` below).
 //!
 //! Every reply is `{"ok": true, "result"}` or `{"ok": false, "error"}`, the envelope the view reads.
+//!
+//! The network session (`open_network`, `net.rs`) is the mini-app's own (review H1): `seal_key` and `open_network` are
+//! answered only to the view, `ferrata_bridge_ui`, as Logos Core names the caller of a call (`wallet_as`: from Logos
+//! protocol 0.6 the host tells a module who calls it, by the token the caller presented; Basecamp 0.4.0-rc.2 gives each
+//! mini-app a token of its own; capability_module checks only that the name is a registered module, so the name is
+//! token-bound, not proven), and once a session is open every call must also carry a MAC under the key the view agreed
+//! with this module when it opened it (`seal.rs`): no other caller, and no other view, can use it or replace it, and a
+//! call is never accepted twice. A LEZ transaction is built for the person's approval (`claim`, `burn` answer
+//! `to_approve`) and signed only by `confirm` with its id, as approved. Every reply names the session's public account
+//! /0 (`session_account`), which the view checks against the one it opened.
 
 use std::io::{Read, Write};
 use std::net::{TcpStream, ToSocketAddrs};
@@ -108,22 +118,71 @@ fn configure_eth(params: &Value) -> Result<Value, String> {
     Ok(json!({ "configured": cfg, "seen": seen, "reads": v.report(), "sends": "tx_sender_module (one approval per send in the Logos signer)" }))
 }
 
-/// `wallet(request)`: one call of the view.
+/// The caller of a call made natively (tests, the `call` example): not through Logos Core.
+pub const NATIVE: &str = "native";
+/// The callers the network session answers: the mini-app's view as Logos Core names it, and a native caller.
+const VIEW_CALLERS: [&str; 2] = ["module:ferrata_bridge_ui", NATIVE];
+
+/// `wallet(request)`: one call of the view, made natively.
 pub fn wallet(request: &str) -> String {
-    let reply = match serde_json::from_str::<Value>(request) {
-        Ok(r) => {
-            let method = r["method"].as_str().unwrap_or("").to_string();
-            match dispatch(&method, &r["params"]) {
-                Ok(v) => json!({ "ok": true, "result": v }),
-                Err(e) => json!({ "ok": false, "error": e }),
-            }
-        }
-        Err(e) => json!({ "ok": false, "error": format!("invalid request: {e}") }),
+    wallet_as(NATIVE, request)
+}
+
+/// `wallet(request)` as Logos Core delivers it: `caller` is who calls (`module:<name>`, `host`, `unknown`; the module's
+/// glue reads it from the Logos SDK). Every reply is `{"ok", "result"|"error"}`, and names the open network session's
+/// public account /0 (`session_account`).
+pub fn wallet_as(caller: &str, request: &str) -> String {
+    crate::net::expire_idle();
+    let result = match serde_json::from_str::<Value>(request) {
+        Ok(r) => route(caller, &r),
+        Err(e) => Err(format!("invalid request: {e}")),
     };
+    let mut reply = match result {
+        Ok(v) => json!({ "ok": true, "result": v }),
+        Err(e) => json!({ "ok": false, "error": e }),
+    };
+    if let Some(a) = crate::net::account0() {
+        reply["session_account"] = json!(a);
+    }
     reply.to_string()
 }
 
-fn dispatch(method: &str, params: &Value) -> Result<Value, String> {
+/// Who may call what (review H1): with a network session open, only its view, each call with a MAC under the session's
+/// key and a counter never used before; without one, `seal_key` and `open_network` only from the view.
+fn route(caller: &str, r: &Value) -> Result<Value, String> {
+    let view = VIEW_CALLERS.contains(&caller);
+    if crate::net::is_open() {
+        if !view {
+            return Err(format!("refused: this module's network session belongs to the Ferrata Bridge view that opened it; this call came from {caller}"));
+        }
+        let body = r["call"].as_str().ok_or("refused: a network session is open: each call must carry its counter and MAC (only the view that opened the session holds its key)")?;
+        let n = r["n"].as_u64().ok_or("refused: the call's counter n")?;
+        let tag = unhex(r["mac"].as_str().ok_or("refused: the call's mac")?)?;
+        crate::net::verify_call(n, body, &tag)?;
+        let inner: Value = serde_json::from_str(body).map_err(|e| format!("invalid call: {e}"))?;
+        let method = inner["method"].as_str().unwrap_or("");
+        return dispatch(method, &inner["params"], caller);
+    }
+    let method = r["method"].as_str().unwrap_or("");
+    if matches!(method, "seal_key" | "open_network") {
+        if !view {
+            return Err(format!("refused: a network session is opened by the Ferrata Bridge view (ferrata_bridge_ui) only; this call came from {caller}"));
+        }
+        return dispatch(method, &r["params"], caller);
+    }
+    dispatch(method, &r["params"], caller)
+}
+
+fn dispatch(method: &str, params: &Value, caller: &str) -> Result<Value, String> {
+    // An open network session is not replaced, by another network session or a chain service's (review H1).
+    if crate::net::is_open() && matches!(method, "open_network" | "seal_key" | "open") {
+        return Err(crate::net::ALREADY_OPEN.into());
+    }
+    if method == "seal_key" {
+        // The module's one-time key for the view's sealed phrase (seal.rs), and who Logos Core says is calling.
+        let (key_id, public) = crate::seal::new_key()?;
+        return Ok(json!({ "key_id": key_id, "public_key": hex(&public), "scheme": crate::seal::SCHEME, "caller": caller }));
+    }
     // The jobs (jobs.rs) answer from the module's memory, never from the chains or lez_core.
     if method == "job" {
         return crate::jobs::get(params);
@@ -201,6 +260,15 @@ fn dispatch(method: &str, params: &Value) -> Result<Value, String> {
         "balances" if c.network() => Ok(json!({ "accounts": crate::net::lgo_balances()?, "unit": "10^-9 LGO" })),
         "deposit_plan" => c.deposit_plan(params),
         "release" if c.network() => c.release_handoff(params),
+        // A LEZ transaction of the network session: built for the person's approval (signed by nothing yet), then
+        // `confirm` with its id signs exactly that and sends it (a job: it waits for its block).
+        "claim" if c.network() => c.claim(params),
+        "burn" if c.network() => c.burn(params),
+        "confirm" if c.network() => {
+            let id = params["pending_id"].as_str().ok_or("confirm needs the pending_id of the transaction approved")?.to_string();
+            let kind = crate::net::pending_kind(&id)?;
+            crate::jobs::start(kind, params, move |_| crate::net::confirm(&id))
+        }
         "info" => c.info(),
         "registry" => c.registry(),
         "price" => match eth_path() {
@@ -618,10 +686,20 @@ fn network_session() -> bool {
 }
 
 /// `open_network`: the mini-app against a Ferrata test network's public endpoints (net.rs: what is checked, where the
-/// phrase's keys live). Its Ethereum side is the session's `eth` path over the endpoint the person chose: every vault
-/// read here, every Ethereum send through Logos Core's tx_sender_module (one approval in the Logos signer).
+/// phrase's keys live). The phrase comes sealed to the module's one-time key (`seal_key`; `key_id`, `view_key`,
+/// `phrase_sealed`), never in clear (review M1). Its Ethereum side is the session's `eth` path over the endpoint the
+/// person chose: every vault read here, every Ethereum send through Logos Core's tx_sender_module (one approval in the
+/// Logos signer).
 fn open_network(params: &Value) -> Result<Value, String> {
-    let (s, summary) = crate::net::open(params)?;
+    if params.get("phrase").is_some_and(|p| !p.is_null()) {
+        return Err("refused: open_network takes the phrase sealed to the module's one-time key (seal_key, then key_id, view_key and \
+                    phrase_sealed), never in clear: Logos Core's IPC carries a call's arguments in clear, and Qt's debug logging \
+                    writes them to Basecamp's log".into());
+    }
+    let key_id = params["key_id"].as_u64().ok_or("open_network needs key_id (from seal_key)")?;
+    let view_pk: [u8; 32] = fixed(&params["view_key"], "view_key")?;
+    let (channel, _) = crate::seal::agree(key_id, &view_pk)?;
+    let (s, mut summary) = crate::net::open(params, channel)?;
     let eth = json!({
         "eth": { "via": "http", "rpc_url": s["eth_rpc"] },
         "chain_id": s["chain_id"],
@@ -630,23 +708,43 @@ fn open_network(params: &Value) -> Result<Value, String> {
         "release_sender": null,
         "network_session": true,
     });
-    *ETH_PATH.lock().map_err(|_| "the eth path lock is poisoned")? = Some(eth);
+    *ETH_PATH.lock().unwrap_or_else(|p| p.into_inner()) = Some(eth);
     if crate::lez::active() {
         crate::lez::configure(&json!({ "via": "plain" }), None)?;
     }
     let chain = format!("network:{}", s["network"].as_str().unwrap_or(""));
-    *SESSION.lock().map_err(|_| "the session lock is poisoned")? = Some(Session { chain, s, calls: 0 });
+    *SESSION.lock().unwrap_or_else(|p| p.into_inner()) = Some(Session { chain, s, calls: 0 });
+    if qt_debug_logging() {
+        if let Some(c) = summary["checks"].as_array_mut() {
+            c.push(json!("note: Qt debug logging is on in this Basecamp (QT_LOGGING_RULES or a qtlogging.ini): its log holds this session's calls and answers (account ids, positions, balances; never the phrase or a key, which are sealed)"));
+        }
+    }
     Ok(summary)
 }
 
-/// `close`: ends the session; a network session's keys are zeroized as they are dropped.
+/// Whether Qt's debug logging for the remote-objects transport looks enabled in this process's environment (a warning
+/// only: what crosses it is sealed or MAC'd; the answers are private but not secret).
+fn qt_debug_logging() -> bool {
+    let on = |rules: &str| rules.lines().flat_map(|l| l.split(';')).any(|r| {
+        let r = r.trim().to_ascii_lowercase().replace(' ', "");
+        r.ends_with("=true") && (r.contains("debug") || !r.contains(".critical") && !r.contains(".warning") && !r.contains(".info"))
+            && (r.starts_with('*') || r.starts_with("qt.*") || r.starts_with("qt.remoteobjects"))
+    });
+    std::env::var("QT_LOGGING_RULES").is_ok_and(|v| on(&v))
+        || std::env::var("QT_LOGGING_CONF").ok().and_then(|p| std::fs::read_to_string(p).ok()).is_some_and(|v| on(&v))
+        || std::env::var("HOME").ok().and_then(|h| std::fs::read_to_string(format!("{h}/.config/QtProject/qtlogging.ini")).ok()).is_some_and(|v| on(&v))
+}
+
+/// `close`: ends the session; a network session's keys are wiped as they are dropped, and its jobs' records (amounts,
+/// recipients, transactions) are forgotten.
 fn close() -> Value {
-    let was = SESSION.lock().ok().and_then(|mut g| g.take()).map(|s| s.chain.starts_with("network:"));
-    if let Ok(mut g) = ETH_PATH.lock() {
-        *g = None;
+    let was = SESSION.lock().unwrap_or_else(|p| p.into_inner()).take().map(|s| s.chain.starts_with("network:"));
+    *ETH_PATH.lock().unwrap_or_else(|p| p.into_inner()) = None;
+    let net = crate::net::close();
+    if net {
+        crate::jobs::forget();
     }
-    crate::net::close();
-    json!({ "closed": was.is_some(), "network_session": was == Some(true), "keys": "dropped" })
+    json!({ "closed": was.is_some() || net, "network_session": was == Some(true) || net, "keys": "wiped" })
 }
 
 struct Chain {
@@ -721,7 +819,8 @@ impl Chain {
     }
 
     /// A burn from public account `/a`'s holding (the network session; the web wallet's public burn): the note and
-    /// `Burn` message of the module, sent as a public call of that account, paid and signed by it.
+    /// `Burn` message of the module, as a public call of that account, built for the person's approval (`to_approve`);
+    /// `confirm` signs it.
     fn burn_public(&self, params: &Value) -> Result<Value, String> {
         let a = params["account"].as_u64().unwrap_or(0) as u32;
         let amount: u128 = params["amount"].as_str().ok_or("amount (base units, a string)")?.parse().map_err(|_| "amount: a decimal")?;
@@ -754,27 +853,28 @@ impl Chain {
             pda(bw::burn_actor(program, &cid, &r), bw::burn_seed(&cid, &r).as_bytes()),
         ]);
         let what = format!("Burn (public) of /{a} with tag counter {i}");
-        let sent = crate::net::submit(&unhex(b["message"].as_str().ok_or("message")?)?, &accounts, 0, &what, a,
-                                      Some(bw::burn_actor(program, &cid, &r)), crate::net::BURN_GAS)?;
-        Ok(json!({
-            "settled": sent["settled"],
+        let recipient_text = hex(&recipient);
+        let reply = json!({
             "private": false,
-            "what": format!("{what} (block {}, transaction {})", sent["block"], sent["tx_hash"].as_str().unwrap_or("?")),
             "burn_index": null,
             "i": i,
             "account": a,
             "amount": amount.to_string(),
-            "recipient": hex(&recipient),
+            "recipient": recipient_text,
             "release_delay_ms": params["release_delay_ms"],
-            "balance": crate::net::holding(a, &[0u8; 20])?.to_string(),
-            "tx_hash": sent["tx_hash"],
-            "block": sent["block"],
             "proof": null,
-            "made_by": format!("ferrata_bridge_module burn (the note and the Burn message), signed with public /{a}'s key from your phrase and sent to the network's RPC"),
+            "made_by": format!("ferrata_bridge_module burn (the note and the Burn message), signed with public /{a}'s key from your phrase after your approval, sent to the network's RPC"),
             "public_on_lez": ["your account and its holding", "the note: r, memo, mac, c_out", "the token and denomination", "the time"],
             "hidden": ["the Ethereum recipient (encrypted in the memo; only your phrase opens it)"],
             "release": release_handoff_text(i),
-        }))
+        });
+        let message = unhex(b["message"].as_str().ok_or("message")?)?;
+        let mut rec = crate::net::prepare("burn", &message, &accounts, 0, &what, a, Some(bw::burn_actor(program, &cid, &r)), crate::net::BURN_GAS, reply, a)?;
+        rec["account"] = json!(a);
+        rec["amount"] = json!(amount.to_string());
+        rec["recipient"] = json!(recipient_text);
+        rec["i"] = json!(i);
+        Ok(json!({ "to_approve": rec }))
     }
 
     /// The release in the network session: handed off, as the web wallet does. The release proof's private input says
@@ -916,9 +1016,18 @@ impl Chain {
         }
     }
 
+    /// The fields the bridge's functions take with the wallet's keys: the chain service's bridge seed, or in the network
+    /// session a marker that has `crate::keys` borrow the session's keys under its lock (review M2: the bridge seed is
+    /// never in a JSON value or string there).
     fn seed_fields(&self) -> Value {
-        json!({ "bridge_seed": self.s["bridge_seed"], "chain_id": self.s["chain_id"], "vault": self.s["vault"],
-                "config_id": self.s["config_id"], "program": self.s["program"], "depositor": self.s["depositor"] })
+        let mut f = json!({ "chain_id": self.s["chain_id"], "vault": self.s["vault"], "config_id": self.s["config_id"],
+                            "program": self.s["program"], "depositor": self.s["depositor"] });
+        if self.network() {
+            f["keys"] = json!("network_session");
+        } else {
+            f["bridge_seed"] = self.s["bridge_seed"].clone();
+        }
+        f
     }
 
     fn account(&self, kind: &str, a: u64) -> Result<String, String> {
@@ -995,9 +1104,10 @@ impl Chain {
                 "public_accounts": self.s["public_accounts"].as_array().into_iter().flatten()
                     .filter_map(|h| fixed::<32>(h, "account").ok()).map(|id| crate::lezkey::id_string(&id)).collect::<Vec<_>>(),
                 "private_proofs": "not made here: a private claim or burn is the ferrata tool's (same phrase)",
+                "signing": "each LEZ transaction is built for your approval in the view and signed here only after it (confirm)",
             }) } else { Value::Null },
             "backend": if self.network() {
-                "ferrata_bridge_module in Logos Basecamp (network session): LEZ through the network's RPC, Ethereum through the endpoint above, both read here; LEZ public calls signed here with keys from your phrase; Ethereum sends through Logos Core's tx_sender_module (approved in the Logos signer)"
+                "ferrata_bridge_module in Logos Basecamp (network session): LEZ through the network's RPC, Ethereum through the endpoint above, both read here; LEZ public calls signed here with keys from your phrase, each after your approval; Ethereum sends through Logos Core's tx_sender_module (approved in the Logos signer)"
             } else if eth_path().is_some() {
                 "ferrata_bridge_module in Logos Core; Ethereum through Logos Core's eth_rpc_module (reads) and tx_sender_module (sends, approved in the Logos signer); LEZ through the chain service or lez_core"
             } else {
@@ -1270,8 +1380,9 @@ impl Chain {
             return Err(format!("refused by the module (checked before sending): {} {}", c["error"].as_str().unwrap_or(""), c["detail"].as_str().unwrap_or("")));
         }
         let what = format!("{} of leaf {leaf}", c["variant"].as_str().unwrap_or("claim"));
-        let sent = if self.network() {
-            // Paid and co-signed by the deposit's own public account (it needs LGO for the fee: the faucet).
+        if self.network() {
+            // Paid and co-signed by the deposit's own public account (it needs LGO for the fee: the faucet), built for the
+            // person's approval; `confirm` signs it.
             let dest: [u8; 32] = fixed(&d["dest"], "dest")?;
             let payer = crate::net::index_of(&dest).unwrap_or(0);
             let n: Hash = fixed(&c["nullifier"], "nullifier")?;
@@ -1279,16 +1390,31 @@ impl Chain {
             let vault: [u8; 20] = fixed(&self.s["vault"], "vault")?;
             let expect = bw::nullifier_actor(self.program()?, &self.cid()?, chain_id, &vault, &n);
             let root_index = c["root_index"].as_u64().unwrap_or(0) as usize;
-            crate::net::submit(&unhex(c["message"].as_str().ok_or("message")?)?, &c["accounts"], root_index, &what, payer, Some(expect),
-                               crate::net::CLAIM_GAS)?
-        } else {
-            self.submit(&c["message"], &c["accounts"], &c["root_index"], &what)?
-        };
+            let a = d["account"].as_u64().unwrap_or(0);
+            let reply = json!({
+                "private": false,
+                "account": a,
+                "nullifier": d["nullifier"],
+                "root_leaf_count": c["leaf_count"],
+                "proof": null,
+                "variant": c["variant"],
+                "accounts": c["accounts"],
+                "made_by": "ferrata_bridge_module claim (the tool's claim with LEZ state), signed with your public account's key after your approval",
+                "public_on_lez": ["the nullifier N (its account)", "the deposit it spends (a plaintext claim names it)", "the destination account and its balance", "the token and denomination"],
+                "hidden": ["the depositor's other deposits"],
+            });
+            let message = unhex(c["message"].as_str().ok_or("message")?)?;
+            let mut rec = crate::net::prepare("claim", &message, &c["accounts"], root_index, &what, payer, Some(expect), crate::net::CLAIM_GAS, reply, a as u32)?;
+            rec["leaf_index"] = json!(leaf);
+            rec["account"] = json!(a);
+            rec["amount"] = d["amount"].clone();
+            rec["destination"] = json!(format!("your public account /{a}"));
+            return Ok(json!({ "to_approve": rec }));
+        }
+        let sent = self.submit(&c["message"], &c["accounts"], &c["root_index"], &what)?;
         let a = d["account"].as_u64().unwrap_or(0);
         let balance = if private && d["kind"] == "private" {
             self.private_holding(a)?.0.to_string()
-        } else if self.network() {
-            crate::net::holding(a as u32, &[0u8; 20])?.to_string()
         } else {
             String::new()
         };
@@ -1896,6 +2022,90 @@ fn word_dec(v: &Value) -> Result<String, String> {
     Ok(u128::from_be_bytes(w[16..].try_into().expect("16 bytes")).to_string())
 }
 
+/// The view's side of the network session for a native client (the tests, the `call` example): what Main.qml does
+/// with `qml/js/seal.js`, here in Rust. `open` asks `seal_key`, seals the phrase to it (or asks for a new one, whose
+/// words come back sealed), and `call` sends each later call with its counter and MAC, as `caller`.
+pub struct ViewClient {
+    caller: String,
+    keys: Option<crate::seal::Keys>,
+    n: u64,
+}
+
+impl ViewClient {
+    pub fn new(caller: &str) -> Self {
+        Self { caller: caller.to_string(), keys: None, n: 0 }
+    }
+
+    /// `open_network` with `params` (network, eth_rpc, depositor) and `phrase` (`None`: a new one). The module's reply,
+    /// and a new phrase's words opened (wiped when dropped).
+    pub fn open(&mut self, params: &Value, phrase: Option<&str>) -> (String, Option<zeroize::Zeroizing<String>>) {
+        let fail = |e: String| (json!({ "ok": false, "error": e }).to_string(), None);
+        let k: Value = serde_json::from_str(&wallet_as(&self.caller, r#"{"method":"seal_key","params":{}}"#)).unwrap_or(Value::Null);
+        if k["ok"] != true {
+            return (k.to_string(), None);
+        }
+        let module_pk: [u8; 32] = match fixed(&k["result"]["public_key"], "public_key") {
+            Ok(p) => p,
+            Err(e) => return fail(e),
+        };
+        let mut secret = zeroize::Zeroizing::new([0u8; 32]);
+        if let Err(e) = getrandom::getrandom(secret.as_mut()) {
+            return fail(format!("no randomness: {e}"));
+        }
+        let (keys, view_pk) = crate::seal::view_side(&secret, &module_pk);
+        let mut p = params.clone();
+        p["key_id"] = k["result"]["key_id"].clone();
+        p["view_key"] = json!(hex(&view_pk));
+        match phrase {
+            Some(ph) => {
+                let (ct, tag) = keys.seal_phrase(ph.as_bytes());
+                p["phrase_sealed"] = json!({ "ct": hex(&ct), "mac": hex(&tag) });
+            }
+            None => p["generate"] = json!(true),
+        }
+        let reply = wallet_as(&self.caller, &json!({ "method": "open_network", "params": p }).to_string());
+        let v: Value = serde_json::from_str(&reply).unwrap_or(Value::Null);
+        let words = v["result"]["words_sealed"].as_object().and_then(|w| {
+            let ct = unhex(w.get("ct")?.as_str()?).ok()?;
+            let tag = unhex(w.get("mac")?.as_str()?).ok()?;
+            let bytes = keys.open_words(&ct, &tag).ok()?;
+            std::str::from_utf8(&bytes).ok().map(|t| zeroize::Zeroizing::new(t.to_string()))
+        });
+        if v["ok"] == true {
+            self.keys = Some(keys);
+            self.n = 0;
+        }
+        (reply, words)
+    }
+
+    /// The envelope of call `method` (its counter and MAC), without sending it.
+    pub fn envelope(&mut self, method: &str, params: &Value) -> String {
+        let body = json!({ "method": method, "params": params }).to_string();
+        match &self.keys {
+            None => body,
+            Some(k) => {
+                self.n += 1;
+                json!({ "call": body, "n": self.n, "mac": hex(&k.mac_call(self.n, &body)) }).to_string()
+            }
+        }
+    }
+
+    /// One call of the session (a plain call before it opens, and after it closes).
+    pub fn call(&mut self, method: &str, params: &Value) -> String {
+        let e = self.envelope(method, params);
+        let reply = wallet_as(&self.caller, &e);
+        if method == "close" && serde_json::from_str::<Value>(&reply).is_ok_and(|r| r["ok"] == true) {
+            self.keys = None;
+        }
+        reply
+    }
+
+    /// An envelope sent as it is (a replay, in the tests).
+    pub fn send(&self, envelope: &str) -> String {
+        wallet_as(&self.caller, envelope)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1964,6 +2174,160 @@ mod tests {
         assert!(e.starts_with("rejected at the role wallet (lra_1): the person declined; nothing was signed or sent"), "{e}");
         let (url, _) = fake_chain(vec![json!({ "state": "expired" })]);
         assert!(Chain { url, s: Value::Null }.wait_role(&held).unwrap_err().contains("not approved in time"));
+    }
+
+    // ---- the network session (review round 1: H1, M1, M2, M3, M4) ----
+
+    use crate::net::tests::{stand_in_lez, PHRASE, SKIP_CHECKS};
+    use std::sync::atomic::Ordering;
+
+    const VIEW: &str = "module:ferrata_bridge_ui";
+
+    fn v(s: &str) -> Value {
+        serde_json::from_str(s).expect("the reply is JSON")
+    }
+
+    /// A network session opened by the view on a stand-in LEZ (the network's checks skipped), public /0 of the test
+    /// phrase holding `held` base units of ETH on the bridge: the view's client, the stand-in, open_network's reply.
+    fn open_view(held: u128) -> (ViewClient, crate::net::tests::StandIn, Value) {
+        close();
+        let seed = crate::lezkey::seed_of_phrase(PHRASE).unwrap();
+        let id0 = crate::lezkey::public_accounts(&seed, 1).unwrap()[0].id;
+        let dep = &crate::net::KNOWN[0];
+        let program = AccountId::new(crate::lezkey::id_from_string(dep.bridge_program).unwrap());
+        let cid: Hash = fixed(&json!(dep.config_id), "c").unwrap();
+        let holder = *bw::holder_actor(program, &cid, AccountId::new(id0)).account_id.value();
+        let net = stand_in_lez(holder, held, Duration::ZERO);
+        SKIP_CHECKS.store(true, Ordering::SeqCst);
+        let mut view = ViewClient::new(VIEW);
+        let (reply, _) = view.open(&json!({ "network": net.url }), Some(PHRASE));
+        SKIP_CHECKS.store(false, Ordering::SeqCst);
+        let r = v(&reply);
+        assert_eq!(r["ok"], true, "{r}");
+        (view, net, r)
+    }
+
+    /// Review H1: only the view that opened the network session can use it, close it or replace it; a call is never
+    /// accepted twice; every reply names the session's /0. Review M2: the session's record holds no bridge seed.
+    #[test]
+    fn h1_only_the_view_that_opened_the_network_session_can_use_it() {
+        let _s = serial();
+        close();
+        let r = v(&wallet_as("module:other_module", r#"{"method":"seal_key","params":{}}"#));
+        assert!(r["error"].as_str().unwrap().contains("opened by the Ferrata Bridge view (ferrata_bridge_ui) only"), "{r}");
+        assert_eq!(v(&wallet_as("host", r#"{"method":"open_network","params":{}}"#))["ok"], false);
+        assert_eq!(v(&wallet_as("unknown", r#"{"method":"open_network","params":{}}"#))["ok"], false);
+        let (mut view, _net, opened) = open_view(0);
+        let account0 = opened["result"]["account0"].clone();
+        assert!(account0.is_string());
+        assert_eq!(opened["session_account"], account0, "every reply names the session's /0");
+        let s = SESSION.lock().unwrap().as_ref().unwrap().s.clone();
+        assert!(s.get("bridge_seed").is_none() && !s.to_string().contains("43bff369e1a90a09"), "no bridge seed in the record: {s}");
+        // Another module; the view's caller without the session's key; a forged MAC: refused.
+        for (caller, req) in [
+            ("module:other_module", r#"{"method":"info","params":{}}"#.to_string()),
+            (VIEW, r#"{"method":"burn","params":{"private":false,"account":0,"amount":"1","recipient":"0x9858EfFD232B4033E47d90003D41EC34EcaEda94"}}"#.to_string()),
+            (VIEW, r#"{"call":"{\"method\":\"close\",\"params\":{}}","n":99,"mac":"00"}"#.to_string()),
+            ("module:other_module", view.envelope("close", &json!({}))),
+        ] {
+            let r = v(&wallet_as(caller, &req));
+            assert_eq!(r["ok"], false, "{caller} {req}: {r}");
+            assert!(r["error"].as_str().unwrap().starts_with("refused"), "{r}");
+        }
+        let e = view.envelope("balances", &json!({}));
+        assert_eq!(v(&view.send(&e))["ok"], true);
+        assert!(v(&view.send(&e))["error"].as_str().unwrap().contains("a replay"));
+        // A second session over the open one (the reviewer's hijack, r1): refused, for another view and for this one.
+        let mut other = ViewClient::new(VIEW);
+        let (r, words) = other.open(&json!({ "network": "https://n.example" }), None);
+        assert!(v(&r)["error"].as_str().unwrap().starts_with("refused") && words.is_none(), "{r}");
+        let r = v(&view.call("open_network", &json!({ "network": "https://n.example", "generate": true })));
+        assert!(r["error"].as_str().unwrap().contains("a network session is open in this module; close it first"), "{r}");
+        let r = v(&view.call("open", &json!({ "chain": "http://127.0.0.1:1/" })));
+        assert!(r["error"].as_str().unwrap().contains("close it first"), "{r}");
+        assert_eq!(v(&view.call("nothing", &json!({})))["session_account"], account0, "still the view's session");
+        // The view closes it; a new one may then be opened.
+        let r = v(&view.call("close", &json!({})));
+        assert_eq!(r["result"]["closed"], true, "{r}");
+        assert!(!crate::net::is_open());
+        assert_eq!(v(&wallet_as(VIEW, r#"{"method":"seal_key","params":{}}"#))["ok"], true);
+    }
+
+    /// Review H1: a burn is built for the person's approval and sent only when the view confirms it, as approved, once.
+    #[test]
+    fn h1_a_burn_waits_for_approval() {
+        let _s = serial();
+        let (mut view, net, _) = open_view(1_000_000_000_000_000);
+        let mut burn = |recipient: &str| v(&view.call("burn", &json!({ "private": false, "account": 0, "amount": "1000000000000000", "recipient": recipient })));
+        let r = burn("0x9858EfFD232B4033E47d90003D41EC34EcaEda94");
+        let rec = r["result"]["to_approve"].clone();
+        assert_eq!(rec["signed"], false, "{r}");
+        assert_eq!(rec["recipient"], "0x9858effd232b4033e47d90003d41ec34ecaeda94");
+        assert!(rec["max_fee"].is_string() && rec["message_hash"].is_string() && rec["payer"].as_str().unwrap().starts_with("public /0"), "{rec}");
+        assert!(net.sent.lock().unwrap().is_empty(), "nothing is sent before the approval");
+        let id = rec["pending_id"].as_str().unwrap().to_string();
+        let r = v(&wallet_as("module:other_module", &json!({ "method": "confirm", "params": { "pending_id": id } }).to_string()));
+        assert_eq!(r["ok"], false);
+        let r = v(&view.call("confirm", &json!({ "pending_id": id })));
+        assert_eq!(r["result"]["job"]["kind"], "burn", "{r}");
+        let done = wait_done(r["result"]["job"]["id"].as_u64().unwrap());
+        assert_eq!(done["state"], "settled", "{done}");
+        assert_eq!(done["result"]["approved"]["message_hash"], rec["message_hash"]);
+        assert_eq!(done["result"]["recipient"], "0x9858effd232b4033e47d90003d41ec34ecaeda94");
+        assert_eq!(net.sent.lock().unwrap().len(), 1);
+        let r = v(&view.call("confirm", &json!({ "pending_id": id })));
+        assert!(r["error"].as_str().unwrap().contains("no transaction waits"), "{r}");
+        view.call("close", &json!({}));
+        assert!(v(&view.call("jobs", &json!({})))["result"]["jobs"].as_array().unwrap().is_empty(), "the session's jobs are forgotten on close");
+    }
+
+    /// Review M1: the phrase is taken only sealed to the module's one-time key, and a refusal names none of it.
+    #[test]
+    fn m1_the_phrase_is_never_taken_in_clear() {
+        let _s = serial();
+        close();
+        let r = v(&wallet_as(VIEW, &json!({ "method": "open_network", "params": { "network": "https://n.example", "phrase": PHRASE } }).to_string()));
+        let e = r["error"].as_str().unwrap();
+        assert!(e.contains("sealed to the module's one-time key") && !e.contains("abandon"), "{e}");
+        let (mut params, _) = crate::net::tests::sealed(json!({ "network": "https://n.example" }), Some(PHRASE));
+        let (other, _) = crate::net::tests::sealed(json!({}), Some("legal winner thank year wave sausage worth useful legal winner thank yellow"));
+        params["phrase_sealed"] = other["phrase_sealed"].clone();
+        let r = v(&wallet_as(VIEW, &json!({ "method": "open_network", "params": params }).to_string()));
+        let e = r["error"].as_str().unwrap();
+        assert!(e.contains("does not verify") && !e.contains("abandon") && !e.contains("legal"), "{e}");
+        assert!(!crate::net::is_open());
+    }
+
+    /// Review M1: a new phrase's words come back sealed to the view; no reply holds them in clear.
+    #[test]
+    fn m1_a_new_phrases_words_come_back_sealed() {
+        let _s = serial();
+        close();
+        let net = stand_in_lez([0u8; 32], 0, Duration::ZERO);
+        SKIP_CHECKS.store(true, Ordering::SeqCst);
+        let mut view = ViewClient::new(VIEW);
+        let (reply, words) = view.open(&json!({ "network": net.url }), None);
+        SKIP_CHECKS.store(false, Ordering::SeqCst);
+        let words = words.expect("the view opens the words");
+        assert_eq!(words.split(' ').count(), 24);
+        assert!(crate::lezkey::seed_of_phrase(&words).is_ok());
+        assert!(!reply.contains(words.as_str()) && v(&reply)["result"].get("words").is_none(), "{reply}");
+        assert!(v(&reply)["result"]["words_sealed"]["ct"].is_string());
+        view.call("close", &json!({}));
+    }
+
+    /// Review H1 (a view that went away): a session nobody calls ends by itself, its keys wiped.
+    #[test]
+    fn h1_an_idle_network_session_ends_by_itself() {
+        let _s = serial();
+        let (_view, _net, _) = open_view(0);
+        crate::net::tests::IDLE_MS.store(50, Ordering::SeqCst);
+        std::thread::sleep(Duration::from_millis(120));
+        let r = v(&wallet_as("module:other_module", r#"{"method":"jobs","params":{}}"#));
+        crate::net::tests::IDLE_MS.store(0, Ordering::SeqCst);
+        assert!(!crate::net::is_open(), "ended: {r}");
+        assert!(r.get("session_account").is_none());
+        close();
     }
 
     #[test]
