@@ -64,7 +64,8 @@ an address without an account (`keccak256("ferrata/absent-account")[12..]`).
       [--hops] [--absent] OUTDIR
 
 SLOT is a decimal or 0x-hex slot number. Without `--storage`, Sepolia USDC's `totalSupply_`
-(slot 11, checked against `totalSupply()`). Ferrata's vault v5 (`e2e/runs/crown-live-1`):
+(slot 11, checked against `totalSupply()`). `--same-address none` reads no account on both chains
+(no request to mainnet). Ferrata's vault v5 (`e2e/runs/crown-live-1`):
 `--storage 0xfE3199fa2634413CbAC317371076Cae3EB2d9E54:0=depositRoot(),1=nextLeafIndex()
  --deposits 0xfE3199fa2634413CbAC317371076Cae3EB2d9E54:12111048 --updates-from 1410 --hops --absent`
 into `crates/ferrata-spectests/fixtures/sepolia-vault-v5-2026-11-11` (read by
@@ -233,7 +234,10 @@ def fetch_gloas(out, a):
                 row["getter"] = getter
             entry["slots"].append(row)
         facts.append(entry)
-    same, _ = f.rpc_any("eth_getProof", [a.same_address, [], hex(n)], f"proof_{a.same_address}_{n}.json", state_n)
+    # `--same-address none`: no account read on both chains (no mainnet request at all; CI's sequencer job).
+    same = None
+    if a.same_address != "none":
+        same, _ = f.rpc_any("eth_getProof", [a.same_address, [], hex(n)], f"proof_{a.same_address}_{n}.json", state_n)
     absent = None
     if a.absent:
         f.rpc_any("eth_getProof", [ABSENT, [e2e.word(0)], hex(n)], f"proof_absent_{n}.json", state_n)
@@ -263,11 +267,12 @@ def fetch_gloas(out, a):
                                    "header": f"header_{m}.rlp", "receipts_file": f"receipts_{m}.json"})
     head, _ = f.rpc_any("eth_blockNumber", [], None, state_n)
     print(f"proofs at {n} served; head {int(head, 16)}", flush=True)
-    mainnet_block, _ = f.rpc_any("eth_blockNumber", [], None, e2e.EXECUTION)
-    on_mainnet, _ = f.rpc_any("eth_getProof", [a.same_address, [], mainnet_block],
-                              f"proof_{a.same_address}_mainnet_{int(mainnet_block, 16)}.json", e2e.EXECUTION)
-    if same["codeHash"] == EMPTY_CODE_HASH or same["codeHash"] != on_mainnet["codeHash"]:
-        raise SystemExit(f"{a.same_address}: code hash {same['codeHash']} here, {on_mainnet['codeHash']} on mainnet")
+    if same is not None:
+        mainnet_block, _ = f.rpc_any("eth_blockNumber", [], None, e2e.EXECUTION)
+        on_mainnet, _ = f.rpc_any("eth_getProof", [a.same_address, [], mainnet_block],
+                                  f"proof_{a.same_address}_mainnet_{int(mainnet_block, 16)}.json", e2e.EXECUTION)
+        if same["codeHash"] == EMPTY_CODE_HASH or same["codeHash"] != on_mainnet["codeHash"]:
+            raise SystemExit(f"{a.same_address}: code hash {same['codeHash']} here, {on_mainnet['codeHash']} on mainnet")
 
     # 4. Receipts, and the ERC-20 Transfer the tests attest.
     receipts, _ = f.rpc_any("eth_getBlockReceipts", [hex(n)], f"receipts_{n}.json", state_n)
@@ -333,8 +338,9 @@ def fetch_gloas(out, a):
         "receipts": len(receipts),
         "head_when_fetched": int(head, 16),
         "storage": facts,
-        "same_address": {"address": a.same_address, "code_hash": same["codeHash"],
-                         "mainnet_block": int(mainnet_block, 16), "mainnet_code_hash": on_mainnet["codeHash"]},
+        "same_address": None if same is None else {"address": a.same_address, "code_hash": same["codeHash"],
+                                                    "mainnet_block": int(mainnet_block, 16),
+                                                    "mainnet_code_hash": on_mainnet["codeHash"]},
         "transfer": transfer,
         "deposits": deposits,
         "updates": updates,
@@ -370,9 +376,10 @@ def fetch_gloas(out, a):
         for row in entry["slots"]:
             check = f", equal to `{row['getter']}` at the block" if "getter" in row else ""
             lines.append(f"| storage | {entry['address']} slot {row['slot']} = {row['value']}{check} |")
+    if same is not None:
+        lines.append(f"| same address on mainnet | {a.same_address}: code hash {same['codeHash']} at {n} and at mainnet "
+                     f"block {int(mainnet_block, 16)} |")
     lines += [
-        f"| same address on mainnet | {a.same_address}: code hash {same['codeHash']} at {n} and at mainnet block "
-        f"{int(mainnet_block, 16)} |",
         f"| ERC-20 `Transfer` | tx {t['tx_index']}, log {t['log_index']} of {t['logs_in_receipt']} (`logIndex` "
         f"{t['block_log_index']}): {t['token']} from {t['from']} to {t['to']}, value {int(t['value'], 16)} |",
     ]
