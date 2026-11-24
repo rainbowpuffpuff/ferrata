@@ -419,11 +419,12 @@ dialog.sheet[open] { display: flex; }
 .g12{flex-grow:12}
 .g14{flex-grow:14}
 .g17{flex-grow:17}
-.g20{flex-grow:20}
+.g21{flex-grow:21}
 .g23{flex-grow:23}
+.g25{flex-grow:25}
 .g31{flex-grow:31}
 .g42{flex-grow:42}
-.g43{flex-grow:43}
+.g45{flex-grow:45}
 .gs1-1{grid-column:1 / span 1}
 .gs2-1{grid-column:2 / span 1}
 .gs3-1{grid-column:3 / span 1}
