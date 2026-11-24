@@ -20,11 +20,12 @@ integrator applies the texts below.
 **Status moves:** RFP-021 S.9 and S.10, in part → **shown**. RFP-022 U.10 and S.3 stay **in part**, advanced: the
 six core modules are published and installed from, but RFP-022 makes every interface a Logos ui module (U.1) and asks
 for a mini-app (U.2), so its "resulting modules" include `ferrata_bridge_ui`, which is not in the catalog. Counts:
-RFP-021 45/10/1/3 → **47/8/1/3**; RFP-022 unchanged, 42/23/1/2.
+RFP-021 45/10/1/3 → **47/8/1/3**, and in the by-section table RFP-021 Supportability 5/4/1/1 → **7/2/1/1** (of 11);
+RFP-022 unchanged, 42/23/1/2.
 
 ## The new EVIDENCE rows (the next free numbers; 251 and 252 at `eac802f5`)
 
-| N1 | **The module catalog, published by its owner (RFP-021 S.9, S.10; RFP-022 U.10, S.3)**: `landclimber/ferrata-modules`, assembled by `release-publish.sh` from public `main` `98375f82` (catalog commit `c9bdb664`; each module repository's `main` = its `v0.1.0` tag = the offline dry run's commit at the same source). `release-all.yml` (run 45438763159) called `logos-modules-release-action` `bbdc5287` (v1.8) on GitHub's runners: six immutable releases `<module>-v0.1.0`, each `.lgx` signed in the release job (`lgx sign`, the `LOGOS_SIGNING_KEY` secret) by the DID the catalog's `trustedSigners` declares, each with its sidecar (`rootHash`, `sha256`); four with `darwin-arm64`, `linux-amd64` and `linux-arm64`, `ferrata_monitor_module` without `darwin-arm64` (its macOS leg never got a GitHub-hosted runner and was cancelled after 37 minutes), `ferrata_updater_module` `linux-amd64` alone by design (its other legs fail linking the vendored x86-64 objects), so the run ended "failure" with all six published. The index: `index/index.json` on the catalog's `main`, six packages, `rootHash` and `sha256` equal to the sidecars', committed by the catalog's own `rebuild-index.yml` (run 45454593821, commit `9738dd09`), because the base catalog's rolling `index` release turned immutable at its first rebuild and can never hold an asset (`modules/catalog/RELEASE.md`, rule 2). Immutable releases on all seven repositories, a ruleset on all tags and one on `main`, organization 2FA. Read back: 123 checks passed, 0 failed; the release-integrity manifest filled from its commands. | `releases/RELEASE-INTEGRITY.md`; `modules/catalog/install-test-landclimber-2026-11-24/read-back-checks.txt`, `integrity-commands.log` |
+| N1 | **The module catalog, published by its owner (RFP-021 S.9, S.10; RFP-022 U.10, S.3)**: `landclimber/ferrata-modules`, assembled by `release-publish.sh` from public `main` `98375f82` (catalog commit `c9bdb664`; each module repository's `main` = its `v0.1.0` tag = the offline dry run's commit at the same source). `release-all.yml` (run 45438763159) called `logos-modules-release-action` `bbdc5287` (v1.8) on GitHub's runners: six immutable releases `<module>-v0.1.0`, each `.lgx` signed in the release job (`lgx sign`, the `LOGOS_SIGNING_KEY` secret) by the DID the catalog's `trustedSigners` declares, each with its sidecar (`rootHash`, `sha256`); four with `darwin-arm64`, `linux-amd64` and `linux-arm64`, `ferrata_monitor_module` without `darwin-arm64` (its macOS leg never got a GitHub-hosted runner and was cancelled after 37 minutes), `ferrata_updater_module` `linux-amd64` alone by design (its other legs fail linking the vendored x86-64 objects), so the run ended "failure" with all six published. The index: `index/index.json` on the catalog's `main`, six packages, `rootHash` and `sha256` equal to the sidecars', committed by the catalog's own `rebuild-index.yml` (run 45454593821, commit `9738dd09`), because the base catalog's rolling `index` release turned immutable at its first rebuild and can never hold an asset (`modules/catalog/RELEASE.md`, rule 2). Immutable releases on all seven repositories; on the catalog, a ruleset on all tags and one on `main` (the six module repositories have none: the catalog pins their commits by SHA); organization 2FA. Read back: 123 checks passed, 0 failed; the release-integrity manifest filled from its commands. | `releases/RELEASE-INTEGRITY.md`; `modules/catalog/install-test-landclimber-2026-11-24/read-back-checks.txt`, `integrity-commands.log` |
 
 | N2 | **Installed from the published catalog, signatures required (RFP-021 S.9; RFP-022 U.10)**: a headless Logos Core (logosctl `66d098d`, portable, built from source with Nix) on the build box (Linux x86-64): `catalog add` the raw `logos-repo.json` URL, `refresh`, `search` (the six), `signature_policy: require`; the catalog's package refused while the keyring was empty (untrusted key); with the DID added, a copy of a published package without its signature (unsigned), one signed by another key under the same signer name (untrusted key) and one with a bit flipped (content hash mismatch) refused, nothing installed; then all six installed by name from the catalog, each installed `rootHash` equal to its release sidecar's and its `signerDid` the DID, loaded, `version` called; `lgx verify` (logos-package `4bdd9041`) of each published `.lgx` against the DID alone. 56 of 56 steps, 24 Nov 2026. Not shown: macOS, `linux-arm64`, Basecamp's package manager. | `modules/catalog/install-test-landclimber-2026-11-24/README.md` |
 
@@ -43,12 +44,23 @@ Row 163, its title: "(not published)" → "(published on 24 November 2026: rows 
 - *a module catalog of the team's own*: `landclimber/ferrata-modules`, in the owner's organization `landclimber`
   (2FA required, N1).
 - *built from the Logos module catalog template*: the catalog's files are `logos-modules-release-base@33fb564`'s
-  (`logos-repo.json` from its template, `_release-module.yml`, one `release-<module>.yml` per module as
-  `add-module.sh` writes it, `release-all.yml`), with the action pinned, signing on and least-privilege
-  `permissions`. One file departs: `rebuild-index.yml` is the catalog's own, because the base's calls the action's,
-  whose last step cannot write the rolling `index` release under immutable releases; ours runs the same index build
-  and commits the result to `main` (`modules/catalog/RELEASE.md`, rule 2). `index.py validate-repo` passes on the
-  published `logos-repo.json`.
+  (`logos-repo.json` from its template, `_release-module.yml`, `release-all.yml`, and one `release-<module>.yml` per
+  module as the base's `scripts/add-module.sh` writes it from `release-module.yml.template`), with the action
+  pinned, signing on and least-privilege `permissions`; the README is our own (the install and trust instructions).
+  `index.py validate-repo` passes on the published `logos-repo.json`. Against the base, every difference
+  ([`modules/catalog/RELEASE.md`](../../modules/catalog/RELEASE.md), "The base's files"):
+  - *replaced*: `rebuild-index.yml` is the catalog's own, because the base's calls the action's, whose last step
+    cannot write the rolling `index` release under immutable releases; ours runs the same index build (icons under
+    `index/icons/`) and commits the result to `main` (`RELEASE.md`, rule 2);
+  - *left out*: `.github/workflows/unpublish.yml`, which deletes releases and their tags: the release-integrity
+    rules freeze every published release (a fix ships as a new version, rule 4) and the tag ruleset forbids deleting
+    tags; `.github/workflows/validate-repo.yml`, which checks a hand-edited `logos-repo.json` and `includes.json` on
+    each push: ours is generated by `release-publish.sh`, includes no other catalog, and its check, `index.py
+    validate-repo`, passes on the generated file (the dry run) and on the published one (the read-back); the
+    maintainer's `scripts/` (`add-module.sh`, which `release-publish.sh` replaces by writing the same submodules
+    and workflows, and `catalog.sh`, which dispatches the workflows, as the `gh workflow run` commands
+    `release-publish.sh` prints do); and the inputs and placeholders whose outputs are there
+    (`release-module.yml.template`, `submodules/.gitkeep`).
 - *so the modules are installable by Logos clients*: a headless Logos Core installed, loaded and called all six from
   the published URL, signatures required (N2). On Linux x86-64 only: no macOS or `linux-arm64` client installed from
   the catalog here. Of the published packages, four carry `darwin-arm64`; the monitor module does not (its macOS leg
@@ -60,7 +72,9 @@ Row 163, its title: "(not published)" → "(published on 24 November 2026: rows 
   key's signing ran for real on 13 packages, published as files with their signatures, not as a catalog, and Logos
   Core enforced it under `signature_policy: require` (row 241)."
 - Proposed: "Published by the owner at `landclimber/ferrata-modules`, from the template (its rolling index release
-  replaced by an index on `main`, which immutable releases require): six signed, immutable releases. A headless Logos
+  replaced by an index on `main`, which immutable releases require; `unpublish.yml`, which would delete frozen
+  releases, `validate-repo.yml`, for a hand-edited file ours is not, and the maintainer's `scripts/` left out):
+  six signed, immutable releases. A headless Logos
   Core installed, loaded and called all six from the published URL with signatures required, after refusing the
   catalog's package before its key was trusted and unsigned, other-signed and tampered copies. Installed on Linux
   x86-64; the monitor module's package has no `darwin-arm64` and the updater module's is `linux-amd64` alone (by
@@ -161,4 +175,6 @@ action has not built or released: its signed packages come from our own release 
 All GitHub access was read-only (`gh` GETs, `gh release view`/`download`, `git ls-remote`, clones, raw files); nothing
 was written to GitHub. The read-back and the manifest's commands ran on the laptop; the install ran on the Modal build
 box (Linux x86-64): the Nix builds of `logosctl` and `lgx` once (1,165 s and 30 s, then saved to the box's volume),
-then the install (63 s). `test-release-publish.sh`: 85 passed, 0 failed (laptop, bash 5.3).
+then the install (63 s), and the committed script once more, unmodified, on a fresh container (327 s with the
+store restored): 56 of 56 each time; the first install run failed (its downloads did not follow redirects; the
+install record's README says how). `test-release-publish.sh`: 85 passed, 0 failed (laptop, bash 5.3).
