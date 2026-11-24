@@ -72,7 +72,7 @@ jobs:
       - name: Cache the upstream sources (LEZ v0.4.0-rc1 1806e87, rc2 e3edf47, rc3 bafd07b; Logos Blockchain d480efc6)
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
-          path: ${{ github.workspace }}/../upstream
+          path: ${{ runner.workspace }}/upstream # beside the checkout; actions/cache saves no path with ".."
           key: upstream-lez-1806e87-e3edf47-bafd07b-logos-blockchain-d480efc6
       - name: Fetch the upstream sources
         run: scripts/fetch-upstream.sh
@@ -86,8 +86,10 @@ jobs:
         with:
           workspaces: |
             lez/live/driver -> ../../../../tmp/sequencer-v0.4.0-rc3/target
-          shared-key: sequencer-attest
-          cache-on-failure: true
+          # A new key, saved by a passing run only: run 45331030912 stopped before building and saved an empty target
+          # under the old one, which a later run then found "up-to-date" and never replaced.
+          shared-key: sequencer-attest-2
+          cache-on-failure: false
       - name: Build (the guests; LEZ v0.4.0-rc3's standalone sequencer; the live driver)
         timeout-minutes: 170
         run: scripts/ci/sequencer-attest.sh e2e/runs/ci-sequencer-attest build
@@ -148,7 +150,7 @@ jobs:
       - name: Cache the upstream sources (LEZ v0.4.0-rc1 1806e87, rc2 e3edf47, rc3 bafd07b; Logos Blockchain d480efc6)
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
-          path: ${{ github.workspace }}/../upstream
+          path: ${{ runner.workspace }}/upstream # beside the checkout; actions/cache saves no path with ".."
           key: upstream-lez-1806e87-e3edf47-bafd07b-logos-blockchain-d480efc6
       - name: Fetch the upstream sources
         run: scripts/fetch-upstream.sh
@@ -171,8 +173,8 @@ jobs:
           workspaces: |
             checkpoint -> target
             cli -> ../../tmp/ci-seq-roundtrip/target
-          shared-key: sequencer-roundtrip
-          cache-on-failure: true
+          shared-key: sequencer-roundtrip-2
+          cache-on-failure: false
       - name: Build (the vault, the guests, ci_zone, LEZ v0.4.0-rc1's standalone sequencer, crown-driver, the tool)
         timeout-minutes: 200
         run: scripts/ci/sequencer-roundtrip.sh e2e/runs/ci-sequencer-roundtrip build

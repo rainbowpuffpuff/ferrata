@@ -32,8 +32,8 @@
 #   run         lez/live/run.sh run: the standalone sequencer (blocks every 3 s, RISC0_DEV_MODE unset, so it verifies
 #               private proofs) and the driver's phases `info deploy fresh-follow fresh-scenarios fresh-consume
 #               fresh-private export` (lez/live/driver/src/fresh.rs; FERRATA_CI_PRIVATE=skip leaves out the private
-#               attestation and its real proof), each capped at FERRATA_LIVE_PHASE_SECONDS (default 3,600: the proof
-#               took 1,222 s with 4 threads on the build box).
+#               attestation and its real proof), each capped at FERRATA_LIVE_PHASE_SECONDS (default 5,400: the proof
+#               took 1,222 s with 4 threads on the build box and 2,927 s on GitHub's 4-core runner, run 45333224944).
 #   check       the records: every transaction's outcome as designed, by count and by name, phase by phase; the
 #               deployed images equal docs/image-ids.md's; instance A holds the finality update's block, with the
 #               root the second provider reports.
@@ -259,7 +259,7 @@ stage_run() {
   export FERRATA_PROGRAM_BIN="$program" FERRATA_SCRIPTED_BIN="$scripted"
   export FERRATA_LIVE_DRIVER_EXTRA="--consumer-bin $consumer --fresh-checkpoint $FRESH/checkpoint --fresh-attest $FRESH/attest"
   export FERRATA_LIVE_PHASES="$phases" FERRATA_LIVE_OUT="$RECORDS"
-  export FERRATA_LIVE_PHASE_SECONDS="${FERRATA_LIVE_PHASE_SECONDS:-3600}"
+  export FERRATA_LIVE_PHASE_SECONDS="${FERRATA_LIVE_PHASE_SECONDS:-5400}"
   rm -rf "$RECORDS"
   say "== run: LEZ $LEZ_TAG's sequencer (standalone: its mock Bedrock, no Logos Blockchain node), blocks every 3 s; phases: $phases (each at most $FERRATA_LIVE_PHASE_SECONDS s)"
   run_logged "run: LEZ sequencer (standalone) + the driver's phases" bash "$REPO/lez/live/run.sh" run
