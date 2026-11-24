@@ -46,7 +46,7 @@ GENERATED = {
                  "the host's limits",
 }
 PREFIXES = ("deploy/testnet/", "names/js/")
-# Files the host's install script (not in this repository) installs under another name than the repository's.
+# Files deploy/testnet/install-web.sh installs under another name than the repository's.
 RENAMED = {"network.html": "deploy/testnet/web/explorer/index.html", "health.html": "deploy/testnet/host/www/status.html"}
 RENAMED_DIRS = {"names/": "names/js/"}
 

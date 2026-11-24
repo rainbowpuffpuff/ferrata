@@ -60,19 +60,21 @@ That is the public leg; the bridge hides which LEZ account it pays, not that you
 reads: the trust pages read only this host, except the verify page's quick check, which also reads the manifest's copy
 on GitHub; the build page reads <code>api.github.com</code> (CI status); the explorer and status pages read the public
 beacon and execution endpoints named in the explorer's <code>config.json</code>; the wallet reads this host and your
-browser wallet. The host's own software (its web server's configuration, the gateway and the faucet) is not in this
-repository yet; by its configuration:</p>
+browser wallet. The host's own software is in this repository (<code>deploy/testnet/</code>: the web server's configuration
+<code>host/Caddyfile</code>, the gateway and faucet <code>host/bin/ferrata-gateway</code>, the stack <code>stack.yaml</code>). The host has run
+what was installed on 23 November 2026; the repository's version, which records more (below), reaches it at the
+next redeploy:</p>
 <div class="table-wrap" tabindex="0" role="region" aria-label="What this host&#x27;s services record"><table>
 <caption>What this host's services record</caption>
 <thead><tr><th scope="col">Service</th><th scope="col">Records</th><th scope="col">Does not record</th></tr></thead>
 <tbody>
-<tr><th scope="row">Web server (Caddy)</th><td>by its configuration (the host's <code>Caddyfile</code>), no per-request access log: it defines a log file for the server's own messages but no site <code>log</code> directive (not inspected on the host itself)</td><td>request bodies</td></tr>
+<tr><th scope="row">Web server (Caddy)</th><td>on the host since 23 November: no per-request access log (its configuration of that day defines a log file for the server's own messages but no site <code>log</code> directive; not inspected on the host itself); from the redeploy (<code>deploy/testnet/host/Caddyfile</code>): each request with your IP address, kept 30 days</td><td>request bodies</td></tr>
 <tr><th scope="row">JSON-RPC gateway <code>/rpc</code></th><td>your IP address, the method names of each call, their count and cost, status, size, time</td><td>the call's parameters: which accounts or blocks you asked for are not logged. The gateway does see them in memory to apply its allowlist, and so does the sequencer.</td></tr>
-<tr><th scope="row">Faucet <code>/faucet</code></th><td>your IP address with the account it credited (rate limits)</td><td>anything else</td></tr>
+<tr><th scope="row">Faucet <code>/faucet</code></th><td>your IP address with the account it credited (rate limits); from the redeploy also each claim's transaction, recorded before it is sent</td><td>anything else</td></tr>
 </tbody></table></div>
 <p>The gateway's log (with the faucet's lines) and the web server's log file are copied to the operator's CloudWatch
-log group, kept 30 days by the stack's default (the host's stack definition).
-A host that wanted to log more could: that is why its code belongs in the repository, and why the wallet's files are listed
+log group, kept 30 days by the stack's default (<code>deploy/testnet/stack.yaml</code>, <code>LogRetentionDays</code>).
+A host that wanted to log more could: that is why its code is in the repository, and why the wallet's files are listed
 in <a href="/bridge/verify/">the site manifest</a>. To avoid this host entirely, run the tools against your own LEZ node
 and your own Ethereum endpoint.</p>
 
