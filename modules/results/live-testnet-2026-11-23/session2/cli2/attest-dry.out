@@ -1,0 +1,8 @@
+zone https://<domain>/rpc: followed to block 4482 (final on Bedrock)
+attest: verdict (the program's function, natively): 3 statement(s) under block 12198519 (0xf83c333ac4fecde38f731f331023cc9511e79c7fc4dbc0a812b2ae16fee6c9fd)
+  statement id 0x586c30e470a0f8729bb70e8ce10d1eea3bbf49bbc5d7f0d77bd808fc051813c2
+  statement id 0x75fb9c605c160eeb13dd5bd9529f1a1125d95fca55388939b13146cc4506a7b8
+  statement id 0xf581fe3e40c1d0f228154d8859b816566edf2195a1dc0a87e06633ed04b3e70b
+attest: dry run of 1 transaction(s) on the zone's state at block 4482, the zone's clock 2026-11-23 22:39:32 UTC (payer 7KVZiQuiFM5154PYF3UezwNcg1FcDRToD6VAyggBdiK9)
+  Attest                       6348 bytes; would be applied; execution gas 251067, storage gas 6348, 1 event(s)
+  the verdict and the zone's execution agree: applied

@@ -56,6 +56,11 @@ adoption_parts = 2                  # committee adoption in 2 transactions of 25
   url = "https://ethereum-sepolia-beacon-api.publicnode.com"
   kind = "headers"
 
+  # [[chain.source]]                # optional: an execution endpoint, which confirms an update's finalized header by
+  # name = "ethpandaops"            # its execution block (held canonical at its number) and counts towards
+  # url = "https://rpc.sepolia.ethpandaops.io"   # min_agreeing; inside Logos Core: via = "eth_rpc_module" and
+  # kind = "execution"              # chain_id = 11155111 instead of url (the endpoint eth_rpc_module holds)
+
 [[chain]]
 name = "mainnet"
 preset = "mainnet"

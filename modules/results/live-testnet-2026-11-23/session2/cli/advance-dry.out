@@ -1,0 +1,7 @@
+zone https://<domain>/rpc: followed to block 4400 (final on Bedrock)
+advance: update attested at slot 11644896, signed at slot 11644897, finalizing slot 11644832; the store is at slot 11644832
+advance: the program's checks, natively: no change: it would not move the store (duplicate, stale or of an earlier period)
+advance: the program's step 1, natively: refused with 52 NotNewer (Ferrata policy: the update does not advance the finalized header (duplicate or stale).)
+advance: dry run of 1 transaction(s) on the zone's state at block 4400, the zone's clock 2026-11-23 22:25:32 UTC (payer 7KVZiQuiFM5154PYF3UezwNcg1FcDRToD6VAyggBdiK9)
+  Open                         12267 bytes; would be refused with 52 NotNewer (Ferrata policy: the update does not advance the finalized header (duplicate or stale).); execution gas 216557, storage gas 12267, 0 event(s)
+  the verdict and the zone's execution agree: 52 NotNewer (Ferrata policy: the update does not advance the finalized header (duplicate or stale).)

@@ -99,6 +99,7 @@
         "daemon_clock",
         "diversity_limits",
         "every_party",
+        "execution",
         "health",
         "jobs",
         "redating",

@@ -1,0 +1,6 @@
+14:58:59 session: 90 minutes; Logos Core logosctl version pre-release-66d098d
+15:16:55 attest: the instance's newest record: slot 11642688, execution block 0x34e95025606a77afad34b88aba54a776f7f0e8204c5398007bdd69b70ebf12fa
+15:16:55 step attest-sign
+15:17:04 step attest-send
+16:38:14 step cli-journey
+16:40:13 live-testnet.sh session: 0 failed steps

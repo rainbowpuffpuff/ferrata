@@ -1,0 +1,167 @@
+{
+  "11642496": {
+    "root": "0x7954ad805ac452669dec3e9ca37adac4f9bcc3fb16032234c01a6cb8e931fce0",
+    "first_seen_s": 1795446486,
+    "divergence": "confirmed",
+    "settled": true,
+    "last_judged_s": 1795446917,
+    "finalized_by": [
+      "lodestar",
+      "publicnode"
+    ]
+  },
+  "11642688": {
+    "root": "0x4042b8ae29af8438e7ec7a050913d8192e87c531aceba54372ec2da96433262c",
+    "first_seen_s": 1795446979,
+    "divergence": "confirmed",
+    "settled": true,
+    "last_judged_s": 1795447102,
+    "finalized_by": [
+      "lodestar",
+      "publicnode"
+    ]
+  },
+  "11642720": {
+    "root": "0x79d90fa6f0bac57b5d95e9324cc8da483dd6a3fd91653aa686da975c3ab46e2c",
+    "first_seen_s": 1795447164,
+    "divergence": "confirmed",
+    "settled": true,
+    "last_judged_s": 1795447534,
+    "finalized_by": [
+      "lodestar",
+      "publicnode"
+    ]
+  },
+  "11642752": {
+    "root": "0x1525815e0a90a8846009dc654189ad898d5e544da37085076784a39e21cf3caa",
+    "first_seen_s": 1795447595,
+    "divergence": "confirmed",
+    "settled": true,
+    "last_judged_s": 1795447904,
+    "finalized_by": [
+      "lodestar",
+      "publicnode"
+    ]
+  },
+  "11642784": {
+    "root": "0xb8d14996cbfa03c49e49224c8e41df19e7a4da729f9144f9a2795416774fbccc",
+    "first_seen_s": 1795447965,
+    "divergence": "confirmed",
+    "settled": true,
+    "last_judged_s": 1795448273,
+    "finalized_by": [
+      "lodestar",
+      "publicnode"
+    ]
+  },
+  "11642816": {
+    "root": "0x5b258e07b81becd26d4809d009928db5059950c6ad2205e55cabccad8d1afb09",
+    "first_seen_s": 1795448335,
+    "divergence": "confirmed",
+    "settled": true,
+    "last_judged_s": 1795448645,
+    "finalized_by": [
+      "lodestar",
+      "publicnode"
+    ]
+  },
+  "11642848": {
+    "root": "0x6c6a83f043bcaf47e1f9aeed7cb0b5548882aa16b58aab8ec66827288ea18356",
+    "first_seen_s": 1795448707,
+    "divergence": "confirmed",
+    "settled": true,
+    "last_judged_s": 1795449017,
+    "finalized_by": [
+      "lodestar",
+      "publicnode"
+    ]
+  },
+  "11642880": {
+    "root": "0x9ccc54013ab84de1e12a2dbc03395ab898438b2f60a7ebcdb3260064e785b476",
+    "first_seen_s": 1795449079,
+    "divergence": "confirmed",
+    "settled": true,
+    "last_judged_s": 1795449387,
+    "finalized_by": [
+      "lodestar",
+      "publicnode"
+    ]
+  },
+  "11642912": {
+    "root": "0xfdef22c2db62e5c62ac7d28e09faa453c675fa6874e1c197fd152d729827e7e5",
+    "first_seen_s": 1795449448,
+    "divergence": "confirmed",
+    "settled": true,
+    "last_judged_s": 1795449759,
+    "finalized_by": [
+      "lodestar",
+      "publicnode"
+    ]
+  },
+  "11642944": {
+    "root": "0x1ca78c5985de8b09d46826bc7514d51e62cb1da36cc33bc42cc66feeec65ecf7",
+    "first_seen_s": 1795449822,
+    "divergence": "confirmed",
+    "settled": true,
+    "last_judged_s": 1795450196,
+    "finalized_by": [
+      "lodestar",
+      "publicnode"
+    ]
+  },
+  "11642976": {
+    "root": "0x3b264d2c5ca6bfd940ce233d0d969cfcade671e3f33f0db64e3cd1e8f2076df4",
+    "first_seen_s": 1795450259,
+    "divergence": "confirmed",
+    "settled": true,
+    "last_judged_s": 1795450570,
+    "finalized_by": [
+      "lodestar",
+      "publicnode"
+    ]
+  },
+  "11643008": {
+    "root": "0x44d520749afb5355feb44f351e968b1e74fa9938dfa48ab5539b98db813cf011",
+    "first_seen_s": 1795450632,
+    "divergence": "confirmed",
+    "settled": true,
+    "last_judged_s": 1795450942,
+    "finalized_by": [
+      "lodestar",
+      "publicnode"
+    ]
+  },
+  "11643040": {
+    "root": "0x38e72a0b00efb6a26069c5e716e41c4c622513e3ba3fe2fde4c286759d2fd379",
+    "first_seen_s": 1795451005,
+    "divergence": "confirmed",
+    "settled": true,
+    "last_judged_s": 1795451314,
+    "finalized_by": [
+      "lodestar",
+      "publicnode"
+    ]
+  },
+  "11643072": {
+    "root": "0xaaa319cb7178732cb69c25bc3f63a5004efec5657fd68235e0c92ff04e22e2ea",
+    "first_seen_s": 1795451376,
+    "divergence": "confirmed",
+    "settled": true,
+    "last_judged_s": 1795451685,
+    "finalized_by": [
+      "lodestar",
+      "publicnode"
+    ]
+  },
+  "11643104": {
+    "root": "0xf1800d4083e62b4337407ae268434021acfb88ec76a098c0c6bea3ce46c76194",
+    "first_seen_s": 1795451747,
+    "divergence": "confirmed",
+    "settled": true,
+    "last_judged_s": 1795451870,
+    "finalized_by": [
+      "lodestar",
+      "publicnode"
+    ]
+  }
+}

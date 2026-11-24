@@ -1,0 +1,22 @@
+| step | result | seconds |
+|---|---|---:|
+| versions | ok | 0 |
+| guests | ok | 29 |
+| rc3-copy | ok | 3 |
+| stage-updater-rc3 | ok | 1 |
+| sdk-updater | ok | 0 |
+| lock-updater-rc3 | ok | 1 |
+| prepare-updater | ok | 2 |
+| rc3-tools | ok | 103 |
+| rc3-tools-test | ok | 3 |
+| attest-monitor | ok | 26 |
+| attest-cli | ok | 6 |
+| cli-rc3 | ok | 150 |
+| lgx-ferrata_updater_module | ok | 481 |
+| logosctl | ok | 46 |
+| lgx-beacon_api_module | ok | 8 |
+| lgx-eth_rpc_module | ok | 7 |
+| stage-attest | ok | 0 |
+| prepare-attest | ok | 1 |
+| lgx-ferrata_attest_module | ok | 6 |
+| save-nix | ok | 96 |

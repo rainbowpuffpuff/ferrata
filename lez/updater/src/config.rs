@@ -186,16 +186,18 @@ pub struct ChainCfg {
 #[serde(deny_unknown_fields)]
 pub struct SourceCfg {
     pub name: String,
-    /// A beacon node's REST API base URL.
+    /// A beacon node's REST API base URL; for `kind = "execution"`, an execution endpoint's JSON-RPC URL.
     #[serde(default)]
     pub url: Option<String>,
     /// A recorded directory in the lab's layout (dev mode).
     #[serde(default)]
     pub dir: Option<String>,
-    /// `"beacon_api_module"`: Logos Core's module of that name, for `chain_id` (inside Logos Core only).
+    /// `"beacon_api_module"`: Logos Core's module of that name, for `chain_id` (inside Logos Core only); for
+    /// `kind = "execution"`, `"eth_rpc_module"`: Logos Core's Ethereum JSON-RPC module, whichever endpoint it holds for
+    /// `chain_id`.
     #[serde(default)]
     pub via: Option<String>,
-    /// The chain id `beacon_api_module` is asked about (with `via`).
+    /// The chain id `beacon_api_module` (or `eth_rpc_module`) is asked about (with `via`).
     #[serde(default)]
     pub chain_id: Option<i64>,
     /// The provider id `beacon_api_module` tries first (with `via`; default: its own order).
@@ -205,7 +207,10 @@ pub struct SourceCfg {
     pub timeout_secs: u64,
     /// `light-client` (default): it serves bootstraps, updates and finality updates. `headers`: it only serves
     /// `/eth/v1/beacon/headers/{slot}` (most public beacon APIs), and counts towards `min_agreeing` for an update
-    /// whose finalized header is the block it reports canonical at that slot.
+    /// whose finalized header is the block it reports canonical at that slot. `execution`: an Ethereum execution
+    /// endpoint (JSON-RPC: a `url`, or `via = "eth_rpc_module"`), which counts towards `min_agreeing` for an update
+    /// whose finalized header's execution block (the block hash the light client binds) it holds canonical at its
+    /// number (`eth_getBlockByHash`, then `eth_getBlockByNumber`).
     #[serde(default)]
     pub kind: SourceKind,
     /// A recorded `dir` only (it has no `/eth/v1/node/version`): the client it stands for, as a node would report it
@@ -220,6 +225,7 @@ pub enum SourceKind {
     #[default]
     LightClient,
     Headers,
+    Execution,
 }
 
 fn default_name() -> String {
@@ -289,8 +295,14 @@ impl File {
                     bail!("chain {} source {}: exactly one of url, dir and via", c.name, s.name);
                 }
                 if let Some(via) = &s.via {
-                    if via != "beacon_api_module" {
-                        bail!("chain {} source {}: via = {via:?}: \"beacon_api_module\"", c.name, s.name);
+                    let known = if s.kind == SourceKind::Execution { "eth_rpc_module" } else { "beacon_api_module" };
+                    if via != known {
+                        bail!(
+                            "chain {} source {}: via = {via:?}: \"beacon_api_module\" (light-client data), or \
+                             \"eth_rpc_module\" with kind = \"execution\"",
+                            c.name,
+                            s.name
+                        );
                     }
                     if !s.chain_id.is_some_and(|id| id > 0) {
                         bail!("chain {} source {}: via needs chain_id (a positive integer)", c.name, s.name);
@@ -302,9 +314,18 @@ impl File {
                 if s.kind == SourceKind::Headers && s.url.is_none() {
                     bail!("chain {} source {}: a headers source needs a url", c.name, s.name);
                 }
+                if s.kind == SourceKind::Execution && s.dir.is_some() {
+                    bail!("chain {} source {}: an execution source is a url or via = \"eth_rpc_module\"", c.name, s.name);
+                }
+                if s.provider.is_some() && s.kind == SourceKind::Execution {
+                    bail!("chain {} source {}: provider is beacon_api_module's (an execution source has none)", c.name, s.name);
+                }
             }
-            if c.sources.iter().all(|s| s.kind == SourceKind::Headers) {
-                bail!("chain {}: no light-client source (every source is kind = \"headers\")", c.name);
+            if c.sources.iter().all(|s| s.kind != SourceKind::LightClient) {
+                bail!(
+                    "chain {}: no light-client source (every source is kind = \"headers\" or \"execution\")",
+                    c.name
+                );
             }
             if let Some(s) = c.sources.iter().find(|s| s.client.is_some() && s.dir.is_none()) {
                 bail!(
@@ -323,7 +344,8 @@ impl File {
                     .iter()
                     .filter(|s| s.via.is_none() && (s.url.is_some() || s.client.is_some()))
                     .filter(|s| {
-                        s.kind == SourceKind::LightClient || self.policy.client_match == ClientMatch::FinalizedHeader
+                        s.kind == SourceKind::LightClient
+                            || (s.kind == SourceKind::Headers && self.policy.client_match == ClientMatch::FinalizedHeader)
                     })
                     .count();
                 if able < k {
@@ -335,7 +357,7 @@ impl File {
                 // One provider listed twice would count as two clients (its version answer and its data can come from
                 // different backends). Two hosts can still be one provider: the updater cannot tell.
                 let mut hosts: std::collections::BTreeMap<String, &str> = std::collections::BTreeMap::new();
-                for s in c.sources.iter() {
+                for s in c.sources.iter().filter(|s| s.kind != SourceKind::Execution) {
                     let Some(url) = &s.url else { continue };
                     let host = url_host(url);
                     if let Some(other) = hosts.insert(host.clone(), &s.name) {

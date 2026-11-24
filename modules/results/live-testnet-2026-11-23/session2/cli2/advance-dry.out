@@ -1,0 +1,8 @@
+zone https://<domain>/rpc: followed to block 4486 (final on Bedrock)
+advance: update attested at slot 11644992, signed at slot 11644993, finalizing slot 11644928; the store is at slot 11644896
+advance: useful: job 0xae38f33a38e565aa499e62241c7dd30fd2511bfe3949cc99310b1bb618458d17, layout Gloas, advanced true, adopted false, rotated false
+advance: dry run of 3 transaction(s) on the zone's state at block 4486, the zone's clock 2026-11-23 22:39:52 UTC (payer 7KVZiQuiFM5154PYF3UezwNcg1FcDRToD6VAyggBdiK9)
+  open                         12267 bytes; would be applied; execution gas 2697077, storage gas 12267, 0 event(s)
+  miller                       399 bytes; would be applied; execution gas 3305374, storage gas 399, 0 event(s)
+  finish                       527 bytes; would be applied; execution gas 3721523, storage gas 527, 1 event(s)
+  the verdict and the zone's execution agree: applied

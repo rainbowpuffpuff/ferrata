@@ -767,6 +767,133 @@ fn headers_source_confirms_or_holds_back() {
     }
 }
 
+/// The execution blocks the recorded updates' finalized headers bind: (block hash, its number), the number the
+/// payload header carries, or (Gloas: the hash only) one made up in order, which the mock below keeps consistent.
+fn finalized_execution(r: &Rec) -> Vec<(Root, u64)> {
+    use ferrata_core::types::Execution;
+    let mut out = Vec::new();
+    for (k, e) in r.entries.iter().enumerate() {
+        let (u, _) = if e.period_update {
+            decode_update(&e.bytes, &r.config)
+        } else {
+            decode_finality_update(&e.bytes, &r.config)
+        }
+        .unwrap();
+        match &u.finalized_header.execution {
+            Execution::Payload { header, .. } => out.push((header.block_hash, header.block_number)),
+            Execution::BlockHash { block_hash, .. } => out.push((*block_hash, 1_000_000 + k as u64)),
+            Execution::None => {}
+        }
+    }
+    out
+}
+
+/// An execution endpoint on loopback (JSON-RPC over HTTP, as a public Sepolia endpoint): `eth_getBlockByHash` gives
+/// each recorded finalized header's execution block with its number, `eth_getBlockByNumber` the block at that
+/// number; `lie`: another block at every number (the hash it was asked about is not canonical there).
+fn mock_execution(blocks: Vec<(Root, u64)>, lie: bool) -> String {
+    use std::{
+        io::{BufRead, BufReader, Read, Write},
+        net::TcpListener,
+    };
+    let by_hash: std::collections::BTreeMap<String, u64> =
+        blocks.iter().map(|(h, n)| (format!("0x{}", hex::encode(h)), *n)).collect();
+    let by_number: std::collections::BTreeMap<u64, String> =
+        blocks.iter().map(|(h, n)| (*n, format!("0x{}", hex::encode(h)))).collect();
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    std::thread::spawn(move || {
+        for stream in listener.incoming() {
+            let Ok(mut stream) = stream else { continue };
+            let mut reader = BufReader::new(stream.try_clone().unwrap());
+            let mut line = String::new();
+            if reader.read_line(&mut line).is_err() {
+                continue;
+            }
+            let mut length = 0usize;
+            loop {
+                let mut h = String::new();
+                if reader.read_line(&mut h).is_err() || h == "\r\n" || h.is_empty() {
+                    break;
+                }
+                if let Some(v) = h.to_ascii_lowercase().strip_prefix("content-length:") {
+                    length = v.trim().parse().unwrap_or(0);
+                }
+            }
+            let mut body = vec![0u8; length];
+            if reader.read_exact(&mut body).is_err() {
+                continue;
+            }
+            let req: serde_json::Value = serde_json::from_slice(&body).unwrap_or_default();
+            let p = &req["params"][0];
+            let result = match req["method"].as_str().unwrap_or("") {
+                "eth_getBlockByHash" => {
+                    let h = p.as_str().unwrap_or("").to_ascii_lowercase();
+                    by_hash.get(&h).map_or(serde_json::Value::Null, |n| {
+                        serde_json::json!({ "hash": h, "number": format!("0x{n:x}") })
+                    })
+                }
+                "eth_getBlockByNumber" => {
+                    let n = u64::from_str_radix(p.as_str().unwrap_or("0x0").trim_start_matches("0x"), 16).unwrap_or(0);
+                    match (by_number.get(&n), lie) {
+                        (Some(_), true) => serde_json::json!({ "hash": format!("0x{}", "ee".repeat(32)), "number": format!("0x{n:x}") }),
+                        (Some(h), false) => serde_json::json!({ "hash": h, "number": format!("0x{n:x}") }),
+                        (None, _) => serde_json::Value::Null,
+                    }
+                }
+                _ => serde_json::Value::Null,
+            };
+            let answer = serde_json::json!({ "jsonrpc": "2.0", "id": req["id"], "result": result }).to_string();
+            let _ = write!(stream, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{answer}", answer.len());
+        }
+    });
+    format!("http://{addr}")
+}
+
+/// An execution source (`kind = "execution"`) beside one light-client source, with `min_agreeing = 2`: when the
+/// endpoint holds each update's finalized execution block canonical, the updater catches up as with two light-client
+/// sources; when it holds another block at that number, nothing after the checkpoint's `Init` is sent (the updater
+/// waits), nothing is refused, and `/health` names the source.
+#[test]
+fn execution_source_confirms_or_holds_back() {
+    use ferrata_updater::source::ExecutionRpc;
+    let r = rec("mainnet");
+    let clock = Clock::new(r.entries.len());
+    let blocks = finalized_execution(&r);
+    assert!(!blocks.is_empty(), "the record's headers bind execution blocks");
+    for lie in [false, true] {
+        let payer = key(if lie { 0x2e } else { 0x2d });
+        let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+        let el = ExecutionRpc::new("el", &mock_execution(blocks.clone(), lie), 5);
+        let sources: Vec<Box<dyn Source>> = vec![r.honest("lc", &clock), Box::new(el)];
+        let mut u = r.updater("exe", payer, sources, None, Policy { min_agreeing: 2, ..policy(1) });
+        if !lie {
+            settle(&mut u, &mut l, 200);
+            assert_eq!(store(&u, &l).finalized.slot, r.last_finalized().0);
+            let s = &u.metrics.sources["el"];
+            assert!(s.confirmed > 0 && s.mismatches == 0 && s.available, "{s:?}");
+            assert_eq!(u.health().0, "ok", "{:?}", u.health().1);
+            println!("execution source honest: {} confirmations, {} jobs applied", s.confirmed, applied(&u, &l));
+        } else {
+            let mut waiting = 0;
+            for _ in 0..30 {
+                if let Plan::Waiting(_) = u.tick(&mut l).unwrap() {
+                    waiting += 1;
+                }
+            }
+            assert!(waiting >= 25, "the updater waits once the instance is initialised ({waiting} rounds)");
+            assert_eq!(applied(&u, &l), 1, "only the initialisation");
+            let s = &u.metrics.sources["el"];
+            assert!(s.mismatches > 0 && s.confirmed == 0, "{s:?}");
+            let (status, why) = u.health();
+            assert_eq!(status, "degraded");
+            assert!(why.iter().any(|w| w.contains("el does not hold a finalized header's execution block")), "{why:?}");
+            println!("execution source lying: {waiting} rounds waiting, {} mismatches, health {status}", s.mismatches);
+        }
+        assert_eq!(refused_total(&l), 0);
+    }
+}
+
 /// `finish_own_jobs`: a source that moves on to a newer finality update while this updater's job for the previous
 /// one is half done (as a beacon node serves only its newest). With it (the default), the updater finishes its own
 /// job first, also after a restart on the same state directory; without it, it opens the newer update's job and the

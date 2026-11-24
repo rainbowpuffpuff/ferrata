@@ -208,6 +208,19 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    a refusal nothing here foresees can cost, also when every round brings a new job. The reason is in
    the log line, the journal, `/health` and the metrics.
 
+## An execution endpoint (`kind = "execution"`)
+
+A source of `kind = "execution"` is an Ethereum execution endpoint: a JSON-RPC `url` (read with `curl`, as the beacon
+sources), or inside Logos Core `via = "eth_rpc_module"` with `chain_id` (the endpoint, proxy and verified-proxy
+policy that module holds for that chain). It serves no light-client data. It confirms an update's finalized header by
+the execution block that header binds (the payload header's block hash; in the Gloas layout the block hash itself): the
+endpoint must hold that block canonical at its number (`eth_getBlockByHash`, then `eth_getBlockByNumber`), and then it
+counts towards `policy.min_agreeing` for the update, as a `headers` source does for the beacon block. With
+`min_agreeing` equal to the number of sources, no update is sent before the execution endpoint holds its block; an
+endpoint that does not is named in `/health` (`degraded`) and the updater waits. It reads nothing else: the program
+checks the update itself, and an execution endpoint cannot make it accept one it would refuse
+(`execution_source_confirms_or_holds_back`, `tests/execution.rs`).
+
 ## Client diversity (`policy.min_distinct_clients`)
 
 Built 18 November 2026 (EVIDENCE row 147). The program's checks (step 4) refuse what the sync committee did not

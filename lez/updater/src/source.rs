@@ -36,6 +36,8 @@ pub const MAX_OBJECT_BYTES: usize = 1 << 20;
 pub const MAX_JSON_BYTES: usize = 64 << 10;
 /// The longest reply text accepted from `beacon_api_module` (the provider's JSON for 128 updates is about 8 MB).
 pub const MAX_MODULE_REPLY_BYTES: usize = 16 << 20;
+/// The most bytes read from an execution endpoint's JSON-RPC answer (a block without its transactions: a few KB).
+pub const MAX_RPC_BYTES: usize = 256 << 10;
 /// Characters of a provider's or curl's message kept in an error (errors reach the log and `/health`).
 pub const MAX_MESSAGE_CHARS: usize = 200;
 
@@ -124,6 +126,15 @@ pub trait Source: Send {
     /// `GET /eth/v1/beacon/headers/{slot}`: the root of the block it holds canonical at `slot` (`None`: none).
     fn canonical_root(&mut self, slot: u64) -> Result<Option<Root>> {
         bail!("{}: serves no headers (slot {slot})", self.name())
+    }
+    /// Whether it is an execution endpoint (`kind = "execution"`), which confirms headers by their execution block.
+    fn execution(&self) -> bool {
+        false
+    }
+    /// The number of the execution block `block_hash` if the endpoint holds it canonical (`None`: it holds no such
+    /// block, or another block at its number): [`execution_canonical`].
+    fn execution_block(&mut self, block_hash: &Root) -> Result<Option<u64>> {
+        bail!("{}: serves no execution blocks (0x{})", self.name(), hex::encode(block_hash))
     }
     /// `GET /eth/v1/node/version`: the client the node says it runs (`data.version`, e.g. `Lodestar/v1.51.0/7923280`),
     /// for `policy.min_distinct_clients`. The provider's own claim: nothing authenticates it.
@@ -227,7 +238,8 @@ pub fn set_beacon_api_module(f: BeaconApiModuleCall) {
 pub struct BeaconApiModule {
     pub name: String,
     pub chain_id: i64,
-    /// The provider id `beacon_api_module` tries first (`""`: its own order).
+    /// The provider id `beacon_api_module` tries first (`""`: its own order); an answer from another provider (it failed
+    /// over) is not taken.
     pub provider: String,
     pub timeout_secs: u64,
     /// The provider that answered each of the last [`ANSWERED_KEPT`] requests, in order (`beacon_api_module`'s ids).
@@ -261,10 +273,20 @@ impl BeaconApiModule {
                 clip(v["code"].as_str().unwrap_or("no code"))
             );
         }
+        let by = clip(v["provider"].as_str().unwrap_or("?"));
+        // A source that names its provider takes that provider's answers only: beacon_api_module fails over to its
+        // other providers, and two sources that both fell over to one provider would count as two for min_agreeing.
+        if !self.provider.is_empty() && by != self.provider {
+            bail!(
+                "{}: {endpoint}: beacon_api_module answered from provider {by}, not {} (it failed over): not taken",
+                self.name,
+                self.provider
+            );
+        }
         if self.answered.len() >= ANSWERED_KEPT {
             self.answered.remove(0);
         }
-        self.answered.push(clip(v["provider"].as_str().unwrap_or("?")));
+        self.answered.push(by);
         let body = v["body"].as_str().ok_or_else(|| anyhow!("{}: {endpoint}: no body", self.name))?;
         serde_json::from_str(body)
             .with_context(|| format!("{}: {endpoint}: the provider's body is not JSON", self.name))
@@ -342,6 +364,177 @@ impl Source for HeaderWitness {
             "404" => Ok(None),
             other => bail!("{}: {url}: HTTP {}: {}", self.name, clip(other), clip(body)),
         }
+    }
+}
+
+// ---- execution endpoints (`kind = "execution"`) ------------------------------------------------------------------
+
+/// Whether an execution endpoint holds the block `block_hash` canonical: `eth_getBlockByHash(hash, false)` gives the
+/// block (its `hash` must be the one asked) and its `number`, and `eth_getBlockByNumber(number, false)` must give
+/// the same hash. `Some(number)` if so; `None` if it holds no block of that hash, or another block at that number (a
+/// fork, or another chain). `call` is one JSON-RPC call: (method, params) -> the `result`.
+pub fn execution_canonical(
+    mut call: impl FnMut(&str, serde_json::Value) -> Result<serde_json::Value>,
+    block_hash: &Root,
+) -> Result<Option<u64>> {
+    let h = format!("0x{}", hex::encode(block_hash));
+    let block = call("eth_getBlockByHash", serde_json::json!([h, false]))?;
+    if block.is_null() {
+        return Ok(None);
+    }
+    let got = block["hash"].as_str().ok_or_else(|| anyhow!("eth_getBlockByHash: no hash in the block"))?;
+    if !got.eq_ignore_ascii_case(&h) {
+        bail!("eth_getBlockByHash {h} answered the block {}", clip(got));
+    }
+    let n = block["number"].as_str().ok_or_else(|| anyhow!("eth_getBlockByHash: no number in the block"))?;
+    let number = u64::from_str_radix(n.trim_start_matches("0x"), 16)
+        .with_context(|| format!("eth_getBlockByHash: number {}", clip(n)))?;
+    let at = call("eth_getBlockByNumber", serde_json::json!([format!("0x{number:x}"), false]))?;
+    Ok(at["hash"].as_str().is_some_and(|x| x.eq_ignore_ascii_case(&h)).then_some(number))
+}
+
+/// An execution endpoint's JSON-RPC, read with `curl` (POST, at most [`MAX_RPC_BYTES`] of answer, a generic
+/// User-Agent, nothing that identifies the caller): a [`Source`] of `kind = "execution"`.
+pub struct ExecutionRpc {
+    pub name: String,
+    pub url: String,
+    pub timeout_secs: u64,
+    pub requests: u64,
+}
+
+impl ExecutionRpc {
+    pub fn new(name: &str, url: &str, timeout_secs: u64) -> Self {
+        Self { name: name.into(), url: url.into(), timeout_secs, requests: 0 }
+    }
+    fn call(&mut self, method: &str, params: serde_json::Value) -> Result<serde_json::Value> {
+        self.requests += 1;
+        let body = serde_json::json!({ "jsonrpc": "2.0", "id": self.requests, "method": method, "params": params }).to_string();
+        let out = fetch(
+            &self.url,
+            "application/json",
+            &["-H", "Content-Type: application/json", "--data-binary", &body, "-w", "\n%{http_code}"],
+            self.timeout_secs,
+            MAX_RPC_BYTES + 16,
+        )
+        .with_context(|| format!("{}: {method}", self.name))?;
+        if !out.ok {
+            bail!("{}: {method}: {}", self.name, out.message);
+        }
+        let text = String::from_utf8_lossy(&out.body);
+        let (answer, code) = text.rsplit_once('\n').ok_or_else(|| anyhow!("{}: {method}: no status", self.name))?;
+        if code.trim() != "200" {
+            bail!("{}: {method}: HTTP {}: {}", self.name, clip(code), clip(answer));
+        }
+        rpc_result(answer).with_context(|| format!("{}: {method}", self.name))
+    }
+}
+
+/// A JSON-RPC answer's `result`, or its `error` as an error.
+pub fn rpc_result(answer: &str) -> Result<serde_json::Value> {
+    let v: serde_json::Value = serde_json::from_str(answer).context("not JSON")?;
+    if let Some(e) = v.get("error").filter(|e| !e.is_null()) {
+        bail!("error {}", clip(&e.to_string()));
+    }
+    v.get("result").cloned().ok_or_else(|| anyhow!("no result"))
+}
+
+impl Source for ExecutionRpc {
+    fn name(&self) -> &str {
+        &self.name
+    }
+    fn bootstrap(&mut self, _: &Root) -> Result<Vec<u8>> {
+        bail!("{}: an execution source serves no light-client data", self.name)
+    }
+    fn updates(&mut self, _: u64, _: u64) -> Result<Vec<Vec<u8>>> {
+        bail!("{}: an execution source serves no light-client data", self.name)
+    }
+    fn finality_update(&mut self) -> Result<Vec<u8>> {
+        bail!("{}: an execution source serves no light-client data", self.name)
+    }
+    fn light_client(&self) -> bool {
+        false
+    }
+    fn execution(&self) -> bool {
+        true
+    }
+    fn execution_block(&mut self, block_hash: &Root) -> Result<Option<u64>> {
+        execution_canonical(|m, p| self.call(m, p), block_hash)
+    }
+}
+
+/// How the module crate reaches `eth_rpc_module.raw_rpc` inside Logos Core: (chain id, method, the params as a JSON
+/// array's text, a deadline in milliseconds) -> that module's reply text (`{ok: true, route, result}` or
+/// `{ok: false, code, error}`), or why the call did not reach it.
+pub type EthRpcModuleCall = fn(i64, &str, &str, u64) -> std::result::Result<String, String>;
+
+static ETH_RPC_MODULE: OnceLock<EthRpcModuleCall> = OnceLock::new();
+
+/// Installed once by `ferrata_updater_module` (inside Logos Core); natively nothing is installed and an
+/// [`EthRpcModule`] source answers with an error.
+pub fn set_eth_rpc_module(f: EthRpcModuleCall) {
+    let _ = ETH_RPC_MODULE.set(f);
+}
+
+/// Logos Core's `eth_rpc_module` (`[[chain.source]] kind = "execution"`, `via = "eth_rpc_module"`): the execution
+/// endpoint that module holds for `chain_id` (its own configuration, proxy and verified-proxy policy).
+pub struct EthRpcModule {
+    pub name: String,
+    pub chain_id: i64,
+    pub timeout_secs: u64,
+    /// `eth_rpc_module`'s label of the route of each of the last [`ANSWERED_KEPT`] answers (`direct`, `verified`,
+    /// `proxied`).
+    pub routes: Vec<String>,
+}
+
+impl EthRpcModule {
+    fn call(&mut self, method: &str, params: serde_json::Value) -> Result<serde_json::Value> {
+        let f = ETH_RPC_MODULE
+            .get()
+            .ok_or_else(|| anyhow!("{}: eth_rpc_module is reachable only from inside Logos Core", self.name))?;
+        let text = f(self.chain_id, method, &params.to_string(), self.timeout_secs * 1000)
+            .map_err(|e| anyhow!("{}: {method}: {}", self.name, clip(&e)))?;
+        if text.len() > MAX_RPC_BYTES {
+            bail!("{}: {method}: eth_rpc_module's reply of {} bytes is longer than {MAX_RPC_BYTES}", self.name, text.len());
+        }
+        let v: serde_json::Value = serde_json::from_str(&text)
+            .with_context(|| format!("{}: {method}: eth_rpc_module's reply is not JSON", self.name))?;
+        if v["ok"].as_bool() != Some(true) {
+            bail!(
+                "{}: {method}: eth_rpc_module answered {} ({})",
+                self.name,
+                clip(v["error"].as_str().unwrap_or("no detail")),
+                clip(v["code"].as_str().unwrap_or("no code"))
+            );
+        }
+        if self.routes.len() >= ANSWERED_KEPT {
+            self.routes.remove(0);
+        }
+        self.routes.push(clip(v["route"].as_str().unwrap_or("?")));
+        Ok(v["result"].clone())
+    }
+}
+
+impl Source for EthRpcModule {
+    fn name(&self) -> &str {
+        &self.name
+    }
+    fn bootstrap(&mut self, _: &Root) -> Result<Vec<u8>> {
+        bail!("{}: an execution source serves no light-client data", self.name)
+    }
+    fn updates(&mut self, _: u64, _: u64) -> Result<Vec<Vec<u8>>> {
+        bail!("{}: an execution source serves no light-client data", self.name)
+    }
+    fn finality_update(&mut self) -> Result<Vec<u8>> {
+        bail!("{}: an execution source serves no light-client data", self.name)
+    }
+    fn light_client(&self) -> bool {
+        false
+    }
+    fn execution(&self) -> bool {
+        true
+    }
+    fn execution_block(&mut self, block_hash: &Root) -> Result<Option<u64>> {
+        execution_canonical(|m, p| self.call(m, p), block_hash)
     }
 }
 

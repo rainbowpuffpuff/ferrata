@@ -1,0 +1,5 @@
+attest-dry exit 0
+attest-send exit 0
+advance-dry exit 0
+advance-send exit 0
+status-after exit 0

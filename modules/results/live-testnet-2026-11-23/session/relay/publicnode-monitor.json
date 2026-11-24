@@ -1,0 +1,23 @@
+{
+ "by": {
+  "GET /eth/v1/beacon/genesis": {
+   "down": 55004,
+   "errors": 0,
+   "n": 88,
+   "up": 10912
+  },
+  "GET /eth/v1/beacon/headers": {
+   "down": 197735,
+   "errors": 0,
+   "n": 176,
+   "up": 23496
+  }
+ },
+ "down": 252739,
+ "errors": 0,
+ "requests": 264,
+ "seconds": 5955.7,
+ "started": 1795445938.1272893,
+ "to": "https://ethereum-sepolia-beacon-api.publicnode.com/",
+ "up": 34408
+}

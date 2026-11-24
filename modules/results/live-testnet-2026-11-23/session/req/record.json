@@ -1,0 +1,10 @@
+{
+  "chain_id": 11155111,
+  "anchor_slot": 11642688,
+  "block_number": 12196417,
+  "timestamp": "0x6b045454",
+  "block_hash": "0x34e95025606a77afad34b88aba54a776f7f0e8204c5398007bdd69b70ebf12fa",
+  "parent_hash": "0x2c86778262d434b98577dc2aa554e7f9c86a100a38455a0083f86ba949312c65",
+  "state_root": "0xdd0a03218748f7beac049e8189b250e4caf65cc041d041515f9fc0509c07f5b5",
+  "receipts_root": "0x1b9854afffb8ba26385e3c84313131dd203ad9e74b99294d08babd51babbfc6f"
+}

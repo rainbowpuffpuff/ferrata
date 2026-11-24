@@ -1,0 +1,17 @@
+{
+ "by": {
+  "getAccount": {
+   "down": 219751,
+   "errors": 0,
+   "n": 89,
+   "up": 22072
+  }
+ },
+ "down": 219751,
+ "errors": 0,
+ "requests": 89,
+ "seconds": 5955.7,
+ "started": 1795445938.13543,
+ "to": "https://<domain>/rpc",
+ "up": 22072
+}

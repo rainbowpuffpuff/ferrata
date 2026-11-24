@@ -1,0 +1,13 @@
+{
+  "block": 1831,
+  "events": 1,
+  "exit_code": null,
+  "fee_base": "2045536",
+  "gas_exec": 249282,
+  "gas_stor": 6410,
+  "hash": "4fd32e3e7b5a36599b29f056d840c9e156791bb1a451c3ec0cbf4673f830fcb4",
+  "reason": null,
+  "settled_utc": "2026-11-23T15:17:28Z",
+  "status": "applied",
+  "tx_bytes": 6410
+}

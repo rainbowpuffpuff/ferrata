@@ -1,0 +1,3 @@
+zone https://<domain>/rpc: followed to block 4190 (final on Bedrock)
+instance 0x3147ce50710d343383a76541c46eeb26ab19d556fe0eb4b9906e9de24421ddbb: store layout Gloas, finalized slot 11644608 (period 1421), root 0x91369571e9e8bfaa6064fc911577a10bc9beba35be1975e96e4e0adb50bc49ae, next committee known, jobs applied 19
+  newest record header(0x3147ce50710d343383a76541c46eeb26ab19d556fe0eb4b9906e9de24421ddbb, 11644608): chain id 11155111, execution BlockHash([213, 6, 168, 248, 43, 25, 151, 75, 13, 247, 200, 226, 114, 175, 112, 25, 106, 245, 102, 111, 226, 91, 110, 64, 6, 252, 147, 102, 212, 236, 179, 218])

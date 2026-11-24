@@ -1,0 +1,139 @@
+config (instance(id)'s state on the zone)
+  instance actor     EPHEsCrtuPB1RY7YzzVNJJ6axLcxrnnuZ4jKRVCSziuF of program 9iE718tLLpNX7jUofw329HeJ2crB4CqBxQTRGjS1YBP4
+  instance id        0x88df84285312923d6be0d04a7cd95a0ec13d61dececcdbfb26d7675ebd64c358 (SHA-256 of the domain, borsh(config) and the checkpoint: derived again, equal)
+  checkpoint         0x5f71d7f650f9252b48749b5f062c0c234e01afd69f364ab600e2b6051494b20d (the trusted beacon block root of Init)
+  chain id           11155111
+  sync committee     512 keys, at least 1 signing; 32 slots per epoch, 256 epochs per period
+  genesis            time 1655733600, 12 s per slot, validators root 0xd8ea171f3c94aea21ebc42a1ed61052acf3f9209c00e4efbaaddac09ed9b8078
+  fork 0             version 0x90000069, from epoch 0
+  fork 1             version 0x90000070, from epoch 50
+  fork 2             version 0x90000071, from epoch 100
+  fork 3             version 0x90000072, from epoch 56832
+  fork 4             version 0x90000073, from epoch 132608
+  fork 5             version 0x90000074, from epoch 222464
+  fork 6             version 0x90000075, from epoch 272640
+  fork 7             version 0x90000076, from epoch 353024
+  fork 8             version 0x00000000, not scheduled
+  layout at Init     3 (Some(Electra); the store upgrades itself at later forks); a committee adopted in 2 parts
+  state              active true, 32 jobs applied, store 274 bytes
+
+dry run: advance with the update of period 1409
+  instance           0x88df84285312923d6be0d04a7cd95a0ec13d61dececcdbfb26d7675ebd64c358 (store layout Gloas, finalized slot 11537760), 32 update jobs submitted
+  update             attested slot 11542593, finalized slot 11542528, signature slot 11542594, next committee carried
+  verdict            step 1 accepts (ferrata_core::steps::step1, the program's own function); the job advances the finalized header, adopts the next committee, rotates to the next period
+  Open (step 1)      message    3437 bytes: execution gas   2124847 (cycles 2124847), storage gas   3899, base fee 17029968
+  Miller (step 2)    message       1 bytes: execution gas   3310470 (cycles 3310470), storage gas    399, base fee 26486952
+  Adopt 1/2          message   24582 bytes: execution gas   3408111 (cycles 3408111), storage gas  24980, base fee 27464728
+  Adopt 2/2          message   24582 bytes: execution gas   3415303 (cycles 3415303), storage gas  24980, base fee 27522264
+  Finish (step 3)    message       1 bytes: execution gas   3731558 (cycles 3731558), storage gas    527, base fee 29856680
+  cost               5 transaction(s): execution gas 15990289, storage gas 54785
+  nothing was sent (add --send to settle it in the harness's zone)
+
+send: advance with the update of period 1409
+  instance           0x88df84285312923d6be0d04a7cd95a0ec13d61dececcdbfb26d7675ebd64c358 (store layout Gloas, finalized slot 11537760), 32 update jobs submitted
+  update             attested slot 11542593, finalized slot 11542528, signature slot 11542594, next committee carried
+  verdict            step 1 accepts (ferrata_core::steps::step1, the program's own function); the job advances the finalized header, adopts the next committee, rotates to the next period
+  Open (step 1)      message    3437 bytes: execution gas   2124847 (cycles 2124847), storage gas   3899, base fee 17029968
+  Miller (step 2)    message       1 bytes: execution gas   3310470 (cycles 3310470), storage gas    399, base fee 26486952
+  Adopt 1/2          message   24582 bytes: execution gas   3408111 (cycles 3408111), storage gas  24980, base fee 27464728
+  Adopt 2/2          message   24582 bytes: execution gas   3415303 (cycles 3415303), storage gas  24980, base fee 27522264
+  Finish (step 3)    message       1 bytes: execution gas   3731558 (cycles 3731558), storage gas    527, base fee 29856680
+  cost               5 transaction(s): execution gas 15990289, storage gas 54785
+  result             5 transaction(s) settled, all applied; finalized slot 11537760 -> 11542528; equal to the dry run: yes
+
+send: advance with the finality update of the attestation fixture
+  instance           0x88df84285312923d6be0d04a7cd95a0ec13d61dececcdbfb26d7675ebd64c358 (store layout Gloas, finalized slot 11542528), 33 update jobs submitted
+  update             attested slot 11549728, finalized slot 11549664, signature slot 11549729, next committee absent (a finality update)
+  verdict            step 1 accepts (ferrata_core::steps::step1, the program's own function); the job advances the finalized header
+  Open (step 1)      message    3741 bytes: execution gas   2128848 (cycles 2128848), storage gas   4203, base fee 17064408
+  Miller (step 2)    message       1 bytes: execution gas   3305374 (cycles 3305374), storage gas    399, base fee 26446184
+  Finish (step 3)    message       1 bytes: execution gas   3721523 (cycles 3721523), storage gas    527, base fee 29776400
+  cost               3 transaction(s): execution gas 9155745, storage gas 5129
+  result             3 transaction(s) settled, all applied; finalized slot 11542528 -> 11549664; equal to the dry run: yes
+
+dry run: storage slot 0x000000000000000000000000000000000000000000000000000000000000000b of 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238
+  message            Attest (variant 7 of ferrata_lez_wire::Message), 7201 bytes borsh
+  to                 header(instance, slot 11549664) = 6qSNcK39RXdHH9cqmswpCn9XHZ5khjWHmUunTau5yR6g of program 9iE718tLLpNX7jUofw329HeJ2crB4CqBxQTRGjS1YBP4
+  request            chain 11155111, instance 0x88df84285312923d6be0d04a7cd95a0ec13d61dececcdbfb26d7675ebd64c358, the block's RLP header (678 bytes: the Gloas record binds the hash only), 1 account(s), 1 slot(s), 0 log(s)
+  written            <out>/session/cli/attest-messages/message-5.hex (borsh, hex) and <out>/session/cli/attest-messages/message-5.debug (its Rust Debug text)
+  verdict            attested: 2 statement(s) (ferrata_lez_wire::attest::evaluate, the program's own function)
+    proven at block 12105936 (0x5a2f5671d4d93d4e9a188ec55743ae20a86cce5f91e570f2e5dc22b2b34b27b6), 0 hop(s), record slot 11549664, chain 11155111
+    [0] account 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 nonce 1 balance 0x0000000000000000000000000000000000000000000000000000000000000000 storage root 0x4d959de7c4a8ad2ee46885228fc3e38d4eb350772e70ab50e5b06538a2768550 code hash 0xcd3f29e2ea9c61dadd48bfeaf8b2884b6de9dfee7bf45329452c4c33d0868ceb
+        statement id 0x93c3fdb51daff9abbd9b31d827b601e1a8e352f0099e3c18c7c5d5e82a4d8c42
+    [1] storage 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 slot 0x000000000000000000000000000000000000000000000000000000000000000b = 0x0000000000000000000000000000000000000000000000009513ef76177584ee
+        statement id 0xa9ffd7e80fcd3afc81e902546e226eb87a655a034099a02ec452274213b2704a
+  cost               execution gas 277795 (cycles metered 277795), storage gas 7599 (the transaction's 7599 bytes), base fee 2283152
+  events             FRT-ATT1 (112 bytes)
+  nothing was sent (add --send to settle it in the harness's zone)
+
+send: storage slot 0x000000000000000000000000000000000000000000000000000000000000000b of 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238
+  message            Attest (variant 7 of ferrata_lez_wire::Message), 7201 bytes borsh
+  to                 header(instance, slot 11549664) = 6qSNcK39RXdHH9cqmswpCn9XHZ5khjWHmUunTau5yR6g of program 9iE718tLLpNX7jUofw329HeJ2crB4CqBxQTRGjS1YBP4
+  request            chain 11155111, instance 0x88df84285312923d6be0d04a7cd95a0ec13d61dececcdbfb26d7675ebd64c358, the block's RLP header (678 bytes: the Gloas record binds the hash only), 1 account(s), 1 slot(s), 0 log(s)
+  written            <out>/session/cli/attest-messages/message-6.hex (borsh, hex) and <out>/session/cli/attest-messages/message-6.debug (its Rust Debug text)
+  verdict            attested: 2 statement(s) (ferrata_lez_wire::attest::evaluate, the program's own function)
+    proven at block 12105936 (0x5a2f5671d4d93d4e9a188ec55743ae20a86cce5f91e570f2e5dc22b2b34b27b6), 0 hop(s), record slot 11549664, chain 11155111
+    [0] account 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 nonce 1 balance 0x0000000000000000000000000000000000000000000000000000000000000000 storage root 0x4d959de7c4a8ad2ee46885228fc3e38d4eb350772e70ab50e5b06538a2768550 code hash 0xcd3f29e2ea9c61dadd48bfeaf8b2884b6de9dfee7bf45329452c4c33d0868ceb
+        statement id 0x93c3fdb51daff9abbd9b31d827b601e1a8e352f0099e3c18c7c5d5e82a4d8c42
+    [1] storage 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 slot 0x000000000000000000000000000000000000000000000000000000000000000b = 0x0000000000000000000000000000000000000000000000009513ef76177584ee
+        statement id 0xa9ffd7e80fcd3afc81e902546e226eb87a655a034099a02ec452274213b2704a
+  cost               execution gas 277795 (cycles metered 277795), storage gas 7599 (the transaction's 7599 bytes), base fee 2283152
+  events             FRT-ATT1 (112 bytes)
+  settled            execution gas 277795 (cycles metered 277795), storage gas 7599 (the transaction's 7599 bytes), base fee 2283152
+  result             applied in block 168; exit None; 1 event(s); equal to the dry run: yes
+
+dry run: storage slot 0x000000000000000000000000000000000000000000000000000000000000000b of 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238, condition value == 0x0000000000000000000000000000000000000000000000000000000000000001
+  message            Attest (variant 7 of ferrata_lez_wire::Message), 7235 bytes borsh
+  to                 header(instance, slot 11549664) = 6qSNcK39RXdHH9cqmswpCn9XHZ5khjWHmUunTau5yR6g of program 9iE718tLLpNX7jUofw329HeJ2crB4CqBxQTRGjS1YBP4
+  request            chain 11155111, instance 0x88df84285312923d6be0d04a7cd95a0ec13d61dececcdbfb26d7675ebd64c358, the block's RLP header (678 bytes: the Gloas record binds the hash only), 1 account(s), 1 slot(s), 0 log(s)
+  written            <out>/session/cli/attest-messages/message-7.hex (borsh, hex) and <out>/session/cli/attest-messages/message-7.debug (its Rust Debug text)
+  verdict            refused with exit code 130 PredicateFailed (the core): A condition of the statement does not hold.
+  cost               execution gas 256439 (cycles metered 256439), storage gas 7633 (the transaction's 7633 bytes), base fee 2112576
+  outcome            the transaction would revert with exit code 130 PredicateFailed (the core): A condition of the statement does not hold. (the fee is charged)
+  nothing was sent (add --send to settle it in the harness's zone)
+
+send: storage slot 0x000000000000000000000000000000000000000000000000000000000000000b of 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238, condition value == 0x0000000000000000000000000000000000000000000000000000000000000001
+  message            Attest (variant 7 of ferrata_lez_wire::Message), 7235 bytes borsh
+  to                 header(instance, slot 11549664) = 6qSNcK39RXdHH9cqmswpCn9XHZ5khjWHmUunTau5yR6g of program 9iE718tLLpNX7jUofw329HeJ2crB4CqBxQTRGjS1YBP4
+  request            chain 11155111, instance 0x88df84285312923d6be0d04a7cd95a0ec13d61dececcdbfb26d7675ebd64c358, the block's RLP header (678 bytes: the Gloas record binds the hash only), 1 account(s), 1 slot(s), 0 log(s)
+  written            <out>/session/cli/attest-messages/message-8.hex (borsh, hex) and <out>/session/cli/attest-messages/message-8.debug (its Rust Debug text)
+  verdict            refused with exit code 130 PredicateFailed (the core): A condition of the statement does not hold.
+  cost               execution gas 256439 (cycles metered 256439), storage gas 7633 (the transaction's 7633 bytes), base fee 2112576
+  outcome            the transaction would revert with exit code 130 PredicateFailed (the core): A condition of the statement does not hold. (the fee is charged)
+  settled            execution gas 256439 (cycles metered 256439), storage gas 7633 (the transaction's 7633 bytes), base fee 2112576
+  result             reverted in block 169; exit Some(130); 0 event(s); equal to the dry run: yes
+
+dry run: log 0 of transaction 0's receipt (the block's first ERC-20 Transfer: emitter and recipient checked)
+  message            Attest (variant 7 of ferrata_lez_wire::Message), 2153 bytes borsh
+  to                 header(instance, slot 11549664) = 6qSNcK39RXdHH9cqmswpCn9XHZ5khjWHmUunTau5yR6g of program 9iE718tLLpNX7jUofw329HeJ2crB4CqBxQTRGjS1YBP4
+  request            chain 11155111, instance 0x88df84285312923d6be0d04a7cd95a0ec13d61dececcdbfb26d7675ebd64c358, the block's RLP header (678 bytes: the Gloas record binds the hash only), 0 account(s), 0 slot(s), 1 log(s)
+  written            <out>/session/cli/attest-messages/message-9.hex (borsh, hex) and <out>/session/cli/attest-messages/message-9.debug (its Rust Debug text)
+  verdict            attested: 1 statement(s) (ferrata_lez_wire::attest::evaluate, the program's own function)
+    proven at block 12105936 (0x5a2f5671d4d93d4e9a188ec55743ae20a86cce5f91e570f2e5dc22b2b34b27b6), 0 hop(s), record slot 11549664, chain 11155111
+    [0] log tx 0 log 0 emitter 0x5543ca71ed8c88daf217488b1808994e080d925b topic0 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef (3 topics, 32 data bytes)
+        statement id 0x739825fa8019c7c2e23985e5f0a3b9a5b542d5dd76843919b3193a05445cdbad
+  cost               execution gas 96434 (cycles metered 96434), storage gas 2551 (the transaction's 2551 bytes), base fee 791880
+  events             FRT-ATT1 (80 bytes)
+  nothing was sent (add --send to settle it in the harness's zone)
+
+send: log 0 of transaction 0's receipt (the block's first ERC-20 Transfer: emitter and recipient checked)
+  message            Attest (variant 7 of ferrata_lez_wire::Message), 2153 bytes borsh
+  to                 header(instance, slot 11549664) = 6qSNcK39RXdHH9cqmswpCn9XHZ5khjWHmUunTau5yR6g of program 9iE718tLLpNX7jUofw329HeJ2crB4CqBxQTRGjS1YBP4
+  request            chain 11155111, instance 0x88df84285312923d6be0d04a7cd95a0ec13d61dececcdbfb26d7675ebd64c358, the block's RLP header (678 bytes: the Gloas record binds the hash only), 0 account(s), 0 slot(s), 1 log(s)
+  written            <out>/session/cli/attest-messages/message-10.hex (borsh, hex) and <out>/session/cli/attest-messages/message-10.debug (its Rust Debug text)
+  verdict            attested: 1 statement(s) (ferrata_lez_wire::attest::evaluate, the program's own function)
+    proven at block 12105936 (0x5a2f5671d4d93d4e9a188ec55743ae20a86cce5f91e570f2e5dc22b2b34b27b6), 0 hop(s), record slot 11549664, chain 11155111
+    [0] log tx 0 log 0 emitter 0x5543ca71ed8c88daf217488b1808994e080d925b topic0 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef (3 topics, 32 data bytes)
+        statement id 0x739825fa8019c7c2e23985e5f0a3b9a5b542d5dd76843919b3193a05445cdbad
+  cost               execution gas 96434 (cycles metered 96434), storage gas 2551 (the transaction's 2551 bytes), base fee 791880
+  events             FRT-ATT1 (80 bytes)
+  settled            execution gas 96434 (cycles metered 96434), storage gas 2551 (the transaction's 2551 bytes), base fee 791880
+  result             applied in block 170; exit None; 1 event(s); equal to the dry run: yes
+
+status
+  program            9iE718tLLpNX7jUofw329HeJ2crB4CqBxQTRGjS1YBP4
+  instance           0x88df84285312923d6be0d04a7cd95a0ec13d61dececcdbfb26d7675ebd64c358 (chain 11155111, store layout Gloas)
+  followed           Init and 34 update job(s) submitted through the program: 169 transactions, all applied: false
+                     execution gas 526291088 in all, storage gas 1794320 in all
+  record             header(id, 11549664) = 6qSNcK39RXdHH9cqmswpCn9XHZ5khjWHmUunTau5yR6g: BlockHash([90, 47, 86, 113, 212, 217, 61, 78, 154, 24, 142, 197, 87, 67, 174, 32, 168, 108, 206, 95, 145, 229, 112, 242, 229, 220, 34, 178, 179, 75, 39, 182])
+

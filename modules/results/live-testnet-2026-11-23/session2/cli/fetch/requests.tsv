@@ -1,0 +1,4 @@
+utc	endpoint	request	file	note
+2026-11-23T22:25:37Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/finality_update		gloas
+2026-11-23T22:25:37Z	https://ethereum-sepolia-beacon-api.publicnode.com	GET /eth/v1/beacon/headers/11644832		
+2026-11-23T22:25:37Z	https://lodestar-sepolia.chainsafe.io	(kept)	000-finality-11644832.ssz	finalized 11644832 root 0x64ad005bf35b282246f6069cb18b0c467d728df84a56d6e69af75c26d4da7ff6, 486/512

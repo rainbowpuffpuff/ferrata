@@ -1,0 +1,9 @@
+216 <out>/session/updater-state/ledger/wallet/wallet_config.json
+33616 <out>/session/updater-state/ledger/wallet/storage.json
+11422 <out>/session/updater-state/ledger/run.tsv
+6186269 <out>/session/updater-state/ledger/blocks.borsh
+5210298 <out>/session/updater-state/ledger/follower.borsh
+24624 <out>/session/updater-state/sepolia/committees/cc0c12f333e69bb2ee3e5c83593067deefd66b8d2790a4e4f7781991b638fa48.bin
+24624 <out>/session/updater-state/sepolia/committees/4bf6e43ff8fdf2745cefeadebef485b55f4ac7e3ea0888543dc98b8253f6712f.bin
+25472 <out>/session/updater-state/sepolia/bootstrap.ssz
+13721 <out>/session/updater-state/sepolia/journal.tsv

@@ -56,8 +56,8 @@ def run_check(map_data, harness_dir=mod.DEFAULT_HARNESS_DIR, updater_dir=mod.DEF
 # 1. Real map passes
 probs, summary = mod.check_shards()
 check("real map passes guard", not probs, "; ".join(probs))
-check("real map discovers 54 harness binaries (44 active + 10 feature-gated: names and names_review run in job `names`, the 3 messages tests in job `msg`) and 12 updater binaries",
-      summary.get("harness_total") == 54 and summary.get("harness_feature_gated") == 10 and summary.get("updater_total") == 12,
+check("real map discovers 54 harness binaries (44 active + 10 feature-gated: names and names_review run in job `names`, the 3 messages tests in job `msg`) and 13 updater binaries",
+      summary.get("harness_total") == 54 and summary.get("harness_feature_gated") == 10 and summary.get("updater_total") == 13,
       str(summary))
 
 # 2. Scratch copy with an extra test file in lez/harness/tests/ -> fails

@@ -1,0 +1,53 @@
+{
+ "by": {
+  "getAccountBalance": {
+   "down": 58787,
+   "errors": 0,
+   "n": 100,
+   "up": 23485
+  },
+  "getAccountView": {
+   "down": 1768856,
+   "errors": 0,
+   "n": 673,
+   "up": 211898
+  },
+  "getAccountsNonces": {
+   "down": 28501,
+   "errors": 0,
+   "n": 49,
+   "up": 11606
+  },
+  "getBlock": {
+   "down": 23561557,
+   "errors": 0,
+   "n": 4576,
+   "up": 834839
+  },
+  "getLastBlockId": {
+   "down": 1777634,
+   "errors": 0,
+   "n": 3055,
+   "up": 528139
+  },
+  "getTransaction": {
+   "down": 13953634,
+   "errors": 0,
+   "n": 2280,
+   "up": 574304
+  },
+  "sendTransaction": {
+   "down": 31598,
+   "errors": 0,
+   "n": 49,
+   "up": 406600
+  }
+ },
+ "down": 41180567,
+ "errors": 0,
+ "requests": 10782,
+ "seconds": 5955.9,
+ "started": 1795445938.1265216,
+ "to": "https://<domain>/rpc",
+ "up": 2590871
+}

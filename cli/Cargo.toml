@@ -111,6 +111,11 @@ lez-wallet = ["dep:wallet", "dep:common", "dep:sequencer_service_rpc", "dep:key_
 # The devnet tools of e2e/seqnet (seqnet-fund, seqnet-txs, seqnet-chain): they sign, send and sync with LEZ's
 # wallet library.
 seqnet = ["lez-wallet"]
+# The few calls whose LEZ API differs between tags, as lez/'s crates (lez/scripts/lez-select.sh): none for
+# v0.4.0-rc1 (as committed); a build against v0.4.0-rc3 (its LEZ paths pointed there, as modules/scripts/live-testnet.sh
+# does in a copy of the tree) enables `lez-rc3`.
+lez-rc2 = []
+lez-rc3 = ["lez-rc2"]
 
 [dev-dependencies]
 # The LEZ side of the end-to-end test: LEZ's state transition with the bridge guest (dev mode).

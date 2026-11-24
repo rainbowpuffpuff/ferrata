@@ -857,6 +857,11 @@ impl Ledger for Sequencer {
                 // LEZ v0.4.0-rc1's wallet prints its dry run (the fee payer, the pending credits it claims and
                 // what they sweep to the payer) and ends it with `DryRun`.
                 match dry {
+                    #[cfg(feature = "lez-rc2")]
+                    Err(wallet::ExecutionFailureKind::DryRun(_)) => eprintln!(
+                        "(the dry run above: the LEZ fee paid by the one-time account {payer}, from the credit it claims)"
+                    ),
+                    #[cfg(not(feature = "lez-rc2"))]
                     Err(wallet::ExecutionFailureKind::DryRun) => eprintln!(
                         "(the dry run above: the LEZ fee paid by the one-time account {payer}, from the credit it claims)"
                     ),

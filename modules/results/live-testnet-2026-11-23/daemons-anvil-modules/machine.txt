@@ -1,0 +1,6 @@
+anvil Version: 1.3.6-v1.3.6
+nproc --all 32
+MemTotal:       67108864 kB
+logosctl version pre-release-66d098d
+e2f68ca1851b564cb0486b4d0341f89a384827fcc2c8382e908eedf5bd05ecff  logos-ferrata_monitor_module-module-lib.lgx
+33c78c5694f3322c258fcf42716a83f2c796b0fadba7200a85a41b76958bd035  logos-ferrata_relayer_module-module-lib.lgx

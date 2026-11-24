@@ -1,0 +1,6 @@
+zone https://<domain>/rpc: followed to block 4319 (final on Bedrock)
+instance 0x3147ce50710d343383a76541c46eeb26ab19d556fe0eb4b9906e9de24421ddbb (root id 0x3147ce50710d343383a76541c46eeb26ab19d556fe0eb4b9906e9de24421ddbb, parent 0x0000000000000000000000000000000000000000000000000000000000000000)
+  chain id 11155111, committee 512, 32 slots/epoch, 256 epochs/period, 12 s/slot, genesis time 1655733600, genesis_validators_root 0xd8ea171f3c94aea21ebc42a1ed61052acf3f9209c00e4efbaaddac09ed9b8078
+  fork epochs [0, 50, 100, 56832, 132608, 222464, 272640, 353024, 18446744073709551615]; layout at Init 4; adoption parts 2; weak-subjectivity period 3532 epochs
+  active true, jobs applied 23
+  id derived again from the configuration and checkpoint 0x7954ad805ac452669dec3e9ca37adac4f9bcc3fb16032234c01a6cb8e931fce0: 0x3147ce50710d343383a76541c46eeb26ab19d556fe0eb4b9906e9de24421ddbb (equal)

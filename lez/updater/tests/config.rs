@@ -99,6 +99,35 @@ fn a_beacon_api_module_source_parses() {
     );
 }
 
+/// An execution source (`kind = "execution"`): a JSON-RPC `url`, or `via = "eth_rpc_module"` with `chain_id`; refused
+/// as a recorded `dir`, through `beacon_api_module`, with a `provider`, or as the only kind of source a chain has.
+#[test]
+fn an_execution_source_parses_and_its_misuses_are_refused() {
+    let base = std::fs::read_to_string(here("dev/dev.toml")).unwrap();
+    let add = |extra: &str| format!("{base}\n  [[chain.source]]\n  name = \"el\"\n  kind = \"execution\"\n{extra}\n");
+    let f = File::parse(&add("  url = \"https://rpc.sepolia.ethpandaops.io\"")).unwrap();
+    let el = &f.chains[0].sources[2];
+    assert_eq!((el.kind, el.url.as_deref()), (SourceKind::Execution, Some("https://rpc.sepolia.ethpandaops.io")));
+    let f = File::parse(&add("  via = \"eth_rpc_module\"\n  chain_id = 1")).unwrap();
+    let el = &f.chains[0].sources[2];
+    assert_eq!((el.kind, el.via.as_deref(), el.chain_id), (SourceKind::Execution, Some("eth_rpc_module"), Some(1)));
+    for (extra, why) in [
+        ("  dir = \"../../lab/results/record/net/mainnet\"", "a recorded dir"),
+        ("  via = \"beacon_api_module\"\n  chain_id = 1", "through beacon_api_module"),
+        ("  via = \"eth_rpc_module\"", "eth_rpc_module without chain_id"),
+        ("  url = \"https://x\"\n  provider = \"lodestar\"", "a provider"),
+        ("  url = \"https://x\"\n  via = \"eth_rpc_module\"\n  chain_id = 1", "url and via"),
+    ] {
+        assert!(File::parse(&add(extra)).is_err(), "an execution source with {why} must be refused");
+    }
+    // No light-client source at all: the two recorded sources made a headers and an execution source.
+    let none = add("  url = \"https://x\"")
+        .replacen("name = \"record-a\"\n  dir = \"../../lab/results/record/net/mainnet\"", "name = \"record-a\"\n  url = \"https://h\"\n  kind = \"headers\"", 1)
+        .replacen("name = \"record-b\"\n  dir = \"../../lab/results/record/net/mainnet\"", "name = \"record-b\"\n  url = \"https://i\"\n  kind = \"headers\"", 1);
+    let e = File::parse(&none).unwrap_err();
+    assert!(format!("{e:#}").contains("no light-client source"), "{e:#}");
+}
+
 #[test]
 fn updates_stream_splits_with_either_length_convention() {
     let (a, b) = (vec![1u8; 300], vec![2u8; 500]);

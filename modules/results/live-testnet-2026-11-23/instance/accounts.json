@@ -1,0 +1,11 @@
+{
+  "payer": "7KVZiQuiFM5154PYF3UezwNcg1FcDRToD6VAyggBdiK9",
+  "payer_public_key": "94e9ef82d9d4a577d49310ebbd26c825f0367ff1025bff4ee95b231000cb8ca8",
+  "daemon": "CJtEhDN6dEk51bmMaczgqXsJ28s2QyhAtjQiKTKzKdB5",
+  "daemon_public_key": "e3c426b7d1a8dbc384134f62d8380a88039cdae0ef54cbf5e69c14ca1d402c4a",
+  "program": {
+    "header": "6f9zuRR63bSN5AEeffqZeACYCwFmqfe5JJhPshuJfYNg",
+    "keys": false,
+    "segments": []
+  }
+}

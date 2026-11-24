@@ -22,7 +22,7 @@ use crate::{
     config::{File, SourceKind},
     ledger::{machine_now_ms, Ledger, Tx, TxOutcome},
     serve::{serve, stale_after, Snapshot},
-    source::{BeaconApi, BeaconApiModule, Clock, HeaderWitness, Recorded, Source},
+    source::{BeaconApi, BeaconApiModule, Clock, EthRpcModule, ExecutionRpc, HeaderWitness, Recorded, Source},
     updater::{Instance, Plan, Updater},
     utc_now,
 };
@@ -127,6 +127,19 @@ impl Daemon {
             let config = instance_config(&c.preset, c.adoption_parts, c.layout.as_deref())?;
             let mut sources: Vec<Box<dyn Source>> = Vec::new();
             for s in &c.sources {
+                if s.kind == SourceKind::Execution {
+                    match (&s.url, &s.via) {
+                        (Some(url), _) => sources.push(Box::new(ExecutionRpc::new(&s.name, url, s.timeout_secs))),
+                        (None, Some(_)) => sources.push(Box::new(EthRpcModule {
+                            name: s.name.clone(),
+                            chain_id: s.chain_id.expect("checked by config"),
+                            timeout_secs: s.timeout_secs,
+                            routes: Vec::new(),
+                        })),
+                        _ => unreachable!("checked by config"),
+                    }
+                    continue;
+                }
                 if s.via.is_some() {
                     sources.push(Box::new(BeaconApiModule {
                         name: s.name.clone(),

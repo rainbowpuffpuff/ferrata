@@ -115,7 +115,7 @@ enum Cmd {
         #[arg(long)]
         state_file: Option<PathBuf>,
     },
-    /// The instance's state, decoded (JSON).
+    /// The instance's state, decoded (JSON), with the state itself (`instance_state`, Borsh in hex).
     State(Common),
 }
 
@@ -195,6 +195,8 @@ fn run() -> Result<i32> {
                     "next_committee_known": store.next.is_some(),
                     "ws_end_slot": state.config.ws_end_slot(store.finalized.slot),
                     "genesis_time": state.config.genesis_time,
+                    // The state itself (Borsh, hex), as `file:` and ferrata_attest_module's `read_instance` take it.
+                    "instance_state": hex::encode(borsh::to_vec(&state)?),
                 }))?
             );
             Ok(0)

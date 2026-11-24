@@ -1,0 +1,6 @@
+{"affected_loaded":[],"changes":[{"action":"install","file":"<out>/lgx-beacon_api_module/logos-beacon_api_module-module-lib.lgx","fromVersion":"","name":"beacon_api_module","signature":"unsigned","toVersion":"0.2.0"}],"installed":["beacon_api_module"],"op":"install","reloaded":[],"status":"ok","stopped_dependents":[]}
+{"dependencies_loaded":[],"module":"beacon_api_module","status":"ok","version":"0.2.0"}
+{"affected_loaded":[],"changes":[{"action":"install","file":"<out>/lgx-eth_rpc_module/logos-eth_rpc_module-module-lib.lgx","fromVersion":"","name":"eth_rpc_module","signature":"unsigned","toVersion":"0.2.0"}],"installed":["eth_rpc_module"],"op":"install","reloaded":[],"status":"ok","stopped_dependents":[]}
+{"dependencies_loaded":[],"module":"eth_rpc_module","status":"ok","version":"0.2.0"}
+{"affected_loaded":[],"changes":[{"action":"install","file":"<out>/lgx-ferrata_updater_module/logos-ferrata_updater_module-module-lib.lgx","fromVersion":"","name":"ferrata_updater_module","signature":"unsigned","toVersion":"0.1.0"}],"installed":["ferrata_updater_module"],"op":"install","reloaded":[],"status":"ok","stopped_dependents":[]}
+{"dependencies_loaded":[],"module":"ferrata_updater_module","status":"ok","version":"0.1.0"}

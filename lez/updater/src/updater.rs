@@ -18,7 +18,7 @@ use anyhow::{anyhow, bail, Context as _, Result};
 use ferrata_core::{
     fork::LcFork,
     steps::{self, Job, Phase},
-    types::{LightClientBootstrap, LightClientUpdate, SyncCommittee},
+    types::{Execution, LightClientBootstrap, LightClientHeader, LightClientUpdate, SyncCommittee},
     witness::{uncompressed_keys, CommitteeSummary, CompactBootstrap, CompactStore, CompactUpdate},
     Root,
 };
@@ -1300,7 +1300,8 @@ impl Updater {
                 .filter(|(_, q, ..)| q.update.finalized_header.beacon.hash_tree_root() == root)
                 .map(|(s, ..)| *s)
                 .collect();
-            agreeing.extend(self.confirm_header(header.slot, &root, &mut asked));
+            let exec = execution_block_hash(&useful[i].1.update.finalized_header);
+            agreeing.extend(self.confirm_header(header.slot, &root, exec, &mut asked));
             // Client diversity: the clients of the sources that served this update byte for byte, or that serve or
             // confirm its finalized header.
             let pairs: BTreeSet<(String, usize)> = match (k >= 2, self.policy.client_match) {
@@ -1649,11 +1650,17 @@ impl Updater {
         &mut self,
         slot: u64,
         root: &Root,
+        exec: Option<Root>,
         asked: &mut BTreeMap<(usize, u64), Option<Root>>,
     ) -> Vec<usize> {
         let mut out = Vec::new();
         for i in 0..self.sources.len() {
             if self.sources[i].light_client() || !self.usable(i) {
+                continue;
+            }
+            // An execution endpoint confirms the header by its execution block (an Altair header binds none).
+            let execution = self.sources[i].execution();
+            if execution && exec.is_none() {
                 continue;
             }
             if self.confirmed.get(&(i, slot)) == Some(root) {
@@ -1664,7 +1671,11 @@ impl Updater {
                 Some(a) => *a,
                 None => {
                     self.stats(i).requests += 1;
-                    match self.sources[i].canonical_root(slot) {
+                    let answer = match (execution, exec) {
+                        (true, Some(h)) => self.sources[i].execution_block(&h).map(|n| n.map(|_| *root)),
+                        _ => self.sources[i].canonical_root(slot),
+                    };
+                    match answer {
                         Ok(a) => {
                             self.stats(i).available = true;
                             asked.insert((i, slot), a);
@@ -1694,11 +1705,20 @@ impl Updater {
             } else {
                 s.mismatch = true;
                 s.mismatches += 1;
-                let theirs = answer.map_or("no block".to_string(), |r| format!("0x{}", hex::encode(r)));
-                self.log(&format!(
-                    "source {name} holds {theirs} canonical at slot {slot}, not 0x{}",
-                    hex::encode(root)
-                ));
+                if let (true, Some(h)) = (execution, exec) {
+                    self.log(&format!(
+                        "source {name} does not hold the execution block 0x{} canonical (the finalized header at slot \
+                         {slot}, 0x{})",
+                        hex::encode(h),
+                        hex::encode(root)
+                    ));
+                } else {
+                    let theirs = answer.map_or("no block".to_string(), |r| format!("0x{}", hex::encode(r)));
+                    self.log(&format!(
+                        "source {name} holds {theirs} canonical at slot {slot}, not 0x{}",
+                        hex::encode(root)
+                    ));
+                }
             }
         }
         out
@@ -2069,7 +2089,12 @@ impl Updater {
             } else if s.lagging {
                 why.push(format!("source {name} lagging (finalized slot {})", s.finalized_slot));
             } else if s.mismatch {
-                why.push(format!("source {name} holds another block canonical at a finalized header's slot"));
+                let execution = self.sources.iter().any(|x| x.name() == name && x.execution());
+                why.push(if execution {
+                    format!("source {name} does not hold a finalized header's execution block canonical")
+                } else {
+                    format!("source {name} holds another block canonical at a finalized header's slot")
+                });
             } else if let Some(d) = &s.disagree {
                 why.push(format!("source {name} {d}"));
             } else if !s.available && s.requests > 0 {
@@ -2318,5 +2343,15 @@ mod tests {
         assert!(!distinct_pairs(&p(&[("nimbus", 0), ("lodestar", 1)]), 3));
         assert!(distinct_pairs(&p(&[("nimbus", 0), ("lodestar", 1), ("lighthouse", 2)]), 3));
         assert!(!distinct_pairs(&p(&[]), 2));
+    }
+}
+
+/// The execution block a light-client header binds: the payload header's block hash (Capella to Electra layouts), or
+/// the block hash itself (Gloas); none in the Altair layout.
+pub fn execution_block_hash(h: &LightClientHeader) -> Option<Root> {
+    match &h.execution {
+        Execution::Payload { header, .. } => Some(header.block_hash),
+        Execution::BlockHash { block_hash, .. } => Some(*block_hash),
+        Execution::None => None,
     }
 }
