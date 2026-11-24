@@ -160,6 +160,9 @@ stage_run() {
     [ -e "$TOOLS/$f" ] || die "$f is not built (stage build)"
   done
   local LH; LH="$(lez_home)"
+  # LEZ's sequencer, crown-driver and the tool are on risc0-zkvm 3.0.5: its r0vm is in the LEZ home (a runner keeps it
+  # in ~/risc0-home-lez, which lez/live/env.sh does not look for; ~/.risc0 holds 3.1.0 for bridge/ and checkpoint/).
+  export RISC0_HOME="$LH"
   rm -rf "$OUT/zone" "$OUT/run"
   mkdir -p "$OUT/run"
   export CI_RT_REPO="$REPO" CI_RT_OUT="$OUT/run" CI_RT_WORK="$T/work" CI_RT_TOOLS="$TOOLS" CI_RT_LEZ_HOME="$LH"
