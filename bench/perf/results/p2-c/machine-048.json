@@ -1,0 +1,10 @@
+{
+ "nproc": "16",
+ "cfs_quota_us": "1600000",
+ "memory_limit_bytes": "34359738368",
+ "vendor": "AuthenticAMD",
+ "family": "25",
+ "model": "1",
+ "cloud": "GCP",
+ "region": "me"
+}

@@ -6,8 +6,9 @@
 #   bash bench/perf/prove-actions.sh OUT_DIR [N ...]      # from the repository root, on the build box
 #   python3 -I bench/perf/summarize_proofs.py OUT_DIR > lez/results/perf-proofs.md
 #
-# PERF_DUMP=DIR reuses a dump (inputs, guests, index.tsv); PERF_WITH_VERIFY_ALL=1 adds the finality
-# update in one public transaction (VerifyAll, about 9.1M cycles). Finished proofs are skipped on a rerun.
+# PERF_DUMP=DIR reuses a dump (inputs, guests, index.tsv). The dump holds every message of the program and
+# every type of statement, 50 transitions, the finality update in one public transaction (VerifyAll, about
+# 9.05M cycles) among them. Finished proofs are skipped on a rerun.
 set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 out="$(realpath -m "${1:?usage: prove-actions.sh OUT_DIR [N ...]}")"
@@ -19,7 +20,7 @@ export RISC0_HOME="${RISC0_HOME:-$root/../risc0-home-lez}"
 cargo build -p harness --locked --bin perf_prove > "$out/build.log" 2>&1 || { tail -30 "$out/build.log"; exit 1; }
 bin="$root/lez/target/debug/perf_prove"
 if [ ! -f "$dump/index.tsv" ]; then
-  "$bin" --dump "$dump" ${PERF_WITH_VERIFY_ALL:+--with-verify-all} > "$out/dump.log" 2>&1 || { tail -30 "$out/dump.log"; exit 1; }
+  "$bin" --dump "$dump" > "$out/dump.log" 2>&1 || { tail -30 "$out/dump.log"; exit 1; }
 fi
 cp "$dump/index.tsv" "$out/index.tsv"
 r0vm_path="$(command -v r0vm || true)"

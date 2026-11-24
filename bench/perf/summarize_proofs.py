@@ -34,7 +34,7 @@ def gnu_time(text):
     return (int(rss.group(1)) if rss else None, secs, int(cpu.group(1)) if cpu else None)
 
 
-CPU_NAMES = {("AuthenticAMD", "25", "1"): "AMD Zen 3", ("AuthenticAMD", "25", "17"): "AMD Zen 4",
+CPU_NAMES = {("AuthenticAMD", "25", "1"): "AMD Zen 3", ("AuthenticAMD", "25", "17"): "AMD Zen 4", ("AuthenticAMD", "23", "49"): "AMD Zen 2",
              ("GenuineIntel", "6", "85"): "Intel Xeon (Skylake/Cascade Lake)", ("GenuineIntel", "6", "106"): "Intel Xeon (Ice Lake)",
              ("GenuineIntel", "6", "143"): "Intel Xeon (Sapphire Rapids)"}
 
