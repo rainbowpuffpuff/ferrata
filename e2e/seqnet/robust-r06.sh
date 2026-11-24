@@ -209,6 +209,7 @@ release_robust() {
   local REL_T; REL_T="$(cast keccak 'Release(bytes32,address,address,uint256,address,uint256,bytes32)')"
   rels() { cast logs --rpc-url "$RPC" --address "$VAULT" --from-block "$FROM" "$REL_T" --json | jq length; }
   rel0="$(rels)"; bal0="$(cast balance "$FRESH" --rpc-url "$RPC")"; inn0="$(cast nonce "$RELAYER" --rpc-url "$RPC")"
+  local b0; b0="$(cast block-number --rpc-url "$RPC")"
   cp "$job" "$W/relayer-inbox/release-robust.json"
   rp_start() { # exec: run in the background (rp_start &), $! is the relayer itself, whom the kills must reach
     exec "$BIN/ferrata-relayer" --eth-rpc "$PU" --vault "$VAULT" --chain-id 11155111 --unlocked "$RELAYER" --from-block "$FROM" \
@@ -220,7 +221,8 @@ release_robust() {
   rp_start & rp=$!
   for i in $(seq 1 240); do [ "$(phits)" -gt "$h" ] && break; sleep 0.25; done
   sleep 1; kill -9 "$rp" 2>/dev/null; wait "$rp" 2>/dev/null
-  local f1; f1="$(jq -c '{key, nonce, hash}' "$W/relayer/inflight.json" 2>/dev/null)"
+  local f1 sel; f1="$(jq -c '{key, nonce, hash}' "$W/relayer/inflight.json" 2>/dev/null)"
+  sel="$(jq -r '.input' "$W/relayer/inflight.json" 2>/dev/null | cut -c1-10)"   # the release call's selector
   if [ "$(rels)" = "$rel0" ] && [ "$(cast nonce "$RELAYER" --rpc-url "$RPC")" = "$inn0" ] && [ -n "$f1" ] && [ -e "$W/relayer-inbox/release-robust.json" ]; then
     ok "R.07 release: the relayer SIGKILLed with the release built and its transaction trapped before the node (nothing on the chain, nonce $inn0); in flight: $f1"
   else bad "R.07 release: after the trapped send: Release events $(rels) (was $rel0), in flight '$f1'"; fi
@@ -239,13 +241,20 @@ release_robust() {
   rel1="$(rels)"; bal1="$(cast balance "$FRESH" --rpc-url "$RPC")"
   nul="$(cast logs --rpc-url "$RPC" --address "$VAULT" --from-block "$FROM" "$REL_T" --json | jq -c '[.[].topics[1]] | group_by(.) | map(length) | max')"
   local sends; sends="$(jq -s '[.[] | select(.method == "eth_sendTransaction" and (.action | test("^forwarded")))] | length' "$PE/log.jsonl")"
+  # The relayer's transactions on the chain since the release began that call release (others, its fee withdrawal
+  # claimOwed for one, are counted apart).
+  local b rtx=0 otx=0 txs
+  for b in $(seq "$b0" "$(cast block-number --rpc-url "$RPC")"); do
+    txs="$(cast block "$b" --full --json --rpc-url "$RPC" | jq -c --arg r "$(echo "$RELAYER" | tr 'A-F' 'a-f')" '[.transactions[] | select((.from | ascii_downcase) == $r) | .input[0:10]]')"
+    rtx=$((rtx + $(echo "$txs" | jq --arg s "$sel" '[.[] | select(. == $s)] | length'))); otx=$((otx + $(echo "$txs" | jq --arg s "$sel" '[.[] | select(. != $s)] | length')))
+  done
   local found; found="$(tail -n 40 "$RUN/eth/relayer.jsonl" | jq -c 'select(.event == "inflight-found" or .event == "inflight-lost" or .event == "inflight-resent")' 2>/dev/null | jq -s -c 'map(.event)')"
   fact releaseLeg "$(jq -n -c --argjson r0 "$rel0" --argjson r1 "$rel1" --arg b0 "$bal0" --arg b1 "$bal1" --argjson s "$sends" --argjson f "${found:-[]}" --argjson n "${nul:-0}" \
-    '{releaseEvents: [$r0, $r1], freshWei: [$b0, $b1], sendsForwarded: $s, relayerEvents: $f, maxReleasesPerNullifier: $n}')"
-  if [ "$rel1" = $((rel0 + 1)) ] && [ "$nul" = 1 ] && [ "$sends" = 1 ] && [ ! -e "$W/relayer/inflight.json" ] && [ ! -e "$W/relayer-inbox/release-robust.json" ] \
+    '{releaseEvents: [$r0, $r1], freshWei: [$b0, $b1], sendsForwarded: $s, relayerEvents: $f, maxReleasesPerNullifier: $n}' | jq -c --argjson rt "$rtx" --argjson ot "$otx" '. + {releaseTransactions: $rt, otherRelayerTransactions: $ot}')"
+  if [ "$rel1" = $((rel0 + 1)) ] && [ "$nul" = 1 ] && [ "$rtx" = 1 ] && [ -n "$sel" ] && [ ! -e "$W/relayer/inflight.json" ] && [ ! -e "$W/relayer-inbox/release-robust.json" ] \
      && [ "$bal1" != "$bal0" ] && echo "$found" | grep -q inflight-found; then
-    ok "R.07 release: started again, the relayer found its release mined under the recorded nonce and booked it (events $found); one release transaction reached the node, one Release (one per nullifier), the fresh address paid $bal0 -> $bal1 wei, nothing in flight"
-  else bad "R.07 release: Release events $rel0 -> $rel1, per nullifier $nul, sends forwarded $sends, events $found, in flight $(cat "$W/relayer/inflight.json" 2>/dev/null | head -c 200)"; fi
+    ok "R.07 release: started again, the relayer found its release mined under the recorded nonce and booked it (events $found); one release transaction on the chain ($rtx; $otx other: its fee withdrawal), one Release (one per nullifier), the fresh address paid $bal0 -> $bal1 wei, nothing in flight"
+  else bad "R.07 release: Release events $rel0 -> $rel1, per nullifier $nul, release transactions $rtx (other $otx, sends forwarded $sends), events $found, in flight $(cat "$W/relayer/inflight.json" 2>/dev/null | head -c 200)"; fi
   cp "$PE/log.jsonl" "$RUN/eth/holdproxy-relayer.jsonl" 2>/dev/null || true
   say "the fresh address $FRESH holds $(cast balance "$FRESH" --rpc-url "$RPC") wei"
 }
