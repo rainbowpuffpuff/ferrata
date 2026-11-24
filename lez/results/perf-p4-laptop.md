@@ -149,6 +149,24 @@ provers at 8 threads, the rule holds only while everything else stays under abou
 the release's rate the three proofs would take about 2.5 hours in the `low-power` profile, not the rehearsal's 50
 minutes (*estimated*: 3,280.6 s at the containers' 8-CPU rate, times 2.8).
 
+### A fifth attempt (25 November, 00:24 CET): the attestation alone, under a looser rule
+
+With other sessions' local work asked to stay at niceness 19, the attestation alone (`P4_JOBS=attest-pad`) ran as a
+transient user service, so that the script started at niceness 0 and its provers ran at 10 as it intends (`machine.txt`:
+"prover niceness: 10"; [`run-part.sh`](p4-laptop-owner/run-part.sh)). The rule for this attempt: stop only if the
+one-minute load average stays above 14 for five minutes, or less than 8 GB is available. It stopped after 9 minutes
+(load average 15.8 on average, 22.6 at most; at least 16.8 GiB available throughout; r0vm at 4.54 GiB), and no proof
+finished ([`attempt-5-stopped/`](p4-laptop-owner/attempt-5-stopped/watch.log)).
+
+**The load average counts the prover's own waiting threads.** r0vm ran 25 threads: one main thread, rayon's 8
+(`RAYON_NUM_THREADS=8`), and 16 for the C++ kernels' pool, all held to CPUs 0–7. risc0's vendored poolstl sizes that
+pool from `std::thread::hardware_concurrency()` (16 on this laptop; `risc0-sys` 1.5, `cxx/vendor/poolstl.hpp`, with no
+environment override). While the C++ kernels run, about 16 threads are runnable on 8 CPUs, and the load average counts
+each one. Three minutes in, other work used 1.35 busy threads and the load average was 14.46. On this laptop the prover
+alone holds the load average at about 14–17 (*estimated* from these samples). A load rule must therefore sit above that:
+about 20 for five minutes leaves room for 3 other threads. Alternatively, it can count busy CPUs rather than runnable
+threads, as the first four attempts' watchdog did.
+
 ### What the laptop run still needs
 
 On this laptop, with the bundle above (kept beside the repository) or a new one from `p4-laptop-build.sh`:
@@ -156,7 +174,10 @@ On this laptop, with the bundle above (kept beside the repository) or a new one 
 1. Other local work stopped for the length of the run (other sessions' builds and tests included).
 2. Mains power and, the owner's choice, a faster platform profile (`powerprofilesctl set balanced`, or `performance`);
    `machine.txt` records it either way.
-3. `P4_CPUS=8 bash bench/perf/p4-laptop-owner.sh STAGE OUT`, then `python3 -I bench/perf/summarize_p4.py --owner OUT`.
+3. A stop rule that allows for the prover's own threads (previous section): the one-minute load average above about 20
+   for five minutes, or other work above about 6 busy threads on CPUs 8–15 for five minutes; and the provers at
+   niceness 10 (from an agent's shell at 19, start the script as a user service, as `run-part.sh` does).
+4. `P4_CPUS=8 bash bench/perf/p4-laptop-owner.sh STAGE OUT`, then `python3 -I bench/perf/summarize_p4.py --owner OUT`.
    Where the machine can be kept quiet only for shorter stretches, one job at a time, each into its own `OUT`:
    `P4_JOBS=attest-pad` (the attestation, 21 minutes at the containers' 8-CPU rate), `P4_JOBS=bridge-pad` (the claim
    and the burn, 34 minutes at that rate).

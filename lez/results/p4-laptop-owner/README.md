@@ -7,14 +7,17 @@ run's output directory); nothing else was changed.
 
 The laptop: AMD Ryzen 9 7940HS (8 cores, 16 threads; CPUs 2k and 2k+1 are core k's two threads), 54.7 GiB, Fedora
 (kernel 7.3.4), on mains power, platform profile `low-power`. The provers were held to CPUs 0–7 (`P4_CPUS=8`: cores
-0–3, both threads of each) and ran at niceness 19: the shell that started them already ran at 19, so the script's
-`nice -n 10` could not lower it (the first attempt's `machine.txt` says 10, the line the script then wrote; the script
-now records the niceness in effect).
+0–3, both threads of each). In attempts 1–4 and the release run they ran at niceness 19: the shell that started them
+already ran at 19, so the script's `nice -n 10` could not lower it (the first attempt's `machine.txt` says 10, the line
+the script then wrote; the script now records the niceness in effect). In attempt 5 they ran at 10 (the script started
+as a user service).
 
 | path | what |
 |---|---|
 | `release-run/` | The release's succinct proof alone (`P4_JOBS=release`), 25 November 2026 00:00 CET: `out/machine.txt`, `out/release/` (`exec.log`, `prove.log` with GNU time and `ferrata-e2e`'s JSON record, `prove/prove.json`, `prove/receipt-succinct.bin`, `settle.log`: `ferrata-e2e verify`, `samples.txt`: the machine's used memory and r0vm's RSS every second, `exit.txt`), `summary.md` (`summarize_p4.py --owner`), `gate.log`, `watch.log`, `verdict.txt`, `owner.log` |
 | `attempt-N-stopped/` | The four attempts at the whole run (the private attestation first), each stopped by the watchdog within 2–4.25 minutes: `machine.txt`, `gate.log`, `watch.log`, `verdict.txt`, `owner.log`, `attest-pad-samples.txt` (no proof finished) |
+| `attempt-5-stopped/` | 25 November 00:24 CET, the attestation alone (`P4_JOBS=attest-pad`) at niceness 10, under the looser rule (stop only if the one-minute load average stays above 14 for five minutes, or under 8 GB available): stopped after 9 minutes, no proof finished |
+| `run-part.sh`, `part-service.sh` | The fifth attempt's runner: the script started as a transient user service (`systemd-run --user`), so it starts at niceness 0 and its provers run at 10, with that rule's watchdog |
 | `pinning-probe.txt` | 60 s of the attestation's prover, sampled: all 25 r0vm threads on CPUs 0–7, their allowed list 0–7 |
 | `run-owner.sh` | The runner that wrapped `bench/perf/p4-laptop-owner.sh`: the gate before it and the watchdog during it (below) |
 
@@ -25,4 +28,8 @@ The watchdog (every 5 s): stop the whole run if less than 8 GiB is available, if
 10 for 120 s, or if the laptop is on battery for 60 s. The provers alone are 8 busy threads, so the run stops when
 everything else on the machine stays above about 2 threads for two minutes. `watch.log` columns: Unix time, mains,
 available memory, the one-minute load average, busy threads (all CPUs, and CPUs 8–15, which the provers do not use),
-r0vm's thread count.
+r0vm's thread count (the fifth attempt's: thread count and niceness).
+
+The fifth attempt's lesson: r0vm runs 1 + 8 (rayon) + 16 (the C++ kernels' pool, sized from the machine's 16 hardware
+threads) threads on its 8 CPUs, so the prover alone holds the one-minute load average at about 14–17. A load rule has
+to sit above that.

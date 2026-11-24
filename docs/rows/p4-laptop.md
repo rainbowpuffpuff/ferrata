@@ -4,7 +4,10 @@ Branch `p4-laptop` (from `861c1c0d`). **Both rows stay in part.** The owner appr
 the owner's laptop on the night of 24 November 2026. The bundle of this tree was staged and checked, and the release's
 succinct proof ran and verified on the laptop. The private attestation, claim and burn did not finish: four attempts
 were each stopped within 2–4.25 minutes by the owner's rule for that night (stop if the load stays above 10), because
-other local work ran beside the provers' 8 threads. Details and every number:
+other local work ran beside the provers' 8 threads. A fifth attempt on 25 November (the attestation alone, provers at
+niceness 10, the lead's looser rule: stop only if the one-minute load average stays above 14 for five minutes) stopped
+after 9 minutes: the prover alone holds that load average at about 14–17 on this laptop (r0vm's 16-thread C++ pool,
+sized from the machine's 16 hardware threads, on its 8 CPUs), so the rule has to sit higher. Details and every number:
 [`lez/results/perf-p4-laptop.md`](../../lez/results/perf-p4-laptop.md), section "The owner's laptop, 24–25 November
 2026"; records: [`lez/results/p4-laptop-owner/`](../../lez/results/p4-laptop-owner/README.md). This stream edited
 neither `docs/EVIDENCE.md` nor `docs/requirements-status.md` nor `docs/traceability.md` nor `docs/performance.md`.
@@ -23,13 +26,17 @@ each), niceness 19. Nothing was sent to Sepolia, mainnet or any public LEZ netwo
 | wall-clock time and peak memory on a mid-range laptop | **not shown**: the run on the owner's laptop was stopped four times, no attestation proof finished (r0vm had reached 4.25 GiB); the bundle is staged and checked |
 
 **What is short, and what it needs:** one run of `P4_CPUS=8 bash bench/perf/p4-laptop-owner.sh STAGE OUT` (or
-`P4_JOBS=attest-pad` alone, about 21 minutes at the containers' rate) on the owner's laptop with other local work
-stopped, preferably in a faster platform profile than `low-power` (the owner's choice; see the release's 2.8× below),
-then `python3 -I bench/perf/summarize_p4.py --owner OUT`. Owner step; nothing from Logos.
+`P4_JOBS=attest-pad` alone, about 21 minutes at the containers' rate) on the owner's laptop. The stop rule must allow
+for the prover's own threads (load average above about 20 for five minutes, or other work above about 6 busy threads
+on CPUs 8–15). The provers should run at niceness 10, started as a user service from an agent's shell, as
+`lez/results/p4-laptop-owner/run-part.sh` does. A faster platform profile than `low-power` would help (the owner's
+choice; see the release's 2.8× below). Then `python3 -I bench/perf/summarize_p4.py --owner OUT`. This is an owner
+step; nothing is needed from Logos.
 
 **Proposed status text:** in part | This tree's padded private attestation proven at the declared minimum's 8 and 16
-CPUs (1,254.8 s and 633.5 s), on an M1 and a GPU; on a laptop the owner's run of 24 November was stopped four times by
-its load rule (other local work), so no attestation finished there; the bundle of this tree is staged and checked. |
+CPUs (1,254.8 s and 633.5 s), on an M1 and a GPU; on a laptop the owner's runs of 24–25 November were stopped five times
+by their load rules (other local work; the prover's own threads in the load average), so no attestation finished there;
+the bundle of this tree is staged and checked. |
 32, 38, 50, 88, 168; `lez/results/perf-p4-laptop.md`
 
 **When the run finishes** (the integrator's text then): shown | The padded private attestation on a Ryzen 9 7940HS
