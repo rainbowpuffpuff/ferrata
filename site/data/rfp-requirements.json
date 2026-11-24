@@ -1,0 +1,863 @@
+{
+ "source": {
+  "repository": "https://github.com/logos-co/rfp",
+  "commit": "920fad928a4592f0fdf4356046a06973fb5c931d",
+  "license": "MIT OR Apache-2.0 (the repository's LICENSE-MIT.txt and LICENSE-APACHEv2.txt)",
+  "note": "Each requirement's text as the RFP words it, from the RFP's Scope of Work; extracted by site/extract_rfp.py",
+  "files": [
+   "RFPs/RFP-000-template.md",
+   "RFPs/RFP-001-admin-authority-lib.md",
+   "RFPs/RFP-002-freeze-authority-lib.md",
+   "RFPs/RFP-003-atomic-swaps.md",
+   "RFPs/RFP-004-privacy-preserving-dex.md",
+   "RFPs/RFP-005-multisig-and-coordination.md",
+   "RFPs/RFP-008-lending-borrowing-protocol.md",
+   "RFPs/RFP-012-curated-lending-vaults.md",
+   "RFPs/RFP-013-reflexive-stablecoin-protocol.md",
+   "RFPs/RFP-014-liquidation-auction-engine.md",
+   "RFPs/RFP-015-bonding-curve-launchpad.md",
+   "RFPs/RFP-016-lbp-launchpad.md",
+   "RFPs/RFP-017-token-vesting.md",
+   "RFPs/RFP-019-twap-oracle.md",
+   "RFPs/RFP-020-redstone-oracle-adaptor.md",
+   "RFPs/RFP-021-ethereum-state-attestation.md",
+   "RFPs/RFP-022-wrapped-erc20.md"
+  ]
+ },
+ "rfps": {
+  "RFP-021": {
+   "title": "RFP-021 — Trustless Ethereum State Attestation for LEZ",
+   "file": "RFPs/RFP-021-ethereum-state-attestation.md",
+   "rows": {
+    "F.1": {
+     "section": "Functionality",
+     "n": 1,
+     "text": "Run the Ethereum light client inside the LEZ program: given a trusted starting checkpoint, the module verifies light-client updates and committee handoffs against material supplied by the submitter, and follows the canonical finalised chain forward without running a full node. The module checks the sync-committee aggregate itself.",
+     "line": 409
+    },
+    "F.2": {
+     "section": "Functionality",
+     "n": 2,
+     "text": "Verify that a supplied Ethereum block header is finalised, and reject any header that is not.",
+     "line": 414
+    },
+    "F.3": {
+     "section": "Functionality",
+     "n": 3,
+     "text": "Verify that a referenced piece of Ethereum state is included under a header the module has verified as finalised, covering at minimum an account, a contract storage slot, and an event log identified by its position within a transaction receipt. The execution state reasoned about is bound to that finalised header, so execution roots supplied by a caller are never trusted. Reject any claim whose inclusion does not verify.",
+     "line": 416
+    },
+    "F.4": {
+     "section": "Functionality",
+     "n": 4,
+     "text": "Evaluate a predicate over the verified state and emit a verified statement asserting that the predicate holds of finalised Ethereum state. The predicate interface must support at least equality and inequality comparisons over attested values, and must be expressible by a consuming program without modifying the module.",
+     "line": 422
+    },
+    "F.5": {
+     "section": "Functionality",
+     "n": 5,
+     "text": "The verified statement binds the chain identity (network and chain ID) it refers to. A statement produced against one chain must be rejected by a verifier configured for another, tested across mainnet and at least one testnet with the same contract address on both.",
+     "line": 427
+    },
+    "F.6": {
+     "section": "Functionality",
+     "n": 6,
+     "text": "The verified statement carries a deterministic, collision-resistant identifier derived from the attested Ethereum state, suitable for a consumer to key a nullifier on. Identical Ethereum state yields an identical identifier; distinct state yields a distinct one.",
+     "line": 431
+    },
+    "F.7": {
+     "section": "Functionality",
+     "n": 7,
+     "text": "The module is implemented and tested as a LEZ program on testnet, with a published interface any consuming program can call. Inclusion verification and predicate evaluation occur inside the consuming transaction, and no consumption path requires a consumer to act on a predicate result computed in an earlier transaction.",
+     "line": 435
+    },
+    "F.8": {
+     "section": "Functionality",
+     "n": 8,
+     "text": "Verifying and consuming an attestation must not introduce any correlation signal beyond what is already public on Ethereum. The public inputs of the verified statement must be limited to what the consumer explicitly chooses to expose, and must not reveal the identity of the consuming LEZ account or the consuming transaction. This must hold over full event and state diffs.",
+     "line": 440
+    },
+    "F.9": {
+     "section": "Functionality",
+     "n": 9,
+     "text": "The weak-subjectivity checkpoint, the supported chain and chain ID, and the finality parameters are written into an instance's accounts when that instance is initialised, and no later instruction changes them. The Logos Ethereum core module exposes an API through which anyone can independently verify an instance's checkpoint against public Ethereum sources before relying on it.",
+     "line": 445
+    },
+    "F.10": {
+     "section": "Functionality",
+     "n": 10,
+     "text": "An instance that has fallen outside the weak-subjectivity period is replaced by a freshly initialised instance rather than refreshed in place. Document when an instance must be replaced, and what a consumer must do to migrate to a replacement.",
+     "line": 451
+    },
+    "F.11": {
+     "section": "Functionality",
+     "n": 11,
+     "text": "Advancing the tracked consensus state is permissionless: any party may submit a valid update, and submission carries no access control, allowlist, role, or registration. An instance in which one party, or a set fixed at initialisation, is the only entity able to advance the state does not satisfy this requirement. An account with no prior relationship to the instance can advance it.",
+     "line": 455
+    },
+    "F.12": {
+     "section": "Functionality",
+     "n": 12,
+     "text": "Supplying update material and submitting it are liveness roles, not trust roles: no specific party may be required for an attestation to be produced, and any party declining to act must not block a user. Proposals must identify every off-chain participant the design requires, state for each whether it can affect safety or only liveness, and justify that none of them, individually or as a class, can block an attestation from eventually being produced.",
+     "line": 461
+    },
+    "F.13": {
+     "section": "Functionality",
+     "n": 13,
+     "text": "The program exposes no instruction that rewrites an initialised instance's checkpoint or chain configuration, whatever the caller. Recovery from a mis-configured or stale checkpoint is by initialising a fresh instance, per Functionality #10, not by mutating an existing one.",
+     "line": 468
+    },
+    "F.14": {
+     "section": "Functionality",
+     "n": 14,
+     "text": "The design must not assume Ethereum mainnet is the only target. The same program, unmodified, must support instances configured for any Ethereum-consensus chain, mainnet or testnet, with the chain binding in Functionality #5 keeping instances separate.",
+     "line": 472
+    },
+    "F.15": {
+     "section": "Functionality",
+     "n": 15,
+     "text": "Multiple independent instances coexist under the same program, each with its own checkpoint, chain configuration, and tracked consensus state, without interfering with one another. A consumer binds to a specific instance, and a statement from one instance is never accepted by a consumer bound to another.",
+     "line": 476
+    },
+    "U.1": {
+     "section": "Usability",
+     "n": 1,
+     "text": "Build the attestation functionality for consumers and operators in a Logos core module, so that different Logos ui modules can be built on it: producing an attestation, verifying one, submitting a consensus-state update, and reading the checkpoint and chain configuration of an instance.",
+     "line": 484
+    },
+    "U.2": {
+     "section": "Usability",
+     "n": 2,
+     "text": "Provide a CLI that covers producing an attestation for a given `(chain, contract, storage slot or log, predicate)` tuple, verifying one off-chain as a dry run, submitting a consensus-state update, and reading an instance's configuration. The dry run must report the same typed error codes the on-chain path returns.",
+     "line": 488
+    },
+    "U.3": {
+     "section": "Usability",
+     "n": 3,
+     "text": "Provide the **update-submitting component**: a process that follows Ethereum through the Logos Ethereum core module, detects when the tracked instance is behind, and submits the outstanding light-client updates to LEZ. It must be provided as a **Logos module accompanied by a Logos Core headless CLI/daemon**, runnable standalone, supporting configurable Ethereum consensus and execution RPC endpoints, structured logging, and a clean shutdown path. Document the operator journey end-to-end: install, configure, run, monitor.",
+     "line": 493
+    },
+    "U.4": {
+     "section": "Usability",
+     "n": 4,
+     "text": "Provide an IDL for the LEZ-side module using the [SPEL framework](https://github.com/logos-co/spel).",
+     "line": 500
+    },
+    "U.5": {
+     "section": "Usability",
+     "n": 5,
+     "text": "Return clear, actionable error messages for all failure modes: header not finalised, sync-committee signature invalid, committee handoff not verified, checkpoint stale or outside the weak-subjectivity period, inclusion proof invalid, predicate not satisfied, chain-ID mismatch, and malformed input.",
+     "line": 502
+    },
+    "U.6": {
+     "section": "Usability",
+     "n": 6,
+     "text": "Provide **reference consumer programs** that demonstrate the recommended consumer pattern of Supportability #4 end to end, covering at minimum two cases:\n- **ERC-20 transfer to a specific contract.** A transfer of a given ERC-20 token to a specified Ethereum contract address, attesting the token, recipient, sender, and amount, whether read from state or from an event, whichever the design prefers.\n- **Native ether transfer to a specific contract.** A transfer of native ETH to a specified Ethereum contract address, attesting recipient, sender, and amount, whether read from state or from an event, whichever the design prefers.",
+     "line": 506
+    },
+    "R.1": {
+     "section": "Reliability",
+     "n": 1,
+     "text": "Verification is deterministic: the same inputs always yield the same verdict, independently reproducible from the test suite.",
+     "line": 520
+    },
+    "R.2": {
+     "section": "Reliability",
+     "n": 2,
+     "text": "Verification is read-only with respect to consumer state: a rejected attestation consumes nothing and leaves the consumer able to retry.",
+     "line": 522
+    },
+    "R.3": {
+     "section": "Reliability",
+     "n": 3,
+     "text": "A verified statement over a finalised header remains valid indefinitely. Later Ethereum activity, including subsequent sync-committee rotations, must never invalidate an attestation that was valid when produced.",
+     "line": 524
+    },
+    "R.4": {
+     "section": "Reliability",
+     "n": 4,
+     "text": "Committee handoff tracking survives interruption: a component restarted after an outage resumes from its last verified state without re-verifying from the original checkpoint, and without accepting a handoff it has not verified.",
+     "line": 527
+    },
+    "R.5": {
+     "section": "Reliability",
+     "n": 5,
+     "text": "Temporary RPC or connectivity failure on the Ethereum side leaves any off-chain component in a recoverable state, able to resume without duplicating work already done.",
+     "line": 531
+    },
+    "R.6": {
+     "section": "Reliability",
+     "n": 6,
+     "text": "Proposals must integrate mature, audited implementations of necessary cryptographic primitives and the light-client protocol. Evaluating what existing implementations offer, and stating what is reused, what is rewritten, and the cost and audit-surface consequences of that split, is a scoped part of the work to be budgeted in the proposal (see Design Rationale, \"Assess reuse before rewriting\").",
+     "line": 534
+    },
+    "R.7": {
+     "section": "Reliability",
+     "n": 7,
+     "text": "An instance left unadvanced does not lose safety: attestations against already-verified headers continue to verify, and a stalled instance resumes correctly when any party submits the outstanding updates, with no manual repair and no gap in the verified handoff chain.",
+     "line": 540
+    },
+    "R.8": {
+     "section": "Reliability",
+     "n": 8,
+     "text": "Concurrent submission of the same update by competing operators is handled without corrupting tracked state: a duplicate or already-applied update is rejected cleanly rather than double-applied.",
+     "line": 544
+    },
+    "R.9": {
+     "section": "Reliability",
+     "n": 9,
+     "text": "The update-submitting component checks whether an update is still needed immediately before submitting, and does not submit one another party has already applied. Running several instances against the same LEZ instance must not multiply the gas spent on a given update beyond what contention makes unavoidable.",
+     "line": 547
+    },
+    "R.10": {
+     "section": "Reliability",
+     "n": 10,
+     "text": "Submission timing must not systematically concentrate cost on whichever party reacts fastest. The component defers submission by an interval it varies per instance, so that over many updates the gas cost is spread across the operators running it rather than always falling on the same one, while still submitting promptly once the deferral elapses and no other party has acted. Document the deferral strategy and its effect on update latency.",
+     "line": 552
+    },
+    "R.11": {
+     "section": "Reliability",
+     "n": 11,
+     "text": "Statement submissions are independent of one another, so that multiple private transactions can submit statements in the same block, and a private transaction can compute its resulting state before inclusion.",
+     "line": 558
+    },
+    "R.12": {
+     "section": "Reliability",
+     "n": 12,
+     "text": "CI must be green on the default branch.",
+     "line": 561
+    },
+    "P.1": {
+     "section": "Performance",
+     "n": 1,
+     "text": "Verifying an attestation and evaluating its predicate must complete within a single LEZ transaction at the per-transaction cycle budget in force at the time the work is completed, in the direct consumption path of Functionality #7. If this proves infeasible at the time the work is completed, the measurement in Performance #2 stands as the output and the shortfall must be documented with the specific component responsible.",
+     "line": 565
+    },
+    "P.2": {
+     "section": "Performance",
+     "n": 2,
+     "text": "Cost measurement is a primary output. Measure and document, with a breakdown by program action: advancing the tracked Ethereum state, and statement verification by type of statement. Report cycle count, gas cost, proof time, and proof size for each, extending the measurement methodology from [RFP-020](./RFP-020-redstone-oracle-adaptor.md). Numbers must be reproducible from the test suite.",
+     "line": 571
+    },
+    "P.3": {
+     "section": "Performance",
+     "n": 3,
+     "text": "Document the amortised per-attestation cost of sync-committee tracking at the recommended operating cadence, separately from the per-attestation verification cost, since the two amortise differently across consumers.",
+     "line": 577
+    },
+    "P.4": {
+     "section": "Performance",
+     "n": 4,
+     "text": "Any proving the user's own device must perform has to be practical on the desktop hardware Basecamp runs on. Measure and document wall-clock time and peak memory on a mid-range laptop and on the lowest specification the team declares as supported, and state that minimum explicitly. This includes running the attestation in a private transaction.",
+     "line": 580
+    },
+    "P.5": {
+     "section": "Performance",
+     "n": 5,
+     "text": "Document end-to-end attestation latency, from the Ethereum event to a verified statement usable on LEZ, broken down by finality wait, update availability, and on-chain verification.",
+     "line": 585
+    },
+    "P.6": {
+     "section": "Performance",
+     "n": 6,
+     "text": "Document the compute resources (CPU, RAM, time) required to run any off-chain component the design requires.",
+     "line": 588
+    },
+    "P.7": {
+     "section": "Performance",
+     "n": 7,
+     "text": "Document the growth rate and on-chain storage cost of any module state that accumulates with usage, in particular committee-tracking state, with projections over one and five years of continuous operation.",
+     "line": 590
+    },
+    "P.8": {
+     "section": "Performance",
+     "n": 8,
+     "text": "Document the cycle-count delta between the in-program BLS12-381 path and a hypothetical native precompile, so the measurement can inform whether a follow-on precompile RFP is warranted. A precompile is reachable only from public transactions, which the comparison must state.",
+     "line": 593
+    },
+    "P.9": {
+     "section": "Performance",
+     "n": 9,
+     "text": "No action's cycle count or gas cost scales with accumulated on-chain storage. Where a design cannot avoid it, the proposal justifies why and documents the mitigations.",
+     "line": 597
+    },
+    "S.1": {
+     "section": "Supportability",
+     "n": 1,
+     "text": "The LEZ program is deployed and tested on LEZ testnet 0.4, attesting to state on a public Ethereum testnet.",
+     "line": 603
+    },
+    "S.2": {
+     "section": "Supportability",
+     "n": 2,
+     "text": "End-to-end integration tests exercise attestation production and consumption against a LEZ sequencer (standalone mode) and an Ethereum test network or local fork, and are included in CI.",
+     "line": 605
+    },
+    "S.3": {
+     "section": "Supportability",
+     "n": 3,
+     "text": "Provide documentation in repo for the core module, covering the developer integration journey for a consuming LEZ program.",
+     "line": 608
+    },
+    "S.4": {
+     "section": "Supportability",
+     "n": 4,
+     "text": "The consumer documentation must include a **\"Recommended Consumer Pattern\"** section covering: enforcing uniqueness with a nullifier keyed on the statement identifier from Functionality #6, verifying the chain binding matches the consumer's expectation, handling each typed error code, and the recommended behaviour when an attestation cannot be produced (refuse the action, never fall back to an unverified input).",
+     "line": 610
+    },
+    "S.5": {
+     "section": "Supportability",
+     "n": 5,
+     "text": "Provide documentation in repo for the CLI and any operator-facing components, covering the core user and operator journeys respectively.",
+     "line": 616
+    },
+    "S.6": {
+     "section": "Supportability",
+     "n": 6,
+     "text": "Provide a **trust assumptions document** covering: the honest sync-committee supermajority assumption and the cost of the attack it admits; the weak-subjectivity checkpoint, who supplies it and how a verifier confirms it independently; what an attestation does and does not prove; what every off-chain participant in the design can observe; whether each can affect safety or only liveness; and the conditions under which the guarantees degrade or fail.",
+     "line": 618
+    },
+    "S.7": {
+     "section": "Supportability",
+     "n": 7,
+     "text": "Document the operator role for an instance: what running an operator costs, at what cadence updates should be submitted, how anyone can start one without permission, what it requires (a consensus endpoint and LEZ gas, and no standing on Ethereum), what an operator should expect when others are running one concurrently, and how to detect that an instance has stalled. State plainly that no party is obliged to operate and that liveness rests on interested parties choosing to spend the gas.",
+     "line": 625
+    },
+    "S.8": {
+     "section": "Supportability",
+     "n": 8,
+     "text": "The module undergoes an independent third-party security audit of the consensus and inclusion verification logic before any production deployment of the software; the audit report must be published. Mainnet deployment is not part of this RFP: whether, when and by whom the software is deployed is a matter for those who deploy it.",
+     "line": 632
+    },
+    "S.9": {
+     "section": "Supportability",
+     "n": 9,
+     "text": "Publish the resulting modules in a module catalog of the team's own, built from the [Logos module catalog template](https://github.com/logos-co/logos-modules-release-base), so the modules are installable by Logos clients.",
+     "line": 637
+    },
+    "S.10": {
+     "section": "Supportability",
+     "n": 10,
+     "text": "The modules must be built and released to that catalog using [logos-modules-release-action](https://github.com/logos-co/logos-modules-release-action).",
+     "line": 641
+    },
+    "S.11": {
+     "section": "Supportability",
+     "n": 11,
+     "text": "Provide a design decision log in repo recording each major design decision and choice: the context, the options considered, the option chosen, and the rationale and trade-offs. The log is updated as decisions are made and is current at each milestone delivery.",
+     "line": 643
+    },
+    "VS.1": {
+     "section": "Verification Security",
+     "n": 1,
+     "text": "Verification must reject a fabricated chain: given a self-consistent header and inclusion proof over state that was never finalised on the canonical chain, verification must fail. This is the central adversarial test of the RFP and must be exercised explicitly, not implied by other tests.",
+     "line": 650
+    },
+    "VS.2": {
+     "section": "Verification Security",
+     "n": 2,
+     "text": "Verification must reject: a header signed by a committee that was never validly handed off from the configured checkpoint; a sync-committee signature below the required participation threshold; a valid inclusion proof against a header that is not finalised; a valid finalised header with a tampered state or receipts root; a proof replayed against a different chain ID; and a predicate asserted over state the inclusion proof does not cover.",
+     "line": 654
+    },
+    "VS.3": {
+     "section": "Verification Security",
+     "n": 3,
+     "text": "**The verification logic cannot be swapped.** No consensus or inclusion verification may be reached through a `ProgramId` held in mutable account state. Change requires deploying a new version and having consumers move to it; document the migration mechanism and what consumers must do. The consumer documentation (Supportability #4) must state that the same rule applies to consumers: a program holding this module's `ProgramId` in mutable state lets whoever controls that pointer substitute a module that attests to anything.",
+     "line": 660
+    },
+    "VS.4": {
+     "section": "Verification Security",
+     "n": 4,
+     "text": "Document the failure modes that follow from a compromised or colluding sync committee, and what a consuming application can do to bound its exposure (for example, caps and freeze authorities on the consumer side, as [RFP-022](./RFP-022-wrapped-erc20.md) specifies).",
+     "line": 667
+    },
+    "VS.5": {
+     "section": "Verification Security",
+     "n": 5,
+     "text": "User-facing and developer-facing documentation must state the trustless verification model and the liveness-only role of any off-chain participant (see Design Rationale, \"The anchor: Ethereum finality via the sync committee\").",
+     "line": 671
+    },
+    "VS.6": {
+     "section": "Verification Security",
+     "n": 6,
+     "text": "An update is accepted on proof validity alone and never on the submitter's identity: any account submitting a valid proof advances the state, and any account submitting an invalid proof is rejected.",
+     "line": 675
+    },
+    "Soft.1": {
+     "section": "Soft Requirements",
+     "n": 1,
+     "text": "**Recorded-statement account.** In addition to the direct path (Functionality #7), provide a consumption path that evaluates a predicate and records the resulting verified statement to a public account, so cost can be amortised when many consumers care about the same Ethereum state. It must share a single verification core with the direct path, following the pattern in [RFP-020](./RFP-020-redstone-oracle-adaptor.md), so that the audit surface and the cost profile stay common. Document that a consumer reading such an account trusts whoever wrote it, which the direct path does not require.",
+     "line": 681
+    },
+    "Soft.2": {
+     "section": "Soft Requirements",
+     "n": 2,
+     "text": "**Batching.** Amortise verification cost across multiple attestations over the same finalised header in a single transaction, analogous to the multi-feed batching soft requirement in RFP-020.",
+     "line": 689
+    },
+    "Soft.3": {
+     "section": "Soft Requirements",
+     "n": 3,
+     "text": "**Historical state.** Attest to state under a header older than the currently-tracked finalised head, for example via historical summaries in the beacon state, so a consumer can prove a fact about Ethereum's past rather than only its recent finalised present.",
+     "line": 692
+    },
+    "Soft.4": {
+     "section": "Soft Requirements",
+     "n": 4,
+     "text": "**Richer predicates.** Support predicates over multiple attested values in a single statement (for example, an account balance and a storage slot under the same header), so a consumer can express a compound condition without producing and correlating several attestations.",
+     "line": 696
+    },
+    "Soft.5": {
+     "section": "Soft Requirements",
+     "n": 5,
+     "text": "**Operator incentive.** Propose a mechanism that rewards whoever advances the consensus state, so that liveness does not rest solely on interested parties choosing to spend the gas. Any such mechanism must preserve the permissionless property in Functionality #11: it may make operating attractive, but must not make it exclusive.",
+     "line": 700
+    }
+   }
+  },
+  "RFP-022": {
+   "title": "RFP-022 — Privacy-Preserving Wrapped ERC-20 and Ether Bridge for LEZ",
+   "file": "RFPs/RFP-022-wrapped-erc20.md",
+   "rows": {
+    "F.1": {
+     "section": "Functionality",
+     "n": 1,
+     "text": "Implement an EVM smart contract vault that escrows deposits of any ERC-20 in the supported-token registry, plus native ETH deposited directly: a user locking ETH must not be required to convert it to WETH or any other ERC-20 themselves first.",
+     "line": 406
+    },
+    "F.2": {
+     "section": "Functionality",
+     "n": 2,
+     "text": "A deposit must not publish, store, or otherwise reveal its LEZ destination. No Ethereum transaction argument, event, or contract state may identify the account that will receive the wrapped tokens.",
+     "line": 410
+    },
+    "F.3": {
+     "section": "Functionality",
+     "n": 3,
+     "text": "Implement a LEZ bridge program that mints the corresponding wrapped token on cryptographic verification of a valid Ethereum deposit. Verification must require no trusted party, and must consume the attestation primitive from [RFP-021](./RFP-021-ethereum-state-attestation.md) rather than implementing its own Ethereum consensus and inclusion verification. Uniqueness (that one deposit cannot be minted against twice, per Reliability #3) is this program's responsibility, keyed on the statement identifier the attestation carries.",
+     "line": 413
+    },
+    "F.4": {
+     "section": "Functionality",
+     "n": 4,
+     "text": "Minting must support both a private LEZ account and a public LEZ account as the destination, at the depositor's choice.",
+     "line": 421
+    },
+    "F.5": {
+     "section": "Functionality",
+     "n": 5,
+     "text": "Implement a burn path on the LEZ bridge program that entitles the holder to release the original asset from the Ethereum vault. The burn must not publish, store, or otherwise reveal its Ethereum destination.",
+     "line": 423
+    },
+    "F.6": {
+     "section": "Functionality",
+     "n": 6,
+     "text": "Burning must support the wrapped token being held in, and burned from, either a private or a public LEZ account, at the holder's choice.",
+     "line": 426
+    },
+    "F.7": {
+     "section": "Functionality",
+     "n": 7,
+     "text": "The Ethereum vault releases the original asset (the deposited ERC-20, or native ETH) on cryptographic verification of a valid LEZ burn, verified natively on Ethereum.",
+     "line": 428
+    },
+    "F.8": {
+     "section": "Functionality",
+     "n": 8,
+     "text": "The amounts visible on Ethereum must not identify which mint or burn they correspond to. Proposals must state the mechanism chosen (fixed denominations are the expected baseline) and its effect on anonymity-set size.",
+     "line": 431
+    },
+    "F.9": {
+     "section": "Functionality",
+     "n": 9,
+     "text": "A user must be able to recover every one of their own unclaimed deposits and unreleased burns from credentials they already hold, with no dependence on any server-side index and no separately-backed-up secret generated during the flow. This does not extend to the wrapped token itself: once minted, it is an ordinary LEZ token redeemable by whoever holds it, regardless of who made the original deposit.",
+     "line": 435
+    },
+    "F.10": {
+     "section": "Functionality",
+     "n": 10,
+     "text": "An admin authority (per RFP-001) can register a supported ERC-20 (Ethereum address, LEZ wrapped mint, decimals, permitted amounts, caps) and deregister a token. Documentation needs to be provided to handle registration changes with minimum impact for users, including delisting of a token.",
+     "line": 441
+    },
+    "F.11": {
+     "section": "Functionality",
+     "n": 11,
+     "text": "Global and per-token deposit and redemption caps, configurable by the admin authority, bound the maximum value that can be minted or released within a rolling window, as a rate limiter independent of the freeze authority. Cap enforcement per blockchain account is sufficient.",
+     "line": 445
+    },
+    "F.12": {
+     "section": "Functionality",
+     "n": 12,
+     "text": "The finality depth required before a deposit may be claimed, and before a burn may be released, is configurable by the admin authority per deployment, defaulting to the depth recommended in Design Rationale, \"Finality and reorg protection.\" A change to the configured depth must not invalidate a claim or release that was already valid under the previous depth.",
+     "line": 449
+    },
+    "F.13": {
+     "section": "Functionality",
+     "n": 13,
+     "text": "A protocol fee can be charged on both minting and burning of the wrapped token on LEZ, in a denomination (wrapped token, native LEZ token, or a configurable mix, per Design Rationale, \"Fee structure\") and at a rate configurable by the admin authority per deployment. The fee value must not distinguish a user's transaction from others, consistent with Functionality #8. The admin can also set either fee to zero.",
+     "line": 454
+    },
+    "F.14": {
+     "section": "Functionality",
+     "n": 14,
+     "text": "A freeze authority (per RFP-002) can pause minting and/or redemption, either globally or for a single registered token, on the Ethereum vault and the LEZ bridge program independently.",
+     "line": 460
+    },
+    "F.15": {
+     "section": "Functionality",
+     "n": 15,
+     "text": "Each LEZ bridge program deployment refers to a specific EVM smart contract deployment on a specific chain (contract address plus chain ID as the identifier), and reciprocally, each EVM smart contract deployment refers to a specific zone instance (LEZ blockchain ID, zone ID, and program ID). The design must not assume Ethereum mainnet is the only chain a deployment can target: the same program and contract design must be deployable, unmodified, against any EVM chain, mainnet or testnet, with each pairing checked as part of proof verification so a deposit or registration valid for one pairing is never accepted as valid for another.",
+     "line": 463
+    },
+    "F.16": {
+     "section": "Functionality",
+     "n": 16,
+     "text": "The design must let multiple entities each operate under their own independent configuration (token registry, fee recipients and rates, admin authority, caps, finality depth) on the same or different pairs of blockchain programs, with strict separation between them: one entity's configuration must have no privileged access over another's configuration or funds, as if each were a fully separate deployment. Document how a client identifies and switches between configurations.",
+     "line": 472
+    },
+    "F.17": {
+     "section": "Functionality",
+     "n": 17,
+     "text": "The Ethereum vault must correctly deposit and release ERC-20s whose `transfer` and `transferFrom` do not return a boolean (USDT).",
+     "line": 479
+    },
+    "U.1": {
+     "section": "Usability",
+     "n": 1,
+     "text": "Build core functionalities for both users and admin in a Logos core module, enabling the delivery of different Logos ui modules to use these programs: depositing, claiming a deposit on LEZ, redeeming, releasing on Ethereum, recovering a position from user credentials, and reading and administering the supported-token registry and its permitted amounts. All off-chain software described here, including every user and admin interface, must be implemented as Logos modules: core modules for functionality and Logos ui modules for interfaces. The Ethereum vault contract and the LEZ bridge program are the only components that are not Logos modules, apart from any supplementary interface offered under Soft Requirement #5.",
+     "line": 484
+    },
+    "U.2": {
+     "section": "Usability",
+     "n": 2,
+     "text": "Provide a Logos mini-app, aka Logos ui module, covering the deposit and redemption flows end to end, position recovery, and a registry view showing supported tokens, permitted amounts, caps and current utilisation. Also provide a UI for the admin functionality; whether this is combined into one UI or delivered as two separate ones is left to the applicant's choice.",
+     "line": 494
+    },
+    "U.3": {
+     "section": "Usability",
+     "n": 3,
+     "text": "Any long-running off-chain component the design requires must be provided as a **Logos module accompanied by a Logos Core headless CLI/daemon**, runnable standalone, using LEZ module and Ethereum module for the respective chains access, configurable finality depth, structured logging, and a clean shutdown path. Document the operator journey end-to-end: install, configure, run, monitor.",
+     "line": 499
+    },
+    "U.4": {
+     "section": "Usability",
+     "n": 4,
+     "text": "Provide an IDL for the LEZ bridge program using the [SPEL framework](https://github.com/logos-co/spel).",
+     "line": 505
+    },
+    "U.5": {
+     "section": "Usability",
+     "n": 5,
+     "text": "The mitigations to the three correlation points in Design Rationale, \"The privacy requirement, stated precisely\" (amount, timing, fee payer) must be enabled by default for users. The mini-app and CLI must show a clear indicator of what data would be leaked by the user's current choices, and default to the recommended parameters (fixed denomination, delayed submission, permissionless relayer) rather than requiring the user to select them.",
+     "line": 507
+    },
+    "U.6": {
+     "section": "Usability",
+     "n": 6,
+     "text": "Although minting and burning both support public LEZ accounts (Functionality #4, #6), the mini-app and CLI must default to inviting the user to mint into, and burn from, a private account: the private path is the pre-selected option in the flow, and choosing the public path instead requires an explicit action, consistent with Privacy Preservation #7.",
+     "line": 514
+    },
+    "U.7": {
+     "section": "Usability",
+     "n": 7,
+     "text": "Documentation and UI must clearly explain what is public and what is private at each step on both chains, so users can judge their own exposure.",
+     "line": 519
+    },
+    "U.8": {
+     "section": "Usability",
+     "n": 8,
+     "text": "Return clear, actionable error messages for all failure modes: unsupported token, invalid amount, cap exceeded, verification failure, insufficient finality, already claimed, and program or per-token frozen. Error messages must not reveal which deposit or burn a failed attempt referred to.",
+     "line": 521
+    },
+    "U.9": {
+     "section": "Usability",
+     "n": 9,
+     "text": "The UI must let users change the targeted Ethereum RPC address and the targeted LEZ sequencer or zone.",
+     "line": 525
+    },
+    "U.10": {
+     "section": "Usability",
+     "n": 10,
+     "text": "Publish the resulting modules in a module catalog of the team's own, built from the [Logos module catalog template](https://github.com/logos-co/logos-modules-release-base), so the modules are installable by Logos clients.",
+     "line": 527
+    },
+    "R.1": {
+     "section": "Reliability",
+     "n": 1,
+     "text": "Minting is atomic: a failed or rejected claim leaves the deposit claimable on retry and consumes nothing.",
+     "line": 534
+    },
+    "R.2": {
+     "section": "Reliability",
+     "n": 2,
+     "text": "Redemption is atomic at each stage: a failed burn does not destroy wrapped tokens without preserving the holder's entitlement to release, and a failed release leaves that entitlement intact.",
+     "line": 536
+    },
+    "R.3": {
+     "section": "Reliability",
+     "n": 3,
+     "text": "No deposit can be claimed twice and no burn redeemed twice, deterministically and under adversarial retry.",
+     "line": 539
+    },
+    "R.4": {
+     "section": "Reliability",
+     "n": 4,
+     "text": "A valid claim remains valid indefinitely; later chain activity must never invalidate a user's outstanding entitlement.",
+     "line": 541
+    },
+    "R.5": {
+     "section": "Reliability",
+     "n": 5,
+     "text": "Position recovery is complete: a client restored from user credentials alone, with no local state, rediscovers every claimable deposit and unredeemed burn.",
+     "line": 543
+    },
+    "R.6": {
+     "section": "Reliability",
+     "n": 6,
+     "text": "Temporary RPC or connectivity failure on either chain leaves any off-chain component in a recoverable state, able to resume without duplicating work already done.",
+     "line": 546
+    },
+    "R.7": {
+     "section": "Reliability",
+     "n": 7,
+     "text": "An interrupted user-side operation does not consume, corrupt, or expose the user's entitlement.",
+     "line": 549
+    },
+    "R.8": {
+     "section": "Reliability",
+     "n": 8,
+     "text": "Proposals must integrate mature, audited proof-system implementations rather than reimplementing zero-knowledge primitives from scratch.",
+     "line": 551
+    },
+    "R.9": {
+     "section": "Reliability",
+     "n": 9,
+     "text": "If any off-chain component is necessary, and expected to be run by a 3rd party, document the effect, and mitigate it, of an outage or malfunction of said component.",
+     "line": 553
+    },
+    "R.10": {
+     "section": "Reliability",
+     "n": 10,
+     "text": "End-to-end integration tests exercise the full deposit and redemption round trip against a LEZ sequencer (standalone mode) and an Ethereum test network or local fork, and are included in CI.",
+     "line": 556
+    },
+    "R.11": {
+     "section": "Reliability",
+     "n": 11,
+     "text": "Every hard requirement has at least one corresponding test.",
+     "line": 559
+    },
+    "R.12": {
+     "section": "Reliability",
+     "n": 12,
+     "text": "Provide documentation in repo for the core module, covering the developer integration journey for both flows including position recovery.",
+     "line": 560
+    },
+    "R.13": {
+     "section": "Reliability",
+     "n": 13,
+     "text": "Provide documentation in repo for the CLI and any operator-facing components, covering the core user and operator journeys respectively.",
+     "line": 562
+    },
+    "R.14": {
+     "section": "Reliability",
+     "n": 14,
+     "text": "Provide documentation in repo for the deployer journey, covering how an entity stands up its own independently configured deployment (Functionality #16): registering tokens, setting fees, configuring the admin and freeze authorities, and the finality depth.",
+     "line": 564
+    },
+    "P.1": {
+     "section": "Performance",
+     "n": 1,
+     "text": "Verifying an inbound claim and minting must complete within a single LEZ public transaction at the per-transaction compute budget in force at the time the work is completed. Document the compute-unit cost with a breakdown by component, extending the measurement methodology from [RFP-020](./RFP-020-redstone-oracle-adaptor.md).",
+     "line": 571
+    },
+    "P.2": {
+     "section": "Performance",
+     "n": 2,
+     "text": "Document the compute-unit cost of any additional LEZ-side verification the design requires beyond the per-claim path, and its amortised per-deposit cost at the recommended operating cadence.",
+     "line": 576
+    },
+    "P.3": {
+     "section": "Performance",
+     "n": 3,
+     "text": "Document the Ethereum-side gas cost of a deposit, of a release, and of any additional on-chain verification the design requires.",
+     "line": 579
+    },
+    "P.4": {
+     "section": "Performance",
+     "n": 4,
+     "text": "Any proving the user's own device must perform has to be practical on the desktop hardware Basecamp runs on. Measure and document wall-clock time and peak memory on a mid-range laptop and on the lowest specification the team declares as supported, and state that minimum explicitly.",
+     "line": 581
+    },
+    "P.5": {
+     "section": "Performance",
+     "n": 5,
+     "text": "Document end-to-end deposit latency (deposit to LEZ mint) and redemption latency (burn to Ethereum release), each broken down by source-chain finality wait, proof generation, any privacy-motivated delay, and on-chain verification.",
+     "line": 585
+    },
+    "P.6": {
+     "section": "Performance",
+     "n": 6,
+     "text": "Document the compute resources (CPU, RAM, time) required to run any off-chain component the design requires.",
+     "line": 589
+    },
+    "P.7": {
+     "section": "Performance",
+     "n": 7,
+     "text": "Document the growth rate and on-chain storage cost of all bridge state that accumulates with usage, projected at 1M and 10M operations.",
+     "line": 591
+    },
+    "S.1": {
+     "section": "Supportability",
+     "n": 1,
+     "text": "The Ethereum vault contract and the LEZ bridge program are deployed and tested on a public Ethereum testnet and LEZ testnet 0.4 respectively.",
+     "line": 596
+    },
+    "S.2": {
+     "section": "Supportability",
+     "n": 2,
+     "text": "The modules work on both Linux and MacOS platforms.",
+     "line": 598
+    },
+    "S.3": {
+     "section": "Supportability",
+     "n": 3,
+     "text": "The modules must be built and released to the team's module catalog (Usability #10) using [logos-modules-release-action](https://github.com/logos-co/logos-modules-release-action).",
+     "line": 599
+    },
+    "S.4": {
+     "section": "Supportability",
+     "n": 4,
+     "text": "Provide a design decision log in repo recording each major design decision and choice: the context, the options considered, the option chosen, and the rationale and trade-offs. The log is updated as decisions are made and is current at each milestone delivery.",
+     "line": 602
+    },
+    "Sec.1": {
+     "section": "Security",
+     "n": 1,
+     "text": "Both blockchain contracts undergo an independent third-party smart-contract security audit prior to any mainnet deployment; the audit report must be published. Mainnet deployment is not part of this RFP: whether, when and by whom the software is deployed is a matter for those who deploy it.",
+     "line": 609
+    },
+    "Sec.2": {
+     "section": "Security",
+     "n": 2,
+     "text": "Proof verification must be independently verifiable. Both the LEZ program and the Ethereum vault must reject invalid proofs, including those with incorrect public inputs, proofs for incorrect chain state, tampered headers, and replayed proofs.",
+     "line": 613
+    },
+    "Sec.3": {
+     "section": "Security",
+     "n": 3,
+     "text": "A malicious party submitting on a user's behalf must not be able to redirect funds, inflate their fee, or replay the user's submission to a different destination: a deposit and a burn must each secretly commit to the destination on the other chain, so that the claim can only be completed by whoever holds the seed or credentials that produced the commitment, and no information that leaks beyond that seed, whether from the deposit or burn transaction itself, public or observable state, or any party the flow depends on, can be used to steal it (see Functionality #2, #5). An adversary who observes everything public about a deposit or burn, but does not hold the originating seed, cannot construct a valid claim for a different destination.",
+     "line": 617
+    },
+    "Sec.4": {
+     "section": "Security",
+     "n": 4,
+     "text": "Caps (Functionality #11) bound the maximum value at risk in any rolling window; proposals must document recommended defaults and the reasoning behind them.",
+     "line": 627
+    },
+    "Sec.5": {
+     "section": "Security",
+     "n": 5,
+     "text": "The freeze authority (Functionality #14) must be exercisable independently on each half, so either can be paused without the other being operational or reachable.",
+     "line": 630
+    },
+    "Sec.6": {
+     "section": "Security",
+     "n": 6,
+     "text": "Soundness of supply: total wrapped supply on LEZ must never exceed the vault's holdings. Minting without a valid deposit, minting twice from one deposit, and releasing without a valid burn must all fail.",
+     "line": 633
+    },
+    "Sec.7": {
+     "section": "Security",
+     "n": 7,
+     "text": "User-facing documentation must state the trustless verification model and the liveness-only role of any off-chain participant (see Design Rationale, \"Trust model\").",
+     "line": 636
+    },
+    "Sec.8": {
+     "section": "Security",
+     "n": 8,
+     "text": "**The verification logic cannot be swapped.** No party may change what the bridge accepts as a valid proof after deployment. Change requires deploying a new version and migrating to it. Proposals must document the migration mechanism and how in-flight deposits and burns are honoured across it.",
+     "line": 639
+    },
+    "Sec.9": {
+     "section": "Security",
+     "n": 9,
+     "text": "The freeze authority (Functionality #14) stops new activity but does not by itself recover funds already at risk or resolve deposits and burns left in-flight once a vulnerability in the verification logic is found. Proposals must specify a failsafe strategy for this scenario, constrained as follows: the failsafe must not become a backdoor, meaning any recovery must still be claimed by the depositor or burner proving their own entitlement, the same way an ordinary claim or redemption works (see Design Rationale, \"Trust model\" and \"Loss of access\"), not by an admin authority or any other party identifying who owns what and redirecting funds on their behalf; it must not be able to mint, redirect, or release funds to any destination other than the address or account the proof specifies; and it must not be able to act on funds beyond what a specific, proven vulnerability put at risk. If no mechanism satisfying these constraints is achievable, the proposal must instead document explicitly why a failsafe should not be implemented, and what happens to affected funds and in-flight positions in its absence.",
+     "line": 643
+    },
+    "Priv.1": {
+     "section": "Privacy Preservation",
+     "n": 1,
+     "text": "**Inbound unlinkability.** No signal other than amount, token, and timing may narrow down which LEZ mint an Ethereum deposit funded. Across the anonymity set those three signals leave unresolved, no correlation derivable from public state identifies the true deposit-to-mint pairing better than chance.",
+     "line": 661
+    },
+    "Priv.2": {
+     "section": "Privacy Preservation",
+     "n": 2,
+     "text": "**Outbound unlinkability.** No signal other than amount, token, and timing may narrow down which Ethereum release a LEZ burn triggered. Across the anonymity set those three signals leave unresolved, no correlation derivable from public state identifies the true burn-to-release pairing better than chance.",
+     "line": 665
+    },
+    "Priv.3": {
+     "section": "Privacy Preservation",
+     "n": 3,
+     "text": "No transaction argument, event, log, or account-state change on either chain may reveal a deposit's LEZ destination or a burn's Ethereum destination. This must hold over full event and state diffs for a complete round trip.",
+     "line": 670
+    },
+    "Priv.4": {
+     "section": "Privacy Preservation",
+     "n": 4,
+     "text": "Information that would connect the two legs must never leave the user's control. Document every component that handles user data; such information must be absent from all submitted transaction data.",
+     "line": 673
+    },
+    "Priv.5": {
+     "section": "Privacy Preservation",
+     "n": 5,
+     "text": "Failure and error paths must not reveal which deposit or burn was involved: a rejected claim, a repeat claim, and a cap rejection must be indistinguishable in that respect.",
+     "line": 676
+    },
+    "Priv.6": {
+     "section": "Privacy Preservation",
+     "n": 6,
+     "text": "Where a third party submits on the user's behalf, document precisely what that party learns, and ensure the user can switch between such parties per operation.",
+     "line": 679
+    },
+    "Priv.7": {
+     "section": "Privacy Preservation",
+     "n": 7,
+     "text": "The default configuration must be the private one. No user action may be required to obtain the privacy guarantees, and any override that weakens them must require explicit confirmation.",
+     "line": 682
+    },
+    "Soft.1": {
+     "section": "Soft Requirements",
+     "n": 1,
+     "text": "**Committed amounts.** Record transferred values on the LEZ side as value commitments rather than restricting transfers to a fixed set of permitted amounts, removing the amount-visibility constraint. This merges all per-amount anonymity sets into one and reduces the need for users to split transfers. Whatever is delivered under the hard requirements should be designed so this can be adopted later without redeploying the vault or resetting accumulated anonymity; document the intended migration path even if it is not implemented.",
+     "line": 688
+    },
+    "Soft.2": {
+     "section": "Soft Requirements",
+     "n": 2,
+     "text": "Optional viewing keys allowing a user to *voluntarily* disclose their own bridge activity to a chosen third party, without weakening privacy for anyone else and without any protocol-level disclosure capability.",
+     "line": 696
+    },
+    "Soft.3": {
+     "section": "Soft Requirements",
+     "n": 3,
+     "text": "A configurable per-token release delay, in addition to finality and any user-chosen delay, as an extra circuit-breaker window allowing the admin authority to react to anomalous redemption volume before funds leave the vault.",
+     "line": 699
+    },
+    "Soft.4": {
+     "section": "Soft Requirements",
+     "n": 4,
+     "text": "Design the proof-system components as pluggable, so that future zkVM improvements, proof compression, or hardware acceleration can be adopted without restructuring the vault or the bridge program (redeployment and migration would be necessary, per Security #8)",
+     "line": 703
+    },
+    "Soft.5": {
+     "section": "Soft Requirements",
+     "n": 5,
+     "text": "**Common Ethereum wallet compatibility.** The hard requirements assume the use of the Logos Ethereum core module, meaning users hold their Ethereum assets in software loaded in Basecamp. This can add friction: a user whose funds are in another Ethereum wallet first has to transfer them to the Logos Ethereum core module before wrapping. Proposals may offer a supplementary approach compatible with common Ethereum wallet software, such as a web application or another wallet integration, in addition to the Logos modules required above. Browser-based software is exposed to security risks that locally loaded Logos modules are intended to avoid, such as malicious or compromised browser extensions, injected scripts, and phishing front ends. Any such approach must be carefully considered, and the proposal must document its security trade-offs.",
+     "line": 707
+    }
+   }
+  }
+ }
+}

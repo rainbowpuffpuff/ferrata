@@ -1,0 +1,232 @@
+# What the build page shows beyond what it reads from docs/: which runs and screenshots to feature, their short
+# captions, and the commands of "Try it". Everything else (statuses, counts, reasons, tests, evidence, milestones,
+# budget) is read by site/build.py from docs/requirements-status.md, docs/EVIDENCE.md, docs/traceability.md,
+# scripts/ci/row-tests.toml, site/data/*.json and the run records named below. Every path here must be tracked;
+# site/test_site.py checks it. Captions say where each thing ran, with the proposal's labels: real, a zone we ran
+# (devnet), dev mode, stand-in.
+
+[site]
+title = "Ferrata"
+tagline = "Ethereum state attestation on LEZ, and a private ERC-20 and ETH bridge built on it"
+bid = "The bid for Logos RFP-021 and RFP-022"
+repo = "https://github.com/rainbowpuffpuff/ferrata"
+ref = "main"
+issue = "https://github.com/logos-co/rfp/issues/257"
+issue_api = "https://api.github.com/repos/logos-co/rfp/issues/257"
+api_repo = "https://api.github.com/repos/rainbowpuffpuff/ferrata"
+workflows = ["ci.yml", "macos.yml", "lez-full.yml", "sequencer.yml"]
+platform = "LEZ v0.4.0-rc1 to rc3 on zones we run; LEZ testnet 0.4 is not released"
+
+# The test network served beside this page (same host). Paths are relative so the page works on any host name.
+[testnet]
+rpc = "/rpc"                                            # LEZ JSON-RPC through the host's gateway
+status = "/status"                                      # the human status page
+status_json = ["/status/status.json", "/status.json"]   # tried in order; the updater's /health is inside
+programs_json = ["/status/programs.json", "/programs.json"]
+explorer = "/explorer/"
+explorer_tx = "/explorer/#/tx/{hash}"                   # the explorer's routes: #/tx/HASH, #/block/N, #/account/ID
+explorer_block = "/explorer/#/block/{n}"
+wallet = "/wallet/"
+agents = "/agents"
+agents_md = "/AGENTS.md"
+faucet = "/faucet"                                      # GET: its terms and balance; POST {"account": ID}: one transfer
+
+# "What runs today": each card takes its title, numbers, where it ran and proofs from its EVIDENCE rows (the proofs
+# label too: a label here may not speak of proofs, build.py refuses it); `txs`
+# names a record whose Sepolia transactions are listed (manifest.json of a crown run), `stages` a README whose
+# "| Stage | Result | Time |" table is shown, `lez_txs` a TSV of LEZ transactions (hash, block, label).
+[[run]]
+id = "crown-live-4"
+title = "The round trip, live on Sepolia, with the LEZ side on LEZ v0.4.0-rc3"
+date = "2026-11-18"
+evidence = [142, 141]
+labels = ["Sepolia: real transactions", "LEZ v0.4.0-rc3: a zone we ran"]
+record = "e2e/runs/crown-live-4/README.md"
+txs = "e2e/runs/crown-live-4/manifest.json"
+deploy = "e2e/runs/crown-live-4/deploy.json"
+stages = "e2e/runs/crown-live-4/README.md"
+recheck = "python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-4"
+
+[[run]]
+id = "crown-live-3"
+title = "The round trip on the final programs, live on Sepolia"
+date = "2026-11-12"
+evidence = [91]
+labels = ["Sepolia: real transactions", "LEZ v0.4.0-rc1: a zone we ran"]
+record = "e2e/runs/crown-live-3/README.md"
+txs = "e2e/runs/crown-live-3/manifest.json"
+deploy = "e2e/runs/crown-live-3/deploy.json"
+stages = "e2e/runs/crown-live-3/README.md"
+recheck = "python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-3"
+
+[[run]]
+id = "crown-live-1"
+title = "The first live round trip on Sepolia"
+date = "2026-11-11"
+evidence = [41]
+labels = ["Sepolia: real transactions", "LEZ v0.4.0-rc1: a zone we ran"]
+record = "e2e/runs/crown-live-1/README.md"
+txs = "e2e/runs/crown-live-1/manifest.json"
+deploy = "e2e/runs/crown-live-1/deploy.json"
+stages = "e2e/runs/crown-live-1/README.md"
+recheck = "python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-1"
+
+[[run]]
+id = "lab"
+title = "The lab: the light client following Sepolia and mainnet, unattended"
+date = "2026-11-10"
+evidence = [21]
+labels = ["LEZ v0.4.0-rc1: a zone we ran", "real Ethereum data", "public job path"]
+record = "lez/lab/README.md"
+recheck = "lez/lab/lab.sh verify"
+
+[[run]]
+id = "public-v031"
+title = "On the public LEZ testnet (v0.3.1): the light client deployed, updated and attesting"
+date = "2026-11-19"
+evidence = [150]
+labels = ["public LEZ testnet v0.3.1", "experimental port", "11 transactions"]
+record = "lez-v03/results/public/README.md"
+lez_txs = "lez-v03/results/public/txs.tsv"
+explorer = "https://explorer.testnet.lez.logos.co/"
+
+[[run]]
+id = "one-block"
+title = "Four private attestations in one block of LEZ v0.4.0-rc3's own sequencer"
+date = "2026-11-22"
+evidence = [217]
+labels = ["LEZ v0.4.0-rc3: a sequencer we ran"]
+record = "lez/results/v0.4.0-rc3/r11-one-block/README.md"
+
+[[run]]
+id = "basecamp"
+title = "The mini-app's private round trip inside Logos Basecamp"
+date = "2026-11-17"
+evidence = [126, 125]
+labels = ["Logos Basecamp", "LEZ: a zone we ran", "Ethereum: a stand-in service on a local anvil"]
+record = "modules/ferrata_bridge_ui/results-basecamp-roundtrip/real-proofs-jobs/final/README.md"
+gallery = "basecamp"
+
+[[run]]
+id = "logos-core"
+title = "The attestation module and the bridge's Ethereum side through Logos Core's own modules"
+date = "2026-11-22"
+evidence = [197, 199]
+labels = ["headless Logos Core", "LEZ: sequencers we ran", "Ethereum: through eth_rpc_module"]
+record = "cli/results/attest-seq-r6/README.md"
+
+[[run]]
+id = "privacy"
+title = "The privacy gate: pairing deposits with claims at chance"
+evidence = [89, 23]
+labels = ["LEZ v0.4 state machine in process", "stand-in records"]
+record = "docs/privacy/RESULTS.md"
+
+[[run]]
+id = "four-sequencers"
+title = "The return leg with four sequencers: a checkpoint signed by 3 of 4, proven and accepted"
+date = "2026-11-13"
+evidence = [100, 101]
+labels = ["LEZ v0.4.0-rc1: four sequencers we ran", "vault on a local EVM"]
+
+# The attestation CLI, as recorded: each block is a file of a recorded run, shown verbatim.
+[cli]
+title = "`ferrata attest` against a LEZ v0.4.0-rc1 sequencer we ran"
+evidence = [195]
+record = "cli/results/attest-seq-rf1/README.md"
+steps = [
+  "cli/results/attest-seq-rf1/cli/12-mainnet-status.txt",
+  "cli/results/attest-seq-rf1/cli/14-attest-storage.txt",
+  "cli/results/attest-seq-rf1/cli/15-attest-storage-predicate-fails.txt",
+  "cli/results/attest-seq-rf1/cli/17-attest-log-transfer.txt",
+]
+
+# Screenshots, rendered from the real apps by the runs named; copied into the bundle as they are.
+[[shot]]
+gallery = "basecamp"
+path = "modules/ferrata_bridge_ui/results-basecamp-roundtrip/real-proofs-jobs/final/pictures/01-basecamp-opens-the-mini-app.png"
+caption = "Logos Basecamp opens the Ferrata mini-app"
+[[shot]]
+gallery = "basecamp"
+path = "modules/ferrata_bridge_ui/results-basecamp-roundtrip/real-proofs-jobs/final/pictures/02-module-inspector-core-modules-loaded.png"
+caption = "Basecamp's module inspector: the Ferrata and Logos core modules loaded"
+[[shot]]
+gallery = "basecamp"
+path = "modules/ferrata_bridge_ui/results-basecamp-roundtrip/real-proofs-jobs/final/pictures/07-deposit-defaults.png"
+caption = "A deposit on its defaults: the private path preselected"
+[[shot]]
+gallery = "basecamp"
+path = "modules/ferrata_bridge_ui/results-basecamp-roundtrip/real-proofs-jobs/final/pictures/14b-claim-job-proving.png"
+caption = "The private claim being proven inside Basecamp"
+[[shot]]
+gallery = "basecamp"
+path = "modules/ferrata_bridge_ui/results-basecamp-roundtrip/real-proofs-jobs/final/pictures/15-claim-settled-privately.png"
+caption = "The claim settled privately on the LEZ zone"
+[[shot]]
+gallery = "basecamp"
+path = "modules/ferrata_bridge_ui/results-basecamp-roundtrip/real-proofs-jobs/final/pictures/17d-reopened-view-found-the-burn-job.png"
+caption = "The view closed and reopened while the burn was proven: it finds the job"
+[[shot]]
+gallery = "basecamp"
+path = "modules/ferrata_bridge_ui/results-basecamp-roundtrip/real-proofs-jobs/final/pictures/18-burn-settled-privately.png"
+caption = "The burn settled privately"
+[[shot]]
+gallery = "basecamp"
+path = "modules/ferrata_bridge_ui/results-basecamp-roundtrip/real-proofs-jobs/final/pictures/21-released-to-the-fresh-address.png"
+caption = "Released to a fresh address on the Ethereum side (a local anvil, through a stand-in service)"
+[[shot]]
+gallery = "basecamp"
+path = "modules/ferrata_bridge_ui/results-basecamp-roundtrip/real-proofs-jobs/final/pictures/23-privacy.png"
+caption = "What is public and what is private, step by step, as the mini-app shows it"
+[[shot]]
+gallery = "depositor"
+path = "web/depositor/results/anvil-2026-11-21.png"
+caption = "The one-page depositor (any EIP-1193 wallet), in headless Chromium against a local anvil with a stand-in wallet"
+record = "web/depositor/results/anvil-2026-11-21.txt"
+
+# "Try it": commands as the guides give them; {rpc} becomes this host's test-network RPC in the browser.
+[[try]]
+title = "Check the work from a fresh clone"
+lines = [
+  "git clone https://github.com/rainbowpuffpuff/ferrata && cd ferrata",
+  "scripts/fetch-vectors.sh && cargo test --workspace --locked",
+]
+doc = "docs/guides/quickstart.md"
+
+[[try]]
+title = "Re-check the live Sepolia round trips from any RPC (read-only)"
+lines = ["python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-4"]
+doc = "docs/sepolia.md"
+
+[[try]]
+title = "Re-run five results in one pinned container"
+lines = ["scripts/reproduce/run.sh"]
+doc = "scripts/reproduce/README.md"
+
+[[try]]
+title = "The M0 checks, each verdict printed"
+lines = ["just m0"]
+doc = "justfile"
+
+[[try]]
+title = "Ask the test network's light client for its state"
+lines = [
+  "cd cli && cargo build --release",
+  "./target/release/ferrata attest --lez-rpc {rpc} --program 0x<program> status --instance 0x<instance>",
+]
+doc = "lez/ATTEST-CLI.md"
+note = "The program and the Sepolia instance are filled in from the test network's programs list when it serves one."
+
+[[try]]
+title = "The bid's day-one deployment on LEZ testnet 0.4, for when it exists (it sends transactions)"
+lines = ["FERRATA_TESTNET_SEND=yes lez/testnet04/day1.sh go URL"]
+doc = "lez/testnet04/README.md"
+note = "Without FERRATA_TESTNET_SEND=yes it sends nothing; the README says what it deploys and in which order."
+
+# Each milestone's current reading where an evidence row measures its gate (shown under the gate as filed).
+[milestone_evidence]
+M0 = [51]
+
+# The review card quotes this document's "Reviews by agents" section (its first paragraph), nothing written here.
+[review]
+doc = "docs/how-it-was-built.md"

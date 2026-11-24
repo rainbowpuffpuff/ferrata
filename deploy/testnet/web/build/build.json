@@ -1,0 +1,63 @@
+{
+ "commit": "75bf7d604f2055e65186081f0903e3295e871546",
+ "date": "2026-11-23",
+ "dirty": false,
+ "statuses_from": "33015d67da048f145a3ea12bf1e20d95b07e01dd",
+ "hard": {
+  "RFP-021": {
+   "shown": 43,
+   "in part": 12,
+   "not yet": 1,
+   "waits on Logos": 3,
+   "total": 59
+  },
+  "RFP-022": {
+   "shown": 42,
+   "in part": 23,
+   "not yet": 1,
+   "waits on Logos": 2,
+   "total": 68
+  }
+ },
+ "soft": {
+  "RFP-021": {
+   "shown": 5,
+   "in part": 0,
+   "not yet": 0,
+   "waits on Logos": 0
+  },
+  "RFP-022": {
+   "shown": 2,
+   "in part": 3,
+   "not yet": 0,
+   "waits on Logos": 0
+  }
+ },
+ "ci": {
+  "RFP-021": 54,
+  "RFP-022": 66
+ },
+ "rows": 137,
+ "evidence_rows": 232,
+ "warnings": [],
+ "files": [
+  "assets/logo.svg",
+  "assets/nojs.css",
+  "assets/site.css",
+  "assets/site.js",
+  "build.json",
+  "evidence.html",
+  "evidence.json",
+  "img/02d183264018.png",
+  "img/3abe24b9392c.png",
+  "img/50f4d9d0305c.png",
+  "img/58bdf01f17f2.png",
+  "img/5a54fdfc0685.png",
+  "img/6e698dd24f0d.png",
+  "img/95bdd4494e88.png",
+  "img/a4563454b67b.png",
+  "img/b1a6e3198ba1.png",
+  "img/da5914b8949b.png",
+  "index.html"
+ ]
+}

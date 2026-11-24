@@ -1,0 +1,51 @@
+{
+ "url": "https://github.com/logos-co/rfp/issues/257",
+ "title": "[PROPOSAL] RFP-022 — Ferrata: a private Ethereum ⇄ LEZ bridge on its own attestation primitive (also covers RFP-021)",
+ "state": "OPEN",
+ "labels": [
+  "RFP-022",
+  "proposal"
+ ],
+ "created": "2026-11-15T23:46:27Z",
+ "updated": "2026-11-23T03:28:23Z",
+ "read_utc": "2026-11-23T08:59:49Z",
+ "sections": {
+  "milestones": "Twelve paid weeks in 14 calendar weeks. Each payout is due when its done gate is met. If testnet 0.4 launches after A4's or B4's week, that milestone's deployment and 7-day runs are due within 4 weeks of the launch, at no extra cost.\n\n| # | Milestone | RFP | Weeks | Payout |\n|---|---|---|---|---|\n| M0 | Open checks | both | 1 | $4,000 |\n| A1 | Light client, production form | 021 | 1 | $4,250 |\n| A2 | Attestation and reference consumers complete | 021 | 1 | $4,250 |\n| A3 | Attestation module, CLI, updater, IDL | 021 | 1 | $4,250 |\n| A4 | Testnet 0.4, attestation release | 021 | 1 | $4,250 |\n| B1 | Return leg with several sequencers | 022 | 2 | $8,500 |\n| B2 | Bridge on Sepolia, hardened; privacy and recovery | 022 | 2 | $8,500 |\n| B3 | Bridge module, mini-app, admin view, CLI, relayer | 022 | 1 | $4,250 |\n| B4 | Testnet 0.4, bridge release | 022 | 1 | $4,250 |\n| | Audit allowance for the vault, paid by Logos to the firm (§A8) | 022 | | $15,000 |\n| R | Audit remediation, after the reports | both | 1 | $3,500 |\n| | **Total** | | **12** | **$65,000** |\n\nBy RFP: $20,500 for RFP-021 (A1-A4, half of M0, $1,500 of R) and $44,500 for RFP-022 (B1-B4, half of M0, $2,000 of R and the allowance). If RFP-021 goes to another team, Part B uses that team's primitive through one adapter for the same $44,500: 7 weeks (M0's RFP-022 rows, then B1-B4), its share of R and the $15,000. The adapter needs a finalized storage-slot statement, synchronous on v0.4. Until one exists, B2 runs against Ferrata's own instance.\n\n**M0.** `just m0` prints each verdict (1 of 4 GO today). The four checks, each with its fallback:\n- A private claim and a private attestation, padded as LEZ's wallet pads, and a release receipt on the declared minimum, Linux and macOS laptops: at most 20 min and 16 GB each. Otherwise the minimum is raised and disclosed (above 32 GB, STOP for that requirement).\n- The gas drop. Otherwise first claims are faucet-funded, the correlation disclosed, and Logos decides.\n- The token program pinned on v0.4. Otherwise STOP for that requirement.\n- Real proofs on the newest LEZ tag. Otherwise its change is traced and fixed in A1.\n\nAt a STOP, Logos chooses to continue without that requirement or to stop.\n\nThe done gates below are abridged. Each requirement's milestone and test are in docs/traceability.md.\n\n**A1.** The deployment check prints OK from a fresh clone, and a consumer bound to the root id accepts a successor's records.\n\n**A2.** 10 ERC-20 and 10 ETH deposits on Sepolia are each accepted exactly once, and the F.8 test passes while a calling private consumer fails it.\n\n**A3.** Two honest daemons and one adversarial daemon run 100 updates on a LEZ sequencer, every update applied once.\n\n**A4.** An instance follows Sepolia for 7 consecutive days on testnet 0.4 with no manual repair, from fresh accounts, and every 021 requirement has a named test, passing in CI.\n\n**B1.** A zone of at least three sequencers, each with `ferrata_attestor_module`, and a rotation removing a key. 20 burns are each released exactly once on Sepolia.\n\n**B2.** 20 deposits of USDC, USDT, WETH and ETH are each minted exactly once, half to private accounts. The public data of 20 deposit-claim and 20 burn-release pairs differ only in fresh randomness and nullifiers, while a linkable variant fails. A wiped client recovers 10 of 10 unclaimed deposits and 10 of 10 unreleased burns from the seed alone.\n\n**B3.** A new user completes a private round trip in the mini-app on defaults alone, in Basecamp, through Logos Core's modules and a LEZ sequencer.\n\n**B4.** Every 022 hard requirement has a named test, passing in CI, and a second deployer stands up a configuration from the deployer guide.\n\n**R.** Every finding is fixed or answered in the response table. New immutable versions ship with migration notes. The reports are published.",
+  "budget": "$65,000: $20,500 for RFP-021 and $44,500 for RFP-022, $15,000 of it toward the vault's audit (§A8). Logos contracts the rest of the audit.",
+  "post_delivery": "For 12 months from B4's acceptance:\n- Security reports: first response within two business days; for High severity, a fix or a published mitigation within 14 days.\n- LEZ releases: reproducers and the bench re-run on each tag within two weeks; a retirement plan published before any change the deployed checkpoint program cannot follow.\n- Ethereum forks: for each scheduled fork, a successor instance and a migration note at least four weeks before activation.\n- Running services: one updater, one relayer with its checkpoint prover and `monitor`, for the testnet deployment, with a monthly uptime log.\n- The return leg: the upstream note kept current; a successor vault proposed when LEZ can be verified.",
+  "risks": "| Risk | Handling |\n|---|---|\n| The schedule slips | 3 weeks of float; then, in order: the public-job path a measured fallback, the gas drop faucet-funded (M0) |\n| LEZ changes its block format | retire first (§B5); tokens not burned in time lose their backing, a disclosed exception to 022: R.4 |\n| One person | decision log, weekly notes, reproducible builds, re-check commands for every result |"
+ },
+ "bid": "**The bid is $65,000.** $50,000 pays for 12 weeks of remaining work: a one-week check of what is still open, 4 weeks for RFP-021, then 6 for RFP-022 (these 11 in 14 calendar weeks), and a week of audit remediation after the reports. $15,000 goes toward the vault's third-party review (§A8). Only unbuilt work is charged, not what the table above shows.",
+ "updates": [
+  {
+   "created": "2026-11-16T09:53:47Z",
+   "url": "https://github.com/logos-co/rfp/issues/257#issuecomment-6913117884",
+   "title": "A 5 minute film of what I built so far and whats running today"
+  },
+  {
+   "created": "2026-11-17T20:44:59Z",
+   "url": "https://github.com/logos-co/rfp/issues/257#issuecomment-6960500305",
+   "title": "Update, 17 November"
+  },
+  {
+   "created": "2026-11-18T21:18:14Z",
+   "url": "https://github.com/logos-co/rfp/issues/257#issuecomment-6991928017",
+   "title": "Update, 18 November"
+  },
+  {
+   "created": "2026-11-19T13:10:57Z",
+   "url": "https://github.com/logos-co/rfp/issues/257#issuecomment-7010098725",
+   "title": "Update, 19 November"
+  },
+  {
+   "created": "2026-11-21T22:54:34Z",
+   "url": "https://github.com/logos-co/rfp/issues/257#issuecomment-7070510951",
+   "title": "Update, 22 November"
+  },
+  {
+   "created": "2026-11-23T03:28:23Z",
+   "url": "https://github.com/logos-co/rfp/issues/257#issuecomment-7090771633",
+   "title": "Progress since the last update"
+  }
+ ]
+}
