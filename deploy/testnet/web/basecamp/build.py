@@ -264,24 +264,29 @@ def main():
       "(a public one is filled in) and a recovery phrase made for this test network, or <b>New phrase</b>; then "
       "<b>Open with this phrase</b>. Before it derives anything the module checks the deployment it knows: this network's "
       "<code>/wallet/config.json</code>, the chain, the vault's configuration, the bridge program's image id and its paired "
-      "configuration on LEZ; it refuses any other.</li>"
+      "configuration on LEZ (these two as this network's own host reports them); it refuses any other.</li>"
       "</ol><p class=\"small\">Run by us on 24 November 2026 with the 0.4.0-rc.2 AppImage on Linux x86-64, with builds made "
-      "before this release and signed by a test key (the mini-app byte-identical to this one): Basecamp started the module "
+      "before this release and signed by a test key (the mini-app the same files as this one, only its signature differs): "
+      "Basecamp started the module "
       "when the app opened, and the session opened on this network with a test phrase, also with Qt's debug logging on (the "
       "phrase in none of Basecamp's log lines). The previous release's files, signed with this key, installed in 0.4.0-rc.2, "
       "which showed the dialog above and refuses to start an installed app whose files changed after the install, and in "
       "0.3.2, which names no signer (its dialog only says the request came from its unsigned Package Manager) and installs "
-      "on <b>Install</b>.</p>"
+      "on <b>Install</b>. These packages, signed with the release key, have been installed so far only by the headless test "
+      "(<a href=\"#tested\">Tested</a>).</p>"
       "<p class=\"small\"><b>What the mini-app does there:</b> with the session open it reads the registry and the vault, finds "
       "your positions from the phrase, shows the faucet and the LGO balances, makes the plaintext claim of a deposit to one of "
       "the phrase's public accounts and the public burn to an address you enter in its checksummed form, and hands the release "
       "to the <code>ferrata</code> tool. A claim or burn is shown to you before anything is signed, and the module signs "
-      "exactly what you approved. Deposits are made in the <a href=\"/wallet/\">web wallet</a> with the same phrase "
+      "exactly what you approved. Run from Basecamp on this network so far: the session, the reads, the positions and the "
+      "faucet; no claim or burn has been sent there yet (the test phrase has no deposit and no wrapped ETH there), and the "
+      "module's tests sign them against a stand-in LEZ node. Deposits are made in the <a href=\"/wallet/\">web wallet</a> with the same phrase "
       "(Basecamp 0.4.0-rc.2 has no Logos signer for Sepolia, so the deposit button is off), and a private claim or burn with "
       "the <code>ferrata</code> tool. The phrase reaches the module sealed, never in clear on Logos Core's connection, and the "
       f"session's keys are wiped when it ends ({gh('modules/ferrata_bridge_ui/README.md', commit, 'the mini-app’s README')} "
-      "says what protects them). We ran the whole round trip inside Basecamp on our own LEZ sequencer with a stand-in for "
-      "Logos's Ethereum and LEZ modules (<a href=\"#withdrawal\">below</a>).</p></div>")
+      "says what protects them). We ran the whole round trip inside Basecamp on our own LEZ sequencer, LEZ through Logos's "
+      "own <code>lez_core</code> (with our patch) and a stand-in for Logos's Ethereum, keystore and signer modules "
+      "(<a href=\"#withdrawal\">below</a>).</p></div>")
     w('<div class="card"><h3>In a headless Logos Core (<code>logosctl</code>)</h3>')
     w(term([
         "printf 'signature_policy: require\\n' > node.yaml     # refuse unsigned packages and unknown signers",
@@ -434,10 +439,12 @@ def main():
       "<li>The RISC Zero 3.1 vault on Sepolia, named in this network's bridge configuration (see the withdrawal table).</li></ul></div>")
     w('<div class="card"><h3>Not yet</h3><ul>'
       "<li>A withdrawal on this network recorded in this repository: the bridge is paired; <a href=\"/status/\">/status/</a> says where the network stands.</li>"
-      "<li>Sending to Sepolia from Basecamp: a deposit needs Logos's signer for Sepolia (<code>tx_sender_module</code>, "
+      "<li>A deposit from Basecamp: it needs Logos's signer for Sepolia (<code>tx_sender_module</code>, "
       "<code>keystore_module</code>), which Basecamp 0.4.0-rc.2 does not have, so deposits are made in the "
-      "<a href=\"/wallet/\">web wallet</a>; a private claim or burn, and the release, need the <code>ferrata</code> tool "
-      "(<a href=\"#install\">Install</a>).</li>"
+      "<a href=\"/wallet/\">web wallet</a>. A private claim or burn (a proof of LEZ's privacy circuit) and the release (proven on your "
+      f"machine, then presented to the vault by a relayer or by you) are made with the <code>ferrata</code> tool ({gh('cli/README.md', commit, 'its README')}).</li>"
+      "<li>A claim or burn sent from Basecamp on this network: so far signed only against a stand-in LEZ node, in the "
+      "module's tests.</li>"
       "<li>The mini-app for macOS built by the macOS workflow: the one here is assembled from the Linux build's files (it has no native code), and nobody has opened it in Basecamp on a Mac yet.</li>"
       + ("<li>A second build of these packages to compare bytes with (the previous release's Linux packages were built twice, "
          "byte-identical: <a href=\"#reproduce\">Reproduce</a>).</li>"
@@ -447,9 +454,10 @@ def main():
       "<li>An audit: everything here is a prototype.</li></ul></div>")
     w("</div></section>")
     w("</main>")
+    pkg_from = ("commits " + from_text) if mixed else f"commit <code>{short}</code>"  # a name, not a nested f-string: Python < 3.12 parses it
     w(f'<footer class="foot"><div class="wrap"><p>Built by <code>deploy/testnet/web/basecamp/build.py</code> from '
       f'<a href="release.json">release.json</a>, which <code>modules/scripts/basecamp_release.py</code> wrote from the signed '
-      f'packages; packages from {('commits ' + from_text) if mixed else f'commit <code>{short}</code>'}; SHA256SUMS written {E(rel.get("signed_utc", ""))}. No cookies, no '
+      f'packages; packages from {pkg_from}; SHA256SUMS written {E(rel.get("signed_utc", ""))}. No cookies, no '
       "analytics; the page reads only this host.</p><p>This page's code and text: MIT OR Apache-2.0. The packages contain "
       'third-party code under its own licences: <a href="dl/notices/NOTICES.md">dl/notices/NOTICES.md</a>.</p></div></footer>')
     w("</body>\n</html>\n")

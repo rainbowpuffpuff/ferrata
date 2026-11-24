@@ -155,7 +155,9 @@ What protects the phrase and the session (review of 24 Nov 2026):
   RFCs' vectors and the module's own implementation by `tests/seal-test.mjs`); a new phrase's words come back sealed to
   the view. Qt's own debug logging (`QT_LOGGING_RULES="*.debug=true"`, `qt.gui.shortcutmap`) writes every key typed in
   Basecamp's window to its log, unless the focused item takes the key's shortcut override: the phrase field takes it,
-  so its keys are never logged. The module tells the view on load when that logging is on; the view then says what the
+  so its keys are never logged. The module tells the view on load when it finds that logging on (`QT_LOGGING_RULES`, `QT_LOGGING_CONF`,
+  `~/.config/QtProject/qtlogging.ini`; not `$XDG_CONFIG_HOME`, `/etc/xdg`, macOS's preferences or rules set at run
+  time); the view then says what the
   log holds (the session's calls in clear: addresses, amounts) and turns New phrase off. The sealed phrase is padded to
   256 bytes, so it does not tell its length.
 - **Typed into bytes, not a string.** The phrase field is not a text field: each key goes into a byte buffer (shown as
@@ -171,13 +173,16 @@ What protects the phrase and the session (review of 24 Nov 2026):
   amount, the address, the signer, the LEZ fee ceiling, the message hash) before anything is signed; Approve sends
   `confirm` with that record's id, and the module signs exactly that, once.
 - **Wiped.** The module keeps the keys of public accounts `/0`-`/7` and the bridge keys in its memory for the session
-  only (its process made non-dumpable), wipes the phrase and the seeds once they are derived, and wipes the keys when the
-  session ends (close, idle, Basecamp quitting).
+  only (its process made non-dumpable), wipes the phrase and the seeds once they are derived (the review still found one copy of the bridge seed on the
+  stack while a session was open, none after Close), and wipes the keys when the session ends (Close, or the first
+  call after 15 idle minutes); quitting Basecamp ends the module's process, its memory going with it without a wipe.
 
 What works there: the registry and the vault read, the positions found from the phrase, the faucet and the LGO balances,
 the plaintext claim of a deposit to one of the phrase's public accounts, the public burn to an address the person enters
 in its checksummed form, and the release handed to the `ferrata` tool (its proof says which burn it is, so it is made on
-the person's machine). Deposits are made in the network's web wallet with the same phrase: Basecamp 0.4.0-rc.2 has no
+the person's machine). Run from Basecamp on this network so far: the session, the reads, the positions and the
+faucet; no claim or burn has been sent there yet, and the module's tests sign them against a stand-in LEZ node.
+Deposits are made in the network's web wallet with the same phrase: Basecamp 0.4.0-rc.2 has no
 Logos signer for Sepolia (`tx_sender_module`, `keystore_module`), so the deposit button is off in the session. A private
 claim or burn needs a proof of LEZ's privacy circuit, which the module does not make: the view says to use the `ferrata`
 tool. Every label shows its text as plain text. The view declares `ferrata_bridge_module` as an optional dependency
