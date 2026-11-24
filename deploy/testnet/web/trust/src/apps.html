@@ -14,9 +14,8 @@ of the machine and path; <code>docs/image-ids.md</code> shows two builds at two 
 <p>Run it yourself from a clone: <code>scripts/reproduce/deployed.sh build --out DIR</code> then
 <code>scripts/reproduce/deployed.sh compare --out DIR</code>, with the pinned toolchains of
 <code>scripts/reproduce/Dockerfile</code> (or <code>scripts/reproduce/deployed.sh docker --out DIR</code>). Without a build,
-<code>python3 -I scripts/reproduce/check_network.py chain</code> compares the chain with the list in seconds. <strong>Two
-sources are not public yet</strong> (marked below: the messages and names programs, on branches not yet merged); until
-they are, only the project can rebuild those two.</p>
+<code>python3 -I scripts/reproduce/check_network.py chain</code> compares the chain with the list in seconds. Every source is a public commit of the repository: the names
+program's deployed v1 from its wire crate kept as <code>lez/names-wire-v1</code>, built in place of v2's.</p>
 </div>
 <p id="chain-status" aria-live="polite" class="small muted">The live columns read this network's chain from your browser (JavaScript).</p>
 <div class="table-wrap"><table id="programs-table">
