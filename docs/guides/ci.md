@@ -132,7 +132,8 @@ Results and timings: `e2e/ci/RESULTS.md`.
 
 ## Not in CI
 
-Real proofs (CPU and GPU), the Groth16 wrap (Docker), runs against Sepolia or a fork of it (the relayer's
+Real proofs (CPU and GPU) other than `sequencer-attest`'s private attestation, the Groth16 wrap (Docker), runs against
+Sepolia or a fork of it other than `sequencer.yml`'s two jobs (the relayer's
 `tests/relayer_fork.rs`, `monitor/tests/fork-live-vault.sh`), the benches, fuzzing, mutation testing, the LEZ
 harness's feature builds (`residue-experimental`, `bridge-next`, `program-class`), `bridge/scripts/check.sh`'s
 other steps and `checkpoint/`'s suites: their READMEs give the commands, and `docs/EVIDENCE.md` where each ran.
