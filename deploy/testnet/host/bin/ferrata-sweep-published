@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Sweep LEZ's two published test accounts into this network's faucet (their keys are public:
+# whatever they hold anyone can spend, and the faucet is where this network's free funds belong).
+#
+# LEZ v0.4.0-rc3 compiles two public test accounts into every chain's pre-genesis state (10^13 and 2x10^13) and their
+# private keys into its own source (lez/testnet_initial_state/src/lib.rs, PRIVATE_KEY_PUB_ACC_A/B). Anyone can spend
+# them to fill blocks and the mempool for free. Their keys being public, the operator can sign too: this moves each
+# balance, less a fee reserve, to the faucet's account with `ferrata-day1 transfer`. The keys are read from LEZ's
+# source, written to a mode-600 scratch directory for the transfer and removed. (LEZ's two private test accounts get
+# nothing on this network: its genesis lists no `supply_private_account`.)
+#
+# Run as root; idempotent (an account holding at most RESERVE is left alone). Prints one JSON line per account and
+# records the two ids in /var/lib/ferrata/status/published-accounts.json for ferrata-status's alarm.
+set -euo pipefail
+LEZ_SRC="${FERRATA_LEZ_SRC:-/opt/ferrata/src/upstream/lez-v0.4.0-rc3}"
+RPC="${FERRATA_RPC:-http://127.0.0.1:3040}"
+DATA=/var/lib/ferrata
+RESERVE="${FERRATA_SWEEP_RESERVE:-200000000}"   # 0.2 LGO left to cover the transfer's fee reservation
+TO="$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["payer"])' "$DATA/keys/faucet/accounts.json")"
+W="$(mktemp -d "$DATA/sweep.XXXXXX")"
+chown ferrata:ferrata "$W"; chmod 700 "$W"
+trap 'rm -rf "$W"' EXIT
+as_ferrata() { runuser -u ferrata -- env XDG_CACHE_HOME=/opt/ferrata/cache RISC0_SERVER_PATH=/opt/ferrata/bin/r0vm "$@"; }
+rpc_balance() {
+  curl -fsS -m 10 "$RPC" -H 'content-type: application/json' \
+    -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getAccountBalance\",\"params\":[\"$1\"]}" \
+    | python3 -I -c 'import json,sys; print(int(json.load(sys.stdin)["result"]))'
+}
+ids=()
+for name in A B; do
+  hex="$(python3 -I - "$LEZ_SRC/lez/testnet_initial_state/src/lib.rs" "PRIVATE_KEY_PUB_ACC_$name" <<'EOF'
+import re, sys
+src, name = open(sys.argv[1]).read(), sys.argv[2]
+m = re.search(r"const " + name + r": \[u8; 32\] = \[([^\]]*)\]", src)
+print(bytes(int(x) for x in m.group(1).replace("\n", " ").split(",") if x.strip()).hex())
+EOF
+)"
+  install -d -o ferrata -g ferrata -m 700 "$W/$name"
+  ( umask 077; printf '%s\n' "$hex" > "$W/$name/payer.key"; printf '%s\n' "$hex" > "$W/$name/daemon.key" )
+  chown ferrata:ferrata "$W/$name/payer.key" "$W/$name/daemon.key"
+  id="$(as_ferrata /opt/ferrata/bin/ferrata-day1 accounts --keys "$W/$name" | python3 -I -c 'import json,sys; print(json.load(sys.stdin)["payer"])')"
+  ids+=("$id")
+  bal="$(rpc_balance "$id")"
+  if [ "$bal" -le "$RESERVE" ]; then
+    printf '{"account": "%s", "balance": %s, "action": "none"}\n' "$id" "$bal"; continue
+  fi
+  out="$(as_ferrata /opt/ferrata/bin/ferrata-day1 transfer --from-key "$W/$name/payer.key" --to "$TO" \
+           --amount "$(( bal - RESERVE ))" --rpc "$RPC" --state "$W/$name/state" --wait 120 | tail -n 1)"
+  printf '{"account": "%s", "balance_before": %s, "balance_after": %s, "transfer": %s}\n' "$id" "$bal" "$(rpc_balance "$id")" "$out"
+done
+install -d -o ferrata -g ferrata -m 750 "$DATA/status"
+printf '{"published_test_accounts": ["%s", "%s"], "reserve": %s}\n' "${ids[0]}" "${ids[1]}" "$RESERVE" > "$DATA/status/published-accounts.json"
+chown ferrata:ferrata "$DATA/status/published-accounts.json"

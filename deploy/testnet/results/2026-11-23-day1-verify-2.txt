@@ -1,0 +1,28 @@
+# `lez/testnet04/day1.sh verify` against the public network's own sequencer (chain 2), run on the host
+# (`deploy/testnet/deploy-programs.sh verify`), 23 Nov 2026 11:32-11:34Z, after the host's hardening (scoped host role,
+# published accounts swept, gateway limits, Caddy and systemd hardening, alerts) and another program's deployment. LEZ v0.4.0-rc3, the day-one kit's run of 10:11-10:27Z. Output as printed (exit 0).
+[ok] program deployed byte for byte (image id, every segment, immutable): "816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df" at "6f9zuRR63bSN5AEeffqZeACYCwFmqfe5JJhPshuJfYNg"
+[ok] bridge deployed byte for byte: "847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515"
+[ok] deploy-program 00 deploy program: WriteSegment 7 of 7 (4816 bytes): bc3308523e5378b70b64b799b53c8bac445c37b857cad35529741ffe7b072997 block Some(6), now applied
+[ok] deploy-program 01 deploy program: WriteSegment 6 of 7 (98304 bytes): 6eb6e360451aa7e7f585cd3e28fd143e2f4744a37f9bf9eafc827ca2e2dade28 block Some(8), now applied
+[ok] deploy-program 02 deploy program: WriteSegment 5 of 7 (98304 bytes): c2ce99ab384c61ca781e071864a7d990cc0951aa8c9e925d3bb1b834bf3f1b3b block Some(10), now applied
+[ok] deploy-program 03 deploy program: WriteSegment 4 of 7 (98304 bytes): 61923bdb63e16524fb21db210e27ffc64e8087a6bace12ae784bd6becd0ae52c block Some(12), now applied
+[ok] deploy-program 04 deploy program: WriteSegment 3 of 7 (98304 bytes): 3eef22506efe0f4641408ed14bbadf596e1cbad1f3d855c7c02cf820efac96b5 block Some(14), now applied
+[ok] deploy-program 05 deploy program: WriteSegment 2 of 7 (98304 bytes): edbd922ac5087d3e07bb0e11f6fed78509644937107e90f671b80900108f87ed block Some(16), now applied
+[ok] deploy-program 06 deploy program: WriteSegment 1 of 7 (98304 bytes): 67cbf18f5d88bc752d397486bdb95ef68d9ea843b31b6402d730f691d85fb095 block Some(18), now applied
+[ok] deploy-program 07 deploy program: CreateHeader (immutable) at 6f9zuRR63bSN5AEeffqZeACYCwFmqfe5JJhPshuJfYNg: 1816520a69be15ddb83ddb8fe2519d3add418efcc086db8bf888083c3937c2cd block Some(20), now applied
+[ok] deploy-bridge 00 deploy bridge: WriteSegment 6 of 6 (83504 bytes): 99d154e010c4b16d80cfadfb8000fb99cb5c953b5086ebf39f1afc9869a6b318 block Some(83), now applied
+[ok] deploy-bridge 01 deploy bridge: WriteSegment 5 of 6 (98304 bytes): faa7c4273dc1a62178cc2bd458214a9f65cda28945d94989b5348b0f20e9199b block Some(85), now applied
+[ok] deploy-bridge 02 deploy bridge: WriteSegment 4 of 6 (98304 bytes): 80212aca1a7928495dcd43dbe6fa3b35a64b8096fb06c926e9fe547c1ce759ff block Some(87), now applied
+[ok] deploy-bridge 03 deploy bridge: WriteSegment 3 of 6 (98304 bytes): 80b29a3ae3c461c32023ec0008230f76ddddde9b65a5c9c2c9a1a08abef50f42 block Some(89), now applied
+[ok] deploy-bridge 04 deploy bridge: WriteSegment 2 of 6 (98304 bytes): a57c9b3ae49d806a267ec3e960c43fc2f02e9e1028ad2e0927499053f702c802 block Some(91), now applied
+[ok] deploy-bridge 05 deploy bridge: WriteSegment 1 of 6 (98304 bytes): 4dead1bb7d5f2012fa8851a3a22cce6068c55f72492ae59dea259829d1808d83 block Some(93), now applied
+[ok] deploy-bridge 06 deploy bridge: CreateHeader (immutable) at 36iqVMFpfgHrwoeuVvZhXX3caM1JPBJh56PBw5A4H1rk: f918b8c228b55df5dd709595fde629246f8c51d3f63766bbd053593366f6b7a2 block Some(95), now applied
+[ok] init 00 Init (Sepolia, Gloas layout): f59a565ebf13b940168c9645a664a72ea59b35be304b2c2f7fbb9792f8010f00 block Some(22), now applied
+[ok] attest 00 Attest: the vault's slots 0 and 1 under header(c741a1f1, 11641184): a568dcb852637a001b772e258c260a1e9775aa47a987f7e62518198a6cc3674d block Some(81), now applied
+[ok] instance exists with the recorded id and configuration: "c741a1f16012516529529814da7a7ebc2d18a8cdcba2a3e7f58710f52630782e"
+[ok] instance active (committee adopted): applied 13
+[ok] instance applied at least 1 jobs (the daemon follows Sepolia): applied 13, finalized slot 11641568
+[ok] attestation: the verdict computed natively on the record equals eth_getProof's values; the transaction applied with an event (its content not compared): block 12194951 "0xe17a8828c2ea9f734de16af72185c4fba2b72ab30a88476faef2082da4fd0e58": [String("0xa67ef5a18a4399b82912087c326e1d4ca21f076d349707b8a100e6c09ac97469"), String("0x0000000000000000000000000000000000000000000000000000000000000002")]
+verify: 23 of 23 checks match
+[ok] the instance's finalized header (slot 11641568) is publicnode's canonical block 0x424ed04c594130705ff06073ae5ef97c417f4e3c094151d1f650bc8b150ac8ae

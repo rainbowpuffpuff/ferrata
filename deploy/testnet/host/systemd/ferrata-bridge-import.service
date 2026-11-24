@@ -1,0 +1,33 @@
+# The Sepolia bridge demo's deposit roots on this zone: one try of ferrata-bridge-lez-import (ImportRoot under the
+# Sepolia instance's newest record when it covers deposits the zone has not imported) and of its --fees (ETH's known
+# leaves up to the vault's count, which a claim needs). Each skips when there is nothing to do; the operator pays.
+# A deposit is imported within one period after Sepolia's finality and the updater (about 15 min plus the period).
+[Unit]
+Description=Ferrata bridge demo: import the vault's deposit roots on the zone
+After=ferrata-sequencer.service
+ConditionPathExists=/var/lib/ferrata/bridge/config.json
+
+[Service]
+Type=oneshot
+# As ferrata (the operator's key, the day-one kit's state and its own store are ferrata's), able to write only those.
+User=ferrata
+Group=ferrata
+# `-`: the fees import runs even when the root import failed (they are independent).
+ExecStart=-/opt/ferrata/bin/ferrata-bridge-lez-import --send --wait 0
+ExecStart=/opt/ferrata/bin/ferrata-bridge-lez-import --fees --send --wait 0
+StandardOutput=append:/var/log/ferrata/bridge-import.log
+StandardError=append:/var/log/ferrata/bridge-import.log
+TimeoutStartSec=600
+UMask=0077
+ProtectSystem=strict
+ReadWritePaths=/var/lib/ferrata/bridge/lez-import /var/lib/ferrata/day1 -/opt/ferrata/cache
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+NoNewPrivileges=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+CapabilityBoundingSet=

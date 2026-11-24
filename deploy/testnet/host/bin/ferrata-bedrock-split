@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+"""Fund the sequencer's Bedrock key once, at a fresh chain's start, without ever leaving the leader without stake.
+
+LEZ's local Logos Blockchain node leads with the *aged, unspent* notes of its wallet's keys (`GET /leader/aged-notes`):
+the sequencer's funding key `FUNDING_PK` (about fifty genesis notes of 10^6, which the sequencer spends on every block's
+inscription) and the SDP key `STAKE_PK` (one genesis note of 10^12). If every aged note is spent, the leader wins no
+slot, the chain makes no block, no new note can age, and the chain never moves again (seen on this network on
+23 Nov 2026 at 09:42Z: `/leader/aged-notes` count 0 after the SDP note was spent while the sequencer spent the rest).
+
+So, before the sequencer's first start (its inscriptions do not spend anything yet): move NOTES notes of NOTE each from
+STAKE_PK to FUNDING_PK (the node's own `POST /wallet/transactions/transfer-funds`; the leader keeps leading with the
+funding key's untouched genesis notes meanwhile), then wait until STAKE_PK's change note is aged again (it shows in
+`/leader/aged-notes`). After that STAKE_PK is never spent: it is the leader's stake for good. One JSON line per step.
+"""
+import json
+import os
+import sys
+import time
+import urllib.error
+import urllib.request
+
+NODE = os.environ.get("FERRATA_NODE_API", "http://127.0.0.1:18080")
+FUNDING_PK = os.environ.get("FERRATA_FUNDING_PK", "2e03b2eff5a45478e7e79668d2a146cf2c5c7925bce927f2b1c67f2ab4fc0d26")
+STAKE_PK = os.environ.get("FERRATA_STAKE_PK", "ed266e6e887b9b97059dc1aa1b7b2e19b934291753c6336a163fe4ebaa28e717")
+NOTE = int(os.environ.get("FERRATA_SPLIT_NOTE", "10000000000"))     # 10^10 each
+NOTES = int(os.environ.get("FERRATA_SPLIT_NOTES", "20"))            # 2 x 10^11 in all; the stake keeps 8 x 10^11
+AGE_TIMEOUT = int(os.environ.get("FERRATA_SPLIT_AGE_TIMEOUT", "3600"))
+
+
+def say(**kw):
+    kw["utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    print(json.dumps(kw), flush=True)
+
+
+def get(path):
+    with urllib.request.urlopen(f"{NODE}{path}", timeout=15) as r:
+        return json.load(r)
+
+
+def balance(pk):
+    b = get(f"/wallet/{pk}/balance")
+    return int(b["balance"]), b.get("notes", {})
+
+
+def aged():
+    a = get("/leader/aged-notes")
+    return int(a.get("count", 0)), int(a.get("total_value", 0))
+
+
+def main():
+    sb, snotes = balance(STAKE_PK)
+    fb, _ = balance(FUNDING_PK)
+    count, total = aged()
+    say(step="start", stake_balance=sb, stake_notes=len(snotes), funding_balance=fb, aged_count=count, aged_total=total)
+    if sb < NOTE * NOTES * 2:
+        say(step="skip", why="the stake key holds too little to split safely")
+        return 1
+    if count == 0:
+        say(step="refuse", why="the leader has no aged note now: splitting would halt the chain")
+        return 1
+    prev = sb
+    for i in range(NOTES):
+        req = urllib.request.Request(f"{NODE}/wallet/transactions/transfer-funds", data=json.dumps({
+            "tip": None, "change_public_key": STAKE_PK, "funding_public_keys": [STAKE_PK],
+            "recipient_public_key": FUNDING_PK, "amount": NOTE}).encode(), headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                code = r.status
+        except urllib.error.HTTPError as e:
+            say(step="transfer", i=i, http=e.code, error=e.read().decode()[:200])
+            return 1
+        t0 = time.time()
+        while time.time() - t0 < 120:  # the change note must be in a block before it can pay again
+            time.sleep(3)
+            try:
+                now = balance(STAKE_PK)[0]
+            except Exception:
+                continue
+            if now < prev:
+                prev = now
+                break
+        else:
+            say(step="transfer", i=i, http=code, error="not included in 120 s")
+            return 1
+    fb2, fnotes = balance(FUNDING_PK)
+    say(step="split", transfers=NOTES, note=NOTE, funding_balance=fb2, funding_notes=len(fnotes), stake_balance=prev)
+    # The stake key's change note must age before anything else spends: wait until the aged total covers it.
+    t0 = time.time()
+    while time.time() - t0 < AGE_TIMEOUT:
+        count, total = aged()
+        if total >= prev:
+            say(step="aged", aged_count=count, aged_total=total, waited_s=round(time.time() - t0))
+            return 0
+        time.sleep(15)
+    say(step="aged", error="the stake key's change note did not age in time", aged_count=count, aged_total=total)
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,52 @@
+# The Sepolia bridge demo's relayer: ferrata-relayer run against the vault named in
+# /etc/ferrata/bridge.env (written by ferrata-bridge-start once the vault exists). Release and checkpoint jobs come from
+# the prover client through the inbox; the relayer checks each with the vault's own eth_call before it sends. Its key:
+# the keystore made by ferrata-bridge-keys. Not enabled by install.sh: ferrata-bridge-start starts it.
+[Unit]
+Description=Ferrata bridge demo: relayer (Sepolia vault)
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/ferrata/bridge.env
+
+[Service]
+User=ferrata-relayer
+Group=ferrata-relayer
+SupplementaryGroups=ferrata-bridge
+EnvironmentFile=/etc/ferrata/bridge.env
+ExecStart=/opt/ferrata/bin/ferrata-relayer --keystore /var/lib/ferrata/bridge/relayer/key --password-file /var/lib/ferrata/bridge/relayer/password --state /var/lib/ferrata/bridge/relayer/state run --inbox /var/lib/ferrata/bridge/relayer/inbox --poll-secs 30
+Restart=always
+RestartSec=30
+TimeoutStopSec=200
+StandardOutput=append:/var/log/ferrata/bridge-relayer.log
+StandardError=append:/var/log/ferrata/bridge-relayer.log
+UMask=0007
+# Of /var/lib/ferrata it sees its own directory only. The inbox is inside it (relayer/inbox) and must stay on the
+# same mount as --state: the daemon moves each finished job from the inbox into <state>/done or /refused with
+# rename(2), which fails with EXDEV across two mounts (two BindPaths entries are two mounts), and a round that
+# fails there never reaches its finalisations. The check below refuses to start with such a layout.
+TemporaryFileSystem=/var/lib/ferrata:ro
+BindPaths=/var/lib/ferrata/bridge/relayer
+ExecStartPre=/bin/sh -c 'test "$(stat -c %%m /var/lib/ferrata/bridge/relayer/inbox)" = "$(stat -c %%m /var/lib/ferrata/bridge/relayer/state)"'
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+TasksMax=128
+MemoryMax=1G
+
+[Install]
+WantedBy=multi-user.target

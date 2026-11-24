@@ -1,0 +1,28 @@
+{
+  "agent": { "metrics_collection_interval": 300, "run_as_user": "root" },
+  "metrics": {
+    "namespace": "Ferrata/TestnetHost",
+    "append_dimensions": { "InstanceId": "${aws:InstanceId}" },
+    "metrics_collected": {
+      "mem": { "measurement": ["mem_used_percent"] },
+      "disk": { "measurement": ["used_percent"], "resources": ["/", "/var/lib/ferrata"] }
+    }
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          { "file_path": "/var/log/ferrata/sequencer.log", "log_group_name": "/ferrata-testnet/services", "log_stream_name": "sequencer" },
+          { "file_path": "/var/log/ferrata/sequencer-run.log", "log_group_name": "/ferrata-testnet/services", "log_stream_name": "sequencer-run" },
+          { "file_path": "/var/log/ferrata/indexer.log", "log_group_name": "/ferrata-testnet/services", "log_stream_name": "indexer" },
+          { "file_path": "/var/log/ferrata/updater.log", "log_group_name": "/ferrata-testnet/services", "log_stream_name": "updater" },
+          { "file_path": "/var/log/ferrata/monitor.log", "log_group_name": "/ferrata-testnet/services", "log_stream_name": "attest-monitor" },
+          { "file_path": "/var/log/ferrata/topup.log", "log_group_name": "/ferrata-testnet/services", "log_stream_name": "topup" },
+          { "file_path": "/var/log/ferrata/gateway.log", "log_group_name": "/ferrata-testnet/access", "log_stream_name": "gateway" },
+          { "file_path": "/var/log/caddy/access.log", "log_group_name": "/ferrata-testnet/access", "log_stream_name": "caddy" },
+          { "file_path": "/var/log/ferrata/provision-*.log", "log_group_name": "/ferrata-testnet/system", "log_stream_name": "provision" }
+        ]
+      }
+    }
+  }
+}

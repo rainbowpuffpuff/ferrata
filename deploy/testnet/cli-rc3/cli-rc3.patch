@@ -1,0 +1,122 @@
+--- a/cli/src/lez.rs
++++ b/cli/src/lez.rs
+@@ -748,9 +748,20 @@
+         let last = client.get_last_block_id().await.map_err(|e| anyhow!("get_last_block_id: {e}"))?;
+         let mut start = 1;
+         while start <= last {
+-            let end = (start + 99).min(last);
+-            let blocks =
+-                client.get_block_range(start, end).await.map_err(|e| anyhow!("get_block_range {start}..{end}: {e}"))?;
++            // A public endpoint caps a range and meters each caller (the testnet's gateway: 50 blocks per call, HTTP
++            // 429 while a caller's budget refills): pages of 50, each tried again after a pause.
++            let end = (start + 49).min(last);
++            let mut tries = 0u64;
++            let blocks = loop {
++                match client.get_block_range(start, end).await {
++                    Ok(blocks) => break blocks,
++                    Err(_) if tries < 40 => {
++                        tries += 1;
++                        tokio::time::sleep(std::time::Duration::from_secs(2 + tries.min(8))).await;
++                    }
++                    Err(e) => return Err(anyhow!("get_block_range {start}..{end}: {e}")),
++                }
++            };
+             for block in blocks {
+                 for (i, tx) in block.body.transactions.iter().enumerate() {
+                     let reverted = block.body.reverted.contains(&(i as u64));
+@@ -826,7 +837,7 @@
+                 // LEZ v0.4.0-rc1's wallet prints its dry run (the fee payer, the pending credits it claims and
+                 // what they sweep to the payer) and ends it with `DryRun`.
+                 match dry {
+-                    Err(wallet::ExecutionFailureKind::DryRun) => eprintln!(
++                    Err(wallet::ExecutionFailureKind::DryRun(_)) => eprintln!(
+                         "(the dry run above: the LEZ fee paid by the one-time account {payer}, from the credit it claims)"
+                     ),
+                     Err(e) => bail!(
+--- a/cli/src/eth.rs
++++ b/cli/src/eth.rs
+@@ -143,6 +143,25 @@
+     }
+ }
+ 
++/// eth_getLogs, tried again while a load-balanced endpoint's backend lags the head another one reported ("block range
++/// extends beyond current head block") or the failure is [`transient`]: up to ten attempts, 2 s apart.
++async fn get_logs_settled(
++    p: &DynProvider,
++    filter: &Filter,
++) -> std::result::Result<Vec<alloy::rpc::types::Log>, RpcError<TransportErrorKind>> {
++    let mut attempt = 0;
++    loop {
++        match p.get_logs(filter).await {
++            Ok(v) => return Ok(v),
++            Err(e) if attempt < 9 && (transient(&e) || e.to_string().contains("beyond current head")) => {
++                attempt += 1;
++                tokio::time::sleep(std::time::Duration::from_secs(2)).await;
++            }
++            Err(e) => return Err(e),
++        }
++    }
++}
++
+ /// The vault error behind an RPC error, if the node returned revert data.
+ pub fn refusal_of(error: &RpcError<TransportErrorKind>, how: &str) -> Option<Refusal> {
+     let data = error.as_error_resp().and_then(|payload| payload.as_revert_data())?;
+@@ -276,7 +295,7 @@
+             .event_signature(IVault::Deposit::SIGNATURE_HASH)
+             .from_block(start)
+             .to_block(end);
+-        for log in p.get_logs(&filter).await.with_context(|| format!("eth_getLogs {start}..{end}"))? {
++        for log in get_logs_settled(p, &filter).await.with_context(|| format!("eth_getLogs {start}..{end}"))? {
+             let at = log.block_number.unwrap_or(end);
+             let event = log
+                 .log_decode::<IVault::Deposit>()
+@@ -350,7 +369,7 @@
+             .event_signature(IVault::CheckpointFinalized::SIGNATURE_HASH)
+             .from_block(start)
+             .to_block(end);
+-        for log in p.get_logs(&filter).await.with_context(|| format!("eth_getLogs {start}..{end}"))? {
++        for log in get_logs_settled(p, &filter).await.with_context(|| format!("eth_getLogs {start}..{end}"))? {
+             let e = log
+                 .log_decode::<IVault::CheckpointFinalized>()
+                 .map_err(|e| anyhow!("a CheckpointFinalized log does not decode: {e}"))?
+@@ -422,7 +441,7 @@
+             .event_signature(IVault::Release::SIGNATURE_HASH)
+             .from_block(start)
+             .to_block(end);
+-        for log in p.get_logs(&filter).await.with_context(|| format!("eth_getLogs {start}..{end}"))? {
++        for log in get_logs_settled(p, &filter).await.with_context(|| format!("eth_getLogs {start}..{end}"))? {
+             let event = log
+                 .log_decode::<IVault::Release>()
+                 .map_err(|e| anyhow!("a Release log does not decode: {e}"))?
+@@ -452,7 +471,7 @@
+             .event_signature(IVault::Refund::SIGNATURE_HASH)
+             .from_block(start)
+             .to_block(end);
+-        for log in p.get_logs(&filter).await.with_context(|| format!("eth_getLogs {start}..{end}"))? {
++        for log in get_logs_settled(p, &filter).await.with_context(|| format!("eth_getLogs {start}..{end}"))? {
+             let event = log
+                 .log_decode::<IVault::Refund>()
+                 .map_err(|e| anyhow!("a Refund log does not decode: {e}"))?
+@@ -483,7 +502,7 @@
+             .event_signature(IVault::CheckpointFinalized::SIGNATURE_HASH)
+             .from_block(start)
+             .to_block(end);
+-        for log in p.get_logs(&filter).await.with_context(|| format!("eth_getLogs {start}..{end}"))? {
++        for log in get_logs_settled(p, &filter).await.with_context(|| format!("eth_getLogs {start}..{end}"))? {
+             let e = log
+                 .log_decode::<IVault::CheckpointFinalized>()
+                 .map_err(|e| anyhow!("a CheckpointFinalized log does not decode: {e}"))?
+--- a/cli/src/flow.rs
++++ b/cli/src/flow.rs
+@@ -980,6 +980,11 @@
+     if let Some(path) = &o.input_out {
+         std::fs::write(path, plan.input.encode()).with_context(|| format!("writing {}", path.display()))?;
+         out.line(format!("guest input written to {} (for a remote prover)", path.display()));
++        // Beside it, the journal the proof must carry (public: the release publishes it), as a prover fixture's meta.
++        let meta = path.with_extension("json");
++        let body = serde_json::json!({ "kind": "release", "journal": hex::encode(&plan.journal) });
++        std::fs::write(&meta, serde_json::to_vec_pretty(&body)?).with_context(|| format!("writing {}", meta.display()))?;
++        out.line(format!("its journal written to {} (the prover checks the proof against it)", meta.display()));
+     }
+     let mut succinct: Option<Vec<u8>> = None;
+     if o.prove {

@@ -1,0 +1,193 @@
+#!/usr/bin/env bash
+# A rule (B) checkpoint of this zone for the Sepolia vault (checkpoint/attestor/README.md; as zone-bridge.sh's `input`
+# stage builds it): the attestor's newest signed final tip T (or --tip T), the node's answers from slot 0 to its LIB
+# (/cryptarchia/info, /channel, /cryptarchia/blocks: the input is built from these alone), realblocks-crown over the
+# zone's blocks T0+1..=T with the attestation, n = t = 1. With --prove the input goes to the prover client (Modal GPU),
+# whose job the relayer submits as a candidate; the monitor watches it; the relayer finalises it after the vault's
+# window.
+#
+#   ferrata-bridge-checkpoint [--tip T] [--prove]          (root; reads the node and the sequencer on loopback)
+#   ferrata-bridge-checkpoint --wait-burn [--prove]        (until the zone holds a new burn, then one checkpoint with it)
+#   ferrata-bridge-checkpoint --rebuild DIR                (DIR/state.json for a checkpoint built before state files)
+#
+# The parent: the vault's finalState (read from Sepolia). While it is the configuration's genesisState, the parent is
+# the configuration's tip T0 (identity.json); after a checkpoint is final, it is that checkpoint's new state, read from
+# the state.json its build wrote (realblocks-crown --parent-state, which checks the file's digest against finalState
+# and its tip against the node's inscription), and T0 is its tip. A request is refused while the last one is not final
+# (its parent is still finalState): the vault takes candidates on finalState only, and a second candidate on the same
+# parent would go stale when the first is finalised. --wait-burn: every 60 s the new LEZ blocks are searched for a call
+# to the bridge program (its account id in the block's bytes); after one, the checkpoint is built (dry) at each newer
+# attested tip until it counts a burn of its own span, then once more SETTLE_S seconds later (burns sent together go in
+# together), and that one is proven. realblocks-crown must be the build with --parent-state (deploy/testnet/checkpoint-chain).
+set -euo pipefail
+TIP=""; PROVE=0; WAIT=0; REBUILD=""
+while [ $# -gt 0 ]; do
+  case "$1" in --tip) TIP="$2"; shift 2 ;; --prove) PROVE=1; shift ;; --wait-burn) WAIT=1; shift ;; --rebuild) REBUILD="$2"; shift 2 ;;
+    *) echo "usage: $0 [--tip T | --wait-burn] [--prove] | --rebuild DIR" >&2; exit 2 ;; esac
+done
+B="${FERRATA_BRIDGE_DIR:-/var/lib/ferrata/bridge}"; A="$B/attestor"; export FERRATA_BRIDGE_ENV="${FERRATA_BRIDGE_ENV:-/etc/ferrata/bridge.env}"; API=http://127.0.0.1:18080; RPC=http://127.0.0.1:3040
+CHANNEL=0101010101010101010101010101010101010101010101010101010101010101; SETTLE_S="${SETTLE_S:-120}"
+RC="${FERRATA_REALBLOCKS_CROWN:-/opt/ferrata/bin/realblocks-crown}"
+j() { python3 -I -c "import json,sys; print(json.load(open(sys.argv[1]))$2)" "$1"; }
+log() { echo "$(date -u +%FT%TZ) $*"; }
+newest_tip() { ls "$A/rounds" | sed -n 's/^tip-\([0-9]*\)\.json$/\1/p' | sort -n | tail -n 1; }
+GENESIS="$(j "$B/params.json" '["genesisState"]')"; T0_ID="$(j "$B/identity.json" '["tip"]["id"]')"
+
+# The vault's finalState (eth_call finalState(), selector 0x22f3099c) over the relayer's endpoint.
+final_state() {
+  python3 -I - <<'PY'
+import json, os, re, urllib.request
+env = dict(l.strip().split("=", 1) for l in open(os.environ["FERRATA_BRIDGE_ENV"]) if "=" in l and not l.startswith("#"))
+q = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "eth_call",
+                "params": [{"to": env["FERRATA_VAULT"], "data": "0x22f3099c"}, "latest"]}).encode()
+req = urllib.request.Request(env["FERRATA_ETH_RPC"], data=q, headers={"Content-Type": "application/json", "User-Agent": "ferrata-checkpoint"})
+r = json.load(urllib.request.urlopen(req, timeout=20))["result"]
+assert re.fullmatch(r"0x[0-9a-f]{64}", r), r
+print(r)
+PY
+}
+
+# The parent of the next checkpoint: PARENT_STATE (a state.json, or empty for the genesis tip T0) and PARENT_TIP.
+choose_parent() {
+  local fs
+  # Fails closed: without the vault's finalState there is no parent to build on.
+  if ! fs="$(final_state)"; then
+    log "the vault's finalState could not be read (endpoint failure): no build" >&2; return 1
+  fi
+  FINAL="$fs"
+  if [ "$fs" = "$GENESIS" ]; then PARENT_STATE=""; PARENT_TIP="$T0_ID"; return 0; fi
+  PARENT_STATE=""
+  for f in "$B"/checkpoint/zone-*/state.json; do
+    [ -f "$f" ] && [ "$(j "$f" '["digest"]')" = "$fs" ] && { PARENT_STATE="$f"; break; }
+  done
+  [ -n "$PARENT_STATE" ] || { echo "the vault's finalState $fs has no state.json under $B/checkpoint (--rebuild its directory)" >&2; return 1; }
+  PARENT_TIP="$(j "$PARENT_STATE" '["tip_id"]')"
+}
+
+# crown DIR NAME TIP: realblocks-crown over DIR's saved node answers and DIR/attestation.json.
+crown() {
+  local W="$1" name="$2" tip="$3" parent_args=()
+  if [ -n "${PARENT_STATE:-}" ]; then parent_args=(--parent-state "$PARENT_STATE" --genesis-state "$FINAL"); else parent_args=(--genesis-state "$GENESIS"); fi
+  "$RC" --node "$W/node" --genesis /var/lib/ferrata/node/deployment-settings.yaml \
+    --session-a "$B/identity.json" --vault "$(j "$B/config.json" '["vault"]')" --config-id "$(j "$B/config.json" '["configId"]')" \
+    "${parent_args[@]}" --tip "$tip" --n-min 1 --t-min 1 --att "$W/attestation.json" \
+    --out "$W" --name "$name" | tee "$W/realblocks-crown.txt"
+  [ -s "$W/state.json" ] || { echo "$RC wrote no state.json: not the build with --parent-state" >&2; return 1; }
+  python3 -I -c 'import json,sys; m=json.load(open(sys.argv[1])); b=json.load(open(sys.argv[2])); s=json.load(open(sys.argv[4])); print(json.dumps({"name": sys.argv[3], "parent_tip": b.get("parent_tip"), "tip": m.get("tip"), "blocks": m.get("blocks"), "input_bytes": m.get("input_bytes"), "parent_state": "0x" + m["parent_state"].removeprefix("0x"), "new_state": m.get("new_state"), "burn_count": m.get("burn_count"), "new_burns": len(b.get("burns", [])), "burn_root": m.get("burn_root"), "imported_leaf_count": m.get("imported_leaf_count"), "state_digest": s["digest"], "burns": [{k: x.get(k) for k in ("burn_index", "block", "amount", "memo", "origin")} for x in b.get("burns", [])]}))' "$W/$name.json" "$W/burns.json" "$name" "$W/state.json" | tee "$W/summary.json"
+}
+
+# build T: the checkpoint at attested tip T on the chosen parent into $B/checkpoint/zone-<parent tip>-<T>.
+build() {
+  local tip="$1"; local ATTF="$A/rounds/tip-$tip.json"; [ -s "$ATTF" ] || { echo "no attestation of tip $tip in $A/rounds" >&2; return 1; }
+  choose_parent || return 1
+  NAME="zone-$PARENT_TIP-$tip"; W="$B/checkpoint/$NAME"; rm -rf "$W"; mkdir -p "$W/node/blocks"
+  cp "$ATTF" "$W/attestation.json"
+  curl -fsS -m 10 -o "$W/node/info.json" "$API/cryptarchia/info"
+  curl -fsS -m 10 -o "$W/node/channel.json" "$API/channel/$CHANNEL"
+  local lib from to
+  lib="$(python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d.get("cryptarchia_info", d).get("lib_slot"))' "$W/node/info.json")"
+  from=0
+  while [ "$from" -le "$lib" ]; do
+    to=$(( from + 499 )); [ "$to" -gt "$lib" ] && to="$lib"
+    curl -fsS -m 120 -o "$W/node/blocks/$from-$to.json" "$API/cryptarchia/blocks?slot_from=$from&slot_to=$to"
+    from=$(( to + 1 ))
+  done
+  echo "node answers: slots 0..=$lib, $(ls "$W/node/blocks" | wc -l) windows, $(cat "$W"/node/blocks/*.json | wc -c) bytes"
+  crown "$W" "$NAME" "$tip"
+}
+
+if [ -n "$REBUILD" ]; then
+  # A checkpoint directory from before state files (zone-1225-3767): the same input from its saved answers, its state.
+  W="$(cd "$REBUILD" && pwd)"; NAME="$(basename "$W")"; M="$W/$NAME.json"
+  [ -s "$M" ] && [ -s "$W/attestation.json" ] && [ -d "$W/node/blocks" ] || { echo "$W: not a checkpoint directory" >&2; exit 1; }
+  journal="$(j "$M" '["journal"]')"; tip="$(j "$M" '["tip"]')"; parent="0x$(j "$M" '["parent_state"]' | sed 's/^0x//')"
+  # The proven checkpoint's directory, whole, before anything in it is rewritten (its input, attestor.json, ...): kept
+  # under before-rebuild/, out of the zone-* directories a parent is chosen from.
+  KEEP="$(dirname "$W")/before-rebuild/$NAME-$(date -u +%Y%m%dT%H%M%SZ)-$$"; mkdir -p "$(dirname "$KEEP")"; cp -a "$W" "$KEEP"
+  if [ "$parent" = "$GENESIS" ]; then PARENT_STATE=""; else
+    PARENT_STATE=""; for f in "$B"/checkpoint/zone-*/state.json; do [ "$(j "$f" '["digest"]' 2>/dev/null)" = "$parent" ] && PARENT_STATE="$f"; done
+    [ -n "$PARENT_STATE" ] || { echo "no state.json for its parent $parent" >&2; exit 1; }; FINAL="$parent"
+  fi
+  crown "$W" "$NAME" "$tip" > /dev/null
+  [ "$(j "$M" '["journal"]')" = "$journal" ] || { echo "$NAME: the rebuilt journal differs from the one proven (the directory as it was: $KEEP)" >&2; exit 1; }
+  log "$NAME: journal unchanged, $W/state.json written (digest $(j "$W/state.json" '["digest"]'))"
+  exit 0
+fi
+
+if [ "$PROVE" = 1 ] && [ -f "$B/checkpoint/requested.json" ]; then
+  # (a request written before chained checkpoints names no parent: it was built on the genesis state)
+  last_parent="$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["summary"].get("parent_state") or sys.argv[2])' "$B/checkpoint/requested.json" "$GENESIS")"
+  # Fails closed: an endpoint failure means no build (a later read could otherwise build a second candidate on a
+  # parent whose first candidate is not final yet).
+  if ! fs_now="$(final_state)"; then
+    log "the vault's finalState could not be read (endpoint failure): no build, no request" >&2; exit 1
+  fi
+  if [ "$last_parent" = "$fs_now" ]; then
+    echo "the last request is not final yet (its parent is still the vault's finalState): $(cat "$B/checkpoint/requested.json")" >&2; exit 1
+  fi
+fi
+
+if [ "$WAIT" = 1 ]; then
+  PROG="$(j "$B/identity.json" '["bridge"]["header"]')"
+  scan() {  # blocks $1.. of the sequencer ($1 = 0: none): {"head": H, "hits": [blocks holding the bridge program's id]}
+    python3 -I - "$RPC" "$PROG" "$1" <<'PY'
+import base64, json, sys, urllib.request
+rpc_url, prog, start = sys.argv[1], bytes.fromhex(sys.argv[2].removeprefix("0x")), int(sys.argv[3])
+def rpc(m, p):
+    q = json.dumps({"jsonrpc": "2.0", "id": 1, "method": m, "params": p}).encode()
+    with urllib.request.urlopen(urllib.request.Request(rpc_url, data=q, headers={"Content-Type": "application/json"}), timeout=10) as r:
+        return json.load(r)["result"]
+head = int(rpc("getLastBlockId", []))
+print(json.dumps({"head": head, "hits": [i for i in range(max(start, 1), head + 1) if start > 0 and prog in base64.b64decode(rpc("getBlock", [i]))]}))
+PY
+  }
+  until choose_parent; do sleep 60; done   # (no parent, no build: wait for the endpoint)
+  next="${WAIT_FROM:-$PARENT_TIP}"; next=$(( next + 1 ))
+  log "waiting for a burn: LEZ blocks from $next on (parent tip $PARENT_TIP), calls to the bridge program $PROG"
+  hot_until=0; built=""; burned=""
+  while :; do
+    r="$(scan "$next" || true)"
+    if [ -n "$r" ]; then
+      head="$(echo "$r" | python3 -I -c 'import json,sys; print(json.load(sys.stdin)["head"])')"
+      hits="$(echo "$r" | python3 -I -c 'import json,sys; print(" ".join(map(str, json.load(sys.stdin)["hits"])))')"
+      [ -n "$hits" ] && { log "bridge calls in blocks $hits"; hot_until=$(( $(date +%s) + 1800 )); }
+      next=$(( head + 1 ))
+    fi
+    tip="$(newest_tip)"
+    if [ "$(date +%s)" -lt "$hot_until" ] && [ -n "$tip" ] && [ "$tip" != "$built" ]; then
+      built="$tip"; log "building at attested tip $tip"
+      if build "$tip" > "$B/checkpoint/wait-build.log" 2>&1; then
+        n="$(python3 -I -c 'import json,sys; print(int(json.load(open(sys.argv[1])).get("new_burns") or 0))' "$W/summary.json")"
+        log "tip $tip: $n new burn(s)"
+        if [ "$n" -eq 0 ]; then rm -rf "$W"; else
+          if [ -z "$burned" ]; then burned="$(date +%s)"; log "a burn is in: one more build after ${SETTLE_S} s"
+          elif [ $(( $(date +%s) - burned )) -ge "$SETTLE_S" ]; then break; fi
+          [ -n "${prev:-}" ] && [ "$prev" != "$W" ] && rm -rf "$prev"; prev="$W"
+        fi
+      else
+        log "build at $tip failed: $(tail -n 2 "$B/checkpoint/wait-build.log" | tr '\n' ' ')"
+      fi
+    fi
+    sleep 60
+  done
+  cat "$W/summary.json"
+else
+  [ -n "$TIP" ] || TIP="$(newest_tip)"
+  build "$TIP"
+fi
+
+if [ "$PROVE" = 1 ]; then
+  P="$B/prover"
+  install -o ferrata-prover -g ferrata-prover -m 600 "$W/$NAME.input" "$P/inputs/$NAME.input"
+  install -o ferrata-prover -g ferrata-prover -m 600 "$W/$NAME.json" "$P/inputs/$NAME.meta.json"
+  python3 -I - "$W/$NAME.json" "$P/inputs/$NAME.input" "$P/inputs/$NAME.meta.json" > "$P/requests/.$NAME.json" <<'PY'
+import json, sys
+m = json.load(open(sys.argv[1]))
+print(json.dumps({"kind": "checkpoint-b", "input": sys.argv[2], "journal": "0x" + m["journal"].removeprefix("0x"), "meta": sys.argv[3]}))
+PY
+  chown ferrata-prover:ferrata-prover "$P/requests/.$NAME.json"
+  echo "{\"name\": \"$NAME\", \"at\": \"$(date -u +%FT%TZ)\", \"summary\": $(cat "$W/summary.json")}" > "$B/checkpoint/requested.json"
+  cat "$B/checkpoint/requested.json" >> "$B/checkpoint/requested.jsonl"
+  mv "$P/requests/.$NAME.json" "$P/requests/$NAME.json"
+  log "proof requested: $P/requests/$NAME.json (the prover client puts the relayer's job into the inbox)"
+fi

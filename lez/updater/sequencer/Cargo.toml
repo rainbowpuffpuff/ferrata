@@ -30,6 +30,7 @@ path = "src/bin/ferrata-day1.rs"
 [dependencies]
 ferrata-updater = { path = ".." }
 ferrata-lez-wire = { path = "../../wire" }
+ferrata-lez-bridge-wire = { path = "../../bridge-wire" }
 ferrata-core = { path = "../../../crates/ferrata-core", features = ["blst"] }
 
 wallet = { path = "../../../../upstream/lez-v0.4.0-rc1/lez/wallet" }

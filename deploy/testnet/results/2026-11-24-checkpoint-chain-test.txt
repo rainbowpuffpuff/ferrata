@@ -1,0 +1,16 @@
+realblocks-crown with --parent-state (deploy/testnet/checkpoint-chain), built on the build box from the bridge branch at
+0c5906d5 with realblocks-chain.patch, 24 Nov 2026:
+
+  cargo test --release --locked -p realblocks --test chained
+  test the_second_span_on_the_genesis_parent_is_refused ... ok
+  test a_state_file_that_does_not_hold_together_is_refused ... ok
+  test two_chained_checkpoints_end_where_one_does ... ok
+  test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+
+  realblocks-crown sha256 9bfa1a4f1cf7d114867009f8ec03b12b7b3d9940b8fbeb98a09b7bcb5011f505
+
+deploy/testnet/tests/test_checkpoint_parent.py (ferrata-bridge-checkpoint's parent and its guard, a stand-in endpoint
+for the vault's finalState()): 6 of 6.
+
+Not yet run on the zone's own blocks: the first such run is the redeploy's (ferrata-bridge-checkpoint --rebuild on the
+posted checkpoint's directory must give the same journal; then a checkpoint on it).

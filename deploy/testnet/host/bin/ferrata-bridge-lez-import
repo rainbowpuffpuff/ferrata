@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# The bridge's deposit roots on this zone (what the relayer's --import-roots does on a zone it
+# signs for): the vault's deposit root and leaf count n under the newest record of the zone's Sepolia instance, sent
+# as the bridge program's `ImportRoot` to root(cid, n), so that a deposit's holder can claim it on LEZ.
+#
+#   ferrata-bridge-lez-import [--send] [--wait SECONDS]     (root; reads Sepolia over public endpoints)
+#
+# Each try: save the day-one tool's follower at the head (it saves only when it sends), the instance's newest record,
+# eth_getProof of the vault's slots 0 and 1 at its block (fetch.py), then `ferrata-day1 sign --stage bridge-import`,
+# which checks everything natively (the proofs under the record as the attestation program checks them; config(cid)
+# on the zone; root(cid, n) not yet) and refuses otherwise; retried every 60 s for --wait seconds (default 1800, 0:
+# once). With --send the transaction is sent (the operator pays) and settled. "nothing to import" ends it with 0.
+set -euo pipefail
+SEND=0; WAIT=1800; STAGE=bridge-import; SLOTS="0,1"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --send) SEND=1; shift ;;
+    --wait) WAIT="$2"; shift 2 ;;
+    # ETH's ImportFees (schedule 1 absent; the vault's fee slot 1 and leaf count): known_until up to the count.
+    --fees) STAGE=bridge-fees; SLOTS="0x07dbb398239016a117a7e00064fdec5830d1a809cdc146e8228b3d0ed733d432,1"; shift ;;
+    *) echo "usage: $0 [--fees] [--send] [--wait S]" >&2; exit 2 ;;
+  esac
+done
+RPC=http://127.0.0.1:3040; B=/var/lib/ferrata/bridge; DAY1=/var/lib/ferrata/day1; OP=/var/lib/ferrata/keys/operator
+ST="$B/lez-import"; FETCH_PY=/opt/ferrata/src/ferrata/lez-v03/scripts/fetch.py
+VAULT="$(python3 -I -c 'import json; print(json.load(open("/var/lib/ferrata/bridge/config.json"))["vault"])')"
+# As root (by hand) or as ferrata (ferrata-bridge-import.service): everything that writes runs as ferrata.
+if [ "$(id -u)" = 0 ]; then
+  install -d -o ferrata -g ferrata -m 700 "$ST" "$ST/fetch"
+  as_ferrata() { runuser -u ferrata -- env XDG_CACHE_HOME=/opt/ferrata/cache RISC0_SERVER_PATH=/opt/ferrata/bin/r0vm "$@"; }
+  mkdirf() { install -d -o ferrata -g ferrata -m 700 "$@"; }
+else
+  [ "$(id -un)" = ferrata ] || { echo "run as root or as ferrata" >&2; exit 2; }
+  install -d -m 700 "$ST" "$ST/fetch"
+  as_ferrata() { env XDG_CACHE_HOME=/opt/ferrata/cache RISC0_SERVER_PATH=/opt/ferrata/bin/r0vm "$@"; }
+  mkdirf() { install -d -m 700 "$@"; }
+fi
+day1() { as_ferrata "${FERRATA_DAY1:-/opt/ferrata/bin/ferrata-day1}" "$@"; }
+sync_follower() { day1 send --rpc "$RPC" --state "$DAY1/state" --keys "$DAY1/keys" --stage attest > /dev/null; }
+deadline=$(( $(date +%s) + WAIT ))
+while :; do
+  sync_follower
+  target="$(day1 target --rpc "$RPC" --keys "$DAY1/keys" --state "$DAY1/state")"
+  slot="$(echo "$target" | python3 -I -c 'import json,sys; print(json.load(sys.stdin)["slot"])')"
+  hash="$(echo "$target" | python3 -I -c 'import json,sys; print(json.load(sys.stdin)["block_hash"])')"
+  W="$ST/try-$slot"; rm -rf "$W"; mkdirf "$W"
+  echo "{\"try\": \"$(date -u +%FT%TZ)\", \"record_slot\": $slot, \"block\": \"$hash\"}"
+  if as_ferrata python3 -I "$FETCH_PY" proof "$ST/fetch" "$slot" "$hash" "$VAULT" "$SLOTS" > "$W/fetch.log" 2>&1 \
+     && day1 sign --rpc "$RPC" --keys "$OP" --state "$DAY1/state" --store "$W" --stage "$STAGE" \
+          --identity "$B/identity.json" --bridge-config "$B/config.json" --fetch "$ST/fetch" > "$W/sign.log" 2>&1; then
+    cat "$W/sign.log"
+    if [ "$SEND" = 1 ]; then
+      day1 send --rpc "$RPC" --state "$DAY1/state" --store "$W" --stage "$STAGE"
+      n="$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["info"]["leaf_count"])' "$W/tx/$STAGE/stage.json")"
+      rm -rf "$ST/$STAGE-n$n"; mv "$W" "$ST/$STAGE-n$n"; echo "done: $STAGE at leaf count $n (store $ST/$STAGE-n$n)"
+    else
+      echo "signed, not sent: $W/tx/$STAGE/"
+    fi
+    exit 0
+  fi
+  tail -n 2 "$W/fetch.log" "$W/sign.log" 2>/dev/null | grep -v '^==' | grep -v '^$' || true
+  # Nothing to do: the root or the known leaves are on the zone already, or the vault holds no deposit yet.
+  if grep -q -e 'nothing to' -e '(leaf count 0)' "$W/sign.log" 2>/dev/null; then rm -rf "$W"; exit 0; fi
+  rm -rf "$W"
+  [ "$(date +%s)" -lt "$deadline" ] || { echo "nothing signed within $WAIT s" >&2; exit 1; }
+  sleep 60
+done

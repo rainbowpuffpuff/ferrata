@@ -1,0 +1,14 @@
+# The node's API (127.0.0.1:18080) for the local users that need it only (host/bin/ferrata-node-api-guard: nftables).
+[Unit]
+Description=Ferrata: the Bedrock node's API for its own users only
+Before=ferrata-node.service
+After=nftables.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/ferrata/bin/ferrata-node-api-guard
+ExecStop=/usr/sbin/nft delete table inet ferrata_node_api
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# The Bedrock node's API (127.0.0.1:18080) for the users that need it, refused to every other local user. The node runs
+# with LEZ's published local keys (bedrock/node-config.yaml: the leader's and SDP keys among them), and the same API
+# spends them without authentication; one transfer from the SDP key's stake halts the chain for good (README:
+# Operating notes). Allowed: root (the operator's scripts, the checkpoint builder), ferrata (the node, sequencer,
+# indexer, status, top-up), ferrata-attestor (it reads the final tier) and ferrata-watcher (its node view), those that
+# exist. Everyone else (the gateway, relayer, prover client, ...) gets a TCP reset.
+#
+#   ferrata-node-api-guard [--print]      (root; ferrata-node-api-guard.service at boot; idempotent)
+set -euo pipefail
+uids="0"
+for u in ferrata ferrata-attestor ferrata-watcher; do
+  if id -u "$u" > /dev/null 2>&1; then uids="$uids, $(id -u "$u")"; fi
+done
+rules="table inet ferrata_node_api
+delete table inet ferrata_node_api
+table inet ferrata_node_api {
+  chain out {
+    type filter hook output priority filter; policy accept;
+    ip daddr 127.0.0.0/8 tcp dport 18080 meta skuid != { $uids } counter reject with tcp reset
+    ip6 daddr ::1 tcp dport 18080 meta skuid != { $uids } counter reject with tcp reset
+  }
+}"
+if [ "${1:-}" = --print ]; then echo "$rules"; exit 0; fi
+echo "$rules" | nft -f -
+echo "node API 18080: allowed uids { $uids }"

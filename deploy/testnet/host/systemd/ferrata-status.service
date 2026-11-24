@@ -1,0 +1,13 @@
+[Unit]
+Description=Ferrata testnet status: status.json for the status page, CloudWatch metrics
+After=ferrata-sequencer.service
+
+[Service]
+Type=oneshot
+User=ferrata
+Group=ferrata
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/python3 -I /opt/ferrata/bin/ferrata-status
+TimeoutStartSec=50
+StandardOutput=append:/var/log/ferrata/status.log
+StandardError=append:/var/log/ferrata/status.log

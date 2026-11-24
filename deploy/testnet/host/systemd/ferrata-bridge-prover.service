@@ -1,0 +1,48 @@
+# The Sepolia bridge demo's prover client: requests in /var/lib/ferrata/bridge/prover/
+# requests are proven on a Modal GPU (app ferrata-prover, in a workspace that holds no secret; its token in
+# /etc/ferrata/bridge-prover.env, root-only, read by systemd), the jobs go to the relayer's inbox
+# (/var/lib/ferrata/bridge/relayer/inbox, group ferrata-bridge; the only part of the relayer's directory it sees). Nothing is proven on
+# this host. Started by ferrata-bridge-start.
+[Unit]
+Description=Ferrata bridge demo: prover client (Modal GPU)
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/ferrata/bridge-prover.env
+
+[Service]
+User=ferrata-prover
+Group=ferrata-prover
+SupplementaryGroups=ferrata-bridge
+EnvironmentFile=/etc/ferrata/bridge-prover.env
+Environment=HOME=/var/lib/ferrata/bridge/prover
+ExecStart=/opt/ferrata/bin/ferrata-bridge-prover watch --requests /var/lib/ferrata/bridge/prover/requests --inbox /var/lib/ferrata/bridge/relayer/inbox
+Restart=always
+RestartSec=30
+StandardOutput=append:/var/log/ferrata/bridge-prover.log
+StandardError=append:/var/log/ferrata/bridge-prover.log
+UMask=0007
+TemporaryFileSystem=/var/lib/ferrata:ro
+BindPaths=/var/lib/ferrata/bridge/prover /var/lib/ferrata/bridge/relayer/inbox
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+TasksMax=128
+MemoryMax=1G
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,181 @@
+#!/usr/bin/env python3
+"""Start LEZ's sequencer_service in phase with its Logos Blockchain node's epochs, then stay its parent.
+
+The node sets its storage gas price anew when an epoch begins (60 slots of 4 s on LEZ v0.4.0-rc3's local node). An
+inscription the sequencer submits in the last second of an epoch can only enter the next epoch's first block; if the
+price rose, the node leaves it out and the zone stalls until the sequencer gives it up and rewinds (LEZ issue 1109;
+lez/live/run-live.sh, lez/lab/session.sh). The sequencer makes a block every interval from the moment its scheduler
+starts, so the phase of its blocks against the epoch seconds is fixed by when it starts: this wrapper reads the node's
+slot clock, launches the sequencer so that its blocks fall TICK_AFTER seconds after an epoch second, reads from the
+sequencer's own log when the scheduler started, and starts it again (at most MAX_STARTS times) until the phase is in
+[TICK_MIN, TICK_MAX]. Then it waits on the sequencer and passes SIGTERM on. Its exit is the sequencer's: systemd
+restarts both.
+
+Environment: FERRATA_SEQ_BIN, FERRATA_SEQ_HOME, FERRATA_SEQ_RPC (127.0.0.1:3040), FERRATA_NODE_API
+(http://127.0.0.1:18080), FERRATA_SEQ_LOG, FERRATA_SEQ_INTERVAL (10), FERRATA_SLOT_SECONDS (4), FERRATA_TICK_AFTER (3),
+FERRATA_TICK_WINDOW ("1 6"), FERRATA_MAX_STARTS (4), FERRATA_PHASE_FILE (where the phase that resulted is written).
+"""
+import json
+import os
+import signal
+import subprocess
+import sys
+import threading
+import time
+import urllib.request
+
+BIN = os.environ.get("FERRATA_SEQ_BIN", "/opt/ferrata/bin/sequencer_service")
+HOME = os.environ.get("FERRATA_SEQ_HOME", "/var/lib/ferrata/sequencer")
+RPC = os.environ.get("FERRATA_SEQ_RPC", "127.0.0.1:3040")
+NODE = os.environ.get("FERRATA_NODE_API", "http://127.0.0.1:18080")
+LOG = os.environ.get("FERRATA_SEQ_LOG", "/var/log/ferrata/sequencer.log")
+INTERVAL = int(os.environ.get("FERRATA_SEQ_INTERVAL", "10"))
+SLOT = int(os.environ.get("FERRATA_SLOT_SECONDS", "4"))
+TICK_AFTER = float(os.environ.get("FERRATA_TICK_AFTER", "3"))
+TICK_MIN, TICK_MAX = (float(x) for x in os.environ.get("FERRATA_TICK_WINDOW", "1 6").split())
+MAX_STARTS = int(os.environ.get("FERRATA_MAX_STARTS", "4"))
+PHASE_FILE = os.environ.get("FERRATA_PHASE_FILE", "/var/lib/ferrata/status/sequencer-phase.json")
+MARK = "Block production scheduler started"
+
+child = None
+stopping = False
+
+
+def note(msg):
+    line = f"{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} [ferrata-sequencer-run] {msg}"
+    print(line, flush=True)
+    with open(LOG, "a") as f:
+        f.write(line + "\n")
+
+
+def node_slot():
+    with urllib.request.urlopen(f"{NODE}/cryptarchia/info", timeout=3) as r:
+        d = json.load(r)
+    # Node 0.3.5-rc.1 answers {"cryptarchia_info": {"slot": ...}, "phase": ...}; older nodes put "slot" at the top.
+    return int(d["cryptarchia_info"]["slot"] if "cryptarchia_info" in d else d["slot"])
+
+
+def wait_node(limit=900):
+    t0 = time.time()
+    while time.time() - t0 < limit and not stopping:
+        try:
+            return node_slot()
+        except Exception:
+            time.sleep(1)
+    raise SystemExit(0 if stopping else "the Logos Blockchain node's API did not answer")
+
+
+def origin():
+    """The unix second of the node's slot 0: at a slot change, now - slot * SLOT (the least of three such moments)."""
+    last, seen, least = node_slot(), 0, None
+    t0 = time.time()
+    while seen < 3 and time.time() - t0 < 120:
+        time.sleep(0.05)
+        try:
+            s = node_slot()
+        except Exception:
+            continue
+        if s != last and s > 0:
+            v = time.time() - s * SLOT
+            least = v if least is None else min(least, v)
+            seen += 1
+        last = s
+    if least is None:
+        raise SystemExit("could not read the node's slot clock")
+    return least
+
+
+def on_term(signum, _frame):
+    global stopping
+    stopping = True
+    if child and child.poll() is None:
+        child.send_signal(signal.SIGTERM)
+
+
+def launch(sched_seen):
+    """Start the sequencer; return (process, launch time); sched_seen gets the scheduler's start time."""
+    env = dict(os.environ)
+    env.pop("RISC0_DEV_MODE", None)  # it must verify the receipts of privacy-preserving transactions
+    p = subprocess.Popen([BIN, "start", HOME, "--rpc-listen-address", RPC], stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT, env=env, bufsize=1, text=True, errors="replace")
+    launched = time.time()
+
+    def pump():
+        with open(LOG, "a") as f:
+            for line in p.stdout:
+                f.write(line)
+                f.flush()
+                if MARK in line and "t" not in sched_seen:
+                    sched_seen["t"] = time.time()
+
+    threading.Thread(target=pump, daemon=True).start()
+    return p, launched
+
+
+def stop(p, timeout=60):
+    if p.poll() is None:
+        p.send_signal(signal.SIGTERM)
+        try:
+            p.wait(timeout)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            p.wait()
+
+
+def main():
+    global child
+    signal.signal(signal.SIGTERM, on_term)
+    signal.signal(signal.SIGINT, on_term)
+    wait_node()
+    o = origin()
+    epoch_note = f"node slot 0 at unix {o:.2f}; epochs begin at seconds t with (t - {o:.2f}) % {INTERVAL} == 0 (every 240 s on rc3)"
+    note(epoch_note)
+    startup = 2.0
+    result = {"aligned": False}
+    for attempt in range(1, MAX_STARTS + 1):
+        if stopping:
+            return 0
+        # Launch at L with (L + startup - origin) % INTERVAL == TICK_AFTER.
+        now = time.time()
+        want = (o + TICK_AFTER - startup) % INTERVAL
+        wait = (want - now) % INTERVAL
+        time.sleep(wait)
+        seen = {}
+        child, launched = launch(seen)
+        t0 = time.time()
+        while "t" not in seen and child.poll() is None and time.time() - t0 < 600 and not stopping:
+            time.sleep(0.2)
+        if child.poll() is not None:
+            note(f"start {attempt}: the sequencer exited with {child.returncode} before its scheduler started")
+            return child.returncode or 1
+        if stopping:
+            stop(child)
+            return 0
+        if "t" not in seen:
+            note(f"start {attempt}: no '{MARK}' in 600 s; leaving it running")
+            break
+        sched = seen["t"]
+        after = (sched + INTERVAL - o) % INTERVAL
+        startup = sched - launched
+        result = {"attempt": attempt, "after_epoch_second_s": round(after, 2), "startup_s": round(startup, 2),
+                  "interval_s": INTERVAL, "origin_unix": round(o, 2), "aligned": TICK_MIN <= after <= TICK_MAX,
+                  "utc": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}
+        note(f"start {attempt}: scheduler {startup:.1f} s after launch; blocks fall {after:.1f} s after an epoch second "
+             f"(wanted {TICK_MIN:g}-{TICK_MAX:g})")
+        if result["aligned"] or attempt == MAX_STARTS:
+            break
+        stop(child)
+        child = None
+    try:
+        os.makedirs(os.path.dirname(PHASE_FILE), exist_ok=True)
+        with open(PHASE_FILE, "w") as f:
+            json.dump(result, f)
+    except OSError:
+        pass
+    rc = child.wait()
+    note(f"the sequencer exited with {rc}")
+    return rc
+
+
+if __name__ == "__main__":
+    sys.exit(main())

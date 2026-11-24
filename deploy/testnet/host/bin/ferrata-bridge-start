@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+"""The Sepolia bridge demo's services, started in one command once the owner has deployed the vault:
+
+    ferrata-bridge-start --vault 0x.. [--rpc URL] [--dry]
+
+Reads only, then starts (nothing is sent to Sepolia by this command; the services send their own transactions):
+  1. the endpoint serves Sepolia (11155111); code at the vault; the vault's slot 2 holds the configId this zone's
+     configuration gives for that vault (/var/lib/ferrata/bridge/params.json, ferrata-bridge-configure);
+  2. the vault's deployment block (a binary search on eth_getCode), the events' first block for relayer and monitor;
+  3. the watcher's and the relayer's Sepolia balances (a warning if one holds nothing: it could not send);
+  4. /etc/ferrata/bridge.env, then `systemctl enable --now` ferrata-bridge-relayer, -monitor and -prover.
+--dry: the checks only. The LEZ side's Init (pairing: the bridge program reads the vault's slot 2 under a finalized
+Sepolia header the zone's light-client instance holds) can only follow the vault (ferrata-bridge-lez-init).
+"""
+import argparse
+import json
+import os
+import subprocess
+import sys
+import urllib.request
+
+PARAMS = "/var/lib/ferrata/bridge/params.json"
+CONFIG = "/var/lib/ferrata/bridge/config.json"  # crown-driver config-id: the vault, configId, preimage, controls
+ADDRESSES = "/var/lib/ferrata/bridge/addresses.json"
+ENV = "/etc/ferrata/bridge.env"
+UNITS = ["ferrata-bridge-relayer.service", "ferrata-bridge-monitor.service", "ferrata-bridge-prover.service"]
+
+
+def call(rpc, method, params):
+    q = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode()
+    req = urllib.request.Request(rpc, data=q, headers={"Content-Type": "application/json", "User-Agent": "ferrata-bridge-start"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        d = json.load(r)
+    if "error" in d:
+        raise RuntimeError(f"{method}: {d['error']}")
+    return d["result"]
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--vault", required=True)
+    ap.add_argument("--rpc", default=os.environ.get("FERRATA_ETH_RPC", "https://ethereum-sepolia-rpc.publicnode.com"))
+    ap.add_argument("--dry", action="store_true")
+    a = ap.parse_args()
+    vault = a.vault.lower()
+    p = json.load(open(PARAMS))
+    p["vault"] = json.load(open(CONFIG))["vault"]
+    def stop(msg):
+        print(json.dumps({"ok": False, "stop": msg}))
+        sys.exit(1)
+    if p.get("vault", "").lower() != vault:
+        stop(f"this zone's configuration names the vault {p.get('vault')}, not {a.vault}: run ferrata-bridge-configure "
+             "for the deployed address (a new configId), and deploy with it")
+    if int(call(a.rpc, "eth_chainId", []), 16) != 11155111:
+        stop("the endpoint is not Sepolia")
+    head = int(call(a.rpc, "eth_blockNumber", []), 16)
+    if call(a.rpc, "eth_getCode", [a.vault, hex(head)]) in ("0x", "0x0", None):
+        stop(f"no code at {a.vault} at block {head}: the vault is not deployed yet")
+    slot2 = call(a.rpc, "eth_getStorageAt", [a.vault, "0x2", hex(head)])
+    if int(slot2, 16) != int(p["lezConfigId"], 16):
+        stop(f"the vault's slot 2 is {slot2}, not this configuration's id {p['lezConfigId']}")
+    # The first block with code, the deployment block, searched over the last ~7 days (public endpoints prune older
+    # state; a block they no longer serve is taken as before the vault, which is new).
+    def has_code(n):
+        try:
+            return call(a.rpc, "eth_getCode", [a.vault, hex(n)]) not in ("0x", "0x0", None)
+        except RuntimeError as e:
+            if "prun" in str(e) or "missing trie" in str(e) or "not available" in str(e):
+                return False
+            raise
+    lo, hi = max(0, head - 50_400), head
+    if has_code(lo):
+        stop(f"the vault had code 7 days ago (block {lo}): pass its deployment block by hand")
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if not has_code(mid):
+            lo = mid + 1
+        else:
+            hi = mid
+    addrs = json.load(open(ADDRESSES))
+    bal = {k: int(call(a.rpc, "eth_getBalance", [addrs[k], "latest"]), 16) for k in ("watcher", "relayer")}
+    out = {"vault": a.vault, "deployed_at_block": lo, "head": head, "configId": p["lezConfigId"],
+           "balances_wei": bal, "warnings": [f"the {k} {addrs[k]} holds no Sepolia ETH: fund it" for k, v in bal.items() if v == 0]}
+    if a.dry:
+        print(json.dumps({"ok": True, "dry": True, **out}))
+        return
+    with open(ENV + ".tmp", "w") as f:
+        f.write(f"FERRATA_ETH_RPC={a.rpc}\nFERRATA_VAULT={a.vault}\nFERRATA_CHAIN_ID=11155111\nFERRATA_FROM_BLOCK={lo}\n")
+    os.chmod(ENV + ".tmp", 0o644)
+    os.replace(ENV + ".tmp", ENV)
+    subprocess.run(["systemctl", "enable", "--now", *UNITS], check=True)
+    active = subprocess.run(["systemctl", "is-active", *UNITS], capture_output=True, text=True).stdout.split()
+    print(json.dumps({"ok": True, **out, "units": dict(zip(UNITS, active))}))
+
+
+if __name__ == "__main__":
+    main()

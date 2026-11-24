@@ -1,0 +1,258 @@
+#!/usr/bin/env python3
+"""The testnet's status, every minute (ferrata-status.timer): status.json and history.json for the status page,
+and metrics to CloudWatch (namespace Ferrata/Testnet: head, finality, Bedrock tip and attestation ages, data and
+root disk use, the counts of its critical and warning alarms) for the stack's alarms.
+
+Reads only this host: the sequencer's JSON-RPC (head; the newest block final on Bedrock, from the block's own
+Bedrock status), the Logos Blockchain node's /cryptarchia/info, the updater's /health, attest-monitor's status file,
+the top-up log and the sequencer's start phase. Nothing secret is read or written.
+"""
+import base64
+import json
+import os
+import shutil
+import struct
+import subprocess
+import time
+import urllib.request
+
+RPC = os.environ.get("FERRATA_RPC", "http://127.0.0.1:3040")
+NODE = os.environ.get("FERRATA_NODE_API", "http://127.0.0.1:18080")
+UPDATER = os.environ.get("FERRATA_UPDATER_HEALTH", "http://127.0.0.1:9464/health")
+WWW = os.environ.get("FERRATA_STATUS_DIR", "/srv/ferrata/www/status")
+STATE = os.environ.get("FERRATA_STATUS_STATE", "/var/lib/ferrata/status")
+MONITOR = os.environ.get("FERRATA_MONITOR_STATUS", "/var/lib/ferrata/monitor/status.json")
+TOPUP_LOG = "/var/log/ferrata/topup.log"
+PHASE = os.path.join(STATE, "sequencer-phase.json")
+DATA = "/var/lib/ferrata"
+STATUS = ["Pending", "Safe", "Finalized"]  # common::block::BedrockStatus at rc3
+NOW = time.time()
+
+
+def rpc(method, params=None, timeout=10):
+    body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params if params is not None else []}).encode()
+    req = urllib.request.Request(RPC, data=body, headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        d = json.load(r)
+    if "error" in d:
+        raise RuntimeError(d["error"])
+    return d.get("result")
+
+
+def block(i):
+    r = rpc("getBlock", [i])
+    if not isinstance(r, str):
+        return None
+    b = base64.b64decode(r)
+    return {"id": struct.unpack("<Q", b[0:8])[0], "hash": b[40:72].hex(), "time_ms": struct.unpack("<Q", b[72:80])[0],
+            "status": STATUS[b[-1]] if b[-1] < len(STATUS) else f"tag {b[-1]}", "bytes": len(b)}
+
+
+def load(path, default):
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return default
+
+
+def save(path, obj):
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(obj, f, separators=(",", ":"))
+    os.replace(tmp, path)
+
+
+ATTEST_DIR = os.environ.get("FERRATA_ATTEST_DIR", "/var/lib/ferrata/day1/keys/tx/attest")
+
+
+def attestations():
+    """The Attest transactions the deployment sent (the day-one kit's records: the verdict computed when it was signed,
+    the transaction's hash and its result), newest first; one entry per attested statement."""
+    out = []
+    st = load(os.path.join(ATTEST_DIR, "stage.json"), None)
+    if not isinstance(st, dict):
+        return out
+    info = st.get("info") or {}
+    v = info.get("verdict") or {}
+    i = 0
+    while os.path.exists(os.path.join(ATTEST_DIR, f"{i:02}.json")):
+        meta = load(os.path.join(ATTEST_DIR, f"{i:02}.json"), {})
+        rp = os.path.join(ATTEST_DIR, f"{i:02}.result.json")
+        res = load(rp, {})
+        when = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(os.path.getmtime(rp))) if os.path.exists(rp) else None
+        for stmt in v.get("statements") or []:
+            f = stmt.get("fact") or {}
+            e = {"kind": "storage" if "storage" in f else ("account" if "account" in f else "other"),
+                 "address": f.get("storage") or f.get("account"), "slot": f.get("slot"), "value": f.get("value"),
+                 "predicate": "eq", "block": v.get("block_number"), "block_hash": v.get("block_hash"),
+                 "record_slot": v.get("slot", info.get("record_slot")), "chain_id": v.get("chain_id"),
+                 "instance_id": v.get("instance_id"), "tx": meta.get("hash"), "time": when}
+            if isinstance(res, dict):
+                e["lez_block"] = res.get("block")
+                e["result"] = res.get("state") or res.get("status") or res.get("outcome")
+            out.append({k: x for k, x in e.items() if x is not None})
+        i += 1
+    return out[::-1]
+
+
+def newest_final(head, known):
+    """The newest block whose Bedrock status is Finalized, searching down from the head (blocks are final in order)."""
+    lo = max(1, min(known or 1, head))
+    b = block(head)
+    if b and b["status"] == "Finalized":
+        return b
+    # Final blocks form a prefix: binary search in [lo, head).
+    best = None
+    b_lo = block(lo)
+    if not b_lo or b_lo["status"] != "Finalized":
+        lo, b_lo = 1, block(1)
+        if not b_lo or b_lo["status"] != "Finalized":
+            return None
+    best, a, z = b_lo, lo, head - 1
+    while a < z:
+        m = (a + z + 1) // 2
+        bm = block(m)
+        if bm and bm["status"] == "Finalized":
+            best, a = bm, m
+        else:
+            z = m - 1
+    return best
+
+
+def main():
+    os.makedirs(WWW, exist_ok=True)
+    os.makedirs(STATE, exist_ok=True)
+    mem = load(os.path.join(STATE, "status-memory.json"), {})
+    st = {"utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(NOW)), "network": "ferrata-lez-testnet",
+          "lez": {}, "bedrock": {}, "attestation": {}, "alarms": []}
+    alarms = st["alarms"]
+    # LEZ
+    try:
+        head = int(rpc("getLastBlockId"))
+        hb = block(head)
+        fin = newest_final(head, mem.get("final_id"))
+        st["lez"] = {"head": head, "head_hash": hb and hb["hash"], "head_time_ms": hb and hb["time_ms"],
+                     "head_status": hb and hb["status"], "final": fin and fin["id"], "final_hash": fin and fin["hash"],
+                     "final_time_ms": fin and fin["time_ms"], "not_final": head - (fin["id"] if fin else 0)}
+        if mem.get("head") != head:
+            mem["head"], mem["head_seen"] = head, NOW
+        if fin and mem.get("final_id") != fin["id"]:
+            mem["final_id"], mem["final_seen"] = fin["id"], NOW
+        st["lez"]["head_age_s"] = round(NOW - mem.get("head_seen", NOW))
+        st["lez"]["final_age_s"] = round(NOW - mem.get("final_seen", NOW)) if fin else None
+        try:
+            st["lez"]["fee_state"] = rpc("getFeeState")
+        except Exception:
+            pass
+        if st["lez"]["head_age_s"] > 120:
+            alarms.append({"level": "critical", "what": "lez-head-stale", "detail": f"no new block for {st['lez']['head_age_s']} s"})
+        fa = st["lez"]["final_age_s"]
+        if fa is not None and fa > 1800:
+            alarms.append({"level": "critical", "what": "bedrock-finality-stalled", "detail": f"no block final on Bedrock for {fa} s"})
+        elif fa is not None and fa > 300:
+            alarms.append({"level": "warn", "what": "bedrock-finality-slow", "detail": f"newest final block is {fa} s old"})
+    except Exception as e:
+        st["lez"]["error"] = repr(e)[:200]
+        alarms.append({"level": "critical", "what": "lez-rpc-down", "detail": repr(e)[:200]})
+    # Bedrock
+    try:
+        with urllib.request.urlopen(f"{NODE}/cryptarchia/info", timeout=5) as r:
+            raw = json.load(r)
+        info = raw.get("cryptarchia_info", raw)  # node 0.3.5-rc.1 nests the chain's info
+        st["bedrock"] = {k: info.get(k) for k in ("slot", "height", "tip", "lib", "lib_slot", "state") if k in info}
+        st["bedrock"]["phase"] = raw.get("phase")
+        if mem.get("bedrock_tip") != info.get("tip"):
+            mem["bedrock_tip"], mem["bedrock_tip_seen"] = info.get("tip"), NOW
+        st["bedrock"]["tip_age_s"] = round(NOW - mem.get("bedrock_tip_seen", NOW))
+        if st["bedrock"]["tip_age_s"] > 90:
+            alarms.append({"level": "critical", "what": "bedrock-halted", "detail": f"the Logos Blockchain node made no block for {st['bedrock']['tip_age_s']} s"})
+        try:
+            with urllib.request.urlopen(f"{NODE}/leader/aged-notes", timeout=5) as r:
+                a = json.load(r)
+            st["bedrock"]["leader_aged_notes"] = a.get("count")
+            if a.get("count") == 0:
+                alarms.append({"level": "critical", "what": "bedrock-leader-no-stake", "detail": "the leader has no aged note: it cannot make blocks"})
+        except Exception:
+            pass
+    except Exception as e:
+        st["bedrock"]["error"] = repr(e)[:200]
+        alarms.append({"level": "critical", "what": "bedrock-node-down", "detail": repr(e)[:200]})
+    st["sequencer_phase"] = load(PHASE, None)
+    try:
+        with open(TOPUP_LOG) as f:
+            lines = f.readlines()[-1:]
+        st["bedrock"]["topup"] = json.loads(lines[0]) if lines else None
+    except (OSError, ValueError):
+        st["bedrock"]["topup"] = None
+    # Attestation: the updater daemon and attest-monitor
+    try:
+        with urllib.request.urlopen(UPDATER, timeout=5) as r:
+            st["attestation"]["updater"] = json.load(r)
+    except Exception as e:
+        st["attestation"]["updater"] = {"unavailable": repr(e)[:160]}
+    mon = load(MONITOR, None)
+    st["attestation"]["monitor"] = mon
+    if isinstance(mon, dict):
+        for a in mon.get("alerts", []) or []:
+            if isinstance(a, dict) and a.get("level") in ("warn", "critical"):
+                alarms.append({"level": a["level"], "what": f"attest-monitor:{a.get('alert') or a.get('kind')}", "detail": a.get("detail") or a})
+    lag = None
+    if isinstance(mon, dict):  # attest-monitor's status file: lag_s (the instance's finalized header behind the chain's)
+        lag = next((mon[k] for k in ("lag_s", "lag_seconds") if isinstance(mon.get(k), (int, float))), None)
+    st["attestation"]["programs"] = load("/srv/ferrata/www/programs.json", None)
+    try:
+        st["attestations"] = attestations()
+    except Exception as e:  # a record being written: next minute
+        st["attestations"] = []
+        st["attestation"]["attestations_error"] = repr(e)[:160]
+    # LEZ's published test accounts (keys public in LEZ's source) must stay swept (ferrata-sweep-published).
+    pub = load(os.path.join(STATE, "published-accounts.json"), None)
+    if isinstance(pub, dict):
+        for acct in pub.get("published_test_accounts", []):
+            try:
+                bal = int(rpc("getAccountBalance", [acct]))
+            except Exception:
+                continue
+            if bal > int(pub.get("reserve", 200_000_000)) * 2:
+                alarms.append({"level": "warn", "what": "published-test-account-funded",
+                               "detail": f"{acct} holds {bal}: run ferrata-sweep-published"})
+    # Host
+    du, ru = shutil.disk_usage(DATA), shutil.disk_usage("/")
+    st["host"] = {"data_used_pct": round(100 * du.used / du.total, 1), "root_used_pct": round(100 * ru.used / ru.total, 1),
+                  "load": os.getloadavg()[0]}
+    if st["host"]["data_used_pct"] > 80:
+        alarms.append({"level": "warn", "what": "data-disk", "detail": f"{st['host']['data_used_pct']} % used"})
+    if st["host"]["root_used_pct"] > 80:  # the logs and the system live there
+        alarms.append({"level": "warn", "what": "root-disk", "detail": f"{st['host']['root_used_pct']} % used"})
+    save(os.path.join(STATE, "status-memory.json"), mem)
+    save(os.path.join(WWW, "status.json"), st)
+    hist = load(os.path.join(WWW, "history.json"), [])
+    hist.append({"t": int(NOW), "head": st["lez"].get("head"), "final": st["lez"].get("final"),
+                 "final_age_s": st["lez"].get("final_age_s"), "alarms": len(alarms)})
+    save(os.path.join(WWW, "history.json"), hist[-1440:])
+    # CloudWatch (the stack's alarms read these). Missing values are simply not sent.
+    data = []
+    if st["lez"].get("head_age_s") is not None:
+        data.append(f"MetricName=HeadAgeSeconds,Value={st['lez']['head_age_s']},Unit=Seconds")
+    if st["lez"].get("final_age_s") is not None:
+        data.append(f"MetricName=FinalAgeSeconds,Value={st['lez']['final_age_s']},Unit=Seconds")
+    if isinstance(lag, (int, float)):
+        data.append(f"MetricName=AttestationLagSeconds,Value={lag},Unit=Seconds")
+    if st["bedrock"].get("tip_age_s") is not None:
+        data.append(f"MetricName=BedrockTipAgeSeconds,Value={st['bedrock']['tip_age_s']},Unit=Seconds")
+    data.append(f"MetricName=DataDiskUsedPercent,Value={st['host']['data_used_pct']},Unit=Percent")
+    data.append(f"MetricName=RootDiskUsedPercent,Value={st['host']['root_used_pct']},Unit=Percent")
+    # The status page's own alarms (a leader without stake, an attest-monitor alert, a funded published account...):
+    # counted, so that CloudWatch can alarm on them too.
+    data.append(f"MetricName=AlarmsCritical,Value={sum(1 for a in alarms if a.get('level') == 'critical')},Unit=Count")
+    data.append(f"MetricName=AlarmsWarn,Value={sum(1 for a in alarms if a.get('level') == 'warn')},Unit=Count")
+    aws = shutil.which("aws") or "/usr/local/bin/aws"
+    if os.path.exists(aws):
+        subprocess.run([aws, "cloudwatch", "put-metric-data", "--region", "us-east-1", "--namespace", "Ferrata/Testnet",
+                        "--metric-data", *data], timeout=30, capture_output=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

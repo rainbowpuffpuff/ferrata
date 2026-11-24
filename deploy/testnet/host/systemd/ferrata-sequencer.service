@@ -1,0 +1,32 @@
+[Unit]
+Description=LEZ v0.4.0-rc3 sequencer_service of the Ferrata testnet, anchored to its Logos Blockchain node
+After=ferrata-node.service
+Requires=ferrata-node.service
+RequiresMountsFor=/var/lib/ferrata
+
+[Service]
+User=ferrata
+Group=ferrata
+WorkingDirectory=/var/lib/ferrata/sequencer
+Environment=RUST_LOG=info,sequencer_core=debug,risc0_zkvm=warn,kameo=warn
+Environment=XDG_CACHE_HOME=/opt/ferrata/cache
+Environment=RISC0_SERVER_PATH=/opt/ferrata/bin/r0vm
+Environment=PATH=/opt/ferrata/bin:/usr/local/bin:/usr/bin:/bin
+UnsetEnvironment=RISC0_DEV_MODE
+# Started in phase with the node's epochs (deploy/testnet/host/bin/ferrata-sequencer-run).
+ExecStart=/usr/bin/python3 -I /opt/ferrata/bin/ferrata-sequencer-run
+Restart=always
+RestartSec=10
+TimeoutStopSec=120
+KillMode=mixed
+LimitNOFILE=65536
+StandardOutput=append:/var/log/ferrata/sequencer-run.log
+StandardError=append:/var/log/ferrata/sequencer-run.log
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/ferrata/sequencer /var/lib/ferrata/status /var/log/ferrata
+
+[Install]
+WantedBy=multi-user.target

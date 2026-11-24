@@ -1,0 +1,11 @@
+/var/log/ferrata/*.log {
+	daily
+	maxsize 200M
+	rotate 5
+	compress
+	delaycompress
+	missingok
+	notifempty
+	copytruncate
+	su ferrata ferrata
+}

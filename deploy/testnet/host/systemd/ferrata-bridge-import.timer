@@ -1,0 +1,11 @@
+# Every 10 minutes (a fixed cadence, not in response to a deposit: what the relayer's --import-every does, shorter).
+[Unit]
+Description=Ferrata bridge demo: deposit roots every 10 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitInactiveSec=10min
+Persistent=false
+
+[Install]
+WantedBy=timers.target

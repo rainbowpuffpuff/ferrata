@@ -1,0 +1,406 @@
+diff -ruN a/checkpoint/realblocks/src/bin/realblocks-crown.rs b/checkpoint/realblocks/src/bin/realblocks-crown.rs
+--- a/checkpoint/realblocks/src/bin/realblocks-crown.rs
++++ b/checkpoint/realblocks/src/bin/realblocks-crown.rs
+@@ -22,6 +22,12 @@
+ //!   gives `tipT1` = T1 (its hash is checked);
+ //! - `--parent T0 --tip T1`: the parent tip (the vault's genesis state is the state at `T0`) and the
+ //!   attested tip; the input holds blocks `T0+1..=T1` as inscribed;
++//! - `--parent-state FILE`: a checkpoint on a posted one: the parent is the state that checkpoint ended at, as the
++//!   `state.json` of its run holds it (`src/parent_state.rs`), and `T0` is its tip (instead of session A's or
++//!   `--parent`); the parent's key set, posting timeframe, configuration tip, burn frontier, imported leaf count and
++//!   sunset flag come from it, its tip hash is checked against the node's inscription of `T0`, and with
++//!   `--genesis-state` (then the vault's `finalState`) its digest must equal that. Every run writes `state.json`,
++//!   the new state the journal's `new_state` is the digest of, for the next checkpoint;
+ //! - `--record DIR`: optional `blocks.borsh` of the blocks as the sequencer served them (u32 count, then
+ //!   the blocks back to back, `lez/lab` and live-driver export format); compared, not used.
+ //! - A zone of several sequencers (`checkpoint/attestor/zone-bridge.sh`): `--att A.json,B.json,...` (records of
+@@ -66,12 +72,15 @@
+ use checkpoint_core::bedrock_0_3_5;
+ use checkpoint_core::rule_b::run_checkpoint_b;
+ use checkpoint_core::state::{key_set_hash, Config, State};
+-use checkpoint_core::tree::{burn_leaf, zero_hashes, Frontier};
++use checkpoint_core::tree::{burn_leaf, zero_hashes};
+ use checkpoint_core::wire::BridgeMessage;
+ use checkpoint_core::{Address, Hash};
+ use ed25519_dalek::SigningKey;
+ use serde_json::{json, Value};
+ 
++#[path = "../parent_state.rs"]
++mod parent_state;
++
+ const STATUS: [&str; 3] = ["Pending", "Safe", "Finalized"];
+ const CHANNEL_ID: Hash = [1u8; 32];
+ 
+@@ -438,6 +447,15 @@
+     let lib_slot =
+         info["lib_slot"].as_u64().or(info["cryptarchia_info"]["lib_slot"].as_u64()).context("info.json: lib_slot")?;
+     let (id, t0, t1, tip_hashes) = identity(&a)?;
++    // A checkpoint on a posted one: its parent is the state that checkpoint ended at (its state.json), T0 its tip.
++    let chained: Option<State> = match a.get("parent-state") {
++        Some(p) => {
++            let v: Value = serde_json::from_slice(&fs::read(p).with_context(|| p.clone())?).with_context(|| p.clone())?;
++            Some(parent_state::from_json(&v).with_context(|| format!("--parent-state {p}"))?)
++        }
++        None => None,
++    };
++    let t0 = chained.as_ref().map_or(t0, |s| s.tip_id);
+     ensure!(t0 >= 1 && t1 > t0, "need 1 <= T0 < T1");
+ 
+     // ---- the run's configuration, checked against the node and the bridge wire's configId ------------
+@@ -521,13 +539,16 @@
+     let channel_key = channel_keys[0];
+     let mut signed_by: BTreeMap<Hash, u32> = BTreeMap::new();
+     // The parent's key set and configuration tip: session A's (a zone), else the channel's as the node reports it.
+-    let parent_keys: Vec<Hash> = match id.get("parentKeys").and_then(Value::as_array).filter(|_| zone) {
+-        Some(k) => k.iter().map(|x| hexa::<32>(x, "session-a channel key")).collect::<Result<_>>()?,
+-        None => channel_keys.clone(),
+-    };
+-    let parent_config_tip: Hash = match id.get("parentConfigTipHash").filter(|v| zone && !v.is_null()) {
+-        Some(v) => hexa(v, "session-a configTipHash")?,
+-        None => hexa(&channel_json["config_tip_hash"], "config_tip_hash")?,
++    // (A chained checkpoint: the parent state's own.)
++    let parent_keys: Vec<Hash> = match (&chained, id.get("parentKeys").and_then(Value::as_array).filter(|_| zone)) {
++        (Some(s), _) => s.keys.clone(),
++        (None, Some(k)) => k.iter().map(|x| hexa::<32>(x, "session-a channel key")).collect::<Result<_>>()?,
++        (None, None) => channel_keys.clone(),
++    };
++    let parent_config_tip: Hash = match (&chained, id.get("parentConfigTipHash").filter(|v| zone && !v.is_null())) {
++        (Some(s), _) => s.config_tip_hash,
++        (None, Some(v)) => hexa(v, "session-a configTipHash")?,
++        (None, None) => hexa(&channel_json["config_tip_hash"], "config_tip_hash")?,
+     };
+     // Configuration changes after T0's inscription: applied in order natively (the program does it again).
+     let t0_slot = ins.get(&t0).context("no final inscription of T0")?.slot;
+@@ -672,15 +693,30 @@
+     // ---- the parent state at T0 and the attestor(s) ---------------------------------------------------
+     let posting_timeframe = u32::try_from(channel_json["posting_timeframe"].as_u64().context("posting_timeframe")?)?;
+     let config_tip_hash: Hash = parent_config_tip;
+-    let parent = State {
+-        tip_id: t0,
+-        tip_hash: ins[&t0].payload()?[40..72].try_into()?,
+-        keys: parent_keys.clone(),
+-        posting_timeframe,
+-        config_tip_hash,
+-        burns: Default::default(),
+-        imported_leaf_count: 0,
+-        sunset: false,
++    let parent = match &chained {
++        // The posted checkpoint's state: its tip must be the node's block T0 as inscribed.
++        Some(s) => {
++            let inscribed: Hash = ins[&t0].payload()?[40..72].try_into()?;
++            ensure!(
++                s.tip_hash == inscribed,
++                "--parent-state: its tip {} has hash {}, the node's final inscription of block {} has {}",
++                s.tip_id,
++                hx(&s.tip_hash),
++                t0,
++                hx(&inscribed)
++            );
++            s.clone()
++        }
++        None => State {
++            tip_id: t0,
++            tip_hash: ins[&t0].payload()?[40..72].try_into()?,
++            keys: parent_keys.clone(),
++            posting_timeframe,
++            config_tip_hash,
++            burns: Default::default(),
++            imported_leaf_count: 0,
++            sunset: false,
++        },
+     };
+     if let Some(g) = id.get("genesisState").filter(|v| !v.is_null()) {
+         ensure!(
+@@ -787,7 +823,8 @@
+     let encoded = input.encode();
+     ensure!(CheckpointInputB::decode(&encoded).is_ok(), "the input does not decode");
+ 
+-    let (mut frontier, mut burns, mut imports, mut sunset) = (Frontier::default(), Vec::new(), Vec::new(), false);
++    // The burns of this span continue the parent's tree (a chained checkpoint's parent holds earlier burns).
++    let (mut frontier, mut burns, mut imports, mut sunset) = (parent.burns.clone(), Vec::new(), Vec::new(), parent.sunset);
+     let mut txs = 0u32;
+     for (k, bytes) in ((t0 + 1)..=t1).zip(&blocks) {
+         let mut v = Calls { program: &config.bridge_header, calls: Vec::new() };
+@@ -847,9 +884,12 @@
+     });
+     fs::write(out_dir.join(format!("{name}.json")), serde_json::to_string_pretty(&meta)? + "\n")?;
+     fs::write(out_dir.join("attestor.json"), serde_json::to_string_pretty(&att_record)? + "\n")?;
+-    let burns_json = json!({"config_id": hx(&config_id), "parent_tip": t0, "tip": t1, "burn_count": frontier.count,
++    let burns_json = json!({"config_id": hx(&config_id), "parent_tip": t0, "tip": t1, "parent_burn_count": parent.burns.count, "burn_count": frontier.count,
+         "burn_root": hx(&frontier.root(&zeros)), "burns": burns, "imports": imports, "sunset": sunset});
+     fs::write(out_dir.join("burns.json"), serde_json::to_string_pretty(&burns_json)? + "\n")?;
++    // The new state itself, for a checkpoint on this one (--parent-state): its digest is the journal's new_state.
++    ensure!(outcome.new_state.digest() == outcome.journal.new_state, "the rule's new state is not the journal's");
++    fs::write(out_dir.join("state.json"), serde_json::to_string_pretty(&parent_state::to_json(&outcome.new_state))? + "\n")?;
+     println!("{name}: {} blocks, {txs} transactions, {bytes} B of blocks, input {} B; burns {} (root {}), imported leaf count {}, \
+               sunset {}; journal sha256 {}; parent state {}; new state {}; configId {}",
+         blocks.len(), encoded.len(), frontier.count, hx(&frontier.root(&zeros)), outcome.journal.imported_leaf_count,
+diff -ruN a/checkpoint/realblocks/src/parent_state.rs b/checkpoint/realblocks/src/parent_state.rs
+--- a/checkpoint/realblocks/src/parent_state.rs
++++ b/checkpoint/realblocks/src/parent_state.rs
+@@ -0,0 +1,64 @@
++//! A checkpoint's new state as a file (`state.json`, which realblocks-crown writes beside each input), and the parent
++//! of the next checkpoint read back from it (`--parent-state`). The vault keeps only the state's digest (`finalState`),
++//! so the builder of the next checkpoint needs the state itself: the tip, the key set and its posting timeframe, the
++//! configuration tip, the burn tree's frontier (32 nodes and the count), the imported leaf count and the sunset flag.
++//! A file whose `digest` is not its state's is refused, as is a frontier that is not canonical.
++use anyhow::{anyhow, bail, ensure, Context as _, Result};
++use checkpoint_core::state::State;
++use checkpoint_core::tree::{Frontier, DEPTH};
++use checkpoint_core::Hash;
++use serde_json::{json, Value};
++
++fn hx(b: &[u8]) -> String {
++    format!("0x{}", hex::encode(b))
++}
++
++fn h32(v: &Value, what: &str) -> Result<Hash> {
++    let s = v.as_str().with_context(|| format!("{what}: not a string"))?;
++    let b = hex::decode(s.strip_prefix("0x").unwrap_or(s)).with_context(|| format!("{what}: not hex"))?;
++    b.try_into().map_err(|_| anyhow!("{what}: not 32 bytes"))
++}
++
++/// The state as its file holds it, with its digest.
++pub fn to_json(s: &State) -> Value {
++    json!({
++        "version": 1,
++        "tip_id": s.tip_id,
++        "tip_hash": hx(&s.tip_hash),
++        "keys": s.keys.iter().map(|k| hx(k)).collect::<Vec<_>>(),
++        "posting_timeframe": s.posting_timeframe,
++        "config_tip_hash": hx(&s.config_tip_hash),
++        "burns": { "count": s.burns.count, "nodes": s.burns.nodes.iter().map(|n| hx(n)).collect::<Vec<_>>() },
++        "imported_leaf_count": s.imported_leaf_count,
++        "sunset": s.sunset,
++        "digest": hx(&s.digest()),
++    })
++}
++
++/// The state a file holds, checked against the file's own digest.
++pub fn from_json(v: &Value) -> Result<State> {
++    ensure!(v["version"].as_u64() == Some(1), "state file: version 1 expected");
++    let nodes = v["burns"]["nodes"].as_array().context("burns.nodes")?;
++    ensure!(nodes.len() == DEPTH, "burns.nodes: {DEPTH} nodes expected, {}", nodes.len());
++    let mut frontier = Frontier { count: v["burns"]["count"].as_u64().context("burns.count")?, ..Frontier::default() };
++    for (slot, n) in frontier.nodes.iter_mut().zip(nodes) {
++        *slot = h32(n, "burns node")?;
++    }
++    ensure!(frontier.is_canonical(), "burns: not a canonical frontier");
++    let s = State {
++        tip_id: v["tip_id"].as_u64().context("tip_id")?,
++        tip_hash: h32(&v["tip_hash"], "tip_hash")?,
++        keys: v["keys"].as_array().context("keys")?.iter().map(|k| h32(k, "key")).collect::<Result<_>>()?,
++        posting_timeframe: u32::try_from(v["posting_timeframe"].as_u64().context("posting_timeframe")?)?,
++        config_tip_hash: h32(&v["config_tip_hash"], "config_tip_hash")?,
++        burns: frontier,
++        imported_leaf_count: v["imported_leaf_count"].as_u64().context("imported_leaf_count")?,
++        sunset: v["sunset"].as_bool().context("sunset")?,
++    };
++    ensure!(!s.keys.is_empty(), "keys: none");
++    let digest = h32(&v["digest"], "digest")?;
++    if digest != s.digest() {
++        bail!("state file: its digest {} is not its state's {}", hx(&digest), hx(&s.digest()));
++    }
++    Ok(s)
++}
+diff -ruN a/checkpoint/realblocks/tests/chained.rs b/checkpoint/realblocks/tests/chained.rs
+--- a/checkpoint/realblocks/tests/chained.rs
++++ b/checkpoint/realblocks/tests/chained.rs
+@@ -0,0 +1,197 @@
++//! A checkpoint on a posted one (`realblocks-crown --parent-state`), on hand-built blocks of a one-key zone in the
++//! Logos Blockchain 0.3.5-rc.1 layout under rule (B), each input through its byte encoding as the guest receives it:
++//! - the state after two chained checkpoints (blocks 2..=6, then 7..=12 on the first one's state read back from its
++//!   `state.json`) is the state after one checkpoint over 2..=12: the same `new_state`, burn root and burn count, with
++//!   a burn in each span (the second span's burn index continues the first's);
++//! - the second checkpoint's journal names the first one's `new_state` as its parent (what the vault's
++//!   `finalState` is once the first is final);
++//! - the second span on the genesis parent is refused (its first block does not link to the genesis tip), and a state
++//!   file whose digest is not its state's, or whose frontier is not canonical, is refused when read.
++#[path = "../../crates/checkpoint-core/tests/common/mod.rs"]
++mod common;
++#[path = "../src/parent_state.rs"]
++mod parent_state;
++
++use attestor_core::{sign_certificate, Deployment, FinalTip, SignedAttestation};
++use checkpoint_core::bedrock_0_3_5::{mantle as new_mantle, rule as new, Error};
++use checkpoint_core::input::CheckpointInputB;
++use checkpoint_core::mantle::{tx_hash, OP_CHANNEL_INSCRIBE, OP_TRANSFER};
++use checkpoint_core::rule_b::OutcomeB;
++use checkpoint_core::state::{key_set_hash, Config, State};
++use checkpoint_core::tree::Frontier;
++use checkpoint_core::wire::{BridgeMessage, Burn};
++use checkpoint_core::Hash;
++use common::*;
++use ed25519_dalek::{Signer as _, SigningKey};
++
++const DIGEST: Hash = [0xd1; 32];
++const TIMEFRAME: u32 = 0;
++
++fn uint256(x: u64) -> Hash {
++    let mut w = [0u8; 32];
++    w[24..].copy_from_slice(&x.to_be_bytes());
++    w
++}
++
++fn config() -> Config {
++    Config {
++        bedrock_genesis_id: DIGEST,
++        channel_id: [1; 32],
++        bridge_header: [3; 32],
++        bridge_image_id: [4; 32],
++        evm_chain_id: uint256(11_155_111),
++        vault: [5; 20],
++        attestation_root_id: [6; 32],
++        salt: [7; 32],
++        n_min: 1,
++        t_min: 1,
++    }
++}
++
++fn pk(k: &SigningKey) -> Hash {
++    k.verifying_key().to_bytes()
++}
++fn channel() -> SigningKey {
++    key(0x10)
++}
++fn att() -> SigningKey {
++    key(0x80)
++}
++
++fn genesis() -> State {
++    State {
++        tip_id: 1,
++        tip_hash: [9; 32],
++        keys: vec![pk(&channel())],
++        posting_timeframe: TIMEFRAME,
++        config_tip_hash: [8; 32],
++        burns: Frontier::default(),
++        imported_leaf_count: 0,
++        sunset: false,
++    }
++}
++
++fn burn(c: &Config, r: u8) -> Vec<u8> {
++    BridgeMessage::Burn(Burn {
++        config_id: c.config_id(),
++        r: [r; 32],
++        memo: [0; 20],
++        mac: [0; 16],
++        token: [0; 20],
++        amount: uint256(1_000_000_000_000_000),
++        c_out: [r ^ 0xff; 32],
++    })
++    .encode()
++}
++
++/// Blocks 2..=12 on the genesis tip (block 1, hash [9; 32]): public burns in blocks 3 and 9.
++fn chain(c: &Config) -> (Vec<Vec<u8>>, Vec<Hash>) {
++    let mut prev = [9u8; 32];
++    let (mut blocks, mut hashes) = (Vec::new(), Vec::new());
++    for id in 2u64..=12 {
++        let txs = match id {
++            3 => vec![public_tx(&[0xaa; 32], &c.bridge_header, &burn(c, 1))],
++            9 => vec![public_tx(&[0xbb; 32], &c.bridge_header, &burn(c, 2))],
++            _ => Vec::new(),
++        };
++        let (b, h) = block(id, &prev, 1_000 + id, &txs, &[]);
++        blocks.push(b);
++        hashes.push(h);
++        prev = h;
++    }
++    (blocks, hashes)
++}
++
++/// `[ChannelInscribe(block), Transfer]` by the channel key, in the 0.3.5-rc.1 layout (the fork digest in front).
++fn inscription(c: &Config, payload: &[u8]) -> (Vec<u8>, [u8; 64]) {
++    let mut col = vec![2u8, OP_CHANNEL_INSCRIBE];
++    col.extend_from_slice(&c.channel_id);
++    col.extend_from_slice(&u32le(payload.len()));
++    col.extend_from_slice(payload);
++    col.extend_from_slice(&[6; 32]);
++    col.extend_from_slice(channel().verifying_key().as_bytes());
++    col.push(OP_TRANSFER);
++    col.push(1);
++    col.extend_from_slice(&[9u8; 32]);
++    col.push(1);
++    col.extend_from_slice(&5u64.to_le_bytes());
++    col.extend_from_slice(&[8u8; 32]);
++    let tx = [DIGEST.as_slice(), &col].concat();
++    let sig = channel().sign(&tx_hash(&tx)).to_bytes();
++    (tx, sig)
++}
++
++/// The one attestor's attestation of tip `id` with hash `hash`, under the parent's key set.
++fn attestation(c: &Config, id: u64, hash: Hash) -> SignedAttestation {
++    let d = Deployment { evm_chain_id: c.evm_chain_id, vault: c.vault, lez_config_id: c.config_id(), channel_id: c.channel_id };
++    let ksh = key_set_hash(&[pk(&channel())], TIMEFRAME);
++    let tip = FinalTip { tip_id: id, tip_hash: hash, final_msg_id: [0x5e; 32] };
++    SignedAttestation::new(&att(), pk(&channel()), sign_certificate(&channel(), &d, &pk(&att())), &d, &ksh, tip)
++}
++
++/// Rule (B) over `blocks` (their last is T) on `parent`, the input encoded and decoded first.
++fn run(c: &Config, parent: &State, blocks: &[Vec<u8>], tip_hash: Hash) -> Result<OutcomeB, Error> {
++    let tip_id = parent.tip_id + blocks.len() as u64;
++    let (tx, sig) = inscription(c, blocks.last().unwrap());
++    let input = CheckpointInputB {
++        config: c.clone(),
++        parent: parent.clone(),
++        config_changes: Vec::new(),
++        blocks: blocks.iter().map(Vec::as_slice).collect(),
++        t_index: u32::try_from(blocks.len() - 1).unwrap(),
++        producer: new_mantle::split(&tx, 0, &sig).unwrap(),
++        attestations: vec![attestation(c, tip_id, tip_hash)],
++        segments: Vec::new(),
++    };
++    let bytes = input.encode();
++    let decoded = CheckpointInputB::decode(&bytes).expect("input decodes");
++    assert_eq!(decoded.encode(), bytes);
++    new::run_checkpoint_b(&decoded)
++}
++
++#[test]
++fn two_chained_checkpoints_end_where_one_does() {
++    let c = config();
++    let (blocks, hashes) = chain(&c);
++    // One checkpoint over 2..=12.
++    let direct = run(&c, &genesis(), &blocks, hashes[10]).expect("the direct checkpoint");
++    // The first of two: 2..=6 (a burn in 3); its state goes through state.json.
++    let first = run(&c, &genesis(), &blocks[..5], hashes[4]).expect("the first checkpoint");
++    let file = serde_json::to_string_pretty(&parent_state::to_json(&first.new_state)).unwrap();
++    let parent = parent_state::from_json(&serde_json::from_str(&file).unwrap()).expect("state.json reads back");
++    assert_eq!(parent, first.new_state);
++    assert_eq!(parent.digest(), first.journal.new_state);
++    assert_eq!((parent.tip_id, parent.burns.count), (6, 1));
++    // The second: 7..=12 (a burn in 9) on the first's state.
++    let second = run(&c, &parent, &blocks[5..], hashes[10]).expect("the chained checkpoint");
++    assert_eq!(second.journal.parent_state, first.journal.new_state, "its parent is the first's new state");
++    assert_eq!(second.new_state, direct.new_state);
++    assert_eq!(second.journal.new_state, direct.journal.new_state);
++    assert_eq!(second.journal.burn_root, direct.journal.burn_root);
++    assert_eq!((second.journal.burn_count, direct.journal.burn_count), (2, 2));
++    assert_eq!(second.journal.tip_id, 12);
++}
++
++#[test]
++fn the_second_span_on_the_genesis_parent_is_refused() {
++    let c = config();
++    let (blocks, hashes) = chain(&c);
++    assert!(run(&c, &genesis(), &blocks[5..], hashes[10]).is_err());
++}
++
++#[test]
++fn a_state_file_that_does_not_hold_together_is_refused() {
++    let c = config();
++    let (blocks, hashes) = chain(&c);
++    let first = run(&c, &genesis(), &blocks[..5], hashes[4]).unwrap();
++    let good = parent_state::to_json(&first.new_state);
++    let mut wrong_count = good.clone();
++    wrong_count["imported_leaf_count"] = serde_json::json!(7);
++    assert!(parent_state::from_json(&wrong_count).unwrap_err().to_string().contains("digest"));
++    let mut not_canonical = good.clone();
++    not_canonical["burns"]["nodes"][5] = serde_json::json!(format!("0x{}", "11".repeat(32)));
++    assert!(parent_state::from_json(&not_canonical).unwrap_err().to_string().contains("canonical"));
++    let mut no_version = good;
++    no_version["version"] = serde_json::json!(2);
++    assert!(parent_state::from_json(&no_version).is_err());
++}

@@ -1,0 +1,46 @@
+# The Sepolia bridge demo's watcher (monitor/README.md): monitor run against the vault named in
+# /etc/ferrata/bridge.env, with this zone's final tier and key set (ferrata-bridge-nodeview) as its node view. It
+# cancels a wrong candidate checkpoint with the watcher key made by ferrata-bridge-keys. Started by ferrata-bridge-start.
+[Unit]
+Description=Ferrata bridge demo: watcher (monitor)
+After=network-online.target ferrata-sequencer.service
+Wants=network-online.target
+ConditionPathExists=/etc/ferrata/bridge.env
+
+[Service]
+User=ferrata-watcher
+Group=ferrata-watcher
+EnvironmentFile=/etc/ferrata/bridge.env
+Environment=HOME=/var/lib/ferrata/bridge/watcher
+ExecStart=/opt/ferrata/bin/monitor run --rpc ${FERRATA_ETH_RPC} --vault ${FERRATA_VAULT} --node cmd:/opt/ferrata/bin/ferrata-bridge-nodeview --state /var/lib/ferrata/bridge/watcher/monitor-state.json --keystore /var/lib/ferrata/bridge/watcher/key --password-file /var/lib/ferrata/bridge/watcher/password --alert-log /var/lib/ferrata/bridge/watcher/alerts.jsonl --start-block ${FERRATA_FROM_BLOCK}
+Restart=always
+RestartSec=30
+StandardOutput=append:/var/log/ferrata/bridge-monitor.log
+StandardError=append:/var/log/ferrata/bridge-monitor.log
+UMask=0077
+TemporaryFileSystem=/var/lib/ferrata:ro
+BindPaths=/var/lib/ferrata/bridge/watcher
+BindReadOnlyPaths=/var/lib/ferrata/bridge/identity.json
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+TasksMax=128
+MemoryMax=1G
+
+[Install]
+WantedBy=multi-user.target

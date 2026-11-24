@@ -1,0 +1,123 @@
+#!/opt/ferrata/venv-modal/bin/python3
+"""The bridge demo's prover client: proofs on a Modal GPU, never on this host.
+
+    ferrata-bridge-prover prove --kind release|checkpoint-b --input FILE (--journal 0x.. | --meta FILE.json) [--name N] [--inbox DIR]
+    ferrata-bridge-prover watch --requests DIR --inbox DIR [--poll 10]
+    ferrata-bridge-prover check
+
+It calls `prove_bytes(program, input, meta, groth16=True)` of the Modal app `ferrata-prover` (gpu-prover/modal_app.py,
+deployed with bin-31/ in a workspace that holds NO secret; its token, MODAL_TOKEN_ID and MODAL_TOKEN_SECRET in
+/etc/ferrata/bridge-prover.env, is that workspace's): STARK and Groth16 on one GPU, the 260-byte seal the vault takes. The program is RISC Zero 3.1's
+(docs/image-ids.md `*_31`, sha256 checked here): release_31 for a release input (the CLI's `ferrata release
+--input-out`), checkpoint_b_0_3_5_31 for a rule (B) checkpoint input of this zone (Logos Blockchain 0.3.5-rc.1).
+The result becomes a relayer inbox job, {"kind": "release"|"checkpoint", "journal": "0x..", "seal": "0x.."}, which the
+relayer checks with the vault's own eth_call before it sends anything.
+
+`watch` takes requests, `<requests>/<name>.json` = {"kind": ..., "input": "<file>", "journal": "0x.."}, one at a time;
+the answer goes to `<requests>/done/<name>.json` (or `failed/`), the job to `<inbox>/<name>.json`.
+"""
+import argparse
+import hashlib
+import json
+import os
+import pathlib
+import sys
+import time
+
+PROGRAMS = pathlib.Path(os.environ.get("FERRATA_PROGRAMS_31", "/opt/ferrata/programs/31"))
+# docs/image-ids.md, RISC Zero 3.1 rows: (file, image id, sha256 of the binary)
+KINDS = {
+    "release": ("release.bin", "0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd",
+                "d0fdcac9fa71ee87d22014ccfbb90f4ac543ae2559838d85a9dd0315c7cae2ac", "release"),
+    "checkpoint-b": ("checkpoint_b_0_3_5.bin", "0x8917f58e76aa805dedc04fc5e2b70404f5078b66b271ec44aaa0c78d9f5eaf04",
+                     "86eaa5502bffbb85d8661e18d24ae83a797cab5e2cdc4db70c01b6a7ae20bbdc", "checkpoint"),
+}
+APP, FUNCTION = os.environ.get("FERRATA_PROVER_APP", "ferrata-prover"), "prove_bytes"
+
+
+def program(kind):
+    name, image, sha, job = KINDS[kind]
+    data = (PROGRAMS / name).read_bytes()
+    if hashlib.sha256(data).hexdigest() != sha:
+        raise SystemExit(f"{PROGRAMS / name}: not the binary of docs/image-ids.md ({sha[:16]}...)")
+    return data, image, job
+
+
+def hex0(s):
+    return "0x" + s.removeprefix("0x").lower()
+
+
+def prove(kind, input_path, journal, name, inbox=None, meta_path=None):
+    import modal  # the client only; the token is the no-secret workspace's (MODAL_CONFIG_PATH)
+    data, image, job_kind = program(kind)
+    # The input's own meta (realblocks-crown's, crown-release's) when there is one, as the prover's local runs pass it.
+    meta = json.loads(pathlib.Path(meta_path).read_text()) if meta_path else {}
+    # The journal the proof must carry: --journal, else the meta's (the CLI's `release --input-out` writes it beside).
+    journal = journal or meta.get("journal") or ""
+    if not journal:
+        raise ValueError("no journal: --journal 0x.., or a --meta file with \"journal\"")
+    meta.update({"kind": kind, "journal": journal.removeprefix("0x"), "name": name})
+    f = modal.Function.from_name(APP, FUNCTION)
+    t0 = time.time()
+    r = f.remote(data, pathlib.Path(input_path).read_bytes(), meta, limit_s=int(os.environ.get("FERRATA_PROVE_LIMIT_S", "6600")), groth16=True)
+    out = {"name": name, "kind": kind, "image_id": image, "ok": bool(r.get("ok")), "seconds": round(time.time() - t0, 1),
+           "journal": hex0(r.get("journal_hex") or ""), "seal": hex0(r.get("seal_hex") or ""),
+           "prover": {k: r.get(k) for k in ("exit_code", "wall_s") if k in r}}
+    if out["ok"] and out["journal"] != hex0(journal):
+        out["ok"], out["error"] = False, "the proof's journal is not the one asked for"
+    if out["ok"] and inbox:
+        job = {"kind": job_kind, "journal": out["journal"], "seal": out["seal"]}
+        tmp = pathlib.Path(inbox) / f".{name}.json.tmp"
+        tmp.write_text(json.dumps(job))
+        tmp.rename(pathlib.Path(inbox) / f"{name}.json")
+        out["job"] = str(pathlib.Path(inbox) / f"{name}.json")
+    return out
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    p = sub.add_parser("prove")
+    p.add_argument("--kind", choices=sorted(KINDS), required=True)
+    p.add_argument("--input", required=True)
+    p.add_argument("--journal")
+    p.add_argument("--name", default=time.strftime("job-%Y%m%dT%H%M%SZ", time.gmtime()))
+    p.add_argument("--inbox")
+    p.add_argument("--meta")
+    w = sub.add_parser("watch")
+    w.add_argument("--requests", required=True)
+    w.add_argument("--inbox", required=True)
+    w.add_argument("--poll", type=int, default=10)
+    sub.add_parser("check")
+    a = ap.parse_args()
+    if a.cmd == "check":  # the programs and the app, without proving anything
+        for k in KINDS:
+            program(k)
+        import modal
+        modal.Function.from_name(APP, FUNCTION).hydrate()
+        print(json.dumps({"ok": True, "app": APP, "programs": {k: v[1] for k, v in KINDS.items()}}))
+        return
+    if a.cmd == "prove":
+        r = prove(a.kind, a.input, a.journal, a.name, a.inbox, a.meta)
+        print(json.dumps(r))
+        sys.exit(0 if r["ok"] else 1)
+    req = pathlib.Path(a.requests)
+    for d in ("done", "failed"):
+        (req / d).mkdir(exist_ok=True)
+    print(json.dumps({"event": "started", "requests": str(req), "inbox": a.inbox}), flush=True)
+    while True:
+        for f in sorted(req.glob("*.json")):
+            name = f.stem
+            try:
+                q = json.loads(f.read_text())
+                r = prove(q["kind"], q["input"], q.get("journal"), name, a.inbox, q.get("meta"))
+            except Exception as e:  # a bad request or a failed call: kept with the reason, the loop goes on
+                r = {"name": name, "ok": False, "error": repr(e)[:500]}
+            (req / ("done" if r["ok"] else "failed") / f.name).write_text(json.dumps(r))
+            f.unlink()
+            print(json.dumps({k: r.get(k) for k in ("name", "kind", "ok", "seconds", "job", "error")}), flush=True)
+        time.sleep(a.poll)
+
+
+if __name__ == "__main__":
+    main()

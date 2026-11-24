@@ -1,0 +1,39 @@
+# The rule (B) attestor beside this zone's sequencer: a signed final-tier attestation every 60 s
+# (deploy/testnet/host/bin/ferrata-bridge-attestor; `setup` once first). Loopback only: its node and its LEZ node.
+[Unit]
+Description=Ferrata bridge demo: rule (B) attestor (final tier)
+After=ferrata-node.service ferrata-sequencer.service
+ConditionPathExists=/var/lib/ferrata/bridge/attestor/cert.json
+
+[Service]
+User=ferrata-attestor
+Group=ferrata-attestor
+ExecStart=/opt/ferrata/bin/ferrata-bridge-attestor loop
+Restart=always
+RestartSec=30
+TimeoutStopSec=300
+StandardOutput=append:/var/log/ferrata/bridge-attestor.log
+StandardError=append:/var/log/ferrata/bridge-attestor.log
+UMask=0077
+TemporaryFileSystem=/var/lib/ferrata:ro
+BindPaths=/var/lib/ferrata/bridge/attestor
+BindReadOnlyPaths=/var/lib/ferrata/bridge/config.json
+IPAddressDeny=any
+IPAddressAllow=localhost
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+MemoryMax=3G
+
+[Install]
+WantedBy=multi-user.target

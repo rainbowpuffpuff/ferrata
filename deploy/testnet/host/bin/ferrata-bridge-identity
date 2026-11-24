@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+"""The Sepolia bridge demo's configuration identity for this zone, from the zone itself.
+
+    ferrata-bridge-identity [--out /var/lib/ferrata/bridge/identity.json]
+
+Writes the identity in the form `crown-driver config-id --identity` reads (lez/crown/driver/src/crown.rs `Identity`):
+  tip               T0: the newest LEZ block final on Bedrock (id, hash), the parent of the vault's first checkpoint
+  channel           the node's /channel/0101..01: accredited keys, posting timeframe, config tip hash
+  bedrockGenesisId  the node's fork digest (GET /chain/fork; Logos Blockchain 0.3.5-rc.1, as checkpoint_b_0_3_5 needs)
+  attestation, bridge, instance   the programs and the Sepolia instance this network deployed (programs.json)
+and beside it `genesisState` (the rule (B) state at T0 with no burns, no imports, no sunset: e2e/crown/identity.py's
+formula), nMin/tMin (the channel's key count and threshold). Reads only (the node and the sequencer on loopback).
+Standard library only; run as root on the host. The configuration's LEZ admin and freeze authority are separate keys
+(ferrata-bridge-roles); the configId needs them and the vault address: `crown-driver config-id`.
+"""
+import argparse
+import base64
+import hashlib
+import json
+import struct
+import time
+import urllib.request
+
+NODE = "http://127.0.0.1:18080"
+RPC = "http://127.0.0.1:3040"
+CHANNEL = "01" * 32
+PROGRAMS = "/var/lib/ferrata/status/programs.json"
+B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+
+
+def get(path):
+    with urllib.request.urlopen(NODE + path, timeout=10) as r:
+        return json.load(r)
+
+
+def rpc(method, params):
+    q = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode()
+    req = urllib.request.Request(RPC, data=q, headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=10) as r:
+        return json.load(r)["result"]
+
+
+def block(i):
+    """id, hash and Bedrock status of an rc3 block (base64 borsh, as ferrata-status reads it)."""
+    b = base64.b64decode(rpc("getBlock", [i]))
+    return {"id": struct.unpack("<Q", b[0:8])[0], "hash": b[40:72].hex(), "status": ["Pending", "Safe", "Finalized"][b[-1]]}
+
+
+def b58(s):
+    n = 0
+    for c in s:
+        n = n * 58 + B58.index(c)
+    raw = n.to_bytes(32, "big")
+    return raw.hex()
+
+
+def genesis_state(tip_id, tip_hash, keys, timeframe, config_tip_hash):
+    key_set = hashlib.sha256(b"ferrata/keyset/v2" + len(keys).to_bytes(4, "big") + timeframe.to_bytes(4, "big")
+                             + b"".join(keys)).digest()
+    frontier = hashlib.sha256(b"ferrata/burn-frontier/v1" + bytes(32 * 32)).digest()
+    return hashlib.sha256(b"ferrata/lez-state/v1" + tip_id.to_bytes(8, "big") + tip_hash + key_set + config_tip_hash
+                          + (0).to_bytes(8, "big") + frontier + (0).to_bytes(8, "big") + b"\x00").digest()
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--out", default="/var/lib/ferrata/bridge/identity.json")
+    a = ap.parse_args()
+    ch = get(f"/channel/{CHANNEL}")
+    fork = get("/chain/fork")["fork_digest"]
+    head = int(rpc("getLastBlockId", []))
+    t0 = None
+    for i in range(head, max(0, head - 200), -1):  # final blocks lag the head by a few blocks
+        b = block(i)
+        if b["status"] == "Finalized":
+            t0 = b
+            break
+    if t0 is None:
+        raise SystemExit("no final block in the last 200: is Bedrock finalising?")
+    progs = json.load(open(PROGRAMS))
+    att, br = progs["programs"]["ferrata_attestation"], progs["programs"]["ferrata_bridge_b1"]
+    inst = progs["instances"]["sepolia"]
+    keys = ch["accredited_keys"]
+    identity = {
+        "label": "ferrata-testnet: LEZ v0.4.0-rc3 on Logos Blockchain 0.3.5-rc.1, one sequencer (AWS)",
+        "chain": "sepolia",
+        "tip": {"id": t0["id"], "hash": "0x" + t0["hash"]},
+        "channel": {"id": "0x" + CHANNEL, "keys": ["0x" + k for k in keys], "postingTimeframe": ch["posting_timeframe"],
+                    "configTipHash": "0x" + ch["config_tip_hash"]},
+        "bedrockGenesisId": "0x" + fork,
+        "evmChainId": 11155111,
+        "attestation": {"account": "0x" + b58(att["program_account"]), "imageId": att["image_id"]},
+        "bridge": {"header": "0x" + b58(br["program_account"]), "imageId": br["image_id"]},
+        "instance": {"id": "0x" + inst["instance_id"].removeprefix("0x"), "checkpoint": "0x" + inst["checkpoint"].removeprefix("0x")},
+    }
+    gs = genesis_state(t0["id"], bytes.fromhex(t0["hash"]), [bytes.fromhex(k) for k in keys], ch["posting_timeframe"],
+                       bytes.fromhex(ch["config_tip_hash"]))
+    identity["vaultParams"] = {"genesisState": "0x" + gs.hex(), "nMin": len(keys), "tMin": ch["configuration_threshold"],
+                               "postingTimeframe": ch["posting_timeframe"]}
+    identity["_made"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    with open(a.out, "w") as f:
+        json.dump(identity, f, indent=2)
+    print(json.dumps(identity, indent=2))
+
+
+if __name__ == "__main__":
+    main()

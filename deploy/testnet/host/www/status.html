@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Network health · Ferrata LEZ testnet</title><link rel="stylesheet" href="/style.css"></head>
+<body><main>
+<nav><a href="/">Home</a><a href="/status/">Light client</a><a href="/explorer/">Explorer</a><a href="/wallet/">Wallet</a><a href="/agents/">AGENTS.md</a></nav>
+<h1>Network health</h1>
+<p class="lead">Updated every minute from the host's own reads. <span id="utc" class="pill">…</span></p>
+<div class="tiles">
+  <div class="tile"><div class="k">LEZ head</div><div class="v" id="head">…</div><small id="headage"></small></div>
+  <div class="tile"><div class="k">Newest block final on Bedrock</div><div class="v" id="final">…</div><small id="fage"></small></div>
+  <div class="tile"><div class="k">Blocks not yet final</div><div class="v" id="nf">…</div></div>
+  <div class="tile"><div class="k">Bedrock slot / height</div><div class="v" id="bed">…</div></div>
+  <div class="tile"><div class="k">Sepolia instance: finalized slot</div><div class="v" id="sep">…</div><small id="seplag"></small></div>
+  <div class="tile"><div class="k">Last update applied</div><div class="v" id="upd">…</div></div>
+</div>
+<h2>Alarms</h2>
+<div id="alarmlist" class="muted">…</div>
+<h2>Finality age, last 24 h</h2>
+<svg id="spark" viewBox="0 0 960 120" width="100%" height="120" role="img" aria-label="Seconds since the newest final block, per minute"></svg>
+<h2>Raw</h2>
+<pre id="raw">…</pre>
+</main>
+<script src="/health.js"></script>
+</body></html>

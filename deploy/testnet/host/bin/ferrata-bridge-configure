@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# The Sepolia bridge demo's LEZ-side configuration for the vault address the deploy tool's --dry predicts (README:
+# "The Sepolia bridge demo"), and the vault's parameters for the owner's deploy:
+#
+#   ferrata-bridge-configure --vault 0x..          (as root; reads only, sends nothing)
+#
+# 1. the zone's identity (ferrata-bridge-identity: T0 = the newest block final on Bedrock, the channel, the fork digest,
+#    the programs, the Sepolia instance) unless one exists (FERRATA_REFRESH=1 makes a new one);
+# 2. the configuration's LEZ admin and freeze authority (ferrata-bridge-roles: two keys made here);
+# 3. its configId for that vault: `crown-driver config-id` (lez/crown/driver; the caps are its defaults);
+# 4. /var/lib/ferrata/bridge/params.json: vault/script/params/sepolia-31.template.json filled (lezConfigId,
+#    genesisState, nMin, tMin, postingTimeframe) for `deploy_sepolia.py --params`, nothing else in it (the vault, the
+#    configId's preimage and the controls are in config.json beside it).
+set -euo pipefail
+VAULT=""
+while [ $# -gt 0 ]; do case "$1" in --vault) VAULT="$2"; shift 2 ;; *) echo "usage: $0 --vault 0x.." >&2; exit 2 ;; esac; done
+[[ "$VAULT" =~ ^0x[0-9a-fA-F]{40}$ ]] || { echo "--vault 0x<40 hex>" >&2; exit 2; }
+B=/var/lib/ferrata/bridge
+[ -f "$B/identity.json" ] && [ "${FERRATA_REFRESH:-0}" != 1 ] || python3 -I /opt/ferrata/bin/ferrata-bridge-identity --out "$B/identity.json" > /dev/null
+chmod 644 "$B/identity.json"
+bash /opt/ferrata/bin/ferrata-bridge-roles > /dev/null
+CROWN_ADMIN="$(python3 -I -c 'import json; print(json.load(open("/var/lib/ferrata/bridge/roles.json"))["admin"])')"
+CROWN_FREEZE_AUTHORITY="$(python3 -I -c 'import json; print(json.load(open("/var/lib/ferrata/bridge/roles.json"))["freezeAuthority"])')"
+export CROWN_ADMIN CROWN_FREEZE_AUTHORITY
+/opt/ferrata/bin/crown-driver config-id --identity "$B/identity.json" --vault "$VAULT" > "$B/config.json"
+python3 -I - "$B/identity.json" "$B/config.json" "$VAULT" <<'EOF' > "$B/params.json"
+import json, sys
+idn, cfg, vault = json.load(open(sys.argv[1])), json.load(open(sys.argv[2])), sys.argv[3]
+vp = idn["vaultParams"]
+print(json.dumps({
+    "_source": "ferrata-testnet (AWS, LEZ v0.4.0-rc3): ferrata-bridge-configure for the vault " + vault
+               + "; T0 block " + str(idn["tip"]["id"]) + "; vault/script/params/sepolia-31.template.json filled",
+    "checkpointImageIdA": "0x9140ec7479debc9b40529b0805095d4cfdef93a1e0500c6687a1d7ec4d7c42de",
+    "checkpointImageIdB": "0x8917f58e76aa805dedc04fc5e2b70404f5078b66b271ec44aaa0c78d9f5eaf04",
+    "releaseImageId": "0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd",
+    "lezConfigId": cfg["configId"],
+    "genesisState": vp["genesisState"],
+    "nMin": vp["nMin"], "tMin": vp["tMin"], "postingTimeframe": vp["postingTimeframe"],
+    "ethLezDefinition": "0x" + "00" * 32, "tokenLezDefinition": "0x" + "00" * 32,
+}, indent=2))
+EOF
+# realblocks-crown reads the configuration's attestationRootId and salt from the identity: the preimage's own words.
+python3 -I - "$B/identity.json" "$B/config.json" <<'EOF'
+import json, sys
+idn, cfg = json.load(open(sys.argv[1])), json.load(open(sys.argv[2]))
+pre = bytes.fromhex(cfg["preimage"].removeprefix("0x"))
+assert len(pre) == 261 and pre[:17] == b"ferrata/config/v1"
+idn["attestationRootId"] = "0x" + pre[197:229].hex()
+idn["salt"] = "0x" + pre[229:261].hex()
+json.dump(idn, open(sys.argv[1], "w"), indent=2)
+EOF
+chmod 644 "$B/config.json" "$B/params.json"
+cat "$B/params.json"

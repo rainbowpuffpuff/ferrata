@@ -1,0 +1,33 @@
+[Unit]
+Description=ferrata-updater: keeps the testnet's Sepolia instance current (Lodestar light-client data; publicnode confirms each finalized header)
+After=ferrata-sequencer.service
+Wants=ferrata-sequencer.service
+RequiresMountsFor=/var/lib/ferrata
+ConditionPathExists=/var/lib/ferrata/day1/state/daemon/updater.toml
+
+[Service]
+User=ferrata
+Group=ferrata
+# The configuration lez/testnet04/day1.sh wrote for the instance it initialized (stage c).
+WorkingDirectory=/var/lib/ferrata/day1/state/daemon
+Environment=FERRATA_TESTNET_SEND=yes
+Environment=XDG_CACHE_HOME=/opt/ferrata/cache
+Environment=RISC0_SERVER_PATH=/opt/ferrata/bin/r0vm
+Environment=PATH=/opt/ferrata/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/opt/ferrata/bin/ferrata-updater --config updater.toml
+# day1.sh status / daemon-status read this pid file.
+ExecStartPost=/bin/sh -c 'echo $MAINPID > /var/lib/ferrata/day1/state/daemon/pid'
+Restart=always
+RestartSec=30
+# A stop waits for the transaction being settled (the daemon decides from the chain on restart either way).
+TimeoutStopSec=300
+StandardOutput=append:/var/log/ferrata/updater.log
+StandardError=append:/var/log/ferrata/updater.log
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/ferrata/day1 /var/log/ferrata
+
+[Install]
+WantedBy=multi-user.target

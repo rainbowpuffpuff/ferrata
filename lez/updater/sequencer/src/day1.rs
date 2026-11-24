@@ -20,6 +20,14 @@
 //!   keygen   --keys DIR --program ACCOUNT                                  the same for an instance on a program deployed
 //!                                                                        already (its account only: no program keys)
 //!   sign     --keys DIR --state DIR [--store DIR] --stage deploy-program|deploy-bridge|init|attest [--bin F] [--fetch DIR]
+//!            --stage bridge-init --identity F --bridge-config F --fetch DIR   the bridge program's `Init` (pairing: the
+//!            vault's slot 2 holds the configId) and ETH's `Register` (registry entry, schedules 0 and 1, leaf count)
+//!            under the instance's newest record, from `eth_getProof` there (deploy/testnet: ferrata-bridge-lez-init)
+//!            --stage bridge-import --identity F --bridge-config F --fetch DIR   the bridge's `ImportRoot`: the vault's
+//!            deposit root and leaf count n (slots 0 and 1) under the newest record, written to root(cid, n)
+//!            (deploy/testnet: ferrata-bridge-lez-import)
+//!            --stage bridge-fees ...   ETH's `ImportFees` with no new schedule: known_until up to the vault's count
+//!            (a claim's leaf must lie below it; registration set it to the count then)
 //!   send     --state DIR --stage S                                       send the stage's stored bytes, settle each
 //!   status   --state DIR --stage S                                       each stored transaction: applied / pending / dead
 //!   target   --keys DIR --state DIR                                      the instance's newest record: slot, block hash
@@ -27,6 +35,15 @@
 //!   verify   --keys DIR --state DIR --bin F [--bridge-bin F]            re-read every verdict; exit 0 only if all match
 //!   fund     --keys DIR --amount N                                       rehearsal only: LEZ's published local test
 //!                                                                        account pays the payer and the daemon key
+//!   transfer --from-key F --to ACCOUNT [--to-pk HEX] --amount N --state DIR [--wait S] [--record FILE]
+//!                                                                        a native-token transfer from the key's
+//!                                                                        public account (the testnet's faucet,
+//!                                                                        deploy/testnet); one JSON line with its
+//!                                                                        receipt (state applied | reverted |
+//!                                                                        pending), no key; --record: its hash, bytes
+//!                                                                        and nonce written to FILE before it is sent
+//!   transfer-status --record FILE --state DIR                            applied | reverted | dropped | pending
+//!   transfer-resend --record FILE --state DIR                            the same bytes again (same nonce)
 //!
 //! Reading a sequencer that is not on this machine needs `FERRATA_SEQUENCER_REMOTE=<that exact URL>`; sending to it
 //! needs `FERRATA_TESTNET_SEND=yes` as well (`live.rs`, `check_loopback` and `check_send`, checked before every send).
@@ -48,6 +65,7 @@ use ferrata_core::{
     witness::{CompactBootstrap, CompactStore, ExecutionSummary, HeaderRecord},
     Root,
 };
+use ferrata_lez_bridge_wire as bw;
 use ferrata_lez_wire::{
     attest, header_actor, header_seed, instance_actor, instance_id, instance_seed, job_actor, job_id, Config,
     InstanceState, Message, RecordState,
@@ -80,6 +98,16 @@ pub const PRESET: &str = "sepolia";
 pub const LAYOUT: &str = "gloas";
 pub const ADOPTION_PARTS: u8 = 2;
 const SEPOLIA_CHAIN_ID: u64 = 11_155_111;
+/// The bridge's `Init` and `Register`: an attestation of the vault's slots chained from the bridge program.
+const BRIDGE_GAS: u64 = 3_000_000;
+/// ETH's registry entry and fee schedule 0 as the vault's DeployVault registers them (lez/crown/driver's `eth_entry`,
+/// `eth_schedule_zero`): checked against the vault's own registry and fee slots before anything is signed.
+const ETH: [u8; 20] = [0; 20];
+const ETH_DENOMINATIONS: [u128; 3] = [1_000_000_000_000_000, 10_000_000_000_000_000, 100_000_000_000_000_000];
+const ETH_RELAY_FEES: [u128; 3] = [2_000_000_000_000, 20_000_000_000_000, 200_000_000_000_000];
+const ETH_CHECKPOINT_FEES: [u128; 3] = [1_000_000_000_000, 10_000_000_000_000, 100_000_000_000_000];
+const ETH_LEZ_UNIT: u128 = 1_000_000_000_000;
+const ETH_UNIT_WEIGHT: u128 = 3000;
 
 // ---- arguments ---------------------------------------------------------------------------------------------------
 
@@ -648,6 +676,70 @@ fn segment_of(s: &[u8]) -> Option<program_loader_core::ProgramSegment> {
 
 // ---- commands --------------------------------------------------------------------------------------------------
 
+// ---- the bridge's configuration on this zone (deploy/testnet: the Sepolia bridge demo) --------------------------------
+
+fn eth_entry() -> bw::TokenEntry {
+    bw::TokenEntry {
+        token: ETH,
+        lez_definition: [0; 32],
+        decimals: 18,
+        lez_unit: ETH_LEZ_UNIT,
+        unit_weight: ETH_UNIT_WEIGHT,
+        denominations: ETH_DENOMINATIONS.to_vec(),
+        relay_fees: ETH_RELAY_FEES.to_vec(),
+    }
+}
+
+fn eth_schedule_zero(t: u64) -> bw::FeeSchedule {
+    bw::FeeSchedule {
+        index: 0,
+        from_leaf: 0,
+        announced_at: t,
+        effective_at: t,
+        mint_fees: vec![0; 3],
+        burn_fees: vec![0; 3],
+        checkpoint_fees: ETH_CHECKPOINT_FEES.to_vec(),
+    }
+}
+
+fn cap_params(v: &Value, what: &str) -> Result<bw::CapParams> {
+    let n = |k: &str| -> Result<u128> {
+        v[k].as_str().ok_or_else(|| anyhow!("{what}.{k}: not a string"))?.parse().with_context(|| format!("{what}.{k}"))
+    };
+    Ok(bw::CapParams { capacity: n("capacity")?, refill_per_second: n("refillPerSecond")? })
+}
+
+/// The configuration `crown-driver config-id` printed for this zone's identity (deploy/testnet: ferrata-bridge-identity,
+/// ferrata-bridge-configure), rebuilt and held to its configId: the bridge's own encoding, so what `Init` writes is
+/// what the vault pins.
+fn bridge_config(identity: &Value, cfg: &Value) -> Result<(bw::BridgeConfig, AccountId, Root)> {
+    let vault: [u8; 20] = unhex(&cfg["vault"], "vault")?.try_into().map_err(|_| anyhow!("vault: not 20 bytes"))?;
+    let c = &cfg["controls"];
+    let controls = bw::Controls {
+        admin: word(&c["admin"], "controls.admin")?,
+        freeze_authority: word(&c["freezeAuthority"], "controls.freezeAuthority")?,
+        fee_recipient: word(&c["feeRecipient"], "controls.feeRecipient")?,
+        floor: cap_params(&c["floor"], "controls.floor")?,
+        token_cap: cap_params(&c["tokenCap"], "controls.tokenCap")?,
+        global_cap: cap_params(&c["globalCap"], "controls.globalCap")?,
+    };
+    controls.check().map_err(|code| anyhow!("the controls would be refused by Init (code {code})"))?;
+    let bridge = AccountId::new(word(&identity["bridge"]["header"], "bridge.header")?);
+    let config = bw::BridgeConfig {
+        bedrock_genesis_id: word(&identity["bedrockGenesisId"], "bedrockGenesisId")?,
+        channel_id: word(&identity["channel"]["id"], "channel.id")?,
+        bridge_image_id: word(&identity["bridge"]["imageId"], "bridge.imageId")?,
+        attestation: AccountId::new(word(&identity["attestation"]["account"], "attestation.account")?),
+        instance_id: word(&identity["instance"]["id"], "instance.id")?,
+        evm_chain_id: SEPOLIA_CHAIN_ID,
+        vault,
+        controls,
+    };
+    let cid = config.id(bridge);
+    ensure!(cid == word(&cfg["configId"], "configId")?, "the rebuilt configuration's id 0x{} is not the configId {}", hex::encode(cid), cfg["configId"]);
+    Ok((config, bridge, cid))
+}
+
 async fn cmd_sign(a: &Args) -> Result<()> {
     let keys = a.path("keys")?;
     let state = a.path("state")?;
@@ -693,6 +785,185 @@ async fn cmd_sign(a: &Args) -> Result<()> {
             let (tx, signers) = public_tx(root, message, vec![root], vec![PublicAccountEvidence::Pda { program: d.program(), seed: header_seed(&id, slot) }], &[(&payer, n)], &payer, ATTEST_GAS, fee);
             let info = json!({"record_slot": slot, "block_hash": format!("0x{}", hex::encode(block_hash_of(&hr)?)), "verdict": attestation_json(&verdict), "eth_getProof": sources});
             (vec![(tx.clone(), tx_meta(&format!("Attest: the vault's slots 0 and 1 under header({}, {slot})", &hex::encode(id)[..8]), &tx, &signers, ATTEST_GAS, fee))], info)
+        }
+        "bridge-init" => {
+            let identity: Value = serde_json::from_str(&fs::read_to_string(a.path("identity")?)?)?;
+            let cfg: Value = serde_json::from_str(&fs::read_to_string(a.path("bridge-config")?)?)?;
+            let (config, bridge, cid) = bridge_config(&identity, &cfg)?;
+            let (attest_program, id) = (config.attestation, config.instance_id);
+            let config_actor = bw::config_actor(bridge, &cid);
+            let token = bw::token_actor(bridge, &cid, &ETH);
+            // Init and Register ETH, or Register alone when an Init applied and its Register did not (the pair is two
+            // transactions: the second can be refused or lost on its own).
+            let paired = !final_state(&live, config_actor).is_empty();
+            ensure!(
+                !(paired && !final_state(&live, token).is_empty()),
+                "config(0x{}) and token(cid, ETH) exist on the zone already: nothing to sign",
+                hex::encode(cid)
+            );
+            let (slot, hr, _) = newest_record(&live, attest_program, &id).await?;
+            let dir = a.path("fetch")?.join("proofs").join(slot.to_string());
+            ensure!(dir.join("proof.json").exists(), "no proofs for slot {slot} in {} (fetch them first)", dir.display());
+            let (request, sources) = attest_request(&id, &dir)?;
+            let acct = request.accounts.first().ok_or_else(|| anyhow!("no account in the proofs"))?;
+            ensure!(acct.address == config.vault, "the proofs are of 0x{}, not the vault 0x{}", hex::encode(acct.address), hex::encode(config.vault));
+            // The attestation program's own check, natively, on the record the zone holds: the header and every proof.
+            attest::evaluate(&id, SEPOLIA_CHAIN_ID, &hr, &request).map_err(|c| anyhow!("the attestation program would refuse these proofs (code {c})"))?;
+            let value = |key: &bw::Word| -> Result<[u8; 32]> {
+                let e = sources["slots"].as_array().into_iter().flatten()
+                    .find(|e| word(&e["slot"], "slot").map(|w| w == *key).unwrap_or(false))
+                    .ok_or_else(|| anyhow!("no proof of slot 0x{}", hex::encode(key)))?;
+                word(&e["value"], "value")
+            };
+            let proof_of = |key: &bw::Word| -> Result<Vec<Vec<u8>>> {
+                acct.slots.iter().find(|q| q.slot == *key).map(|q| q.proof.clone()).ok_or_else(|| anyhow!("no proof of slot 0x{}", hex::encode(key)))
+            };
+            ensure!(value(&bw::SLOT_CONFIG_ID)? == cid, "the vault's slot 2 is 0x{}, not the configId 0x{}", hex::encode(value(&bw::SLOT_CONFIG_ID)?), hex::encode(cid));
+            let entry = eth_entry();
+            ensure!(value(&bw::registry_slot(&ETH))? == entry.hash(), "the vault's ETH registry entry is not the one this registers (other denominations or fees?)");
+            let fee0 = value(&bw::fee_slot(&ETH, 0))?;
+            ensure!(fee0 != [0; 32], "the vault's ETH fee schedule 0 is empty: ETH is not registered yet");
+            let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_secs();
+            let t = (now.saturating_sub(30 * 24 * 3600)..=now).rev().find(|t| eth_schedule_zero(*t).hash(&ETH) == fee0)
+                .ok_or_else(|| anyhow!("no time in the last 30 days gives the vault's ETH schedule 0 (other fees?)"))?;
+            let account = bw::with_header(fs::read(dir.join("header.rlp"))?, acct.proof.clone());
+            let init = bw::BridgeMessage::Init { config: config.clone(), record_slot: slot, proof: bw::PairingProof { account: account.clone(), config_slot: proof_of(&bw::SLOT_CONFIG_ID)? } };
+            let register = bw::BridgeMessage::Register {
+                config_id: cid,
+                entry,
+                schedule: eth_schedule_zero(t),
+                record_slot: slot,
+                proof: bw::VaultProof { account, slots: bw::register_slots(&ETH).iter().map(&proof_of).collect::<Result<_>>()? },
+            };
+            let header = header_actor(attest_program, &id, slot);
+            let ev_config = PublicAccountEvidence::Pda { program: bridge, seed: bw::config_seed(&cid) };
+            let ev_header = PublicAccountEvidence::Pda { program: attest_program, seed: header_seed(&id, slot) };
+            let ev_token = PublicAccountEvidence::Pda { program: bridge, seed: bw::token_seed(&cid, &ETH) };
+            let mut txs = Vec::new();
+            let mut nonce = n;
+            if !paired {
+                let m1 = borsh::to_vec(&init)?;
+                let f1 = max_fee(BRIDGE_GAS, m1.len() + 512, q);
+                let (tx1, s1) = public_tx(config_actor, m1, vec![config_actor, header], vec![ev_config.clone(), ev_header.clone()], &[(&payer, nonce)], &payer, BRIDGE_GAS, f1);
+                txs.push((tx1.clone(), tx_meta(&format!("bridge Init: config 0x{} paired with the vault's slot 2 under header({}, {slot})", &hex::encode(cid)[..8], &hex::encode(id)[..8]), &tx1, &s1, BRIDGE_GAS, f1)));
+                nonce += 1;
+            }
+            let m2 = borsh::to_vec(&register)?;
+            let f2 = max_fee(BRIDGE_GAS, m2.len() + 512, q);
+            let (tx2, s2) = public_tx(config_actor, m2, vec![config_actor, header, token], vec![ev_config, ev_header, ev_token], &[(&payer, nonce)], &payer, BRIDGE_GAS, f2);
+            txs.push((tx2.clone(), tx_meta("bridge Register ETH: registry entry, schedules 0 and 1, leaf count", &tx2, &s2, BRIDGE_GAS, f2)));
+            let info = json!({"config_id": format!("0x{}", hex::encode(cid)), "vault": format!("0x{}", hex::encode(config.vault)),
+                "record_slot": slot, "block_hash": format!("0x{}", hex::encode(block_hash_of(&hr)?)), "eth_schedule0_at": t,
+                "eth_entry_hash": format!("0x{}", hex::encode(eth_entry().hash())), "eth_getProof": sources,
+                "register_only": paired});
+            (txs, info)
+        }
+        "bridge-import" => {
+            let identity: Value = serde_json::from_str(&fs::read_to_string(a.path("identity")?)?)?;
+            let cfg: Value = serde_json::from_str(&fs::read_to_string(a.path("bridge-config")?)?)?;
+            let (config, bridge, cid) = bridge_config(&identity, &cfg)?;
+            let (attest_program, id) = (config.attestation, config.instance_id);
+            let config_actor = bw::config_actor(bridge, &cid);
+            ensure!(!final_state(&live, config_actor).is_empty(), "config(0x{}) is not on the zone: Init first", hex::encode(cid));
+            let (slot, hr, _) = newest_record(&live, attest_program, &id).await?;
+            let dir = a.path("fetch")?.join("proofs").join(slot.to_string());
+            ensure!(dir.join("proof.json").exists(), "no proofs for slot {slot} in {} (fetch them first)", dir.display());
+            let (request, sources) = attest_request(&id, &dir)?;
+            let acct = request.accounts.first().ok_or_else(|| anyhow!("no account in the proofs"))?;
+            ensure!(acct.address == config.vault, "the proofs are of 0x{}, not the vault 0x{}", hex::encode(acct.address), hex::encode(config.vault));
+            attest::evaluate(&id, SEPOLIA_CHAIN_ID, &hr, &request).map_err(|c| anyhow!("the attestation program would refuse these proofs (code {c})"))?;
+            let value = |key: &bw::Word| -> Result<[u8; 32]> {
+                let e = sources["slots"].as_array().into_iter().flatten()
+                    .find(|e| word(&e["slot"], "slot").map(|w| w == *key).unwrap_or(false))
+                    .ok_or_else(|| anyhow!("no proof of slot 0x{}", hex::encode(key)))?;
+                word(&e["value"], "value")
+            };
+            let proof_of = |key: &bw::Word| -> Result<Vec<Vec<u8>>> {
+                acct.slots.iter().find(|q| q.slot == *key).map(|q| q.proof.clone()).ok_or_else(|| anyhow!("no proof of slot 0x{}", hex::encode(key)))
+            };
+            let root = value(&bw::SLOT_ROOT)?;
+            let count = value(&bw::SLOT_COUNT)?;
+            ensure!(count[..24].iter().all(|b| *b == 0), "the vault's leaf count does not fit 64 bits");
+            let leaves = u64::from_be_bytes(count[24..].try_into()?);
+            ensure!(leaves > 0, "no deposit in the vault under record slot {slot} (leaf count 0)");
+            let root_actor = bw::root_actor(bridge, &cid, leaves);
+            ensure!(final_state(&live, root_actor).is_empty(), "root(cid, {leaves}) is on the zone already: nothing to import under record slot {slot}");
+            let account = bw::with_header(fs::read(dir.join("header.rlp"))?, acct.proof.clone());
+            let message = bw::BridgeMessage::ImportRoot {
+                config_id: cid,
+                record_slot: slot,
+                root,
+                leaf_count: leaves,
+                proof: bw::ImportProof { account, root_slot: proof_of(&bw::SLOT_ROOT)?, count_slot: proof_of(&bw::SLOT_COUNT)? },
+            };
+            let header = header_actor(attest_program, &id, slot);
+            let m = borsh::to_vec(&message)?;
+            let f = max_fee(BRIDGE_GAS, m.len() + 512, q);
+            let (tx, s1) = public_tx(config_actor, m, vec![config_actor, header, root_actor], vec![
+                PublicAccountEvidence::Pda { program: bridge, seed: bw::config_seed(&cid) },
+                PublicAccountEvidence::Pda { program: attest_program, seed: header_seed(&id, slot) },
+                PublicAccountEvidence::Pda { program: bridge, seed: bw::root_seed(&cid, leaves) },
+            ], &[(&payer, n)], &payer, BRIDGE_GAS, f);
+            let info = json!({"config_id": format!("0x{}", hex::encode(cid)), "vault": format!("0x{}", hex::encode(config.vault)),
+                "record_slot": slot, "block_hash": format!("0x{}", hex::encode(block_hash_of(&hr)?)), "leaf_count": leaves,
+                "deposit_root": format!("0x{}", hex::encode(root)), "eth_getProof": sources});
+            (vec![(tx.clone(), tx_meta(&format!("bridge ImportRoot n={leaves}: deposit root 0x{} under header({}, {slot})", &hex::encode(root)[..8], &hex::encode(id)[..8]), &tx, &s1, BRIDGE_GAS, f))], info)
+        }
+        "bridge-fees" => {
+            // A claim's leaf must lie below the token's `known_until`, which registration set to the vault's leaf count
+            // then; `ImportFees` with no new schedule (the vault's next fee slot empty) extends it to the count now.
+            let identity: Value = serde_json::from_str(&fs::read_to_string(a.path("identity")?)?)?;
+            let cfg: Value = serde_json::from_str(&fs::read_to_string(a.path("bridge-config")?)?)?;
+            let (config, bridge, cid) = bridge_config(&identity, &cfg)?;
+            let (attest_program, id) = (config.attestation, config.instance_id);
+            let config_actor = bw::config_actor(bridge, &cid);
+            let token_actor = bw::token_actor(bridge, &cid, &ETH);
+            let tbytes = final_state(&live, token_actor);
+            ensure!(!tbytes.is_empty(), "token(cid, ETH) is not on the zone: Register first");
+            let bw::BridgeState::Token(token) = borsh::from_slice::<bw::BridgeState>(&tbytes)? else { bail!("token(cid, ETH) holds another state") };
+            let index = token.schedules.len() as u64;
+            let (slot, hr, _) = newest_record(&live, attest_program, &id).await?;
+            let dir = a.path("fetch")?.join("proofs").join(slot.to_string());
+            ensure!(dir.join("proof.json").exists(), "no proofs for slot {slot} in {} (fetch them first)", dir.display());
+            let (request, sources) = attest_request(&id, &dir)?;
+            let acct = request.accounts.first().ok_or_else(|| anyhow!("no account in the proofs"))?;
+            ensure!(acct.address == config.vault, "the proofs are of 0x{}, not the vault 0x{}", hex::encode(acct.address), hex::encode(config.vault));
+            attest::evaluate(&id, SEPOLIA_CHAIN_ID, &hr, &request).map_err(|c| anyhow!("the attestation program would refuse these proofs (code {c})"))?;
+            let value = |key: &bw::Word| -> Result<[u8; 32]> {
+                let e = sources["slots"].as_array().into_iter().flatten()
+                    .find(|e| word(&e["slot"], "slot").map(|w| w == *key).unwrap_or(false))
+                    .ok_or_else(|| anyhow!("no proof of slot 0x{} (fetch fee slot {index})", hex::encode(key)))?;
+                word(&e["value"], "value")
+            };
+            let proof_of = |key: &bw::Word| -> Result<Vec<Vec<u8>>> {
+                acct.slots.iter().find(|q| q.slot == *key).map(|q| q.proof.clone()).ok_or_else(|| anyhow!("no proof of slot 0x{}", hex::encode(key)))
+            };
+            let fees_key = bw::fee_slot(&ETH, index);
+            ensure!(value(&fees_key)? == [0; 32], "the vault has an ETH fee schedule {index}: import it with its schedule (not done here)");
+            let count = value(&bw::SLOT_COUNT)?;
+            ensure!(count[..24].iter().all(|b| *b == 0), "the vault's leaf count does not fit 64 bits");
+            let leaves = u64::from_be_bytes(count[24..].try_into()?);
+            ensure!(leaves > token.known_until, "token(cid, ETH) is known until leaf {} already (vault count {leaves}): nothing to extend", token.known_until);
+            let account = bw::with_header(fs::read(dir.join("header.rlp"))?, acct.proof.clone());
+            let message = bw::BridgeMessage::ImportFees {
+                config_id: cid,
+                token: ETH,
+                index,
+                schedule: None,
+                record_slot: slot,
+                proof: bw::VaultProof { account, slots: vec![proof_of(&fees_key)?, proof_of(&bw::SLOT_COUNT)?] },
+            };
+            let header = header_actor(attest_program, &id, slot);
+            let m = borsh::to_vec(&message)?;
+            let f = max_fee(BRIDGE_GAS, m.len() + 512, q);
+            let (tx, s1) = public_tx(config_actor, m, vec![config_actor, header, token_actor], vec![
+                PublicAccountEvidence::Pda { program: bridge, seed: bw::config_seed(&cid) },
+                PublicAccountEvidence::Pda { program: attest_program, seed: header_seed(&id, slot) },
+                PublicAccountEvidence::Pda { program: bridge, seed: bw::token_seed(&cid, &ETH) },
+            ], &[(&payer, n)], &payer, BRIDGE_GAS, f);
+            let info = json!({"config_id": format!("0x{}", hex::encode(cid)), "record_slot": slot, "index": index,
+                "known_until_before": token.known_until, "leaf_count": leaves, "eth_getProof": sources});
+            (vec![(tx.clone(), tx_meta(&format!("bridge ImportFees ETH: schedule {index} absent, known until leaf {leaves} (was {})", token.known_until), &tx, &s1, BRIDGE_GAS, f))], info)
         }
         other => bail!("unknown stage {other}"),
     };
@@ -813,12 +1084,13 @@ async fn inspect(a: &Args, live: &Live) -> Result<Value> {
         let inst: Value = serde_json::from_str(&fs::read_to_string(store.join("instance.json"))?)?;
         let id: Root = ferrata_updater::chain::root(inst["instance_id"].as_str().unwrap_or_default())?;
         let program: AccountId = inst["program"].as_str().unwrap_or_default().parse().map_err(|e| anyhow!("{e:?}"))?;
+        let account = AccountId::for_public_pda(&program, &instance_seed(&id)).to_string();
         v["instance"] = match instance_state(live, program, &id).await? {
-            None => json!({"id": hex::encode(id), "exists": false}),
+            None => json!({"id": hex::encode(id), "account": account, "exists": false}),
             Some(s) => {
                 let store = CompactStore::decode(&s.store).map_err(|e| anyhow!("store: {e:?}"))?;
                 let config_ok = s.config == ferrata_updater::chain::instance_config(PRESET, ADOPTION_PARTS, Some(LAYOUT))?;
-                json!({"id": hex::encode(id), "exists": true, "id_matches": s.id == id, "config_matches": config_ok, "active": s.active,
+                json!({"id": hex::encode(id), "account": account, "exists": true, "id_matches": s.id == id, "config_matches": config_ok, "active": s.active,
                        "applied": s.applied, "finalized_slot": store.finalized.slot, "finalized_header_ssz": hex::encode(header_ssz(&store.finalized)),
                        "root_id": hex::encode(s.root_id)})
             }
@@ -942,6 +1214,261 @@ async fn cmd_fund(a: &Args) -> Result<()> {
     Ok(())
 }
 
+/// The testnet's faucet (`deploy/testnet`, the gateway's `/faucet`): the public account of `--from-key` pays `--amount`
+/// to the public account `--to` with LEZ's own native-token transfer (as `fund` does), through the wallet alone: no
+/// follower, so a claim does not replay the chain. Waits for the transfer's own receipt (at most `--wait` seconds,
+/// default 120) and prints one JSON line (hash, recipient, amount, state: applied, reverted or pending, block,
+/// credited). With `--record FILE` the signed transaction is written to FILE before it is sent (`RecordingClient`).
+/// The key is read from its file and never printed. Sending follows `live.rs`'s rules (`check_send`).
+async fn cmd_transfer(a: &Args) -> Result<()> {
+    use std::str::FromStr as _;
+    let key = read_key(&a.path("from-key")?)?;
+    let amount: u128 = a.need("amount")?.parse().context("--amount")?;
+    ensure!(amount > 0, "--amount must be positive");
+    // A public account never used before is credited only with admission evidence: its public key
+    // (`--to-pk`, 64 hex digits, as LEZ's wallet prints it); `--to` alone reaches an account that exists.
+    let to_pk = match a.get("to-pk") {
+        Some(h) => {
+            let b: [u8; 32] = hex::decode(h.trim().trim_start_matches("0x"))
+                .context("--to-pk: not hex")?
+                .try_into()
+                .map_err(|_| anyhow!("--to-pk: not 32 bytes"))?;
+            Some(PublicKey::try_new(b).map_err(|e| anyhow!("--to-pk: not a public key ({e:?})"))?)
+        }
+        None => None,
+    };
+    let to = match (a.get("to"), &to_pk) {
+        (Some(t), pk) => {
+            let t = t.trim();
+            let t = t.strip_prefix("Public/").unwrap_or(t);
+            let to = AccountId::from_str(t).map_err(|e| anyhow!("--to {t}: not a LEZ public account id ({e:?})"))?;
+            if let Some(pk) = pk {
+                ensure!(AccountId::from(pk) == to, "--to-pk is not the key of --to");
+            }
+            to
+        }
+        (None, Some(pk)) => AccountId::from(pk),
+        (None, None) => bail!("--to ACCOUNT or --to-pk HEX is required"),
+    };
+    let from = id_of(&key);
+    ensure!(to != from, "--to is the paying account itself");
+    let rpc = a.need("rpc")?.to_string();
+    crate::live::check_send(&rpc)?;
+    let wait: u64 = a.get("wait").unwrap_or("120").parse().context("--wait")?;
+    let home = a.path("state")?.join("wallet");
+    let dest = match to_pk {
+        Some(pk) => wallet::AccountIdentity::PublicForeign(pk),
+        None => wallet::AccountIdentity::PublicNoSign(to),
+    };
+    match a.get("record") {
+        Some(record) => {
+            let w = open_recording_wallet(&home, &rpc, key, PathBuf::from(record), from)?;
+            send_and_wait(&w, from, to, dest, amount, wait).await
+        }
+        None => send_and_wait(&crate::live::open_wallet(&home, &rpc, &[key])?, from, to, dest, amount, wait).await,
+    }
+}
+
+/// The transfer, then its receipt polled for `wait` seconds: its own hash in a block, and whether its action reverted
+/// there (`applied`, `reverted`; `pending` when not in a block yet). After the send a failed read is retried, never an
+/// error: the caller must always learn the hash.
+async fn send_and_wait<C: wallet::WalletSequencerClient>(
+    w: &wallet::WalletCore<C>,
+    from: AccountId,
+    to: AccountId,
+    dest: wallet::AccountIdentity,
+    amount: u128,
+    wait: u64,
+) -> Result<()> {
+    use wallet::program_facades::{native_token_transfer::NativeTokenTransfer, CreditDelivery};
+    let (hash, _) = NativeTokenTransfer(w)
+        .transfer(wallet::AccountIdentity::Public(from), dest, amount, CreditDelivery::Automatic)
+        .await
+        .map_err(|e| anyhow!("the transfer was not sent: {e:?}"))?;
+    let t0 = Instant::now();
+    let (mut state, mut block) = ("pending", None);
+    while t0.elapsed().as_secs() < wait {
+        if let Ok(Some((s, b))) = receipt(w.client(), &hash.0).await {
+            (state, block) = (s, Some(b));
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    }
+    println!(
+        "{}",
+        json!({
+            "hash": hex::encode(hash.0), "from": from.to_string(), "to": to.to_string(), "amount": amount.to_string(),
+            "state": state, "block": block, "credited": state == "applied", "seconds": t0.elapsed().as_secs_f64(),
+        })
+    );
+    Ok(())
+}
+
+/// The receipt of the transaction `hash`: `applied` or `reverted` (its action, in the block that holds it) and the
+/// block's id, or None while no block holds it.
+async fn receipt<C: wallet::WalletSequencerClient>(c: &C, hash: &[u8; 32]) -> Result<Option<(&'static str, u64)>> {
+    let Some((_, id)) = c.get_transaction(common::HashType(*hash)).await.map_err(|e| anyhow!("getTransaction: {e}"))? else {
+        return Ok(None);
+    };
+    let block = c.get_block(id).await.map_err(|e| anyhow!("getBlock {id}: {e}"))?.ok_or_else(|| anyhow!("block {id} is not served"))?;
+    let i = block.body.transactions.iter().position(|t| t.hash().0 == *hash).ok_or_else(|| anyhow!("block {id} does not hold it"))?;
+    Ok(Some((if block.body.reverted.contains(&(i as u64)) { "reverted" } else { "applied" }, id)))
+}
+
+/// The client of the faucet's transfers (`transfer --record FILE`): before a transaction leaves, its record (its hash,
+/// its bytes and the sender's nonce it spends) is written whole to FILE (synced, renamed into place), and only then is it
+/// sent. Whoever loses the tool's answer looks the transfer up by its own hash (`transfer-status`) and may send the very
+/// same bytes again (`transfer-resend`: the same nonce, so at most one of them is ever applied).
+#[derive(Clone)]
+struct RecordingClient {
+    inner: sequencer_service_rpc::SequencerClient,
+    record: PathBuf,
+    from: AccountId,
+}
+
+impl RecordingClient {
+    fn write(&self, tx: &LeeTransaction) -> std::result::Result<(), String> {
+        let nonce = match tx {
+            LeeTransaction::Public(p) => p.message.nonces.get(&self.from).map(|n| n.0),
+            LeeTransaction::PrivacyPreserving(_) => None,
+        }
+        .ok_or("not a public transaction the faucet account signs")?;
+        let bytes = borsh::to_vec(tx).map_err(|e| e.to_string())?;
+        let body = json!({"hash": hex::encode(tx.hash().0), "from": self.from.to_string(), "nonce": nonce.to_string(),
+                          "tx": hex::encode(bytes)});
+        let tmp = self.record.with_extension("partial");
+        let mut f = fs::File::create(&tmp).map_err(|e| e.to_string())?;
+        f.write_all(body.to_string().as_bytes()).and_then(|()| f.sync_all()).map_err(|e| e.to_string())?;
+        fs::rename(&tmp, &self.record).map_err(|e| e.to_string())?;
+        if let Some(dir) = self.record.parent() {
+            fs::File::open(dir).and_then(|d| d.sync_all()).map_err(|e| e.to_string())?;
+        }
+        Ok(())
+    }
+}
+
+impl wallet::WalletSequencerClient for RecordingClient {
+    type Error = sequencer_service_rpc::ClientError;
+
+    async fn send_transaction(&self, tx: LeeTransaction) -> std::result::Result<common::HashType, Self::Error> {
+        self.write(&tx).map_err(|e| sequencer_service_rpc::ClientError::Custom(format!("not sent: its record: {e}")))?;
+        <sequencer_service_rpc::SequencerClient as wallet::WalletSequencerClient>::send_transaction(&self.inner, tx).await
+    }
+    async fn get_block(&self, block_id: lee_core::BlockId) -> std::result::Result<Option<common::block::Block>, Self::Error> {
+        <sequencer_service_rpc::SequencerClient as wallet::WalletSequencerClient>::get_block(&self.inner, block_id).await
+    }
+    async fn get_block_range(&self, start: lee_core::BlockId, end: lee_core::BlockId) -> std::result::Result<Vec<common::block::Block>, Self::Error> {
+        <sequencer_service_rpc::SequencerClient as wallet::WalletSequencerClient>::get_block_range(&self.inner, start, end).await
+    }
+    async fn get_last_block_id(&self) -> std::result::Result<lee_core::BlockId, Self::Error> {
+        <sequencer_service_rpc::SequencerClient as wallet::WalletSequencerClient>::get_last_block_id(&self.inner).await
+    }
+    async fn get_account_balance(&self, account_id: AccountId) -> std::result::Result<u128, Self::Error> {
+        <sequencer_service_rpc::SequencerClient as wallet::WalletSequencerClient>::get_account_balance(&self.inner, account_id).await
+    }
+    async fn get_transaction(&self, tx_hash: common::HashType) -> std::result::Result<Option<(LeeTransaction, lee_core::BlockId)>, Self::Error> {
+        <sequencer_service_rpc::SequencerClient as wallet::WalletSequencerClient>::get_transaction(&self.inner, tx_hash).await
+    }
+    async fn get_accounts_nonces(&self, account_ids: Vec<AccountId>) -> std::result::Result<Vec<Nonce>, Self::Error> {
+        <sequencer_service_rpc::SequencerClient as wallet::WalletSequencerClient>::get_accounts_nonces(&self.inner, account_ids).await
+    }
+    async fn get_account_view(&self, actor_state_selector: lee_core::account::Actor) -> std::result::Result<Option<lee::Account>, Self::Error> {
+        <sequencer_service_rpc::SequencerClient as wallet::WalletSequencerClient>::get_account_view(&self.inner, actor_state_selector).await
+    }
+    async fn get_proofs_and_root(
+        &self,
+        commitments: Vec<lee_core::Commitment>,
+        message_positions: Vec<lee_core::CommitmentPosition>,
+    ) -> std::result::Result<(Vec<Option<lee_core::MembershipProof>>, Vec<Option<lee_core::MembershipProof>>, lee_core::CommitmentSetDigest), Self::Error> {
+        <sequencer_service_rpc::SequencerClient as wallet::WalletSequencerClient>::get_proofs_and_root(&self.inner, commitments, message_positions).await
+    }
+    async fn get_fee_state(&self) -> std::result::Result<sequencer_service_rpc::FeeStateQuote, Self::Error> {
+        <sequencer_service_rpc::SequencerClient as wallet::WalletSequencerClient>::get_fee_state(&self.inner).await
+    }
+    async fn get_account(&self, account_id: AccountId) -> std::result::Result<Option<lee::Account>, Self::Error> {
+        <sequencer_service_rpc::SequencerClient as wallet::WalletSequencerClient>::get_account(&self.inner, account_id).await
+    }
+    async fn get_program_ids(&self) -> std::result::Result<std::collections::BTreeMap<String, lee::ProgramId>, Self::Error> {
+        <sequencer_service_rpc::SequencerClient as wallet::WalletSequencerClient>::get_program_ids(&self.inner).await
+    }
+    async fn get_publications(
+        &self,
+        from_position: lee_core::CommitmentPosition,
+        limit: common::PageLimit,
+    ) -> std::result::Result<Vec<(lee_core::CommitmentPosition, lee_core::program::Publication)>, Self::Error> {
+        <sequencer_service_rpc::SequencerClient as wallet::WalletSequencerClient>::get_publications(&self.inner, from_position, limit).await
+    }
+    async fn get_recovery_binding(&self, address: AccountId) -> std::result::Result<Option<lee::EncryptedNote>, Self::Error> {
+        <sequencer_service_rpc::SequencerClient as wallet::WalletSequencerClient>::get_recovery_binding(&self.inner, address).await
+    }
+}
+
+/// The faucet's wallet over the recording client: LEZ's wallet as `live::open_wallet` makes it (its configuration, its
+/// storage with the faucet's key), reopened over the client that records each transaction before it leaves. A send
+/// whose action reverts in the wallet's simulation is not made (no fee spent on a transfer that would not credit).
+fn open_recording_wallet(home: &Path, rpc: &str, key: PrivateKey, record: PathBuf, from: AccountId) -> Result<wallet::WalletCore<RecordingClient>> {
+    let inner = crate::live::open_wallet(home, rpc, &[key])?.client_owned();
+    wallet::WalletCore::new_update_chain_with_client(
+        home.join("wallet_config.json"),
+        home.join("storage.json"),
+        None,
+        "",
+        RecordingClient { inner, record, from },
+    )
+}
+
+fn read_record(path: &Path) -> Result<([u8; 32], AccountId, u128, Vec<u8>)> {
+    use std::str::FromStr as _;
+    let r: Value = serde_json::from_str(&fs::read_to_string(path).with_context(|| format!("{}", path.display()))?)?;
+    let hash: [u8; 32] = hex::decode(r["hash"].as_str().context("record: hash")?)?.try_into().map_err(|_| anyhow!("record: hash"))?;
+    let from = AccountId::from_str(r["from"].as_str().context("record: from")?).map_err(|e| anyhow!("record: from ({e:?})"))?;
+    let nonce: u128 = r["nonce"].as_str().context("record: nonce")?.parse().context("record: nonce")?;
+    let tx = hex::decode(r["tx"].as_str().context("record: tx")?)?;
+    Ok((hash, from, nonce, tx))
+}
+
+/// `transfer-status --record FILE --rpc URL --state DIR`: what became of a recorded transfer, by its own hash:
+/// `applied` or `reverted` (in a block), `dropped` (in no block, and the sender's nonce has moved past it: it never
+/// can be), or `pending` (in no block yet, its nonce not spent: it may still be applied; `transfer-resend` sends it again).
+async fn cmd_transfer_status(a: &Args) -> Result<()> {
+    use wallet::WalletSequencerClient as _;
+    let (hash, from, nonce, _) = read_record(&a.path("record")?)?;
+    let rpc = a.need("rpc")?.to_string();
+    let w = crate::live::open_wallet(&a.path("state")?.join("wallet"), &rpc, &[])?;
+    // The sender's nonce first, then the receipt: a transaction applied before the nonce was read is asked for after
+    // it; one not found while the nonce has moved past it is asked for once more, after a pause, before it is called
+    // dropped.
+    let now = w.client().get_accounts_nonces(vec![from]).await.map_err(|e| anyhow!("getAccountsNonces: {e}"))?;
+    let now = now.first().map(|n| n.0).ok_or_else(|| anyhow!("getAccountsNonces: no answer"))?;
+    let mut found = receipt(w.client(), &hash).await?;
+    if found.is_none() && now > nonce {
+        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+        found = receipt(w.client(), &hash).await?;
+    }
+    let out = match found {
+        Some((state, block)) => json!({"hash": hex::encode(hash), "state": state, "block": block}),
+        None => json!({"hash": hex::encode(hash), "state": if now > nonce { "dropped" } else { "pending" },
+                       "nonce": nonce.to_string(), "account_nonce": now.to_string()}),
+    };
+    println!("{out}");
+    Ok(())
+}
+
+/// `transfer-resend --record FILE --rpc URL --state DIR`: the recorded transfer's very bytes sent again (its hash and
+/// nonce unchanged: at most one of the two is ever applied).
+async fn cmd_transfer_resend(a: &Args) -> Result<()> {
+    use wallet::WalletSequencerClient as _;
+    let (hash, _, _, bytes) = read_record(&a.path("record")?)?;
+    let tx: LeeTransaction = borsh::from_slice(&bytes).context("record: tx")?;
+    ensure!(tx.hash().0 == hash, "record: its bytes are not its hash");
+    let rpc = a.need("rpc")?.to_string();
+    crate::live::check_send(&rpc)?;
+    let w = crate::live::open_wallet(&a.path("state")?.join("wallet"), &rpc, &[])?;
+    let sent = w.client().send_transaction(tx).await.map_err(|e| anyhow!("not resent: {e}"))?;
+    println!("{}", json!({"hash": hex::encode(sent.0), "resent": true}));
+    Ok(())
+}
+
 pub fn main() -> Result<()> {
     let a = Args::parse()?;
     let rt = tokio::runtime::Builder::new_current_thread().enable_all().build()?;
@@ -959,7 +1486,10 @@ pub fn main() -> Result<()> {
             "inspect" => cmd_inspect(&a).await,
             "verify" => cmd_verify(&a).await,
             "fund" => cmd_fund(&a).await,
-            other => bail!("unknown command {other}: keygen accounts sign send status target inspect verify fund"),
+            "transfer" => cmd_transfer(&a).await,
+            "transfer-status" => cmd_transfer_status(&a).await,
+            "transfer-resend" => cmd_transfer_resend(&a).await,
+            other => bail!("unknown command {other}: keygen accounts sign send status target inspect verify fund transfer transfer-status transfer-resend"),
         }
     })
 }

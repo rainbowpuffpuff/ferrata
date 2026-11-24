@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# The rule (B) attestor beside this zone's sequencer (checkpoint/attestor/README.md): its
+# own key, certified once by the sequencer's channel key for this deployment (chain, vault, lezConfigId, channel), and
+# a round every ROUND_S seconds that signs the node's final tier (checkpoint/attestor's ferrata_attestor, as zone-bridge.sh runs it).
+#
+#   ferrata-bridge-attestor setup      (root, once): user ferrata-attestor, its key, the certificate
+#   ferrata-bridge-attestor loop       (the service): `attest` every ROUND_S s; each new tip kept in rounds/tip-<id>.json
+#
+# The channel key is read once, by its owner (ferrata), to sign the certificate; the attestor never sees it. The
+# attestor's state file is its guard against signing two histories: never delete it while the zone runs.
+set -euo pipefail
+B=/var/lib/ferrata/bridge; A="$B/attestor"; ATT=/opt/ferrata/bin/ferrata_attestor
+NODE=http://127.0.0.1:18080; LEZ=http://127.0.0.1:3040; ROUND_S="${ROUND_S:-60}"
+case "${1:-}" in
+  setup)
+    id ferrata-attestor >/dev/null 2>&1 || useradd --system --home-dir /nonexistent --no-create-home --shell /usr/sbin/nologin ferrata-attestor
+    install -d -o ferrata-attestor -g ferrata-attestor -m 700 "$A" "$A/rounds" "$A/answers"
+    python3 -I - "$B/config.json" > "$A/deployment.json" <<'EOF'
+import json, sys
+c = json.load(open(sys.argv[1]))
+print(json.dumps({"evm_chain_id": "%064x" % 11155111, "vault": c["vault"].lower().removeprefix("0x"),
+                  "lez_config_id": c["configId"].lower().removeprefix("0x"), "channel_id": "01" * 32}, indent=2))
+EOF
+    chown ferrata-attestor:ferrata-attestor "$A/deployment.json"; chmod 644 "$A/deployment.json"
+    if [ ! -f "$A/key" ]; then
+      # as its user, in a namespace that sees only its directory (/var/lib/ferrata stays 750)
+      systemd-run --quiet --wait --pipe --collect --uid=ferrata-attestor --gid=ferrata-attestor \
+        -p TemporaryFileSystem=/var/lib/ferrata:ro -p BindPaths="$A" -p UMask=0077 -- "$ATT" keygen --out "$A/key" > "$A/pub.txt"
+      chmod 600 "$A/key"
+    fi
+    if [ ! -f "$A/cert.json" ]; then
+      T="$(mktemp -d "$B/.cert.XXXXXX")"; chown ferrata:ferrata "$T"
+      cp "$A/deployment.json" "$T/deployment.json"; chown ferrata:ferrata "$T/deployment.json"
+      runuser -u ferrata -- env -i PATH=/usr/bin:/bin "$ATT" certify --channel-key /var/lib/ferrata/sequencer/channel_signing_key \
+        --att-pub "$(cat "$A/pub.txt")" --deployment "$T/deployment.json" --out "$T/cert.json"
+      install -o ferrata-attestor -g ferrata-attestor -m 644 "$T/cert.json" "$A/cert.json"; rm -rf "$T"
+    fi
+    # The attestor reads the node's API: its user is allowed there once it exists (host/bin/ferrata-node-api-guard).
+    [ -x /opt/ferrata/bin/ferrata-node-api-guard ] && /opt/ferrata/bin/ferrata-node-api-guard > /dev/null
+    echo "attestor key $(cat "$A/pub.txt"), certificate $A/cert.json"
+    ;;
+  loop)
+    stop=""; trap 'stop=1' TERM INT; last=""
+    while [ -z "$stop" ]; do
+      rm -rf "$A/answers"; mkdir -p "$A/answers"
+      if "$ATT" attest --deployment "$A/deployment.json" --cert "$A/cert.json" --att-key "$A/key" --node "$NODE" --lez "$LEZ" \
+           --save "$A/answers" --slot-from 0 --state "$A/state.json" --out "$A/round.json" >> "$A/attest.log" 2>&1; then
+        tip="$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["tip_id"])' "$A/round.json")"
+        echo -e "$(date -u +%FT%TZ)\tsigned\t$tip" >> "$A/rounds.tsv"
+        [ "$tip" != "$last" ] && cp "$A/round.json" "$A/rounds/tip-$tip.json"; last="$tip"
+        ls -1t "$A/rounds"/tip-*.json 2>/dev/null | tail -n +200 | xargs -r rm -f   # keep the newest 200
+      else
+        echo -e "$(date -u +%FT%TZ)\trefused\t$(tail -n 1 "$A/attest.log" | tr '\t' ' ' | cut -c1-200)" >> "$A/rounds.tsv"
+      fi
+      [ -n "$stop" ] && break
+      sleep "$ROUND_S" & wait $! || true
+    done
+    ;;
+  *) echo "usage: $0 setup|loop" >&2; exit 2 ;;
+esac

@@ -1,0 +1,485 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Ferrata's public LEZ v0.4.0-rc3 test network: one host running a Logos Blockchain node, LEZ's sequencer anchored
+  to it, the indexer and explorer, Ferrata's attestation updater, a faucet and an HTTPS gateway (Caddy). Reached
+  only on 80/443; administered through SSM Session Manager (no SSH). Everything is tagged Project=ferrata-testnet.
+
+Parameters:
+  InstanceType:
+    Type: String
+    Default: c7i.8xlarge
+    Description: Build big (c7i.8xlarge), then resize to the steady state (deploy/testnet/README.md).
+  AmiId:
+    Type: AWS::EC2::Image::Id
+    Description: >-
+      Ubuntu 24.04 LTS amd64 (gp3). deploy.sh resolves the current one from the SSM public parameter
+      /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id at creation and keeps it on
+      updates, so that an update never replaces the host.
+  AvailabilityZone:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: us-east-1a
+  RootVolumeGiB:
+    Type: Number
+    Default: 100
+    Description: OS, toolchains and build trees.
+  DataVolumeGiB:
+    Type: Number
+    Default: 60
+    Description: /var/lib/ferrata (node, sequencer, indexer, updater state); snapshotted daily.
+  LogRetentionDays:
+    Type: Number
+    Default: 30
+    AllowedValues: [7, 14, 30, 60, 90]
+  SnapshotRetainCount:
+    Type: Number
+    Default: 7
+
+Resources:
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules: [{ ObjectOwnership: BucketOwnerEnforced }]
+      VersioningConfiguration: { Status: Enabled }
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-old-versions
+            Status: Enabled
+            NoncurrentVersionExpiration: { NoncurrentDays: 30 }
+            AbortIncompleteMultipartUpload: { DaysAfterInitiation: 2 }
+      Tags: [{ Key: Project, Value: ferrata-testnet }]
+
+  ArtifactBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ArtifactBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource: [!GetAtt ArtifactBucket.Arn, !Sub "${ArtifactBucket.Arn}/*"]
+            Condition: { Bool: { "aws:SecureTransport": "false" } }
+
+  HostRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: "Ferrata testnet host - SSM management, its own log groups and metrics, read-only artifacts"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ec2.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore"
+      Policies:
+        # AmazonSSMManagedInstanceCore allows ssm:GetParameter(s) on every parameter of the account, other projects'
+        # SecureStrings included (decryptable through alias/aws/ssm). Nothing on this host reads parameters.
+        - PolicyName: no-parameters
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Deny
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                  - ssm:GetParametersByPath
+                  - ssm:GetParameterHistory
+                  - ssm:DescribeParameters
+                  - ssm:PutParameter
+                  - ssm:DeleteParameter
+                  - ssm:DeleteParameters
+                  - ssm:LabelParameterVersion
+                Resource: "*"
+        # In place of CloudWatchAgentServerPolicy (Resource "*", any log group's retention): this stack's log groups and
+        # this stack's metric namespaces only.
+        - PolicyName: cloudwatch-own
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogGroup, logs:CreateLogStream, logs:PutLogEvents, logs:DescribeLogStreams]
+                Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ferrata-testnet/*"
+              - Effect: Allow
+                Action: [logs:DescribeLogGroups, ec2:DescribeTags, ec2:DescribeVolumes]
+                Resource: "*"
+              - Effect: Allow
+                Action: cloudwatch:PutMetricData
+                Resource: "*"
+                Condition: { StringEquals: { "cloudwatch:namespace": ["Ferrata/Testnet", "Ferrata/TestnetHost"] } }
+        # Read only, and only what provisioning fetches: a compromised host cannot plant a bundle.
+        - PolicyName: artifact-bucket-read
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: [!Sub "${ArtifactBucket.Arn}/bundle/*", !Sub "${ArtifactBucket.Arn}/hotfix/*"]
+      Tags: [{ Key: Project, Value: ferrata-testnet }]
+
+  HostProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [!Ref HostRole]
+
+  HostSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Ferrata testnet host - HTTP and HTTPS only (no SSH; SSM Session Manager); default egress
+      SecurityGroupIngress:
+        - { IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: 0.0.0.0/0, Description: "HTTP (ACME challenge, redirect)" }
+        - { IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0, Description: HTTPS }
+      Tags: [{ Key: Project, Value: ferrata-testnet }, { Key: Name, Value: ferrata-testnet }]
+
+  Host:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AmiId
+      InstanceType: !Ref InstanceType
+      AvailabilityZone: !Ref AvailabilityZone
+      IamInstanceProfile: !Ref HostProfile
+      SecurityGroupIds: [!GetAtt HostSecurityGroup.GroupId]
+      Monitoring: false
+      MetadataOptions:
+        HttpTokens: required
+        HttpPutResponseHopLimit: 1
+        HttpEndpoint: enabled
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs: { VolumeType: gp3, VolumeSize: !Ref RootVolumeGiB, Encrypted: true, DeleteOnTermination: true }
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          # Minimal on purpose: everything else is deploy/testnet/provision.sh, run over SSM.
+          set -eu
+          hostnamectl set-hostname ferrata-testnet
+          systemctl enable --now snap.amazon-ssm-agent.amazon-ssm-agent.service || true
+          # Unattended security updates (Ubuntu's default unattended-upgrades, made explicit).
+          echo 'APT::Periodic::Update-Package-Lists "1";' >  /etc/apt/apt.conf.d/20auto-upgrades
+          echo 'APT::Periodic::Unattended-Upgrade "1";'   >> /etc/apt/apt.conf.d/20auto-upgrades
+          # No SSH daemon: the host is administered through SSM only (port 22 is closed anyway).
+          systemctl disable --now ssh.service ssh.socket 2>/dev/null || true
+      Tags:
+        - { Key: Project, Value: ferrata-testnet }
+        - { Key: Name, Value: ferrata-testnet }
+
+  DataVolume:
+    Type: AWS::EC2::Volume
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      AvailabilityZone: !GetAtt Host.AvailabilityZone
+      Size: !Ref DataVolumeGiB
+      VolumeType: gp3
+      Encrypted: true
+      Tags:
+        - { Key: Project, Value: ferrata-testnet }
+        - { Key: Name, Value: ferrata-testnet-data }
+        - { Key: Snapshot, Value: ferrata-testnet-daily }
+
+  DataVolumeAttachment:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      InstanceId: !Ref Host
+      VolumeId: !Ref DataVolume
+      Device: /dev/sdf
+
+  HostAddress:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref Host
+      Tags: [{ Key: Project, Value: ferrata-testnet }, { Key: Name, Value: ferrata-testnet }]
+
+  SnapshotRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: "Data Lifecycle Manager for the Ferrata testnet daily data-volume snapshots"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: dlm.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSDataLifecycleManagerServiceRole"
+      Tags: [{ Key: Project, Value: ferrata-testnet }]
+
+  DailySnapshots:
+    Type: AWS::DLM::LifecyclePolicy
+    Properties:
+      Description: ferrata-testnet daily data-volume snapshots
+      State: ENABLED
+      ExecutionRoleArn: !GetAtt SnapshotRole.Arn
+      PolicyDetails:
+        PolicyType: EBS_SNAPSHOT_MANAGEMENT
+        ResourceTypes: [VOLUME]
+        TargetTags: [{ Key: Snapshot, Value: ferrata-testnet-daily }]
+        Schedules:
+          - Name: daily-0315-utc
+            CopyTags: true
+            TagsToAdd: [{ Key: Project, Value: ferrata-testnet }]
+            CreateRule: { Interval: 24, IntervalUnit: HOURS, Times: ["03:15"] }
+            RetainRule: { Count: !Ref SnapshotRetainCount }
+      Tags: [{ Key: Project, Value: ferrata-testnet }]
+
+  ServicesLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ferrata-testnet/services
+      RetentionInDays: !Ref LogRetentionDays
+      Tags: [{ Key: Project, Value: ferrata-testnet }]
+
+  AccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ferrata-testnet/access
+      RetentionInDays: !Ref LogRetentionDays
+      Tags: [{ Key: Project, Value: ferrata-testnet }]
+
+  SystemLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ferrata-testnet/system
+      RetentionInDays: !Ref LogRetentionDays
+      Tags: [{ Key: Project, Value: ferrata-testnet }]
+
+  # Every alarm below notifies this topic. No subscription here (an address is personal data): the owner subscribes
+  # after deploying, `aws sns subscribe --topic-arn <AlertTopicArn> --protocol email --notification-endpoint <address>`,
+  # and confirms the e-mail (README "Alerts").
+  AlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: ferrata-testnet-alerts
+      DisplayName: Ferrata testnet
+      Tags: [{ Key: Project, Value: ferrata-testnet }]
+
+  # The hardware under the host failed: move it to healthy hardware (same id, address and volumes).
+  RecoverAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ferrata-testnet-system-check-recover
+      Namespace: AWS/EC2
+      MetricName: StatusCheckFailed_System
+      Dimensions: [{ Name: InstanceId, Value: !Ref Host }]
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions: [!Sub "arn:${AWS::Partition}:automate:${AWS::Region}:ec2:recover", !Ref AlertTopic]
+      OKActions: [!Ref AlertTopic]
+
+  # The OS stopped answering: reboot it (systemd brings every service back).
+  RebootAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ferrata-testnet-instance-check-reboot
+      Namespace: AWS/EC2
+      MetricName: StatusCheckFailed_Instance
+      Dimensions: [{ Name: InstanceId, Value: !Ref Host }]
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 3
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions: [!Sub "arn:${AWS::Partition}:automate:${AWS::Region}:ec2:reboot", !Ref AlertTopic]
+      OKActions: [!Ref AlertTopic]
+
+  # Published every minute by the host's ferrata-status timer (deploy/testnet/host/bin/ferrata-status).
+  HeadStaleAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ferrata-testnet-lez-head-stale
+      AlarmDescription: LEZ sequencer made no block for 5 minutes (or the metric stopped).
+      Namespace: Ferrata/Testnet
+      MetricName: HeadAgeSeconds
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 300
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: breaching
+      AlarmActions: [!Ref AlertTopic]
+      OKActions: [!Ref AlertTopic]
+
+  BedrockHaltAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ferrata-testnet-bedrock-halted
+      AlarmDescription: The Logos Blockchain node made no block for 2 minutes (its leader may have no aged stake).
+      Namespace: Ferrata/Testnet
+      MetricName: BedrockTipAgeSeconds
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 120
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: breaching
+      AlarmActions: [!Ref AlertTopic]
+      OKActions: [!Ref AlertTopic]
+
+  FinalityLagAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ferrata-testnet-bedrock-finality-lag
+      AlarmDescription: The newest LEZ block final on Bedrock is more than 30 minutes old.
+      Namespace: Ferrata/Testnet
+      MetricName: FinalAgeSeconds
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 1800
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: breaching
+      AlarmActions: [!Ref AlertTopic]
+      OKActions: [!Ref AlertTopic]
+
+  AttestationLagAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ferrata-testnet-attestation-lag
+      AlarmDescription: The Sepolia instance's finalized header is more than 2 hours behind Sepolia's finality.
+      Namespace: Ferrata/Testnet
+      MetricName: AttestationLagSeconds
+      Statistic: Maximum
+      Period: 900
+      EvaluationPeriods: 1
+      Threshold: 7200
+      ComparisonOperator: GreaterThanThreshold
+      # Missing means attest-monitor is not running (deploy.sh programs handover starts it): that is an alarm too.
+      TreatMissingData: breaching
+      AlarmActions: [!Ref AlertTopic]
+      OKActions: [!Ref AlertTopic]
+
+  DiskAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ferrata-testnet-data-disk
+      AlarmDescription: The data volume is more than 80% full.
+      Namespace: Ferrata/Testnet
+      MetricName: DataDiskUsedPercent
+      Statistic: Maximum
+      Period: 900
+      EvaluationPeriods: 1
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref AlertTopic]
+      OKActions: [!Ref AlertTopic]
+
+  RootDiskAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ferrata-testnet-root-disk
+      AlarmDescription: The root volume (system, logs under /var/log) is more than 80% full.
+      Namespace: Ferrata/Testnet
+      MetricName: RootDiskUsedPercent
+      Statistic: Maximum
+      Period: 900
+      EvaluationPeriods: 1
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref AlertTopic]
+      OKActions: [!Ref AlertTopic]
+
+  # The status page's critical alarms (status.json "alarms"): the leader without aged stake, attest-monitor's
+  # critical alerts, the node down. Warnings (a funded published test account, a disk) after 15 minutes.
+  StatusCriticalAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ferrata-testnet-status-critical
+      AlarmDescription: The host's status page shows a critical alarm (see /status/status.json "alarms").
+      Namespace: Ferrata/Testnet
+      MetricName: AlarmsCritical
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: breaching
+      AlarmActions: [!Ref AlertTopic]
+      OKActions: [!Ref AlertTopic]
+
+  StatusWarnAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ferrata-testnet-status-warn
+      AlarmDescription: The host's status page has shown a warning for 15 minutes (see /status/status.json "alarms").
+      Namespace: Ferrata/Testnet
+      MetricName: AlarmsWarn
+      Statistic: Minimum
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref AlertTopic]
+      OKActions: [!Ref AlertTopic]
+
+  # Data leaving the host: AWS bills it (about 0.09 USD/GB). Normal: ~45 MB an hour (23 Nov 2026). The
+  # gateway's byte budgets cap RPC answers at ~1.9 GB an hour (512 KiB/s, plus its two bursts: 40 MiB);
+  # static files are not budgeted, hence these two.
+  EgressHourAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ferrata-testnet-egress-hour
+      AlarmDescription: More than 5 GB left the host in an hour.
+      Namespace: AWS/EC2
+      MetricName: NetworkOut
+      Dimensions: [{ Name: InstanceId, Value: !Ref Host }]
+      Statistic: Sum
+      Period: 3600
+      EvaluationPeriods: 1
+      Threshold: 5000000000
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref AlertTopic]
+      OKActions: [!Ref AlertTopic]
+
+  EgressDayAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ferrata-testnet-egress-day
+      AlarmDescription: More than 10 GB left the host in a day (a slower, steady drain).
+      Namespace: AWS/EC2
+      MetricName: NetworkOut
+      Dimensions: [{ Name: InstanceId, Value: !Ref Host }]
+      Statistic: Sum
+      Period: 86400
+      EvaluationPeriods: 1
+      Threshold: 10000000000
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref AlertTopic]
+      OKActions: [!Ref AlertTopic]
+
+Outputs:
+  InstanceId:
+    Value: !Ref Host
+  PublicIp:
+    Value: !Ref HostAddress
+  Hostname:
+    Description: TLS name until a domain exists (sslip.io resolves a-b-c-d.sslip.io to a.b.c.d).
+    Value: !Join ["", [!Join ["-", !Split [".", !Ref HostAddress]], ".sslip.io"]]
+  ArtifactBucketName:
+    Value: !Ref ArtifactBucket
+  DataVolumeId:
+    Value: !Ref DataVolume
+  AlertTopicArn:
+    Description: Every alarm notifies this topic; subscribe an address to it (README "Alerts").
+    Value: !Ref AlertTopic

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# A holder's release, proven on the Modal GPU and sent by this host's relayer: the
+# release input the holder's `ferrata release --input-out FILE.input` wrote (private: the burn's index, path, sOut and
+# r, so the prover learns which burn this is) and the FILE.json beside it (the journal, public).
+#
+#   ferrata-bridge-release FILE.input [--name N]       (root)
+#
+# Both files go to the prover client's inputs (user ferrata-prover, mode 600) and a request into its queue; the client
+# proves (release_31, Groth16) and puts {"kind": "release", "journal", "seal"} into the relayer's inbox; the relayer
+# checks it with the vault's eth_call and sends `release`, paying the gas, paid the registered relay fee. Progress:
+# /var/log/ferrata/bridge-prover.log, then /var/log/ferrata/bridge-relayer.log ("job-done" with the transaction).
+set -euo pipefail
+IN="${1:?usage: $0 FILE.input [--name N]}"; shift; NAME="release-$(date -u +%Y%m%dT%H%M%SZ)"
+while [ $# -gt 0 ]; do case "$1" in --name) NAME="$2"; shift 2 ;; *) echo "usage: $0 FILE.input [--name N]" >&2; exit 2 ;; esac; done
+META="${IN%.*}.json"
+[ -s "$IN" ] && [ -s "$META" ] || { echo "need $IN and $META (ferrata release --input-out writes both)" >&2; exit 1; }
+python3 -I -c 'import json,sys; m=json.load(open(sys.argv[1])); assert m.get("kind") == "release" and len(bytes.fromhex(m["journal"].removeprefix("0x"))) > 0, "not a release meta"' "$META"
+P=/var/lib/ferrata/bridge/prover
+[ ! -e "$P/requests/$NAME.json" ] && [ ! -e "$P/requests/done/$NAME.json" ] || { echo "request $NAME exists" >&2; exit 1; }
+install -o ferrata-prover -g ferrata-prover -m 600 "$IN" "$P/inputs/$NAME.input"
+install -o ferrata-prover -g ferrata-prover -m 600 "$META" "$P/inputs/$NAME.meta.json"
+printf '{"kind": "release", "input": "%s", "meta": "%s"}\n' "$P/inputs/$NAME.input" "$P/inputs/$NAME.meta.json" > "$P/requests/.$NAME.json"
+chown ferrata-prover:ferrata-prover "$P/requests/.$NAME.json"; mv "$P/requests/.$NAME.json" "$P/requests/$NAME.json"
+echo "$(date -u +%FT%TZ) release proof requested: $P/requests/$NAME.json (journal sha256 $(python3 -I -c 'import json,sys,hashlib; print(hashlib.sha256(bytes.fromhex(json.load(open(sys.argv[1]))["journal"].removeprefix("0x"))).hexdigest())' "$META"))"

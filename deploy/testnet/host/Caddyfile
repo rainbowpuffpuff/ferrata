@@ -1,0 +1,154 @@
+# Caddy for the Ferrata LEZ testnet. {{SITES}}: the public names (the domain from /etc/ferrata/site.env first, then
+# a-b-c-d.sslip.io); {{HOST}}: the sslip.io name. TLS by Let's Encrypt for each.
+#
+#   /                    the bid's build page (the site bundle's build/: README, Artifacts)
+#   /explorer/ /status/ /agents/ /registry/ /AGENTS.md /config.json /idl/   the explorer bundle (its explorer/)
+#   /wallet/             the web wallet (its wallet/), its own strict CSP
+#   /rpc /faucet         the gateway (JSON-RPC allowlist, per-IP limits, CORS; faucet)
+#   /status/status.json /status/history.json /programs.json /health   this host's own status (ferrata-status)
+{
+	# No admin API, so that a local process cannot load a new configuration. Change the site with
+	# `systemctl restart caddy` (install-web.sh does), never `reload`, which needs the API.
+	admin off
+	servers {
+		protocols h1 h2
+		# Slow clients are dropped, so that they cannot hold connections open. `write` covers the whole answer, a
+		# faucet claim's wait included.
+		timeouts {
+			read_header 10s
+			read_body 20s
+			write 120s
+			idle 2m
+		}
+	}
+	# Caddy's own messages. The sites' access logs (snippet access_log) share the file: keep the two outputs the same.
+	log {
+		output file /var/log/caddy/access.log {
+			roll_size 50MiB
+			roll_keep 5
+			roll_keep_for 720h
+		}
+		format json
+	}
+}
+
+# Each request with its client IP, imported by every site (without it Caddy writes no access log). Rolled files are
+# deleted after 30 days, as the public limits page says.
+(access_log) {
+	log {
+		output file /var/log/caddy/access.log {
+			roll_size 50MiB
+			roll_keep 5
+			roll_keep_for 720h
+		}
+		format json
+	}
+}
+
+(common) {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		X-Frame-Options DENY
+		-Server
+	}
+}
+
+(gateway) {
+	# A transaction cannot exceed the sequencer's 1,048,576-byte block (the gateway enforces the same).
+	request_body {
+		max_size 1100KB
+	}
+	# Each body is read whole before it is passed on, so that a slow sender holds none of the gateway's slots.
+	reverse_proxy 127.0.0.1:8090 {
+		request_buffers 1100KB
+		header_up X-Real-IP {remote_host}
+	}
+}
+
+{{SITES}} {
+	import common
+	import access_log
+	@notwallet not path /wallet/*
+	# Scripts only from this origin on every page: the wallet keeps its keys in this origin's storage.
+	header @notwallet Content-Security-Policy "script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+
+	@rpc path /rpc /rpc/
+	handle @rpc {
+		import gateway
+	}
+	@faucet path /faucet /faucet/
+	handle @faucet {
+		import gateway
+	}
+
+	redir /explorer /explorer/ 308
+	redir /status /status/ 308
+	redir /agents /agents/ 308
+	redir /registry /registry/ 308
+	redir /wallet /wallet/ 308
+
+	handle /wallet/* {
+		@hidden path /wallet/test/* /wallet/vendor/build.sh /wallet/vendor/package.json /wallet/vendor/package-lock.json /wallet/vendor/entry.js /wallet/README.md
+		respond @hidden 404
+		header Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+		@wnocache path /wallet/ /wallet/index.html /wallet/config.json
+		header @wnocache Cache-Control "no-cache"
+		file_server {
+			root /srv/ferrata/www
+		}
+	}
+	handle /AGENTS.md {
+		header Content-Type "text/markdown; charset=utf-8"
+		header Access-Control-Allow-Origin *
+		header Cache-Control "no-cache"
+		file_server {
+			root /srv/ferrata/www
+		}
+	}
+	handle /health {
+		rewrite * /health.html
+		file_server {
+			root /srv/ferrata/www
+		}
+	}
+	handle /network {
+		rewrite * /network.html
+		file_server {
+			root /srv/ferrata/www
+		}
+	}
+	@statusdata path /status/status.json /status/history.json /programs.json /status/programs.json
+	handle @statusdata {
+		header Cache-Control "no-store"
+		header Access-Control-Allow-Origin *
+		file_server {
+			root /srv/ferrata/www
+		}
+	}
+	handle /test/* {
+		respond 404
+	}
+	handle {
+		header /img/* Cache-Control "public, max-age=31536000, immutable"
+		header /assets/* Cache-Control "max-age=300"
+		@nocache path / /index.html /evidence.html /evidence.json /build.json /config.json
+		header @nocache Cache-Control "no-cache"
+		header /idl/* Access-Control-Allow-Origin *
+		file_server {
+			root /srv/ferrata/www
+		}
+	}
+}
+
+# Wallets that take a sequencer URL post JSON-RPC to its root: https://rpc.{{HOST}}
+rpc.{{HOST}} {
+	import common
+	import access_log
+	import gateway
+}
+
+# LEZ's own explorer_service is not published (it has no limiter in front of its server functions); the operator
+# reaches it through an SSM port forward to 127.0.0.1:8081. The public explorer is the bundle at /explorer/.

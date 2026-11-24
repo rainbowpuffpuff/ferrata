@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# The LEZ side of the Sepolia bridge demo, once the vault exists (it cannot come before: `Init` attests the vault's
+# slot 2, which holds the configId from the vault's deployment on): on this zone, the bridge program's `Init` pairing
+# the configuration of /var/lib/ferrata/bridge/config.json with its vault, and ETH's `Register` (its registry entry,
+# fee schedules 0 and 1 and the leaf count), both under the newest record of the zone's Sepolia instance, which
+# ferrata-updater keeps current.
+#
+#   ferrata-bridge-lez-init [--send] [--wait SECONDS]      (root; reads Sepolia over public endpoints)
+#
+# Each try: the instance's newest record (ferrata-day1 target), eth_getProof of the vault's slots at its block
+# (lez-v03/scripts/fetch.py: public endpoints, generic User-Agent), then `ferrata-day1 sign --stage bridge-init`, which
+# checks everything natively before it signs (the proofs under the record as the attestation program checks them, slot
+# 2 = configId, the ETH entry and schedule 0 = the vault's) and refuses otherwise. Until the record covers the vault's
+# registrations (about 15 minutes after the deploy: Sepolia's finality and the updater), a try is refused and repeated
+# every 60 s for --wait seconds (default 3600). With --send, the signed transactions (the operator's account pays) are
+# sent and settled (ferrata-day1 send); without it, they stay signed in the store.
+set -euo pipefail
+SEND=0; WAIT=3600
+while [ $# -gt 0 ]; do
+  case "$1" in --send) SEND=1; shift ;; --wait) WAIT="$2"; shift 2 ;; *) echo "usage: $0 [--send] [--wait S]" >&2; exit 2 ;; esac
+done
+RPC=http://127.0.0.1:3040; B=/var/lib/ferrata/bridge; DAY1=/var/lib/ferrata/day1; OP=/var/lib/ferrata/keys/operator; ST="$B/lez-init"
+FETCH_PY=/opt/ferrata/src/ferrata/lez-v03/scripts/fetch.py
+# The vault's slots: 2 (configId); ETH's registry entry and fee schedules 0 and 1 (SHA-256 slots, bridge-wire); 1.
+SLOTS="2,0x2f7d2fc425649f0a2184f57eb1355c97d45240e80cf9b2fa1972b849a0d0433c,0x9aa0b42bfab58f5661a89501a520051162e6336036c5c42663bd4f8f1ac012ce,0x07dbb398239016a117a7e00064fdec5830d1a809cdc146e8228b3d0ed733d432,1"
+VAULT="$(python3 -I -c 'import json; print(json.load(open("/var/lib/ferrata/bridge/config.json"))["vault"])')"
+install -d -o ferrata -g ferrata -m 700 "$ST" "$ST/fetch"
+as_ferrata() { runuser -u ferrata -- env XDG_CACHE_HOME=/opt/ferrata/cache RISC0_SERVER_PATH=/opt/ferrata/bin/r0vm "$@"; }
+day1() { as_ferrata "${FERRATA_DAY1:-/opt/ferrata/bin/ferrata-day1}" "$@"; }  # the day-one tool with the bridge-init stage
+# The tool saves its chain follower only when it sends: "sending" the day-one kit's applied `attest` stage sends nothing
+# (every transaction is recorded) and saves the follower at the head, so the lookup and the signing that follow sync in
+# seconds, not minutes, and the instance's newest record cannot move between them (it moves about every 6.4 min).
+sync_follower() { day1 send --rpc "$RPC" --state "$DAY1/state" --keys "$DAY1/keys" --stage attest > /dev/null; }
+deadline=$(( $(date +%s) + WAIT ))
+if [ ! -f "$ST/tx/bridge-init/stage.json" ]; then
+  while :; do
+    sync_follower
+    target="$(day1 target --rpc "$RPC" --keys "$DAY1/keys" --state "$DAY1/state")"
+    slot="$(echo "$target" | python3 -I -c 'import json,sys; print(json.load(sys.stdin)["slot"])')"
+    hash="$(echo "$target" | python3 -I -c 'import json,sys; print(json.load(sys.stdin)["block_hash"])')"
+    echo "{\"try\": \"$(date -u +%FT%TZ)\", \"record_slot\": $slot, \"block\": \"$hash\"}"
+    if as_ferrata python3 -I "$FETCH_PY" proof "$ST/fetch" "$slot" "$hash" "$VAULT" "$SLOTS" > "$ST/fetch.log" 2>&1 \
+       && day1 sign --rpc "$RPC" --keys "$OP" --state "$DAY1/state" --store "$ST" --stage bridge-init --identity "$B/identity.json" \
+            --bridge-config "$B/config.json" --fetch "$ST/fetch" 2>&1 | tee "$ST/sign.log"; then
+      [ -f "$ST/tx/bridge-init/stage.json" ] && break
+    fi
+    tail -n 2 "$ST/fetch.log" "$ST/sign.log" 2>/dev/null | grep -v '^==' | grep -v '^$' || true
+    [ "$(date +%s)" -lt "$deadline" ] || { echo "not signed within $WAIT s" >&2; exit 1; }
+    sleep 60
+  done
+fi
+if [ "$SEND" = 1 ]; then
+  day1 send --rpc "$RPC" --state "$DAY1/state" --store "$ST" --stage bridge-init
+else
+  echo "signed, not sent (run again with --send): $ST/tx/bridge-init/"
+fi

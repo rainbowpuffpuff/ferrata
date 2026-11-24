@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+"""The watcher's view of this zone for `monitor run --node cmd:ferrata-bridge-nodeview` (monitor/README.md, "The node
+view"): one JSON document per call with
+  finalHeight, finalBlocks  every LEZ block final on Bedrock from the configuration's T0 (identity.json) up, id -> hash;
+  keySets                   the channel's live key set (the node's /channel/0101..01: accredited keys, posting timeframe).
+`states` and `attestations` are left out (monitor then skips those checks). The sequencer's and the node's own answers
+on loopback; a final block's hash never changes, so hashes are cached (FERRATA_NODEVIEW_CACHE). Standard library only.
+"""
+import base64
+import json
+import os
+import struct
+import sys
+import urllib.request
+
+NODE = os.environ.get("FERRATA_NODE", "http://127.0.0.1:18080")
+RPC = os.environ.get("FERRATA_RPC", "http://127.0.0.1:3040")
+IDENTITY = os.environ.get("FERRATA_BRIDGE_IDENTITY", "/var/lib/ferrata/bridge/identity.json")
+CACHE = os.environ.get("FERRATA_NODEVIEW_CACHE", os.path.join(os.environ.get("HOME", "."), "nodeview-cache.json"))
+CHANNEL = "01" * 32
+STATUS = ["Pending", "Safe", "Finalized"]
+
+
+def rpc(method, params):
+    q = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode()
+    req = urllib.request.Request(RPC, data=q, headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=10) as r:
+        return json.load(r)["result"]
+
+
+def block(i):
+    b = base64.b64decode(rpc("getBlock", [i]))
+    assert struct.unpack("<Q", b[0:8])[0] == i, f"block {i}: another id"
+    return b[40:72].hex(), STATUS[b[-1]] if b[-1] < len(STATUS) else "?"
+
+
+def main():
+    t0 = int(json.load(open(IDENTITY))["tip"]["id"])
+    try:
+        cache = {int(k): v for k, v in json.load(open(CACHE)).items()}
+    except (OSError, ValueError):
+        cache = {}
+    head = int(rpc("getLastBlockId", []))
+    final = None
+    for i in range(head, max(t0 - 1, head - 300), -1):  # the final tier is a prefix: search down from the head
+        if i in cache:
+            final = i
+            break
+        h, st = block(i)
+        if st == "Finalized":
+            final = i
+            break
+    if final is None:
+        final = max(cache) if cache else t0
+    for i in range(max([t0] + [k + 1 for k in cache]), final + 1):
+        h, st = block(i)
+        if st != "Finalized":
+            final = i - 1
+            break
+        cache[i] = h
+    tmp = CACHE + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump({str(k): v for k, v in cache.items()}, f)
+    os.replace(tmp, CACHE)
+    with urllib.request.urlopen(f"{NODE}/channel/{CHANNEL}", timeout=10) as r:
+        ch = json.load(r)
+    view = {
+        "node": "ferrata-test-network",
+        "finalHeight": final,
+        "finalBlocks": {str(i): "0x" + h for i, h in sorted(cache.items()) if t0 <= i <= final},
+        "keySets": [{"fromBlock": 0, "keys": ["0x" + k for k in ch["accredited_keys"]],
+                     "postingTimeframe": ch["posting_timeframe"]}],
+    }
+    json.dump(view, sys.stdout)
+    print()
+
+
+if __name__ == "__main__":
+    main()

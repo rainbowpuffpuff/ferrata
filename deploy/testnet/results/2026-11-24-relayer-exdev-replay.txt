@@ -1,0 +1,41 @@
+The relayer's stall of 23 Nov 2026, replayed (deploy/testnet/tests/relayer-replay/replay.sh, run 24 Nov 2026 on a
+workstation: anvil 1.3.6 forking Sepolia at block 12,198,161 through a public endpoint; the deployed ferrata-relayer,
+sha256 09de92f46313ba94…; the job rebuilt from the on-chain submitCandidate 0xcaa00efa…a0d1, its journal's sha256 equal
+to the candidate's journalDigest on chain).
+
+Live (Sepolia, read from public endpoints): the relayer sent submitCandidate (block 12,198,162, 21:03:24Z) and then
+nothing: its nonce stayed 1 with nothing pending; at 23:05Z and 01:10Z finalizeAttested passed an eth_call on the live
+vault (checkpointCount 0, not frozen) and publicnode answered the daemon's own read pattern (10/10, 9/10).
+Cause: the unit bound the relayer's directory and the shared inbox as two mounts (BindPaths); after a job the daemon
+moves its file from the inbox into <state>/done with rename(2) (cli/src/relayerd.rs round() and book_recovered()),
+which fails with EXDEV across mounts; the round fails before its finalisations, and every later round fails the same
+way while booking the in-flight submission. Fix: the inbox inside the relayer's directory (one mount), a start check.
+
+relayer sha256 09de92f46313ba94
+== A: state and inbox in two bind mounts (as deployed)
+  round 1
+    {"event": "round-failed", "reason": "Invalid cross-device link (os error 18)"}
+    {"event": "stop", "reason": "rounds"}
+  round 2 (after the 3,600 s window)
+    {"event": "round-failed", "reason": "Invalid cross-device link (os error 18)"}
+    {"event": "stop", "reason": "rounds"}
+  round 3
+    {"event": "round-failed", "reason": "Invalid cross-device link (os error 18)"}
+    {"event": "stop", "reason": "rounds"}
+    checkpointCount on the fork: 0
+    in flight: submitCandidate job zone-1225-3767.json nonce 48722
+== C: the fix on A's state: the old inbox's job moved by hand, the inbox inside the relayer's own mount
+  round 4
+    {"event": "job-done", "job": "zone-1225-3767.json", "recovered": true, "result": {"gasUsed": 375293, "key": "submitCandidate:0x66ce08eaf04bfa58cc33008e93ed7c54aabc239122bb5f0211e3b67ba5dc4f48", "kind": "submitCandidate", "tx": "0x5bf4468fb077f1fc68595fe16327e891e9ae5efd97629c371a2fc8ed481f502f"}}
+    {"event": "finalized", "newState": "0x66ce08eaf04bfa58cc33008e93ed7c54aabc239122bb5f0211e3b67ba5dc4f48", "tx": "0x7f063d2fdd086d0021ca471cbe529d374ae36eb56f011af9df88a1738b40abbc"}
+    {"event": "stop", "reason": "rounds"}
+    checkpointCount on the fork: 1
+== B: fresh fork; inbox inside the relayer's own mount from the start
+  round 1
+    {"event": "job-done", "job": "zone-1225-3767.json", "result": {"burnCount": 1, "burnRoot": "0x0478a04419463fc231d79fa8007efcdf8312a344f063c85f06ac148288210a4d", "gasUsed": 375293, "kind": "candidate", "newState": "0x66ce08eaf04bfa58cc33008e93ed7c54aabc239122bb5f0211e3b67ba5dc4f48", "tx": "0x5bf4468fb077f1fc68595fe16327e891e9ae5e
+    {"event": "candidate-waiting", "newState": "0x66ce08eaf04bfa58cc33008e93ed7c54aabc239122bb5f0211e3b67ba5dc4f48", "now": 1795467793, "readyAt": 1795471393}
+    {"event": "stop", "reason": "rounds"}
+  round 2 (after the window)
+    {"event": "finalized", "newState": "0x66ce08eaf04bfa58cc33008e93ed7c54aabc239122bb5f0211e3b67ba5dc4f48", "tx": "0x7f063d2fdd086d0021ca471cbe529d374ae36eb56f011af9df88a1738b40abbc"}
+    {"event": "stop", "reason": "rounds"}
+    checkpointCount on the fork: 1

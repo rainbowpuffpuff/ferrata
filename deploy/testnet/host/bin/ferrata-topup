@@ -1,0 +1,67 @@
+#!/usr/bin/env python3
+"""Keep the sequencer's Bedrock funding key funded from the leader's own rewards, never from the leader's stake.
+
+The sequencer pays every block's inscription from the node's wallet key `FUNDING_PK`. The node's leader earns a
+voucher per block it makes; a voucher pays a block reward (emission plus the block's fees) when claimed, and the node
+pays the claim to the same `FUNDING_PK` (`POST /leader/claim`, LEZ's local node config: `cryptarchia.leader.wallet`).
+So when the funding key runs low, this claims up to CLAIMS vouchers. It never spends the SDP key (`ferrata-bedrock-split`
+funded the sequencer from it once and left its note as the leader's stake: spending it can halt the chain). It also
+reports the leader's aged notes (`GET /leader/aged-notes`): a count of 0 means the leader can make no block.
+One JSON line per run on stdout; nothing leaves the host.
+"""
+import json
+import os
+import sys
+import time
+import urllib.error
+import urllib.request
+
+NODE = os.environ.get("FERRATA_NODE_API", "http://127.0.0.1:18080")
+FUNDING_PK = os.environ.get("FERRATA_FUNDING_PK", "2e03b2eff5a45478e7e79668d2a146cf2c5c7925bce927f2b1c67f2ab4fc0d26")
+LOW = int(os.environ.get("FERRATA_TOPUP_LOW", "20000000000"))   # 2 x 10^10: a tenth of what the split gave
+CLAIMS = int(os.environ.get("FERRATA_TOPUP_CLAIMS", "20"))
+
+
+def get(path):
+    with urllib.request.urlopen(f"{NODE}{path}", timeout=15) as r:
+        return json.load(r)
+
+
+def main():
+    out = {"utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+    try:
+        b = get(f"/wallet/{FUNDING_PK}/balance")
+        out.update(funding_balance=int(b["balance"]), funding_notes=len(b.get("notes", {})))
+        a = get("/leader/aged-notes")
+        out.update(aged_count=int(a.get("count", 0)), aged_total=int(a.get("total_value", 0)))
+    except Exception as e:
+        out["error"] = f"node not readable: {e!r}"[:300]
+        print(json.dumps(out), flush=True)
+        return 1
+    out["low"] = LOW
+    if out["funding_balance"] >= LOW:
+        out["action"] = "none"
+        print(json.dumps(out), flush=True)
+        return 0
+    claimed = []
+    for _ in range(CLAIMS):
+        req = urllib.request.Request(f"{NODE}/leader/claim", data=b"", method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                claimed.append(r.status)
+        except urllib.error.HTTPError as e:
+            out["last_error"] = f"{e.code} {e.read().decode()[:200]}"
+            break
+        time.sleep(5)  # one claim per block or so
+    out["action"] = "claim"
+    out["claims"] = claimed
+    try:
+        out["funding_balance_after"] = int(get(f"/wallet/{FUNDING_PK}/balance")["balance"])
+    except Exception:
+        pass
+    print(json.dumps(out), flush=True)
+    return 0 if claimed else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

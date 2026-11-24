@@ -1,0 +1,49 @@
+[Unit]
+Description=LEZ v0.4.0-rc3 indexer_service: the zone read back from the Logos Blockchain node's channel
+After=ferrata-node.service
+Wants=ferrata-node.service
+RequiresMountsFor=/var/lib/ferrata
+
+[Service]
+User=ferrata
+Group=ferrata
+WorkingDirectory=/var/lib/ferrata/indexer
+Environment=RUST_LOG=info,risc0_zkvm=warn,kameo=warn,jsonrpsee_server=warn
+Environment=RISC0_SERVER_PATH=/opt/ferrata/bin/r0vm
+Environment=XDG_CACHE_HOME=/opt/ferrata/cache
+Environment=PATH=/opt/ferrata/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/opt/ferrata/bin/indexer_service /etc/ferrata/indexer_config.json --data-dir /var/lib/ferrata/indexer --port 8779
+Restart=always
+RestartSec=10
+TimeoutStopSec=60
+StandardOutput=append:/var/log/ferrata/indexer.log
+StandardError=append:/var/log/ferrata/indexer.log
+# Of /var/lib/ferrata it sees its own directory only.
+TemporaryFileSystem=/var/lib/ferrata:ro
+BindPaths=/var/lib/ferrata/indexer
+ReadWritePaths=/var/log/ferrata
+# indexer_service takes a port but no address and binds 0.0.0.0: only loopback traffic reaches it (and the
+# security group blocks the port too).
+IPAddressDeny=any
+IPAddressAllow=localhost
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

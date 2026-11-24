@@ -1,0 +1,46 @@
+[Unit]
+Description=LEZ v0.4.0-rc3 explorer_service (Leptos) over the indexer
+After=ferrata-indexer.service
+Wants=ferrata-indexer.service
+
+[Service]
+User=ferrata
+Group=ferrata
+WorkingDirectory=/opt/ferrata/explorer
+Environment=RUST_LOG=info
+Environment=LEPTOS_SITE_ADDR=127.0.0.1:8081
+Environment=LEPTOS_SITE_ROOT=site
+Environment=INDEXER_RPC_URL=http://127.0.0.1:8779
+ExecStart=/opt/ferrata/explorer/explorer_service
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/log/ferrata/explorer.log
+StandardError=append:/var/log/ferrata/explorer.log
+ReadWritePaths=/var/log/ferrata
+# Nothing of /var/lib/ferrata (keys, ledgers); loopback only (no service reads another's keys; nothing
+# public but Caddy). Reached by the operator through an SSM
+# port forward to 127.0.0.1:8081; no public name.
+InaccessiblePaths=/var/lib/ferrata
+IPAddressDeny=any
+IPAddressAllow=localhost
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

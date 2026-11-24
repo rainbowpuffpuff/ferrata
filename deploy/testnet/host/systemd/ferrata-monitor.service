@@ -1,0 +1,23 @@
+[Unit]
+Description=attest-monitor: the Sepolia instance against several beacon providers (stall, divergence, weak subjectivity)
+After=ferrata-sequencer.service
+ConditionPathExists=/etc/ferrata/attest.env
+
+[Service]
+User=ferrata
+Group=ferrata
+EnvironmentFile=/etc/ferrata/attest.env
+WorkingDirectory=/var/lib/ferrata/monitor
+ExecStart=/opt/ferrata/bin/attest-monitor watch --state lez:http://127.0.0.1:3040 --program ${FERRATA_PROGRAM} --instance ${FERRATA_INSTANCE} --provider lodestar=https://lodestar-sepolia.chainsafe.io --provider publicnode=https://ethereum-sepolia-beacon-api.publicnode.com --interval 300 --alert-log /var/lib/ferrata/monitor/alerts.jsonl --status-file /var/lib/ferrata/monitor/status.json --state-file /var/lib/ferrata/monitor/seen.json
+Restart=always
+RestartSec=30
+StandardOutput=append:/var/log/ferrata/monitor.log
+StandardError=append:/var/log/ferrata/monitor.log
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/ferrata/monitor /var/log/ferrata
+
+[Install]
+WantedBy=multi-user.target

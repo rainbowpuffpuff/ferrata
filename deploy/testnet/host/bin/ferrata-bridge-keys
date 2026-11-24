@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# The Sepolia bridge demo's two throwaway Ethereum keys, made on this host (owner-approved, 23 Nov 2026):
+#   watcher  the vault's watcher, used by `monitor` (ferrata-bridge-monitor.service), user ferrata-watcher
+#   relayer  sends checkpoints, finalisations and releases (ferrata-bridge-relayer.service), user ferrata-relayer
+# Each is an encrypted Web3 keystore (Foundry's `cast wallet new`) with a random password beside it, both mode 600 in a
+# mode-700 directory its own service user owns. The password reaches `cast` through its environment, never its command
+# line. Nothing here prints, logs or copies a key: only the addresses, also kept in /var/lib/ferrata/bridge/addresses.json.
+# Idempotent: an existing keystore is kept and only checked. Run as root. No Sepolia transaction is sent.
+set -euo pipefail
+CAST="${FERRATA_CAST:-/opt/ferrata/bin/cast}"
+BASE=/var/lib/ferrata/bridge
+install -d -m 755 "$BASE"
+for u in ferrata-watcher ferrata-relayer ferrata-prover; do
+  id "$u" >/dev/null 2>&1 || useradd --system --home-dir /nonexistent --no-create-home --shell /usr/sbin/nologin "$u"
+done
+# /var/lib/ferrata stays mode 750 (no service reads another's files): each command runs as the role's user in its own mount namespace that
+# sees, of /var/lib/ferrata, only the role's directory (as the services will).
+as_role() { local role="$1"; shift
+  systemd-run --quiet --wait --pipe --collect --uid="ferrata-$role" --gid="ferrata-$role" \
+    -p TemporaryFileSystem=/var/lib/ferrata:ro -p BindPaths="$BASE/$role" -p UMask=0077 \
+    -E HOME="$BASE/$role" -E PATH=/usr/bin:/bin -E CAST="$CAST" -- "$@"; }
+declare -A ADDR
+for role in watcher relayer; do
+  u="ferrata-$role"; d="$BASE/$role"
+  install -d -o "$u" -g "$u" -m 700 "$d"
+  if [ ! -f "$d/key" ]; then
+    [ -f "$d/password" ] || ( umask 077; head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' > "$d/password" )
+    chown "$u:$u" "$d/password"; chmod 600 "$d/password"
+    # The keystore's file is `key`; cast's output (the path and the address) stays in the directory, unprinted.
+    as_role "$role" /bin/bash -c \
+      'export CAST_PASSWORD; CAST_PASSWORD="$(cat "$HOME/password")"; exec "$CAST" wallet new "$HOME" key > "$HOME/new.out" 2>&1'
+  fi
+  chmod 600 "$d/key" "$d/password"
+  # The address the keystore decrypts to (also proves the password opens it).
+  a="$(as_role "$role" "$CAST" wallet address --keystore "$d/key" --password-file "$d/password" | tail -n 1)"
+  [[ "$a" =~ ^0x[0-9a-fA-F]{40}$ ]] || { echo "the $role keystore did not open" >&2; exit 1; }
+  if [ -f "$d/new.out" ]; then
+    grep -qi "${a#0x}" "$d/new.out" || { echo "the $role keystore is not the one cast made" >&2; exit 1; }
+    rm -f "$d/new.out"
+  fi
+  ADDR[$role]="$a"
+done
+printf '{"watcher": "%s", "relayer": "%s", "chain_id": 11155111}\n' "${ADDR[watcher]}" "${ADDR[relayer]}" > "$BASE/addresses.json"
+chmod 644 "$BASE/addresses.json"
+cat "$BASE/addresses.json"

@@ -1,0 +1,51 @@
+[Unit]
+Description=Ferrata testnet gateway: JSON-RPC allowlist, per-IP limits, CORS, faucet
+After=ferrata-sequencer.service
+RequiresMountsFor=/var/lib/ferrata
+
+[Service]
+# Its own user, owning only the faucet's key and ledger (a public-facing process holds nothing else).
+User=ferrata-gw
+Group=ferrata-gw
+Environment=XDG_CACHE_HOME=/opt/ferrata/cache
+Environment=RISC0_SERVER_PATH=/opt/ferrata/bin/r0vm
+Environment=PATH=/opt/ferrata/bin:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=-/etc/ferrata/gateway.env
+ExecStart=/usr/bin/python3 -I /opt/ferrata/bin/ferrata-gateway
+Restart=always
+RestartSec=3
+StandardOutput=append:/var/log/ferrata/gateway.log
+StandardError=append:/var/log/ferrata/gateway.log
+UMask=0077
+# Of /var/lib/ferrata it sees the faucet's key (read-only) and ledger, nothing else; logs are opened by systemd.
+TemporaryFileSystem=/var/lib/ferrata:ro
+BindReadOnlyPaths=/var/lib/ferrata/keys/faucet
+BindPaths=/var/lib/ferrata/faucet
+InaccessiblePaths=-/srv/ferrata -/etc/caddy -/var/lib/caddy
+# Loopback only: Caddy in front of it, the sequencer behind it.
+IPAddressDeny=any
+IPAddressAllow=localhost
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+TasksMax=256
+MemoryMax=1G
+ProtectProc=invisible
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

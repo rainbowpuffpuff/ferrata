@@ -1,0 +1,745 @@
+#!/usr/bin/env python3
+"""The Ferrata testnet's HTTP gateway, behind Caddy (which terminates TLS, caps request size and sets X-Real-IP).
+
+  POST /rpc (and POST / on the rpc. host)  LEZ JSON-RPC, forwarded to the sequencer on loopback, with a method
+                                            allowlist, batch, range and list caps, CORS, and limits (below)
+  POST /faucet {"account": "<LEZ public account id>", "public_key": "<64 hex, for an account never used>"}
+  GET  /faucet   the faucet's terms, its account and balance (cached for a few seconds)
+
+Limits:
+- per IP, a token bucket charged by work: one token per request, a getBlockRange one more per GATEWAY_RANGE_PER_TOKEN
+  blocks of its span (at most GATEWAY_MAX_RANGE: 50, the wallet's page; the explorer is configured to match), a list
+  parameter (getProofsAndRoot, getAccountsNonces; at most GATEWAY_MAX_LIST entries) one more per entry beyond
+  GATEWAY_LIST_FREE; one token is taken before the body is read;
+- response bytes: no answer above GATEWAY_MAX_RESPONSE; a byte budget per IP and one for everyone together (it bounds
+  what the RPC can cost in egress). An IP's budget is at most GATEWAY_BYTES_SHARE of the network-wide one (rate and
+  burst), so that it takes 1/share clients to exhaust that. A request goes on only while its IP's budget is positive
+  (and holds what it needs, below), GATEWAY_BYTES_RESERVE (at most the answer cap) held from it while the request is
+  forwarded. An answer is sent only if each budget can pay for it at that moment: it holds at least the answer's size,
+  or it is full (an answer larger than a budget's burst goes alone, then the budget repays it); else 429 with the time
+  to wait, nothing sent. So the bytes one IP is sent in any interval are at most its budget's burst plus its refill,
+  or one answer when its budget was full, however many answers are in flight at once. An answer the sequencer built
+  and the gateway did not send (over the cap, or not paid for) is charged to its IP all the same, for the bytes the
+  sequencer produced, and that IP's next request goes on only once its budget holds that size again (or is full): the
+  sequencer builds at most one answer an IP cannot pay for before the IP's budget has refilled by its size, and a
+  client that waits Retry-After gets its answer. Answers of at most GATEWAY_SMALL_ANSWER bytes are not held back by
+  the network-wide budget but by one of their own (GATEWAY_SMALL_GLOBAL_*, every caller together), and charged to
+  both: a few heavy clients cannot stop everyone's small calls, and every answer together stays within the
+  network-wide rate (plus the two bursts);
+- sendTransaction per IP and for the whole network (the operator's own services, such as the updater, post to the
+  sequencer directly and keep most of the 20-transaction blocks);
+- sockets time out; at most GATEWAY_PER_IP_INFLIGHT requests per IP and GATEWAY_MAX_INFLIGHT in all are handled at
+  once, the per-IP cap checked first, so that one client cannot hold every slot (Caddy reads each body whole before
+  passing it on, so a slow sender holds none);
+- the faucet: its per-IP bucket comes before any work; one transfer at a time, at most FAUCET_PER_IP_WAITING claims
+  per IP and FAUCET_MAX_WAITING in all waiting (the rest get 429 at once, so that claims cannot take the RPC's slots
+  and one client cannot take the faucet's); failed claims count against the IP and its /24 (IPv6 /64); a transfer that
+  is not in a block yet may still settle, so it also counts against its account and the hourly total. A claim is
+  written to the ledger (pending) before the tool runs, with the path of its transfer's record; the tool writes that
+  record (the signed transaction's hash, bytes and nonce) before it sends the transaction. Whether a claim paid is read
+  from its own transaction, never from the account's balance (another source may pay the same amount): in a block and
+  applied, it paid; reverted, or its nonce spent by another transaction (it never can be applied), or no record (nothing
+  was signed), it failed; else it is still pending: its very bytes are sent again once older than FAUCET_RESEND_AFTER
+  (the same nonce: at most one is ever applied). An account with a claim still pending is refused until that claim is
+  decided, which its next claim looks up first. No claim is made with a tool that does not record its transfers. The
+  tool's output is logged, never returned; claims older than FAUCET_KEEP_DAYS are deleted with their records.
+
+Standard library only. Configuration: environment (see DEFAULTS); the faucet's ledger is a SQLite file.
+"""
+import http.server
+import ipaddress
+import json
+import os
+import re
+import sqlite3
+import subprocess
+import threading
+import time
+import urllib.error
+import urllib.request
+
+DEFAULTS = {
+    "GATEWAY_LISTEN": "127.0.0.1:8090",
+    "GATEWAY_UPSTREAM": "http://127.0.0.1:3040",
+    "GATEWAY_MAX_BODY": "1100000",            # a transaction cannot exceed the sequencer's 1,048,576-byte block
+    "GATEWAY_MAX_BATCH": "20",
+    "GATEWAY_MAX_RANGE": "50",                # blocks per getBlockRange (the wallet pages by 50)
+    "GATEWAY_RANGE_PER_TOKEN": "10",
+    "GATEWAY_MAX_RESPONSE": "8388608",        # bytes of one answer (a full block is ~1.4 MB in base64)
+    "GATEWAY_MAX_LIST": "64",                 # entries of one list parameter
+    "GATEWAY_LIST_FREE": "10",
+    "GATEWAY_READ_RATE": "10",                # tokens per second, per IP
+    "GATEWAY_READ_BURST": "60",
+    "GATEWAY_SEND_RATE": "0.5",               # sendTransaction per second, per IP
+    "GATEWAY_SEND_BURST": "12",
+    "GATEWAY_SEND_GLOBAL_RATE": "0.5",        # sendTransaction per second, every public caller together
+    "GATEWAY_SEND_GLOBAL_BURST": "10",
+    "GATEWAY_BYTES_RATE": "262144",           # response bytes per second, per IP (at most the share below: 128 KiB/s)
+    "GATEWAY_BYTES_BURST": "4194304",
+    "GATEWAY_BYTES_GLOBAL_RATE": "524288",    # every caller together: 512 KiB/s, at most ~1.9 GB (~0.17 USD) an hour
+    "GATEWAY_BYTES_GLOBAL_BURST": "33554432",
+    "GATEWAY_BYTES_RESERVE": "262144",        # held from the IP's byte budget while a request is forwarded
+    "GATEWAY_BYTES_SHARE": "0.25",            # an IP's byte budget: at most this share of the network-wide one
+    "GATEWAY_SMALL_ANSWER": "16384",          # answers this small are held back by a budget of their own only:
+    "GATEWAY_SMALL_GLOBAL_RATE": "262144",    # every caller together (and charged to the network-wide one too)
+    "GATEWAY_SMALL_GLOBAL_BURST": "8388608",
+    "GATEWAY_MAX_INFLIGHT": "64",
+    "GATEWAY_PER_IP_INFLIGHT": "6",           # the explorer's first page sends 5 at once; 64 / 6: eleven clients
+    "GATEWAY_SOCKET_TIMEOUT": "20",
+    "FAUCET_KEY": "/var/lib/ferrata/keys/faucet/payer.key",
+    "FAUCET_ACCOUNTS": "/var/lib/ferrata/keys/faucet/accounts.json",
+    "FAUCET_STATE": "/var/lib/ferrata/faucet",
+    "FAUCET_AMOUNT": "10000000000",           # 10 LGO (10^9 units each)
+    "FAUCET_PER_ACCOUNT_SECONDS": "86400",
+    "FAUCET_PER_IP_PER_DAY": "3",             # claims tried, failed ones included
+    "FAUCET_PER_NET_PER_DAY": "10",           # the same for an IPv4 /24 or IPv6 /64
+    "FAUCET_MAX_WAITING": "4",
+    "FAUCET_PER_IP_WAITING": "1",
+    "FAUCET_GLOBAL_PER_HOUR": "120",
+    "FAUCET_TOOL": "/opt/ferrata/bin/ferrata-day1",
+    "FAUCET_WAIT": "45",
+    "FAUCET_TOOL_GRACE": "30",                # seconds the tool may run beyond FAUCET_WAIT before the claim gets 504
+    "FAUCET_RESEND_AFTER": "60",              # a transfer still pending this long after its claim is sent again
+    "FAUCET_KEEP_DAYS": "30",
+}
+CFG = {k: os.environ.get(k, v) for k, v in DEFAULTS.items()}
+F = {k: float(v) for k, v in CFG.items() if re.fullmatch(r"[0-9.]+", v)}
+
+READ_METHODS = {
+    "checkHealth", "getFeeState", "getBlock", "getBlockRange", "getLastBlockId", "getAccountBalance",
+    "getTransaction", "getAccountsNonces", "getAccountView", "getPublications", "getMessagePath",
+    "getRecoveryBinding", "getProofsAndRoot", "getAccount", "getProgramIds", "getChannelId",
+    "getCrossZoneDeadLetters",
+}
+SEND_METHODS = {"sendTransaction"}
+LIST_METHODS = {"getProofsAndRoot", "getAccountsNonces"}
+# Not forwarded: requeueCrossZoneDeadLetter (an operator's move) and anything else LEZ may add.
+ACCOUNT_RE = re.compile(r"^(Public/)?[1-9A-HJ-NP-Za-km-z]{32,44}$")
+PK_RE = re.compile(r"^[0-9a-f]{64}$")
+CORS = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
+}
+
+
+class Buckets:
+    """Token buckets keyed by (class, who). A bucket may go into debt (debit), repaid at its rate. A byte budget charged
+    for an answer it could not pay for also needs that answer's size (or to be full) before its next request goes on."""
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.state = {}
+        self.need = {}
+
+    def _level(self, key, rate, burst, now):
+        tokens, last = self.state.get(key, (burst, now))
+        return min(burst, tokens + (now - last) * rate)
+
+    def take(self, key, rate, burst, n=1):
+        now = time.monotonic()
+        with self.lock:
+            tokens = self._level(key, rate, burst, now)
+            ok = tokens >= n
+            self.state[key] = (tokens - n if ok else tokens, now)
+            if len(self.state) > 100_000:  # forget the idle
+                self.state = {k: v for k, v in self.state.items() if now - v[1] < 600}
+                self.need = {k: v for k, v in self.need.items() if k in self.state}
+            return ok
+
+    def _wait(self, key, rate, burst, level):
+        """Seconds until a byte budget at `level` may let a request go on: positive, and holding what it needs."""
+        goal = min(self.need.get(key, 0), burst)
+        if level > 0 and level >= goal:
+            return 0.0
+        return (max(goal, 1) - level) / rate if rate > 0 else 3600.0
+
+    def ready(self, key, rate, burst):
+        """0 if the byte budget may let a request go on now, else the seconds until it may."""
+        now = time.monotonic()
+        with self.lock:
+            level = self._level(key, rate, burst, now)
+            self.state[key] = (level, now)
+            return self._wait(key, rate, burst, level)
+
+    def reserve(self, budgets, n):
+        """If every budget (key, rate, burst) is ready, take n from each (it may go into debt); else take nothing."""
+        now = time.monotonic()
+        with self.lock:
+            levels = [self._level(key, rate, burst, now) for key, rate, burst in budgets]
+            ok = all(self._wait(key, rate, burst, level) == 0 for (key, rate, burst), level in zip(budgets, levels))
+            for (key, _, _), level in zip(budgets, levels):
+                self.state[key] = (level - n if ok else level, now)
+            return ok
+
+    def debit(self, key, rate, burst, n):
+        """Take n; a negative n gives back, up to the burst."""
+        now = time.monotonic()
+        with self.lock:
+            self.state[key] = (min(burst, self._level(key, rate, burst, now) - n), now)
+
+    def _give_back(self, held, now):
+        for key, rate, burst, n in held:
+            self.state[key] = (min(burst, self._level(key, rate, burst, now) + n), now)
+
+    def _charge(self, budget, size, now):
+        """`size` taken from `budget` whatever it holds, and needed whole (or a full budget) before its next request."""
+        key, rate, burst = budget
+        level = self._level(key, rate, burst, now) - size
+        self.state[key] = (level, now)
+        self.need[key] = size
+        return (min(size, burst) - level) / rate if rate > 0 else 3600.0
+
+    def settle(self, held, budgets, size, owner):
+        """At once, for an answer of `size` bytes: give back `held` ((key, rate, burst, n) the request reserved), then
+        charge `size` to every budget (key, rate, burst, may_owe) if each can pay for it now (it holds at least `size`,
+        is full, or may_owe: then it may go into debt), and return 0. Else the answer is not sent: only `owner` (key,
+        rate, burst), the budget of the client it was built for, is charged (see _charge), and the seconds until every
+        budget short of it can pay are returned."""
+        now = time.monotonic()
+        with self.lock:
+            self._give_back(held, now)
+            short = [(key, rate, burst) for key, rate, burst, may_owe in budgets
+                     if not (may_owe or self._level(key, rate, burst, now) >= min(size, burst))]
+            if not short:
+                for key, rate, burst, _ in budgets:
+                    self.state[key] = (self._level(key, rate, burst, now) - size, now)
+                    self.need.pop(key, None)
+                return 0
+            wait = self._charge(owner, size, now)
+            return max([wait] + [(min(size, burst) - self._level(key, rate, burst, now)) / rate if rate > 0 else 3600.0
+                                 for key, rate, burst in short] + [0.001])
+
+    def charge(self, held, budget, size):
+        """Give back `held`, then charge `size` to `budget` (see _charge): an answer built for its client, not sent."""
+        now = time.monotonic()
+        with self.lock:
+            self._give_back(held, now)
+            return self._charge(budget, size, now)
+
+
+class InFlight:
+    """Requests in progress per client, under a cap."""
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.count = {}
+
+    def enter(self, who, cap):
+        with self.lock:
+            n = self.count.get(who, 0)
+            if n >= cap:
+                return False
+            self.count[who] = n + 1
+            return True
+
+    def leave(self, who):
+        with self.lock:
+            n = self.count.pop(who) - 1
+            if n:
+                self.count[who] = n
+
+
+BUCKETS = Buckets()
+INFLIGHT = threading.BoundedSemaphore(int(CFG["GATEWAY_MAX_INFLIGHT"]))
+INFLIGHT_PER_IP = InFlight()
+FAUCET_LOCK = threading.Lock()
+FAUCET_SLOTS = threading.BoundedSemaphore(int(CFG["FAUCET_MAX_WAITING"]))
+FAUCET_SLOTS_PER_IP = InFlight()
+FAUCET_INFO = {"t": 0.0, "body": None}
+TOOL_RECORDS = {"ok": False}
+FAUCET_INFO_LOCK = threading.Lock()
+
+
+def faucet_db():
+    os.makedirs(CFG["FAUCET_STATE"], exist_ok=True)
+    db = sqlite3.connect(os.path.join(CFG["FAUCET_STATE"], "claims.sqlite"), timeout=30)
+    # ok: 1 paid (its transfer applied in a block), 0 failed (reverted, its nonce spent by another transaction, or
+    # nothing signed), 2 sent and not in a block yet (it may still be applied), 3 pending (written before the tool
+    # runs). detail: {"record": the path of the transfer's record, ...}; rows from before records have none.
+    db.execute("CREATE TABLE IF NOT EXISTS claims (t REAL, ip TEXT, account TEXT, ok INTEGER, hash TEXT, detail TEXT)")
+    if db.execute("PRAGMA user_version").fetchone()[0] < 1:  # a ledger from before timeouts had a status of their own
+        db.execute("UPDATE claims SET ok=2 WHERE ok=0 AND detail='timeout'")
+        db.execute("PRAGMA user_version=1")
+        db.commit()
+    return db
+
+
+def tool_records():
+    """Whether the faucet tool records each transfer before sending it (its commands include transfer-status). A tool
+    from before records takes --record and ignores it: its transfers could not be looked up, so none is made with it."""
+    if not TOOL_RECORDS["ok"]:
+        try:
+            p = subprocess.run([CFG["FAUCET_TOOL"], "commands"], capture_output=True, text=True, timeout=10)
+            TOOL_RECORDS["ok"] = "transfer-status" in p.stdout + p.stderr
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    return TOOL_RECORDS["ok"]
+
+
+def record_of(detail):
+    """The path of a claim's transfer record, from its ledger detail (None for a claim from before records)."""
+    try:
+        record = json.loads(detail or "{}").get("record")
+    except (ValueError, AttributeError):
+        return None
+    return record if isinstance(record, str) and record else None
+
+
+def same_net(a, b):
+    """Whether two addresses share an IPv4 /24 or an IPv6 /64."""
+    try:
+        x, y = ipaddress.ip_address(a), ipaddress.ip_address(b)
+    except ValueError:
+        return a == b
+    if x.version != y.version:
+        return False
+    return y in ipaddress.ip_network(f"{x}/{24 if x.version == 4 else 64}", strict=False)
+
+
+def retry_after(seconds):
+    return max(1, min(600, int(seconds) + 1))
+
+
+def jerr(id_, code, msg):
+    return {"jsonrpc": "2.0", "id": id_, "error": {"code": code, "message": msg}}
+
+
+def upstream(method, params):
+    q = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode()
+    req = urllib.request.Request(CFG["GATEWAY_UPSTREAM"], data=q, headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=10) as r:
+        return json.load(r)
+
+
+def cost_of(reqs):
+    """(tokens, sends, None) for an acceptable request list, or (0, 0, (http status, error body))."""
+    cost = sends = 0
+    for r in reqs:
+        if not isinstance(r, dict) or not isinstance(r.get("method"), str):
+            return 0, 0, (400, jerr(None, -32600, "invalid request"))
+        m, p = r["method"], r.get("params")
+        if m not in READ_METHODS and m not in SEND_METHODS:
+            return 0, 0, (403, jerr(r.get("id"), -32601, f"method {m} is not served by this gateway"))
+        cost += 1
+        sends += m in SEND_METHODS
+        if m == "getBlockRange":
+            try:
+                a, b = (p[0], p[1]) if isinstance(p, list) else (p["start_block_id"], p["end_block_id"])
+                blocks = int(b) - int(a) + 1  # both ends included
+            except (KeyError, IndexError, TypeError, ValueError):
+                blocks = 0  # the sequencer answers malformed params itself
+            if blocks > int(CFG["GATEWAY_MAX_RANGE"]):
+                return 0, 0, (400, jerr(r.get("id"), -32602, f"at most {CFG['GATEWAY_MAX_RANGE']} blocks per getBlockRange"))
+            cost += max(0, blocks) // int(CFG["GATEWAY_RANGE_PER_TOKEN"])
+        if m in LIST_METHODS:
+            values = p if isinstance(p, list) else list(p.values()) if isinstance(p, dict) else []
+            for v in [values, *values]:
+                if isinstance(v, list):
+                    if len(v) > int(CFG["GATEWAY_MAX_LIST"]):
+                        return 0, 0, (400, jerr(r.get("id"), -32602, f"at most {CFG['GATEWAY_MAX_LIST']} entries per list in {m}"))
+                    cost += max(0, len(v) - int(CFG["GATEWAY_LIST_FREE"]))
+    return cost, sends, None
+
+
+class Handler(http.server.BaseHTTPRequestHandler):
+    server_version = "ferrata-gateway"
+    sys_version = ""
+    timeout = F["GATEWAY_SOCKET_TIMEOUT"]  # a slow client cannot hold a thread
+    # Each write leaves at once: an answer sent before the body is read (429, 404) is followed by a reset when the
+    # connection closes with the body unread, and with Nagle's algorithm its last segment could still be waiting.
+    disable_nagle_algorithm = True
+
+    def client_ip(self):
+        peer = self.client_address[0]
+        real = self.headers.get("X-Real-IP", "")
+        if peer in ("127.0.0.1", "::1") and real:
+            try:
+                return str(ipaddress.ip_address(real.strip()))
+            except ValueError:
+                pass
+        return peer
+
+    def log_message(self, fmt, *args):  # one line per request on stdout, no bodies
+        pass
+
+    def send(self, code, obj, extra=None):
+        body = json.dumps(obj, separators=(",", ":")).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        for k, v in {**CORS, **(extra or {})}.items():
+            self.send_header(k, v)
+        self.end_headers()
+        self.wfile.write(body)
+
+    def limited(self, why, retry, id_=None):
+        self.close_connection = True  # the body may be unread
+        return self.send(429, jerr(id_, -32005, why), {"Retry-After": str(retry)})
+
+    def guarded(self, fn):
+        # The client's own cap before the shared slots, so that a client at its cap takes none of them.
+        ip = self.client_ip()
+        if not INFLIGHT_PER_IP.enter(ip, int(CFG["GATEWAY_PER_IP_INFLIGHT"])):
+            return self.limited("too many requests at once from this address: wait for an answer", 1)
+        try:
+            if not INFLIGHT.acquire(blocking=False):
+                self.close_connection = True
+                return self.send(503, {"error": "busy: try again shortly"}, {"Retry-After": "5"})
+            try:
+                return fn()
+            finally:
+                INFLIGHT.release()
+        finally:
+            INFLIGHT_PER_IP.leave(ip)
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        for k, v in CORS.items():
+            self.send_header(k, v)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def read_body(self, limit):
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            return None, -1
+        if n <= 0 or n > limit:
+            self.close_connection = True
+            return None, n
+        return self.rfile.read(n), n
+
+    def do_GET(self):
+        self.guarded(self._get)
+
+    def do_POST(self):
+        self.guarded(self._post)
+
+    def _get(self):
+        path = self.path.split("?")[0]
+        if path in ("/faucet", "/faucet/"):
+            return self.faucet_info()
+        if path in ("/rpc", "/"):
+            return self.send(200, {"jsonrpc": "LEZ v0.4.0-rc3 sequencer JSON-RPC: POST here",
+                                   "methods": sorted(READ_METHODS | SEND_METHODS)})
+        self.send(404, {"error": "not found"})
+
+    def _post(self):
+        path = self.path.split("?")[0]
+        host = (self.headers.get("Host") or "").split(":")[0]
+        if path == "/rpc" or (path == "/" and host.startswith("rpc.")):
+            return self.rpc()
+        if path in ("/faucet", "/faucet/"):
+            return self.faucet()
+        self.close_connection = True
+        self.send(404, {"error": "not found"})
+
+    # ---- JSON-RPC -------------------------------------------------------------------------------------------------
+    def rpc(self):
+        t0 = time.monotonic()
+        ip = self.client_ip()
+        rate, burst = F["GATEWAY_READ_RATE"], F["GATEWAY_READ_BURST"]
+        if not BUCKETS.take(("read", ip), rate, burst, 1):  # before the body is read
+            return self.limited("rate limited: slow down", 2)
+        share = F["GATEWAY_BYTES_SHARE"]
+        mine = (("bytes", ip), min(F["GATEWAY_BYTES_RATE"], share * F["GATEWAY_BYTES_GLOBAL_RATE"]),
+                min(F["GATEWAY_BYTES_BURST"], share * F["GATEWAY_BYTES_GLOBAL_BURST"]))
+        everyone = (("bytes", "*"), F["GATEWAY_BYTES_GLOBAL_RATE"], F["GATEWAY_BYTES_GLOBAL_BURST"])
+        small_calls = (("bytes", "small"), F["GATEWAY_SMALL_GLOBAL_RATE"], F["GATEWAY_SMALL_GLOBAL_BURST"])
+        wait = BUCKETS.ready(*mine)
+        if wait:
+            return self.limited("response budget used up: try again after Retry-After seconds", retry_after(wait))
+        raw, n = self.read_body(int(CFG["GATEWAY_MAX_BODY"]))
+        if raw is None:
+            return self.send(413 if n > 0 else 400, jerr(None, -32600, f"body must be 1..{CFG['GATEWAY_MAX_BODY']} bytes"))
+        try:
+            req = json.loads(raw)
+        except ValueError:
+            return self.send(400, jerr(None, -32700, "parse error"))
+        reqs = req if isinstance(req, list) else [req]
+        if not reqs or len(reqs) > int(CFG["GATEWAY_MAX_BATCH"]):
+            return self.send(400, jerr(None, -32600, f"a batch holds 1..{CFG['GATEWAY_MAX_BATCH']} requests"))
+        cost, sends, err = cost_of(reqs)
+        if err:
+            return self.send(*err)
+        cap = int(CFG["GATEWAY_MAX_RESPONSE"])
+        # Held from the IP's budget before the send tokens (scarce, network-wide) are taken; given back when the answer
+        # is settled (charged if it is sent) or the request ends otherwise.
+        reserve = min(int(F["GATEWAY_BYTES_RESERVE"]), cap)
+        if not BUCKETS.reserve([mine], reserve):
+            return self.limited("response budget used up: try again after Retry-After seconds", retry_after(BUCKETS.ready(*mine)))
+        held = [(*mine, reserve)]
+        try:
+            if cost > 1 and not BUCKETS.take(("read", ip), rate, burst, cost - 1):
+                return self.limited("rate limited: this request costs more than your remaining budget", 5)
+            if sends and not BUCKETS.take(("send", ip), F["GATEWAY_SEND_RATE"], F["GATEWAY_SEND_BURST"], sends):
+                return self.limited("rate limited: too many sendTransaction", 5)
+            if sends and not BUCKETS.take(("send", "*"), F["GATEWAY_SEND_GLOBAL_RATE"], F["GATEWAY_SEND_GLOBAL_BURST"], sends):
+                return self.limited("the network is busy: public sendTransaction is capped network-wide; try again shortly", 10)
+            up = urllib.request.Request(CFG["GATEWAY_UPSTREAM"], data=raw, headers={"Content-Type": "application/json"})
+            try:
+                with urllib.request.urlopen(up, timeout=60) as resp:
+                    body, code, length = resp.read(cap + 1), resp.status, resp.headers.get("Content-Length")
+            except urllib.error.HTTPError as e:
+                body, code, length = e.read(cap + 1), e.code, e.headers.get("Content-Length")
+            except Exception as e:  # the sequencer is restarting or down
+                print(f"rpc {ip} upstream error {e!r}", flush=True)
+                return self.send(503, jerr(None, -32603, "the sequencer is not answering; try again shortly"), {"Retry-After": "10"})
+            if len(body) > cap:
+                produced = len(body)  # read up to the cap; the whole answer's length when the sequencer declared it
+                try:
+                    produced = max(produced, int(length or 0))
+                except ValueError:
+                    pass
+                BUCKETS.charge(held, mine, produced)
+                held = []  # given back by charge
+                print(f"rpc {ip} answer of {produced}B over {cap}B refused and charged", flush=True)
+                return self.send(400, jerr(None, -32602, f"the answer would exceed {cap} bytes: ask for fewer blocks or entries"))
+            small = len(body) <= int(F["GATEWAY_SMALL_ANSWER"])
+            budgets = [(*mine, False), (*everyone, small)] + ([(*small_calls, False)] if small else [])
+            wait = BUCKETS.settle(held, budgets, len(body), mine)
+            held = []  # given back by settle
+            if wait:
+                print(f"rpc {ip} answer of {len(body)}B held back and charged: byte budget", flush=True)
+                return self.limited("response budget used up: this answer is larger than what is left, and it is charged "
+                                    "all the same; try again after Retry-After seconds", retry_after(wait))
+            self.send_response(code)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            for k, v in CORS.items():
+                self.send_header(k, v)
+            self.end_headers()
+            self.wfile.write(body)
+            methods = ",".join(sorted({r["method"] for r in reqs}))
+            print(f"rpc {ip} {methods} n={len(reqs)} cost={cost} {code} {len(body)}B {1000 * (time.monotonic() - t0):.0f}ms", flush=True)
+        finally:
+            for key, r, b, n in held:  # the request ended before its answer was settled
+                BUCKETS.debit(key, r, b, -n)
+
+    # ---- faucet ---------------------------------------------------------------------------------------------------
+    def faucet_account(self):
+        try:
+            with open(CFG["FAUCET_ACCOUNTS"]) as f:
+                return json.load(f)["payer"]
+        except (OSError, ValueError, KeyError):
+            return None
+
+    def account_absent(self, account):
+        """True when the sequencer says the account does not exist (getAccount answers null); False if unsure."""
+        try:
+            d = upstream("getAccount", [account])
+            return "result" in d and d["result"] is None
+        except Exception:
+            return False
+
+    def faucet_info(self):
+        if not BUCKETS.take(("faucet-info", self.client_ip()), 1, 10):
+            return self.limited("slow down", 5)
+        now = time.monotonic()
+        with FAUCET_INFO_LOCK:
+            if FAUCET_INFO["body"] is None or now - FAUCET_INFO["t"] > 10:
+                acct, bal = self.faucet_account(), None
+                if acct:
+                    try:
+                        bal = upstream("getAccountBalance", [acct]).get("result")
+                    except Exception:
+                        pass
+                FAUCET_INFO["body"] = {
+                    "faucet_account": acct, "balance": bal, "amount": CFG["FAUCET_AMOUNT"], "unit": "1 LGO = 10^9",
+                    "limits": {"per_account_seconds": int(CFG["FAUCET_PER_ACCOUNT_SECONDS"]),
+                               "per_ip_per_day": int(CFG["FAUCET_PER_IP_PER_DAY"]),
+                               "per_network_per_day": int(CFG["FAUCET_PER_NET_PER_DAY"]),
+                               "global_per_hour": int(CFG["FAUCET_GLOBAL_PER_HOUR"])},
+                    "network": {"public_send_per_second": F["GATEWAY_SEND_GLOBAL_RATE"],
+                                "note": "public sendTransaction is capped network-wide and per IP; on HTTP 429 wait Retry-After seconds"},
+                    "how": "POST /faucet with {\"account\": \"<your LEZ public account id>\", \"public_key\": \"<its 64-hex public key; required for an account never used>\"}; testnet tokens only",
+                }
+                FAUCET_INFO["t"] = now
+            body = FAUCET_INFO["body"]
+        self.send(200, body)
+
+    def faucet(self):
+        ip = self.client_ip()
+        if not BUCKETS.take(("faucet", ip), 1 / 20, 3):  # before reading, before asking the sequencer
+            return self.limited("slow down", 20)
+        # The IP's own cap before the shared slots, so that one client cannot hold them all.
+        if not FAUCET_SLOTS_PER_IP.enter(ip, int(CFG["FAUCET_PER_IP_WAITING"])):
+            return self.limited("a claim from this address is already in progress: wait for its answer", 10)
+        try:
+            if not FAUCET_SLOTS.acquire(blocking=False):
+                return self.limited("the faucet is busy; try again in a few seconds", 10)
+            try:
+                return self._faucet(ip)
+            finally:
+                FAUCET_SLOTS.release()
+        finally:
+            FAUCET_SLOTS_PER_IP.leave(ip)
+
+    def _faucet(self, ip):
+        raw, n = self.read_body(4096)
+        if raw is None:
+            return self.send(400, {"ok": False, "error": "send a small JSON body: {\"account\": \"...\"}"})
+        try:
+            body = json.loads(raw)
+            account = str(body.get("account") or body.get("account_id") or "").strip()
+            pk = str(body.get("public_key") or body.get("publicKey") or "").strip().lower().removeprefix("0x")
+        except (ValueError, AttributeError):
+            return self.send(400, {"ok": False, "error": "body is not JSON"})
+        if not ACCOUNT_RE.match(account):
+            return self.send(400, {"ok": False, "error": "account must be a LEZ public account id (base58, optionally Public/...)"})
+        account = account.removeprefix("Public/")
+        if pk and not PK_RE.match(pk):
+            return self.send(400, {"ok": False, "error": "public_key must be 64 hex digits (the account's public key)"})
+        if not pk and self.account_absent(account):
+            # LEZ credits a public account that does not exist yet only with its public key as admission evidence.
+            return self.send(400, {"ok": False, "error": "this account has never been used: send its public_key too "
+                                   "({\"account\": ..., \"public_key\": \"<64 hex>\"})"})
+        if not tool_records():
+            print("faucet: its tool does not record transfers (an older ferrata-day1?): no claims", flush=True)
+            return self.send(503, {"ok": False, "error": "the faucet is being updated; try again later"}, {"Retry-After": "600"})
+        if not FAUCET_LOCK.acquire(timeout=30):
+            return self.limited("the faucet is busy; try again in a few seconds", 10)
+        now = time.time()
+        try:
+            db = faucet_db()
+            try:
+                cutoff = now - 86400 * float(CFG["FAUCET_KEEP_DAYS"])
+                for (detail,) in db.execute("SELECT detail FROM claims WHERE t < ?", (cutoff,)).fetchall():
+                    record = record_of(detail)
+                    for path in ([record, os.path.splitext(record)[0] + ".partial"] if record else []):
+                        try:
+                            os.unlink(path)
+                        except OSError:
+                            pass
+                db.execute("DELETE FROM claims WHERE t < ?", (cutoff,))
+                per_account = float(CFG["FAUCET_PER_ACCOUNT_SECONDS"])
+                # This account's claims whose outcome is not known yet (a transfer not in a block yet, a claim that was
+                # interrupted): looked up by their own transaction. Under the faucet's lock, so none of them is running.
+                for rowid, ok, t, detail in db.execute("SELECT rowid, ok, t, detail FROM claims WHERE account=? AND ok IN (2, 3) "
+                                                       "AND t>?", (account, now - per_account)).fetchall():
+                    self.resolve(db, rowid, ok, t, detail)
+                paid = db.execute("SELECT max(t) FROM claims WHERE account=? AND ok=1", (account,)).fetchone()[0]
+                if paid and now - paid < per_account:
+                    wait = int(per_account - (now - paid))
+                    return self.send(429, {"ok": False, "error": f"this account was funded recently; again in {wait} s"})
+                if db.execute("SELECT 1 FROM claims WHERE account=? AND ok IN (2, 3) AND t>?", (account, now - per_account)).fetchone():
+                    return self.send(429, {"ok": False, "error": "this account's last transfer has not settled yet (or its "
+                                           "outcome is not known yet); try again later"}, {"Retry-After": "60"})
+                today = [x for (x,) in db.execute("SELECT ip FROM claims WHERE t>?", (now - 86400,))]
+                if sum(x == ip for x in today) >= int(CFG["FAUCET_PER_IP_PER_DAY"]):
+                    return self.send(429, {"ok": False, "error": "this address has had its claims for today"})
+                if sum(same_net(x, ip) for x in today) >= int(CFG["FAUCET_PER_NET_PER_DAY"]):
+                    return self.send(429, {"ok": False, "error": "this network has had its claims for today"})
+                total = db.execute("SELECT count(*) FROM claims WHERE ok IN (1, 2, 3) AND t>?", (now - 3600,)).fetchone()[0]
+                if total >= int(CFG["FAUCET_GLOBAL_PER_HOUR"]):
+                    return self.send(429, {"ok": False, "error": "the faucet is busy; try in a while"})
+                # The claim is in the ledger (pending) before the tool runs; the tool writes the transfer's record (its
+                # hash, bytes and nonce) before it sends it: whatever happens next, the outcome is found by that hash.
+                records = os.path.join(CFG["FAUCET_STATE"], "records")
+                os.makedirs(records, exist_ok=True)
+                row = db.execute("INSERT INTO claims VALUES (?,?,?,3,'','')", (now, ip, account)).lastrowid
+                # Named by time and row: a row id used again (once the newest rows are deleted) is not a record's name.
+                record = os.path.join(records, time.strftime("%Y%m%dT%H%M%SZ", time.gmtime(now)) + f"-{row}.json")
+                db.execute("UPDATE claims SET detail=? WHERE rowid=?", (json.dumps({"record": record}), row))
+                db.commit()
+                cmd = [CFG["FAUCET_TOOL"], "transfer", "--from-key", CFG["FAUCET_KEY"], "--to", account,
+                       "--amount", CFG["FAUCET_AMOUNT"], "--rpc", CFG["GATEWAY_UPSTREAM"],
+                       "--state", os.path.join(CFG["FAUCET_STATE"], "tool"), "--wait", CFG["FAUCET_WAIT"],
+                       "--record", record] + (["--to-pk", pk] if pk else [])
+                res, why = None, "unknown"
+                try:
+                    p = subprocess.run(cmd, capture_output=True, text=True,
+                                       timeout=F["FAUCET_WAIT"] + F["FAUCET_TOOL_GRACE"])
+                    why = ((p.stderr or "").strip().splitlines()[-1:] or ["unknown"])[0][:300]
+                    if p.returncode == 0:
+                        try:
+                            res = json.loads((p.stdout or "").strip().splitlines()[-1])
+                        except (ValueError, IndexError):
+                            res = None
+                except subprocess.TimeoutExpired:
+                    why = "timeout"
+                except OSError as e:  # the tool could not be started: nothing was signed or sent
+                    why = f"the tool could not be started ({e.__class__.__name__})"
+                state = (res or {}).get("state")
+                if state not in ("applied", "reverted"):
+                    # Not known from the tool's own answer: by the transfer's record, if it wrote one.
+                    state = self.resolve(db, row, 3, now, json.dumps({"record": record}))
+                if state == "applied":
+                    h = (res or {}).get("hash") or db.execute("SELECT hash FROM claims WHERE rowid=?", (row,)).fetchone()[0]
+                    db.execute("UPDATE claims SET ok=1, hash=?, detail=? WHERE rowid=?",
+                               (h, json.dumps({"record": record, **({"result": res} if res else {})}), row))
+                    db.commit()
+                    print(f"faucet {ip} {account} {h} applied", flush=True)
+                    return self.send(200, {"ok": True, **(res or {}), "hash": h, "credited": True})
+                if state == "pending":
+                    print(f"faucet {ip} {account} sent, not in a block yet ({why})", flush=True)
+                    return self.send(504, {"ok": False, "error": "the transfer was sent and is not in a block yet; it "
+                                           "counts as this account's claim while it settles"})
+                if state == "unknown":
+                    print(f"faucet {ip} {account}: outcome not known yet ({why})", flush=True)
+                    return self.send(504, {"ok": False, "error": "the transfer's outcome is not known yet; it counts as "
+                                           "this account's claim until it is"})
+                db.execute("UPDATE claims SET ok=0, detail=? WHERE rowid=?",
+                           (json.dumps({"record": record, "state": state, "error": why}), row))
+                db.commit()
+                print(f"faucet {ip} {account} failed ({state}): {why}", flush=True)
+                return self.send(502, {"ok": False, "error": "the transfer failed; try again later"})
+            finally:
+                db.close()
+        finally:
+            FAUCET_LOCK.release()
+
+    def tool(self, args):
+        """The faucet tool's one-line JSON answer to `args` (transfer-status, transfer-resend), or None."""
+        cmd = [CFG["FAUCET_TOOL"], *args, "--rpc", CFG["GATEWAY_UPSTREAM"], "--state", os.path.join(CFG["FAUCET_STATE"], "tool")]
+        try:
+            p = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            return json.loads((p.stdout or "").strip().splitlines()[-1]) if p.returncode == 0 else None
+        except (OSError, subprocess.TimeoutExpired, ValueError, IndexError):
+            return None
+
+    def resolve(self, db, rowid, ok, t, detail):
+        """A claim's outcome from its own transfer, by the record the tool wrote before sending it: applied -> paid (1);
+        reverted, or dropped (its nonce spent by another transaction: it never can be applied) -> failed (0); pending
+        (in no block, its nonce not spent) -> settling (2), its very bytes sent again once older than
+        FAUCET_RESEND_AFTER (the same nonce: at most one is applied); no record file -> nothing was signed or sent (0).
+        A claim from a ledger written before records (no record named) stays as it is, and so does one whose status
+        cannot be read now ("unknown")."""
+        record = record_of(detail)
+        if not record:
+            return "unknown"
+        if not os.path.exists(record):
+            db.execute("UPDATE claims SET ok=0 WHERE rowid=?", (rowid,))
+            db.commit()
+            return "unsigned"
+        st = self.tool(["transfer-status", "--record", record]) or {}
+        state = st.get("state")
+        if state == "applied":
+            db.execute("UPDATE claims SET ok=1, hash=? WHERE rowid=?", (st.get("hash", ""), rowid))
+        elif state in ("reverted", "dropped"):
+            db.execute("UPDATE claims SET ok=0 WHERE rowid=?", (rowid,))
+        elif state == "pending":
+            db.execute("UPDATE claims SET ok=2 WHERE rowid=?", (rowid,))
+            if time.time() - t > F["FAUCET_RESEND_AFTER"]:
+                self.tool(["transfer-resend", "--record", record])
+        else:
+            return "unknown"
+        db.commit()
+        return state
+
+
+def main():
+    host, port = CFG["GATEWAY_LISTEN"].rsplit(":", 1)
+    http.server.ThreadingHTTPServer.request_queue_size = 128  # Caddy may open many connections at once
+    srv = http.server.ThreadingHTTPServer((host, int(port)), Handler)
+    srv.daemon_threads = True
+    print(f"ferrata-gateway on {host}:{port} -> {CFG['GATEWAY_UPSTREAM']}", flush=True)
+    srv.serve_forever()
+
+
+if __name__ == "__main__":
+    main()
