@@ -45,6 +45,7 @@ var MESSAGES = [
     [/a network session is open in this module; close it first/, "A session is already open in the module: close it first (or quit Basecamp; it also ends after 15 minutes without a call)."],
     [/deposits are made in the network's web wallet/, "Deposits are made in the network's web wallet with this phrase (Basecamp has no Logos signer for Sepolia yet); claim and burn them here afterwards."],
     [/release address|enter the Ethereum address the release pays|checksummed form|fails its EIP-55/, "Enter the address the release pays: yours, in its checksummed form (upper and lower case as your wallet shows it). Nothing was signed."],
+    [/did not answer in time|more than this call has left/, "The network did not answer in time: try again. Nothing was signed."],
     [/above this module's ceiling/, "Refused: the network asks for a LEZ fee above the module's ceiling. Nothing was signed."],
     [/no transaction waits for approval/, "That transaction no longer waits for approval (sent, replaced or expired): start the step again."],
     [/a deposit needs your Sepolia address/, "A deposit needs your Sepolia address (the account Logos's signer sends it from): close the session and open it again with that address. Nothing was sent."],

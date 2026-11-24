@@ -9,6 +9,7 @@
 //   M3  in the network session the release address starts empty and nothing makes one up.
 //   M4  the deposit button is off in the network session and the panel sends the person to the web wallet.
 //   L1  every label shows its text as plain text.
+//   L2  when open_network's answer is lost (Basecamp's 20 s), the view closes the session with its key.
 // Run as `qmltestrunner -input qmltest/tst_network.qml` from the module's directory (scripts/network-ui-test.sh).
 import QtQuick
 import QtTest
@@ -34,6 +35,7 @@ Item {
         property string account0: "AKRYNTU8c4MZ4fSr5FHcn6BGE6T4dfRCzn1ziQCNKFBu"
         property string answerAs: ""
         property bool open: false
+        property bool loseOpen: false
         property var held: null
         property string pendingKind: ""
         property int jobId: 7
@@ -90,6 +92,7 @@ Item {
                     opened = s;
                 }
                 lastN = 0;
+                if (loseOpen) { open = true; return JSON.stringify({ error: "timeout", message: "the call timed out after 20000 ms" }); }
                 open = true;
                 return reply(summary);
             }
@@ -296,5 +299,19 @@ Item {
             closeIt();
         }
 
+        // L2: open_network's answer lost (Basecamp's 20 s): the view closes the session with its key.
+        function test_09_a_lost_open_is_closed() {
+            logos.loseOpen = true;
+            openWithoutWait();
+            tryVerify(function () { return !logos.open; }, 5000, "the view closed it");
+            logos.loseOpen = false;
+            compare(logos.methods[logos.methods.length - 1], "close");
+            verify(!host.app.netOpen);
+        }
+        function openWithoutWait() {
+            el("net.address").text = "https://n.example";
+            typePhrase(phrase);
+            click("net.open");
+        }
     }
 }

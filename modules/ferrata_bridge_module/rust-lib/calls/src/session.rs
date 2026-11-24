@@ -161,14 +161,14 @@ fn route(caller: &str, r: &Value) -> Result<Value, String> {
         crate::net::verify_call(n, body, &tag)?;
         let inner: Value = serde_json::from_str(body).map_err(|e| format!("invalid call: {e}"))?;
         let method = inner["method"].as_str().unwrap_or("");
-        return dispatch(method, &inner["params"], caller);
+        return crate::net::within(crate::net::CALL_LIMIT, || dispatch(method, &inner["params"], caller));
     }
     let method = r["method"].as_str().unwrap_or("");
     if matches!(method, "seal_key" | "open_network") {
         if !view {
             return Err(format!("refused: a network session is opened by the Ferrata Bridge view (ferrata_bridge_ui) only; this call came from {caller}"));
         }
-        return dispatch(method, &r["params"], caller);
+        return crate::net::within(crate::net::CALL_LIMIT, || dispatch(method, &r["params"], caller));
     }
     dispatch(method, &r["params"], caller)
 }

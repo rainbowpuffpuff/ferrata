@@ -138,7 +138,12 @@ Rectangle {
                 if (!ok2) {
                     netStatus = "Not opened: " + String(v);
                     netStatusBad = true;
-                    Seal.wipeKeys(a.keys);
+                    // The answer was lost (Basecamp ends a call at 20 s): the module may have opened it; this view holds its
+                    // key, so it closes it (review L2), and nothing stays open behind it.
+                    if (/timed out|timeout|outcome is unknown/i.test(String(v))) {
+                        netKeys = a.keys; netN = 0;
+                        call("close", {}, function () { wipeNet(); }, true);
+                    } else Seal.wipeKeys(a.keys);
                     return;
                 }
                 netKeys = a.keys; netN = 0; netAccount0 = String(v.account0);

@@ -34,6 +34,7 @@
 //! has no Logos signer for Sepolia yet). A private claim or burn needs a proof of LEZ's privacy circuit, which this
 //! module does not make.
 
+use std::cell::Cell;
 use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
@@ -88,6 +89,11 @@ pub(crate) const BURN_GAS: u64 = 1_000_000;
 /// The most LEZ fee this module signs for one call, in 10^-9 LGO: 1 LGO. At the network's base fees a claim or a burn
 /// reserves about 0.064; a host that asks for more than this ceiling is refused, nothing signed.
 pub(crate) const MAX_FEE: u128 = 1_000_000_000;
+
+/// How long one call of the view may take here, all its requests together: Basecamp ends a view's call to a module at
+/// 20 s, and the module serves one call at a time, so a slow or stalling host must not hold the next call (`close`)
+/// behind it for longer.
+pub(crate) const CALL_LIMIT: Duration = Duration::from_secs(15);
 
 /// A session nobody has called for this long ends at the next call (its keys wiped): a view that went away without
 /// closing it leaves no keys behind for good, and a new session can be opened.
@@ -155,6 +161,39 @@ fn same_origin(base: &str, path: &str, what: &str) -> Result<String, String> {
     Ok(format!("{base}{path}"))
 }
 
+// ------------------------------------------------------------------------------------------------ one call's deadline
+
+thread_local! {
+    static DEADLINE: Cell<Option<Instant>> = const { Cell::new(None) };
+}
+
+/// Runs `f` with all the network requests it makes on this thread bounded by `limit` together (session.rs runs each
+/// call of the view so; a job's thread has no such bound).
+pub(crate) fn within<T>(limit: Duration, f: impl FnOnce() -> T) -> T {
+    let before = DEADLINE.with(|d| d.replace(Some(Instant::now() + limit)));
+    let out = f();
+    DEADLINE.with(|d| d.set(before));
+    out
+}
+
+/// How long a request may still take: `want`, or less near the call's deadline; an error once it has passed.
+fn budget(want: Duration) -> Result<Duration, String> {
+    match DEADLINE.with(Cell::get) {
+        None => Ok(want),
+        Some(end) => {
+            let left = end.saturating_duration_since(Instant::now());
+            if left < Duration::from_millis(250) {
+                Err(format!(
+                    "the network did not answer in time (one call here may take {} s; Basecamp ends a call at 20 s): try again",
+                    CALL_LIMIT.as_secs()
+                ))
+            } else {
+                Ok(want.min(left))
+            }
+        }
+    }
+}
+
 // ------------------------------------------------------------------------------------------------ HTTP(S)
 
 fn agent(timeout: Duration) -> ureq::Agent {
@@ -174,13 +213,13 @@ fn body_of(mut r: ureq::http::Response<ureq::Body>) -> Result<(u16, String, Opti
 }
 
 fn get(url: &str) -> Result<(u16, String), String> {
-    let r = agent(TIMEOUT).get(url).header("Accept", "application/json").call().map_err(|e| format!("{url}: {e}"))?;
+    let r = agent(budget(TIMEOUT)?).get(url).header("Accept", "application/json").call().map_err(|e| format!("{url}: {e}"))?;
     let (s, t, _) = body_of(r)?;
     Ok((s, t))
 }
 
 fn post(url: &str, body: &str, timeout: Duration) -> Result<(u16, String, Option<u64>), String> {
-    let r = agent(timeout)
+    let r = agent(budget(timeout)?)
         .post(url)
         .header("Content-Type", "application/json")
         .header("Accept", "application/json")
@@ -201,8 +240,8 @@ pub(crate) fn https_post(url: &str, body: &str, timeout_ms: u64) -> Result<Strin
 // ------------------------------------------------------------------------------------------------ LEZ's JSON-RPC
 
 /// LEZ's sequencer through the network's gateway. A gateway limits requests per address (HTTP 429, Retry-After) and
-/// may answer 502/503 while the sequencer restarts: the call waits and tries again, at most four times (nothing reached
-/// the sequencer on such an answer, so a resend of `sendTransaction` is safe).
+/// may answer 502/503 while the sequencer restarts: the call waits and tries again, at most four times and never past
+/// the call's deadline (nothing reached the sequencer on such an answer, so a resend of `sendTransaction` is safe).
 #[derive(Clone)]
 pub(crate) struct Lez {
     pub url: String,
@@ -214,8 +253,11 @@ impl Lez {
         for attempt in 0..5u32 {
             let (status, text, retry) = post(&self.url, &body, TIMEOUT)?;
             if matches!(status, 429 | 502 | 503) && attempt < 4 {
-                let wait = retry.map_or(600 * 2u64.pow(attempt), |s| s * 1000).min(10_000);
-                std::thread::sleep(Duration::from_millis(wait));
+                let wait = Duration::from_millis(retry.map_or(600 * 2u64.pow(attempt), |s| s.saturating_mul(1000)).min(10_000));
+                if budget(Duration::MAX)? < wait + Duration::from_millis(250) {
+                    return Err(format!("{method}: the network's RPC asks to wait {} s, more than this call has left: try again", wait.as_secs().max(1)));
+                }
+                std::thread::sleep(wait);
                 continue;
             }
             if status != 200 {
@@ -1038,7 +1080,7 @@ pub(crate) fn confirm(id: &str) -> Result<Value, String> {
 
 /// One claim at the network's faucet for public account `/index` (its id and public key: a never-used account needs
 /// the key as LEZ's admission evidence). The faucet's limits are its own (one claim per account per day). Its credit
-/// is looked for for 30 s; the reply says when it was not seen yet.
+/// is looked for while the call has time; the reply says when it was not seen yet.
 pub(crate) fn faucet(index: u32) -> Result<Value, String> {
     let (id, pk) = public_account(index)?;
     let (url, lez) = with(|n| Ok((n.faucet.clone(), n.lez.clone())))?;
@@ -1052,7 +1094,7 @@ pub(crate) fn faucet(index: u32) -> Result<Value, String> {
     }
     let mut after = lez.balance(&id).unwrap_or(before);
     let t0 = Instant::now();
-    while after <= before && t0.elapsed() < Duration::from_secs(30) {
+    while after <= before && t0.elapsed() < Duration::from_secs(30) && budget(Duration::MAX).is_ok_and(|left| left > Duration::from_secs(4)) {
         std::thread::sleep(Duration::from_secs(2));
         after = lez.balance(&id).unwrap_or(after);
     }
@@ -1386,6 +1428,27 @@ pub(crate) mod tests {
         // SAFETY: as above; `wipe` zeroed them in place.
         assert!(unsafe { std::slice::from_raw_parts(p, n) }.iter().all(|b| *b == 0), "every byte of the keys is zero after wipe");
         drop(k);
+    }
+
+    /// Review L2: a slow or stalling host cannot hold a call (and the `close` queued behind it) past the call's limit.
+    #[test]
+    fn l2_a_slow_host_cannot_hold_a_call_past_its_limit() {
+        let net = stand_in_lez([0u8; 32], 0, Duration::from_millis(900));
+        let (methods, lez) = (net.methods.clone(), Lez { url: format!("{}/rpc", net.url) });
+        let t0 = Instant::now();
+        let r = within(Duration::from_secs(2), || -> Result<(), String> {
+            for _ in 0..20 {
+                lez.head()?;
+            }
+            Ok(())
+        });
+        let took = t0.elapsed();
+        let e = r.unwrap_err();
+        assert!(e.contains("did not answer in time") || e.contains("timed out") || e.contains("imeout"), "{e}");
+        assert!(took < Duration::from_secs(4), "the call ended after {took:?}, not at its limit");
+        assert!(methods.lock().unwrap().len() <= 3, "it stopped asking: {:?}", methods.lock().unwrap());
+        // Outside a call's deadline (a job's thread) the same reads are not cut short.
+        assert!(lez.head().is_ok());
     }
 
     /// Review H1 and L3: a burn is built for the person's approval and signed only when confirmed, exactly as approved,
