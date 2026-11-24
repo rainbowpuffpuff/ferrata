@@ -23,8 +23,9 @@ deployed on any public network yet**: deploying it is a new deployment at a new 
 
 The build the review read on the public network on 23 November 2026 (`/programs.json`; the header `4EBU635H…`
 (`getAccount`) shows this image id and immutable), from the commit-reveal source before the review's fixes (only
-`lez/names-wire/src/lib.rs` differs from v2's; that version is not in this repository's history). It stays
-live: it cannot be changed or retired, and its names stay on it. v2 does not read its records.
+`lez/names-wire/src/lib.rs` differs from v2's; that file is kept as
+[`lez/names-wire-v1`](../lez/names-wire-v1/README.md), and `scripts/reproduce/deployed.sh` rebuilds the binary below
+from it). It stays live: it cannot be changed or retired, and its names stay on it. v2 does not read its records.
 
 | Build | Image id | sha256 of the binary | Bytes | sha256 of the user ELF | r0vm |
 |---|---|---|---:|---|---|

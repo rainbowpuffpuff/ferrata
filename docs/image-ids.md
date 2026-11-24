@@ -183,8 +183,9 @@ The rows are [`names/image-ids.md`](../names/image-ids.md)'s (raw: `names/e2e/re
 own name here. Rebuild: `names/e2e/box.sh build && names/e2e/box.sh ids`.
 
 - v1 is **live and immutable** on our test network (header `4EBU635H…`, `/programs.json`; the review read it on 23
-  November 2026). Its source, before the review's fixes, is not in this repository's history (only
-  `lez/names-wire/src/lib.rs` differs from v2's).
+  November 2026). Its source, before the review's fixes, differs from v2's in `lez/names-wire/src/lib.rs` only, kept as
+  [`lez/names-wire-v1`](../lez/names-wire-v1/README.md): `scripts/reproduce/deployed.sh` rebuilds it to the v1 rows
+  below (row 238).
 - v2 (the review's fixes) is **not yet on the public test network**: a new program at a new address, which does not
   read v1's records.
 

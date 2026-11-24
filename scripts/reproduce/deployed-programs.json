@@ -33,11 +33,14 @@
     },
     {
       "id": "names",
-      "commit": "",
-      "short": "",
-      "where": "deployed v1: source not in public history (v2's is in lez/guests/names and lez/names-wire; the two differ only in lez/names-wire/src/lib.rs)",
+      "commit": "a609fa11c83676f2d92cdb5db6cd659cb2d882fe",
+      "short": "a609fa11",
+      "where": "this repository: v1's wire crate kept as lez/names-wire-v1, built in place of lez/names-wire (the path v1 was built at); the guest and methods-names are v2's, unchanged",
       "lez_tag": "v0.4.0-rc3",
       "select": "lez/scripts/lez-select.sh v0.4.0-rc3, then every lez/ manifest's upstream/lez-v0.4.0-rc1 path set to rc3 (names/e2e/box.sh copy_tree)",
+      "overlay": [
+        "lez/names-wire-v1/src/lib.rs:lez/names-wire/src/lib.rs"
+      ],
       "build": "cd lez && cargo build --release -p methods-names",
       "packages": [
         "methods-names"
