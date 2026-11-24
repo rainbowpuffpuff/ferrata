@@ -1,0 +1,35 @@
+# Ferrata catalog: the base catalog's rebuild-index.yml (logos-modules-release-base@33fb564), with the
+# action pinned to the same commit as _release-module.yml. Without it nothing listens for the
+# `rebuild-index` dispatch the release job sends, the rolling `index` release is never written, and
+# logos-repo.json's indexUrl (.../releases/download/index/index.json) answers 404: the catalog would
+# not be installable. The owner's step: modules/catalog/RELEASE.md.
+name: Rebuild index
+
+# Regenerates the rolling `index` release (index.json — the catalog
+# clients fetch) whenever a per-module release fires the
+# `rebuild-index` repository_dispatch event. Also runs on a six-hourly
+# schedule as a catch-up so a missed dispatch can't strand the catalog,
+# and can be kicked manually from the Actions UI.
+#
+# Thin passthrough to the versioned action — nothing to configure here.
+
+on:
+  workflow_dispatch: {}
+  repository_dispatch:
+    types: [rebuild-index]
+  schedule:
+    - cron: '17 */6 * * *'
+
+# Forked repos default to a read-only GITHUB_TOKEN; the rebuild replaces
+# the `index` release's asset, so contents: write, and nothing else.
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    permissions:
+      contents: write
+    uses: logos-co/logos-modules-release-action/.github/workflows/rebuild-index.yml@bbdc52871dc4305c8007923e1b08738ad2dd6b50 # v1 (= v1.8)
+    with:
+      # Unset means GitHub-hosted; see "Runners and the Nix cache" in the README.
+      runner: ${{ vars.RELEASE_RUNNER }}

@@ -339,13 +339,19 @@ else
   echo "After those commands:"
 fi
 echo "The owner's remaining steps, in this order (the release must come last):"
-echo "  1. [in the browser] in $org/$catalog_repo and each module repository: turn on immutable releases;"
-echo "     add a ruleset protecting refs/tags/* (the release tags <module>-v<version>); require 2FA for the"
-echo "     $org organization. Tokens stay least-privilege: the workflows use the built-in GITHUB_TOKEN with"
-echo "     contents alone (modules/catalog/RELEASE.md, rules 2 and 6)."
-echo "  2. Only then, the release: builds, signs, verifies and publishes every module, then the index:"
+echo "  1. The rolling index release, created empty while releases are still mutable: rebuild-index.yml"
+echo "     replaces its index.json after every module release, which an immutable release refuses (the"
+echo "     lambda-prize rule: it must exist before immutability is turned on):"
+show gh release create index --repo "$org/$catalog_repo" --title "Catalog index (auto-updated)" \
+  --notes "Auto-generated index of every per-module release in this repository." --latest=false
+echo "  2. [in the browser] in $org/$catalog_repo and each module repository: turn on immutable releases;"
+echo "     add a ruleset protecting refs/tags/* (the release tags <module>-v<version>; updates and deletions"
+echo "     restricted, creations allowed: the workflows create them); require 2FA for the $org organization."
+echo "     Tokens stay least-privilege: the workflows use the built-in GITHUB_TOKEN with contents alone"
+echo "     (modules/catalog/RELEASE.md, rules 2 and 6)."
+echo "  3. Only then, the release: builds, signs, verifies and publishes every module, then the index:"
 show gh workflow run release-all.yml --repo "$org/$catalog_repo"
-echo "  3. Fill releases/RELEASE-INTEGRITY.template.md (each value's command is in it) with the release"
+echo "  4. Fill releases/RELEASE-INTEGRITY.template.md (each value's command is in it) with the release"
 echo "     URLs, the source commits, the signer DID and the rootHashes the sidecars give."
 echo
 echo "release-publish.sh: done.${dry_dir:+ Dry run: repositories under $dry_dir.}"
