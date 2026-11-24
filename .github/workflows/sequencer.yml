@@ -93,6 +93,11 @@ jobs:
       - name: Sepolia checkpoint (public beacon endpoints; fails if none answers)
         timeout-minutes: 15
         run: scripts/ci/sequencer-attest.sh e2e/runs/ci-sequencer-attest checkpoint
+      - name: The checked native archives (restored from ci.yml's cache, not saved here; scripts/native-deps.json)
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ferrata/native
+          key: native-${{ hashFiles('scripts/native-deps.json') }}
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           workspaces: |
@@ -105,7 +110,8 @@ jobs:
         timeout-minutes: 170
         run: scripts/ci/sequencer-attest.sh e2e/runs/ci-sequencer-attest build
       - name: Sepolia finality update and the facts under its block (public endpoints, checked natively and for age)
-        timeout-minutes: 40
+        # The stage's own limit comes first: at most 12 fetches two minutes apart (about 42 min at worst).
+        timeout-minutes: 50
         run: scripts/ci/sequencer-attest.sh e2e/runs/ci-sequencer-attest data
       - name: Run (the standalone sequencer and the driver's phases)
         timeout-minutes: 150

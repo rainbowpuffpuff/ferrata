@@ -21,22 +21,28 @@
 #   build       the guests from the committed tree (its LEZ v0.4.0-rc1 manifests: the images of docs/image-ids.md,
 #               which the run checks), then LEZ $LEZ_TAG's sequencer_service with its `standalone` feature (its mock
 #               Bedrock actor: no Logos Blockchain node) and the live driver against $LEZ_TAG
-#               (lez/scripts/lez-select.sh; the manifests are put back afterwards). LEZ_TAG: FERRATA_CI_LEZ_TAG,
+#               (lez/scripts/lez-select.sh; the manifests are put back afterwards), the native archives the build
+#               scripts link taken from scripts/fetch_native.py (pinned sha256) and checked after the build
+#               (fetch_native.py check-build on cargo's JSON messages). LEZ_TAG: FERRATA_CI_LEZ_TAG,
 #               default v0.4.0-rc3, the tag of the test network's deployment kit (lez/testnet04/).
 #   data        lez/scripts/fetch-attest-fixture.py --network sepolia --same-address none: Lodestar's newest finality
 #               update, the execution block its finalized header binds (RLP header and receipts from a public Sepolia
 #               RPC, a second RPC's copy), eth_getProof of Sepolia USDC's totalSupply_ at that block, its first ERC-20
 #               Transfer, the second beacon provider's root of the finalized block. `live-driver fresh-check` runs
 #               the whole chain natively on it; until its finality update advances the checkpoint's store, it is
-#               fetched again every two minutes, at most 12 times.
+#               fetched again every two minutes, at most 12 times; a bootstrap over 30 h or a finalized block over
+#               2 h old (a stale endpoint, fresh-check's exit 4) stops the run at once.
 #   run         lez/live/run.sh run: the standalone sequencer (blocks every 3 s, RISC0_DEV_MODE unset, so it verifies
 #               private proofs) and the driver's phases `info deploy fresh-follow fresh-scenarios fresh-consume
 #               fresh-private export` (lez/live/driver/src/fresh.rs; FERRATA_CI_PRIVATE=skip leaves out the private
-#               attestation and its real proof), each capped at FERRATA_LIVE_PHASE_SECONDS (default 5,400: the proof
+#               attestation and its real proof: for a local run only, refused under GitHub Actions, and the summary
+#               then says the run is incomplete), each capped at FERRATA_LIVE_PHASE_SECONDS (default 5,400: the proof
 #               took 1,222 s with 4 threads on the build box and 2,927 s on GitHub's 4-core runner, run 45333224944).
-#   check       the records: every transaction's outcome as designed, by count and by name, phase by phase; the
+#   check       the records: every transaction's outcome as designed, by exact count phase by phase and by name
+#               (the period updates' Finish among them); the private attestation required under GitHub Actions; the
 #               deployed images equal docs/image-ids.md's; instance A holds the finality update's block, with the
-#               root the second provider reports.
+#               root the second provider reports; the data no older than its bound (FERRATA_CI_NOW, unix seconds,
+#               stands for the clock in the tests of the check).
 #   summary     RESULTS-DIR/README.md and, under GitHub Actions, the job summary ($GITHUB_STEP_SUMMARY): the checkpoint
 #               and the block used, the outcome of every phase. Written whatever happened before; never fails.
 #
@@ -102,6 +108,9 @@ on_exit() {
 trap on_exit EXIT
 
 T0=$(date +%s)
+# Text from public endpoints (fetch.log) echoed to the job's log, with "::" broken so that GitHub reads no workflow
+# command from it.
+clean() { sed -e 's/::/: :/g'; }
 say() { echo "[sequencer-attest $(date -u +%T)] $*"; echo "[$(date -u +%T)] $*" >> "$LOG"; }
 minutes() { echo "$(( ($(date +%s) - T0) / 60 )) min"; }
 
@@ -115,10 +124,10 @@ run_logged() {
   "$@" >> "$STEP_LOG" 2>&1 || rc=$?
   if [ "$rc" != 0 ]; then
     echo "== $name FAILED (exit $rc); the last 40 lines of ${STEP_LOG#"$REPO"/}:" >&2
-    tail -n 40 "$STEP_LOG" >&2
+    tail -n 40 "$STEP_LOG" | clean >&2
     echo "== the driver's and the sequencer's logs:" >&2
     for f in "$RECORDS"/logs/driver.log "$RECORDS"/logs/sequencer.log; do
-      if [ -f "$f" ]; then echo "-- ${f#"$REPO"/}:" >&2; tail -n 20 "$f" >&2; fi
+      if [ -f "$f" ]; then echo "-- ${f#"$REPO"/}:" >&2; tail -n 20 "$f" | clean >&2; fi
     done
     bash "$REPO/lez/live/run.sh" stop > /dev/null 2>&1 || true
     exit "$rc"
@@ -175,7 +184,7 @@ stage_checkpoint() {
     fi
     rm -rf "$FRESH/checkpoint"
     echo "sequencer-attest: fetching the checkpoint failed (attempt $i of 3); the last lines of fresh/fetch.log:" >&2
-    tail -n 8 "$FRESH/fetch.log" >&2
+    tail -n 8 "$FRESH/fetch.log" | clean >&2
     if [ "$i" != 3 ]; then sleep 120; fi
   done
   die "no Sepolia checkpoint could be fetched from the public endpoints (fresh/fetch.log): the run stops here; nothing recorded is replayed in its place"
@@ -192,6 +201,14 @@ stage_build() {
   [ "$selected" = v0.4.0-rc1 ] || die "the tree's manifests point at LEZ $selected; the committed selection is v0.4.0-rc1"
   say "== build (started $(date -u +%Y-%m-%dT%H:%M:%SZ)); scratch ${FERRATA_LIVE_TMP#"$BESIDE"/}; $FERRATA_LIVE_JOBS build jobs"
   STEP_LOG="$OUT/build.log"
+  # The native archives LEZ's build scripts link (rapidsnark, the Logos Blockchain circuits): fetched once and checked
+  # against scripts/native-deps.json (the same rust-rapidsnark revision and circuits 0.5.7 in rc1's and rc3's lockfiles),
+  # instead of the build scripts' own unchecked downloads; check-build below verifies that nothing else was linked.
+  local vars
+  vars="$(python3 -I "$REPO/scripts/fetch_native.py" env 2>> "$STEP_LOG")" || die "scripts/fetch_native.py env failed (build.log)"
+  eval "$vars"
+  local messages="$FERRATA_LIVE_TMP/cargo-messages.jsonl"
+  rm -f "$messages"
   run_logged "build: the guest programs (lez methods; the committed v0.4.0-rc1 manifests)" \
     bash -c 'cd "$1/lez" && RISC0_BUILD_LOCKED=1 RUSTC_WRAPPER="$1/scripts/guest-rustc" cargo build -p methods --locked' _ "$REPO"
   local b
@@ -204,8 +221,12 @@ stage_build() {
     run_logged "select LEZ $LEZ_TAG for the sequencer and the driver (lez/scripts/lez-select.sh)" \
       bash "$REPO/lez/scripts/lez-select.sh" "$LEZ_TAG"
   fi
-  run_logged "build: LEZ $LEZ_TAG's sequencer_service (standalone)" bash "$REPO/lez/live/run.sh" build-standalone
-  run_logged "build: the live driver against LEZ $LEZ_TAG" bash "$REPO/lez/live/run.sh" build-driver
+  run_logged "build: LEZ $LEZ_TAG's sequencer_service (standalone)" \
+    env FERRATA_LIVE_CARGO_MESSAGES="$messages" bash "$REPO/lez/live/run.sh" build-standalone
+  run_logged "build: the live driver against LEZ $LEZ_TAG" \
+    env FERRATA_LIVE_CARGO_MESSAGES="$messages" bash "$REPO/lez/live/run.sh" build-driver
+  run_logged "build: the native code linked only from the checked archives (scripts/fetch_native.py check-build)" \
+    python3 -I "$REPO/scripts/fetch_native.py" check-build "$messages" --target-dir "$FERRATA_LIVE_TMP/target"
   restore_selection
   STEP_LOG="$LOG"
   say "build took $(minutes)"
@@ -231,13 +252,16 @@ stage_data() {
           rm -rf "$FRESH"/attest-try-*
           say "data: $(python3 -I -c 'import json, sys; c = json.load(open(sys.argv[1])); print("finalized slot %s (%s), block %s, %s signers; checked natively" % (c["finalizedSlot"], c["finalizedTime"], c["block"], c["signers"]))' "$FRESH/check.json")"
           return 0 ;;
-        3) say "data: attempt $i: $(grep -E '^fresh-check:' "$FRESH/fetch.log" | tail -n 1)"; rm -rf "$d" ;;
+        3) say "data: attempt $i: $(grep -E '^fresh-check:' "$FRESH/fetch.log" | tail -n 1 | clean)"; rm -rf "$d" ;;
+        4)
+          grep -E '^fresh-check:' "$FRESH/fetch.log" | tail -n 1 | clean >&2
+          die "the fetched data is older than its bound: a public endpoint served stale data (fresh/fetch.log); the run stops here" ;;
         *)
-          tail -n 15 "$FRESH/fetch.log" >&2
+          tail -n 15 "$FRESH/fetch.log" | clean >&2
           die "the fetched data does not check natively (live-driver fresh-check exit $rc; fresh/fetch.log)" ;;
       esac
     else
-      say "data: attempt $i: the fetch stopped: $(tail -n 1 "$FRESH/fetch.log" | cut -c1-200)"
+      say "data: attempt $i: the fetch stopped: $(tail -n 1 "$FRESH/fetch.log" | cut -c1-200 | clean)"
       rm -rf "$d"
     fi
     if [ "$i" != 12 ]; then sleep 120; fi
@@ -251,6 +275,9 @@ stage_run() {
   [ -f "$FRESH/check.json" ] && [ -d "$FRESH/attest" ] || die "no checked data (stages checkpoint and data)"
   local program scripted consumer phases
   program="$(guest_bin ferrata_lez.bin)"; scripted="$(guest_bin scripted.bin)"; consumer="$(guest_bin ferrata_consumer.bin)"
+  if [ -n "${GITHUB_ACTIONS:-}" ] && [ "${FERRATA_CI_PRIVATE:-real}" = skip ]; then
+    die "FERRATA_CI_PRIVATE=skip is for local runs: a CI run proves and sends the private attestation"
+  fi
   phases="info deploy fresh-follow fresh-scenarios fresh-consume"
   if [ "${FERRATA_CI_PRIVATE:-real}" != skip ]; then phases="$phases fresh-private"; fi
   phases="$phases export"
@@ -292,49 +319,91 @@ stage_check() {
     if [ "${got%% *}" = "$2" ] && { [ -z "${3:-}" ] || [ "${got#* }" = "$3" ]; }; then echo "  ok: \"$1\" $got"
     else echo "  MISSING: \"$1\" $2${3:+ exit $3}, got: ${got:-no row}" >&2; fail=1; fi
   }
+  exactly() { # WHAT GOT WANT
+    if [ "$2" = "$3" ]; then echo "  ok: $1: $2"; else echo "  MISSING: $1: $3 designed, got $2" >&2; fail=1; fi
+  }
   [ -f "$RECORDS/run.tsv" ] || die "no records in ${RECORDS#"$REPO"/} (stage run)"
+  [ -f "$FRESH/check.json" ] || die "no fresh/check.json (stage data)"
   say "== check: the records of ${RECORDS#"$REPO"/}"
   for f in run.tsv summary.txt chain.tsv programs.tsv instances.tsv environment.md logs/driver.log logs/sequencer.log; do
     check "records/$f is written" test -s "$RECORDS/$f"
   done
-  local applied refused reverted dropped rejected unfinished phase n
-  applied="$(status_count "$RECORDS/run.tsv" applied)"; refused="$(status_count "$RECORDS/run.tsv" refused)"
-  reverted="$(status_count "$RECORDS/run.tsv" reverted)"; dropped="$(status_count "$RECORDS/run.tsv" dropped)"
-  rejected="$(status_count "$RECORDS/run.tsv" rejected)"; unfinished="$(status_count "$RECORDS/run.tsv" unfinished)"
-  [ "$dropped" = 0 ] && [ "$rejected" = 0 ] && [ "$unfinished" = 0 ] \
-    && echo "  ok: nothing dropped, rejected or unfinished" \
-    || { echo "  MISSING: no dropped, rejected or unfinished transaction, got $dropped, $rejected, $unfinished" >&2; fail=1; }
-  [ "$reverted" = 2 ] && echo "  ok: exactly the two designed reverts" \
-    || { echo "  MISSING: exactly the two designed reverts, got $reverted" >&2; fail=1; }
-  [ "$refused" -ge 21 ] && echo "  ok: $refused refusals with the program's exit codes (21 designed)" \
-    || { echo "  MISSING: the 21 designed refusals, got $refused" >&2; fail=1; }
-  for phase in deploy fresh-follow fresh-scenarios fresh-consume $(grep -o 'fresh-private' "$OUT/phases.txt" || true); do
-    n="$(awk -F'\t' -v p="$phase" 'NR > 1 && $1 == p && $6 == "applied"' "$RECORDS/run.tsv" | wc -l)"
-    [ "$n" -ge 1 ] && echo "  ok: phase $phase: $n applied" || { echo "  MISSING: phase $phase applied nothing" >&2; fail=1; }
+  # The data's age: the run's own fresh-check refused anything over its bound (2 h, 30 h) when it fetched; here, by
+  # this check's clock, the finalized block must be under 6 h old and the bootstrap under 36 h (the build and the run
+  # take at most 5.4 h by the step timeouts), so that no older record can pass for this run.
+  local now ages
+  now="${FERRATA_CI_NOW:-$(date -u +%s)}"
+  ages="$(python3 -I - "$FRESH/check.json" "$now" <<'PY'
+import datetime, json, sys
+c = json.load(open(sys.argv[1]))
+now = int(sys.argv[2])
+t = lambda s: int(datetime.datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc).timestamp())
+print(now - t(c["finalizedTime"]), now - t(c["bootstrapTime"]), c.get("finalizedAgeS", -1), c.get("bootstrapAgeS", -1),
+      len(c["periods"]), " ".join(str(p["period"]) for p in c["periods"]))
+PY
+)" || die "fresh/check.json does not read"
+  local fin_age boot_age fin_at boot_at nperiods periods
+  read -r fin_age boot_age fin_at boot_at nperiods periods <<< "$ages"
+  [ "$fin_at" -ge 0 ] && [ "$fin_at" -le 7200 ] && [ "$boot_at" -ge 0 ] && [ "$boot_at" -le 108000 ] \
+    && echo "  ok: fresh when fetched (fresh-check): the finalized block $fin_at s old, the bootstrap $boot_at s old (bounds 7,200 and 108,000 s)" \
+    || { echo "  MISSING: fresh-check's ages within its bounds (7,200 and 108,000 s), got $fin_at and $boot_at" >&2; fail=1; }
+  [ "$fin_age" -le 21600 ] && [ "$boot_age" -le 129600 ] \
+    && echo "  ok: this run's data by this check's clock: the finalized block $fin_age s old, the bootstrap $boot_age s old (bounds 21,600 and 129,600 s)" \
+    || { echo "  MISSING: this run's data: the finalized block $fin_age s old (bound 21,600 s), the bootstrap $boot_age s old (bound 129,600 s)" >&2; fail=1; }
+  [ "$nperiods" -ge 1 ] && echo "  ok: $nperiods period update(s): $periods" \
+    || { echo "  MISSING: the bootstrap period's update in fresh/check.json" >&2; fail=1; }
+  # The private attestation: always required under GitHub Actions; a local run may leave it out (FERRATA_CI_PRIVATE=
+  # skip), and the summary then says the run is incomplete.
+  local private=0
+  if [ -n "${GITHUB_ACTIONS:-}" ] || grep -q fresh-private "$OUT/phases.txt" 2> /dev/null; then private=1; fi
+  # Exact counts, phase by phase: deploy 20 (the program twice in 8 transactions, scripted in 4), fresh-follow 6 + 5
+  # per period update (Init in 3; each update Open, Miller, two adoption parts, Finish; the finality update Open, Miller,
+  # Finish), fresh-scenarios 23 applied, 16 refused, 2 reverted, fresh-consume 12 applied (the consumer's deployment in
+  # 6) and 5 refused, fresh-private 1.
+  local phase st n want_n
+  for phase in deploy:applied:20 fresh-follow:applied:$(( 6 + 5 * nperiods )) fresh-scenarios:applied:23 \
+               fresh-scenarios:refused:16 fresh-scenarios:reverted:2 fresh-consume:applied:12 fresh-consume:refused:5 \
+               fresh-private:applied:$private; do
+    st="$(echo "$phase" | cut -d: -f2)"; want_n="${phase##*:}"; phase="${phase%%:*}"
+    n="$(awk -F'\t' -v p="$phase" -v s="$st" 'NR > 1 && $1 == p && $6 == s' "$RECORDS/run.tsv" | wc -l)"
+    exactly "phase $phase, $st" "$n" "$want_n"
   done
-  # Production: A initialised from the checkpoint and advanced by the finality update.
+  local applied refused reverted other
+  applied="$(status_count "$RECORDS/run.tsv" applied)"; refused="$(status_count "$RECORDS/run.tsv" refused)"
+  reverted="$(status_count "$RECORDS/run.tsv" reverted)"
+  other="$(awk -F'\t' 'NR > 1 && $6 != "applied" && $6 != "refused" && $6 != "reverted"' "$RECORDS/run.tsv" | wc -l)"
+  exactly "applied in all" "$applied" "$(( 61 + 5 * nperiods + private ))"
+  exactly "refused with the program's exit codes" "$refused" 21
+  exactly "reverted otherwise (the wallet's default gas limit; the validity window)" "$reverted" 2
+  exactly "dropped, rejected or unfinished" "$other" 0
+  # Production: A initialised from the checkpoint, every period update applied, the finality update advancing it.
   want "fresh A Init Init" applied
+  local p
+  for p in $periods; do want "fresh A period $p update Finish (step 3)" applied; done
   want "fresh A finality update Finish (step 3)" applied
   # The scenarios, by name.
   want "fresh twin Init adopt 1/2 with the wallet's default gas limit" reverted
+  want "fresh twin period ${periods%% *} update Finish (step 3)" applied
   want "fresh malformed signature: Open (step 1)" refused 41
   want "fresh forged signature: Finish (step 3)" refused 40
-  want "fresh Apply sent as the transaction root" refused
-  want "fresh Init of an existing instance" refused
+  want "fresh Apply sent as the transaction root" refused 202
+  want "fresh Init of an existing instance" refused 203
   want "fresh other chain period update Finish (step 3)" refused 40
   want "fresh Open before its signature slot (validity window)" reverted
   want "fresh finality update Finish (step 3)" applied
-  want "fresh duplicate Open (same job)" refused
+  want "fresh duplicate Open (same job)" refused 207
   want "fresh Open an applied update again" refused 52
   # Consumption, public and private.
   want "fresh Attest: the slot and the log in one request" applied
-  want "fresh Attest refused: no block header for a record that binds a block hash" refused
-  want "fresh Attest refused: a false value for the slot" refused
+  want "fresh Attest refused: no block header for a record that binds a block hash" refused 215
+  want "fresh Attest refused: a false value for the slot" refused 130
   want "fresh consumer CallAttest: the Transfer log" applied
   want "fresh consumer Claim: the ERC-20 Transfer (credits its sender once)" applied
-  want "fresh consumer Claim again (replay)" refused
-  if grep -q fresh-private "$OUT/phases.txt"; then
+  want "fresh consumer Claim again (replay)" refused 223
+  if [ "$private" = 1 ]; then
     want "fresh private attestation (consumer AttestPrivately), real proof" applied
+  else
+    echo "  NOTE: the private attestation was left out (FERRATA_CI_PRIVATE=skip, a local run): this run is incomplete" >&2
   fi
   # The images: the final programs of docs/image-ids.md, as the sequencer's loader recorded them.
   local name doc got
@@ -355,7 +424,7 @@ stage_check() {
   else
     echo "  MISSING: instance A active at slot $want_slot with root $want_root: ${inst:-no row}" >&2; fail=1
   fi
-  echo "== $applied applied, $refused refused with an exit code, $reverted reverted, $dropped dropped, $rejected rejected, $unfinished unfinished"
+  echo "== $applied applied, $refused refused with an exit code, $reverted reverted, $other dropped, rejected or unfinished"
   [ "$fail" = 0 ] || die "the records do not show every phase as designed (above)"
   say "check: every phase as designed"
 }
@@ -371,6 +440,11 @@ lines += ["RFP-021 Supportability #2 (job `sequencer-attest` of `.github/workflo
           "`scripts/ci/sequencer-attest.sh`): LEZ %s's `sequencer_service` built with its `standalone` feature (its mock" % tag,
           "Bedrock actor; no Logos Blockchain node), blocks every 3 s, `RISC0_DEV_MODE` unset; the Ethereum side is",
           "Sepolia, read from public endpoints when the run started.", ""]
+phases_file = os.path.join(out, "phases.txt")
+phases_text = open(phases_file).read().strip() if os.path.exists(phases_file) else ""
+if phases_text and "fresh-private" not in phases_text.split():
+    lines += ["**INCOMPLETE: the private attestation (phase `fresh-private`, its real proof) was left out",
+              "(`FERRATA_CI_PRIVATE=skip`): this run does not show the private consumption.**", ""]
 check = os.path.join(out, "fresh", "check.json")
 if os.path.exists(check):
     c = json.load(open(check))
@@ -378,6 +452,9 @@ if os.path.exists(check):
     lines += ["| | |", "|---|---|",
               "| checkpoint | Sepolia slot %s (%s, period %s, %s layout), block root `%s`, the second provider's; Init valid until %s |"
               % (c["bootstrapSlot"], c["bootstrapTime"], c["bootstrapPeriod"], c["layout"], c["checkpoint"], c["initValidUntil"]),
+              "| freshness | checked at %s: the finalized block %s s old, the bootstrap %s s old (bounds %s and %s s) |"
+              % (c.get("checkedAt", "?"), c.get("finalizedAgeS", "?"), c.get("bootstrapAgeS", "?"),
+                 c.get("maxFinalizedAgeS", "?"), c.get("maxBootstrapAgeS", "?")),
               "| period updates | %s |" % ", ".join("%s (finalized slot %s; advanced %s, adopted %s)" % (p["period"], p["finalizedSlot"], p["advanced"], p["adopted"]) for p in c["periods"]),
               "| finality update | finalizes slot %s (%s), root `%s` (the second provider's), signature slot %s, %s/512 signers |"
               % (c["finalizedSlot"], c["finalizedTime"], c["finalizedRoot"], c["signatureSlot"], c["signers"]),
@@ -406,9 +483,8 @@ else:
 log = os.path.join(rec, "logs", "driver.log")
 failed = [l.strip() for l in open(log)] if os.path.exists(log) else []
 failed = [l for l in failed if l.startswith("== phase") and "FAILED" in l]
-phases_file = os.path.join(out, "phases.txt")
-if os.path.exists(phases_file):
-    lines.append("- phases: `%s`" % open(phases_file).read().strip())
+if phases_text:
+    lines.append("- phases: `%s`" % phases_text)
 lines.append("- outcome: " + ("**%s**" % failed[-1] if failed else "every phase ran to its end (the check step asserts each outcome)"))
 lines += ["- records: `records/` (run.tsv the manifest, summary.txt, chain.tsv, blocks.borsh, programs.tsv, instances.tsv,",
           "  environment.md, logs/, private/), `fresh/` (the fetched data, each directory pinned by its SHA256SUMS; check.json,",
