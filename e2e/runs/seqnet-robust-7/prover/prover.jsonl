@@ -1,0 +1,4 @@
+{"t": 1795563970.437, "event": "start", "call_id": "fc-a0e6c2b735c949a1", "name": "seqnet-19-53", "die_after": 4.0}
+{"t": 1795563985.462, "event": "end", "call_id": "fc-a0e6c2b735c949a1", "name": "seqnet-19-53", "ok": false, "died": true}
+{"t": 1795563987.498, "event": "start", "call_id": "fc-ab0116c0f6714d94", "name": "seqnet-19-53", "die_after": null}
+{"t": 1795564002.806, "event": "end", "call_id": "fc-ab0116c0f6714d94", "name": "seqnet-19-53", "ok": true}

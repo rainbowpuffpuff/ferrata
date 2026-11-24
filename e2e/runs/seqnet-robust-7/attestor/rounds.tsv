@@ -1,0 +1,101 @@
+23:42:24	signed	30
+23:42:26	signed	31
+23:42:28	signed	31
+23:42:30	signed	31
+23:42:32	signed	31
+23:42:35	signed	31
+23:42:37	signed	32
+23:42:42	signed	32
+23:42:44	signed	32
+23:42:46	signed	33
+23:42:48	signed	33
+23:42:50	signed	33
+23:42:52	signed	33
+23:42:55	signed	33
+23:42:57	refused	Error: reading the nodes: GET http://127.0.0.1:41709/cryptarchia/info: curl exit exit status: 22
+23:42:59	refused	Error: reading the nodes: GET http://127.0.0.1:41709/cryptarchia/info: curl exit exit status: 22
+23:43:01	refused	Error: reading the nodes: GET http://127.0.0.1:41709/cryptarchia/info: curl exit exit status: 22
+23:43:03	refused	Error: reading the nodes: GET http://127.0.0.1:41709/cryptarchia/info: curl exit exit status: 22
+23:43:05	refused	Error: reading the nodes: GET http://127.0.0.1:41709/cryptarchia/info: curl exit exit status: 22
+23:43:07	refused	Error: reading the nodes: GET http://127.0.0.1:41709/cryptarchia/info: curl exit exit status: 22
+23:43:09	refused	Error: reading the nodes: GET http://127.0.0.1:41709/cryptarchia/info: curl exit exit status: 22
+23:43:11	refused	Error: reading the nodes: GET http://127.0.0.1:41709/cryptarchia/info: curl exit exit status: 22
+23:43:13	refused	Error: reading the nodes: GET http://127.0.0.1:41709/cryptarchia/info: curl exit exit status: 22
+23:43:15	signed	36
+23:43:17	signed	36
+23:43:19	signed	36
+23:43:21	signed	36
+23:43:24	signed	36
+23:43:26	signed	37
+23:43:28	signed	37
+23:43:33	signed	37
+23:43:35	signed	38
+23:43:37	signed	38
+23:43:39	signed	38
+23:43:41	signed	38
+23:43:44	signed	38
+23:43:46	refused	Error: reading the nodes: LEZ node http://127.0.0.1:32295: getBlock(38): curl exit exit status: 22
+23:43:48	refused	Error: reading the nodes: LEZ node http://127.0.0.1:32295: getBlock(38): curl exit exit status: 22
+23:43:50	refused	Error: reading the nodes: LEZ node http://127.0.0.1:32295: getBlock(38): curl exit exit status: 22
+23:43:52	refused	Error: reading the nodes: LEZ node http://127.0.0.1:32295: getBlock(38): curl exit exit status: 52
+23:43:54	refused	Error: reading the nodes: LEZ node http://127.0.0.1:32295: getBlock(38): curl exit exit status: 22
+23:43:56	refused	Error: reading the nodes: LEZ node http://127.0.0.1:32295: getBlock(38): curl exit exit status: 22
+23:43:58	refused	Error: reading the nodes: LEZ node http://127.0.0.1:32295: getBlock(38): curl exit exit status: 22
+23:44:00	refused	Error: reading the nodes: LEZ node http://127.0.0.1:32295: getBlock(38): curl exit exit status: 52
+23:44:03	refused	Error: reading the nodes: LEZ node http://127.0.0.1:32295: getBlock(38): curl exit exit status: 52
+23:44:05	signed	40
+23:44:07	signed	41
+23:44:09	signed	41
+23:44:11	signed	41
+23:44:13	signed	41
+23:44:18	signed	42
+23:44:21	signed	42
+23:44:23	signed	42
+23:44:25	signed	43
+23:44:27	signed	43
+23:44:29	signed	43
+23:44:31	signed	43
+23:44:33	refused	Error: reading the nodes: GET http://127.0.0.1:41709/cryptarchia/info: curl exit exit status: 22
+23:44:35	refused	Error: reading the nodes: GET http://127.0.0.1:41709/cryptarchia/info: curl exit exit status: 22
+23:44:37	refused	Error: reading the nodes: GET http://127.0.0.1:41709/cryptarchia/info: curl exit exit status: 22
+23:44:39	refused	Error: reading the nodes: GET http://127.0.0.1:41709/cryptarchia/info: curl exit exit status: 22
+23:44:41	refused	Error: reading the nodes: GET http://127.0.0.1:41709/cryptarchia/info: curl exit exit status: 22
+23:44:44	refused	Error: reading the nodes: GET http://127.0.0.1:41709/cryptarchia/info: curl exit exit status: 22
+23:44:46	refused	Error: reading the nodes: GET http://127.0.0.1:41709/cryptarchia/info: curl exit exit status: 22
+23:44:48	refused	Error: reading the nodes: GET http://127.0.0.1:41709/cryptarchia/info: curl exit exit status: 22
+23:44:50	refused	Error: reading the nodes: GET http://127.0.0.1:41709/cryptarchia/info: curl exit exit status: 22
+23:44:52	signed	45
+23:44:54	signed	45
+23:44:56	signed	46
+23:44:58	signed	46
+23:45:00	signed	46
+23:45:02	signed	46
+23:45:06	signed	47
+23:45:08	signed	47
+23:45:10	signed	47
+23:45:12	signed	47
+23:45:14	signed	47
+23:45:16	signed	48
+23:45:18	signed	48
+23:45:20	signed	48
+23:45:22	refused	Error: reading the nodes: LEZ node http://127.0.0.1:32295: getBlock(48): curl exit exit status: 52
+23:45:24	refused	Error: reading the nodes: LEZ node http://127.0.0.1:32295: getBlock(48): curl exit exit status: 52
+23:45:27	refused	Error: reading the nodes: LEZ node http://127.0.0.1:32295: getBlock(48): curl exit exit status: 22
+23:45:29	refused	Error: reading the nodes: LEZ node http://127.0.0.1:32295: getBlock(48): curl exit exit status: 22
+23:45:31	refused	Error: reading the nodes: LEZ node http://127.0.0.1:32295: getBlock(48): curl exit exit status: 22
+23:45:33	refused	Error: reading the nodes: LEZ node http://127.0.0.1:32295: getBlock(48): curl exit exit status: 22
+23:45:35	refused	Error: reading the nodes: LEZ node http://127.0.0.1:32295: getBlock(48): curl exit exit status: 22
+23:45:37	refused	Error: reading the nodes: LEZ node http://127.0.0.1:32295: getBlock(48): curl exit exit status: 52
+23:45:39	refused	Error: reading the nodes: LEZ node http://127.0.0.1:32295: getBlock(48): curl exit exit status: 52
+23:45:41	signed	50
+23:45:43	signed	50
+23:45:46	signed	51
+23:45:48	signed	51
+23:45:50	signed	51
+23:45:55	signed	52
+23:45:57	signed	52
+23:45:59	signed	52
+23:46:01	signed	52
+23:46:03	signed	52
+23:46:06	signed	53
+23:46:08	signed	53

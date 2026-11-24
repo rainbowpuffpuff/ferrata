@@ -1,0 +1,9 @@
+{
+  "label": "seqnet: local anvil (chain id 11155111, the stand-in committee finalizes its blocks), the vault uses the vault tests' MockRiscZeroVerifier behind the emergency stop; the mock's runtime code put at the address of the risc0-ethereum v3.1.0 verifier DeployVault deployed (anvil_setCode)",
+  "chainId": 11155111,
+  "vault": "0x7aa40900A493Bcb2140f441ED52B94B26E5E0688",
+  "configId": "0x1e0d618e7baf086f739285bdf8cd6e6378666b4c6167b7b6f48f467c60390250",
+  "genesisState": "0x7ddcffe6444316d0c50b8ff8d2460fb3944e26bf3372722655c995088e440318",
+  "groth16Verifier": "0x90B79C3BfD84E3126c7614aA192892a074223873",
+  "delta": 3600
+}

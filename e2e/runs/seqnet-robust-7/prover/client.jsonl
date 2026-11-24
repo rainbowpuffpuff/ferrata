@@ -1,0 +1,8 @@
+{"event": "started", "requests": "<work>/prover/requests", "inbox": "<work>/relayer-inbox"}
+{"event": "spawned", "name": "seqnet-19-53", "call_id": "fc-a0e6c2b735c949a1", "attempt": 1}
+{"event": "retry", "name": "seqnet-19-53", "attempts": 1, "error": "RemoteError(\"the prover's container stopped mid-proof (stand-in)\")"}
+{"event": "spawned", "name": "seqnet-19-53", "call_id": "fc-ab0116c0f6714d94", "attempt": 2}
+{"event": "started", "requests": "<work>/prover/requests", "inbox": "<work>/relayer-inbox"}
+{"event": "resumed", "name": "seqnet-19-53", "call_id": "fc-ab0116c0f6714d94", "attempt": 2}
+{"name": "seqnet-19-53", "kind": "checkpoint-b", "ok": true, "seconds": 8.2, "job": "<work>/relayer-inbox/seqnet-19-53.json", "error": null, "call_id": "fc-ab0116c0f6714d94", "attempts": 2, "resumed": true}
+{"event": "stop", "reason": "SIGTERM"}

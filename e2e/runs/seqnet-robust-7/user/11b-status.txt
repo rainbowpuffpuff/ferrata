@@ -1,0 +1,22 @@
+$ ferrata --seed <work>/user/seed.txt --eth-rpc http://127.0.0.1:8545 --chain-id 11155111 --vault 0x7aa40900A493Bcb2140f441ED52B94B26E5E0688 --from-block 1 --sequencer http://127.0.0.1:3040 --lez-wallet <work>/user/lez-wallet --lez-password-file <work>/user/lez.pass --bridge-account 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d status
+
+vault 0x7aa40900A493Bcb2140f441ED52B94B26E5E0688: 2 deposits, root 0xe86776cd487834cb1c6c9405433664e92f3b61cd80faacf49a8ceb6d8d52b380, configId 0x1e0d618e7baf086f739285bdf8cd6e6378666b4c6167b7b6f48f467c60390250
+  retired false; deposits frozen until 0; releases frozen until 0
+  checkpoints 0; final imported leaf count 0
+  global deposit cap: capacity 1030000000000 value units, refill 11921297 value units/s, available 1030000000000 value units
+  global release cap: capacity 1030000000000 value units, refill 11921297 value units/s, available 1030000000000 value units
+token 0x0000000000000000000000000000000000000000 (ETH): registered true, deposits enabled true, lezUnit 1000000000000
+  [0] 0.001 ETH (1000000000000000 base units, 18 decimals)  mint fee 0 ETH (0 base units, 18 decimals)  relay fee 0.000002 ETH (2000000000000 base units, 18 decimals)  burn fee 0 ETH (0 base units, 18 decimals)  checkpoint fee 0.000001 ETH (1000000000000 base units, 18 decimals)
+  [1] 0.01 ETH (10000000000000000 base units, 18 decimals)  mint fee 0 ETH (0 base units, 18 decimals)  relay fee 0.00002 ETH (20000000000000 base units, 18 decimals)  burn fee 0 ETH (0 base units, 18 decimals)  checkpoint fee 0.00001 ETH (10000000000000 base units, 18 decimals)
+  [2] 0.1 ETH (100000000000000000 base units, 18 decimals)  mint fee 0 ETH (0 base units, 18 decimals)  relay fee 0.0002 ETH (200000000000000 base units, 18 decimals)  burn fee 0 ETH (0 base units, 18 decimals)  checkpoint fee 0.0001 ETH (100000000000000 base units, 18 decimals)
+  deposits frozen until 0; releases frozen until 0; release delay 120 s after a checkpoint
+  deposit cap: capacity 10 ETH (10000000000000000000 base units, 18 decimals), refill 0.000115740740740741 ETH (115740740740741 base units, 18 decimals)/s, available 10 ETH (10000000000000000000 base units, 18 decimals)
+  release cap: capacity 10 ETH (10000000000000000000 base units, 18 decimals), refill 0.000115740740740741 ETH (115740740740741 base units, 18 decimals)/s, available 10 ETH (10000000000000000000 base units, 18 decimals)
+zone: configuration ready, sunset false; attestation program 0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c, instance 0xabd362ebd8091508211f8c37dfd4c8e77d7ee313248579c5399aecf726b13c4a
+  freezes of the whole configuration: mints not frozen; burns not frozen; clock 0 (1970-01-01 00:00:00 UTC)
+  freezes of ETH: mints not frozen; burns not frozen; clock 0 (1970-01-01 00:00:00 UTC)
+  gate Gate { now_ms: 0, mints_until: 0, burns_until: 0, mint: Bucket { capacity: 30000000000, refill_per_second: 347223, level: 29993988000, last_ms: 0 }, burn: Bucket { capacity: 30000000000, refill_per_second: 347223, level: 30000000000, last_ms: 0 } }
+  instance: active true, 2 jobs applied, finalized slot 11542656
+  newest record: header(id, 11542656): Gloas record, bound block hash 0x7506570af2426bafaa24ead1d4b4a8776db62fa2fbcfff9449c3773a7fd33fcb
+  newest imported root: root(cid, 2) (1 imports), from header(id, 11542656): Gloas record, bound block hash 0x7506570af2426bafaa24ead1d4b4a8776db62fa2fbcfff9449c3773a7fd33fcb
+  burns published: 0
