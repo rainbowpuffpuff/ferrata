@@ -21,10 +21,12 @@ SITES="$SSLIP"; [ -n "${FERRATA_DOMAIN:-}" ] && SITES="$FERRATA_DOMAIN, $SSLIP"
 RANGE_LIMIT=50   # the gateway's GATEWAY_MAX_RANGE: the explorer pages getBlockRange by it
 
 rm -rf "$STAGE"; mkdir -p "$STAGE"; tar -xzf "$TGZ" -C "$STAGE"
-# The wallet's and the messaging module's config as served now: web-config.py keeps what the host set there and the
-# bundle leaves empty (the wallet's bridge settings, the module's rpc).
-install -d "$STAGE/served-before"
-for f in wallet msg; do [ ! -f "$WWW/$f/config.json" ] || cp "$WWW/$f/config.json" "$STAGE/served-before/$f-config.json"; done
+# The wallet's and the messaging module's config as last served, kept outside the stage: web-config.py keeps what the
+# host set there and the bundle leaves empty (the wallet's bridge settings). Written below only once step 5 succeeds,
+# so a run stopped half way (the bundle's raw configs already in place) does not lose them; the first run copies them.
+SERVED=/var/lib/ferrata/web-served
+install -d -m 755 "$SERVED"
+for f in wallet msg; do [ -f "$SERVED/$f-config.json" ] || [ ! -f "$WWW/$f/config.json" ] || cp "$WWW/$f/config.json" "$SERVED/$f-config.json"; done
 install -d -m 755 "$WWW" "$WWW/wallet"
 install -d -o ferrata -g ferrata -m 755 "$WWW/status"
 # 1. the build page owns /index.html, /evidence.*, /build.json, /assets/{site.css,site.js,logo.svg}, /img/
@@ -64,7 +66,10 @@ install -m 644 "$REPO"/idl/ferrata_attestation.idl.json "$REPO"/idl/ferrata_brid
 cp "$WWW/programs.json" "$WWW/status/programs.json"
 # 5. the bundles' config: this network's URLs and, once deployed, its program and instance ids (messaging and names:
 #    their second versions where deployed); /AGENTS.md with the program streams' sections and this host's limits
-python3 -I "$HERE/web-config.py" "$WWW" "$PRIMARY" "$HERE" "$RANGE_LIMIT" "$STAGE"
+python3 -I "$HERE/web-config.py" "$WWW" "$PRIMARY" "$HERE" "$RANGE_LIMIT" "$STAGE" "$SERVED"
+for f in wallet msg; do
+  [ ! -f "$WWW/$f/config.json" ] || { cp "$WWW/$f/config.json" "$SERVED/.$f-config.json" && mv "$SERVED/.$f-config.json" "$SERVED/$f-config.json"; }
+done
 # 6. Caddy
 sed -e "s/{{SITES}}/$SITES/" -e "s/{{HOST}}/$SSLIP/g" "$HERE/host/Caddyfile" > /etc/caddy/Caddyfile.new
 caddy validate --config /etc/caddy/Caddyfile.new --adapter caddyfile > /dev/null 2>&1 || { caddy validate --config /etc/caddy/Caddyfile.new --adapter caddyfile; exit 1; }

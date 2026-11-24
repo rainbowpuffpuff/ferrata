@@ -2,20 +2,25 @@
 """The site's configuration on the host (install-web.sh step 5): the bundles' config files filled with this network's
 URLs and the programs and instances it deployed (programs.json), and /AGENTS.md assembled. Standard library only.
 
-    web-config.py WWW PRIMARY HERE RANGE_LIMIT [STAGE]
+    web-config.py WWW PRIMARY HERE RANGE_LIMIT [STAGE [SERVED]]
 
   WWW          the web root (/srv/ferrata/www), its bundles already installed from STAGE
   PRIMARY      the site's name (the domain, else the sslip.io name)
   HERE         deploy/testnet (for host/www/AGENTS-limits.md)
   RANGE_LIMIT  the gateway's getBlockRange limit
-  STAGE        the unpacked web tarball (for the program streams' AGENTS sections), and STAGE/served-before/, where
-               install-web.sh keeps the wallet's and the messaging module's config as they were served before
+  STAGE        the unpacked web tarball (for the program streams' AGENTS sections)
+  SERVED       the wallet's and the messaging module's config as last served (wallet-config.json, msg-config.json):
+               install-web.sh keeps them outside the stage and writes them only after this step succeeds, so a run
+               stopped half way does not lose them
 
-Where a program has a second version deployed beside the first (programs.json `ferrata_msg_v2`, `ferrata_names_v2`;
-the first stays live and immutable), the messaging module and the wallet are pointed at the second, the first named as
-legacy (the messaging module reads its old inboxes); the explorer's catalogue keeps the first, whose IDL and image it
-reads. A value the host set in a served config and the bundle leaves empty (null, or a key it does not have) is kept
-(the wallet's bridge settings, the messaging module's rpc), so that installing the site again loses nothing.
+The messaging module and the wallet's inbox and names panels are the programs' second versions' clients: they are
+pointed at `ferrata_msg_v2` and `ferrata_names_v2` (programs.json), the first versions, live and immutable, named as
+legacy (the module reads their old inboxes). On a host without the second versions they are left off (program null:
+the wallet says no program is configured), never pointed at a first version, whose messages they would misread. The
+explorer's catalogue keeps the first versions, whose IDLs and images it reads. A value the host set in a served config
+and the bundle leaves empty (null, or a key it does not have) is kept (the wallet's bridge settings); the module's rpc
+is the site's own, written each run (absolute: its command-line tool reads the file outside a browser). Each file is
+written whole (a new file renamed over the old).
 """
 import json
 import os
@@ -29,8 +34,10 @@ def load(path):
 
 
 def save(path, value):
-    with open(path, "w", encoding="utf-8") as f:
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(value, f, indent=2)
+    os.replace(tmp, path)
 
 
 def keep(new, old):
@@ -45,14 +52,13 @@ def account(progs, name):
 
 
 def current(progs, name):
-    """(the program a client should use, the first version when a second is deployed, else None)."""
-    v1, v2 = account(progs, name), account(progs, name + "_v2")
-    return (v2, v1) if v2 else (v1, None)
+    """(the second version, whose clients these are, or None; the first version, as legacy, or None)."""
+    return account(progs, name + "_v2"), account(progs, name)
 
 
-def served_before(stage, name):
-    p = os.path.join(stage, "served-before", name)
-    return load(p) if stage and os.path.exists(p) else {}
+def served_before(served, name):
+    p = os.path.join(served, name)
+    return load(p) if served and os.path.exists(p) else {}
 
 
 def explorer(www, site, progs, range_limit):
@@ -80,18 +86,16 @@ def explorer(www, site, progs, range_limit):
     save(p, c)
 
 
-def messaging(www, site, progs, stage):
+def messaging(www, site, progs, served):
     m = os.path.join(www, "msg", "config.json")
     if not os.path.exists(m):
         return
-    c = keep(load(m), served_before(stage, "msg-config.json"))
+    c = keep(load(m), served_before(served, "msg-config.json"))
     program, legacy = current(progs, "ferrata_msg")
-    if program:
-        c["program"] = program
+    c["program"] = program  # null without the second version: the module is left off
     if legacy:
         c["legacy_program"] = legacy
-    if not c.get("rpc"):
-        c["rpc"] = f"{site}/rpc"
+    c["rpc"] = f"{site}/rpc"
     save(m, c)
 
 
@@ -117,11 +121,11 @@ def agents(www, primary, here, range_limit, stage):
             f.write(t2)
 
 
-def wallet(www, progs, stage):
+def wallet(www, progs, served):
     w = os.path.join(www, "wallet", "config.json")
     if not os.path.exists(w):
         return
-    c = keep(load(w), served_before(stage, "wallet-config.json"))
+    c = keep(load(w), served_before(served, "wallet-config.json"))
     c.update({"network": "Ferrata LEZ testnet (rc3)", "rpc": "/rpc", "faucet": "/faucet", "explorer": "/explorer/"})
     a = account(progs, "ferrata_attestation")
     inst = (progs.get("instances") or {}).get("sepolia")
@@ -131,11 +135,10 @@ def wallet(www, progs, stage):
     b = account(progs, "ferrata_bridge_b1")
     if b:
         c.setdefault("bridge", {})["program"] = b
-    # The encrypted inbox and names panels turn on when their program is set: the second version where one is deployed.
+    # The encrypted inbox and names panels turn on when their program is set: the second version only (their code's).
     for key, prog in (("msg", "ferrata_msg"), ("names", "ferrata_names")):
         program, legacy = current(progs, prog)
-        if program:
-            c.setdefault(key, {})["program"] = program
+        c.setdefault(key, {})["program"] = program
         if legacy and key == "msg":
             c[key]["legacyProgram"] = legacy
     save(w, c)
@@ -144,12 +147,13 @@ def wallet(www, progs, stage):
 def main(argv):
     www, primary, here, range_limit = argv[1], argv[2], argv[3], int(argv[4])
     stage = argv[5] if len(argv) > 5 else ""
+    served = argv[6] if len(argv) > 6 else ""
     site = f"https://{primary}"
     progs = load(os.path.join(www, "programs.json"))
     explorer(www, site, progs, range_limit)
-    messaging(www, site, progs, stage)
+    messaging(www, site, progs, served)
     agents(www, primary, here, range_limit, stage)
-    wallet(www, progs, stage)
+    wallet(www, progs, served)
 
 
 if __name__ == "__main__":
