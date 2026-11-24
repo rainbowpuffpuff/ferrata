@@ -1,0 +1,79 @@
+{
+ "source_commit": "a0f388279e2de21305e0a8d1b0777f627ad165b9",
+ "a": "a Modal build box in one workspace, its Nix store restored from an earlier stream's",
+ "b": "a Modal build box in another workspace, a fresh container and an empty Nix store",
+ "packages": [
+  {
+   "file": "linux-amd64/ferrata_attest_module-0.1.0.lgx",
+   "size_a": 6724335,
+   "size_b": 6724335,
+   "sha256_a": "361c6426a9ddccb9f3353e30fe8e59a9ce1a062baeb9379200ac925d8796a941",
+   "sha256_b": "361c6426a9ddccb9f3353e30fe8e59a9ce1a062baeb9379200ac925d8796a941",
+   "rootHash_a": "5235792c051b4cfddd053a3624604cdd84e6d98cfb2329bc08583a6a17da3821",
+   "rootHash_b": "5235792c051b4cfddd053a3624604cdd84e6d98cfb2329bc08583a6a17da3821",
+   "same": true
+  },
+  {
+   "file": "linux-amd64/ferrata_attestor_module-0.1.0.lgx",
+   "size_a": 5577395,
+   "size_b": 5577395,
+   "sha256_a": "ff5957bdb67b657b09d658f2a86c0380bef1d034e2aeb3a82717e6867a88adb1",
+   "sha256_b": "ff5957bdb67b657b09d658f2a86c0380bef1d034e2aeb3a82717e6867a88adb1",
+   "rootHash_a": "b552cddbe73cc18804635718cedb142d127a27234d407e67b41ba5fa60d14b76",
+   "rootHash_b": "b552cddbe73cc18804635718cedb142d127a27234d407e67b41ba5fa60d14b76",
+   "same": true
+  },
+  {
+   "file": "linux-amd64/ferrata_bridge_module-0.1.0.lgx",
+   "size_a": 9916300,
+   "size_b": 9916300,
+   "sha256_a": "3d75f4c31e0515ba46a35a44c6c17131f3ea0ccdc889cf35a4c0182a9aefc3b2",
+   "sha256_b": "3d75f4c31e0515ba46a35a44c6c17131f3ea0ccdc889cf35a4c0182a9aefc3b2",
+   "rootHash_a": "8906dc39f77011135b3527fab8412b8266b4bc2be2fb2c37a6f56cdb26f2900e",
+   "rootHash_b": "8906dc39f77011135b3527fab8412b8266b4bc2be2fb2c37a6f56cdb26f2900e",
+   "same": true
+  },
+  {
+   "file": "linux-amd64/ferrata_bridge_ui-0.1.0.lgx",
+   "size_a": 26516,
+   "size_b": 26516,
+   "sha256_a": "523c4d602b2e724447708cfa683bf7e92004faad1c1fa50aff18ed5e2ce50212",
+   "sha256_b": "523c4d602b2e724447708cfa683bf7e92004faad1c1fa50aff18ed5e2ce50212",
+   "rootHash_a": "ed43ff73648c1d998b5c404815a45d7c512b0ea96c0096c1c0cb62bc71e084ac",
+   "rootHash_b": "ed43ff73648c1d998b5c404815a45d7c512b0ea96c0096c1c0cb62bc71e084ac",
+   "same": true
+  },
+  {
+   "file": "linux-amd64/ferrata_monitor_module-0.1.0.lgx",
+   "size_a": 12268531,
+   "size_b": 12268531,
+   "sha256_a": "a05b1c30469e1fce1633cb2b13c19dd38100484b90444bb8c2fa92fb9509a47e",
+   "sha256_b": "a05b1c30469e1fce1633cb2b13c19dd38100484b90444bb8c2fa92fb9509a47e",
+   "rootHash_a": "1f91b4e8692d0ac1989355699cba56a3e7bf6ef50851edb1a2061c21f84b1b27",
+   "rootHash_b": "1f91b4e8692d0ac1989355699cba56a3e7bf6ef50851edb1a2061c21f84b1b27",
+   "same": true
+  },
+  {
+   "file": "linux-amd64/ferrata_relayer_module-0.1.0.lgx",
+   "size_a": 17727733,
+   "size_b": 17727733,
+   "sha256_a": "2b4973106fb97bb0cf8a6c2e19bb619a3eeeb2c5beba5ab22df13c2b809cc42b",
+   "sha256_b": "2b4973106fb97bb0cf8a6c2e19bb619a3eeeb2c5beba5ab22df13c2b809cc42b",
+   "rootHash_a": "938674936267792e2f5f44debae6a58459a70d5bdf9bc6bce69039d1aed3f020",
+   "rootHash_b": "938674936267792e2f5f44debae6a58459a70d5bdf9bc6bce69039d1aed3f020",
+   "same": true
+  },
+  {
+   "file": "linux-amd64/ferrata_updater_module-0.1.0.lgx",
+   "size_a": 61887639,
+   "size_b": 61887639,
+   "sha256_a": "6e012ef780913c5f807e1d15daebad6122a75c66a8675c71500f520b2f14e5bf",
+   "sha256_b": "6e012ef780913c5f807e1d15daebad6122a75c66a8675c71500f520b2f14e5bf",
+   "rootHash_a": "7936b1614f7385fbbac471d74d015e31f9b31fc3bac51c4eb55d1bdfd6107cc8",
+   "rootHash_b": "7936b1614f7385fbbac471d74d015e31f9b31fc3bac51c4eb55d1bdfd6107cc8",
+   "same": true
+  }
+ ],
+ "same": 7,
+ "differ": 0
+}

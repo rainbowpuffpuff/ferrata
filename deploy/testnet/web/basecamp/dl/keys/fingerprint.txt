@@ -1,0 +1,1 @@
+256 SHA256:m5xC7zkg0LzI3YhCtol4qSfgMJGijs84mFWWGk0eX9Y ferrata-release (ED25519)

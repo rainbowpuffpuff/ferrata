@@ -1,0 +1,1 @@
+{"affected_loaded":[],"changes":[{"action":"install","file":"REL/linux-amd64/ferrata_relayer_module-0.1.0.lgx","fromVersion":"","name":"ferrata_relayer_module","signature":"signed","toVersion":"0.1.0"}],"installed":["ferrata_relayer_module"],"op":"install","reloaded":[],"status":"ok","stopped_dependents":[]}

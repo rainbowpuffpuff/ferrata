@@ -1,0 +1,4 @@
+# The packages and the GMP source archives are served from the release directory, not committed (release.json and
+# notices/NOTICES.md hold their sizes and SHA-256).
+*.lgx
+notices/sources/*.tar.xz

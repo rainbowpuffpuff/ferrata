@@ -1,0 +1,41 @@
+{
+  "network": "Ferrata LEZ testnet (rc3)",
+  "rpc": "/rpc",
+  "faucet": "/faucet",
+  "explorer": "/explorer/",
+  "token": {
+    "symbol": "LGO",
+    "decimals": 9
+  },
+  "gasLimitTransfer": 100000,
+  "attestation": {
+    "program": "6f9zuRR63bSN5AEeffqZeACYCwFmqfe5JJhPshuJfYNg",
+    "instances": [
+      {
+        "id": "0xc741a1f16012516529529814da7a7ebc2d18a8cdcba2a3e7f58710f52630782e",
+        "chainId": 11155111,
+        "name": "Sepolia"
+      }
+    ]
+  },
+  "msg": {
+    "program": "ExZxU36vgBErfDHpnsM97euf4ubx7gL8WpX7DFsYrVTe"
+  },
+  "names": {
+    "program": "4EBU635HU4qXYWhEq6omJRW4kUHkMgfwGzThFnK3XZVt"
+  },
+  "bridge": {
+    "program": "36iqVMFpfgHrwoeuVvZhXX3caM1JPBJh56PBw5A4H1rk",
+    "configId": "0x3773b58836d2fa242e16b3eb580a15630de2a437218a432f52e5b01152ae67cd",
+    "vault": "0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787",
+    "evmChainId": 11155111,
+    "lezReady": true,
+    "token": {
+      "address": "0x5d4DdB1863d2EE85765499dd850a9AeedecA03bC",
+      "symbol": "TUSD",
+      "decimals": 6,
+      "testMint": true
+    },
+    "fromBlock": 12196188
+  }
+}

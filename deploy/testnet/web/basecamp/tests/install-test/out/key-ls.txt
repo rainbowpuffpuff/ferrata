@@ -1,0 +1,1 @@
+[{"addedAt":"2026-11-23T22:32:57Z","did":"did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6ImdlY2F3UU5PTEhpNlBCT3c4bERTQVN4bXllTU1IRHEwUjFSMUN1NmdhTTQifQ","displayName":"Ferrata release (test network)","name":"ferrata"}]
