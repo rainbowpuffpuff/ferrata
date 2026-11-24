@@ -57,7 +57,9 @@ pub trait FerrataBridgeModule: Send + 'static {
     /// session's LEZ reads and private sends through Logos Core's `lez_core`, `lez_report` lists those
     /// calls; `claim` and `burn` start a job in a thread of the module and answer at once (a private one is
     /// proven for minutes, and a host may end the call sooner), `job` answers a job's state and, once done, its
-    /// reply, `jobs` lists them (calls/src/jobs.rs); `{"ok", ...}`.
+    /// reply, `jobs` lists them (calls/src/jobs.rs); `open_network` opens a session on a Ferrata test network's public
+    /// endpoints instead (HTTPS; only the deployment the module knows; keys from the person's recovery phrase, held for
+    /// the session only), with `faucet`, `balances`, `deposit_plan` and `close` (calls/src/net.rs); `{"ok", ...}`.
     fn wallet(&mut self, request: String) -> String;
     /// The admin's and the freeze authority's functions: `status` (the vault's roles, registry, caps and freezes read
     /// through Logos Core's `eth_rpc_module`; LEZ's from the bridge program's states), a vault action built, checked

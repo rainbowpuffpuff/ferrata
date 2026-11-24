@@ -135,6 +135,10 @@ fn dispatch(method: &str, params: &Value) -> Result<Value, String> {
     // once (jobs.rs: it would wait there for lez_core, busy proving). `info` and `price` read through the chain service
     // and, on the `eth` path, eth_rpc_module, never lez_core; `deposit` sends through the chain service, or is itself a
     // job on the `eth` path; `claim` and `burn` answer the running job, or are refused. `set_endpoints` is refused.
+    // `close` ends the session even while a job runs (the job then finds no session and fails, sending nothing more).
+    if method == "close" {
+        return Ok(close());
+    }
     if let Some(job) = crate::jobs::active() {
         // A deposit or a vault admin call through the send stack is itself a job: started again it answers that job,
         // and jobs.rs refuses it while another job runs.
@@ -144,6 +148,25 @@ fn dispatch(method: &str, params: &Value) -> Result<Value, String> {
     }
     if method == "open" {
         return open(params);
+    }
+    // The network session (net.rs): the mini-app against a test network's public endpoints, keys from the phrase.
+    if method == "open_network" {
+        return open_network(params);
+    }
+    if network_session() {
+        // A private claim or burn is refused at once in the network session (it needs a proof this module does not
+        // make), rather than started as a job that fails.
+        if matches!(method, "claim" | "burn") && params["private"] != false {
+            return Err(crate::net::PRIVATE_NEEDS_PROOF.into());
+        }
+        if let Some(why) = match method {
+            "lez" | "eth" | "lez_probe" => Some("this session reads and sends through the network's own endpoints"),
+            "set_endpoints" => Some("this session's endpoints are the network's: close it and open it again with another Ethereum endpoint"),
+            "admin.vault" | "admin.set_cap" | "admin.lez" => Some("the bridge's admin calls are its operator's, not a user's"),
+            _ => None,
+        } {
+            return Err(format!("{method}: {why}"));
+        }
     }
     if method == "lez" {
         // The session's LEZ path: Logos Core's lez_core (reads, the private holding, private sends) or plain.
@@ -174,6 +197,10 @@ fn dispatch(method: &str, params: &Value) -> Result<Value, String> {
     };
     let c = Chain { url: chain, s };
     match method {
+        "faucet" if c.network() => crate::net::faucet(params["account"].as_u64().unwrap_or(0) as u32),
+        "balances" if c.network() => Ok(json!({ "accounts": crate::net::lgo_balances()?, "unit": "10^-9 LGO" })),
+        "deposit_plan" => c.deposit_plan(params),
+        "release" if c.network() => c.release_handoff(params),
         "info" => c.info(),
         "registry" => c.registry(),
         "price" => match eth_path() {
@@ -569,6 +596,7 @@ fn open(params: &Value) -> Result<Value, String> {
             reset.push("lez");
         }
     }
+    crate::net::close();
     let summary = json!({
         "chain": url,
         "chain_id": s["chain_id"],
@@ -584,14 +612,196 @@ fn open(params: &Value) -> Result<Value, String> {
     Ok(summary)
 }
 
+/// Whether the open session is a network session (`net.rs`).
+fn network_session() -> bool {
+    SESSION.lock().ok().is_some_and(|g| g.as_ref().is_some_and(|s| s.chain.starts_with("network:")))
+}
+
+/// `open_network`: the mini-app against a Ferrata test network's public endpoints (net.rs: what is checked, where the
+/// phrase's keys live). Its Ethereum side is the session's `eth` path over the endpoint the person chose: every vault
+/// read here, every Ethereum send through Logos Core's tx_sender_module (one approval in the Logos signer).
+fn open_network(params: &Value) -> Result<Value, String> {
+    let (s, summary) = crate::net::open(params)?;
+    let eth = json!({
+        "eth": { "via": "http", "rpc_url": s["eth_rpc"] },
+        "chain_id": s["chain_id"],
+        "from_block": s["from_block"],
+        "user": s["depositor"].as_str().map(str::to_lowercase),
+        "release_sender": null,
+        "network_session": true,
+    });
+    *ETH_PATH.lock().map_err(|_| "the eth path lock is poisoned")? = Some(eth);
+    if crate::lez::active() {
+        crate::lez::configure(&json!({ "via": "plain" }), None)?;
+    }
+    let chain = format!("network:{}", s["network"].as_str().unwrap_or(""));
+    *SESSION.lock().map_err(|_| "the session lock is poisoned")? = Some(Session { chain, s, calls: 0 });
+    Ok(summary)
+}
+
+/// `close`: ends the session; a network session's keys are zeroized as they are dropped.
+fn close() -> Value {
+    let was = SESSION.lock().ok().and_then(|mut g| g.take()).map(|s| s.chain.starts_with("network:"));
+    if let Ok(mut g) = ETH_PATH.lock() {
+        *g = None;
+    }
+    crate::net::close();
+    json!({ "closed": was.is_some(), "network_session": was == Some(true), "keys": "dropped" })
+}
+
 struct Chain {
     url: String,
     s: Value,
 }
 
 impl Chain {
+    fn network(&self) -> bool {
+        self.url.starts_with("network:")
+    }
+
+    /// A deposit planned to its approval, nothing sent: the commitment C, the vault call and what it costs, for the
+    /// person to check in the wallet's prompt (and then in the Logos signer, which signs it). The vault is asked to
+    /// simulate it from the depositor first (`preflight`); its refusal is shown, not hidden.
+    fn deposit_plan(&self, params: &Value) -> Result<Value, String> {
+        let e = eth_path().ok_or("deposit_plan: the session's Ethereum path is a chain service's (it plans and sends at once)")?;
+        if self.s["depositor"].is_null() {
+            return Err("a deposit needs your Sepolia address (the account Logos's signer sends it from): enter it when you open the session".into());
+        }
+        let d = params["denomination"].as_u64().unwrap_or(0);
+        let kind = params["kind"].as_str().unwrap_or("private");
+        let a = params["account"].as_u64().unwrap_or(0);
+        let gap = self.s["gap"].as_u64().unwrap_or(8);
+        if a >= gap {
+            return Err(format!("account /{a} is outside the recovery window ({gap}): a wallet would not find it"));
+        }
+        let mut v = self.vault(&e)?;
+        let depositor: [u8; 20] = fixed(&self.s["depositor"], "depositor")?;
+        let j = v.deposit_count(&depositor)?;
+        let price = v.price(&[0u8; 20], d as u8)?;
+        let mut req = self.seed_fields();
+        req["j"] = json!(j);
+        req["kind"] = json!(kind);
+        req["dest"] = json!(self.account(kind, a)?);
+        req["token"] = json!(ETH);
+        req["denom_index"] = json!(d);
+        let made = crate::deposit_of(&req)?;
+        let call = &made["vault_call"];
+        let data = unhex(call["data"].as_str().ok_or("vault_call.data")?)?;
+        let to: [u8; 20] = fixed(&call["to"], "vault_call.to")?;
+        let total = price["total"].as_str().ok_or("price.total")?.to_string();
+        let preflight = match crate::user::preflight(&mut v, &depositor, &to, &data, &total) {
+            Ok(()) => json!("the vault accepts it (simulated from your address)"),
+            Err(e) => json!(format!("the vault's simulation from your address refuses it now: {e}")),
+        };
+        let dest = if kind == "public" {
+            fixed::<32>(&json!(self.account(kind, a)?), "dest").map(|id| crate::lezkey::id_string(&id)).unwrap_or_default()
+        } else {
+            format!("your private account /{a} (its id stays inside C)")
+        };
+        Ok(json!({
+            "chain_id": self.s["chain_id"],
+            "from": hex(&depositor),
+            "to": hex(&to),
+            "value_wei": total,
+            "data": hex(&data),
+            "function": "depositETH(uint8,bytes32,uint64)",
+            "denomination": d,
+            "amount_wei": price["denomination"],
+            "price": price,
+            "j": j,
+            "commitment": made["commitment"],
+            "kind": kind,
+            "account": a,
+            "destination": dest,
+            "preflight": preflight,
+            "signs": "Logos's signer, through Logos Core's tx_sender_module (keystore_module holds the key); this module holds no Ethereum key",
+            "public_on_ethereum": ["the depositor address", "the token", "the denomination and fees", "the time", "the commitment C"],
+            "hidden": ["the LEZ destination (C commits to it)"],
+        }))
+    }
+
+    /// A burn from public account `/a`'s holding (the network session; the web wallet's public burn): the note and
+    /// `Burn` message of the module, sent as a public call of that account, paid and signed by it.
+    fn burn_public(&self, params: &Value) -> Result<Value, String> {
+        let a = params["account"].as_u64().unwrap_or(0) as u32;
+        let amount: u128 = params["amount"].as_str().ok_or("amount (base units, a string)")?.parse().map_err(|_| "amount: a decimal")?;
+        let recipient = crate::net::address(params["recipient"].as_str().unwrap_or(""), "recipient")?;
+        let held = crate::net::holding(a, &[0u8; 20])?;
+        if held < amount {
+            return Err(format!("refused: LEZ bridge program exit code 254 INSUFFICIENT_BALANCE (checked before sending: public /{a} holds {held} base units on the bridge)"));
+        }
+        let (i, _) = crate::net::own_burns()?;
+        let mut req = self.seed_fields();
+        req["i"] = json!(i);
+        req["recipient"] = json!(hex(&recipient));
+        req["token"] = json!(ETH);
+        req["amount"] = json!(amount.to_string());
+        let b = crate::burn_of(&req)?;
+        let r: Hash = fixed(&b["note"]["r"], "note.r")?;
+        let program = self.program()?;
+        let cid = self.cid()?;
+        let (id, _) = crate::net::public_account(a)?;
+        let holder = AccountId::new(id);
+        let pda = |actor: ferrata_wallet::Actor, seed: &[u8]| {
+            json!({ "account": hex(actor.account_id.value()), "program": hex(actor.program_account_id.value()), "kind": "pda", "seed": hex(seed) })
+        };
+        let me = bw::own_actor(program, holder);
+        let accounts = json!([
+            { "account": hex(me.account_id.value()), "program": hex(me.program_account_id.value()), "kind": "signer" },
+            pda(bw::holder_actor(program, &cid, holder), bw::holder_seed(&cid, holder.value()).as_bytes()),
+            pda(bw::token_actor(program, &cid, &[0u8; 20]), bw::token_seed(&cid, &[0u8; 20]).as_bytes()),
+            pda(bw::config_actor(program, &cid), bw::config_seed(&cid).as_bytes()),
+            pda(bw::burn_actor(program, &cid, &r), bw::burn_seed(&cid, &r).as_bytes()),
+        ]);
+        let what = format!("Burn (public) of /{a} with tag counter {i}");
+        let sent = crate::net::submit(&unhex(b["message"].as_str().ok_or("message")?)?, &accounts, 0, &what, a,
+                                      Some(bw::burn_actor(program, &cid, &r)), crate::net::BURN_GAS)?;
+        Ok(json!({
+            "settled": sent["settled"],
+            "private": false,
+            "what": format!("{what} (block {}, transaction {})", sent["block"], sent["tx_hash"].as_str().unwrap_or("?")),
+            "burn_index": null,
+            "i": i,
+            "account": a,
+            "amount": amount.to_string(),
+            "recipient": hex(&recipient),
+            "release_delay_ms": params["release_delay_ms"],
+            "balance": crate::net::holding(a, &[0u8; 20])?.to_string(),
+            "tx_hash": sent["tx_hash"],
+            "block": sent["block"],
+            "proof": null,
+            "made_by": format!("ferrata_bridge_module burn (the note and the Burn message), signed with public /{a}'s key from your phrase and sent to the network's RPC"),
+            "public_on_lez": ["your account and its holding", "the note: r, memo, mac, c_out", "the token and denomination", "the time"],
+            "hidden": ["the Ethereum recipient (encrypted in the memo; only your phrase opens it)"],
+            "release": release_handoff_text(i),
+        }))
+    }
+
+    /// The release in the network session: handed off, as the web wallet does. The release proof's private input says
+    /// which burn is released (its index, path, sOut, r), so it is made on the person's machine by the `ferrata` tool
+    /// from the same phrase; then a relayer (or the person) presents it to the vault once a checkpoint holds the burn
+    /// and its delay has passed. Nothing is sent from here.
+    fn release_handoff(&self, params: &Value) -> Result<Value, String> {
+        let i = params["i"].as_u64().or_else(|| params["burn_index"].as_u64()).ok_or("release needs the burn's counter i")?;
+        let inputs = self.inputs(json!({ "token": ETH }))?;
+        let (_, _, burns) = self.positions(&inputs)?;
+        let b = burns.iter().find(|b| b["i"].as_u64() == Some(i)).ok_or("not a burn of this wallet")?;
+        Ok(json!({
+            "settled": false,
+            "handoff": true,
+            "i": i,
+            "recipient": b["recipient"],
+            "amount": b["amount"],
+            "released": b["released"],
+            "what": if b["released"] == true { "already released by the vault".to_string() } else { release_handoff_text(i) },
+        }))
+    }
+
     /// One call of the chain service: `{"method", "params"}` -> its `result`, or its `error`.
     fn post(&self, method: &str, params: Value) -> Result<Value, String> {
+        if self.network() {
+            return crate::net::answer(method, &params);
+        }
         let rest = self.url.strip_prefix("http://").ok_or("the chain service: only http:// (127.0.0.1)")?;
         let (authority, path) = match rest.find('/') {
             Some(i) => (&rest[..i], &rest[i..]),
@@ -729,10 +939,12 @@ impl Chain {
             Some(e) => {
                 let mut i = self.post("module.info", json!({ "lez_only": true }))?;
                 let mut v = self.vault(&e)?;
-                let depositor: [u8; 20] = fixed(&self.s["depositor"], "depositor")?;
                 i["eth_block"] = json!(v.block_number()?);
                 i["eth_time"] = json!(v.now()?);
-                i["eth_balance_wei"] = json!(crate::evm::dec(&v.balance(&depositor)?));
+                if !self.s["depositor"].is_null() {
+                    let depositor: [u8; 20] = fixed(&self.s["depositor"], "depositor")?;
+                    i["eth_balance_wei"] = json!(crate::evm::dec(&v.balance(&depositor)?));
+                }
                 i["eth"] = v.report();
                 i
             }
@@ -756,7 +968,7 @@ impl Chain {
                                sequencer.as_str().unwrap_or("?"), self.s["chain_id"], eth_rpc.as_str().unwrap_or("?")),
             "endpoints": {
                 "eth_rpc": { "url": eth_rpc, "via": owner.label(), "error": eth_error },
-                "sequencer": { "url": sequencer, "via": SEQUENCER_OWNER },
+                "sequencer": { "url": sequencer, "via": if self.network() { "the network's gateway (its /rpc), read and sent to by the module" } else { SEQUENCER_OWNER } },
             },
             "private_proofs": match self.s["proofs"].as_str() {
                 Some("real") => "real: LEZ's wallet proves each private transaction on the CPU; the sequencer verifies it",
@@ -778,7 +990,15 @@ impl Chain {
                 "private_accounts": self.s["private_accounts"],
             },
             "relayer": i["relayer"],
-            "backend": if eth_path().is_some() {
+            "network_session": if self.network() { json!({
+                "address": self.s["network"],
+                "public_accounts": self.s["public_accounts"].as_array().into_iter().flatten()
+                    .filter_map(|h| fixed::<32>(h, "account").ok()).map(|id| crate::lezkey::id_string(&id)).collect::<Vec<_>>(),
+                "private_proofs": "not made here: a private claim or burn is the ferrata tool's (same phrase)",
+            }) } else { Value::Null },
+            "backend": if self.network() {
+                "ferrata_bridge_module in Logos Basecamp (network session): LEZ through the network's RPC, Ethereum through the endpoint above, both read here; LEZ public calls signed here with keys from your phrase; Ethereum sends through Logos Core's tx_sender_module (approved in the Logos signer)"
+            } else if eth_path().is_some() {
                 "ferrata_bridge_module in Logos Core; Ethereum through Logos Core's eth_rpc_module (reads) and tx_sender_module (sends, approved in the Logos signer); LEZ through the chain service or lez_core"
             } else {
                 "ferrata_bridge_module in Logos Core; the chains through seqnet-chain (the stand-in for Logos Core's own modules)"
@@ -923,7 +1143,8 @@ impl Chain {
             let n: Hash = fixed(&d["nullifier"], "nullifier")?;
             let n_account = hex(bw::nullifier_actor(program, &cid, chain_id, &vault, &n).account_id.value()).to_lowercase();
             let leaf = d["leaf_index"].as_u64().unwrap_or(0);
-            let state = if claimed.contains(&hex(&n).to_lowercase()) || touched.contains(&n_account) {
+            let spent_on_lez = self.network() && crate::net::exists(&bw::nullifier_actor(program, &cid, chain_id, &vault, &n))?;
+            let state = if claimed.contains(&hex(&n).to_lowercase()) || touched.contains(&n_account) || spent_on_lez {
                 "claimed"
             } else if refunded.contains(&leaf) {
                 "refunded"
@@ -947,7 +1168,8 @@ impl Chain {
         for b in rec["burns"].as_array().into_iter().flatten() {
             let n = b["nullifier"].as_str().unwrap_or("").to_lowercase();
             burns.push(json!({
-                "burn_index": b["burn_index"],
+                // In the network session the zone's own burn index is not read (it needs the zone's history): the counter.
+                "burn_index": if self.network() { Value::Null } else { b["burn_index"].clone() },
                 "i": b["i"],
                 "amount": word_dec(&b["amount"])?,
                 "recipient": b["recipient"],
@@ -1008,13 +1230,20 @@ impl Chain {
             "holdings": holdings,
             "vault_deposits": inputs["deposits"].as_array().map(|a| a.len()),
             "imported_roots": inputs["imported"],
-            "how": "ferrata_bridge_module recover over the whole deposit list (checked against depositRoot by the chain service) and the zone's applied calls: no per-item query",
+            "how": if self.network() {
+                "ferrata_bridge_module recover over the vault's whole deposit list (checked against depositRoot) and your burns found by their tags; claims read from their nullifier accounts on LEZ"
+            } else {
+                "ferrata_bridge_module recover over the whole deposit list (checked against depositRoot by the chain service) and the zone's applied calls: no per-item query"
+            },
         }))
     }
 
     fn claim(&self, params: &Value) -> Result<Value, String> {
         let leaf = params["leaf_index"].as_u64().ok_or("claim needs leaf_index")?;
         let private = params["private"].as_bool().unwrap_or(true);
+        if private && self.network() {
+            return Err(crate::net::PRIVATE_NEEDS_PROOF.into());
+        }
         let inputs = self.inputs(json!({ "token": ETH }))?;
         let (_, deposits, _) = self.positions(&inputs)?;
         let d = deposits.iter().find(|d| d["leaf_index"].as_u64() == Some(leaf)).ok_or("not a deposit of this wallet")?;
@@ -1033,13 +1262,36 @@ impl Chain {
         if private && d["kind"] == "public" {
             req["prover"] = json!(self.account("private", 0)?);
         }
+        if self.network() && d["kind"] != "public" {
+            return Err(format!("leaf {leaf} was deposited to your private account /{}: {}", d["account"], crate::net::PRIVATE_NEEDS_PROOF));
+        }
         let c = w::claim_with_state(&req)?;
         if c["verdict"] != "claimable" {
             return Err(format!("refused by the module (checked before sending): {} {}", c["error"].as_str().unwrap_or(""), c["detail"].as_str().unwrap_or("")));
         }
-        let sent = self.submit(&c["message"], &c["accounts"], &c["root_index"], &format!("{} of leaf {leaf}", c["variant"].as_str().unwrap_or("claim")))?;
+        let what = format!("{} of leaf {leaf}", c["variant"].as_str().unwrap_or("claim"));
+        let sent = if self.network() {
+            // Paid and co-signed by the deposit's own public account (it needs LGO for the fee: the faucet).
+            let dest: [u8; 32] = fixed(&d["dest"], "dest")?;
+            let payer = crate::net::index_of(&dest).unwrap_or(0);
+            let n: Hash = fixed(&c["nullifier"], "nullifier")?;
+            let chain_id = self.s["chain_id"].as_u64().ok_or("chain_id")?;
+            let vault: [u8; 20] = fixed(&self.s["vault"], "vault")?;
+            let expect = bw::nullifier_actor(self.program()?, &self.cid()?, chain_id, &vault, &n);
+            let root_index = c["root_index"].as_u64().unwrap_or(0) as usize;
+            crate::net::submit(&unhex(c["message"].as_str().ok_or("message")?)?, &c["accounts"], root_index, &what, payer, Some(expect),
+                               crate::net::CLAIM_GAS)?
+        } else {
+            self.submit(&c["message"], &c["accounts"], &c["root_index"], &what)?
+        };
         let a = d["account"].as_u64().unwrap_or(0);
-        let balance = if private && d["kind"] == "private" { self.private_holding(a)?.0.to_string() } else { String::new() };
+        let balance = if private && d["kind"] == "private" {
+            self.private_holding(a)?.0.to_string()
+        } else if self.network() {
+            crate::net::holding(a as u32, &[0u8; 20])?.to_string()
+        } else {
+            String::new()
+        };
         Ok(json!({
             "settled": sent["settled"],
             "private": private,
@@ -1063,6 +1315,12 @@ impl Chain {
 
     fn burn(&self, params: &Value) -> Result<Value, String> {
         let private = params["private"].as_bool().unwrap_or(true);
+        if self.network() {
+            if private {
+                return Err(crate::net::PRIVATE_NEEDS_PROOF.into());
+            }
+            return self.burn_public(params);
+        }
         if !private {
             return Err("a public burn is not run through the module on the sequencer (the round trip is the private one)".into());
         }
@@ -1185,6 +1443,14 @@ impl Chain {
     }
 }
 
+
+/// What the release needs, after a burn of counter `i` in the network session.
+fn release_handoff_text(i: u64) -> String {
+    format!("Release on Sepolia, outside Basecamp for now: with the same phrase, `ferrata release --burn {i}` proves on your \
+             machine that one of the checkpointed burns is yours without saying which (a prover service given that input \
+             would learn the link to your recipient); a relayer, or you, then presents it to the vault once a checkpoint \
+             holds the burn and its release delay has passed")
+}
 
 /// A deposit asked for while an earlier deposit of this session was broadcast and reported not yet mined (its job ended
 /// `unconfirmed`) is refused as long as that transaction has no receipt: it may still be mined, and then only one of the two lands: the vault refuses the other (it carries the same deposit

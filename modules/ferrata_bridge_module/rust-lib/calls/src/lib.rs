@@ -22,6 +22,8 @@ mod admin;
 mod evm;
 mod jobs;
 mod lez;
+mod lezkey;
+mod net;
 mod rpc;
 mod send;
 mod session;

@@ -1,5 +1,7 @@
 //! Run one method natively and print its reply: `cargo run --example call -- METHOD [REQUEST_FILE]`.
 //! `scripts/check.sh` compares these replies with the module's replies through Logos Core.
+//! `call wallet FILE`: the mini-app's calls in one session, one `{"method", "params"}` per line of FILE, each reply
+//! printed on a line of its own (`#` lines are comments).
 
 fn main() {
     let mut args = std::env::args().skip(1);
@@ -23,8 +25,14 @@ fn main() {
         "import_root" => ferrata_bridge_calls::import_root(&request),
         "registry" => ferrata_bridge_calls::registry(&request),
         "admin" => ferrata_bridge_calls::admin(&request),
+        "wallet" => {
+            for line in request.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with('#')) {
+                println!("{}", ferrata_bridge_calls::wallet(line));
+            }
+            return;
+        }
         _ => {
-            eprintln!("usage: call version|deposit|claim|burn|release|recover|status|prove_release|import_root|registry|admin [REQUEST_FILE]");
+            eprintln!("usage: call version|deposit|claim|burn|release|recover|status|prove_release|import_root|registry|admin|wallet [REQUEST_FILE]");
             std::process::exit(2)
         }
     };
