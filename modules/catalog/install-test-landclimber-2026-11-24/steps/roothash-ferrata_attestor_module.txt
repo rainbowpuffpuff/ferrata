@@ -1,0 +1,1 @@
+installed ferrata_attestor_module rootHash: 85dcae24795b94e5e21484f43bf367d79fe7e6cc11071f1379d48203ad6f2359; release sidecar: 85dcae24795b94e5e21484f43bf367d79fe7e6cc11071f1379d48203ad6f2359

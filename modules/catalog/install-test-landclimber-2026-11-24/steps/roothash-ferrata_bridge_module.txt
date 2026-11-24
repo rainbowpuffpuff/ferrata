@@ -1,0 +1,1 @@
+installed ferrata_bridge_module rootHash: 0e46fbecf4c39caa9880bac11bc53c9abab4a4c703b9af9fa34db6a4f166fdd8; release sidecar: 0e46fbecf4c39caa9880bac11bc53c9abab4a4c703b9af9fa34db6a4f166fdd8

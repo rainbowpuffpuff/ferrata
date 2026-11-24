@@ -1,0 +1,1 @@
+8bef9d31d44a806c3b6a0a53c0a37203dac50bcb5c4e0b03d2fc9ccda9a84dd8  ferrata_attestor_module-0.1.0.lgx

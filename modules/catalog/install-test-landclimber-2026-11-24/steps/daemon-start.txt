@@ -1,0 +1,2 @@
+Daemon started (pid 467)
+Logs: WORK/session/logs/daemon.log

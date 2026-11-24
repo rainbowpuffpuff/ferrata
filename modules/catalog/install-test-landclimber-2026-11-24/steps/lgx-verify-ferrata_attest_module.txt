@@ -1,0 +1,4 @@
+Package structure is valid: WORK/pkgs/ferrata_attest_module-0.1.0.lgx
+Signature is valid
+Signer DID: did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6ImNLVmpDSnFiWEFqYTBtenc1VFBOODhqWUs2QXkwTmtpRWNldUduekN6bGsifQ
+Signer is trusted: ferrata
