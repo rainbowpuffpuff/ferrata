@@ -1,5 +1,5 @@
 {
- "commit": "9792770463af3e534c7675ad1b3215dfabba2bf3",
+ "commit": "9634ce347c8dc1a828d850e41e9ed209099e6acf",
  "date": "2026-11-24",
  "dirty": false,
  "statuses_from": "d37efe92f9d9224e7e0dc941211bb40ea809c4e0",
@@ -58,6 +58,7 @@
   "img/a4563454b67b.png",
   "img/b1a6e3198ba1.png",
   "img/da5914b8949b.png",
-  "index.html"
+  "index.html",
+  "testers/index.html"
  ]
 }
