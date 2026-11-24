@@ -176,8 +176,18 @@ rm -f "$REPO/vault/deployments/crown-$(basename "$R").json"
 G16="$(jq -r '.groth16Verifier // empty' "$R/deploy.json")"
 [ -n "$G16" ] || die "deploy.json names no Groth16 verifier"
 REAL_CODEHASH="$(cast keccak "$(cast code "$G16" --rpc-url "$RPC")")"
-MOCK_CODE="$(cd "$REPO/vault" && forge inspect test/mocks/MockVerifiers.sol:MockRiscZeroVerifier deployedBytecode 2>"$W/inspect.err")"
-[ -n "$MOCK_CODE" ] && [ "$MOCK_CODE" != 0x ] || { cat "$W/inspect.err"; die "forge inspect gave no MockRiscZeroVerifier code"; }
+# The mock's runtime code: from forge's build artifact, else from a copy deployed by another impersonated address (the
+# deployer's nonce is left alone).
+MOCK_CODE="$(jq -r '.deployedBytecode.object // empty' "$REPO/vault/out/MockVerifiers.sol/MockRiscZeroVerifier.json" 2>/dev/null)"
+if [ -z "$MOCK_CODE" ] || [ "$MOCK_CODE" = 0x ]; then
+  AUX=0x000000000000000000000000000000005E9DE902
+  cast rpc anvil_setBalance "$AUX" 0x56bc75e2d63100000 --rpc-url "$RPC" > /dev/null
+  copy="$(cd "$REPO/vault" && forge create test/mocks/MockVerifiers.sol:MockRiscZeroVerifier --rpc-url "$RPC" --unlocked \
+    --from "$AUX" --broadcast --json 2>"$W/mock.err" | jq -r .deployedTo)"
+  [ -n "$copy" ] && [ "$copy" != null ] || { tail -n 10 "$W/mock.err"; die "no MockRiscZeroVerifier code (artifact or copy)"; }
+  MOCK_CODE="$(cast code "$copy" --rpc-url "$RPC")"
+fi
+[ -n "$MOCK_CODE" ] && [ "$MOCK_CODE" != 0x ] || die "no MockRiscZeroVerifier code"
 cast rpc anvil_setCode "$G16" "$MOCK_CODE" --rpc-url "$RPC" > /dev/null || die "anvil_setCode"
 MOCK="$G16"
 [ "$(cast call "$MOCK" 'accepted(bytes32,bytes32)(bool)' "$CPB_ID" "$CPB_ID" --rpc-url "$RPC")" = false ] || die "the mock's code is not at the verifier's address"
