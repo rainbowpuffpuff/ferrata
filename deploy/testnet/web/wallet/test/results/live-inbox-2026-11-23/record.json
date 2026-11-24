@@ -1,0 +1,77 @@
+{
+ "when_utc": "2026-11-23T10:49Z",
+ "passed": 13,
+ "failed": 0,
+ "numbers": {
+  "publish_seconds": 9.0,
+  "send_seconds": 11.4
+ },
+ "checks": [
+  {
+   "check": "A is funded by the network's faucet",
+   "ok": true,
+   "detail": "Received: your balance is 10 LGO."
+  },
+  {
+   "check": "A funds B (1 LGO, B's first credit)",
+   "ok": true,
+   "detail": "In block 219, applied; the nonce moved to 1. Balance: 8.999995648 LGO. Transaction <x>."
+  },
+  {
+   "check": "B publishes its messaging key",
+   "ok": true,
+   "detail": "Publish key: done in block 220. <x>"
+  },
+  {
+   "check": "B's page shows the key's fingerprint",
+   "ok": true,
+   "detail": "Your messaging key is published (fingerprint CBWK8jW8y7cLoc); 0 message(s); 0 contact(s), 0 blocked."
+  },
+  {
+   "check": "A sends an encrypted message to B",
+   "ok": true,
+   "detail": "Send: done in block 221. <x>"
+  },
+  {
+   "check": "B reads it, decrypted in its own page",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "the RPC's view of B's mailbox does not contain the text",
+   "ok": true,
+   "detail": "15473"
+  },
+  {
+   "check": "B accepts contacts only",
+   "ok": true,
+   "detail": "Policy: done in block 222. <x>"
+  },
+  {
+   "check": "A's message to a contacts-only B is refused before any fee",
+   "ok": true,
+   "detail": "Not sent (NOT_A_CONTACT): the recipient accepts messages from contacts only. No fee was paid."
+  },
+  {
+   "check": "B adds A as a contact",
+   "ok": true,
+   "detail": "Add contact: done in block 223. <x>"
+  },
+  {
+   "check": "A's message as a contact arrives",
+   "ok": true,
+   "detail": "Send: done in block 224. <x>"
+  },
+  {
+   "check": "B blocks A",
+   "ok": true,
+   "detail": "Block: done in block 225. <x>"
+  },
+  {
+   "check": "A's message to B after the block is refused before any fee",
+   "ok": true,
+   "detail": "Not sent (BLOCKED): the recipient has blocked this account. No fee was paid."
+  }
+ ],
+ "where": "our public test network's /wallet/ (bundle 53ef2c20, installed via the artifact bucket and SSM), from the build box; host not recorded"
+}

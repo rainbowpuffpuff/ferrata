@@ -1,0 +1,133 @@
+{
+ "vault": "0x19499061cec0bac2a3e1869ba5ae6b403aa82787",
+ "token": "0x5d4ddb1863d2ee85765499dd850a9aeedeca03bc",
+ "passed": 22,
+ "failed": 0,
+ "numbers": {
+  "fork_block": 12196270,
+  "eth_options": [
+   "0.001 ETH (+ fees 0.000002 ETH)",
+   "0.01 ETH (+ fees 0.00002 ETH)",
+   "0.1 ETH (+ fees 0.0002 ETH)"
+  ],
+  "eth_vault_gain_wei": 1002000000000000,
+  "tusd_options": [
+   "100 TUSD (+ fees 0.25 TUSD)",
+   "1000 TUSD (+ fees 2.5 TUSD)",
+   "10000 TUSD (+ fees 25 TUSD)"
+  ],
+  "tusd_vault_gain": 100250000
+ },
+ "checks": [
+  {
+   "name": "anvil forks Sepolia with the vault's code",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "a wallet is created from a new phrase",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "lezReady false: the tab says the LEZ side is still being set up",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "lezReady false: the review is refused, nothing to sign",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "a configId that is not the vault's lezConfigId is refused on connect",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "lezReady true: no set-up notice",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "ETH: the page reads the deployed vault (j = 0)",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "ETH: the vault's three denominations with their fees",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "ETH: C is SPEC-v2 for (chain, vault, depositor, j = 0, public, the account)",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "ETH: the deposit is mined and its Deposit event checked by the page",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "ETH: the vault holds 0.001 ETH + 0.000002 ETH relay fee more",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "TUSD: the page reads the token's denominations and the balance (j = 1, balance 0)",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "TUSD: 100, 1000, 10000 TUSD with their fees",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "TUSD: a deposit above the balance is refused before anything is signed",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "TUSD: the mint button mints 100.25 TUSD to the browser wallet's address",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "TUSD: C is SPEC-v2 for j = 1",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "TUSD: the review names the exact approval (100.25 TUSD) before the deposit",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "TUSD: approval then deposit mined, the Deposit event checked by the page (asset included)",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "TUSD: the vault holds 100.25 TUSD more",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "TUSD: the allowance is back to zero (the approval was exact)",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "the fork's vault logged two deposits by this depositor: ETH then TUSD",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "both deposits are in the wallet's list",
+   "ok": true,
+   "detail": null
+  }
+ ]
+}

@@ -22,14 +22,30 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
+# Every file a deployment installs: the walk of test/pwa-files.mjs (servedFiles), plus config.json and sw.js.
+SKIP = {"README.md", "config.json", "sw.js", "package.json", "vendor/build.sh", "vendor/package.json",
+        "vendor/package-lock.json", "vendor/entry.js"}
+
+
+def served_files(root=ROOT):
+    out = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        rel_dir = os.path.relpath(dirpath, root)
+        dirnames[:] = [d for d in dirnames if not d.startswith(".") and d != "node_modules" and not (rel_dir == "." and d == "test")]
+        for f in filenames:
+            rel = f if rel_dir == "." else rel_dir.replace(os.sep, "/") + "/" + f
+            if not f.startswith(".") and rel not in SKIP:
+                out.append(rel)
+    return sorted(out)
+
+
 SERVED = {"/": "index.html"}
-for name in ("index.html", "app.js", "lez.js", "keystore.js", "history.js", "prove.js", "bridge.js", "private.js",
-             "eth.js", "style.css", "config.json", "vendor/noble.js"):
+for name in served_files() + ["config.json", "sw.js"]:
     SERVED["/" + name] = name
 TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
-         ".json": "application/json"}
+         ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml"}
 CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; "
-       "manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+       "manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
 B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
 
@@ -85,6 +101,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(413, b'{"error":"too large"}')
         body = self.rfile.read(length)
         if self.path == "/rpc":
+            if self.server.args.rpc_delay_ms:
+                time.sleep(self.server.args.rpc_delay_ms / 1000)  # a public network's latency, for the tests
             req = urllib.request.Request(self.server.args.rpc, data=body, headers={"Content-Type": "application/json"})
             try:
                 with urllib.request.urlopen(req, timeout=30) as r:
@@ -98,34 +116,40 @@ class Handler(BaseHTTPRequestHandler):
     def faucet(self, body: bytes):
         a = self.server.args
         if not a.faucet_wallet:
-            return self.send(503, b'{"error":"no faucet on this server"}')
+            return self.send(503, b'{"ok":false,"error":"no faucet on this server"}')
+        # The test network gateway's contract ({"account"}; answers ok, hash, amount, credited, error), plus the
+        # optional "public_key" LEZ needs to credit an account that does not exist yet.
         try:
             j = json.loads(body)
-            account, pk_hex = str(j["account_id"]), str(j["public_key"]).lower()
-            if not re.fullmatch(r"[0-9a-f]{64}", pk_hex):
+            account = str(j.get("account") or j.get("account_id") or "").removeprefix("Public/")
+            pk_hex = str(j.get("public_key") or "").lower() or None
+            if not re.fullmatch(r"[1-9A-HJ-NP-Za-km-z]{32,44}", account):
+                raise ValueError("account: a LEZ public account id")
+            if pk_hex is not None and not re.fullmatch(r"[0-9a-f]{64}", pk_hex):
                 raise ValueError("public_key: 64 hex digits")
-            if account_id_of(bytes.fromhex(pk_hex)) != account:
+            if pk_hex is not None and account_id_of(bytes.fromhex(pk_hex)) != account:
                 raise ValueError("the public key is not this account's")
-        except (ValueError, KeyError, json.JSONDecodeError) as e:
-            return self.send(400, json.dumps({"error": f"bad request: {e}"}).encode())
+        except (ValueError, AttributeError, json.JSONDecodeError) as e:
+            return self.send(400, json.dumps({"ok": False, "error": f"bad request: {e}"}).encode())
         now = time.time()
         with self.server.lock:
             last = self.server.recent.get(account, 0)
             if now - last < a.faucet_interval:
-                return self.send(429, json.dumps({"error": f"one request per {a.faucet_interval} s per account"}).encode())
+                return self.send(429, json.dumps({"ok": False, "error": f"one request per {a.faucet_interval} s per account"}).encode())
             self.server.recent[account] = now
             rpc = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "getAccount", "params": [account]}).encode()
             with urllib.request.urlopen(urllib.request.Request(a.rpc, data=rpc, headers={"Content-Type": "application/json"}), timeout=10) as r:
                 exists = json.loads(r.read()).get("result") is not None
-            to = ["--to", f"Public/{account}"] if exists else ["--to-pk", pk_hex]
+            to = ["--to-pk", pk_hex] if (not exists and pk_hex) else ["--to", f"Public/{account}"]
             cmd = [a.faucet_wallet, "auth-transfer", "send", "--from", f"Public/{a.faucet_from}", *to, "--amount", str(a.faucet_amount)]
             p = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
         out = p.stdout + p.stderr
-        self.server.faucet_log.append({"account": account, "new": not exists, "exit": p.returncode, "output": out[-2000:]})
+        self.server.faucet_log.append({"account": account, "new": not exists, "key_given": pk_hex is not None,
+                                       "exit": p.returncode, "output": out[-2000:]})
         m = re.findall(r"\b[0-9a-f]{64}\b", out)
         if p.returncode != 0 or not m:
-            return self.send(502, json.dumps({"error": "the faucet's send failed", "detail": out[-400:]}).encode())
-        return self.send(200, json.dumps({"tx_hash": m[0], "amount": str(a.faucet_amount)}).encode())
+            return self.send(502, json.dumps({"ok": False, "error": "the transfer failed", "detail": out.strip().splitlines()[-1][:300] if out.strip() else ""}).encode())
+        return self.send(200, json.dumps({"ok": True, "hash": m[0], "amount": str(a.faucet_amount)}).encode())
 
 
 def main():
@@ -138,8 +162,13 @@ def main():
     ap.add_argument("--faucet-amount", type=int, default=5_000_000_000)
     ap.add_argument("--faucet-interval", type=int, default=20)
     ap.add_argument("--faucet-log", help="write the faucet's sends here (JSON) at exit")
+    ap.add_argument("--rpc-delay-ms", type=int, default=0, help="delay each /rpc answer (a remote network's latency)")
     ap.add_argument("--verbose", action="store_true")
+    ap.add_argument("--list", action="store_true", help="print the served files and exit")
     args = ap.parse_args()
+    if args.list:
+        print("\n".join(sorted(SERVED[k] for k in SERVED if k != "/")))
+        return
     srv = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     srv.args, srv.lock, srv.recent, srv.faucet_log = args, threading.Lock(), {}, []
     print(f"serving {ROOT} on http://127.0.0.1:{args.port}/ (rpc -> {args.rpc})", flush=True)

@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "io.github.rainbowpuffpuff.ferrata.wallet",
+      "sha256_cert_fingerprints": [
+        "76:AA:28:60:A6:04:96:8E:DD:B8:BA:BC:1D:EB:CC:DD:5D:84:86:2C:0D:35:82:AF:D5:C5:1D:79:12:6A:4D:40"
+      ]
+    }
+  }
+]

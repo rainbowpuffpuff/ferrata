@@ -3,9 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
+<meta name="description" content="A wallet for the LEZ v0.4 test network: keys stay on this device. Test network only.">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#171a20" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ferrata">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Ferrata wallet · LEZ v0.4 test network</title>
 <link rel="stylesheet" href="style.css">
 <script type="module" src="app.js"></script>
@@ -14,8 +25,12 @@
 <header class="top">
   <div class="brand"><span class="logo" aria-hidden="true">◆</span> Ferrata wallet <span class="net" id="net-name">LEZ v0.4 test network</span></div>
   <div class="status"><span id="net-status" class="pill" data-testid="net-status">connecting…</span>
+    <button id="install" class="ghost small" hidden data-testid="install">Install</button>
     <button id="lock" class="ghost small" hidden data-testid="lock">Lock</button></div>
 </header>
+<div id="update-banner" class="banner" hidden role="status" data-testid="update-banner"><span>A new version of the wallet is ready.</span>
+  <button id="update-go" class="small primary" data-testid="update-go">Reload</button></div>
+<div id="toast" class="toast" hidden role="status" aria-live="polite" data-testid="toast"></div>
 
 <main>
 <!-- First visit: create or import -->
@@ -28,6 +43,11 @@
     <button id="go-import" data-testid="go-import">Import</button>
   </div>
   <p class="fine">Test network only: its coins have no value. Prototype, unaudited.</p>
+  <p class="fine warn-text shared-origin" data-testid="shared-origin-welcome"><b>Shared address.</b> This wallet shares its web
+    origin with the network's other pages (build page, explorer, status, trust, Basecamp and Android pages). A script on any of them
+    could read this browser's encrypted wallet record and its PIN wrap, ask for your passkey, or drive this page once it is
+    unlocked; only the host's script policy and those pages' own code stand in the way. Use a phrase made for this test
+    network only.</p>
 </section>
 
 <section id="v-create" class="card" hidden>
@@ -57,19 +77,33 @@
 
 <section id="v-unlock" class="card" hidden>
   <h1>Unlock</h1>
+  <div id="quick-unlock" hidden data-testid="quick-unlock">
+    <div class="row"><button id="unlock-passkey" class="primary" hidden data-testid="unlock-passkey">Unlock with fingerprint, face or screen lock</button></div>
+    <div id="unlock-pin-box" hidden>
+      <label>PIN <input type="password" id="unlock-pin" inputmode="numeric" autocomplete="off" maxlength="12" data-testid="unlock-pin"></label>
+      <div class="row"><button id="unlock-pin-go" class="primary" data-testid="unlock-pin-go">Unlock</button></div>
+    </div>
+    <p class="err" id="quick-err" role="alert" data-testid="quick-err"></p>
+    <p class="fine"><a href="#" id="use-pass" data-testid="use-pass">Use the passphrase instead</a></p>
+  </div>
+  <div id="pass-unlock">
   <label>Passphrase <input type="password" id="unlock-pass" autocomplete="current-password" data-testid="unlock-pass"></label>
   <div class="row"><button id="unlock-go" class="primary" data-testid="unlock-go">Unlock</button></div>
   <p class="err" id="unlock-err" role="alert"></p>
+  </div>
   <details class="fine"><summary>Forgot the passphrase?</summary>
     <p>Erase this browser's copy and import your recovery phrase again. Without the phrase the accounts cannot be recovered.</p>
     <button id="erase-wallet" class="danger small">Erase this browser's wallet</button></details>
+  <p class="fine warn-text shared-origin" data-testid="shared-origin-unlock"><b>Shared address.</b> This wallet shares its
+    web origin with the network's other pages; a script on any of them could read this browser's encrypted record or
+    drive the wallet once unlocked (More: "What it cannot check"). Test network only.</p>
 </section>
 
 <!-- The wallet -->
 <section id="v-main" hidden>
   <nav class="tabs" id="tabs">
     <a href="#home" data-tab="home">Home</a><a href="#send" data-tab="send">Send</a><a href="#receive" data-tab="receive">Receive</a>
-    <a href="#activity" data-tab="activity">Activity</a><a href="#prove" data-tab="prove">Prove</a><a href="#bridge" data-tab="bridge">Bridge</a>
+    <a href="#activity" data-tab="activity">Activity</a><a href="#inbox" data-tab="inbox">Inbox<span id="inbox-badge" class="badge" hidden data-testid="inbox-badge"></span></a><a href="#prove" data-tab="prove">Prove</a><a href="#bridge" data-tab="bridge">Bridge</a>
     <a href="#private" data-tab="private">Private</a><a href="#settings" data-tab="settings">More</a>
   </nav>
 
@@ -89,6 +123,13 @@
     <p id="faucet-msg" class="msg" data-testid="faucet-msg" role="status"></p>
     <div class="kv"><span>Account id</span><code id="home-id" class="copy" data-testid="home-id"></code></div>
     <div class="kv"><span>Nonce</span><code id="home-nonce" data-testid="home-nonce">—</code></div>
+    <div id="names-box" hidden>
+      <div class="kv"><span>Name</span><code id="home-name" data-testid="home-name">—</code></div>
+      <div class="row"><input id="name-input" placeholder="claim a name, e.g. alice" autocomplete="off" spellcheck="false" data-testid="name-input">
+        <button id="name-claim" data-testid="name-claim">Claim</button></div>
+      <p id="name-msg" class="msg" role="status" data-testid="name-msg"></p>
+      <p class="fine">A name is public: anyone can send to <code>alice</code> instead of the account id. Names last 180 days and are renewed by their owner.</p>
+    </div>
     <div class="privacy"><b>Public on LEZ:</b> this account's id, balance, nonce and every transaction it signs.
       <b>Private:</b> your keys and recovery phrase (only in this browser) and which accounts belong to one phrase.</div>
   </div>
@@ -96,6 +137,9 @@
   <div id="t-send" class="tab card" hidden>
     <h2>Send</h2>
     <label>To <input id="send-to" placeholder="account id, public key, or receive code" autocomplete="off" spellcheck="false" data-testid="send-to"></label>
+    <div class="row"><button id="send-scan" class="small" data-testid="send-scan">Scan a QR code</button>
+      <label class="button small file">From a photo<input type="file" accept="image/*" id="send-scan-file" data-testid="send-scan-file"></label></div>
+    <p id="scan-msg" class="msg" role="status" data-testid="scan-msg"></p>
     <label>Amount <span class="unit-wrap"><input id="send-amount" inputmode="decimal" placeholder="0.0" data-testid="send-amount"><span class="unit" id="send-unit">LGO</span></span></label>
     <div class="row"><button id="send-max" class="ghost small">Max</button><span class="fine" id="send-avail"></span></div>
     <button id="send-review" class="primary" data-testid="send-review">Review</button>
@@ -114,6 +158,10 @@
     <h2>Receive</h2>
     <p>Give the sender your <b>receive code</b>. It holds your account id and your public key: LEZ needs the key the first
       time an account is credited (as admission evidence), after that the id alone is enough.</p>
+    <div class="qr" id="recv-qr" data-testid="recv-qr"></div>
+    <label>Ask for an amount (optional) <span class="unit-wrap"><input id="recv-amount" inputmode="decimal" placeholder="0.0" autocomplete="off" data-testid="recv-amount"><span class="unit" id="recv-unit">LGO</span></span></label>
+    <p class="err" id="recv-err" role="alert"></p>
+    <div class="row"><button id="recv-copy" class="small" data-testid="recv-copy">Copy the code</button><button id="recv-share" class="small" hidden data-testid="recv-share">Share</button></div>
     <div class="kv"><span>Receive code</span><code id="recv-code" class="copy wrap" data-testid="recv-code"></code></div>
     <div class="kv"><span>Account id</span><code id="recv-id" class="copy wrap" data-testid="recv-id"></code></div>
     <div class="kv"><span>Public key</span><code id="recv-pk" class="copy wrap" data-testid="recv-pk"></code></div>
@@ -127,7 +175,13 @@
     <button id="act-more" class="ghost small">Scan further back</button>
     <p class="fine">Read from the network's own blocks (the sequencer's <code>getBlockRange</code>): LEZ's RPC keeps no
       per-account index, so this page reads the blocks and keeps what concerns your accounts, in this browser only.
-      LEZ's RPC reports no outcome for a transaction; a transfer is shown as applied when the sender's nonce moved past it.</p>
+      LEZ's RPC reports no outcome for a transaction; the page reads the block that holds it, whose list of reverted
+      transactions says whether it applied (the fee is charged either way).</p>
+  </div>
+
+  <div id="t-inbox" class="tab card" hidden>
+    <h2>Encrypted inbox</h2>
+    <div id="inbox-body"></div>
   </div>
 
   <div id="t-prove" class="tab card" hidden>
@@ -154,12 +208,31 @@
     <div class="row"><button id="reveal-phrase" data-testid="reveal-phrase">Show recovery phrase</button>
       <button id="reveal-key" data-testid="reveal-key">Show this account's private key</button></div>
     <pre id="reveal-out" class="secret" hidden data-testid="reveal-out"></pre>
+    <h3>App lock</h3>
+    <div id="lock-settings" data-testid="lock-settings"></div>
+    <h3>Notifications</h3>
+    <div id="notify-settings" data-testid="notify-settings"></div>
+    <h3>What this page checks</h3>
+    <div id="checks" data-testid="checks"></div>
+    <p class="fine shared-origin" data-testid="shared-origin"><b>What it cannot check: its neighbours.</b> The page shares
+      its web origin with the network's other pages (build page, explorer, status, trust, Basecamp and Android pages), so their
+      scripts have the same access to this browser's storage as this page: the encrypted record, the PIN wrap (a 6-digit
+      PIN falls to an offline search in about a minute), the passkey prompt, and an unlocked wallet in another tab. Only
+      the host's <code>script-src 'self'</code> policy and those pages' own code stand in the way. For value: a wallet on
+      its own origin, or the <code>ferrata</code> tool.</p>
+    <h3>App</h3>
+    <div id="app-settings" data-testid="app-settings"></div>
     <h3>Session</h3>
     <label class="inline">Lock after <select id="autolock"><option value="5">5 min</option><option value="15" selected>15 min</option><option value="60">60 min</option></select> idle</label>
     <p class="fine">Built against LEZ v0.4.0-rc3. Source: the Ferrata repository, <code>deploy/testnet/web/wallet/</code>.</p>
   </div>
 </section>
 </main>
+<div id="scanner" class="scanner" hidden data-testid="scanner">
+  <video id="scan-video" playsinline muted></video>
+  <p id="scan-hint">Point the camera at a LEZ receive code.</p>
+  <button id="scan-cancel" data-testid="scan-cancel">Cancel</button>
+</div>
 <footer class="fine foot">Keys stay in this page · Test network: no value · Prototype, unaudited</footer>
 </body>
 </html>

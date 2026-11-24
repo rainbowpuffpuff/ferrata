@@ -1,0 +1,27 @@
+{
+  "file": "ferrata-wallet-0.1.0.apk",
+  "size": 1133430,
+  "sha256": "51257de9da1156c737b200956b237b7a38c0c19745d3645f98ef8bf268fb9e3f",
+  "certSha256": "76:AA:28:60:A6:04:96:8E:DD:B8:BA:BC:1D:EB:CC:DD:5D:84:86:2C:0D:35:82:AF:D5:C5:1D:79:12:6A:4D:40",
+  "package": "io.github.rainbowpuffpuff.ferrata.wallet",
+  "versionName": "0.1.0",
+  "versionCode": 1,
+  "minSdk": 24,
+  "targetSdk": 36,
+  "permissions": [
+    "android.permission.POST_NOTIFICATIONS",
+    "io.github.rainbowpuffpuff.ferrata.wallet.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+  ],
+  "signatureSchemes": {
+    "v1": "false",
+    "v2": "true",
+    "v3": "true"
+  },
+  "unsignedSha256": "dfc14b161553d030e42c343fe5aeb52e6be38e14c8813ee416750769789cc4c3",
+  "reproducible": true,
+  "startUrl": "/wallet/?source=android",
+  "fallback": "customtabs",
+  "generator": "bubblewrap-core 1.27.0 (deploy/testnet/web/android/gen.mjs)",
+  "commit": "0ecd1713",
+  "built": "2026-11-23T15:11:50Z"
+}

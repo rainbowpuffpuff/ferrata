@@ -1,0 +1,83 @@
+{
+ "passed": 12,
+ "total": 12,
+ "checks": [
+  {
+   "name": "two wallets created",
+   "ok": true,
+   "detail": "A FcyUdE519qrQHqiDkcGDjssNkzzfBqAzar58gun91NZx, B Brqg5v5KWnSY8DbvTETdcSBDaQ4jatZs353kRvJZhQuL",
+   "t": 4.2
+  },
+  {
+   "name": "faucet funds A",
+   "ok": true,
+   "detail": "Received: your balance is 10 LGO.",
+   "t": 10.3
+  },
+  {
+   "name": "A sends 3 LGO to B's receive code (B new on LEZ)",
+   "ok": true,
+   "detail": "In block 1716, applied; the nonce moved to 1. Balance: 6.999995648 LGO. Transaction 3cc8c1aac96d407b823587cda0291466e853",
+   "t": 18.8
+  },
+  {
+   "name": "A publishes its messaging key",
+   "ok": true,
+   "detail": "Publish key: done in block 1717. 923e25793c092bccc71af6685ff0a7ef0e64f92c4654a277ed7438d56282ff97",
+   "t": 29.3
+  },
+  {
+   "name": "B sends A an encrypted message",
+   "ok": true,
+   "detail": "Send: done in block 1718. d3f41df2d830c84121ea2603ff2e899235c526308bf94bd8554cc7312e96fb4f",
+   "t": 38.5
+  },
+  {
+   "name": "A's Inbox badge counts it (A on Home)",
+   "ok": true,
+   "detail": "10.1 s after B's block",
+   "t": 48.6
+  },
+  {
+   "name": "A gets a notification naming no text and no sender",
+   "ok": true,
+   "detail": "Ferrata wallet: New encrypted message on Account 1",
+   "t": 48.6
+  },
+  {
+   "name": "A sees an on-screen line",
+   "ok": true,
+   "detail": "New encrypted message on Account 1",
+   "t": 48.6
+  },
+  {
+   "name": "A reads the text, decrypted in its page; the badge clears",
+   "ok": true,
+   "detail": "",
+   "t": 48.9
+  },
+  {
+   "name": "B sends A 1 LGO",
+   "ok": true,
+   "detail": "In block 1720, applied; the nonce moved to 2. Balance: 1.999352048 LGO. Transaction 808cdd430118dbf40982e544b32c9c0b6b61",
+   "t": 59.4
+  },
+  {
+   "name": "A is notified: Received 1 LGO",
+   "ok": true,
+   "detail": "Ferrata wallet: Received 1 LGO on Account 1 | Ferrata wallet: New encrypted message on Account 1",
+   "t": 63.8
+  },
+  {
+   "name": "no script errors",
+   "ok": true,
+   "detail": "",
+   "t": 64.0
+  }
+ ],
+ "times": {
+  "message_to_badge_s": 10.1,
+  "transfer_to_notification_s": 4.3
+ },
+ "deployed": false
+}

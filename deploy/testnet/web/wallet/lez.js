@@ -4,7 +4,7 @@
 // LEZ's own pinned test vectors and against transactions LEZ's wallet CLI signed.
 import {
   schnorr, secp256k1, sha256, sha512, hmac, base58, base64,
-  generateMnemonic, mnemonicToSeedSync, validateMnemonic, englishWordlist,
+  generateMnemonic, mnemonicToSeedSync, validateMnemonic, englishWordlist, ml_kem768,
 } from './vendor/noble.js';
 
 // ---------------------------------------------------------------- bytes
@@ -181,7 +181,10 @@ export function encodeMessage(m) {
   w.u32(nonces.length);
   for (const [id, n] of nonces) w.fixed(id, 32).u128(n);
   w.u32(m.evidence.length);
-  for (const e of m.evidence) w.u8(0).fixed(e.key, 32); // PublicAccountEvidence::Key
+  for (const e of m.evidence) {
+    if (e.key) w.u8(0).fixed(e.key, 32);                                  // PublicAccountEvidence::Key
+    else w.u8(1).fixed(e.pda.program, 32).fixed(e.pda.seed, 32);          // PublicAccountEvidence::Pda
+  }
   return w.done();
 }
 export function messageHash(messageBytes) { return sha256(concat(MESSAGE_PUBLIC_PREFIX, messageBytes)); }
@@ -223,6 +226,28 @@ export function buildTransfer({ from, to, toKey = null, amount, nonce, gasLimit,
   const sig = sign(from.ssk, h, aux);
   const tx = encodePublicTransaction(messageBytes, [{ sig, pk: from.pk }]);
   return { ...wrapPublic(tx), messageHash: hex(h), messageBytes, txBytes: tx };
+}
+
+/**
+ * A signed call of a program at `to` (an actor), paid by `payer` (a node), which co-signs without being an actor (as
+ * LEZ's wallet does for a payer outside the message's accounts). `actors`: the public actors the call touches.
+ */
+export function buildCall({ payer, to, actors = [to], data, nonce, gasLimit, tip = 0n, maxFee, evidence = [], aux }) {
+  const messageBytes = encodeMessage({ actors, signers: [payer.accountId], to, data,
+    fee: { payer: payer.accountId, gasLimit, tip, maxFee }, nonces: [[payer.accountId, nonce]], evidence });
+  const h = messageHash(messageBytes);
+  const tx = encodePublicTransaction(messageBytes, [{ sig: sign(payer.ssk, h, aux), pk: payer.pk }]);
+  return { ...wrapPublic(tx), messageHash: hex(h), messageBytes, txBytes: tx };
+}
+
+/** An account's actor state at `program` from getAccount's JSON (bytes as a JSON array, or base64). */
+export function actorStateOf(account, program) {
+  const states = account?.data?.actor_states ?? {};
+  const v = states[idToString(program)];
+  if (v === undefined || v === null) return null;
+  if (Array.isArray(v)) return Uint8Array.from(v);
+  if (typeof v === 'string') return base64.decode(v);
+  throw new Error('unknown actor state encoding');
 }
 
 // ---------------------------------------------------------------- decoding (for history: LEZ's public transactions)
@@ -309,15 +334,29 @@ export function decodeWire(b64) {
   return d;
 }
 const STATUS = ['Pending', 'Safe', 'Finalized'];
-/** A block as getBlock / getBlockRange serve it (base64 of borsh `Block`, lez/common/src/block.rs at rc3). */
+const BLOCK_PREFIX = concat(utf8('/LEE/v0.3/Message/Block/'), new Uint8Array(8));
+/**
+ * LEZ rc3's block hash recomputed from the block's own bytes (`HashableBlockData::compute_hash`, block.rs): SHA-256 of
+ * the 32-byte prefix and the borsh of (id, previous hash, timestamp, transactions, reverted), which is the served
+ * block without its own hash field (bytes 40..72) and without its Bedrock status (the last byte).
+ */
+export function blockHashOf(bytes) {
+  return hex(sha256(concat(BLOCK_PREFIX, bytes.subarray(0, 40), bytes.subarray(72, bytes.length - 1))));
+}
+/**
+ * A block as getBlock / getBlockRange serve it (base64 of borsh `Block`, lez/common/src/block.rs at rc3). `hashOk`: its
+ * hash recomputed from its contents equals the hash it carries.
+ */
 export function decodeBlock(b64) {
-  const r = new Reader(base64.decode(b64));
+  const bytes = base64.decode(b64);
+  const r = new Reader(bytes);
   const header = { id: Number(r.u64()), prevHash: hex(r.take(32)), hash: hex(r.take(32)), timestamp: Number(r.u64()) };
   const transactions = r.vec(readLeeTransaction);
   const reverted = r.vec((x) => Number(x.u64()));
   const status = STATUS[r.u8()] ?? 'unknown';
   if (!r.end()) throw new Error('trailing bytes after a block');
-  return { header, transactions, reverted, status };
+  const computedHash = blockHashOf(bytes);
+  return { header, transactions, reverted, status, computedHash, hashOk: computedHash === header.hash };
 }
 
 /** The native transfer a public transaction makes, if it is one. */
@@ -333,19 +372,30 @@ export class RpcError extends Error {
 }
 export class Sequencer {
   constructor(url, { timeoutMs = 15000 } = {}) { this.url = url; this.timeoutMs = timeoutMs; this.id = 0; }
+  // A public gateway limits requests per IP (HTTP 429, Retry-After) and may answer 502/503 while the sequencer restarts:
+  // the call waits and tries again (at most 4 times). Nothing reached the sequencer on such an answer, so a resend of
+  // sendTransaction is safe; a transaction that did reach it keeps its hash and nonce, so LEZ applies it once.
   async call(method, params = []) {
-    const ctl = new AbortController();
-    const t = setTimeout(() => ctl.abort(), this.timeoutMs);
-    try {
-      const res = await fetch(this.url, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctl.signal,
-        body: JSON.stringify({ jsonrpc: '2.0', id: ++this.id, method, params }),
-      });
-      if (!res.ok) throw new Error(`${method}: HTTP ${res.status}`);
-      const j = await res.json();
-      if (j.error) throw new RpcError(method, j.error);
-      return j.result;
-    } finally { clearTimeout(t); }
+    for (let attempt = 0; ; attempt++) {
+      const ctl = new AbortController();
+      const t = setTimeout(() => ctl.abort(), this.timeoutMs);
+      let res;
+      try {
+        res = await fetch(this.url, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctl.signal,
+          body: JSON.stringify({ jsonrpc: '2.0', id: ++this.id, method, params }),
+        });
+        if ((res.status === 429 || res.status === 502 || res.status === 503) && attempt < 4) {
+          const ra = Number(res.headers.get('Retry-After'));
+          await new Promise((r) => setTimeout(r, Math.min(10000, (ra > 0 ? ra * 1000 : 0) || 600 * 2 ** attempt)));
+          continue;
+        }
+        if (!res.ok) throw new Error(`${method}: HTTP ${res.status}`);
+        const j = await res.json();
+        if (j.error) throw new RpcError(method, j.error);
+        return j.result;
+      } finally { clearTimeout(t); }
+    }
   }
   lastBlockId() { return this.call('getLastBlockId'); }
   feeState() { return this.call('getFeeState'); }
@@ -361,6 +411,30 @@ export class Sequencer {
 }
 
 // JSON numbers above 2^53 lose precision: read a u128 that may come as a number or a string.
+/**
+ * An amount typed by a person, in units of `decimals` (e.g. "1.5"), as a bigint of atomic units. A comma is refused:
+ * "1,5" (a decimal comma) and "1,000" (a thousands separator) read differently, so neither is guessed.
+ */
+export function parseUnits(s, decimals) {
+  const D = Number(decimals), trimmed = String(s).trim();
+  // A space (or any blank, such as a narrow no-break space) inside the amount is refused, as a comma is: "1 5" is not
+  // read as 15, nor "1 000" as 1000.
+  if (/\s/.test(trimmed)) throw new Error('write the amount without spaces (1500, or 1.5 with a point)');
+  const t = trimmed.replace(/_/g, '');
+  if (t.includes(',')) throw new Error('use a point for decimals (1.5) and no commas');
+  if (!/^\d+(\.\d+)?$/.test(t)) throw new Error('enter an amount such as 1.5');
+  const [w, f = ''] = t.split('.');
+  if (f.length > D) throw new Error(`at most ${D} decimals`);
+  const v = BigInt(w) * 10n ** BigInt(D) + BigInt((f + '0'.repeat(D)).slice(0, D) || '0');
+  if (v <= 0n) throw new Error('the amount must be more than zero');
+  return v;
+}
+/** A transaction's outcome in a decoded block: 'applied', 'reverted', or 'missing' (the block does not list it). */
+export function outcomeIn(block, hash) {
+  const pos = block.transactions.findIndex((d) => d.hash === hash);
+  if (pos < 0) return 'missing';
+  return block.reverted.includes(pos) ? 'reverted' : 'applied';
+}
 export function big(v) { return typeof v === 'bigint' ? v : BigInt(typeof v === 'number' ? Math.round(v) : String(v)); }
 
 /** Fee fields for a public transaction of `size` bytes: reserve at the head, and a max_fee with headroom. */
@@ -379,3 +453,36 @@ export function programIdHex(words) {
   if (typeof words === 'string') return words.replace(/^0x/, '');
   return words.map((w) => { const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0, Number(w), true); return hex(b); }).join('');
 }
+
+// ---------------------------------------------------------------- private account keys (key_protocol keys_private.rs)
+// The keys of LEZ's private accounts from the same phrase: the spending key tree under /LEE-Keys/v1/Master/Private, the
+// authorization and nullifier keys, the ML-KEM-768 viewing key (FIPS 203 from d ‖ z), and the private account id. The
+// page derives and shows them; spending a private account needs a proof of LEZ's privacy circuit (private.js).
+const be32 = (i) => { const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0, i, false); return b; };
+const PRIVATE_ACCOUNT_ID_PREFIX = pad32('/LEE/v0.3/AccountId/Private/');
+function privateNode(ssk, ccc, cci) {
+  const idx = be32(cci ?? 0);
+  const ask = sha256(concat(utf8('/LEE-Keys/v1/Authorization/Secret'), ssk, idx));
+  const vseed = hmac(sha512, utf8('/LEE-Keys/v1/Viewing/Seed'), concat(utf8('/LEE-Keys/v1/Viewing/Secret'), ssk, idx));
+  const d = vseed.slice(0, 32), z = vseed.slice(32);
+  const nsk = sha256(concat(utf8('/LEE-Keys/v1/Nullifier/Secret'), ask));
+  const npk = sha256(concat(utf8('/LEE-Keys/v1/Nullifier/Public'), nsk));
+  const vpk = ml_kem768.keygen(concat(d, z)).publicKey;
+  return { ssk, ccc, cci, ask, nsk, npk, d, z, vpk, accountId: sha256(concat(PRIVATE_ACCOUNT_ID_PREFIX, npk, vpk)) };
+}
+/** `ChildKeysPrivate::root`. */
+export function privateMaster(seed) {
+  const h = hmac(sha512, utf8('/LEE-Keys/v1/Master/Private'), seed);
+  return privateNode(h.slice(0, 32), h.slice(32), null);
+}
+/** `ChildKeysPrivate::nth_child`. */
+export function privateChild(parent, cci) {
+  const pt = sha256(concat(utf8('/LEE-Keys/v1/Parent/Private'), parent.nsk, parent.d, parent.z));
+  const h = hmac(sha512, parent.ccc, concat(utf8('/LEE-Keys/v1/Seed/Private'), pt, be32(cci)));
+  return privateNode(h.slice(0, 32), h.slice(32), cci);
+}
+/** The private account at /i of a phrase's seed, as LEZ's wallet creates it (the first is /0). */
+export const derivePrivate = (seed, path) => path.reduce(privateChild, privateMaster(seed));
+
+/** Re-exported for the messages client (msg/client.js reads base64 actor states with it). */
+export { base64 };

@@ -1,9 +1,20 @@
-// Activity: LEZ's RPC keeps no per-account index, so the page reads blocks (getBlockRange, 100 at a time) and keeps the
+// Activity: LEZ's RPC keeps no per-account index, so the page reads blocks (getBlockRange, 50 at a time) and keeps the
 // public transactions that touch this wallet's accounts. What it learns stays in the encrypted wallet record. Each
 // transaction this page signs is also journalled (its bytes, hash and nonce) before it is sent, so it is shown while
 // pending and can be sent again byte for byte if the network rewinds.
-const CHUNK = 100;
-const FIRST_SCAN = 2000;
+const CHUNK = 50; // the public gateway serves getBlockRange spans of at most 50
+const FIRST_SCAN = 1000;
+/** Activity keeps the newest MAX_ITEMS transfers per account (older ones are read again by "Scan further back"). */
+export const MAX_ITEMS = 500;
+/** Adds `added` to the account stores (no duplicates) and keeps each store's newest MAX_ITEMS. */
+export function keepItems(c, added) {
+  const touched = new Set();
+  for (const it of added) {
+    const st = store(c, it.account);
+    if (!st.items.some((x) => x.hash === it.hash && x.dir === it.dir)) { st.items.push(it); touched.add(st); }
+  }
+  for (const st of touched) if (st.items.length > MAX_ITEMS) st.items = st.items.sort((x, y) => y.block - x.block).slice(0, MAX_ITEMS);
+}
 
 function store(c, id) {
   const h = (c.S.secret.history ??= {});
@@ -70,10 +81,7 @@ export async function sync(c, back = 0) {
       added = added.concat(await scanRange(c, from, win.from - 1));
       win.from = from;
     }
-    for (const it of added) {
-      const st = store(c, it.account);
-      if (!st.items.some((x) => x.hash === it.hash && x.dir === it.dir)) st.items.push(it);
-    }
+    keepItems(c, added);
     await c.persist();
     return win;
   })();
@@ -108,10 +116,11 @@ export async function render(c, back = 0) {
     li.children[1].textContent = (r.reverted ? '±' : r.dir === 'in' ? '+' : '−') + c.fmt(r.amount);
     li.children[1].classList.add(r.dir);
     li.children[2].textContent = `${r.dir === 'in' ? 'from' : 'to'} ${r.other} · ${r.hash}`;
+    if (c.names) c.names.reverse(r.other).then((n) => { if (n) li.children[2].textContent = `${r.dir === 'in' ? 'from' : 'to'} ${n}.lez (${r.other}) · ${r.hash}`; }).catch(() => {});
     list.append(li);
   }
   if (!rows.length && !pending.length) {
     const li = document.createElement('li'); li.textContent = 'Nothing yet in the blocks read.'; list.append(li);
   }
-  document.getElementById('act-more').onclick = () => render(c, 2000);
+  document.getElementById('act-more').onclick = () => render(c, 1000);
 }

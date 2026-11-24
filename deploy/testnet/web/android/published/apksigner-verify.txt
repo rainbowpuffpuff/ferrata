@@ -1,0 +1,17 @@
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=Ferrata wallet (LEZ test network), O=Ferrata
+Signer #1 certificate SHA-256 digest: 76aa2860a604968eddb8babc1debccdd5d84862c0d3582afd5c51d79126a4d40
+Signer #1 certificate SHA-1 digest: a3f007ebc807979d623da3b98684af6bfb94ec9a
+Signer #1 certificate MD5 digest: 0d7d2968cfc5ed44dcb9b13481b2b1c3
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 4096
+Signer #1 public key SHA-256 digest: 990a2b88263c73e9fe5814bb2e345f88529d2fd05d53fd838bfaf4f26da31b20
+Signer #1 public key SHA-1 digest: 69a88919140293a8fd0aff8f3a9af30b4c993546
+Signer #1 public key MD5 digest: deca3a103692596b4ca0362ade447c19

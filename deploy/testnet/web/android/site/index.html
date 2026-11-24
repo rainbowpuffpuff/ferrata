@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="The Ferrata wallet of the LEZ v0.4 test network as an Android app: its checksum, its signing key, and checks this page runs itself.">
+<title>Ferrata wallet for Android · LEZ v0.4 test network</title>
+<link rel="icon" href="/wallet/icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="android.css">
+<script type="module" src="android.js"></script>
+</head>
+<body>
+<header class="top"><a class="brand" href="/"><span class="logo" aria-hidden="true">◆</span> Ferrata</a>
+  <nav><a href="/wallet/">Wallet</a> <a href="/explorer/">Explorer</a> <a href="/status/">Status</a></nav></header>
+<main>
+
+<section class="card hero">
+  <img src="/wallet/icons/icon-192.png" alt="" width="72" height="72">
+  <div>
+    <h1>Ferrata wallet for Android</h1>
+    <p class="lead">The wallet of our LEZ v0.4 test network as an Android app. Your keys stay on the phone, unlocked with your
+      fingerprint or face. Send and receive with QR codes, use names, write end-to-end encrypted messages, and get
+      notifications without a push service.</p>
+    <p><a id="dl" class="button primary" href="#" data-testid="download">Download the APK</a> <span id="dl-size" class="fine"></span></p>
+    <p class="fine">Test network only: its coins have no value. Prototype, unaudited. No install needed to try it:
+      <a href="/wallet/">open the wallet in the browser</a>, then “Install app” (Android, desktop) or Share → “Add to Home
+      Screen” (iPhone, iPad).</p>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Check what you download</h2>
+  <dl id="facts" data-testid="facts"><dt>Loading…</dt><dd></dd></dl>
+  <p><button id="check-apk" data-testid="check-apk">Check the download in this browser</button></p>
+  <p id="check-apk-out" class="msg" role="status" data-testid="check-apk-out"></p>
+  <p class="fine">On a computer: <code>sha256sum <span class="apk-name">the APK</span></code> must print the SHA-256 above, and
+    <code>apksigner verify --print-certs <span class="apk-name">the APK</span></code> (Android SDK build tools) the certificate
+    above. Once installed, Android refuses any update not signed by that same key. This page comes from the same host as
+    the file, so it checks transport and storage, not the host itself: compare with the numbers in the repository
+    (<code>deploy/testnet/web/android/</code>) if you need that.</p>
+</section>
+
+<section class="card">
+  <h2>Live checks, run by this page now</h2>
+  <ul class="checks" id="checks" data-testid="checks"></ul>
+  <p><button id="check-files" data-testid="check-files">Check every file of the wallet</button></p>
+</section>
+
+<section class="card">
+  <h2>What the app is</h2>
+  <p>A <b>Trusted Web Activity</b>: Android opens this site's <a href="/wallet/">/wallet/</a> in Chrome's engine, full screen,
+    without an address bar. The app holds no wallet code of its own, so the app and the web wallet are one program with
+    one review: what you check in the browser is what runs in the app. Android shows it full screen only after checking
+    that this site names the app's signing key in <a href="/.well-known/assetlinks.json">/.well-known/assetlinks.json</a>;
+    otherwise it opens as a normal browser tab with the address shown.</p>
+  <table>
+    <tr><th>Keys</th><td>Made and kept on the phone, in Chrome's storage for this site, encrypted with your passphrase (PBKDF2-SHA-256, 600,000 iterations; AES-256-GCM). Never sent anywhere.</td></tr>
+    <tr><th>Unlock</th><td>Passphrase, or a passkey (fingerprint, face, screen lock: WebAuthn's PRF secret unwraps the key; nothing to guess offline), or a 6-12 digit PIN (erased after 5 wrong tries; weaker against someone who copies the phone's storage).</td></tr>
+    <tr><th>Network</th><td>Only this site: its RPC and faucet. The page's Content-Security-Policy forbids any other server.</td></tr>
+    <tr><th>Offline</th><td>The app opens, unlocks and shows your receive QR without a network: its service worker keeps exactly one build, each file checked against its SHA-256.</td></tr>
+    <tr><th>Notifications</th><td>No push service: while the app is open, the page asks this network for new blocks (every 15 s) and reads them itself. When it is closed nothing runs.</td></tr>
+    <tr><th>Needs</th><td id="needs">Android 7.0 or later with Chrome (or another browser with Trusted Web Activities, such as Edge or Samsung Internet).</td></tr>
+  </table>
+</section>
+
+<section class="card">
+  <h2>What it checks, and what it does not</h2>
+  <p>This app runs no node on the phone. An app that carries a light client of the chain checks more than this one, and
+    says so here first:</p>
+  <table class="cmp">
+    <tr><th></th><th>This app</th><th>An app with a light client on the phone</th></tr>
+    <tr><th>Who made a block; is it final</th><td>Trusted to this network's RPC</td><td><b>Checked on the phone</b> (stronger)</td></tr>
+    <tr><th>Account balances</th><td>Trusted to the RPC (LEZ's RPC gives no state proofs), as LEZ's own wallet does</td><td>From its own view of the chain</td></tr>
+    <tr><th>A block's contents</th><td>Checked: every block it reads has its hash recomputed from its contents and its link to the block before checked</td><td>Checked</td></tr>
+    <tr><th>A transaction's outcome</th><td>Checked in the block itself (applied, or reverted with the fee charged)</td><td>Checked</td></tr>
+    <tr><th>An Ethereum fact (Prove tab)</th><td>Checked in the page: Merkle-Patricia proofs against the Ethereum block hash LEZ attested</td><td>Depends</td></tr>
+    <tr><th>A receive code</th><td>Checked: its key must hash to its account id</td><td>Depends</td></tr>
+    <tr><th>Its own build</th><td>Checked: each file against the SHA-256 its service worker lists; this page checks the APK</td><td>Depends</td></tr>
+    <tr><th>The host's other pages</th><td><b>Not isolated</b>: the wallet shares its web origin with this network's other pages (build page, explorer, status, trust, Basecamp, this page); a script on any of them could read the wallet's encrypted record and PIN wrap, ask for its passkey, or drive it once unlocked. Only the host's script policy and those pages' own code stand in the way</td><td>Depends</td></tr>
+    <tr><th>Size, battery when closed</th><td id="cmp-size">About 1 MB; nothing runs when closed</td><td>Tens of MB; a node may keep syncing</td></tr>
+  </table>
+  <p class="fine">Messages are end-to-end encrypted with hybrid post-quantum envelopes (X25519 and ML-KEM-768, padded to fixed
+    sizes). They have <b>no forward secrecy</b>: the messaging keys derive from the account's key, so whoever later
+    obtains that key can read past messages. Who wrote to whom, when and the padded size are public on LEZ.</p>
+</section>
+
+<section class="card">
+  <h2>Measured</h2>
+  <table id="measured" data-testid="measured"><tr><td>Loading…</td></tr></table>
+  <p class="fine" id="measured-note"></p>
+</section>
+
+<section class="card">
+  <h2>Build it yourself</h2>
+  <p>From the repository: <code>HOST=&lt;this host&gt; bash deploy/testnet/web/android/build.sh</code> on Linux with JDK 17 and
+    Node 22. It fetches Google's Android command-line tools (SHA-1 checked against Google's list), generates the project
+    with Bubblewrap's own generator (pinned), builds it twice in two directories and requires the two unsigned APKs to
+    be equal, then signs. The signing key was made on the build machine and is not in the repository; its certificate is
+    above and in <a href="/.well-known/assetlinks.json">assetlinks.json</a>.</p>
+</section>
+</main>
+<footer class="fine foot">Test network: no value · Prototype, unaudited · <a href="/wallet/">Web wallet</a></footer>
+</body>
+</html>

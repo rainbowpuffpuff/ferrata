@@ -1,0 +1,34 @@
+{
+ "network": "local stand-in; Sepolia fork",
+ "rpc": "/rpc",
+ "faucet": "/faucet",
+ "explorer": "/explorer",
+ "token": {
+  "symbol": "LGO",
+  "decimals": 9
+ },
+ "gasLimitTransfer": 100000,
+ "attestation": {
+  "program": null,
+  "instances": []
+ },
+ "msg": {
+  "program": null
+ },
+ "names": {
+  "program": null
+ },
+ "bridge": {
+  "program": null,
+  "configId": "0x3773b58836d2fa242e16b3eb580a15630de2a437218a432f52e5b01152ae67cd",
+  "vault": "0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787",
+  "evmChainId": 11155111,
+  "lezReady": true,
+  "token": {
+   "address": "0x5d4DdB1863d2EE85765499dd850a9AeedecA03bC",
+   "symbol": "TUSD",
+   "decimals": 6,
+   "testMint": true
+  }
+ }
+}

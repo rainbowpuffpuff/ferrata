@@ -1,0 +1,46 @@
+{
+ "passed": 8,
+ "total": 8,
+ "checks": [
+  {
+   "name": "facts shown from apk.json",
+   "ok": true,
+   "detail": "ferrata-wallet-0.1.0.apk 1133430 bytes"
+  },
+  {
+   "name": "live check: Android's link check (Digital Asset Links)",
+   "ok": true,
+   "detail": "this site names io.github.rainbowpuffpuff.ferrata.wallet signed by 76:AA:28:60:A6:04:96:8E\u2026, so Android opens it full screen."
+  },
+  {
+   "name": "live check: The chain, block by block",
+   "ok": true,
+   "detail": "20 of 20 block hashes recomputed from their contents and equal, 19 of 19 links to the previous block checked (blocks #1860 to #1879; the newest is 2 s old, Pending)."
+  },
+  {
+   "name": "live check: The wallet's security headers",
+   "ok": true,
+   "detail": "scripts and connections from this site only, nothing else loaded, not embeddable in another page."
+  },
+  {
+   "name": "the APK checked in the browser",
+   "ok": true,
+   "detail": "\u2713 The file this host serves has SHA-256 51257de9da1156c737b200956b237b7a38c0c19745d3645f98ef8bf268fb9e3f and 1,133,430 bytes, as published."
+  },
+  {
+   "name": "every wallet file against the service worker's list",
+   "ok": true,
+   "detail": "32 of 32 files equal the SHA-256 that build 25ff0cd2e468ae50 lists."
+  },
+  {
+   "name": "the download link saves the published APK under its name",
+   "ok": true,
+   "detail": "ferrata-wallet-0.1.0.apk, 1133430 bytes"
+  },
+  {
+   "name": "no script errors",
+   "ok": true,
+   "detail": ""
+  }
+ ]
+}

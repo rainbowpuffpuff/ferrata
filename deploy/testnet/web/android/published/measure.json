@@ -1,0 +1,16 @@
+{
+  "note": "Measured on 23 November 2026 against this host, in headless Chromium (Playwright 1.58) and WebKit 26 on a 2-vCPU Linux build machine, not on a phone. Records: deploy/testnet/web/wallet/test/results/ in the repository.",
+  "rows": [
+    ["Android app (APK)", "1.08 MB (1,133,430 bytes)", "measured: the signed APK"],
+    ["The whole web app", "0.22 MB on the wire (223,494 bytes, 33 files as this host compresses them); 0.48 MB unpacked", "measured with curl; a first visit or install fetches at most this, once"],
+    ["Cold start, first visit", "1.77 s to the first screen (first paint 0.42 s); the page's own requests: 71 KB", "median of 3; emulated phone: CPU 4x slower, 150 ms round trip, 1.6 Mbit/s"],
+    ["Cold start, installed", "0.42 s to the unlock screen (first paint 0.11 s); 5.8 KB over the network", "median of 3, same emulation; the files come from the offline copy, only the RPC goes out"],
+    ["Cold start, no emulation", "first visit 0.15 s, installed 0.10 s", "the build machine's own CPU and network"],
+    ["Unlock", "passkey 0.25 s, PIN 0.43 s, passphrase 0.42 s", "median of 3 on the build machine's CPU; PBKDF2 (600,000 iterations) runs on WebCrypto's thread, which the emulation does not slow: a phone takes longer"],
+    ["Data while open", "19.5 KB per minute, 18 requests per minute (the build before: 47.7 KB and 50)", "measured over 3 minutes, unlocked on Home, the network making a block every 10 s"],
+    ["Data while closed", "none", "nothing runs when the app is closed: no push service, no background task"],
+    ["Notification delay", "new message: 10.1 and 11.2 s after the sender's block; transfer: 4.3 and 6.6 s after it applied", "two live runs on this network, two wallets"],
+    ["Battery", "not measured", "no Android emulator on the build machine (no hardware virtualisation); when closed the app does nothing"],
+    ["Android app's own start", "not measured", "needs a device or an emulator: the app adds Chrome's start to the page's"]
+  ]
+}

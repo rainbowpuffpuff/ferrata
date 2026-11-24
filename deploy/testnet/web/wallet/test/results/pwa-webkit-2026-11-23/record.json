@@ -1,0 +1,56 @@
+{
+ "passed": 8,
+ "total": 8,
+ "checks": [
+  {
+   "name": "Home Screen tags: manifest, apple-touch-icon (served), web-app-capable",
+   "ok": true,
+   "detail": "[\"yes\"]",
+   "t": 1.4
+  },
+  {
+   "name": "service worker controls the page (WebKit)",
+   "ok": true,
+   "detail": "",
+   "t": 1.6
+  },
+  {
+   "name": "wallet created",
+   "ok": true,
+   "detail": "",
+   "t": 2.3
+  },
+  {
+   "name": "More shows the iPhone install hint",
+   "ok": true,
+   "detail": "On iPhone or iPad: tap Share, then \u201cAdd to Home Screen\u201d. The app opens full screen and keeps working offline.Android app",
+   "t": 2.4
+  },
+  {
+   "name": "receive QR read back by zbar",
+   "ok": true,
+   "detail": "'lez:ARiwvKNatDoBdPkrKi6ZvBi9tojEKGnQFXtPL1R91cQH?pk=10a02f7226509b8338d181cdacd7f96f6bfcdd27f8638fee5e2c26c7173d12d4'",
+   "t": 4.3
+  },
+  {
+   "name": "scan from a photo fills the recipient (WebKit has no BarcodeDetector: the page's decoder)",
+   "ok": true,
+   "detail": "",
+   "t": 4.5
+  },
+  {
+   "name": "PIN unlock",
+   "ok": true,
+   "detail": "",
+   "t": 4.9
+  },
+  {
+   "name": "no script errors",
+   "ok": true,
+   "detail": "",
+   "t": 5.4
+  }
+ ],
+ "engine": "WebKit 26.0 (Playwright, Linux)",
+ "offline": "not shown: Playwright's WebKit refused the offline navigation (Page.goto: WebKit encountered an internal error)"
+}

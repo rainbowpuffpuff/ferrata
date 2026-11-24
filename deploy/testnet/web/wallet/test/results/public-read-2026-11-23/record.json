@@ -1,0 +1,41 @@
+{
+ "checks": [
+  {
+   "check": "the page reads the public network's head through /rpc",
+   "ok": true,
+   "detail": "33"
+  },
+  {
+   "check": "a new account's balance and nonce read from the public RPC",
+   "ok": true,
+   "detail": "0 LGO"
+  },
+  {
+   "check": "Activity reads the public network's blocks (getBlockRange, spans of 50)",
+   "ok": true,
+   "detail": "Blocks 1 to 33 read (from genesis). in 0.8 s"
+  },
+  {
+   "check": "network info: rc3's privacy circuit on the public network",
+   "ok": true,
+   "detail": "RPC | <url> | Head block | 33 | Base fees | execution 8, storage 8 per unit | Channel (zone id) | 0101010101010101010101010101010101010101010101010101010101010101 | Privacy circuit | 631f0c96572a86ce6"
+  },
+  {
+   "check": "a send without funds is refused before anything is signed",
+   "ok": true,
+   "detail": "That is not an account id, a public key (64 hex digits) or a receive code (lez:\u2026?pk=\u2026)."
+  },
+  {
+   "check": "no faucet request was made",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "no uncaught script error",
+   "ok": true,
+   "detail": "[]"
+  }
+ ],
+ "passed": 7,
+ "failed": 0
+}

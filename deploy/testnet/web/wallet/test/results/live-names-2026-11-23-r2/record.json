@@ -1,0 +1,36 @@
+{
+ "when_utc": "2026-11-23T12:08Z",
+ "passed": 4,
+ "failed": 1,
+ "numbers": {
+  "reveal_wait_seconds": 233.6
+ },
+ "checks": [
+  {
+   "check": "A is funded by the faucet",
+   "ok": true,
+   "detail": "Received: your balance is 10 LGO."
+  },
+  {
+   "check": "Home offers a name (the network publishes the names program)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "Claim, step 1: the commitment is in a block (the name stays hidden)",
+   "ok": true,
+   "detail": "Committed to w5mli06x9n (hidden until the reveal). The reveal opens at 12:07:36 PM; this page keeps the secret salt."
+  },
+  {
+   "check": "Claim, step 2: the reveal registers the name",
+   "ok": true,
+   "detail": "w5mli06x9n.lez is yours (In block 694, applied; the nonce moved to 2. Balance: 9.999589912 LGO.)"
+  },
+  {
+   "check": "the run completed without an unexpected error",
+   "ok": false,
+   "detail": "TimeoutError('Page.wait_for_function: Timeout 60000ms exceeded.')"
+  }
+ ],
+ "where": "our public test network's /wallet/ (c98cddac) from the second build box; commit and reveal applied; the displayed name needs SetPrimary (added next)"
+}

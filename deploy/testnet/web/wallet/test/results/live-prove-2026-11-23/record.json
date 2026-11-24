@@ -1,0 +1,33 @@
+{
+ "when_utc": "2026-11-23T10:37Z",
+ "passed": 4,
+ "failed": 0,
+ "numbers": {
+  "check_seconds": 0.7,
+  "attest_seconds_to_block": 7.3
+ },
+ "checks": [
+  {
+   "check": "the faucet funds the attesting account",
+   "ok": true,
+   "detail": "Received: your balance is 10 LGO."
+  },
+  {
+   "check": "the Prove tab reads the instance's newest record from LEZ",
+   "ok": true,
+   "detail": "Newest record: beacon slot 11641280, block <x>\u2026 (active, 4 updates applied)."
+  },
+  {
+   "check": "the page fetched eth_getProof through the browser wallet and checked it against the record's block",
+   "ok": true,
+   "detail": "The proof holds against the record's block (checked in this page). Attesting costs a LEZ fee. | Block\n12195044 (<x>\u2026)\nAccount\nnonce 1, balance 0 wei\nSlot\n<x>\nValue\n<x>"
+  },
+  {
+   "check": "the attestation program accepted the fact on our network (not in the block's reverted list)",
+   "ok": true,
+   "detail": "Attested: the attestation program accepted the proof in LEZ block 152. Transaction <x>. The statements above are now LEZ's, under the record header(0xc741a1f1\u2026, 11641280) (account <x>)."
+  }
+ ],
+ "where": "our public LEZ v0.4.0-rc3 test network, its /wallet/ URL (host not recorded); Ethereum reads from a public Sepolia endpoint through a read-only stand-in browser wallet; sending on our network approved by the lead",
+ "fact": "Sepolia USDC 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238, storage slot 11, at block 12195044; instance 0xc741a1f1..., record slot 11641280"
+}

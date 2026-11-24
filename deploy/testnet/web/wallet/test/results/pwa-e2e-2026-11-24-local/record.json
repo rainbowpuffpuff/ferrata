@@ -1,0 +1,153 @@
+{
+ "passed": 24,
+ "total": 24,
+ "checks": [
+  {
+   "name": "service worker controls the page",
+   "ok": true,
+   "detail": "",
+   "t": 3.1
+  },
+  {
+   "name": "installable (Chrome's Page.getInstallabilityErrors is empty)",
+   "ok": true,
+   "detail": "[]",
+   "t": 3.1
+  },
+  {
+   "name": "manifest parsed without errors",
+   "ok": true,
+   "detail": "[]",
+   "t": 3.1
+  },
+  {
+   "name": "offline copy holds every file of the build",
+   "ok": true,
+   "detail": "33 of 33",
+   "t": 3.1
+  },
+  {
+   "name": "wallet created",
+   "ok": true,
+   "detail": "GUAjPNVgQAfXrzpnqbbn7yUC8kH1kbLWatadv3itXG8Z",
+   "t": 3.6
+  },
+  {
+   "name": "receive QR holds the receive code (zbar reads it back)",
+   "ok": true,
+   "detail": "zbar: 'lez:GUAjPNVgQAfXrzpnqbbn7yUC8kH1kbLWatadv3itXG8Z?pk=f85b60a49595ead76853a05140726d93b2abf56b92abc9d380eb27bc6003ec04'",
+   "t": 3.9
+  },
+  {
+   "name": "receive QR with an amount asked for",
+   "ok": true,
+   "detail": "'lez:GUAjPNVgQAfXrzpnqbbn7yUC8kH1kbLWatadv3itXG8Z?pk=f85b60a49595ead76853a05140726d93b2abf56b92abc9d380eb27bc6003ec04&amount=2.5'",
+   "t": 4.1
+  },
+  {
+   "name": "camera scan fills recipient and amount",
+   "ok": true,
+   "detail": "lez:5YBTsTD1FPEBH6NA4rDQ\u2026 3.25",
+   "t": 4.7
+  },
+  {
+   "name": "camera released after the scan",
+   "ok": true,
+   "detail": "",
+   "t": 4.7
+  },
+  {
+   "name": "photo scan fills the recipient",
+   "ok": true,
+   "detail": "",
+   "t": 5.0
+  },
+  {
+   "name": "PIN set",
+   "ok": true,
+   "detail": "",
+   "t": 5.3
+  },
+  {
+   "name": "passkey (PRF) set; stored: wraps only",
+   "ok": true,
+   "detail": "created, credId, ct, iv, prfSalt",
+   "t": 5.6
+  },
+  {
+   "name": "unlocked with the passkey",
+   "ok": true,
+   "detail": "",
+   "t": 5.8
+  },
+  {
+   "name": "wrong PIN counted, right PIN unlocks",
+   "ok": true,
+   "detail": "",
+   "t": 6.3
+  },
+  {
+   "name": "the passphrase still unlocks; the next lock offers the quick methods again",
+   "ok": true,
+   "detail": "",
+   "t": 6.8
+  },
+  {
+   "name": "a passkey without PRF is refused, nothing saved",
+   "ok": true,
+   "detail": "This passkey cannot derive an unlock key (its authenticator has no PRF). Nothing was saved",
+   "t": 7.4
+  },
+  {
+   "name": "locks when the app leaves the screen (setting: right away)",
+   "ok": true,
+   "detail": "",
+   "t": 7.4
+  },
+  {
+   "name": "notifications on (permission granted)",
+   "ok": true,
+   "detail": "[\"function\", \"granted\", \"Permission: granted. Checks run every 15 s while the wallet is open (every 60 s in the background, where the system allows).\"]",
+   "t": 7.7
+  },
+  {
+   "name": "More shows the offline copy's build",
+   "ok": true,
+   "detail": "Offline copy: build 75b3b68dc18ca0de, 33 files, each checked against its SHA-256 before it was kept.",
+   "t": 7.7
+  },
+  {
+   "name": "offline: the app opens, unlocks and shows the receive QR",
+   "ok": true,
+   "detail": "RPC unreachable",
+   "t": 8.1
+  },
+  {
+   "name": "a new build shows the banner and reloads into it",
+   "ok": true,
+   "detail": "",
+   "t": 9.5
+  },
+  {
+   "name": "a build whose file does not match its listed SHA-256 is refused",
+   "ok": true,
+   "detail": "redundant",
+   "t": 9.8
+  },
+  {
+   "name": "no request left this origin",
+   "ok": true,
+   "detail": "",
+   "t": 9.8
+  },
+  {
+   "name": "no script errors",
+   "ok": true,
+   "detail": "",
+   "t": 9.8
+  }
+ ],
+ "base": "http://localhost:18660",
+ "upstream": false,
+ "beforeinstallprompt_fired": true
+}

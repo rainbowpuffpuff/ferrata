@@ -1,0 +1,108 @@
+{
+ "when_utc": "2026-11-23T10:35Z",
+ "passed": 19,
+ "failed": 0,
+ "numbers": {
+  "faucet_seconds": 6.5,
+  "send1_seconds_to_block": 8.8,
+  "send1_fee_atomic": 4352
+ },
+ "checks": [
+  {
+   "check": "the network serves the wallet with its CSP (own origin only, no framing)",
+   "ok": true,
+   "detail": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; "
+  },
+  {
+   "check": "the page reads the network's head",
+   "ok": true,
+   "detail": "block 139"
+  },
+  {
+   "check": "a new wallet in the page: 24 words, its first account",
+   "ok": true,
+   "detail": "<id1>"
+  },
+  {
+   "check": "the account is new on the network",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "the faucet button funds the new account",
+   "ok": true,
+   "detail": "Received: your balance is 10 LGO."
+  },
+  {
+   "check": "the RPC agrees: the faucet's amount",
+   "ok": true,
+   "detail": "10000000000 vs 10000000000"
+  },
+  {
+   "check": "account 2: own id, receive code with its key",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "the review is shown before signing (first credit flagged)",
+   "ok": true,
+   "detail": "From\nAccount 1 (<id1>)\nTo\n<id2>\nAmount\n1.25 LGO\nFee now\nabout 0.000804352 LGO (gas limit 100000, 544 bytes at base fees 8/"
+  },
+  {
+   "check": "the page reports the transfer applied in a block",
+   "ok": true,
+   "detail": "In block 141, applied; the nonce moved to 1. Balance: 8.749995648 LGO. Transaction <hash3>."
+  },
+  {
+   "check": "the RPC agrees: account 2 holds 1.25 LGO",
+   "ok": true,
+   "detail": "1250000000"
+  },
+  {
+   "check": "the RPC agrees: account 1 paid 1.25 LGO and a fee; nonce 1",
+   "ok": true,
+   "detail": "4352"
+  },
+  {
+   "check": "the hash the page shows is the network's transaction",
+   "ok": true,
+   "detail": "['<hash3>']"
+  },
+  {
+   "check": "account 2 sends back by id; applied",
+   "ok": true,
+   "detail": "In block 142, applied; the nonce moved to 1. Balance: 0.749995912 LGO. Transaction <hash4>."
+  },
+  {
+   "check": "the RPC agrees: +0.5 LGO exactly",
+   "ok": true,
+   "detail": "500000000"
+  },
+  {
+   "check": "Activity lists the faucet's credit, the send and the return, none reverted",
+   "ok": true,
+   "detail": "Received \u00b7 block 142 \u00b7 11/23/2026, 11:35:42 AM\n+0.5 LGO\nfrom <id2> \u00b7 <hash4>\nSent \u00b7 block 141 \u00b7 11/23/2026, 11:35:32 AM\n\u22121.25 LGO\nto <id2> \u00b7 <hash>"
+  },
+  {
+   "check": "lock, unlock and a reload keep both accounts",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "the phrase imported on a phone-sized screen opens the same account and balance",
+   "ok": true,
+   "detail": "9.249995648 LGO"
+  },
+  {
+   "check": "every request the page made went to the network's own origin",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "no uncaught script error",
+   "ok": true,
+   "detail": "[]"
+  }
+ ],
+ "where": "our public LEZ v0.4.0-rc3 test network, its /wallet/ URL (host not recorded); sending approved by the lead"
+}

@@ -40,6 +40,7 @@ button:disabled { opacity: .55; cursor: default; }
 .err { color: var(--bad); min-height: 1em; margin: 8px 0 0; }
 .msg { min-height: 1em; margin: 8px 0; }
 .msg.ok { color: var(--ok); } .msg.warn { color: var(--warn); } .msg.bad { color: var(--bad); }
+.warn-text b { color: var(--warn); }
 code, pre { font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--code); border-radius: 6px; padding: 2px 6px; }
 code.wrap, .kv code { word-break: break-all; }
 .copy { cursor: copy; }
@@ -83,3 +84,23 @@ dt { color: var(--muted); } dd { margin: 0; word-break: break-all; }
 .tag.pub { color: var(--warn); } .tag.priv { color: var(--ok); }
 .foot { text-align: center; padding: 12px; }
 @media (max-width: 640px) { .foot { padding-bottom: 80px; } }
+/* The app: update banner, toast, inbox badge, QR codes, the scanner */
+[hidden] { display: none !important; } /* buttons and rows set their own display: `hidden` must still hide them */
+.banner { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px;
+  background: var(--accent); color: var(--accent-fg); font-size: 14px; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 5;
+  max-width: min(92vw, 520px); padding: 10px 14px; border-radius: 10px; background: var(--fg); color: var(--bg); font-size: 14px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, .25); }
+.badge { display: inline-block; min-width: 18px; margin-left: 5px; padding: 0 5px; border-radius: 999px; background: var(--bad);
+  color: #fff; font-size: 11.5px; line-height: 18px; text-align: center; font-weight: 650; }
+.qr { width: min(100%, 280px); margin: 8px auto 4px; padding: 0; border-radius: 10px; overflow: hidden; background: #fff;
+  border: 1px solid var(--line); }
+.qr svg { display: block; width: 100%; height: auto; }
+.file { position: relative; }
+.file input[type=file] { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; opacity: 0; cursor: pointer; }
+.scanner { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; padding: 16px; background: rgba(0, 0, 0, .92); color: #fff; }
+.scanner video { width: min(100%, 520px); max-height: 70vh; border-radius: 12px; background: #000; object-fit: cover; }
+.scanner p { margin: 0; font-size: 15px; }
+label.grow { flex: 1 1 140px; margin: 0; }
+b.bad { color: var(--bad); }

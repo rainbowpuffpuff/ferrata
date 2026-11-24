@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Pinned inputs of vendor/noble.js",
+  "description": "Pinned inputs of vendor/noble.js and vendor/qr.js",
   "dependencies": {
     "@noble/ciphers": "^2.4.0",
     "@noble/curves": "^2.4.0",
@@ -11,6 +11,7 @@
     "@noble/post-quantum": "^0.7.1",
     "@scure/base": "^2.4.0",
     "@scure/bip39": "^2.4.0",
-    "esbuild": "^0.28.2"
+    "esbuild": "^0.28.2",
+    "qr": "0.7.2"
   }
 }

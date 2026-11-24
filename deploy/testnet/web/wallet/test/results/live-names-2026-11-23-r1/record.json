@@ -1,0 +1,36 @@
+{
+ "when_utc": "2026-11-23T11:58Z",
+ "passed": 3,
+ "failed": 2,
+ "numbers": {
+  "reveal_wait_seconds": 203.7
+ },
+ "checks": [
+  {
+   "check": "A is funded by the faucet",
+   "ok": true,
+   "detail": "Received: your balance is 10 LGO."
+  },
+  {
+   "check": "Home offers a name (the network publishes the names program)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "Claim, step 1: the commitment is in a block (the name stays hidden)",
+   "ok": true,
+   "detail": "Committed to wb7blj495j (hidden until the reveal). The reveal opens at 11:56:56 AM; this page keeps the secret salt."
+  },
+  {
+   "check": "Claim, step 2: the reveal registers the name",
+   "ok": false,
+   "detail": "Reveal refused by the names program: In block 630, but it reverted: the fee was charged and nothing moved (nonce now 2)."
+  },
+  {
+   "check": "the run completed without an unexpected error",
+   "ok": false,
+   "detail": "TimeoutError('Page.wait_for_function: Timeout 60000ms exceeded.')"
+  }
+ ],
+ "where": "our public test network's /wallet/ (53ef2c20) from the build box; the reveal was sent 30 s before its window (fixed next)"
+}

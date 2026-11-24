@@ -7,8 +7,8 @@
 #   box.sh probe           start the sequencer, record its RPC answers and a transfer signed by LEZ's own wallet CLI
 #   box.sh e2e [NAME]      start the sequencer and test/serve.py, run the Playwright test (test/e2e_test.py), stop both
 #
-# Layout: LEZ at upstream/lez-v0.4.0-rc3 beside the repository (LEZ_SRC overrides); scratch in target/wallet-box
-# inside the repository (git-ignored; WALLET_WORK overrides). Everything a command starts is stopped before it returns.
+# Layout: LEZ at upstream/lez-v0.4.0-rc3 beside the repository (LEZ_SRC overrides); scratch in ferrata-scratch/wallet/box
+# beside the repository (WALLET_WORK overrides). Everything a command starts is stopped before it returns.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WALLET="$(cd "$HERE/.." && pwd)"
@@ -16,7 +16,7 @@ REPO="$(cd "$WALLET/../../../.." && pwd)"
 BESIDE="$(cd "$REPO/.." && pwd)"
 LEZ_SRC="${LEZ_SRC:-$BESIDE/upstream/lez-v0.4.0-rc3}"
 LEZ_COMMIT=bafd07be0701398f9bc435f73ab05e9a7936c301
-WORK="${WALLET_WORK:-$REPO/target/wallet-box}"
+WORK="${WALLET_WORK:-$BESIDE/ferrata-scratch/wallet/box}"
 TARGET="$WORK/target"
 BIN="$WORK/bin"
 RUN="$WORK/run"
@@ -53,6 +53,7 @@ rpc() { # method, params (JSON)
 SEQ_PID=""
 stop_all() {
   [ -n "${SERVE_PID:-}" ] && kill "$SERVE_PID" 2>/dev/null || true
+  [ -n "${ANVIL_PID:-}" ] && kill "$ANVIL_PID" 2>/dev/null || true
   if [ -n "$SEQ_PID" ]; then kill -TERM "$SEQ_PID" 2>/dev/null || true; sleep 1; kill -KILL "$SEQ_PID" 2>/dev/null || true; fi
 }
 
@@ -101,7 +102,7 @@ cli_wallet() {
 }
 
 probe() {
-  local OUT="$WORK/probe"
+  local OUT="$BESIDE/ferrata-scratch/wallet/probe"
   rm -rf "$OUT"; mkdir -p "$OUT"
   start_sequencer "${WALLET_BLOCK_TIME:-2s}"
   cp "$RUN/sequencer_config.json" "$OUT/"
@@ -146,5 +147,6 @@ case "${1:-}" in
   build) build ;;
   probe) probe ;;
   e2e) shift; . "$HERE/e2e.sh" ;;
+  metamask) shift; . "$HERE/metamask.sh" ;;
   *) sed -n '2,12p' "${BASH_SOURCE[0]}"; exit 2 ;;
 esac

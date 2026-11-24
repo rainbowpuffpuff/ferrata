@@ -1,0 +1,27 @@
+{
+  "id": "./",
+  "name": "Ferrata wallet · LEZ test network",
+  "short_name": "Ferrata",
+  "description": "A wallet for the LEZ v0.4 test network. Keys stay on this device. Send and receive with QR codes, use names and end-to-end encrypted messages, and prove Ethereum facts on LEZ. Test network only: its coins have no value.",
+  "start_url": "./?source=app",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f7f9",
+  "theme_color": "#1f5fd1",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["finance", "utilities"],
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/mono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "monochrome" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Send", "short_name": "Send", "url": "./#send", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Receive", "short_name": "Receive", "url": "./#receive", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Inbox", "short_name": "Inbox", "url": "./#inbox", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "what": "The first live bridge claim and burn on the public test network, both from the web wallet's Bridge tab",
+  "date": "2026-11-23",
+  "page": {
+    "commit": "15d956ee (deployed 16:34Z); 79f57166 from 20:11Z (vault logs read in windows)",
+    "served_files_equal": "34 of 34"
+  },
+  "deposit": {
+    "chain": "Sepolia",
+    "block": 12196757,
+    "leaf": 0,
+    "amount_wei": "1000000000000000",
+    "destination_kind": "public",
+    "tx": "0x44709f7c31561f1682b67b95a1a01b774246fcdcbdb4f049d482e8284857e9e1"
+  },
+  "imports_by_the_page_code": [
+    {
+      "message": "ImportFees (schedule 1 absent)",
+      "lez_block": 2276,
+      "applied": true,
+      "gas_limit": 3000000,
+      "effect": "ETH known_until 0 -> 1",
+      "tx": "50f1d085b23fe47a6b1b4a6a12463311f272a7ea52df24b55a0a0dd62bc63ec3"
+    },
+    {
+      "message": "ImportRoot (n = 1)",
+      "lez_block": 2278,
+      "applied": true,
+      "gas_limit": 3000000,
+      "root": "0x0d0c28da72263f2c1b0aa74ee00356e2ea8c6dabd45f5ed22f071d55a2fd8b23",
+      "root_equals": "the vault's slot 0 under record slot 11643072 and the root of its Deposit events",
+      "tx": "f2fb461e534c17fbcca0de06ff8091542744bbfb7aee27d641e72bfc1213b1e3"
+    },
+    {
+      "message": "ImportRoot (n = 1) by the host relayer",
+      "lez_block": 2278,
+      "applied": false,
+      "note": "refused: root(cid, 1) already written",
+      "tx": "dd159aec47ec2d151575e6cff5818884fa3efd5cc193ad1176ca986ab5ad7075"
+    }
+  ],
+  "imports_note": "sent from the page's own prepareClaim (claim.js) by a test account; together 0.0072 LGO",
+  "claim": {
+    "message": "Claim (plaintext, kind public)",
+    "lez_block": 3746,
+    "applied": true,
+    "actors": 6,
+    "pda_evidence": 6,
+    "gas_limit": 1000000,
+    "max_fee_atomic": 64150208,
+    "message_bytes": 1239,
+    "sent_by": "the depositor, in the page (the page's gas limit and evidence set)",
+    "tx": "28771fd510b26758f39ee2b1b5e921568a6b0c14857267d58e91ffb8ef1c2e2f"
+  },
+  "burn": {
+    "message": "Burn (one denomination, 0.001 ETH, from holder(cid, account))",
+    "lez_block": 3749,
+    "applied": true,
+    "actors": 5,
+    "pda_evidence": 4,
+    "gas_limit": 1000000,
+    "max_fee_atomic": 64070336,
+    "message_bytes": 185,
+    "sent_by": "the depositor, in the page",
+    "tx": "5c89d209852ee257bad4191cdd176e11dfea6b83b35a12f8a9487c6fa2e727cf"
+  },
+  "holding_after": "empty (0.001 ETH claimed, then burned)",
+  "release": "not possible yet: the vault has had no checkpoint candidate since its deployment (its only events are the setup's and the deposit), so no burn root is accepted on Sepolia",
+  "watcher": "read-only: getBlockRange over LEZ blocks 2279-3749, the bridge program's transactions and their reverted flags",
+  "how_to_check": "LEZ: getTransaction(tx) names the block; getBlock(block) holds the transaction (its hash is SHA-256 of its borsh bytes) and its reverted list. Sepolia: the deposit transaction's receipt holds the vault's Deposit event (leaf 0)."
+}

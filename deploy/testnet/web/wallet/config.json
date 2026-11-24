@@ -6,5 +6,7 @@
   "token": { "symbol": "LGO", "decimals": 9 },
   "gasLimitTransfer": 100000,
   "attestation": { "program": null, "instances": [] },
+  "msg": { "program": null },
+  "names": { "program": null },
   "bridge": { "program": null, "configId": null, "vault": null, "evmChainId": 11155111 }
 }

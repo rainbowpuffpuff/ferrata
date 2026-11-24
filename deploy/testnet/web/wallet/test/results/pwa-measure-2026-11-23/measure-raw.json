@@ -1,0 +1,150 @@
+{
+ "base_is_local": false,
+ "runs": 3,
+ "first": [
+  {
+   "ready_ms": 1806,
+   "fcp_ms": 424,
+   "bytes": 71468,
+   "requests": 34
+  },
+  {
+   "ready_ms": 1774,
+   "fcp_ms": 432,
+   "bytes": 71470,
+   "requests": 34
+  },
+  {
+   "ready_ms": 1742,
+   "fcp_ms": 420,
+   "bytes": 71465,
+   "requests": 34
+  }
+ ],
+ "repeat": [
+  {
+   "ready_ms": 477,
+   "fcp_ms": 108,
+   "bytes": 5836,
+   "requests": 5
+  },
+  {
+   "ready_ms": 417,
+   "fcp_ms": 116,
+   "bytes": 5836,
+   "requests": 5
+  },
+  {
+   "ready_ms": 411,
+   "fcp_ms": 108,
+   "bytes": 5859,
+   "requests": 5
+  }
+ ],
+ "first_fast": [
+  {
+   "ready_ms": 150,
+   "fcp_ms": 68,
+   "bytes": 71467,
+   "requests": 34
+  },
+  {
+   "ready_ms": 150,
+   "fcp_ms": 52,
+   "bytes": 71467,
+   "requests": 34
+  },
+  {
+   "ready_ms": 126,
+   "fcp_ms": 56,
+   "bytes": 71467,
+   "requests": 34
+  }
+ ],
+ "repeat_fast": [
+  {
+   "ready_ms": 96,
+   "fcp_ms": 36,
+   "bytes": 5840,
+   "requests": 5
+  },
+  {
+   "ready_ms": 108,
+   "fcp_ms": 48,
+   "bytes": 5840,
+   "requests": 5
+  },
+  {
+   "ready_ms": 91,
+   "fcp_ms": 40,
+   "bytes": 5840,
+   "requests": 5
+  }
+ ],
+ "create_ms": 701,
+ "pin_setup_ms": 575,
+ "passkey_setup_ms": 337,
+ "state_after_setup": "{\"unlock\":false,\"main\":true,\"quick\":false,\"passkey\":false,\"pin\":false,\"stored\":[\"v\",\"salt\",\"pin\",\"passkey\"],\"hash\":\"#settings\"}",
+ "unlock_ms": {
+  "passphrase": 415,
+  "pin": 432,
+  "passkey": 251
+ },
+ "unlock_runs_ms": {
+  "passphrase": [
+   415,
+   465,
+   403
+  ],
+  "pin": [
+   462,
+   410,
+   432
+  ],
+  "passkey": [
+   214,
+   286,
+   251
+  ]
+ },
+ "idle_this_build": {
+  "seconds": 180,
+  "rpc_bytes": 58413,
+  "rpc_requests": 54,
+  "all_bytes": 58413,
+  "all_requests": 54,
+  "rpc_bytes_per_min": 19471,
+  "rpc_requests_per_min": 18.0
+ },
+ "idle_old_build": {
+  "seconds": 180,
+  "rpc_bytes": 143044,
+  "rpc_requests": 150,
+  "all_bytes": 143044,
+  "all_requests": 150,
+  "rpc_bytes_per_min": 47681,
+  "rpc_requests_per_min": 50.0
+ },
+ "summary": {
+  "first": {
+   "ready_ms": 1774,
+   "fcp_ms": 424,
+   "bytes": 71468
+  },
+  "repeat": {
+   "ready_ms": 417,
+   "fcp_ms": 108,
+   "bytes": 5836
+  },
+  "first_fast": {
+   "ready_ms": 150,
+   "fcp_ms": 56,
+   "bytes": 71467
+  },
+  "repeat_fast": {
+   "ready_ms": 96,
+   "fcp_ms": 40,
+   "bytes": 5840
+  }
+ }
+}
