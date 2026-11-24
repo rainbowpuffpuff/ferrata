@@ -74,7 +74,9 @@ anvil --chain-id 11155111 --port 8545 --gas-limit 100000000 --auto-impersonate >
 trap 'kill $ANVIL 2>/dev/null || true' EXIT
 for _ in $(seq 60); do cast chain-id --rpc-url $RPC > /dev/null 2>&1 && break; sleep 1; done
 cast rpc anvil_setBalance $DEPLOYER 0x56bc75e2d63100000 --rpc-url $RPC > /dev/null   # 100 ETH
-if [ "$MODE" = deployer ]; then
+# gasdrop: DeployVault now accepts only RISC Zero's 3.1.0 verifier (its VERSION() and code), so it deploys that one and
+# its code is replaced on anvil by the mock's afterwards, as scripts/ci/sequencer-roundtrip-hook.sh does.
+if [ "$MODE" = deployer ] || [ "$MODE" = gasdrop ]; then
   # A second deployer's own deployment: DeployVault deploys RISC Zero's Groth16 verifier first (no proof is verified in
   # this run), then the stop, the library and the vault: the vault is the fourth creation.
   MOCK=""; N="$(cast nonce $DEPLOYER --rpc-url $RPC)"
@@ -100,6 +102,7 @@ GS="$(python3 -I "$REPO/e2e/crown/identity.py" genesis-state --tip-id "$(jq -r .
   --config-tip-hash "$(jq -r .channel.configTipHash "$SA")")"
 FROM="$(cast block-number --rpc-url $RPC)"
 if [ "$MODE" = deployer ]; then VERIFIER="RISC Zero's Groth16 verifier, which DeployVault deploys first"
+elif [ "$MODE" = gasdrop ]; then VERIFIER="RISC Zero's Groth16 verifier deployed by DeployVault, its code then replaced on anvil by the vault tests' MockRiscZeroVerifier"
 else VERIFIER="the vault tests' MockRiscZeroVerifier"; fi
 jq -n --arg v "$VAULT" --arg c "$CID" --arg g "$GS" --arg m "$MOCK" --arg d "${SEQNET_DELTA:-3600}" --arg w "$VERIFIER" \
   '{label: ("seqnet: local anvil (chain id 11155111, the stand-in committee finalizes its blocks), the vault uses " + $w + " behind the emergency stop"),
@@ -127,6 +130,15 @@ if [ "$MODE" = deployer ]; then
   GV="$(jq -r '.groth16Verifier // empty' "$RUN/deploy.json")"; [ -n "$GV" ] || die "deploy.json names no Groth16 verifier"
   jq --arg g "$GV" '.groth16Verifier = $g' "$RUN/identity.json" > "$W/identity.json" && mv "$W/identity.json" "$RUN/identity.json"
   say "RISC Zero's Groth16 verifier $GV (DeployVault's first creation)"
+fi
+if [ "$MODE" = gasdrop ]; then
+  GV="$(jq -r '.groth16Verifier // empty' "$RUN/deploy.json")"; [ -n "$GV" ] || die "deploy.json names no Groth16 verifier"
+  MOCK_CODE="$(jq -r '.deployedBytecode.object // empty' "$REPO/vault/out/MockVerifiers.sol/MockRiscZeroVerifier.json" 2>/dev/null)"
+  [ -n "$MOCK_CODE" ] && [ "$MOCK_CODE" != 0x ] || die "no MockRiscZeroVerifier code in vault/out"
+  cast rpc anvil_setCode "$GV" "$MOCK_CODE" --rpc-url $RPC > /dev/null || die "anvil_setCode"
+  MOCK="$GV"
+  jq --arg g "$GV" '.groth16Verifier = $g' "$RUN/identity.json" > "$W/identity.json" && mv "$W/identity.json" "$RUN/identity.json"
+  say "RISC Zero's Groth16 verifier $GV deployed by DeployVault, its code replaced on anvil by MockRiscZeroVerifier's"
 fi
 
 # ---- 3. The user: seed, LEZ wallet password, Ethereum keystore --------------------------------------
