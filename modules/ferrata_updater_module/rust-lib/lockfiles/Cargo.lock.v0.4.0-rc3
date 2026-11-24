@@ -2210,6 +2210,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "ferrata-lez-msg-v2-wire"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "sha2 0.10.9",
+]
+
+[[package]]
+name = "ferrata-lez-msg-wire"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "ferrata-lez-rebate-wire"
 version = "0.1.0"
 dependencies = [
@@ -2739,6 +2755,8 @@ dependencies = [
  "ferrata-core",
  "ferrata-lez-bridge-wire",
  "ferrata-lez-holdings-wire",
+ "ferrata-lez-msg-v2-wire",
+ "ferrata-lez-msg-wire",
  "ferrata-lez-rebate-wire",
  "ferrata-lez-statements-wire",
  "ferrata-lez-wire",
