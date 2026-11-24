@@ -129,7 +129,7 @@ for rpc in $SEPOLIA_RPCS; do
       if [ "$FORK_AGE" -le "$FORK_MAX_AGE" ] && [ "$FORK_AGE" -ge -300 ]; then FORK_RPC="$rpc"; break 2; fi
       say "$rpc: its finalized block $FORK_BLOCK is $FORK_AGE s old by this machine's clock (bound $FORK_MAX_AGE s; attempt $attempt of 3)"
     else
-      say "$rpc: no finalized block (attempt $attempt of 3): $(tail -n 1 "$W/fork.err" | cut -c1-200)"
+      say "$rpc: no usable finalized block (attempt $attempt of 3; cast's last error: $(tail -n 1 "$W/fork.err" | cut -c1-200))"
     fi
   done
 done
