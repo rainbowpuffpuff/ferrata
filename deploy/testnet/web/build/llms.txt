@@ -2,7 +2,7 @@
 
 > A LEZ v0.4.0-rc3 network we run for Ferrata's bid for Logos RFP-021 and RFP-022, bridged to Sepolia; not Logos's LEZ testnet 0.4. Prototype, unaudited: its tokens have no value, and it may be reset.
 
-Reading needs no key and no account. Never give an agent a recovery phrase or a private key: nothing here asks for one.
+Reading needs no key and no account. Never give an agent a recovery phrase or a private key: no page or service here needs one sent to it.
 
 ## For agents
 
