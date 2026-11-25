@@ -21,6 +21,8 @@
   /* green, yellow, orange, red (the owner's), spread in lightness so they stay apart under colour-vision deficiency;
      each mark also carries its symbol: check, dash, hourglass, cross */
   --c-shown: #0f8a3c;
+  --net-bg: #0b7a35;
+  --net-ink: #ffffff;
   --c-part: #fcd34d;
   --c-waits: #f08a24;
   --c-notyet: #9f1239;
@@ -53,6 +55,8 @@
     --code-bg: #242422;
     --term-bg: #0a0a0a;
     --c-shown: #4ade80;
+    --net-bg: #4ade80;
+    --net-ink: #0b0b0b;
     --c-part: #fde047;
     --c-waits: #ef8a2b;
     --c-notyet: #dc2626;
@@ -495,6 +499,12 @@ dialog.sheet[open] { display: flex; }
 .top nav a.top-cta:hover { background: var(--accent); color: var(--plane); filter: brightness(1.08); }
 .top nav a.top-cta:focus-visible { outline: 2px solid var(--plane); outline-offset: -4px; }
 @media (max-width: 560px) { .top-cta-more { display: none; } }
+.top nav a.top-net { margin-right: .3rem; padding: .35rem .75rem; border-radius: 999px; background: var(--net-bg); color: var(--net-ink);
+  font-weight: 650; }
+.top nav a.top-net::before { content: ""; display: inline-block; width: .5em; height: .5em; margin-right: .4em; border-radius: 50%;
+  background: currentColor; vertical-align: .08em; }
+.top nav a.top-net:hover { background: var(--net-bg); color: var(--net-ink); filter: brightness(1.08); }
+.top nav a.top-net:focus-visible { outline: 2px solid var(--plane); outline-offset: -4px; }
 /* The testers' page has no script to scroll a focused link into view: under 900 px its five links wrap instead of
    scrolling, and its header stays at the top of the page rather than following it */
 @media (max-width: 900px) {
