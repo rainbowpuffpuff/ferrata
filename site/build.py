@@ -750,7 +750,7 @@ def render_index(site, model):
                  f'<nav aria-label="Sections"><ul><li><a class="top-cta" href="{TESTERS_DIR}/">Testers<span '
                  'class="top-cta-more">: start here</span></a></li>'
                  # The network's explorer, live, beside it (green: the network is running)
-                 '<li><a class="top-net" href="network" title="The test network, live: blocks, transactions, accounts and '
+                 '<li><a class="top-net" href="/network" title="The test network, live: blocks, transactions, accounts and '
                  'programs">Network</a></li>' +
                  "".join(f'<li><a href="#{k}">{h(v)}</a></li>' for k, v in nav) + "</ul></nav></div></header>")
     parts.append('<main id="main">')

@@ -46,7 +46,7 @@ import urllib.request
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 BUNDLE = ROOT / "deploy" / "testnet" / "web" / "build"
 REPO = "https://github.com/rainbowpuffpuff/ferrata"
-TESTNET_PATHS = {"/explorer/", "/wallet/", "/agents", "/agents/", "/status", "/rpc", "/AGENTS.md", "/faucet", "/android/"}
+TESTNET_PATHS = {"/explorer/", "/network", "/wallet/", "/agents", "/agents/", "/status", "/rpc", "/AGENTS.md", "/faucet", "/android/"}
 STATUSES = ("shown", "in part", "not yet", "waits on Logos")
 SKEY = {"shown": "shown", "in part": "part", "not yet": "notyet", "waits on Logos": "waits"}
 

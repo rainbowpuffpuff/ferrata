@@ -282,7 +282,7 @@ def main():
                 check(link.count() == 1 and link.is_visible() and link.get_attribute("href") == "testers/",
                       f"{width} px {scheme}: the build page's {where} shows no link to testers/")
             net = tp.locator(".top .top-net")
-            check(net.count() == 1 and net.is_visible() and net.get_attribute("href") == "network",
+            check(net.count() == 1 and net.is_visible() and net.get_attribute("href") == "/network",
                   f"{width} px {scheme}: the build page's header shows no link to the network")
             tp.locator(".top .top-cta").click()
             tp.wait_for_load_state("load")
