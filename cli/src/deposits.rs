@@ -19,8 +19,10 @@
 //!   while it is pending.
 //!
 //! Nothing here is needed to find a deposit: `ferrata scan` and `ferrata recover` find every deposit of the seed from the
-//! chain. The file is beside the user's other local state (`<LEZ wallet home>/ferrata-deposits.json`, or beside the
-//! keystore), mode 0600; `ferrata-deposits.lock` serialises the tool's processes on it.
+//! chain. The file is beside the keystore that signs the deposit (`<keystore's directory>/ferrata-deposits.json`, whatever
+//! `--lez-wallet` says), mode 0600; `ferrata-deposits.lock` serialises the tool's processes on it. So "never twice" holds
+//! for one depositor's runs on one machine: a run with a copy of the keystore elsewhere, or on another machine, has
+//! another journal (the vault's own `j` check still keeps two transactions for one `j` apart).
 
 use std::{
     fs,

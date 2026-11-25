@@ -406,10 +406,14 @@ async fn run(cli: Cli, out: &mut flow::Out) -> Result<(&'static str, serde_json:
                 send: send.send,
                 yes: send.yes,
                 confirmations: send.confirmations,
-                // The deposit journal beside the user's other local state: the LEZ wallet's home, else the keystore's
-                // directory.
-                journal: c.lez_wallet.clone().or_else(|| {
-                    send.keystore.as_deref().and_then(std::path::Path::parent).map(std::path::Path::to_path_buf)
+                // The deposit journal beside the keystore that signs the deposit, whatever --lez-wallet says: one
+                // depositor's runs on one machine find one journal (a deposit is sent only with a keystore).
+                journal: send.keystore.as_deref().and_then(std::path::Path::parent).map(|d| {
+                    if d.as_os_str().is_empty() {
+                        std::path::PathBuf::from(".")
+                    } else {
+                        d.to_path_buf()
+                    }
                 }),
             };
             let d = flow::deposit(&e, &seed, signer.as_ref(), &o, out).await?;

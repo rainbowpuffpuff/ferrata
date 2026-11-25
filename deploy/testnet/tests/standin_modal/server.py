@@ -7,7 +7,8 @@ Each spawned call runs CMD in a thread (a shell command; PROGRAM, INPUT and META
 arguments, NAME the request's name) and answers the last line of its standard output, a JSON object, as the call's
 result. The calls outlive the client that spawned them, as Modal's do. The control file C (one line, read at each
 spawn): `pass`; `die-next SECS`: the next call's prover dies SECS seconds in (its container gone: the call ends with an
-error and no result), then `pass`. Every call's start and end go to L (JSONL). Loopback only."""
+error and no result), then `pass`; `fail-next CODE`: the next call's prover exits CODE, answered as Modal's prove_bytes
+answers a failed prover (ok false, its exit code), then `pass`. Every call's start and end go to L (JSONL). Loopback only."""
 import argparse
 import base64
 import json
@@ -46,7 +47,7 @@ def main():
             line = []
         return line or ["pass"]
 
-    def run(cid, args, die_after):
+    def run(cid, args, die_after, fail_code=None):
         d = work / cid
         d.mkdir()
         (d / "program").write_bytes(base64.b64decode(args[0]))
@@ -55,6 +56,8 @@ def main():
         name = args[2].get("name", "")
         log(event="start", call_id=cid, name=name, die_after=die_after)
         env = dict(os.environ, PROGRAM=str(d / "program"), INPUT=str(d / "input"), META=str(d / "meta.json"), NAME=name)
+        if fail_code is not None:
+            env["STANDIN_FAIL"] = str(fail_code)
         p = subprocess.Popen(["bash", "-c", a.prove_cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, text=True)
         try:
             out, err = p.communicate(timeout=die_after)
@@ -65,8 +68,13 @@ def main():
             log(event="end", call_id=cid, name=name, ok=False, died=True)
             return
         lines = [x for x in out.splitlines() if x.strip().startswith("{")]
-        if p.returncode != 0 or not lines:
-            calls[cid] = {"error": f"the prover exited {p.returncode}: {err[-300:]}"}
+        if p.returncode != 0:
+            # As prove_bytes answers a prover that failed: a result, ok false, with the exit code (no exception).
+            calls[cid] = {"result": {"ok": False, "exit_code": p.returncode, "error": err[-300:]}}
+            log(event="end", call_id=cid, name=name, ok=False, exit=p.returncode)
+            return
+        if not lines:
+            calls[cid] = {"error": f"the prover printed no result: {err[-300:]}"}
             log(event="end", call_id=cid, name=name, ok=False, exit=p.returncode)
             return
         calls[cid] = {"result": json.loads(lines[-1])}
@@ -82,7 +90,10 @@ def main():
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
-            self.wfile.write(data)
+            try:
+                self.wfile.write(data)
+            except (BrokenPipeError, ConnectionResetError):
+                pass  # the client's connection was cut (a test's forwarder)
 
         def do_GET(self):
             u = urlparse(self.path)
@@ -109,13 +120,16 @@ def main():
             if urlparse(self.path).path != "/spawn":
                 return self.reply(404, {"error": "no such path"})
             ctl = control()
-            die_after = None
+            die_after = fail_code = None
             if ctl[0] == "die-next":
                 die_after = float(ctl[1]) if len(ctl) > 1 else 1.0
                 pathlib.Path(a.ctl).write_text("pass\n")
+            elif ctl[0] == "fail-next":
+                fail_code = int(ctl[1]) if len(ctl) > 1 else 137
+                pathlib.Path(a.ctl).write_text("pass\n")
             cid = "fc-" + uuid.uuid4().hex[:16]
             calls[cid] = {}
-            threading.Thread(target=run, args=(cid, body["args"], die_after), daemon=True).start()
+            threading.Thread(target=run, args=(cid, body["args"], die_after, fail_code), daemon=True).start()
             self.reply(200, {"call_id": cid})
 
     srv = ThreadingHTTPServer(("127.0.0.1", 0), H)

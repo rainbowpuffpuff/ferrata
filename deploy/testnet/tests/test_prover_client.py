@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""host/bin/ferrata-bridge-prover under faults (RFP-022 R.6): its client killed mid-proof and started again, the prover
-dying mid-proof, the prover's service down, a restart after the job was delivered, a request that cannot succeed. The
+"""host/bin/ferrata-bridge-prover under faults (RFP-022 R.6): its client killed mid-proof and started again, its connection
+to the prover cut mid-proof, the prover dying mid-proof or answering that it failed, the prover's service down, a restart after the job was delivered, a request that cannot succeed. The
 prover is the stand-in of standin_modal/ (a local server with Modal's call model: a spawned call outlives its client);
 the client is the deployed script, unchanged. Each case: the proofs the prover ran, the jobs the relayer's inbox got,
 the request's end. Standard library only; run from anywhere: python3 -I deploy/testnet/tests/test_prover_client.py"""
@@ -10,9 +10,11 @@ import os
 import pathlib
 import shutil
 import signal
+import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 
@@ -30,6 +32,63 @@ def wait_for(pred, secs, what):
             return v
         time.sleep(0.1)
     raise AssertionError(f"timed out after {secs} s waiting for {what}")
+
+
+class Fwd:
+    """A TCP forwarder in front of the stand-in service, cut (every connection closed) and started again on its port."""
+
+    def __init__(self, up):
+        self.up, self.port, self.socks, self.srv = up, 0, [], None
+
+    def start(self):
+        s = socket.socket()
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind(("127.0.0.1", self.port))
+        s.listen(64)
+        self.port, self.srv = s.getsockname()[1], s
+        threading.Thread(target=self.accept, args=(s,), daemon=True).start()
+
+    def accept(self, s):
+        while True:
+            try:
+                c, _ = s.accept()
+            except OSError:
+                return
+            try:
+                u = socket.create_connection(("127.0.0.1", self.up))
+            except OSError:
+                c.close()
+                continue
+            self.socks += [c, u]
+            for a, b in ((c, u), (u, c)):
+                threading.Thread(target=self.pipe, args=(a, b), daemon=True).start()
+
+    @staticmethod
+    def pipe(a, b):
+        try:
+            while True:
+                d = a.recv(65536)
+                if not d:
+                    break
+                b.sendall(d)
+        except OSError:
+            pass
+        for x in (a, b):
+            try:
+                x.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+
+    def cut(self):
+        for x in [self.srv] + self.socks:
+            if x is None:
+                continue
+            try:
+                x.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+            x.close()
+        self.socks = []
 
 
 class Rig:
@@ -149,6 +208,43 @@ class ProverClient(unittest.TestCase):
         self.assertTrue(d["ok"] and d["attempts"] == 2, d)
         self.assertTrue(any(x.get("event") == "retry" for x in r.lines()), "the failure logged as a retry")
         self.assertEqual(sorted(p.name for p in r.inbox.iterdir()), ["cp-2.json"])
+
+    def test_a_cut_connection_mid_proof_waits_for_the_same_call(self):
+        # The client's connection to the service cut for 4 s while the spawned call runs: it waits for the same call
+        # again (no attempt counted), instead of starting a second proof.
+        r = self.rig(delay=8)
+        r.start_server()
+        f = Fwd(r.port)
+        f.start()
+        self.addCleanup(f.cut)
+        r.start_client(f.port)
+        r.request("cp-5")
+        wait_for(lambda: any(p["event"] == "start" for p in r.proofs("cp-5")), 15, "the proof to start")
+        time.sleep(2)
+        f.cut()
+        time.sleep(4)
+        f.start()
+        d = wait_for(lambda: r.done("cp-5") or r.done("cp-5", "failed"), 60, "the request finished")
+        self.assertTrue(d["ok"] and d["attempts"] == 1, d)
+        self.assertEqual([p["event"] for p in r.proofs("cp-5")], ["start", "end"], "one proof, not two")
+        self.assertTrue(any(x.get("event") == "reconnect" for x in r.lines()), "the cut logged as a reconnect")
+        self.assertFalse(any(x.get("event") == "retry" for x in r.lines()), "no attempt counted")
+        self.assertEqual(sorted(p.name for p in r.inbox.iterdir()), ["cp-5.json"])
+
+    def test_a_failed_prover_answer_is_proven_again(self):
+        # The service answers a prover that failed (a crash, out of memory, its own limit) as Modal's prove_bytes does:
+        # ok false with its exit code. The client proves again, within its attempts.
+        r = self.rig(delay=1)
+        r.start_server()
+        r.ctl.write_text("fail-next 137\n")
+        r.start_client(r.port)
+        r.request("cp-6")
+        d = wait_for(lambda: r.done("cp-6") or r.done("cp-6", "failed"), 40, "the request finished")
+        ends = [p for p in r.proofs("cp-6") if p["event"] == "end"]
+        self.assertEqual([(e["ok"], e.get("exit")) for e in ends], [(False, 137), (True, None)], ends)
+        self.assertTrue(d["ok"] and d["attempts"] == 2, d)
+        self.assertTrue(any(x.get("event") == "retry" and "exit 137" in x.get("error", "") for x in r.lines()))
+        self.assertEqual(sorted(p.name for p in r.inbox.iterdir()), ["cp-6.json"])
 
     def test_service_down_keeps_the_request_until_it_is_back(self):
         r = self.rig()

@@ -18,10 +18,12 @@ the answer goes to `<requests>/done/<name>.json` (or `failed/`), the job to `<in
 
 Restarts and failures (RFP-022 R.6): the proof is started with `spawn` and its call id kept in `<requests>/calls/<name>.json`
 before the client waits for it, so a client killed mid-proof and started again waits for the same call (Modal keeps
-running it and keeps its result) instead of paying for a second proof. A proof that fails on the prover's side (its
-container gone, a time limit, the app unreachable, the endpoint down) keeps the request: the call id is dropped and the
-next poll starts it again, up to FERRATA_PROVE_ATTEMPTS (5) attempts; a request that cannot succeed (an unreadable request,
-a program that is not the pinned one, no journal, a proof of another journal) goes to `failed/` at once. The inbox job is
+running it and keeps its result) instead of paying for a second proof. The client losing its connection while a call
+is recorded keeps the call id: the next poll waits for the same call again, and no attempt is counted (a cut connection
+does not start a second proof). A proof that fails on the prover's side (its container gone, a time limit, the prover's
+process failing, which the service answers as ok false with its exit code) keeps the request: the call id is dropped and
+the next poll starts it again, up to FERRATA_PROVE_ATTEMPTS (5) attempts; a request that cannot succeed (an unreadable
+request, a program that is not the pinned one, no journal, a proof of another journal) goes to `failed/` at once. The inbox job is
 written once: the call record notes the delivery, and a restart after it only finishes the request.
 FERRATA_PROVER_PROGRAMS_JSON names a JSON file {kind: [file, image id, sha256, job kind]} that replaces the pinned
 programs (another deployment's, or a test's).
@@ -47,6 +49,11 @@ if os.environ.get("FERRATA_PROVER_PROGRAMS_JSON"):
     KINDS = {k: tuple(v) for k, v in json.loads(pathlib.Path(os.environ["FERRATA_PROVER_PROGRAMS_JSON"]).read_text()).items()}
 APP, FUNCTION = os.environ.get("FERRATA_PROVER_APP", "ferrata-prover"), "prove_bytes"
 ATTEMPTS = int(os.environ.get("FERRATA_PROVE_ATTEMPTS", "5"))
+
+
+class ProverFailed(Exception):
+    """The prover's process failed (prove_bytes answered ok false with a non-zero exit code: a crash, out of memory, its
+    own time limit): the call is over, so another attempt proves again."""
 
 
 class Permanent(Exception):
@@ -104,10 +111,15 @@ def prove(kind, input_path, journal, name, inbox=None, meta_path=None, calls=Non
            "prover": {k: r.get(k) for k in ("exit_code", "wall_s") if k in r}, "call_id": rec.get("call_id"),
            "attempts": rec.get("attempts", 1), "resumed": resumed}
     if out["ok"] and out["journal"] != hex0(journal):
-        out["ok"], out["error"] = False, "the proof's journal is not the one asked for"
+        # The prover answered with another journal's proof: trying again proves the same input again.
+        raise Permanent("the proof's journal is not the one asked for")
     if not out["ok"]:
-        # The prover answered, and not with this journal's proof: trying again proves the same input again.
-        raise Permanent(out.get("error") or f"the prover refused: {json.dumps(r.get('error') or r.get('exit_code'))[:300]}")
+        code = r.get("exit_code")
+        if isinstance(code, int) and code != 0:
+            # The prover's process failed (prove_bytes answers ok false with its exit code, a signal's negative):
+            # another attempt starts a new proof, bounded by the attempts.
+            raise ProverFailed(f"the prover failed: exit {code} {json.dumps(r.get('error'))[:300]}")
+        raise Permanent(f"the prover refused: {json.dumps(r.get('error') or code)[:300]}")
     if rec_path and not rec.get("result"):
         rec["result"] = {k: r.get(k) for k in ("ok", "journal_hex", "seal_hex", "exit_code", "wall_s") if k in r}
         write_atomic(rec_path, json.dumps(rec))
@@ -168,6 +180,13 @@ def main():
                 rec = json.loads(rec_path.read_text()) if rec_path.exists() else {}
                 permanent = isinstance(e, (Permanent, ValueError, KeyError, OSError)) and not _transient(e)
                 r = {"name": name, "ok": False, "error": repr(e)[:500], "attempts": rec.get("attempts", 0)}
+                if not permanent and rec.get("call_id") and _connectivity(e):
+                    # The client lost the prover's endpoint, not the proof: the spawned call keeps running and Modal
+                    # keeps its result, so the next poll waits for the same call; no attempt is counted.
+                    rec.setdefault("errors", []).append(r["error"][:200])
+                    write_atomic(rec_path, json.dumps(rec))
+                    print(json.dumps({"event": "reconnect", "name": name, "call_id": rec["call_id"], "error": r["error"][:200]}), flush=True)
+                    continue
                 if not permanent and rec.get("attempts", 0) < ATTEMPTS:
                     # The prover's side failed (or the client could not reach it): the request stays, the call id goes,
                     # and the next poll starts the proof again.
@@ -192,7 +211,19 @@ def _transient(e):
     """An error of the network or of the prover's side, not of the request: worth another attempt."""
     names = {c.__name__ for c in type(e).__mro__}
     return bool(names & {"ConnectionError", "TimeoutError", "RemoteError", "FunctionTimeoutError", "OutputExpiredError",
-                         "InputCancellation", "InternalFailure", "ExecutionError", "URLError"})
+                         "InputCancellation", "InternalFailure", "ExecutionError", "URLError", "ProverFailed",
+                         "GRPCError", "StreamTerminatedError", "ServiceError", "InternalError"})
+
+
+def _connectivity(e):
+    """The client's connection to the service failed, not the call (OSError and its ConnectionError, urllib's URLError,
+    grpclib's GRPCError and StreamTerminatedError, Modal's ConnectionError, ServiceError and InternalError): a recorded
+    call may still be running."""
+    names = {c.__name__ for c in type(e).__mro__}
+    calls_own = {"RemoteError", "FunctionTimeoutError", "OutputExpiredError", "InputCancellation", "InternalFailure",
+                 "ExecutionError", "ProverFailed", "Permanent"}
+    return not (names & calls_own) and bool(names & {"ConnectionError", "URLError", "GRPCError", "StreamTerminatedError",
+                                                       "ServiceError", "InternalError", "OSError"})
 
 
 if __name__ == "__main__":
