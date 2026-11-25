@@ -225,7 +225,8 @@ MAC; Qt 6's `qmltestrunner`, offscreen).
   shown, not sent; the admin view sends the bridge program's `SetCap` and `Freeze`.
 - One token (ETH) on the devnet; ERC-20 deposits need the token's approval step, which the view does not
   have yet.
-- Not in the published catalog yet: prepared for it (`modules/catalog/`, its release workflow; added with
-  `release-publish.sh --update`, [`../catalog/dry-run-update/`](../catalog/dry-run-update/README.md)), its package
-  built by the release action's steps for Linux x86-64 ([`../catalog/dry-run-plus/`](../catalog/dry-run-plus/));
+- In the published catalog since 25 November 2026 (`ferrata_bridge_ui` 0.1.0, added with
+  `release-publish.sh --update` and released by the action; [`../catalog/README.md`](../catalog/README.md)), and
+  installed from it by Basecamp 0.4.0-rc.2's own Package Manager
+  ([`../catalog/install-test-landclimber-2026-11-25/`](../catalog/install-test-landclimber-2026-11-25/README.md));
   Linux x86-64 only was tried.

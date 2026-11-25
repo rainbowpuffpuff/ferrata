@@ -386,8 +386,9 @@ tests = [
   { path = "lez/results/p4-minimum/README.md", kind = "record" },
   { path = "lez/results/p4-macos/README.md", kind = "record" },
   { path = "lez/harness/tests/wallet_padding.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/results/p4-laptop-owner/README.md", kind = "record" },
 ]
-note = "the private attestation proven at cloud containers held to the declared minimum (904.3 s at 8 CPUs), on an M1 Mac mini (857.4 s padded, EVIDENCE row 88) and on one L4; padded as the wallet pads them (wallet_padding.rs, row 38); not on a laptop; device_workload.rs (CI, lez-harness) holds the work those proofs measured: the programs' private transitions in the record's segments and padded sizes (user cycles pinned at this tree's values, -652 to +625 from the record's), the claim's and burn's transactions at the recorded sizes to the byte, the wallet's padded shape; the attestation's transaction is 32 bytes larger than recorded (231,246 and 255,334 against 231,214 and 255,302), and LEZ's circuit's session cannot be measured in dev mode, so the recorded times stand for a transaction 32 bytes smaller"
+note = "the private attestation proven at cloud containers held to the declared minimum (904.3 s at 8 CPUs), on an M1 Mac mini (857.4 s padded, EVIDENCE row 88) and on one L4; padded as the wallet pads them (wallet_padding.rs, row 38); on the owner's laptop, below the declared minimum (8 of its 16 threads), 4,596.7 s, settled (EVIDENCE row 264); hops inside the user's proof neither proven nor declared; device_workload.rs (CI, lez-harness) holds the work those proofs measured: the programs' private transitions in the record's segments and padded sizes (user cycles pinned at this tree's values, -652 to +625 from the record's), the claim's and burn's transactions at the recorded sizes to the byte, the wallet's padded shape; the attestation's transaction is 32 bytes larger than recorded (231,246 and 255,334 against 231,214 and 255,302), and LEZ's circuit's session cannot be measured in dev mode, so the recorded times stand for a transaction 32 bytes smaller"
 
 [[row]]
 id = "RFP-021 P.5"
@@ -906,8 +907,11 @@ tests = [
   { path = "modules/catalog/dry-run-publish/README.md", kind = "record" },
   { path = "modules/scripts/release-local.sh", kind = "test", ci = "box", run = "modules/scripts/release-local.sh OUT_DIR" },
   { path = "modules/scripts/catalog-install.sh", kind = "test", ci = "box", run = "modules/scripts/catalog-install.sh" },
+  { path = "releases/RELEASE-INTEGRITY.md", kind = "record" },
+  { path = "modules/catalog/install-test-landclimber-2026-11-24/README.md", kind = "record" },
+  { path = "modules/catalog/install-test-landclimber-2026-11-25/README.md", kind = "record" },
 ]
-note = "as RFP-021 S.9: the catalog laid out from the base and the modules installed from it (EVIDENCE rows 61, 98, 107); publishing is one owner step, tested against a stub gh in CI; nothing published"
+note = "as RFP-021 S.9: the catalog laid out from the base and the modules installed from it (EVIDENCE rows 61, 98, 107); publishing is one owner step, tested against a stub gh in CI; published by the owner at landclimber/ferrata-modules (24 November, the six core modules) and updated on 25 November (the mini-app and ferrata_bridge_module 0.1.1), all seven installed from there by a headless Logos Core with signatures required, the bridge module and the mini-app by Basecamp 0.4.0-rc.2's own Package Manager (EVIDENCE rows 253, 254, 262, 263; no CI job reads the live catalog)"
 
 [[row]]
 id = "RFP-022 R.1"
@@ -1098,8 +1102,9 @@ tests = [
   { path = "lez/results/p4-macos/README.md", kind = "record" },
   { path = "lez/harness/tests/wallet_padding.rs", kind = "test", ci = "lez-harness" },
   { path = "bridge/artifacts/logs/20261110T065453Z-prove-claim-claim.log", kind = "record" },
+  { path = "lez/results/p4-laptop-owner/README.md", kind = "record" },
 ]
-note = "the full private claim and burn proven at cloud containers held to the declared minimum (905.4 s / 756.3 s at 8 CPUs) and on the Mac minis (818.7 s / 716.5 s on an M1, 453.5 s / 396.1 s on an M4, EVIDENCE row 88); the release's succinct proof 46.0 s at 8 CPUs, 31.7 s on the M1; padded shape in wallet_padding.rs; the full claim and burn on a laptop: none yet; device_workload.rs (CI, lez-harness): the private claim and burn the device proves are the recorded transactions to the byte (bare and padded), their programs' transitions in the recorded segments and padded sizes"
+note = "the full private claim and burn proven at cloud containers held to the declared minimum (905.4 s / 756.3 s at 8 CPUs) and on the Mac minis (818.7 s / 716.5 s on an M1, 453.5 s / 396.1 s on an M4, EVIDENCE row 88); the release's succinct proof 46.0 s at 8 CPUs, 31.7 s on the M1; padded shape in wallet_padding.rs; on the owner's laptop, below the declared minimum (8 of its 16 threads), the claim 3,313.4 s and the burn 2,802.0 s, both settled, and the release's succinct proof 129.0 s, verified (EVIDENCE rows 264, 265); device_workload.rs (CI, lez-harness): the private claim and burn the device proves are the recorded transactions to the byte (bare and padded), their programs' transitions in the recorded segments and padded sizes"
 
 [[row]]
 id = "RFP-022 P.5"
@@ -1157,8 +1162,9 @@ tests = [
   { path = "modules/scripts/release-local.sh", kind = "test", ci = "box", run = "modules/scripts/release-local.sh OUT_DIR" },
   { path = "modules/catalog/.github/workflows/_release-module.yml", kind = "document" },
   { path = "modules/scripts/test-release-publish.sh", kind = "test", ci = "release-publish" },
+  { path = "releases/RELEASE-INTEGRITY.md", kind = "record" },
 ]
-note = "as RFP-021 S.10: the action's steps run locally (EVIDENCE row 61), the catalog's workflows pin the action; nothing published, the action not run on a release"
+note = "as RFP-021 S.10: the action's steps run locally (EVIDENCE row 61), the catalog's workflows pin the action; the action ran on the releases of landclimber/ferrata-modules (runs 45438763159, 45543214624 and 45543219299; EVIDENCE rows 253, 262); the publish step that triggers it is tested against a stub gh (CI job release-publish)"
 
 [[row]]
 id = "RFP-022 S.4"
