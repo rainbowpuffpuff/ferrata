@@ -1,16 +1,16 @@
 {
  "about": "Every file the Ferrata LEZ test network's host serves from the repository, with its SHA-256 and the commit it comes from. Check it with `python3 -I scripts/site-manifest.py verify` from a clone. A file whose commit is not public (\"public\": false) can be checked against this manifest but not yet against its source.",
  "site": "https://54-156-116-24.sslip.io",
- "made": "2026-11-25T04:28Z",
- "made_how": "the host's own file list (sha256sum of its web root) at 2026-11-25T04:28Z, after the site was deployed from public main f9623cfd (install-web.sh: the build page and the wallet's bridge.js and sw.js; the Caddyfile's gas-drop route)",
+ "made": "2026-11-25T06:14Z",
+ "made_how": "the host's own file list (sha256sum of its web root) at 2026-11-25T06:14Z, right after the build page was deployed from public main c8050c4e (install-web.sh)",
  "public_checked": {
-  "utc": "2026-11-25T04:29Z",
+  "utc": "2026-11-25T06:17Z",
   "refs": {
-   "origin": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "origin": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "origin/basecamp-desktop": "b6d9be6130ac58bb1d38de3dc7766332a2665e0b",
    "origin/ci-sequencer": "bd2af9b0ff982bc2329be6f5576ca95b0f0a829a",
    "origin/macos-fix": "01b045726085beb7baf042b7741f3d876e9cd8bc",
-   "origin/main": "f9623cfd90ae0af852d2dc7000e90821e8381f06"
+   "origin/main": "c8050c4edea6ef174a4d2d9777824173ec6692a1"
   }
  },
  "files": [
@@ -18,7 +18,7 @@
    "path": "/.well-known/assetlinks.json",
    "sha256": "51c402eacf84efed0222410c9e22bc339f3aa9f656439efe3c70adf06ed85dfa",
    "bytes": 359,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/android/published/assetlinks.json",
    "branch": "origin/main",
    "public": true
@@ -27,7 +27,7 @@
    "path": "/README.md",
    "sha256": "46ab28d9df6bfed924a4485e2395ea99a82ddbdcb9f72399b3711ed0dcf0d42f",
    "bytes": 6897,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/README.md",
    "branch": "origin/main",
    "public": true
@@ -36,7 +36,7 @@
    "path": "/accessibility/a11y.js",
    "sha256": "f98ccb5fec57eb9ae9070c644fc1cfb401d2d39e702584b7357eb053cfb234dd",
    "bytes": 2111,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/trust/accessibility/a11y.js",
    "branch": "origin/main",
    "public": true
@@ -45,7 +45,7 @@
    "path": "/accessibility/index.html",
    "sha256": "07e1edbb231de030be859bff96d10d61a906d778810c8594cfb5ea487690abf1",
    "bytes": 4538,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/trust/accessibility/index.html",
    "branch": "origin/main",
    "public": true
@@ -54,7 +54,7 @@
    "path": "/accessibility/results.json",
    "sha256": "c98782ede2f0b368017cf8e950a4516545329d5eb7a4b62b033f504bbc9f4771",
    "bytes": 10739,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/trust/accessibility/results.json",
    "branch": "origin/main",
    "public": true
@@ -63,7 +63,7 @@
    "path": "/agents/build_agents_md.py",
    "sha256": "c0dbd3a6d2e8398de25cdafa5ddb276528a7c8cf99038fca2d70fb32a48d5233",
    "bytes": 25450,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/agents/build_agents_md.py",
    "branch": "origin/main",
    "public": true
@@ -72,7 +72,7 @@
    "path": "/agents/examples.json",
    "sha256": "1ccebae7e2f2c9b934960bd0feb64b145f7148378c66a4763d4177d29a12a6e3",
    "bytes": 6778,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/agents/examples.json",
    "branch": "origin/main",
    "public": true
@@ -81,7 +81,7 @@
    "path": "/agents/ferrata_check.mjs",
    "sha256": "591ccea7b1c6425885e8e9f9d65eac8c0f46da3c6f0877de28b2f9b5260d6fc9",
    "bytes": 6213,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/agents/ferrata_check.mjs",
    "branch": "origin/main",
    "public": true
@@ -90,7 +90,7 @@
    "path": "/agents/ferrata_check.py",
    "sha256": "fb1212c95eafdf80009b90b0c7aa694028c23e2100c7a20b35b16bf409cf6faf",
    "bytes": 6877,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/agents/ferrata_check.py",
    "branch": "origin/main",
    "public": true
@@ -99,7 +99,7 @@
    "path": "/agents/index.html",
    "sha256": "578aa0744b70ddc9f74e2d377ba0f5d68e9534d4a4ec2b9dc1fe04a23456afb3",
    "bytes": 737,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/agents/index.html",
    "branch": "origin/main",
    "public": true
@@ -108,7 +108,7 @@
    "path": "/agents/sections/msg.md",
    "sha256": "bf91414d6c55ef83762b3c38487b18ae217216d747f24694355ae6a6c5f055fe",
    "bytes": 2946,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/agents/sections/msg.md",
    "branch": "origin/main",
    "public": true
@@ -117,7 +117,7 @@
    "path": "/agents/sections/names.md",
    "sha256": "a297edc4eb91b9681bdc62a867f6fa63de66e9568f480eeb12781eaf97f6376e",
    "bytes": 4465,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/agents/sections/names.md",
    "branch": "origin/main",
    "public": true
@@ -126,7 +126,7 @@
    "path": "/android/SHA256SUMS",
    "sha256": "fbd564fabb4830bfdaba492b5362a9eec1e3042ad2f3ff4bfcf2d6a1f1bc017f",
    "bytes": 91,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/android/published/SHA256SUMS",
    "branch": "origin/main",
    "public": true
@@ -135,7 +135,7 @@
    "path": "/android/android.css",
    "sha256": "8e2544102119541c6939adad353386bbf45542a42d3fcd9383fc6225cf2c8cdd",
    "bytes": 3223,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/android/site/android.css",
    "branch": "origin/main",
    "public": true
@@ -144,7 +144,7 @@
    "path": "/android/android.js",
    "sha256": "c6ee1c6d2bbbedf33fd15a658d48bb47c8dcd27f15b745c62b766e5a4ca1e4f0",
    "bytes": 8100,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/android/site/android.js",
    "branch": "origin/main",
    "public": true
@@ -153,7 +153,7 @@
    "path": "/android/apk.json",
    "sha256": "aba6e0f8ea4b8311601a930ca1b458c868fb4643e0bf5d0ab61b03df5df8d745",
    "bytes": 950,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/android/published/apk.json",
    "branch": "origin/main",
    "public": true
@@ -162,7 +162,7 @@
    "path": "/android/index.html",
    "sha256": "ab182b2dc571ca38caed0fb1d6f057417612cd10274ad9c85c791d6c0b8a9886",
    "bytes": 7957,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/android/site/index.html",
    "branch": "origin/main",
    "public": true
@@ -171,7 +171,7 @@
    "path": "/android/measure.json",
    "sha256": "ed58ed946b3328e8415892644ae568d214fea804c7cdba0a33ec94a71c0c4a02",
    "bytes": 2001,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/android/published/measure.json",
    "branch": "origin/main",
    "public": true
@@ -180,7 +180,7 @@
    "path": "/apps/apps.js",
    "sha256": "1935ca42dec59aa35200dbb8adad2ac2abb0219d25a86c62f431fd6cbd8ed548",
    "bytes": 6466,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/trust/apps/apps.js",
    "branch": "origin/main",
    "public": true
@@ -189,7 +189,7 @@
    "path": "/apps/index.html",
    "sha256": "050fdab5d5d67386e7fbe1989d66f078c881493418b2d60532dd2a1fb07c101f",
    "bytes": 21135,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/trust/apps/index.html",
    "branch": "origin/main",
    "public": true
@@ -198,7 +198,7 @@
    "path": "/apps/rebuild.json",
    "sha256": "77952c8f22ed009d5341fd775737935677e64944134f3b11a1de7e5d67bc0ad0",
    "bytes": 1061,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/trust/apps/rebuild.json",
    "branch": "origin/main",
    "public": true
@@ -207,7 +207,7 @@
    "path": "/apps/registry.json",
    "sha256": "7b5dba720555dbb18bcc60317b58a0ca1ee9bc5dffd9bde8b721d53b4b868277",
    "bytes": 7231,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/trust/apps/registry.json",
    "branch": "origin/main",
    "public": true
@@ -216,7 +216,7 @@
    "path": "/assets/activity.js",
    "sha256": "30f1c762affe967c1199a0cf7b91dd8325cded0a0b351a753bcfb31a0b1fcddb",
    "bytes": 7821,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/activity.js",
    "branch": "origin/main",
    "public": true
@@ -225,7 +225,7 @@
    "path": "/assets/agents.js",
    "sha256": "64bfcacfd83a14fca3a20731a4603b69f310add73865feef719a896c3202816c",
    "bytes": 1295,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/agents.js",
    "branch": "origin/main",
    "public": true
@@ -234,7 +234,7 @@
    "path": "/assets/attest.js",
    "sha256": "fb070a3ba43709fb360029da366ac31a75d5d7eda42762d51db4e5e3f2243f7e",
    "bytes": 11358,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/attest.js",
    "branch": "origin/main",
    "public": true
@@ -243,7 +243,7 @@
    "path": "/assets/borsh.js",
    "sha256": "d51ffa3ed5b3b509eeffffe749f0bdfe83da697b9f071c7c45bfe234db5c855c",
    "bytes": 2467,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/borsh.js",
    "branch": "origin/main",
    "public": true
@@ -252,7 +252,7 @@
    "path": "/assets/chart.js",
    "sha256": "3a557589e6cdd8528f615f0bd3a5ff17cb3c9dac18fc43af3cf351a85a77e6fa",
    "bytes": 5828,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/chart.js",
    "branch": "origin/main",
    "public": true
@@ -261,7 +261,7 @@
    "path": "/assets/eth.js",
    "sha256": "b58e3e6d0ae80a968b19a586c93ae01fbf9e08effe83ea4038b0444db8a88ce1",
    "bytes": 15034,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/eth.js",
    "branch": "origin/main",
    "public": true
@@ -270,7 +270,7 @@
    "path": "/assets/explorer.js",
    "sha256": "61024743af4e8d6229ca0f823706666a2761d7608ef4afcf4a2bdee372b94277",
    "bytes": 51931,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/explorer.js",
    "branch": "origin/main",
    "public": true
@@ -279,7 +279,7 @@
    "path": "/assets/facts.js",
    "sha256": "6db21e5296c14eac074cf982e35e1e2f30b900155eb6080ea376b39c17ddb7bb",
    "bytes": 4312,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/facts.js",
    "branch": "origin/main",
    "public": true
@@ -288,7 +288,7 @@
    "path": "/assets/features.js",
    "sha256": "44b6a5423c1bcde0a4b9c93c50d76e123fa2bd40034c0e7fec96d8fed0d7b1b4",
    "bytes": 10957,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/features.js",
    "branch": "origin/main",
    "public": true
@@ -297,7 +297,7 @@
    "path": "/assets/ferrata.js",
    "sha256": "90ecf25ca66a0cbdc5f02ef2e14e2583914bd188cb275c40228ef9731459b1c3",
    "bytes": 6494,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/ferrata.js",
    "branch": "origin/main",
    "public": true
@@ -306,7 +306,7 @@
    "path": "/assets/idl.js",
    "sha256": "baf86f89aa8e0b8125ef44bae73289814bcfb9122bde2d903a21cdcc0c642254",
    "bytes": 5682,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/idl.js",
    "branch": "origin/main",
    "public": true
@@ -315,7 +315,7 @@
    "path": "/assets/landing.js",
    "sha256": "3935b29174f13e14fbf1d544cab86702e56ae24d9eddc2a14b4756aa2990cc83",
    "bytes": 5779,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/landing.js",
    "branch": "origin/main",
    "public": true
@@ -324,7 +324,7 @@
    "path": "/assets/lez.js",
    "sha256": "a2016d71a54e598b488252ef15504707746f3efb3448a63b841a2b1ec59994c8",
    "bytes": 14287,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/lez.js",
    "branch": "origin/main",
    "public": true
@@ -333,7 +333,7 @@
    "path": "/assets/logo.svg",
    "sha256": "124478c505a8e52a315d61a9511df82c2e114c2dbf4d3f6c87d7067e7b82bc2a",
    "bytes": 415,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/assets/logo.svg",
    "branch": "origin/main",
    "public": true
@@ -342,7 +342,7 @@
    "path": "/assets/md.js",
    "sha256": "bd27746ca54a0a3502f7457b3f8d6dd553d3035c349cf8cb8d76c8d814af8aeb",
    "bytes": 3798,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/md.js",
    "branch": "origin/main",
    "public": true
@@ -351,7 +351,7 @@
    "path": "/assets/names.js",
    "sha256": "a9ecae7497d8e95d05f4b01bcb52b6a8a6df97cad6f6218b84c7e77c6552ffb9",
    "bytes": 4465,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/names.js",
    "branch": "origin/main",
    "public": true
@@ -360,7 +360,7 @@
    "path": "/assets/nojs.css",
    "sha256": "c0cbca618223aa035bb7b812f3ff5b5c3169843221f835ea0fe24dd45ee180f2",
    "bytes": 167,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/build/assets/nojs.css",
    "branch": "origin/main",
    "public": true
@@ -369,7 +369,7 @@
    "path": "/assets/programs.js",
    "sha256": "1a412c72a0f88b1778eab869ccc06ad8475b0e4bf6c9568faea76dc6292deb9c",
    "bytes": 4420,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/programs.js",
    "branch": "origin/main",
    "public": true
@@ -378,7 +378,7 @@
    "path": "/assets/registry.js",
    "sha256": "d41c4f5f2c683342740485669d533f3c1f00f3d8b03b79e292ef0d5b28a5873b",
    "bytes": 10072,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/registry.js",
    "branch": "origin/main",
    "public": true
@@ -387,7 +387,7 @@
    "path": "/assets/rpc.js",
    "sha256": "da7f1cdda48f6ea0de4ba9f0b24df12a13c5c94b5b940e0404654a3110385378",
    "bytes": 6631,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/rpc.js",
    "branch": "origin/main",
    "public": true
@@ -396,16 +396,16 @@
    "path": "/assets/sha256.js",
    "sha256": "63825a7e3ed0517929bb22ded52df519d3682fe712cde324adaddf0efc83041e",
    "bytes": 3039,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/sha256.js",
    "branch": "origin/main",
    "public": true
   },
   {
    "path": "/assets/site.css",
-   "sha256": "7928b1c7b3a5857751008b15f13850fc0eb73ffb0fb9f464d4727ac09a2d85f7",
-   "bytes": 35800,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "sha256": "1eced470ee9853704e7cd2973f15eda43b92bb19679949c586b3308589149442",
+   "bytes": 35707,
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/build/assets/site.css",
    "branch": "origin/main",
    "public": true
@@ -414,7 +414,7 @@
    "path": "/assets/site.js",
    "sha256": "ff0d3f230175409beda9f067c947dd3807a7e09f21a4738d8aef42c664dcdf72",
    "bytes": 29910,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/build/assets/site.js",
    "branch": "origin/main",
    "public": true
@@ -423,7 +423,7 @@
    "path": "/assets/status.js",
    "sha256": "d58f70682786c78e7bc678ecdea7d8fe9c4f319c83c37e83a2209c0e92c516fe",
    "bytes": 15496,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/status.js",
    "branch": "origin/main",
    "public": true
@@ -432,7 +432,7 @@
    "path": "/assets/style.css",
    "sha256": "05a2c6335e97656c1756e94a580bb8060518a759294a6227d872c4dcf83b3189",
    "bytes": 10628,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/style.css",
    "branch": "origin/main",
    "public": true
@@ -441,7 +441,7 @@
    "path": "/assets/ui.js",
    "sha256": "8fa65773fbf39632a1ce03774e168d208db1e9c173700e1a400abe751d241553",
    "bytes": 12757,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/ui.js",
    "branch": "origin/main",
    "public": true
@@ -450,7 +450,7 @@
    "path": "/assets/util.js",
    "sha256": "78a8a500842899d619977c1bcb25b50193a8baf24446bf8e1f142250bc0aa233",
    "bytes": 5767,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/assets/util.js",
    "branch": "origin/main",
    "public": true
@@ -459,7 +459,7 @@
    "path": "/basecamp/assets/basecamp.css",
    "sha256": "9f957df9fc9cf2520a6398bd7450fcccf7e9c6afc7d45dc10ed2868fdf805a47",
    "bytes": 9127,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/assets/basecamp.css",
    "branch": "origin/main",
    "public": true
@@ -468,7 +468,7 @@
    "path": "/basecamp/assets/basecamp.js",
    "sha256": "8bc85f1c22748e6bd657ab4eeb353251ecc0a3e75e814598e6f142fb6cc96384",
    "bytes": 4722,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/assets/basecamp.js",
    "branch": "origin/main",
    "public": true
@@ -477,7 +477,7 @@
    "path": "/basecamp/assets/logo.svg",
    "sha256": "124478c505a8e52a315d61a9511df82c2e114c2dbf4d3f6c87d7067e7b82bc2a",
    "bytes": 415,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/assets/logo.svg",
    "branch": "origin/main",
    "public": true
@@ -486,7 +486,7 @@
    "path": "/basecamp/dl/SHA256SUMS",
    "sha256": "699acfa61a75e5c6a539bce1fe607343240997de26224c861790543f52772a0e",
    "bytes": 1437,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/SHA256SUMS",
    "branch": "origin/main",
    "public": true
@@ -495,7 +495,7 @@
    "path": "/basecamp/dl/SHA256SUMS.minisig",
    "sha256": "0cfd5185f5a9f7842cde29d41736ea46061ec92230c67ba5f83898ee7ae4b942",
    "bytes": 297,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/SHA256SUMS.minisig",
    "branch": "origin/main",
    "public": true
@@ -504,7 +504,7 @@
    "path": "/basecamp/dl/SHA256SUMS.sig",
    "sha256": "963ae1684ab83cd7f6f7955900f77893bbd46a1bfbce24cb4a319ca9ddbc9887",
    "bytes": 294,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/SHA256SUMS.sig",
    "branch": "origin/main",
    "public": true
@@ -513,7 +513,7 @@
    "path": "/basecamp/dl/darwin-arm64/ferrata_attest_module-0.1.0.lgx.minisig",
    "sha256": "dbc30d6597e5c49b64b166c99f45fc7f72a835ceb7b6cccd2e114f4b61b79c65",
    "bytes": 365,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/darwin-arm64/ferrata_attest_module-0.1.0.lgx.minisig",
    "branch": "origin/main",
    "public": true
@@ -522,7 +522,7 @@
    "path": "/basecamp/dl/darwin-arm64/ferrata_attest_module-0.1.0.lgx.sig",
    "sha256": "cb2eb7342928ee836601ea5c1bc5975e285e5e8022a5236881ca6cfc81f2fe6b",
    "bytes": 294,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/darwin-arm64/ferrata_attest_module-0.1.0.lgx.sig",
    "branch": "origin/main",
    "public": true
@@ -531,7 +531,7 @@
    "path": "/basecamp/dl/darwin-arm64/ferrata_attestor_module-0.1.0.lgx.minisig",
    "sha256": "64b9a058bf860a4a63a661c7330b3ec8fd784e81e30d4823582cdd28bd1715cc",
    "bytes": 367,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/darwin-arm64/ferrata_attestor_module-0.1.0.lgx.minisig",
    "branch": "origin/main",
    "public": true
@@ -540,7 +540,7 @@
    "path": "/basecamp/dl/darwin-arm64/ferrata_attestor_module-0.1.0.lgx.sig",
    "sha256": "68dc4e90b41560d4757f3ec0e572b5d18d74e4b0f60ee67a1daf89217847a833",
    "bytes": 294,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/darwin-arm64/ferrata_attestor_module-0.1.0.lgx.sig",
    "branch": "origin/main",
    "public": true
@@ -549,7 +549,7 @@
    "path": "/basecamp/dl/darwin-arm64/ferrata_bridge_module-0.1.0.lgx.minisig",
    "sha256": "9287897b78eb19ab680a83e6dcbc0285e29afcd67f3e1163fa91035c7b14920d",
    "bytes": 365,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/darwin-arm64/ferrata_bridge_module-0.1.0.lgx.minisig",
    "branch": "origin/main",
    "public": true
@@ -558,7 +558,7 @@
    "path": "/basecamp/dl/darwin-arm64/ferrata_bridge_module-0.1.0.lgx.sig",
    "sha256": "09fb45dbda7fefaf28d9305d8adb35e175ab2d04caa6c5f5ca505a31404e8863",
    "bytes": 294,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/darwin-arm64/ferrata_bridge_module-0.1.0.lgx.sig",
    "branch": "origin/main",
    "public": true
@@ -567,7 +567,7 @@
    "path": "/basecamp/dl/darwin-arm64/ferrata_bridge_ui-0.1.0.lgx.minisig",
    "sha256": "0895252f87b9accda04b247dd4658a29c9f50b5495e164e1cda3afe9ec4c1cc6",
    "bytes": 361,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/darwin-arm64/ferrata_bridge_ui-0.1.0.lgx.minisig",
    "branch": "origin/main",
    "public": true
@@ -576,7 +576,7 @@
    "path": "/basecamp/dl/darwin-arm64/ferrata_bridge_ui-0.1.0.lgx.sig",
    "sha256": "8432f53a8df314811e44b39370789a08e5b94aef9b8b7c39cea698fd0cda4595",
    "bytes": 294,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/darwin-arm64/ferrata_bridge_ui-0.1.0.lgx.sig",
    "branch": "origin/main",
    "public": true
@@ -585,7 +585,7 @@
    "path": "/basecamp/dl/darwin-arm64/ferrata_monitor_module-0.1.0.lgx.minisig",
    "sha256": "084d4705eb81693a2517113db4608b601be45139212c95d021c6532b322b9798",
    "bytes": 366,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/darwin-arm64/ferrata_monitor_module-0.1.0.lgx.minisig",
    "branch": "origin/main",
    "public": true
@@ -594,7 +594,7 @@
    "path": "/basecamp/dl/darwin-arm64/ferrata_monitor_module-0.1.0.lgx.sig",
    "sha256": "8c7b5cf6ad57542327bed9818ea371f6760742f65159ef514d1bd04413e5ec1b",
    "bytes": 294,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/darwin-arm64/ferrata_monitor_module-0.1.0.lgx.sig",
    "branch": "origin/main",
    "public": true
@@ -603,7 +603,7 @@
    "path": "/basecamp/dl/darwin-arm64/ferrata_relayer_module-0.1.0.lgx.minisig",
    "sha256": "5b0ef8ef500a18243ac399c2249aebd6af4d6e9a3e5ddf1b206740d2e41baf1f",
    "bytes": 366,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/darwin-arm64/ferrata_relayer_module-0.1.0.lgx.minisig",
    "branch": "origin/main",
    "public": true
@@ -612,7 +612,7 @@
    "path": "/basecamp/dl/darwin-arm64/ferrata_relayer_module-0.1.0.lgx.sig",
    "sha256": "cb853324c1618c597aae0946306c80e13eb68bdee0313491d8d2630b9555d82f",
    "bytes": 294,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/darwin-arm64/ferrata_relayer_module-0.1.0.lgx.sig",
    "branch": "origin/main",
    "public": true
@@ -621,7 +621,7 @@
    "path": "/basecamp/dl/keys/allowed_signers",
    "sha256": "c9bd197380ae61d7c53ed9c772f2893cbba8388595c10877545747ede49eb9f4",
    "bytes": 115,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/keys/allowed_signers",
    "branch": "origin/main",
    "public": true
@@ -630,7 +630,7 @@
    "path": "/basecamp/dl/keys/ferrata-release.did",
    "sha256": "4007f3a98e2d60a0f3c7138d1e27cb9d662cdbff49507eacc4fd9009fd28211d",
    "bytes": 115,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/keys/ferrata-release.did",
    "branch": "origin/main",
    "public": true
@@ -639,7 +639,7 @@
    "path": "/basecamp/dl/keys/ferrata-release.pub",
    "sha256": "c4a6ec1f9a66990b66a7562016ab67ae443360b2244b5dda64aafa43b3794226",
    "bytes": 97,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/keys/ferrata-release.pub",
    "branch": "origin/main",
    "public": true
@@ -648,7 +648,7 @@
    "path": "/basecamp/dl/keys/fingerprint.txt",
    "sha256": "603e0ee2b425b4a0d9b8b806b331af32ceba964dfb1471a5ee9f0ebf38426c72",
    "bytes": 81,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/keys/fingerprint.txt",
    "branch": "origin/main",
    "public": true
@@ -657,7 +657,7 @@
    "path": "/basecamp/dl/keys/minisign.pub",
    "sha256": "0ecc5151260633549e05155fa380a3c6317257ef846c325d9789da371b536c52",
    "bytes": 113,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/keys/minisign.pub",
    "branch": "origin/main",
    "public": true
@@ -666,7 +666,7 @@
    "path": "/basecamp/dl/linux-amd64/ferrata_attest_module-0.1.0.lgx.minisig",
    "sha256": "dc72267806b1a1f1a4bf1cfecd45f29420841aada221e6af9d9b236a167d432d",
    "bytes": 365,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/linux-amd64/ferrata_attest_module-0.1.0.lgx.minisig",
    "branch": "origin/main",
    "public": true
@@ -675,7 +675,7 @@
    "path": "/basecamp/dl/linux-amd64/ferrata_attest_module-0.1.0.lgx.sig",
    "sha256": "904f03dd78074a0bea0523c903063ef1f18bca0b483a1ce8b6c0df1639d5bd0f",
    "bytes": 294,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/linux-amd64/ferrata_attest_module-0.1.0.lgx.sig",
    "branch": "origin/main",
    "public": true
@@ -684,7 +684,7 @@
    "path": "/basecamp/dl/linux-amd64/ferrata_attestor_module-0.1.0.lgx.minisig",
    "sha256": "17e6d35cc1e7febcf9a2a53afdd33cebf7c000e867c6092d897cb1f89ceda0c7",
    "bytes": 367,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/linux-amd64/ferrata_attestor_module-0.1.0.lgx.minisig",
    "branch": "origin/main",
    "public": true
@@ -693,7 +693,7 @@
    "path": "/basecamp/dl/linux-amd64/ferrata_attestor_module-0.1.0.lgx.sig",
    "sha256": "90c409e682179fbfa2cc6ee141724710bad04d061597867154762104440a16af",
    "bytes": 294,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/linux-amd64/ferrata_attestor_module-0.1.0.lgx.sig",
    "branch": "origin/main",
    "public": true
@@ -702,7 +702,7 @@
    "path": "/basecamp/dl/linux-amd64/ferrata_bridge_module-0.1.0.lgx.minisig",
    "sha256": "3028a351f8e45023ea9c4005b8b02928e1c905264e238e7d7790008f34b6d946",
    "bytes": 365,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/linux-amd64/ferrata_bridge_module-0.1.0.lgx.minisig",
    "branch": "origin/main",
    "public": true
@@ -711,7 +711,7 @@
    "path": "/basecamp/dl/linux-amd64/ferrata_bridge_module-0.1.0.lgx.sig",
    "sha256": "041da11e5034339c4bba135a31c96defff330745f63e2d2d720d66f3b1406515",
    "bytes": 294,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/linux-amd64/ferrata_bridge_module-0.1.0.lgx.sig",
    "branch": "origin/main",
    "public": true
@@ -720,7 +720,7 @@
    "path": "/basecamp/dl/linux-amd64/ferrata_bridge_ui-0.1.0.lgx.minisig",
    "sha256": "b68a6b3405e37fc8f3eaa7272d8d696f01b86244675a6d1a47c812b49d2432cf",
    "bytes": 361,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/linux-amd64/ferrata_bridge_ui-0.1.0.lgx.minisig",
    "branch": "origin/main",
    "public": true
@@ -729,7 +729,7 @@
    "path": "/basecamp/dl/linux-amd64/ferrata_bridge_ui-0.1.0.lgx.sig",
    "sha256": "c3542f6916789ddf87faf044d2a61da416521da5658c59172d2c60b7a1388999",
    "bytes": 294,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/linux-amd64/ferrata_bridge_ui-0.1.0.lgx.sig",
    "branch": "origin/main",
    "public": true
@@ -738,7 +738,7 @@
    "path": "/basecamp/dl/linux-amd64/ferrata_monitor_module-0.1.0.lgx.minisig",
    "sha256": "0dd39b2f023f4804adfd81c3466f2e6813026d2d0309691011a090ed219e8a1c",
    "bytes": 366,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/linux-amd64/ferrata_monitor_module-0.1.0.lgx.minisig",
    "branch": "origin/main",
    "public": true
@@ -747,7 +747,7 @@
    "path": "/basecamp/dl/linux-amd64/ferrata_monitor_module-0.1.0.lgx.sig",
    "sha256": "fa44a73139bdc0112cd527572891bcf61912e8c2c37e039a661ef8d60ce79e95",
    "bytes": 294,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/linux-amd64/ferrata_monitor_module-0.1.0.lgx.sig",
    "branch": "origin/main",
    "public": true
@@ -756,7 +756,7 @@
    "path": "/basecamp/dl/linux-amd64/ferrata_relayer_module-0.1.0.lgx.minisig",
    "sha256": "3314590763032a2cf7828dec8e26a43b5f6d2efdac8f342c31ea14b320315c2e",
    "bytes": 366,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/linux-amd64/ferrata_relayer_module-0.1.0.lgx.minisig",
    "branch": "origin/main",
    "public": true
@@ -765,7 +765,7 @@
    "path": "/basecamp/dl/linux-amd64/ferrata_relayer_module-0.1.0.lgx.sig",
    "sha256": "c8e78ec27d744c384a5557e83c4f6d4930a5f4c2098a8bed5d16a296dcf8769d",
    "bytes": 294,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/linux-amd64/ferrata_relayer_module-0.1.0.lgx.sig",
    "branch": "origin/main",
    "public": true
@@ -774,7 +774,7 @@
    "path": "/basecamp/dl/linux-amd64/ferrata_updater_module-0.1.0.lgx.minisig",
    "sha256": "0c6ccca827ddd6d1a62c03939fd26fe3748de512dac05acdfdb40f11b7985b48",
    "bytes": 366,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/linux-amd64/ferrata_updater_module-0.1.0.lgx.minisig",
    "branch": "origin/main",
    "public": true
@@ -783,7 +783,7 @@
    "path": "/basecamp/dl/linux-amd64/ferrata_updater_module-0.1.0.lgx.sig",
    "sha256": "7ad1be40908f32f4beb09811a2f72af6ee875376206ba9800d7d838f303b8ff3",
    "bytes": 294,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/linux-amd64/ferrata_updater_module-0.1.0.lgx.sig",
    "branch": "origin/main",
    "public": true
@@ -792,7 +792,7 @@
    "path": "/basecamp/dl/notices/NOTICES.md",
    "sha256": "e96eebcc8ac4ab45b056dff4c5ff8ff0513d44d53587648f0519619cb2547ad5",
    "bytes": 11311,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/notices/NOTICES.md",
    "branch": "origin/main",
    "public": true
@@ -801,7 +801,7 @@
    "path": "/basecamp/dl/notices/crates.md",
    "sha256": "44d56576cb85490e938bfb74f5ef6393d32b404a0581ba640e89b3893ac3a00e",
    "bytes": 1051641,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/notices/crates.md",
    "branch": "origin/main",
    "public": true
@@ -810,7 +810,7 @@
    "path": "/basecamp/dl/notices/licenses/Apache-2.0.txt",
    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
    "bytes": 11358,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/notices/licenses/Apache-2.0.txt",
    "branch": "origin/main",
    "public": true
@@ -819,7 +819,7 @@
    "path": "/basecamp/dl/notices/licenses/BSD-3-Clause.txt",
    "sha256": "f3276e06d19f797dea745e00b44815e1090c28337adfa0f451351565a72a655b",
    "bytes": 1591,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/notices/licenses/BSD-3-Clause.txt",
    "branch": "origin/main",
    "public": true
@@ -828,7 +828,7 @@
    "path": "/basecamp/dl/notices/licenses/BSL-1.0-boost-1.87.0.txt",
    "sha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566",
    "bytes": 1338,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/notices/licenses/BSL-1.0-boost-1.87.0.txt",
    "branch": "origin/main",
    "public": true
@@ -837,7 +837,7 @@
    "path": "/basecamp/dl/notices/licenses/CDLA-Permissive-2.0.txt",
    "sha256": "e271993808fec50ab29350b39539cdec611a9103f827e0aa26d61da70e2d33f8",
    "bytes": 2371,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/notices/licenses/CDLA-Permissive-2.0.txt",
    "branch": "origin/main",
    "public": true
@@ -846,7 +846,7 @@
    "path": "/basecamp/dl/notices/licenses/GPL-2.0.txt",
    "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643",
    "bytes": 18092,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/notices/licenses/GPL-2.0.txt",
    "branch": "origin/main",
    "public": true
@@ -855,7 +855,7 @@
    "path": "/basecamp/dl/notices/licenses/GPL-3.0.txt",
    "sha256": "e6037104443f9a7829b2aa7c5370d0789a7bda3ca65a0b904cdc0c2e285d9195",
    "bytes": 35150,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/notices/licenses/GPL-3.0.txt",
    "branch": "origin/main",
    "public": true
@@ -864,7 +864,7 @@
    "path": "/basecamp/dl/notices/licenses/LGPL-3.0.txt",
    "sha256": "a853c2ffec17057872340eee242ae4d96cbf2b520ae27d903e1b2fef1a5f9d1c",
    "bytes": 7639,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/notices/licenses/LGPL-3.0.txt",
    "branch": "origin/main",
    "public": true
@@ -873,7 +873,7 @@
    "path": "/basecamp/dl/notices/licenses/MIT-logos-blockchain-circuits.txt",
    "sha256": "d106f5269af8b37730b6d713aefea2f76c0023eebd32c1364e99eb3c08f635c3",
    "bytes": 1076,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/notices/licenses/MIT-logos-blockchain-circuits.txt",
    "branch": "origin/main",
    "public": true
@@ -882,7 +882,7 @@
    "path": "/basecamp/dl/notices/licenses/MIT-nlohmann-json-3.10.5.txt",
    "sha256": "86b998c792894ccb911a1cb7994f7a9652894e7a094c0b5e45be2f553f45cf14",
    "bytes": 1076,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/notices/licenses/MIT-nlohmann-json-3.10.5.txt",
    "branch": "origin/main",
    "public": true
@@ -891,7 +891,7 @@
    "path": "/basecamp/dl/notices/licenses/MIT-nlohmann-json.txt",
    "sha256": "50be9457e5c9faaba5e60d9c73f8eabe9e0737a2d9c3e58357d856661862c18e",
    "bytes": 1076,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/notices/licenses/MIT-nlohmann-json.txt",
    "branch": "origin/main",
    "public": true
@@ -900,7 +900,7 @@
    "path": "/basecamp/dl/notices/licenses/MIT.txt",
    "sha256": "8fe284c66d06c989833a97019da5eb81eafcbf586f9677e57935f4edd0f155ce",
    "bytes": 1148,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/notices/licenses/MIT.txt",
    "branch": "origin/main",
    "public": true
@@ -909,7 +909,7 @@
    "path": "/basecamp/dl/notices/licenses/Unicode-3.0.txt",
    "sha256": "f7db81051789b729fea528a63ec4c938fdcb93d9d61d97dc8cc2e9df6d47f2a1",
    "bytes": 1995,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/notices/licenses/Unicode-3.0.txt",
    "branch": "origin/main",
    "public": true
@@ -918,7 +918,7 @@
    "path": "/basecamp/dl/notices/licenses/pcsc-lite-2.3.0-COPYING.txt",
    "sha256": "40d4358bb8dc8d30f5365ae6d999b6f820bbc051b292912482f2e4d0ebd837e1",
    "bytes": 4620,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/notices/licenses/pcsc-lite-2.3.0-COPYING.txt",
    "branch": "origin/main",
    "public": true
@@ -927,7 +927,7 @@
    "path": "/basecamp/dl/notices/sources/SHA256SUMS",
    "sha256": "c38f46f9517b311cefb4905530f8fe1b04bcb526f47bbb22c41e8c5684a3c981",
    "bytes": 166,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/dl/notices/sources/SHA256SUMS",
    "branch": "origin/main",
    "public": true
@@ -936,7 +936,7 @@
    "path": "/basecamp/index.html",
    "sha256": "5cc5439c2a282ba467a63cac4f8af92192f6fcb84750f7d884295b4dd6016c4c",
    "bytes": 38722,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/index.html",
    "branch": "origin/main",
    "public": true
@@ -945,7 +945,7 @@
    "path": "/basecamp/release.json",
    "sha256": "c81e585c89d71bead34253c6274968e19c889811867be878be47b9f71ff5952d",
    "bytes": 12309,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/release.json",
    "branch": "origin/main",
    "public": true
@@ -954,7 +954,7 @@
    "path": "/basecamp/tests/install-test.json",
    "sha256": "f42af2b27c3fca7acc62abebf935e3731e916050f9b6e203f637ec768859f9d5",
    "bytes": 4069,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test.json",
    "branch": "origin/main",
    "public": true
@@ -963,7 +963,7 @@
    "path": "/basecamp/tests/install-test/live-account.json",
    "sha256": "8654f735ab61608cbd00fda4d5bf1f0e7055e7ee21ab35776b3ed7482dcc4833",
    "bytes": 1915,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/live-account.json",
    "branch": "origin/main",
    "public": true
@@ -972,7 +972,7 @@
    "path": "/basecamp/tests/install-test/live-programs.json",
    "sha256": "701102ee0f3616be6ee29e769d854ba489e0c721298235f4eb04853d172afda8",
    "bytes": 6182,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/live-programs.json",
    "branch": "origin/main",
    "public": true
@@ -981,7 +981,7 @@
    "path": "/basecamp/tests/install-test/live-read-utc.txt",
    "sha256": "9f715331685c292444086d52ed2a5be07f5bdcee23abdbfe8fa540c17201d457",
    "bytes": 21,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/live-read-utc.txt",
    "branch": "origin/main",
    "public": true
@@ -990,7 +990,7 @@
    "path": "/basecamp/tests/install-test/live-status.json",
    "sha256": "55b5a19ed55f7575904fa2c95608ffd4265a06d47605b45d7aa43a5584446bbb",
    "bytes": 9916,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/live-status.json",
    "branch": "origin/main",
    "public": true
@@ -999,7 +999,7 @@
    "path": "/basecamp/tests/install-test/live-wallet-config.json",
    "sha256": "4f39bcc5f87cf42abf66e843b46db3b57761bd33fcb63bf456a8e42bdfc3fbe8",
    "bytes": 1080,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/live-wallet-config.json",
    "branch": "origin/main",
    "public": true
@@ -1008,7 +1008,7 @@
    "path": "/basecamp/tests/install-test/node.yaml",
    "sha256": "adf610558387ad7cec76bc5cc9cee8785595fe295c63ec9ec892a9f20e372b81",
    "bytes": 26,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/node.yaml",
    "branch": "origin/main",
    "public": true
@@ -1017,7 +1017,7 @@
    "path": "/basecamp/tests/install-test/out/config-set.txt",
    "sha256": "248c23f5cfd678e6ca0a19595d24fecc6c7a246f9d34ffdbd843eb995d165604",
    "bytes": 57,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/config-set.txt",
    "branch": "origin/main",
    "public": true
@@ -1026,7 +1026,7 @@
    "path": "/basecamp/tests/install-test/out/config-show.txt",
    "sha256": "bdb7d08e067a74abf650d2585b0ed5d72a1d08fa714efc1d517ce8256f78b57c",
    "bytes": 109,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/config-show.txt",
    "branch": "origin/main",
    "public": true
@@ -1035,7 +1035,7 @@
    "path": "/basecamp/tests/install-test/out/daemon-start.txt",
    "sha256": "1ad037a166e55a6762c42df3bfab1ff02ae2238ed6fde773e7dbe4279d01694a",
    "bytes": 62,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/daemon-start.txt",
    "branch": "origin/main",
    "public": true
@@ -1044,7 +1044,7 @@
    "path": "/basecamp/tests/install-test/out/daemon-stop.txt",
    "sha256": "191f020bbed7dbd83d69e4daa34c2739413701f0e914b6664ed9ee90cd966be3",
    "bytes": 50,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/daemon-stop.txt",
    "branch": "origin/main",
    "public": true
@@ -1053,7 +1053,7 @@
    "path": "/basecamp/tests/install-test/out/deposit-live-vault.txt",
    "sha256": "5db444ac2e06d8e5cab61a514d1ef79f0daa88206097d1a590ac0faa63fd4105",
    "bytes": 702,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/deposit-live-vault.txt",
    "branch": "origin/main",
    "public": true
@@ -1062,7 +1062,7 @@
    "path": "/basecamp/tests/install-test/out/deposit-vector.txt",
    "sha256": "3d573c54f8aa34b653563b3d9e112a99a7de35698845179933018ac75b7b29d9",
    "bytes": 1010,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/deposit-vector.txt",
    "branch": "origin/main",
    "public": true
@@ -1071,7 +1071,7 @@
    "path": "/basecamp/tests/install-test/out/install-ferrata_attest_module.txt",
    "sha256": "54d7a2a6aea5b8256be7bbfd2cbea829218e6d3daa59ef2f878fb481b42c27a1",
    "bytes": 307,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/install-ferrata_attest_module.txt",
    "branch": "origin/main",
    "public": true
@@ -1080,7 +1080,7 @@
    "path": "/basecamp/tests/install-test/out/install-ferrata_attestor_module.txt",
    "sha256": "fd7b77910931512358ff44ff27115c59e2e3f55038d4f574f58abc2e5012b37c",
    "bytes": 313,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/install-ferrata_attestor_module.txt",
    "branch": "origin/main",
    "public": true
@@ -1089,7 +1089,7 @@
    "path": "/basecamp/tests/install-test/out/install-ferrata_bridge_module.txt",
    "sha256": "98c9ddd1592d904c506f7e1e85393724b17c685dfd236871decf4f567b2729c0",
    "bytes": 307,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/install-ferrata_bridge_module.txt",
    "branch": "origin/main",
    "public": true
@@ -1098,7 +1098,7 @@
    "path": "/basecamp/tests/install-test/out/install-ferrata_bridge_ui.txt",
    "sha256": "68c0b9bfb44c7f9e3bcf2dbf1d3e4018ef9ea2585eeab6bb09b5a3be67766682",
    "bytes": 295,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/install-ferrata_bridge_ui.txt",
    "branch": "origin/main",
    "public": true
@@ -1107,7 +1107,7 @@
    "path": "/basecamp/tests/install-test/out/install-ferrata_monitor_module.txt",
    "sha256": "24a813623707871039d9f7cc7ab0611e529f027fce56bf3c87189eeab860a0cc",
    "bytes": 310,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/install-ferrata_monitor_module.txt",
    "branch": "origin/main",
    "public": true
@@ -1116,7 +1116,7 @@
    "path": "/basecamp/tests/install-test/out/install-ferrata_relayer_module.txt",
    "sha256": "b363e6209f628a26faf7128631a9abe04d7940cde3763fc233c87827b6d4adcb",
    "bytes": 310,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/install-ferrata_relayer_module.txt",
    "branch": "origin/main",
    "public": true
@@ -1125,7 +1125,7 @@
    "path": "/basecamp/tests/install-test/out/install-ferrata_updater_module.txt",
    "sha256": "d32d9895e5f65a044178053d6265b23bd1419ff671762a378ec1bcd46e5fed73",
    "bytes": 310,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/install-ferrata_updater_module.txt",
    "branch": "origin/main",
    "public": true
@@ -1134,7 +1134,7 @@
    "path": "/basecamp/tests/install-test/out/key-add.txt",
    "sha256": "b493cdb3b30ea63f6a924f814dfccfcfe305dac02106f9994ce2bcb2e8ed28c4",
    "bytes": 17,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/key-add.txt",
    "branch": "origin/main",
    "public": true
@@ -1143,7 +1143,7 @@
    "path": "/basecamp/tests/install-test/out/key-ls.txt",
    "sha256": "7974afdf39d81f806f70fe1a3df850dc7590d928da3130fb8e0baf65cbc3964e",
    "bytes": 224,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/key-ls.txt",
    "branch": "origin/main",
    "public": true
@@ -1152,7 +1152,7 @@
    "path": "/basecamp/tests/install-test/out/live-read-instance.txt",
    "sha256": "3590cd3bcca647aecf8e175e670f86573ced26b7841c584033d02408ba105316",
    "bytes": 1495,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/live-read-instance.txt",
    "branch": "origin/main",
    "public": true
@@ -1161,7 +1161,7 @@
    "path": "/basecamp/tests/install-test/out/load-ferrata_attest_module.txt",
    "sha256": "091ca78e3fd8214b00fbc195b9bfbf3ddac17186f802cd21656017c1a3926f8d",
    "bytes": 92,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/load-ferrata_attest_module.txt",
    "branch": "origin/main",
    "public": true
@@ -1170,7 +1170,7 @@
    "path": "/basecamp/tests/install-test/out/load-ferrata_attestor_module.txt",
    "sha256": "f6842458a2511341ebcc3e284f42de5d6fc04519503cb1a755c1826b097179d7",
    "bytes": 94,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/load-ferrata_attestor_module.txt",
    "branch": "origin/main",
    "public": true
@@ -1179,7 +1179,7 @@
    "path": "/basecamp/tests/install-test/out/load-ferrata_bridge_module.txt",
    "sha256": "ca1958844765ec5ee150a37f093c2f78c4a0f2c0f4f2fed189f2ec5765700dc1",
    "bytes": 92,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/load-ferrata_bridge_module.txt",
    "branch": "origin/main",
    "public": true
@@ -1188,7 +1188,7 @@
    "path": "/basecamp/tests/install-test/out/load-ferrata_monitor_module.txt",
    "sha256": "72b653bfae4ecaa98ee180d0be4b28b135e890c52840e3c8dc2045f968aa2fb4",
    "bytes": 93,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/load-ferrata_monitor_module.txt",
    "branch": "origin/main",
    "public": true
@@ -1197,7 +1197,7 @@
    "path": "/basecamp/tests/install-test/out/load-ferrata_relayer_module.txt",
    "sha256": "320189d2355092fb0767e790f8ca343607fc2a03ae08e411ba6406bc8b249f8e",
    "bytes": 93,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/load-ferrata_relayer_module.txt",
    "branch": "origin/main",
    "public": true
@@ -1206,7 +1206,7 @@
    "path": "/basecamp/tests/install-test/out/load-ferrata_updater_module.txt",
    "sha256": "0b30aaeb4a7b95d8089e2b3882dae7078e19ba03f129d5c67e72ff0c7f70c37e",
    "bytes": 93,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/load-ferrata_updater_module.txt",
    "branch": "origin/main",
    "public": true
@@ -1215,7 +1215,7 @@
    "path": "/basecamp/tests/install-test/out/package-ls-after-refusals.txt",
    "sha256": "214f394f16670e7b267774206eaf31cbc586683f7fb8d155639a364434e5a0b4",
    "bytes": 3565,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/package-ls-after-refusals.txt",
    "branch": "origin/main",
    "public": true
@@ -1224,7 +1224,7 @@
    "path": "/basecamp/tests/install-test/out/package-ls.txt",
    "sha256": "54097210b441b4867c996ce117458dedc293c40fc51afc266a08eab0abd3c1b1",
    "bytes": 10256,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/package-ls.txt",
    "branch": "origin/main",
    "public": true
@@ -1233,7 +1233,7 @@
    "path": "/basecamp/tests/install-test/out/refuse-other-signer.txt",
    "sha256": "bf64ecd8607be97d5fdd46c11b67bafaeebe183887950e79fa0e25dfde102bda",
    "bytes": 635,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/refuse-other-signer.txt",
    "branch": "origin/main",
    "public": true
@@ -1242,7 +1242,7 @@
    "path": "/basecamp/tests/install-test/out/refuse-tampered.txt",
    "sha256": "e17072c123141227137ce886ec584f4b1840da77455dca0395a031d17634b0a5",
    "bytes": 528,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/refuse-tampered.txt",
    "branch": "origin/main",
    "public": true
@@ -1251,7 +1251,7 @@
    "path": "/basecamp/tests/install-test/out/refuse-unsigned.txt",
    "sha256": "a2b38643a460e9e6ab7d6825b70f587972b0ae71a1bb672c1b3136c5b240e60e",
    "bytes": 482,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/refuse-unsigned.txt",
    "branch": "origin/main",
    "public": true
@@ -1260,7 +1260,7 @@
    "path": "/basecamp/tests/install-test/out/version-ferrata_attest_module.txt",
    "sha256": "eca625653368d043ac8565ae26279004e3bfd741087d1c3648d97ca935666dc2",
    "bytes": 1463,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/version-ferrata_attest_module.txt",
    "branch": "origin/main",
    "public": true
@@ -1269,7 +1269,7 @@
    "path": "/basecamp/tests/install-test/out/version-ferrata_attestor_module.txt",
    "sha256": "8c0733d44f95db12344331b4f6c453260f07e321e89322d129c7323c4617edb3",
    "bytes": 548,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/version-ferrata_attestor_module.txt",
    "branch": "origin/main",
    "public": true
@@ -1278,7 +1278,7 @@
    "path": "/basecamp/tests/install-test/out/version-ferrata_bridge_module.txt",
    "sha256": "b4c615fed6e6e9320494fa15437e9938b5c06c2d7dc2385f5131a331809b00f5",
    "bytes": 1871,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/version-ferrata_bridge_module.txt",
    "branch": "origin/main",
    "public": true
@@ -1287,7 +1287,7 @@
    "path": "/basecamp/tests/install-test/out/version-ferrata_monitor_module.txt",
    "sha256": "4c89660c42fe2edb8e366489f6dfb06e2a8c1a6d37de72a389b0e9d0fc054d69",
    "bytes": 421,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/version-ferrata_monitor_module.txt",
    "branch": "origin/main",
    "public": true
@@ -1296,7 +1296,7 @@
    "path": "/basecamp/tests/install-test/out/version-ferrata_relayer_module.txt",
    "sha256": "e5db2ded6fd9e0e498324cf909eff6c555a058a52e825d8e600ffe1d5be99dbc",
    "bytes": 587,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/version-ferrata_relayer_module.txt",
    "branch": "origin/main",
    "public": true
@@ -1305,7 +1305,7 @@
    "path": "/basecamp/tests/install-test/out/version-ferrata_updater_module.txt",
    "sha256": "86be49fdb81accec7c823ac77122f7d1bcd7d106b8c4dbfdf4b7735670d77aac",
    "bytes": 1714,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/out/version-ferrata_updater_module.txt",
    "branch": "origin/main",
    "public": true
@@ -1314,7 +1314,7 @@
    "path": "/basecamp/tests/install-test/req/deposit_live_vault.json",
    "sha256": "751616b3f9916e4ea4086c1ddbbc9584d3a1a8abd7419af0032a2a1c9fff1448",
    "bytes": 375,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/req/deposit_live_vault.json",
    "branch": "origin/main",
    "public": true
@@ -1323,7 +1323,7 @@
    "path": "/basecamp/tests/install-test/req/deposit_vector.expect.json",
    "sha256": "e360f80b9b2d19b4fdc81610cbf1fe456bf92db26297b4cfe9e4942608ddbd72",
    "bytes": 91,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/req/deposit_vector.expect.json",
    "branch": "origin/main",
    "public": true
@@ -1332,7 +1332,7 @@
    "path": "/basecamp/tests/install-test/req/deposit_vector.json",
    "sha256": "83ef2de27080d583d2f886909cf75ee619aa7bfd245f751d90b3833caf784751",
    "bytes": 536,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/req/deposit_vector.json",
    "branch": "origin/main",
    "public": true
@@ -1341,7 +1341,7 @@
    "path": "/basecamp/tests/install-test/req/read_instance.json",
    "sha256": "803818dbc8f6fccc2b64f70b42ea4c24fc6a38a0d2b6293f9d0e6d11b0769be6",
    "bytes": 1185,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/req/read_instance.json",
    "branch": "origin/main",
    "public": true
@@ -1350,7 +1350,7 @@
    "path": "/basecamp/tests/install-test/roots.env",
    "sha256": "eba40194c5adb4d54051809e77f5fea2a6a71d9133fcda755f2d7207db5b83f5",
    "bytes": 157,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/roots.env",
    "branch": "origin/main",
    "public": true
@@ -1359,7 +1359,7 @@
    "path": "/basecamp/tests/install-test/steps.tsv",
    "sha256": "815eff8329ce79dd5ff9ec9af01a723bc6f480ae747f1eb60bc9a1760512f385",
    "bytes": 9944,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/steps.tsv",
    "branch": "origin/main",
    "public": true
@@ -1368,7 +1368,7 @@
    "path": "/basecamp/tests/install-test/versions.txt",
    "sha256": "f747f261b2703f45bf1f52c749609ae001b38a232b769c7cc0a0e0ecd99b819d",
    "bytes": 90,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/install-test/versions.txt",
    "branch": "origin/main",
    "public": true
@@ -1377,7 +1377,7 @@
    "path": "/basecamp/tests/reproduce.json",
    "sha256": "06482fd8a80bd5f8e4b340cc62c087353a8b3a28dfbf128b8f679ea89177f80b",
    "bytes": 3535,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/basecamp/tests/reproduce.json",
    "branch": "origin/main",
    "public": true
@@ -1386,7 +1386,7 @@
    "path": "/bridge/index.html",
    "sha256": "2db82dacd18e643cf9f8c357b6d93941688a1f30203b0d44b07c4247bf22dcf5",
    "bytes": 3125,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/trust/bridge/index.html",
    "branch": "origin/main",
    "public": true
@@ -1395,7 +1395,7 @@
    "path": "/bridge/privacy/index.html",
    "sha256": "993a14aa2b621e1429af0e0c5b768dcbd9844f46245ec5c1111e05b6ec22e1d9",
    "bytes": 10214,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/trust/bridge/privacy/index.html",
    "branch": "origin/main",
    "public": true
@@ -1404,7 +1404,7 @@
    "path": "/bridge/security/index.html",
    "sha256": "d4fceaa7a08f932420530df6b3b04d170a6c15d60bf3dcccdc5ad867f0eaacdc",
    "bytes": 16540,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/trust/bridge/security/index.html",
    "branch": "origin/main",
    "public": true
@@ -1413,7 +1413,7 @@
    "path": "/bridge/verify/index.html",
    "sha256": "bd35de3be4a46905433db8cce2cf17151d00418df9830e6401d6d487b6642a82",
    "bytes": 6521,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/trust/bridge/verify/index.html",
    "branch": "origin/main",
    "public": true
@@ -1422,34 +1422,34 @@
    "path": "/bridge/verify/verify.js",
    "sha256": "a5d4c10a70a6936253c8f1c8dd8b2c58da513bd5ff25a8b7ea5a50d0812b88ac",
    "bytes": 5755,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/trust/bridge/verify/verify.js",
    "branch": "origin/main",
    "public": true
   },
   {
    "path": "/build.json",
-   "sha256": "1618d72119ef9b1065c42e5ba2ed01872a073e0c8cddf2bb5060f7c6ae76c376",
+   "sha256": "3bc1c9c7d2563270ea959b12d455d3096defe6468788dac0915ab6a9a530c926",
    "bytes": 1157,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/build/build.json",
    "branch": "origin/main",
    "public": true
   },
   {
    "path": "/evidence.html",
-   "sha256": "ee6825efa1e31681b03bb8961e0ca71d98306f5b2a0474b4af2fe5a37377e862",
-   "bytes": 678175,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "sha256": "ca13069db85385b198cf402d040113079b480b999367ccaca49888b19ca02faa",
+   "bytes": 689462,
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/build/evidence.html",
    "branch": "origin/main",
    "public": true
   },
   {
    "path": "/evidence.json",
-   "sha256": "7447059ddb6ea8fae5015130311ac20af0083be766f67fb9096d93b575bf7cf2",
-   "bytes": 151638,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "sha256": "28e1417fe33bf928c87eb0e1378968b5250b3a7ecfcddab947d946b56a542067",
+   "bytes": 154378,
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/build/evidence.json",
    "branch": "origin/main",
    "public": true
@@ -1458,7 +1458,7 @@
    "path": "/explorer/index.html",
    "sha256": "d8c44412e83e3ab77159410532fdb48c4f880a98bacf1050811f281f3e558f0a",
    "bytes": 734,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/explorer/index.html",
    "branch": "origin/main",
    "public": true
@@ -1467,7 +1467,7 @@
    "path": "/health.html",
    "sha256": "1e18255320c8ed63b0d474798b762089b8bdbeef1a9a918347285c770baea326",
    "bytes": 1590,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/host/www/status.html",
    "branch": "origin/main",
    "public": true
@@ -1476,7 +1476,7 @@
    "path": "/health.js",
    "sha256": "bd18d900b88f9abbe80ff96b9717d51781d4107e12d82ee7c99b4cfc86ef2e60",
    "bytes": 2570,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/host/www/health.js",
    "branch": "origin/main",
    "public": true
@@ -1485,7 +1485,7 @@
    "path": "/idl/ferrata_attestation.idl.json",
    "sha256": "e0f2d4622693debf61dd8997acd4fb1472b99a26cf67376627ac126d72eea269",
    "bytes": 59617,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/idl/ferrata_attestation.idl.json",
    "branch": "origin/main",
    "public": true
@@ -1494,7 +1494,7 @@
    "path": "/idl/ferrata_bridge.idl.json",
    "sha256": "473f53c2695ce2c521d4374d2999d0bed35ac0f805c5a701b89304a9420950f1",
    "bytes": 126436,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/idl/ferrata_bridge.idl.json",
    "branch": "origin/main",
    "public": true
@@ -1503,7 +1503,7 @@
    "path": "/idl/ferrata_msg.idl.json",
    "sha256": "04a9941999b3106178fcc7a24405b62a554ae53a6dc590da83e4538ba1474c40",
    "bytes": 17825,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/idl/ferrata_msg.idl.json",
    "branch": "origin/main",
    "public": true
@@ -1512,7 +1512,7 @@
    "path": "/idl/ferrata_names.idl.json",
    "sha256": "5bb356078b1afd31a31cab117f6ae5fa61a2e8db220c652e4938e4bb131ab11c",
    "bytes": 23507,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/idl/ferrata_names.idl.json",
    "branch": "origin/main",
    "public": true
@@ -1521,7 +1521,7 @@
    "path": "/img/02d183264018.png",
    "sha256": "02d1832640187a2943fe607f39824b8aa489df2d23d39055cfb9a3df34c37592",
    "bytes": 57912,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/build/img/02d183264018.png",
    "branch": "origin/main",
    "public": true
@@ -1530,7 +1530,7 @@
    "path": "/img/3abe24b9392c.png",
    "sha256": "3abe24b9392c7bcb63ee8fa8a0ddb9e9e0be23e1d7d449d14581d03e6270d395",
    "bytes": 63582,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/build/img/3abe24b9392c.png",
    "branch": "origin/main",
    "public": true
@@ -1539,7 +1539,7 @@
    "path": "/img/50f4d9d0305c.png",
    "sha256": "50f4d9d0305ca5277972e9b4fde2b78a22e3049284c7cc7bda07c7819c9d55ec",
    "bytes": 52155,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/build/img/50f4d9d0305c.png",
    "branch": "origin/main",
    "public": true
@@ -1548,7 +1548,7 @@
    "path": "/img/58bdf01f17f2.png",
    "sha256": "58bdf01f17f26f980a6b898550537e0afa89a2a8774802952b0d01f845c8e724",
    "bytes": 48448,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/build/img/58bdf01f17f2.png",
    "branch": "origin/main",
    "public": true
@@ -1557,7 +1557,7 @@
    "path": "/img/5a54fdfc0685.png",
    "sha256": "5a54fdfc06858b924efb4cc202a7df9d5fc0e3e4a2015d26841a5fc47c4aa7d8",
    "bytes": 50602,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/build/img/5a54fdfc0685.png",
    "branch": "origin/main",
    "public": true
@@ -1566,7 +1566,7 @@
    "path": "/img/6e698dd24f0d.png",
    "sha256": "6e698dd24f0d942a60dd1406880a7d1e8d198425c5aedc6ffb18c3e5d5ad0a8e",
    "bytes": 68429,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/build/img/6e698dd24f0d.png",
    "branch": "origin/main",
    "public": true
@@ -1575,7 +1575,7 @@
    "path": "/img/95bdd4494e88.png",
    "sha256": "95bdd4494e8861138ace8cea293df5a2a08013aea6d523751babe4faf12d62c6",
    "bytes": 31761,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/build/img/95bdd4494e88.png",
    "branch": "origin/main",
    "public": true
@@ -1584,7 +1584,7 @@
    "path": "/img/a4563454b67b.png",
    "sha256": "a4563454b67b5648a3c19fc15a3c17833c123c251a1426490a52b30c4233e6cf",
    "bytes": 48413,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/build/img/a4563454b67b.png",
    "branch": "origin/main",
    "public": true
@@ -1593,7 +1593,7 @@
    "path": "/img/b1a6e3198ba1.png",
    "sha256": "b1a6e3198ba1e1901faea53f88ceb15dabdd0727606116dda3657035c697651e",
    "bytes": 43796,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/build/img/b1a6e3198ba1.png",
    "branch": "origin/main",
    "public": true
@@ -1602,16 +1602,16 @@
    "path": "/img/da5914b8949b.png",
    "sha256": "da5914b8949beeaa7ddf5adcb5d00669a8cb0734314da23be8c5e562b7d63bf0",
    "bytes": 123585,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/build/img/da5914b8949b.png",
    "branch": "origin/main",
    "public": true
   },
   {
    "path": "/index.html",
-   "sha256": "600c8a684f8c250e47a9686173aebe49c618441891a7f31c86697a616ba11dae",
-   "bytes": 766118,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "sha256": "922ea44e4d101681f57d2e6575f52036589fc96ee70a86e923147448a3c9bf7f",
+   "bytes": 770969,
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/build/index.html",
    "branch": "origin/main",
    "public": true
@@ -1620,7 +1620,7 @@
    "path": "/llms.txt",
    "sha256": "5dfd055bf9e08d346b9065cacb6e3f4c29e52f8a67675c41a915803d19399354",
    "bytes": 1153,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/build/llms.txt",
    "branch": "origin/main",
    "public": true
@@ -1629,7 +1629,7 @@
    "path": "/msg/AGENTS-section.md",
    "sha256": "bf91414d6c55ef83762b3c38487b18ae217216d747f24694355ae6a6c5f055fe",
    "bytes": 2946,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/msg/AGENTS-section.md",
    "branch": "origin/main",
    "public": true
@@ -1638,7 +1638,7 @@
    "path": "/msg/client.js",
    "sha256": "ebee8073476121eae7fe4d630b2fb161a51dfeb3b5f7614d91d276f5000cd240",
    "bytes": 11106,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/msg/client.js",
    "branch": "origin/main",
    "public": true
@@ -1647,7 +1647,7 @@
    "path": "/msg/ferrata-msg.js",
    "sha256": "87f8d101f3e30227dae0e537c9eb2e2e0e95efb7d19a81237140f55690a94f60",
    "bytes": 21124,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/msg/ferrata-msg.js",
    "branch": "origin/main",
    "public": true
@@ -1656,7 +1656,7 @@
    "path": "/msg/ferrata-msg.mjs",
    "sha256": "226fd1dcbaffdbebcfaa074bdd0dc5b56ed1831a3ea29e4a72a1bfca4f25ed36",
    "bytes": 10708,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/msg/ferrata-msg.mjs",
    "branch": "origin/main",
    "public": true
@@ -1665,7 +1665,7 @@
    "path": "/msg/vendor/NOTICE",
    "sha256": "b739c2bae28881ec6cc88480beb794984477a758d427ecb9f53ec2a35ee86a2e",
    "bytes": 5893,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/msg/vendor/NOTICE",
    "branch": "origin/main",
    "public": true
@@ -1674,7 +1674,7 @@
    "path": "/msg/vendor/build.sh",
    "sha256": "ba927b1a8a477eaceea548a974067c85445b1f9212c15215a671d6394ff7b4e1",
    "bytes": 1936,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/msg/vendor/build.sh",
    "branch": "origin/main",
    "public": true
@@ -1683,7 +1683,7 @@
    "path": "/msg/vendor/crypto.js",
    "sha256": "44a587ee8f6c403f8cbbc6ad0a157f8073f2e8860f0e814ffa49cbe7212e1f16",
    "bytes": 63752,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/msg/vendor/crypto.js",
    "branch": "origin/main",
    "public": true
@@ -1692,7 +1692,7 @@
    "path": "/msg/vendor/entry.js",
    "sha256": "d957a85a4bf6ca6008101ca6f8a8651ad835bdf05982c3f19781fa043b5185ae",
    "bytes": 642,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/msg/vendor/entry.js",
    "branch": "origin/main",
    "public": true
@@ -1701,7 +1701,7 @@
    "path": "/names/cli.mjs",
    "sha256": "efe68d359b4775eab88fc93e9187de3f4e8a67bbf96fa7e7559dd6761b7ea097",
    "bytes": 18143,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "names/js/cli.mjs",
    "branch": "origin/main",
    "public": true
@@ -1710,7 +1710,7 @@
    "path": "/names/names.js",
    "sha256": "d17d955bfc755908b0c55ebd354c49484710960e3660886f09c1338e54cc12f9",
    "bytes": 26584,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "names/js/names.js",
    "branch": "origin/main",
    "public": true
@@ -1719,7 +1719,7 @@
    "path": "/network.html",
    "sha256": "51755c504bbececd1981d3c3e0e60ed796eeaa7718c7dfddbaf6813c67e95eee",
    "bytes": 920,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/index.html",
    "branch": "origin/main",
    "public": true
@@ -1728,7 +1728,7 @@
    "path": "/registry/index.html",
    "sha256": "bc27504cb3b755894d36804836a3aafa65d4cc38dc5122884418fcd05194ec53",
    "bytes": 743,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/registry/index.html",
    "branch": "origin/main",
    "public": true
@@ -1737,7 +1737,7 @@
    "path": "/robots.txt",
    "sha256": "16ceb5ee3e0dc13aa9adf31a3ebbe45a1d965b8c2b9f72eaf84e5911e140ed95",
    "bytes": 23,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/host/www/robots.txt",
    "branch": "origin/main",
    "public": true
@@ -1746,7 +1746,7 @@
    "path": "/status/index.html",
    "sha256": "ef9169be941c41c5407193ce49be38a8570b45cf6da3aec97b351a6cf77be4f1",
    "bytes": 742,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/explorer/status/index.html",
    "branch": "origin/main",
    "public": true
@@ -1755,16 +1755,16 @@
    "path": "/style.css",
    "sha256": "9a3d2e9d0a795c7a58b4a7c09214c92e8cbe3a10c97bc45af3ef99135c583491",
    "bytes": 1859,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/host/www/style.css",
    "branch": "origin/main",
    "public": true
   },
   {
    "path": "/testers/index.html",
-   "sha256": "f63d6a7426d789b14a85fcd6ee740ddda6568002b3216c7bda5969cca286a627",
+   "sha256": "c78df7b7a0320ae1d7d6fd8d9dc12a3f5835794fa77d9f680f048c0428cd6547",
    "bytes": 28619,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/build/testers/index.html",
    "branch": "origin/main",
    "public": true
@@ -1773,7 +1773,7 @@
    "path": "/trust/index.html",
    "sha256": "ea581ee5a90704a99e2ecdb7fbb93107c6e711cd1f5eee9c06495e8d5dcd0c1b",
    "bytes": 3900,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/trust/trust/index.html",
    "branch": "origin/main",
    "public": true
@@ -1782,7 +1782,7 @@
    "path": "/trust/trust.css",
    "sha256": "0b4f3b59713e6e382c20879497d1d8e8bd89f1aaa1430e07d51841420c54b7c1",
    "bytes": 5171,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/trust/trust/trust.css",
    "branch": "origin/main",
    "public": true
@@ -1791,7 +1791,7 @@
    "path": "/wallet/app.js",
    "sha256": "9eec8abbe2d76731a005ae72c06bc694b4ba38d6cf4839af06d07414e6b05484",
    "bytes": 30966,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/app.js",
    "branch": "origin/main",
    "public": true
@@ -1800,7 +1800,7 @@
    "path": "/wallet/applock.js",
    "sha256": "a59bb7c8aa6978c1f9581599dc8c05f7df4598bc69ec62d9a66d406dce47eae4",
    "bytes": 16785,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/applock.js",
    "branch": "origin/main",
    "public": true
@@ -1809,7 +1809,7 @@
    "path": "/wallet/attest.js",
    "sha256": "5fd1ee5d0f85bbf101ea0e4df618280e67d013ec609e50e3fdc92d966941b007",
    "bytes": 6148,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/attest.js",
    "branch": "origin/main",
    "public": true
@@ -1818,7 +1818,7 @@
    "path": "/wallet/bridge.js",
    "sha256": "a467a4f00803852067ede86cbd428d9437f6efa9ab90fc479707053861300312",
    "bytes": 39933,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/bridge.js",
    "branch": "origin/main",
    "public": true
@@ -1827,7 +1827,7 @@
    "path": "/wallet/claim.js",
    "sha256": "32c3a495de7bfcef2deb60fb835ee6432b9bd6e7c81f52d5f4cb5d270609cb9e",
    "bytes": 28697,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/claim.js",
    "branch": "origin/main",
    "public": true
@@ -1836,7 +1836,7 @@
    "path": "/wallet/eth.js",
    "sha256": "d3b8f296199680b6562c6ccb1df6109658802f8fbfe0e34e33716e7275f67cb2",
    "bytes": 9444,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/eth.js",
    "branch": "origin/main",
    "public": true
@@ -1845,7 +1845,7 @@
    "path": "/wallet/history.js",
    "sha256": "2a469a3b8b3db2e701e77c035c8e99577e23cf166f3a8fd7e726a0defb4cd9f4",
    "bytes": 5858,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/history.js",
    "branch": "origin/main",
    "public": true
@@ -1854,7 +1854,7 @@
    "path": "/wallet/icons/apple-touch-icon.png",
    "sha256": "fdcf2fff62a99f4ceb4e501582a2a96c178d29deba682891d507c05dc588f3f0",
    "bytes": 1399,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/icons/apple-touch-icon.png",
    "branch": "origin/main",
    "public": true
@@ -1863,7 +1863,7 @@
    "path": "/wallet/icons/icon-192.png",
    "sha256": "053f64be2da029112675ce3a9d1eb560e018a2bb003c9abda697e91d28cda826",
    "bytes": 3174,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/icons/icon-192.png",
    "branch": "origin/main",
    "public": true
@@ -1872,7 +1872,7 @@
    "path": "/wallet/icons/icon-512.png",
    "sha256": "32b6be55c02d9e923fdf95104c5ccc609cc67c04c40f202afc18eca18d206958",
    "bytes": 9723,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/icons/icon-512.png",
    "branch": "origin/main",
    "public": true
@@ -1881,7 +1881,7 @@
    "path": "/wallet/icons/icon.svg",
    "sha256": "786437b05e3b1010a3fb14a2951ef00bc464b40dff40cb48104d3e4137d74b9f",
    "bytes": 240,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/icons/icon.svg",
    "branch": "origin/main",
    "public": true
@@ -1890,7 +1890,7 @@
    "path": "/wallet/icons/maskable-512.png",
    "sha256": "51472db5df63edeeaa3d1145254210a653b4db0779f67d3c3f382da0308f0bbc",
    "bytes": 3494,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/icons/maskable-512.png",
    "branch": "origin/main",
    "public": true
@@ -1899,7 +1899,7 @@
    "path": "/wallet/icons/maskable.svg",
    "sha256": "272260e424f12d7d0272db2b3694194f5c5a644f6f9ac95f47345f5265a1c2b2",
    "bytes": 233,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/icons/maskable.svg",
    "branch": "origin/main",
    "public": true
@@ -1908,7 +1908,7 @@
    "path": "/wallet/icons/mono-512.png",
    "sha256": "227054b028b807136b615d63aedaf3d7e1f812a4a597c6fd4b3b1a25c1763ddd",
    "bytes": 4824,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/icons/mono-512.png",
    "branch": "origin/main",
    "public": true
@@ -1917,7 +1917,7 @@
    "path": "/wallet/icons/mono-96.png",
    "sha256": "7ce71dd0cc5fe0f2811e86cde4de8bcb24d372eb7e80156365d9c603817649cf",
    "bytes": 807,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/icons/mono-96.png",
    "branch": "origin/main",
    "public": true
@@ -1926,7 +1926,7 @@
    "path": "/wallet/icons/mono.svg",
    "sha256": "c51c91efa3c7c7f6251d49cb5df0709ffb43f5bb3fff3d562a49b39fe6afeb95",
    "bytes": 177,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/icons/mono.svg",
    "branch": "origin/main",
    "public": true
@@ -1935,7 +1935,7 @@
    "path": "/wallet/inbox.js",
    "sha256": "b44278ee6f5eac456bc8298e79ccf4ccd07215b004a5d8444d569efac901ad19",
    "bytes": 9746,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/inbox.js",
    "branch": "origin/main",
    "public": true
@@ -1944,7 +1944,7 @@
    "path": "/wallet/index.html",
    "sha256": "7d058586bfc16a1d55f4b212dbc81cab7e8134ef70ab04e5fc94b5c4d6c61f66",
    "bytes": 16183,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/index.html",
    "branch": "origin/main",
    "public": true
@@ -1953,7 +1953,7 @@
    "path": "/wallet/keystore.js",
    "sha256": "3f38a0d0384c21e05a0ed5413264d2fbba64bf0520ff4088bc69a04281a673e8",
    "bytes": 6009,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/keystore.js",
    "branch": "origin/main",
    "public": true
@@ -1962,7 +1962,7 @@
    "path": "/wallet/lez.js",
    "sha256": "d278674401ed2aa47ad87d4ba1fa7846324dbfcc12911be0903e1bf407302c1e",
    "bytes": 26687,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/lez.js",
    "branch": "origin/main",
    "public": true
@@ -1971,7 +1971,7 @@
    "path": "/wallet/manifest.json",
    "sha256": "ae6f89d3122bcbfc787a90ffc90a14c7c8f351d7a6623a74df47d5e0c0a2e07f",
    "bytes": 1572,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/manifest.json",
    "branch": "origin/main",
    "public": true
@@ -1980,7 +1980,7 @@
    "path": "/wallet/msg/client.js",
    "sha256": "d22aec6ce6537c48db99f1158bc8af676815d8b2c2e7873abfe38be71b44d17c",
    "bytes": 3241,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/msg/client.js",
    "branch": "origin/main",
    "public": true
@@ -1989,7 +1989,7 @@
    "path": "/wallet/msg/ferrata-msg.js",
    "sha256": "ff59d6f680f7e791b735a8e38a6cce017eeebe9f85db8626ae6bab60a4ea5805",
    "bytes": 14018,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/msg/ferrata-msg.js",
    "branch": "origin/main",
    "public": true
@@ -1998,7 +1998,7 @@
    "path": "/wallet/msg/vendor/crypto.js",
    "sha256": "44a587ee8f6c403f8cbbc6ad0a157f8073f2e8860f0e814ffa49cbe7212e1f16",
    "bytes": 63752,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/msg/vendor/crypto.js",
    "branch": "origin/main",
    "public": true
@@ -2007,7 +2007,7 @@
    "path": "/wallet/notify.js",
    "sha256": "879b9cec9e1fdfd787e6712821c272efadb66b80857d9b124b6f12c7e9477393",
    "bytes": 10148,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/notify.js",
    "branch": "origin/main",
    "public": true
@@ -2016,7 +2016,7 @@
    "path": "/wallet/private.js",
    "sha256": "a7e26a9ac145465de3381b9865370e70955914b5d50229c6059b824a136b5173",
    "bytes": 5177,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/private.js",
    "branch": "origin/main",
    "public": true
@@ -2025,7 +2025,7 @@
    "path": "/wallet/prove.js",
    "sha256": "6dc9dcdeab364d67d4e6e8e9fbf5186e42bdb7856b79281bf385e62de7d93856",
    "bytes": 12830,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/prove.js",
    "branch": "origin/main",
    "public": true
@@ -2034,7 +2034,7 @@
    "path": "/wallet/pwa.js",
    "sha256": "22b8e74f9d222d9e3870086602935b4cdd9a60d9eb423acdea88eb9927198594",
    "bytes": 6157,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/pwa.js",
    "branch": "origin/main",
    "public": true
@@ -2043,7 +2043,7 @@
    "path": "/wallet/qr.js",
    "sha256": "4c5645f1201f537b7c083d7598dd263a31fa8d70e1665c206bc8905add158b9b",
    "bytes": 5933,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/qr.js",
    "branch": "origin/main",
    "public": true
@@ -2052,7 +2052,7 @@
    "path": "/wallet/settings.js",
    "sha256": "d992f06aebe7380281129fb73e3cda4b9a25248ca79ec2ca870602810df86c38",
    "bytes": 1008,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/settings.js",
    "branch": "origin/main",
    "public": true
@@ -2061,7 +2061,7 @@
    "path": "/wallet/style.css",
    "sha256": "9d6ba21e0b4dd8a5c5584724c779d4c57fc5019a8c9b34d27ab411f9fb6eb7c4",
    "bytes": 8356,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/style.css",
    "branch": "origin/main",
    "public": true
@@ -2070,7 +2070,7 @@
    "path": "/wallet/sw.js",
    "sha256": "057245183a366b6f5f9b67e01bccc19e52758c8ab2dd9ef97b2c8658e5799fe0",
    "bytes": 7633,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/sw.js",
    "branch": "origin/main",
    "public": true
@@ -2079,7 +2079,7 @@
    "path": "/wallet/vendor/names.js",
    "sha256": "40aea7543b30d387271915318d88e34d48800b28ea7c15a17b9a3505e82e40a2",
    "bytes": 18706,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/vendor/names.js",
    "branch": "origin/main",
    "public": true
@@ -2088,7 +2088,7 @@
    "path": "/wallet/vendor/noble.js",
    "sha256": "4350804c442ef6064d154f3bc1ad23d31243ec1c67e3fe5062f963cf776d143e",
    "bytes": 102990,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/vendor/noble.js",
    "branch": "origin/main",
    "public": true
@@ -2097,7 +2097,7 @@
    "path": "/wallet/vendor/qr.js",
    "sha256": "c2bca84ede724ae5ad56493c33b64768b8fd0e17fd52dc244613af4245186ee7",
    "bytes": 52978,
-   "commit": "f9623cfd90ae0af852d2dc7000e90821e8381f06",
+   "commit": "c8050c4edea6ef174a4d2d9777824173ec6692a1",
    "repo_path": "deploy/testnet/web/wallet/vendor/qr.js",
    "branch": "origin/main",
    "public": true
