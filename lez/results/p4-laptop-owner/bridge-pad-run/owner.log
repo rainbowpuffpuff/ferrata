@@ -1,0 +1,5 @@
+04:07:14 bridge-pad: proving (no output until it ends; log <OUT_DIR>/bridge-pad/prove.log)
+05:49:24 bridge-pad: exit 0, wall 6123.2 s settle exit 0 
+private claim: REAL PROOF: execute_and_prove 3313.4 s (prove + settle 3313.8 s); receipt (succinct InnerReceipt, borsh) 239628 bytes; transaction 256130 bytes
+private burn: REAL PROOF: execute_and_prove 2802.0 s (prove + settle 2802.3 s); receipt (succinct InnerReceipt, borsh) 239046 bytes; transaction 254966 bytes
+records in <OUT_DIR>; next: python3 -I bench/perf/summarize_p4.py --owner <OUT_DIR>

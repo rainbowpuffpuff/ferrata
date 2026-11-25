@@ -1,0 +1,4 @@
+00:59:29 attest-pad: proving (no output until it ends; log <OUT_DIR>/attest-pad/prove.log)
+02:16:11 attest-pad: exit 0, wall 4599.4 s settle exit 0 
+REAL PROOF: execute_and_prove 4596.7 s (prove + settle 4596.9 s); receipt (succinct InnerReceipt, borsh) 239246 bytes; transaction 255366 bytes
+records in <OUT_DIR>; next: python3 -I bench/perf/summarize_p4.py --owner <OUT_DIR>
