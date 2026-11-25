@@ -542,16 +542,15 @@ a.btn { display: inline-block; text-decoration: none; }
 .g6{flex-grow:6}
 .g8{flex-grow:8}
 .g10{flex-grow:10}
-.g11{flex-grow:11}
-.g12{flex-grow:12}
-.g14{flex-grow:14}
+.g13{flex-grow:13}
 .g15{flex-grow:15}
+.g16{flex-grow:16}
 .g18{flex-grow:18}
-.g22{flex-grow:22}
+.g19{flex-grow:19}
 .g24{flex-grow:24}
 .g29{flex-grow:29}
 .g31{flex-grow:31}
-.g43{flex-grow:43}
+.g46{flex-grow:46}
 .g49{flex-grow:49}
 .gs1-1{grid-column:1 / span 1}
 .gs2-1{grid-column:2 / span 1}
@@ -564,8 +563,7 @@ a.btn { display: inline-block; text-decoration: none; }
 .gs11-1{grid-column:11 / span 1}
 .gs12-3{grid-column:12 / span 3}
 @container (min-width: 4rem) { .fit4 > .seg-n { display: inline-block } }
-@container (min-width: 5rem) { .fit5 > .seg-n { display: inline-block } }
-@container (min-width: 8rem) { .fit8 > .seg-n { display: inline-block } }
+@container (min-width: 9rem) { .fit9 > .seg-n { display: inline-block } }
 @container (min-width: 19rem) { .fit19 > .seg-n { display: inline-block } }
 @container (min-width: 37rem) { .fit37 > .seg-n { display: inline-block } }
 @container (min-width: 62rem) { .fit62 > .seg-n { display: inline-block } }
