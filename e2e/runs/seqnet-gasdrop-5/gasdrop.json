@@ -1,0 +1,49 @@
+{
+  "relayer": {
+    "lez": "0xbe4749d897560029caac6c340ab2d38409dc10755067b1fb97cdcf513840b551",
+    "guest": "0xce3ad533d2c72b38c9779f1c692dd784e3fd754612808696e1362da49c7f8125",
+    "amount": "200000000",
+    "terms": "http://127.0.0.1:<gw>/relayer/gas-drop"
+  },
+  "user_before": {
+    "private_0": "0",
+    "private_0_id": "Ezz73Y9kCtDTQTqBWAzFsRQVm4xvRZ4ZntqedNLFwKRW",
+    "public_0": "0",
+    "public_0_id": "AKRYNTU8c4MZ4fSr5FHcn6BGE6T4dfRCzn1ziQCNKFBu",
+    "step": "balances (nothing sent)"
+  },
+  "claim": {
+    "oneTime": "0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3",
+    "job": "went to http://127.0.0.1:47928/relayer/gas-drop (job gas-drop-cd6efdc213344cb4703558dba09755f76699b31837e3c6f271bad16311b1adad.json)",
+    "relayer": {
+      "amount": "200000000",
+      "applied": true,
+      "kind": "gas-drop",
+      "nullifier": "0xcd6efdc213344cb4703558dba09755f76699b31837e3c6f271bad16311b1adad",
+      "oneTimeAddress": "0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3",
+      "resolvedLater": true,
+      "sealed": true,
+      "sends": 1,
+      "tx": "1c87cb2f95ded57a90c2a625b7dcc6383d5555ccfbe0c364397e6ebc867b57e4"
+    },
+    "tx": "3f682ef47b541fdfbce256636d1716b8995133857f4f049382407bba6e120281"
+  },
+  "user_after_claim": {
+    "private_0": "0",
+    "private_0_id": "Ezz73Y9kCtDTQTqBWAzFsRQVm4xvRZ4ZntqedNLFwKRW",
+    "public_0": "0",
+    "public_0_id": "AKRYNTU8c4MZ4fSr5FHcn6BGE6T4dfRCzn1ziQCNKFBu",
+    "step": "balances (nothing sent)"
+  },
+  "burn": {
+    "tx": "c0f17d662f82333063cd01b1c9c1d748da91944d06165a3c547c44c2830305e1",
+    "feeFrom": "0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3"
+  },
+  "user_after_burn": {
+    "private_0": "0",
+    "private_0_id": "Ezz73Y9kCtDTQTqBWAzFsRQVm4xvRZ4ZntqedNLFwKRW",
+    "public_0": "0",
+    "public_0_id": "AKRYNTU8c4MZ4fSr5FHcn6BGE6T4dfRCzn1ziQCNKFBu",
+    "step": "balances (nothing sent)"
+  }
+}

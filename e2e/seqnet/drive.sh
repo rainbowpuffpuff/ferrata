@@ -10,6 +10,7 @@
 #      stand-in, the user's private claim and private burn, the checkpoint, the release, the records.
 #   5. Ethereum's transactions listed (ethtxs.py); anvil stopped.
 # Records: e2e/runs/seqnet-NAME/ (committed); work: spike/tmp/miniapp-sequencer/w-NAME/ (not committed).
+# MODE gasdrop (hook-gasdrop.sh): the cli mode's deposit; the network's gas-drop relayer by default, behind the gateway.
 # MODE robust (hook-robust.sh): the cli mode's deposit twice; the relayer's root import and interrupted user commands.
 set -euo pipefail
 REPO="$SEQNET_REPO"; T="$SEQNET_T"; NAME="$SEQNET_NAME"; MODE="$SEQNET_MODE"
@@ -68,23 +69,16 @@ cp "$VOL/session-a/channel.json" "$VOL/session-a/deployment-settings.yaml" "$RUN
 BRIDGE="$(jq -r .bridge.header "$SA")"; ATTEST="$(jq -r .attestation.account "$SA")"
 say "session A: tip $(jq -c .tip "$SA"); bridge program $BRIDGE (image $BRIDGE_ID), attestation program $ATTEST (image $ATTEST_ID)"
 
-# ---- 2. anvil, the mock verifier, the vault ---------------------------------------------------------
+# ---- 2. anvil, the vault (and, but for the deployer mode, the mock verifier in its verifier's place) ---------------
+. "$HERE/vault.sh"
 anvil --chain-id 11155111 --port 8545 --gas-limit 100000000 --auto-impersonate > "$W/anvil.log" 2>&1 & ANVIL=$!
 trap 'kill $ANVIL 2>/dev/null || true' EXIT
 for _ in $(seq 60); do cast chain-id --rpc-url $RPC > /dev/null 2>&1 && break; sleep 1; done
 cast rpc anvil_setBalance $DEPLOYER 0x56bc75e2d63100000 --rpc-url $RPC > /dev/null   # 100 ETH
-if [ "$MODE" = deployer ]; then
-  # A second deployer's own deployment: DeployVault deploys RISC Zero's Groth16 verifier first (no proof is verified in
-  # this run), then the stop, the library and the vault: the vault is the fourth creation.
-  MOCK=""; N="$(cast nonce $DEPLOYER --rpc-url $RPC)"
-  VAULT="$(cast compute-address $DEPLOYER --nonce $((N + 3)) | awk '{print $NF}')"
-else
-  MOCK="$(cd "$REPO/vault" && forge create test/mocks/MockVerifiers.sol:MockRiscZeroVerifier --rpc-url $RPC --unlocked \
-    --from $DEPLOYER --broadcast --json 2>/dev/null | jq -r .deployedTo)"
-  [ -n "$MOCK" ] && [ "$MOCK" != null ] || die "the mock verifier was not deployed"
-  N="$(cast nonce $DEPLOYER --rpc-url $RPC)"
-  VAULT="$(cast compute-address $DEPLOYER --nonce $((N + 2)) | awk '{print $NF}')"
-fi
+# Every mode: DeployVault deploys RISC Zero's 3.1.0 Groth16 verifier itself (it refuses any other, the mock included),
+# then the stop, the library and the vault, its fourth creation; every mode but `deployer` then puts the mock's code in
+# the verifier's place on anvil (vault.sh; CI's job `vault` runs the same functions: e2e/seqnet/test-vault-deploy.sh).
+MOCK=""; VAULT="$(seqnet_vault_address $RPC $DEPLOYER)" || die "the vault's address"
 if [ "$MODE" = deployer ] && [ -z "${CROWN_ADMIN:-}${CROWN_FREEZE_AUTHORITY:-}${CROWN_ROLES_LABEL:-}" ]; then
   # The LEZ configuration's admin and freeze authority, unless the deployer names its own accounts (CROWN_ADMIN and
   # CROWN_FREEZE_AUTHORITY) or a label: two fresh random keys, kept in the work directory, never in the records.
@@ -99,20 +93,12 @@ GS="$(python3 -I "$REPO/e2e/crown/identity.py" genesis-state --tip-id "$(jq -r .
   --config-tip-hash "$(jq -r .channel.configTipHash "$SA")")"
 FROM="$(cast block-number --rpc-url $RPC)"
 if [ "$MODE" = deployer ]; then VERIFIER="RISC Zero's Groth16 verifier, which DeployVault deploys first"
-else VERIFIER="the vault tests' MockRiscZeroVerifier"; fi
-jq -n --arg v "$VAULT" --arg c "$CID" --arg g "$GS" --arg m "$MOCK" --arg d "${SEQNET_DELTA:-3600}" --arg w "$VERIFIER" \
-  '{label: ("seqnet: local anvil (chain id 11155111, the stand-in committee finalizes its blocks), the vault uses " + $w + " behind the emergency stop"),
-  chainId: 11155111, vault: $v, configId: $c, genesisState: $g, groth16Verifier: $m, delta: ($d | tonumber)}' > "$RUN/identity.json"
-jq -n --arg c "$CID" --arg g "$GS" --arg a "$CHECKPOINT_A_ID" --arg b "$CHECKPOINT_B_ID" --arg r "$RELEASE_ID" --arg z "$Z" \
-  '{_source: "seqnet (the final programs of docs/image-ids.md; a stand-in identity from a real devnet session A)",
-    checkpointImageIdA: $a, checkpointImageIdB: $b, releaseImageId: $r, lezConfigId: $c, genesisState: $g, nMin: 1, tMin: 1,
-    postingTimeframe: 0, ethLezDefinition: $z, tokenLezDefinition: $z}' > "$RUN/params.json"
-jq -n --arg v "$VAULT" '{chainId: 11155111, vault: $v, deposits: []}' > "$RUN/crown.json"
+else VERIFIER="RISC Zero's Groth16 verifier deployed by DeployVault, its code then replaced on anvil by the vault tests' MockRiscZeroVerifier"; fi
+seqnet_vault_inputs "$RUN" "$VAULT" "$CID" "$GS" "$VERIFIER" "$CHECKPOINT_A_ID" "$CHECKPOINT_B_ID" "$RELEASE_ID" "${SEQNET_DELTA:-3600}"
 if [ -n "$MOCK" ]; then say "vault $VAULT (mock verifier $MOCK), configId $CID, genesisState $GS"
 else say "vault $VAULT ($VERIFIER), configId $CID, genesisState $GS"; fi
 [ "$MODE" = logoseth ] && export FERRATA_FREEZE_AUTHORITY=$FREEZER
-SEPOLIA_RPC_URL=$RPC ETH_FROM=$DEPLOYER FERRATA_UNLOCKED=1 FERRATA_NONCE_GAP=0 bash "$REPO/e2e/crown/sepolia.sh" "$RUN" deploy \
-  > "$W/deploy.log" 2>&1 || { tail -n 30 "$W/deploy.log"; die "vault deployment"; }
+seqnet_deploy_vault "$RUN" $RPC $DEPLOYER "$W/deploy.log" || { tail -n 30 "$W/deploy.log"; die "vault deployment"; }
 if [ "$MODE" = logoseth ]; then
   # The deployer (impersonated: nobody holds its key) offers the admin role; the admin accepts it through the module.
   cast send --unlocked --from $DEPLOYER --rpc-url $RPC "$VAULT" "transferAdmin(address)" $ADMIN > "$W/transfer-admin.log" 2>&1 \
@@ -126,6 +112,10 @@ if [ "$MODE" = deployer ]; then
   GV="$(jq -r '.groth16Verifier // empty' "$RUN/deploy.json")"; [ -n "$GV" ] || die "deploy.json names no Groth16 verifier"
   jq --arg g "$GV" '.groth16Verifier = $g' "$RUN/identity.json" > "$W/identity.json" && mv "$W/identity.json" "$RUN/identity.json"
   say "RISC Zero's Groth16 verifier $GV (DeployVault's first creation)"
+fi
+if [ "$MODE" != deployer ]; then
+  MOCK="$(seqnet_mock_verifier "$RUN" $RPC)" || die "the mock verifier in the Groth16 verifier's place"
+  say "RISC Zero's Groth16 verifier $MOCK deployed by DeployVault, its code replaced on anvil by MockRiscZeroVerifier's"
 fi
 
 # ---- 3. The user: seed, LEZ wallet password, Ethereum keystore --------------------------------------
@@ -147,7 +137,7 @@ EOF
 F=("$BIN/ferrata" --seed "$U/seed.txt" --eth-rpc $RPC --chain-id 11155111 --vault "$VAULT" --from-block "$FROM")
 
 # ---- 3b. cli: the private deposit with the tool, then capture-1 (miniapp: both in the hook, through the view) ------
-if [ "$MODE" = cli ] || [ "$MODE" = deployer ] || [ "$MODE" = robust ]; then
+if [ "$MODE" = cli ] || [ "$MODE" = deployer ] || [ "$MODE" = robust ] || [ "$MODE" = gasdrop ]; then
   u 01-keys "${F[@]}" keys --accounts 2 || die "keys"
   u 02-status "${F[@]}" status || die "status"
   u 03-deposit-dry-run "${F[@]}" deposit --denomination 0 --from "$DEPOSITOR" || die "deposit dry run"

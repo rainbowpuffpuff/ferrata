@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# The network's gas-drop relayer (RFP-022 U.5, Priv.7), set up on this host. Run as root, in order:
+#
+#   ferrata-gasdrop-setup init GUEST AMOUNT BRIDGE
+#                                               user ferrata-gasdrop, /var/lib/ferrata/gasdrop/{inbox,state,lez,cache},
+#                                               a fresh LEZ seed (cast wallet new-mnemonic, mode 600, never printed),
+#                                               the guest (GUEST: the gas-drop ELF whose image id the `ferrata` tool
+#                                               pins: docs/image-ids.md `gasdrop`) to /opt/ferrata/share/gasdrop.bin,
+#                                               /etc/ferrata/gasdrop.env and the gateway's terms
+#                                               (/etc/ferrata/gasdrop-terms.json, "paused" until funded); AMOUNT: native
+#                                               LEZ per drop (one per deposit: the claim's fee and a later burn's);
+#                                               BRIDGE: the bridge program's account, 32-byte hex (/programs.json).
+#                                               Prints the relayer's LEZ public account /0 to fund.
+#   ferrata-gasdrop-setup fund AMOUNT           after the operator paid native LEZ to that public account /0: AMOUNT of
+#                                               it to the drop account (private /0), proven here (seqnet-fund
+#                                               --private-only); then the terms lose "paused"
+#   ferrata-gasdrop-setup start                 the unit enabled and started; the gateway restarted (it then serves
+#                                               /relayer/gas-drop and writes jobs into the inbox)
+#   ferrata-gasdrop-setup status                the terms, the inbox, the drop book, the drop account's balance
+#
+# Idempotent: an existing seed is kept. Nothing here sends to Ethereum; `fund` sends one LEZ transaction on this zone.
+set -euo pipefail
+B=/var/lib/ferrata/gasdrop
+BIN=/opt/ferrata/bin
+TERMS=/etc/ferrata/gasdrop-terms.json
+ENVF=/etc/ferrata/gasdrop.env
+GUEST=/opt/ferrata/share/gasdrop.bin
+as_gasdrop() {
+  systemd-run --quiet --wait --pipe --collect --uid=ferrata-gasdrop --gid=ferrata-gasdrop \
+    -p TemporaryFileSystem=/var/lib/ferrata:ro -p BindPaths="$B" -p UMask=0077 \
+    -E HOME="$B" -E XDG_CACHE_HOME="$B/cache" -E RISC0_SERVER_PATH="$BIN/r0vm" -E PATH=/usr/bin:/bin -- "$@"; }
+relayer_public() { as_gasdrop "$BIN/ferrata" --seed "$B/seed.txt" keys --accounts 1 2>/dev/null | awk '/public accounts/{getline; print $2; exit}'; }
+terms_set() { # KEY JSON-VALUE (null deletes)
+  python3 -I - "$TERMS" "$1" "$2" <<'EOF'
+import json, os, sys
+p, k, v = sys.argv[1], sys.argv[2], json.loads(sys.argv[3])
+t = json.load(open(p))
+if v is None:
+    t.pop(k, None)
+else:
+    t[k] = v
+tmp = p + ".tmp"
+with open(tmp, "w") as f:
+    json.dump(t, f, indent=1)
+os.chmod(tmp, 0o644)
+os.replace(tmp, p)
+EOF
+}
+
+case "${1:-}" in
+init)
+  SRC="${2:?usage: $0 init GUEST AMOUNT BRIDGE}"; AMOUNT="${3:?usage: $0 init GUEST AMOUNT BRIDGE}"
+  BRIDGE="${4:?usage: $0 init GUEST AMOUNT BRIDGE}"
+  id ferrata-gasdrop >/dev/null 2>&1 || useradd --system --home-dir /nonexistent --no-create-home --shell /usr/sbin/nologin ferrata-gasdrop
+  usermod -a -G ferrata-gasdrop ferrata-gw     # the gateway writes jobs into the inbox (group, setgid directory)
+  install -d -o ferrata-gasdrop -g ferrata-gasdrop -m 750 "$B"
+  install -d -o ferrata-gasdrop -g ferrata-gasdrop -m 2770 "$B/inbox"
+  for d in state lez cache; do install -d -o ferrata-gasdrop -g ferrata-gasdrop -m 700 "$B/$d"; done
+  if [ ! -s "$B/seed.txt" ]; then
+    ( umask 077; "$BIN/cast" wallet new-mnemonic --words 12 | awk '/^Phrase:/{getline; print; exit}' > "$B/seed.txt" )
+    [ "$(wc -w < "$B/seed.txt")" = 12 ] || { rm -f "$B/seed.txt"; echo "no mnemonic from cast" >&2; exit 1; }
+  fi
+  [ -s "$B/lez.pass" ] || ( umask 077; head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' > "$B/lez.pass" )
+  chown ferrata-gasdrop:ferrata-gasdrop "$B/seed.txt" "$B/lez.pass"; chmod 600 "$B/seed.txt" "$B/lez.pass"
+  # The vault and its chain (bridge.env, ferrata-bridge-start): the gateway's checker refuses receipts of another.
+  CHAIN="$(sed -n 's/^FERRATA_CHAIN_ID=//p' /etc/ferrata/bridge.env)"; VAULT="$(sed -n 's/^FERRATA_VAULT=//p' /etc/ferrata/bridge.env)"
+  [ -n "$CHAIN" ] && [ -n "$VAULT" ] || { echo "no FERRATA_CHAIN_ID / FERRATA_VAULT in /etc/ferrata/bridge.env" >&2; exit 1; }
+  [ -x "$BIN/ferrata-gasdrop" ] || { echo "$BIN/ferrata-gasdrop (the gateway's receipt checker) is not installed" >&2; exit 1; }
+  ID="$("$BIN/r0vm" --id --elf "$SRC" | tail -n 1)"
+  case "$ID" in 0x*) ;; *) ID="0x$ID" ;; esac
+  install -D -m 644 "$SRC" "$GUEST"
+  RL="$(relayer_public)"
+  [ -n "$RL" ] || { echo "the relayer's public account could not be read (ferrata keys)" >&2; exit 1; }
+  umask 022
+  printf 'FERRATA_BRIDGE_ACCOUNT=%s\nFERRATA_RELAYER_LEZ_ACCOUNT=%s\nFERRATA_GASDROP_IMAGE_ID=%s\nFERRATA_DROP_AMOUNT=%s\n' \
+    "$BRIDGE" "$RL" "$ID" "$AMOUNT" > "$ENVF"
+  [ -f "$TERMS" ] || printf '{}' > "$TERMS"
+  terms_set relayer "\"$RL\""; terms_set imageId "\"$ID\""; terms_set amount "\"$AMOUNT\""
+  terms_set covers '["claim", "burn"]'; terms_set chainId "$CHAIN"; terms_set vault "\"$VAULT\""
+  terms_set paused '"the relayer is not funded yet"'
+  grep -q '^GASDROP_INFO=' /etc/ferrata/gateway.env 2>/dev/null || \
+    printf 'GASDROP_INFO=%s\nGASDROP_GUEST=%s\nGASDROP_INBOX=%s\nGASDROP_CHECK=%s\n' "$TERMS" "$GUEST" "$B/inbox" "$BIN/ferrata-gasdrop" >> /etc/ferrata/gateway.env
+  echo "relayer LEZ public account /0: $RL (fund it with native LEZ, then: $0 fund AMOUNT)"
+  echo "guest $ID; $AMOUNT per drop; terms $TERMS (paused)"
+  ;;
+fund)
+  AMOUNT="${2:?usage: $0 fund AMOUNT}"
+  as_gasdrop "$BIN/seqnet-fund" --private-only --sequencer http://127.0.0.1:3040 --seed "$B/seed.txt" \
+    --lez-wallet "$B/lez" --lez-password-file "$B/lez.pass" --private-amount "$AMOUNT" | tee -a "$B/fund.jsonl"
+  terms_set paused null
+  echo "funded; terms published without \"paused\""
+  ;;
+start)
+  install -m 644 "$(dirname "$0")/../systemd/ferrata-gasdrop.service" /etc/systemd/system/ 2>/dev/null || true
+  systemctl daemon-reload
+  systemctl enable --now ferrata-gasdrop
+  systemctl restart ferrata-gateway
+  systemctl is-active ferrata-gasdrop ferrata-gateway
+  ;;
+status)
+  cat "$TERMS"; echo; ls -la "$B/inbox"; cat "$B/state/drops.json" 2>/dev/null; echo
+  tail -n 5 /var/log/ferrata/gasdrop.log 2>/dev/null || true
+  ;;
+*) sed -n '2,22p' "$0"; exit 2 ;;
+esac

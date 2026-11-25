@@ -29,6 +29,9 @@
 #   run.sh logoseth NAME  the mini-app's round trip with its Ethereum side through Logos Core's own modules (reads through
 #                         eth_rpc_module; the deposit, the release and the vault's admin calls through tx_sender_module, each
 #                         approved at evm_signer_cli) and LEZ through lez_core (hook-logoseth.sh)
+#   run.sh gasdrop NAME   the private claim and burn with no gas-drop setting and no native LEZ of the user's own: the
+#                         network's relayer (ferrata-relayer --gas-drops-only) read from the test network's gateway in
+#                         front of the sequencer (U.5, Priv.7) (hook-gasdrop.sh)
 #   run.sh robust NAME    the cli round trip with two deposits, the relayer daemon's root import on the sequencer
 #                         (U.03), the claims' fees paid from the relayer daemon's gas drops (U.05), a claim killed
 #                         between its proof and its sending and a burn killed after its sending (R.07) (hook-robust.sh)
@@ -67,9 +70,19 @@ build() {
   ( cd "$REPO/vault" && { [ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 \
       OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0; } && forge build ) > "$L/vault.log" 2>&1 \
     || { tail -n 20 "$L/vault.log"; die "vault build"; }
-  say "cli: ferrata, ferrata-relayer, seqnet-fund, seqnet-txs"
-  ( cd "$REPO/cli" && CARGO_TARGET_DIR="$TGT" cargo build --release --features seqnet --bin ferrata --bin ferrata-relayer \
-      --bin seqnet-fund --bin seqnet-txs ) > "$L/cli.log" 2>&1 || { grep -E -A7 '^error' "$L/cli.log" | head -60; die "cli build"; }
+  # The gas-drop guest first: the tool built below pins its image id (FERRATA_GASDROP_PINS, cli/src/gasdrop_net.rs),
+  # as a release of the tool pins docs/image-ids.md's (a guest built in another directory has another id).
+  say "the gas-drop guest (bridge/guests' gasdrop, built by bridge's host crate with ~/.risc0, as cli/tests/relayer.sh)"
+  ( cd "$REPO/bridge" && env -u RISC0_HOME cargo build --release -p host ) > "$L/gasdrop.log" 2>&1 \
+    || { grep -E -A7 '^error' "$L/gasdrop.log" | head -40; die "the gas-drop guest build"; }
+  local gd; gd="$(find "$REPO/bridge/target" -path '*riscv32im-risc0-zkvm-elf/release/gasdrop.bin' | head -n 1)"
+  [ -n "$gd" ] || die "no gasdrop.bin under bridge/target"
+  local gid; gid="$(r0vm --id --elf "$gd" 2>/dev/null | tail -n 1)"; case "$gid" in 0x*) ;; *) gid="0x$gid" ;; esac
+  [ "${#gid}" = 66 ] || die "the gas-drop guest's image id ($gid)"
+  say "the gas-drop guest $gid, pinned in this build of the tool"
+  say "cli: ferrata, ferrata-relayer, ferrata-gasdrop, seqnet-fund, seqnet-txs"
+  ( cd "$REPO/cli" && FERRATA_GASDROP_PINS="$gid" CARGO_TARGET_DIR="$TGT" cargo build --release --features seqnet --bin ferrata --bin ferrata-relayer \
+      --bin ferrata-gasdrop --bin seqnet-fund --bin seqnet-txs ) > "$L/cli.log" 2>&1 || { grep -E -A7 '^error' "$L/cli.log" | head -60; die "cli build"; }
   say "crown-driver"
   ( cd "$REPO/lez/crown/driver" && { [ -f Cargo.lock ] || cp "$REPO/lez/live/driver/Cargo.lock" Cargo.lock; } \
       && CARGO_TARGET_DIR="$TGT" cargo build --release ) > "$L/driver.log" 2>&1 \
@@ -79,14 +92,9 @@ build() {
     || { grep -E -A7 '^error' "$L/realblocks.log" | head -40; die "realblocks-crown build"; }
   ( cd "$REPO/bridge" && cargo build --release -p ferrata-e2e ) > "$L/e2e.log" 2>&1 \
     || { grep -E -A7 '^error' "$L/e2e.log" | head -40; die "ferrata-e2e build"; }
-  say "the gas-drop guest (bridge/guests' gasdrop, built by bridge's host crate with ~/.risc0, as cli/tests/relayer.sh)"
-  ( cd "$REPO/bridge" && env -u RISC0_HOME cargo build --release -p host ) > "$L/gasdrop.log" 2>&1 \
-    || { grep -E -A7 '^error' "$L/gasdrop.log" | head -40; die "the gas-drop guest build"; }
-  local gd; gd="$(find "$REPO/bridge/target" -path '*riscv32im-risc0-zkvm-elf/release/gasdrop.bin' | head -n 1)"
-  [ -n "$gd" ] || die "no gasdrop.bin under bridge/target"
   mkdir -p "$T/bin"
   cp "$gd" "$T/bin/gasdrop.bin"
-  cp "$TGT/release/ferrata" "$TGT/release/ferrata-relayer" "$TGT/release/seqnet-fund" "$TGT/release/seqnet-txs" \
+  cp "$TGT/release/ferrata" "$TGT/release/ferrata-relayer" "$TGT/release/ferrata-gasdrop" "$TGT/release/seqnet-fund" "$TGT/release/seqnet-txs" \
      "$TGT/release/crown-driver" "$REPO/checkpoint/target/release/realblocks-crown" "$REPO/bridge/target/release/ferrata-e2e" "$T/bin/"
   say "the zone's bundle: $(basename "$BUNDLE"), with this tree's crown-driver and session.sh (lez/crown/build.sh repack)"
   mkdir -p "$T/crown-lez/bin"; cp "$T/bin/crown-driver" "$T/crown-lez/bin/crown-driver"
@@ -199,11 +207,11 @@ case "${1:-}" in
   build-miniapp) build_miniapp ;;
   build-logoseth) build_logoseth ;;
   build-lezcore) build_lezcore "${2:-all}" ;;
-  cli|miniapp|lezcore|basecamp|deployer|logoseth|robust)
+  cli|miniapp|lezcore|basecamp|deployer|logoseth|robust|gasdrop)
     NAME="${2:?run.sh $1 NAME}"
     # The tools are rebuilt first (incremental), so that a run uses this tree's (a restored box may hold older ones).
     build > "$T/logs/build-before-$NAME.log" 2>&1 || { tail -n 20 "$T/logs/build-before-$NAME.log"; die "build"; }
-    if [ "$1" != cli ] && [ "$1" != deployer ] && [ "$1" != robust ]; then
+    if [ "$1" != cli ] && [ "$1" != deployer ] && [ "$1" != robust ] && [ "$1" != gasdrop ]; then
       ( cd "$REPO/cli" && CARGO_TARGET_DIR="$TGT" cargo build --release --features seqnet --bin seqnet-chain ) >> "$T/logs/build-before-$NAME.log" 2>&1 \
         && cp "$TGT/release/seqnet-chain" "$T/bin/" || die "seqnet-chain build"
     fi

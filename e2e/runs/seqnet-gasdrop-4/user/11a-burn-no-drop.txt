@@ -1,0 +1,18 @@
+$ ferrata --seed <work>/user/seed.txt --eth-rpc http://127.0.0.1:8545 --chain-id 11155111 --vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 --from-block 0 --lez-wallet <work>/user/lez-wallet --lez-password-file <work>/user/lez.pass --bridge-account 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d --sequencer http://127.0.0.1:56081/rpc burn --amount 0.001 --recipient 0x8063Dc8afD535491EDFF87b229b4C6960BFe0907 --bridge-program <work>/zone/bundle/program/ferrata_bridge.bin
+
+Latest block is 31
+burn on LEZ (configuration 0xa78fc27222401bbe1eb0b8191b82d867586efc6b89d7bd7de60b7acb79ac0278):
+  amount       0.001 ETH (1000000000000000 base units, 18 decimals) from your private account /0
+  recipient    0x8063Dc8afD535491EDFF87b229b4C6960BFe0907 on Ethereum (bound into COut, encrypted in the memo)
+  would send   Burn to the bridge program 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d, proven locally by LEZ's wallet; note r 0x8723fe2e3bab092017d425d0a74eb80bbc46121f59a348639c3954b3dd3c6bf6  COut 0xea4cae904a5a9cd8fd5c26bc2f9d9d724655aaa4bc713013daf517d885416dcc  burn counter 0
+  cost         at release, the burn fee 0 ETH (0 base units, 18 decimals) and the checkpoint fee 0.000001 ETH (1000000000000 base units, 18 decimals) in force now are deducted: the recipient receives 0.000997 ETH (997000000000000 base units, 18 decimals) through a relayer (relay fee 0.000002 ETH (2000000000000 base units, 18 decimals)), 0.000999 ETH (999000000000000 base units, 18 decimals) if you send the release yourself; the LEZ fee is paid inside the proof
+what becomes public (Burn (LEZ)):
+  public on Ethereum: nothing
+  public on LEZ:      the burn note: token, denomination, r, the recipient encrypted (c_out); the holder account, if it is public
+  stays private:      the Ethereum recipient (encrypted to you); a private holder and its balance
+privacy of these choices: Minimal: only the residual correlations (token, denomination, time)
+  ok Burn from a private account: the holder stays private.
+  ok Fresh recipient address: nothing on Ethereum ties the release to your depositor address.
+  ok Released through a relayer: the recipient needs no ETH for gas.
+fee payer: your private account that proves; its native LEZ came from somewhere (a faucet or a purchase can link it to you); a claim's gas drop (on by default when the network publishes a relayer) leaves enough in its one-time account to pay a burn
+error: no gas drop of this wallet holds native LEZ for this burn's fee (a drop pays a claim and one burn) and the network publishes relayer 0xbe4749d897560029caac6c340ab2d38409dc10755067b1fb97cdcf513840b551: paying from your own private account reveals where its native LEZ came from; add --no-gas-drop to confirm that

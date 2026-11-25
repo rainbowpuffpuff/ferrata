@@ -175,12 +175,16 @@ jobs:
       # cli/tests/relayer.sh's offline part: the relayer library's tests (journals, the burn watch, temporary
       # failures, imported roots) and the gas drop's checks on a real receipt, no dev mode (RFP-022 R.6, U.3). Its
       # third test, tests/relayer_fork.rs, reads public Sepolia state for its fork and runs on the build box.
-      - name: The relayer's tests (library, gas drop); the burn-counter journal's (cli/src/burns.rs, RFP-022 R.7)
+      # The gas drop by default (RFP-022 U.5, Priv.7): the network's relayer read from the sequencer's origin, only
+      # 404/410 read as "none published", every other answer stopping the claim and the burn (cli/src/gasdrop_net.rs);
+      # the gateway's offline job check on the recorded real receipt (relayer::tests, in `--lib relayer`).
+      - name: The relayer's tests (library, gas drop, the network's relayer); the burn-counter journal's (cli/src/burns.rs, RFP-022 R.7)
         timeout-minutes: 30
         working-directory: cli
         run: |
           export RISC0_HOME="$HOME/risc0-home-lez"
           cargo test --locked --lib relayer
+          cargo test --locked --lib gasdrop_net
           cargo test --locked --lib burns
           cargo test --locked --test gasdrop -- --nocapture
       # RFP-022 U.9: seqnet-chain, the chain service the mini-app's endpoints test runs inside Logos Core with
@@ -338,6 +342,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: The JS library (Node 20 or later)
         run: node --version && node --test deploy/testnet/web/msg/test/*.test.mjs
+      - name: The web wallet's fee-payer line (the network's gas-drop relayer; RFP-022 U.5, Priv.7)
+        run: node --test deploy/testnet/web/wallet/test/gasdrop.test.mjs
       - name: The IDLs are what idl/tools/msg_idl.py writes
         run: python3 -I idl/tools/msg_idl.py --check
       - name: Free disk space
@@ -429,6 +435,9 @@ jobs:
       - name: forge test
         working-directory: vault
         run: forge test --no-match-contract PrivacySuite
+      # e2e/seqnet deploys the vault through these functions in every mode; DeployVault once refused them unnoticed.
+      - name: e2e/seqnet's vault deployment (e2e/seqnet/vault.sh, on anvil)
+        run: bash e2e/seqnet/test-vault-deploy.sh
 
   # The dependency policy (deny.toml) over every Rust workspace (scripts/deny_all.py): licences, bans and sources block,
   # and the workspaces that need the upstream sources (the root, cli, lez) must have passed, not been skipped (the trees
@@ -554,6 +563,11 @@ jobs:
       # again from its files, offline (modules/results/live-testnet-2026-11-23/).
       - name: The live test-network record's figures and checks recomputed (modules/scripts/test_live_testnet.py)
         run: python3 -I modules/scripts/test_live_testnet.py
+      # RFP-022 U.5, Priv.7: the test network's gateway publishing its gas-drop relayer: the terms (404 only when none
+      # are published), the inbox's checks, a job's receipt verified before it counts against any cap, no address or
+      # nullifier in its log (deploy/testnet/host/bin/ferrata-gateway, standard library only).
+      - name: The gateway's gas-drop routes (deploy/testnet/tests/test_gateway_gasdrop.py)
+        run: python3 -I deploy/testnet/tests/test_gateway_gasdrop.py
       # The build page (site/README.md): a fresh build's counts equal the status document's and every link it emits
       # resolves; the committed bundle's freshness is left to its rebuild (--skip-freshness).
       - name: The build page, built fresh and checked (site/test_site.py --skip-freshness)

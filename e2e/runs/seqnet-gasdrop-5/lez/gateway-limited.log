@@ -1,0 +1,8 @@
+ferrata-gateway on 127.0.0.1:47238 -> http://127.0.0.1:3040
+rpc 127.0.0.1 getAccount n=1 cost=1 200 355B 4ms
+rpc 127.0.0.1 getAccount n=1 cost=1 200 1765B 1ms
+rpc 127.0.0.1 getLastBlockId n=1 cost=1 200 36B 1ms
+rpc 127.0.0.1 getLastBlockId n=1 cost=1 200 36B 1ms
+rpc 127.0.0.1 getBlockRange n=1 cost=4 200 1823220B 7ms
+rpc 127.0.0.1 getAccount n=1 cost=1 200 2305B 1ms
+rpc 127.0.0.1 getAccount n=1 cost=1 200 1765B 1ms

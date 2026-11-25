@@ -1,0 +1,62 @@
+# The network's gas-drop relayer (RFP-022 U.5, Priv.7; ADR 0022): `ferrata-relayer --gas-drops-only`. Jobs come from
+# the gateway (POST /relayer/gas-drop, its checks and caps) into the inbox; for each it verifies the receipt (the guest
+# in /etc/ferrata/gasdrop.env, a root the zone imported, N not claimed and not dropped yet) and sends one sealed
+# native-LEZ credit from its private account /0 to the receipt's one-time account, proven here (LEZ's privacy circuit,
+# real proofs: about four minutes of CPU each, one drop at a time), journaled in state/drops.json. It holds no
+# Ethereum key and sends nothing to Ethereum: it reads the vault's deposits (bridge.env) to map imported roots.
+# Set up by host/bin/ferrata-gasdrop-setup (user, directories, seed, terms, guest); not enabled by install.sh.
+[Unit]
+Description=Ferrata testnet: the gas-drop relayer (one sealed native-LEZ credit per deposit)
+After=ferrata-sequencer.service network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/ferrata/gasdrop.env
+ConditionPathExists=/etc/ferrata/bridge.env
+RequiresMountsFor=/var/lib/ferrata
+
+[Service]
+User=ferrata-gasdrop
+Group=ferrata-gasdrop
+EnvironmentFile=/etc/ferrata/bridge.env
+EnvironmentFile=/etc/ferrata/gasdrop.env
+Environment=XDG_CACHE_HOME=/var/lib/ferrata/gasdrop/cache
+Environment=RISC0_SERVER_PATH=/opt/ferrata/bin/r0vm
+Environment=HOME=/var/lib/ferrata/gasdrop
+UnsetEnvironment=RISC0_DEV_MODE
+ExecStart=/opt/ferrata/bin/ferrata-relayer --gas-drops-only --sequencer http://127.0.0.1:3040 --seed /var/lib/ferrata/gasdrop/seed.txt --lez-wallet /var/lib/ferrata/gasdrop/lez --lez-password-file /var/lib/ferrata/gasdrop/lez.pass --state /var/lib/ferrata/gasdrop/state --drop-amount ${FERRATA_DROP_AMOUNT} --drop-wait 300 --max-job-age 86400 run --inbox /var/lib/ferrata/gasdrop/inbox --poll-secs 10
+Restart=always
+RestartSec=30
+TimeoutStopSec=60
+StandardOutput=append:/var/log/ferrata/gasdrop.log
+StandardError=append:/var/log/ferrata/gasdrop.log
+UMask=0007
+# Of /var/lib/ferrata it sees its own directory only, the inbox inside it (one mount with --state: finished jobs move
+# into state/done or state/refused with rename(2); the bridge relayer's EXDEV lesson, README "Operating notes").
+TemporaryFileSystem=/var/lib/ferrata:ro
+BindPaths=/var/lib/ferrata/gasdrop
+ExecStartPre=/bin/sh -c 'test "$(stat -c %%m /var/lib/ferrata/gasdrop/inbox)" = "$(stat -c %%m /var/lib/ferrata/gasdrop/state)"'
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+TasksMax=256
+# The credit's proof: bounded so that the sequencer, the node and the updater keep their share of the host.
+MemoryMax=12G
+CPUQuota=400%
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

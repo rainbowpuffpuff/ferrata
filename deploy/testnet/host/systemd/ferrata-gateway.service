@@ -21,6 +21,8 @@ UMask=0077
 TemporaryFileSystem=/var/lib/ferrata:ro
 BindReadOnlyPaths=/var/lib/ferrata/keys/faucet
 BindPaths=/var/lib/ferrata/faucet
+# The gas-drop relayer's inbox (ferrata-gasdrop-setup: group ferrata-gasdrop, setgid 2770), when it is set up.
+BindPaths=-/var/lib/ferrata/gasdrop/inbox
 InaccessiblePaths=-/srv/ferrata -/etc/caddy -/var/lib/caddy
 # Loopback only: Caddy in front of it, the sequencer behind it.
 IPAddressDeny=any

@@ -182,10 +182,14 @@ proof; nobody else can pay it on v0.4. The **gas drop** lets a relayer fund that
 is yours: your gas-drop receipt binds `(N, oneTimeAddress, relayer)`, the relayer sends one credit per `N` (EVIDENCE
 rows 47, 48), and on LEZ v0.4.0-rc3 a credit sealed to a fresh one-time private account was swept by the private
 claim that paid its fee from it, by a claimant with no native LEZ at all, with real proofs (M0 check 2, row 124).
-The relayer daemon sends that sealed credit, and the `ferrata` tool's claim asks for it by default once a relayer's
-inbox is configured (`--gas-drop-inbox`; run on LEZ v0.4.0-rc1's sequencer with dev-mode proofs, row 205); with no
-relayer configured, or in the mini-app, a first claim still needs native LEZ from elsewhere: a correlation the client states
-([`bridge.md`](../design/bridge.md) §6).
+The relayer daemon sends that sealed credit, and the `ferrata` tool's claim asks for it with no setting: it reads the
+relayer the network publishes at its sequencer's origin (`/relayer/gas-drop`), or one you name (`--gas-drop-inbox`); the
+same drop's remainder pays a later private burn's fee. The claim names that relayer, so it is paid the deposit's
+registered relay fee (the same amount whoever is named). Only a network that publishes no relayer (an answer 404 or 410)
+leaves the fee to your own account; any other answer stops the claim until you add `--no-gas-drop` (run on LEZ
+v0.4.0-rc1's sequencer with dev-mode proofs, `e2e/runs/seqnet-gasdrop-4/`; not yet deployed on the test network). Where
+no relayer is published, or in the mini-app, a first claim still needs native LEZ from elsewhere: a correlation the
+client states ([`bridge.md`](../design/bridge.md) §6).
 
 **A refused claim changes nothing** and the deposit stays claimable (R.1): a refusal reverts the whole
 LEZ transaction, and a private claim that fails produces no receipt and no transaction

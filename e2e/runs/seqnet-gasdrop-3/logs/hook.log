@@ -1,0 +1,27 @@
+[23:01:31] operator: crown-driver crown-b --operator-only over capture-1
+[crown-b] bridge Register ETH (registry entry, schedules 0 and 1, leaf count) applied        gas    453070 block   24 + 10.0s 04fb31d1750205e323e9ab18023c94a4989eb0a493521969f636f92a3649cf6e
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 1
+[crown-b] bridge ImportRoot n=1 (stage 1, block 9)                   applied        gas    302845 block   25 + 10.0s 23fcc5841508a74710613c2938174511d7d8245884c4ed3ea60dbc1e97bbb44c
+[crown-b] blocks 20..=25 (T1 0xf2b127973323de0aa1fe4c5d493d368889e2d51bc920e9221081c637dee4ecae); 0 burn note(s) written to <work>/notes.json
+- PASS the gateway publishes the network's relayer 0xbe4749d897560029caac6c340ab2d38409dc10755067b1fb97cdcf513840b551 (guest 0xce3ad533d2c72b38c9779f1c692dd784e3fd754612808696e1362da49c7f8125, 200000000 native LEZ per deposit, for claim and burn)
+[23:02:51] PASS the gateway publishes the network's relayer 0xbe4749d897560029caac6c340ab2d38409dc10755067b1fb97cdcf513840b551 (guest 0xce3ad533d2c72b38c9779f1c692dd784e3fd754612808696e1362da49c7f8125, 200000000 native LEZ per deposit, for claim and burn)
+[23:02:51] the network: relayer 0xbe4749d897560029caac6c340ab2d38409dc10755067b1fb97cdcf513840b551 (--gas-drops-only, inbox <work>/gasdrop/inbox), gateway http://127.0.0.1:18084/rpc
+- PASS U.5/Priv.7: with no setting the claim's dry run names the network's relayer, read from the gateway, as fee payer: fee payer: a fresh one-time private account, credited (sealed) by the network's gas-drop relayer 0xbe4749d897560029caac6c340ab2d38409dc10755067b1fb97cdcf513840b…
+[23:02:51] PASS U.5/Priv.7: with no setting the claim's dry run names the network's relayer, read from the gateway, as fee payer: fee payer: a fresh one-time private account, credited (sealed) by the network's gas-drop relayer 0xbe4749d897560029caac6c340ab2d38409dc10755067b1fb97cdcf513840b…
+[23:02:52] the claim's delay let pass on anvil's clock: 601 blocks mined (block 9 -> 610; the tool counts 12 s per block)
+[23:03:12] applied: block 29, private transaction 42121a36f9e8edff139df8640f8e04d7f1347f4624576be2f0c41c82f2a92f83, reverted false, program (private root), visible bridge calls Read,Issue
+- PASS U.5/Priv.7: the private claim applied, its fee paid by one-time account 0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3 from the network relayer's sealed credit (job posted to the gateway: went to http://127.0.0.1:18084/relayer/gas-drop (job gas-drop-cd6efdc213344cb4703558dba09755f76699b31837e3c6f271bad16311b1adad.json); relayer: {"tx":"48c1cd515473c683328bfcd3f6d7afa46ed2bce63ff463e4bd0b6a66e6162de4","amount":"200000000","sealed":true,"sends":1})
+[23:03:12] PASS U.5/Priv.7: the private claim applied, its fee paid by one-time account 0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3 from the network relayer's sealed credit (job posted to the gateway: went to http://127.0.0.1:18084/relayer/gas-drop (job gas-drop-cd6efdc213344cb4703558dba09755f76699b31837e3c6f271bad16311b1adad.json); relayer: {"tx":"48c1cd515473c683328bfcd3f6d7afa46ed2bce63ff463e4bd0b6a66e6162de4","amount":"200000000","sealed":true,"sends":1})
+- PASS the drop is recorded beside the wallet (ferrata-gas-drops.json: N -> the one-time account and the inbox URL)
+[23:03:12] PASS the drop is recorded beside the wallet (ferrata-gas-drops.json: N -> the one-time account and the inbox URL)
+- PASS nothing funded the user: seqnet-fund ran for the relayer only
+[23:03:12] PASS nothing funded the user: seqnet-fund ran for the relayer only
+- PASS U.5/Priv.7: with no setting the burn's dry run names the drop's one-time account as fee payer: fee payer: the one-time account 0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3 of a gas drop, from the 189900781 native LEZ its relayer's credit left after your claim; nothing is a…
+[23:03:12] PASS U.5/Priv.7: with no setting the burn's dry run names the drop's one-time account as fee payer: fee payer: the one-time account 0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3 of a gas drop, from the 189900781 native LEZ its relayer's credit left after your claim; nothing is a…
+- PASS Priv.7: --no-gas-drop (the opt-out) names the user's own private account and what its funding reveals
+[23:03:13] PASS Priv.7: --no-gas-drop (the opt-out) names the user's own private account and what its funding reveals
+[23:03:22] applied: block 30, private transaction dfcf79b46772f274640d6d9ad34183abc42c7199307156a3e76d3ae94b477aed, reverted false, program (private root), visible bridge calls Burn
+- PASS U.5/Priv.7: the private burn applied, its fee paid by the drop's one-time account 0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3 (the user holds no native LEZ elsewhere)
+[23:03:22] PASS U.5/Priv.7: the private burn applied, its fee paid by the drop's one-time account 0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3 (the user holds no native LEZ elsewhere)
+[23:03:23] the zone: 96 transactions in blocks 1..=30
+[23:03:23] hook-gasdrop: 8 passed, 0 failed

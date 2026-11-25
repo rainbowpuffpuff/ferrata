@@ -22,6 +22,7 @@ pub mod attest;
 pub mod burns;
 pub mod codes;
 pub mod eth;
+pub mod gasdrop_net;
 #[cfg(feature = "lez-wallet")]
 pub mod flow;
 pub mod lez;

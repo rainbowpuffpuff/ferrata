@@ -24,15 +24,6 @@
              for block in blocks {
                  for (i, tx) in block.body.transactions.iter().enumerate() {
                      let reverted = block.body.reverted.contains(&(i as u64));
-@@ -826,7 +837,7 @@
-                 // LEZ v0.4.0-rc1's wallet prints its dry run (the fee payer, the pending credits it claims and
-                 // what they sweep to the payer) and ends it with `DryRun`.
-                 match dry {
--                    Err(wallet::ExecutionFailureKind::DryRun) => eprintln!(
-+                    Err(wallet::ExecutionFailureKind::DryRun(_)) => eprintln!(
-                         "(the dry run above: the LEZ fee paid by the one-time account {payer}, from the credit it claims)"
-                     ),
-                     Err(e) => bail!(
 --- a/cli/src/eth.rs
 +++ b/cli/src/eth.rs
 @@ -143,6 +143,25 @@
