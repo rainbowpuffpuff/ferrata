@@ -247,7 +247,9 @@ the claim's own `sendTransaction` through `/rpc` is in the access log with its a
 4. Install the new gateway, its unit (the inbox's `BindPaths`) and the Caddyfile (`/relayer/gas-drop` to the gateway, no
    access log: `caddy validate --config /etc/caddy/Caddyfile` before the reload), then `ferrata-gasdrop-setup start`;
    check `curl -s https://<host>/relayer/gas-drop` (200, `accepting`), a junk POST (400, `pending` unchanged) and
-   `ferrata-gasdrop-setup status`.
+   `ferrata-gasdrop-setup status`. The gateway keeps every N it admitted in `/var/lib/ferrata/faucet/gasdrop-admitted.sqlite`
+   (no addresses; 7 days after the job left the inbox) and answers a repeat 409; run `check-job` once under the
+   gateway's unit (`MemoryMax=1G`) after the install, e.g. through a real job.
 
 Pause it by setting `"paused": "<reason>"` in the terms (the tool then stops a claim, with the reason, rather than pay
 from the user's own account); stop with `systemctl disable --now ferrata-gasdrop`.

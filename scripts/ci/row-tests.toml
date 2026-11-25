@@ -847,8 +847,9 @@ tests = [
   { path = "deploy/testnet/web/wallet/test/gasdrop.test.mjs", kind = "test", ci = "msg" },
   { path = "e2e/seqnet/hook-gasdrop.sh", kind = "test", ci = "box", run = "e2e/seqnet/run.sh gasdrop NAME" },
   { path = "e2e/runs/seqnet-gasdrop-4/gasdrop.md", kind = "record" },
+  { path = "e2e/runs/seqnet-gasdrop-5/gasdrop.md", kind = "record" },
 ]
-note = "fixed denominations, the claim delay and the relayer release preselected; each dry run prints the exposure of the choices; the fee-payer gas drop ran on rc3 with real proofs (EVIDENCE row 124, M0 check 2 GO); the tool now uses the network's relayer by default for the claim and pays a later private burn from the drop's remainder, the relayer read from the network's gateway, only 404/410 read as none published, every other answer stopping the claim or burn (gasdrop_net tests; seqnet-gasdrop-4, rc1's sequencer, dev-mode proofs); the gateway verifies a job's receipt before it counts against its caps; not in the mini-app's claim, not yet live on the test network"
+note = "fixed denominations, the claim delay and the relayer release preselected; each dry run prints the exposure of the choices; the fee-payer gas drop ran on rc3 with real proofs (EVIDENCE row 124, M0 check 2 GO); the tool now uses the network's relayer by default for the claim and pays a later private burn from the drop's remainder, the relayer read from the network's gateway, only 404/410 read as none published, every other answer stopping the claim or burn (gasdrop_net tests; seqnet-gasdrop-4, rc1's sequencer, dev-mode proofs); the gateway verifies a job's receipt before it counts against its caps and refuses an N it admitted before (seqnet-gasdrop-5); not in the mini-app's claim, not yet live on the test network"
 
 [[row]]
 id = "RFP-022 U.6"

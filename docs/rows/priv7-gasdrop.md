@@ -28,7 +28,8 @@ evidence per clause, a proposed EVIDENCE row. Strict reading as in `docs/require
   /relayer/gas-drop/guest`, `POST /relayer/gas-drop`. A posted job's **receipt is verified before it counts against any
   cap** (`ferrata-gasdrop check-job`, `relayer::check_drop_job`: the STARK against the published image id, this relayer,
   chain and vault, the one-time keys deriving the receipt's one-time address); only then the inbox (8 pending), hourly,
-  per-/24 and per-IP caps (F2). The gateway logs neither a job's address nor its N; Caddy keeps no access log of these
+  per-/24 and per-IP caps (F2). An N it has admitted is refused (409) before any check or cap while its job is in the
+  inbox and for 7 days after it left it (persisted, no address; review round 2, R1). The gateway logs neither a job's address nor its N; Caddy keeps no access log of these
   routes (F5). `ferrata-gasdrop.service`, `ferrata-gasdrop-setup`, README "The gas-drop relayer: deploying it". Not
   deployed: the lead deploys after review.
 - **Web wallet**: the bridge tab reads the same terms and names the relayer, what it learns, who is paid the relay fee
@@ -54,7 +55,7 @@ receipt check and the gateway's checker are tested on a real rc3 receipt). The b
 | fee-payer mitigation on by default (CLI) | as Priv.7 above |
 | fee-payer mitigation for burns | same run: the burn's dry run names the drop account (189,900,781 left after the claim; the claim's fee 10,099,219, derived); with the drop record set aside the burn stops while a relayer is published (it needs `--no-gas-drop`) and on a 429, and names the own account only on 404; the burn applied (LEZ tx `7e4b206e…aaab`), its fee paid by the drop's one-time account; the user still holds 0 native LEZ |
 | indicator of what leaks | the claim's and the burn's `fee payer:` lines (the relayer, what it learns: N, the one-time account, a time, the posting address, never which deposit; who is paid the relay fee; the opt-out); the web wallet's line (`deploy/testnet/web/wallet/test/gasdrop.test.mjs`, 4 tests, in CI job `msg`) |
-| the relayer serves it with bounds | `deploy/testnet/tests/test_gateway_gasdrop.py` (45 checks, CI job `links`): six fake receipts refused 400 leave the inbox, hourly, per-network and per-IP caps untouched; no checker or a checker past its timeout: 503, nothing counted; then the caps. What the gateway cannot check (no Ethereum or zone history there) the relayer does (root imported, N unclaimed, one drop per N): a job over a root of the asker's own making still costs a cap, at the price of a real proof each (about 13 s of CPU, M0 check 2) |
+| the relayer serves it with bounds | `deploy/testnet/tests/test_gateway_gasdrop.py` (58 checks, CI job `links`): six fake receipts refused 400 leave the inbox, hourly, per-network and per-IP caps untouched; no checker or a checker past its timeout: 503, nothing counted; then the caps. Every N the gateway admits is remembered on disk (no address) while its job is in the inbox and for 7 days after it left it: the same receipt posted again once the relayer has moved its job out (done, or refused: a root the relayer did not import) is answered 409 before any check or cap, also with other one-time keys and after a restart (review round 2, R1; on the running sequencer: `e2e/runs/seqnet-gasdrop-5/gasdrop.md`, 21 of 21 PASS: the claim's own job, posted again once the relayer had finished it, answered 409 (taken already), nothing checked, counted or handed over; the other 20 checks as seqnet-gasdrop-4's). What the gateway cannot check (no Ethereum or zone history there) the relayer does: the root imported, N unclaimed, one drop per N. So a job that spends a cap needs an N the gateway has not taken in the last 7 days after its job finished: a new proof (about 13 s of CPU, M0 check 2) over a deposit tree the asker may make up; the caps then bound how many such jobs reach the relayer (12 an hour), not how many proofs an asker makes |
 
 Still short: the mini-app (U.5 names the mini-app and the CLI); the live run; real proofs on this path.
 
@@ -66,9 +67,12 @@ Still short: the mini-app (U.5 names the mini-app and the CLI); the live run; re
   (`relayer::tests::a_gateway_admits_only_a_verified_job_of_this_relayer`, `a_fake_receipt_passes_only_a_dev_mode_verifier`):
   passed (box); CI job `roundtrip`.
 - `cargo check --locked --bins --tests --features seqnet` (cli/): clean (box).
-- `python3 -I deploy/testnet/tests/test_gateway_gasdrop.py`: 45 checks; CI job `links`. `test_units.py`: all passed.
+- `python3 -I deploy/testnet/tests/test_gateway_gasdrop.py`: 58 checks (13 for R1); CI job `links`. `test_units.py`: all passed.
 - `node --test deploy/testnet/web/wallet/test/*.test.mjs`: 48 passed; `gasdrop.test.mjs` in CI job `msg`.
 - `bash e2e/seqnet/test-vault-deploy.sh`: passed (box); CI job `vault` (review F3: the seqnet vault deploy, every mode).
+- `e2e/seqnet/run.sh gasdrop gasdrop-5` (box, after the R1 fix): 21 of 21 PASS (gasdrop-4's 20 and the re-post of the finished job:
+  409); a first attempt stopped in LEZ session A (the zone's start-up, "connection refused", before the vault or the hook), the
+  rerun passed.
 - `e2e/seqnet/run.sh gasdrop gasdrop-4` (box; `CROWN_BRIDGE_BIN` = B1's bridge program, sha256 `537cbe7a…`): `seqnet-gasdrop-4`: 20 of 20 PASS (dev-mode proofs). After the hook, LEZ session's own export step logs "export failed (1)", as in seqnet-gasdrop-3 and seqnet-robust-2 (pre-existing, `lez/crown/session.sh` after the hook; the zone saved). Earlier attempts this round: none failed; round 1's gasdrop-1 (vault deploy, now F3) and gasdrop-2 (the viewing-key bound) are recorded in the commits
 - `deploy/testnet/cli-rc3/build.sh SRC` on this tree (box): first refused (`--locked`: the rc3 lockfile of 23 Nov lacked two path crates cli/ gained since, `ferrata-lez-msg-wire` and `-v2-wire`); the lockfile re-resolved minimally (18 lines) and committed; then rc=0 for `ferrata`, `ferrata-relayer`, `ferrata-gasdrop` and `seqnet-fund` (`deploy/testnet/results/2026-11-25-cli-rc3-gasdrop.txt`, sha256s)
 - `scripts/ci/row-tests.toml`: U.5 and Priv.7 list these tests; `python3 -I scripts/ci/check-row-tests.py`: consistent (every hard row has an entry, every path tracked, every test said to run in a CI job run by it)
