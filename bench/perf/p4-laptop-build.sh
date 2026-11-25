@@ -15,6 +15,10 @@
 # and r0vm 3.1.0 (rzup), each checked here by the executor and one real proof whose receipt is verified.
 set -u
 S=${P4_BUILD_DIR:-../../tmp/perf-p4}
+# This script empties S: refuse the repository, anything inside it, and any directory that holds it (/ and $HOME too).
+root=$(realpath -m ..) dir=$(realpath -m -- "$S")
+case "$dir/" in //|"$root"/*) echo "p4-laptop-build: refusing P4_BUILD_DIR=$S ($dir)" >&2; exit 2;; esac
+case "$root/" in "$dir"/*) echo "p4-laptop-build: refusing P4_BUILD_DIR=$S ($dir holds the repository)" >&2; exit 2;; esac
 rm -rf "$S"; mkdir -p "$S/stripped" "$S/dry" "$S/stage/r0vm"
 export RISC0_HOME=$PWD/../../risc0-home-lez RISC0_BUILD_LOCKED=1
 # r0vm 3.0.5 (LEZ's RISC Zero): rzup's copy in ~/.risc0, else the one on PATH
