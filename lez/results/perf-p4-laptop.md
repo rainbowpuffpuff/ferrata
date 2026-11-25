@@ -97,7 +97,9 @@ All four user-device proofs ran on the owner's laptop with this tree's programs,
 private attestation took **4,596.7 s**. RFP-022's private claim took **3,313.4 s** and its private burn **2,802.0 s**
 (each padded as LEZ's wallet pads it), and the release's succinct proof (the holder's) took **129.0 s**. Peak memory
 was **9.17 GiB** for the three LEZ proofs and **1.39 GiB** for the release. The laptop ran at half its CPU and in its
-`low-power` profile, so these figures are slow for this machine: 2.8–3.7 times the 8-CPU containers' times above. Six
+`low-power` profile, so these figures are slow for this machine: 2.8–3.7 times the 8-CPU containers' times above. At 8 of
+its 16 threads it ran **below the declared minimum** (8 cores with 16 threads): it is a laptop measurement, not a
+measurement at the minimum, and by M0 check 1's bound it is not practical there (below). Six
 attempts and the first bridge run were stopped by those nights' stop rules (below). Records:
 [`p4-laptop-owner/`](p4-laptop-owner/README.md).
 
@@ -132,18 +134,23 @@ the laptop the script checked every staged file against its manifest before each
 | private attestation | 25 Nov 00:59–02:16 | **4,596.7** | 3,336,413 (6) | **9.17** / 9.17 | 239,246 | 255,366 | yes | 1,254.8; 3.66× |
 | private claim | 25 Nov 04:07–05:49, one run of both | **3,313.4** | 3,123,496 (6) | **9.17** / 9.17 (the run's) | 239,628 | 256,130 | yes | 1,093.0; 3.03× |
 | private burn | (the same run) | **2,802.0** | 2,900,415 (5) | (the same) | 239,046 | 254,966 | yes | 932.8; 3.00× |
-| release, succinct (`release_31`; `ferrata-e2e prove`) | 25 Nov 00:00–00:02 | **129.0** | 77,736 (1) | **1.39** / 1.37 | 223,930 | none: to a relayer | verified (image id, native journal) | 46.0; 2.80× |
+| release, succinct (`release_31`; `ferrata-e2e prove`) | 24 Nov 23:59:45 – 25 Nov 00:01:54 | **129.0** | 77,736 (1) | **1.39** / 1.37 | 223,930 | none: to a relayer | verified (image id, native journal) | 46.0; 2.80× |
 
 `python3 -I bench/perf/summarize_p4.py --owner` on each run's output gives these rows (`*-run/summary.md`). "Settled"
 means `prove_attest --settle` and `prove_bridge --settle` on the transactions, with the receipts verified.
 
-**Conditions** (from the runs' `watch.log`, one sample every 5 s; the provers' CPUs were busy 7.8–7.9 threads on
-average):
+**Conditions** (from the runs' `watch.log`, one sample about every 5 s, 5.16–5.27 s apart; the provers' CPUs were busy
+7.8–7.9 threads on average):
 
-- The attestation's run (73 minutes): other work on CPUs 8–15 had a median of 5.5 busy threads (up to 8.0), the load
+- The attestation's run (76.6 minutes, its first to last sample): other work on CPUs 8–15 had a median of 5.5 busy threads (up to 8.0), the load
   average was 18.3 on average (30.3 at most), and at least 11.4 GiB was available.
-- The claim's and burn's run (99 minutes, from 04:07): other work had a median of 3.3 busy threads (up to 8.0), the load
+- The claim's and burn's run (102.2 minutes, from 04:07): other work had a median of 3.3 busy threads (up to 8.0), the load
   average was 13.6 on average (23.0 at most), and at least 12.7 GiB was available.
+
+- At the start of every run, this one and all the others in the record, the laptop's 8 GiB swap was full (8.00 of 8.00
+  GiB used in all ten `machine.txt`), and other work held 31.8–33.3 GiB of the memory. The provers themselves did not
+  page: GNU time counts 75 major page faults over the attestation and none in the bridge run or the release, and at
+  least 11.4 GiB stayed available throughout.
 
 The stop rule for both: stop only if other work used more than 6 busy threads on CPUs 8–15 for five minutes, if the
 one-minute load average stayed above 24 for five minutes, or if less than 8 GB was available.
@@ -161,14 +168,33 @@ Read with the table:
   344.9–345.8 in the containers) put each laptop thread at about a third of a container thread's work (*derived*).
   The likely causes are not separated: the `low-power` profile, both threads of each core busy, and other work on the
   other four cores sharing the power budget. The laptop at a faster profile or with all 16 threads was not measured.
-- **The declared minimum** (16 GB, 8 cores with 16 threads, x86-64, or an Apple M1 with 16 GB). On the M1 with 16 GB:
-  attestation 857.4 s, claim 818.7 s, burn 716.5 s, release 31.7 s (EVIDENCE row 88). In 16-CPU, 16-GiB containers:
-  633.5 s, 639.2 s, 534.5 s (above) and 26.7 s (row 33).
+- **The declared minimum** (16 GB, 8 cores with 16 threads, x86-64, or an Apple M1 with 16 GB) was measured elsewhere,
+  not on this laptop:
+  - On the M1 with 16 GB (EVIDENCE row 88): attestation 857.4 s, claim 818.7 s, burn 716.5 s, release 31.7 s. These are
+    programs built on the Macs from an earlier tree: attestation program `3d2f597b…`, bridge program `af14e3b5…`, the
+    crown's release `0x17257f91…`.
+  - In 16-CPU, 16-GiB containers: 633.5 s, 639.2 s, 534.5 s (above; this tree's attestation program `0x816d1fef…` and
+    the bridge program before B1, `0xccde6171…`) and 26.7 s (row 33, release `0x17257f91…`). The laptop proved B1's
+    bridge program, `0x847a4336…`; its claim and burn have user cycles within 0.2 % of the containers' (3,123,496
+    against 3,123,878; 2,900,415 against 2,903,989).
+- **Practical, by M0 check 1.** The project's test of "practical" is M0 check 1 (`docs/release-engineering.md`): at
+  most 20 min and 16 GB a proof at the declared minimum.
+  - Met on the M1 with 16 GB: 14.3, 13.6 and 11.9 min and 31.7 s, 9.26–9.45 GiB, no swap-out.
+  - Met in the 16-CPU, 16-GiB containers: 10.6, 10.7 and 8.9 min and 26.7 s, 9.19–9.24 GiB.
+  - Not met on this laptop, below the minimum: 76.6, 55.2 and 46.7 min (the release 129.0 s). M0 already marks 8
+    threads NO-GO (the attestation 20.6 min in 8-CPU containers).
+  - **Risk** (*estimated*, not measured): the x86 minimum's figures come from server containers. This laptop proved
+    2.8–3.7 times slower than 8-CPU containers at the same thread count, in its `low-power` profile. A laptop at the
+    declared minimum in that profile could therefore take about 30–39 min an attestation (633.5 s × 2.8–3.7), above
+    M0's 20 min.
+  - The run that settles it: this laptop with all 16 threads (`P4_CPUS` unset) in its default `balanced` profile. That
+    is about 1.5 hours of the whole laptop (*estimated*: half the 3.0 hours the four proofs took here at 8 threads), and
+    the owner's call.
 
 ### The release's succinct proof on the laptop
 
-`P4_JOBS=release P4_CPUS=8 bash bench/perf/p4-laptop-owner.sh STAGE OUT`, 25 November 2026 at 00:00 CET, after two
-quiet minutes, verified with `ferrata-e2e verify` against the image id, with the journal equal to the native one.
+`P4_JOBS=release P4_CPUS=8 bash bench/perf/p4-laptop-owner.sh STAGE OUT`, from 24 November 23:59:45 to 25 November
+00:01:54 CET, after two quiet minutes, verified with `ferrata-e2e verify` against the image id, with the journal equal to the native one.
 Beside it, other processes kept 1.1–5.9 busy threads (median 2.6) on CPUs 8–15, and the load average reached 12.0. The
 prover used 983.2 CPU-seconds (763 % of one CPU). The same proof took 344.9 and 345.8 CPU-seconds in the second pass's
 8-CPU containers (46.0 s; [`p4-minimum`](p4-minimum/README.md)) and 330.8 on the 32-thread build box (13.1 s). The

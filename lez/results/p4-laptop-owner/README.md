@@ -19,6 +19,12 @@ because the script was started as a user service. In attempts 1–4 and the rele
 started them already ran at 19, and the script's `nice -n 10` could not lower it. The first attempt's `machine.txt`
 says 10, the line the script wrote then; the script now records the niceness in effect.
 
+The machine was not quiet. At the start of every run here the laptop's 8 GiB swap was full (8.00 of 8.00 GiB in all
+ten `machine.txt`), and other work held 31.8–33.3 GiB of the memory. During the runs, other sessions' work kept busy
+threads on CPUs 8–15 (`watch.log`). The provers themselves did not page: 75 major page faults over the attestation,
+none in the bridge run or the release (GNU time, in `prove.log`). At 8 of 16 threads the runs were below the declared
+minimum (8 cores with 16 threads), so they are laptop measurements, not measurements at the minimum.
+
 | path | what |
 |---|---|
 | `attest-pad-run/` | The private attestation, 25 November 00:59–02:16 CET (`P4_JOBS=attest-pad`). `out/machine.txt`; `out/attest-pad/` holds `prove.log` (with GNU time), `samples.txt` (the machine's used memory and r0vm's RSS every second), `settle.log`, `exit.txt` and `tx-attest.borsh`. Also `summary.md` (`summarize_p4.py --owner`), `owner.log`, `owner.exit`, `watch.log` and `verdict.txt` |
