@@ -48,6 +48,10 @@ GLM 5.3 through Claude Code (`Assisted-by: Claude Code (glm-5.3)`). Opus (`claud
 twice in a separate context, its drafter fixed the findings, and Opus merged both and folded the status
 changes they proposed into the status documents.
 
+The Helios step-path oracle (RFP-021 R.6: `crates/ferrata-spectests/tests/helios_step_oracle.rs`,
+`scripts/helios-oracle-full.sh`), merged on 25 November 2026, was drafted by Gemini 4 Neon through Antigravity and
+reviewed twice by Opus in a separate context; it was merged as one commit, which carries both trailers.
+
 ## Reviews by agents
 
 Agent reviews in a separate context were part of the work; none of them is an audit. No part of this
