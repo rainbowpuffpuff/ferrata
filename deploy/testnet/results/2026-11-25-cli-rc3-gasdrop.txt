@@ -1,0 +1,15 @@
+deploy/testnet/cli-rc3/build.sh on branch priv7-gasdrop (tree of df7ffc0e, its review-round-2 fixes) against LEZ
+v0.4.0-rc3 (bafd07b), on the build box (Modal, 16 cores), 25 Nov 2026 (review-priv7 F4). Measured.
+
+1. build.sh as committed until then: refused, --locked: cli-rc3/Cargo.lock.v0.4.0-rc3 (resolved 23 Nov) lacks two
+   path crates cli/ gained since, ferrata-lez-msg-wire 0.1.0 and ferrata-lez-msg-v2-wire 0.1.0. Re-resolved minimally
+   on build.sh's own prepared copy (cargo metadata without --locked): 18 changed lines, nothing else moved; committed.
+2. build.sh again on a fresh copy, --locked: rc=0, release build of the four binaries it now builds
+   (--features lez-rc3 for ferrata, ferrata-relayer, ferrata-gasdrop; --features lez-rc3,seqnet for seqnet-fund):
+   5e25f043d9a0e32a0626bad8f2feb5aaf90931d7937cc87499f19ed2fd59754a  ferrata
+   726529f81ec72ce538bf2dcfa8cf1c010842e6f07a5e3d68487cfd01e1eac4ca  ferrata-relayer
+   4fc4f2c0edd587f780cd33ddd53d1c575367e8736b2881065a2375893e8e5cfa  ferrata-gasdrop
+   b797f437ae50df9e5078bacad1ac2e20feae5b03c1bc110d1c126675206ea649  seqnet-fund
+   ferrata-relayer --help lists --gas-drops-only; ferrata-gasdrop check-job --help; ferrata claim --help lists
+   --no-gas-drop [env: FERRATA_NO_GAS_DROP]. These hashes are of the build box's binaries (linked to its glibc); the
+   host's own build prints its own. Not run against the test network here (the relayer is not deployed there).

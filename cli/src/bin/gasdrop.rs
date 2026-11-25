@@ -59,7 +59,6 @@ enum Command {
         #[arg(long)]
         image_id: Option<String>,
     },
-    /// The relayer's gas drop for a receipt: check it, record it, send the credit through CMD.
     /// A gateway's check of a gas-drop job (standard input, at most 4 MiB) before it counts against its caps.
     CheckJob {
         #[arg(long)]
@@ -75,6 +74,7 @@ enum Command {
         #[arg(long)]
         accept_dev_mode_receipts: bool,
     },
+    /// The relayer's gas drop for a receipt: check it, record it, send the credit through CMD.
     Relay {
         #[arg(long)]
         receipt: PathBuf,
