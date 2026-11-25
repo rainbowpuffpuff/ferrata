@@ -1,0 +1,1 @@
+cb7ffe9bc10c43b30eb7b3ae6b9b2d610e3aeed16d6a311ef3bcccd4fe992ab2  ferrata_bridge_module-0.1.1.lgx

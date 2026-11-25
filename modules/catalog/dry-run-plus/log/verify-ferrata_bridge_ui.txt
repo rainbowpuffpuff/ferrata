@@ -1,0 +1,2 @@
+Package structure is valid: <work>/rel/dist/ferrata_bridge_ui-v0.1.0/ferrata_bridge_ui-0.1.0.lgx
+Package is unsigned

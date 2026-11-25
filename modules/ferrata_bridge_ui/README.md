@@ -225,4 +225,7 @@ MAC; Qt 6's `qmltestrunner`, offscreen).
   shown, not sent; the admin view sends the bridge program's `SetCap` and `Freeze`.
 - One token (ETH) on the devnet; ERC-20 deposits need the token's approval step, which the view does not
   have yet.
-- Not in a catalog; Linux x86-64 only was tried.
+- Not in the published catalog yet: prepared for it (`modules/catalog/`, its release workflow; added with
+  `release-publish.sh --update`, [`../catalog/dry-run-update/`](../catalog/dry-run-update/README.md)), its package
+  built by the release action's steps for Linux x86-64 ([`../catalog/dry-run-plus/`](../catalog/dry-run-plus/));
+  Linux x86-64 only was tried.

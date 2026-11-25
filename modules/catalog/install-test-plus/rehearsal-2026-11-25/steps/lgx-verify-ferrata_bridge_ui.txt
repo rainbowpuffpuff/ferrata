@@ -1,0 +1,4 @@
+Package structure is valid: <repo>/modules/catalog/install-test-plus/rehearsal-2026-11-25/pkgs/ferrata_bridge_ui-0.1.0.lgx
+Signature is valid
+Signer DID: did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6IlFKbXZfbUJ4SzdMclZYVnBPLUtkUHBibnVDTFREZUtFWHJ2YllNRDYzc1EifQ
+Signer is trusted: ferrata

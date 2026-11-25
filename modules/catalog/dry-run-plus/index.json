@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 2,
+  "repositoryName": "ferrata-modules",
+  "generatedAt": "2026-11-25T01:39:59Z",
+  "packages": [
+    {
+      "name": "ferrata_bridge_module",
+      "versions": [
+        {
+          "releasedAt": "2026-11-25T01:39:52Z",
+          "publisherRef": "ferrata_bridge_module-v0.1.1",
+          "url": "http://127.0.0.1:18546/ferrata_bridge_module-v0.1.1/ferrata_bridge_module-0.1.1.lgx",
+          "size": 12348286,
+          "sha256": "0bbbf3c7e94a002efcfaba27fb0e594130eb0450b59c2a659cb4ee89cd466e3d",
+          "rootHash": "c20b41d28b72897801adfb6e715f3e0eb46a7e57c0aa4ac4a7127eb63be9141b",
+          "manifest": {
+            "author": "",
+            "category": "bridge",
+            "dependencies": [],
+            "description": "Ferrata (prototype, unaudited, not for production): the user side of the Ferrata bridge between Ethereum and LEZ: deposit commitments and vault calls, claims, burns, release witnesses and journals, recovery and status, with the bridge core",
+            "display_name": "Ferrata bridge",
+            "hashes": {
+              "assets": "9d3a9ea264d1af935f7654399f7daf176fcf97bfd3f237b17a3b7f32cb1bc981",
+              "root": "c20b41d28b72897801adfb6e715f3e0eb46a7e57c0aa4ac4a7127eb63be9141b",
+              "variants": "ae9eace9c2c520d9178ca4ec787db67ae0ce2e223d1a5f23f66c4f43f90cf264",
+              "variants/linux-amd64": "c1c2ae579658633b31b2f1aa82e4bd0bd4c0bea83956d5b72a82e68e315e71ed"
+            },
+            "icon": "",
+            "main": {
+              "linux-amd64": "ferrata_bridge_module_plugin.so"
+            },
+            "manifestVersion": "0.7.0",
+            "name": "ferrata_bridge_module",
+            "type": "core",
+            "version": "0.1.1"
+          },
+          "urls": [
+            "http://127.0.0.1:18546/ferrata_bridge_module-v0.1.1/ferrata_bridge_module-0.1.1.lgx"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ferrata_bridge_ui",
+      "versions": [
+        {
+          "releasedAt": "2026-11-25T01:39:58Z",
+          "publisherRef": "ferrata_bridge_ui-v0.1.0",
+          "url": "http://127.0.0.1:18546/ferrata_bridge_ui-v0.1.0/ferrata_bridge_ui-0.1.0.lgx",
+          "size": 51201,
+          "sha256": "68a302db24ca2228878d10aa8019050c757b476c1f9e88bd447c29b57cf1ba29",
+          "rootHash": "0dbd91caa3d933816d9cf65f98bb5f5cc963a00e8bdf5e74b12881ecccf5bffe",
+          "manifest": {
+            "author": "Ferrata",
+            "category": "wallet",
+            "dependencies": [],
+            "description": "Ferrata: private ERC-20 and ETH bridge between Ethereum and LEZ. Deposit, claim, burn, release, recovery, the token registry, the admin functions and the endpoints (prototype, not audited).",
+            "display_name": "Ferrata Bridge",
+            "hashes": {
+              "assets": "b6872abbd336987b6194e6591c1a8534381501f4b51933c154939e2eb5fe0132",
+              "root": "0dbd91caa3d933816d9cf65f98bb5f5cc963a00e8bdf5e74b12881ecccf5bffe",
+              "variants": "732fd383a42b93852c3a615e53b6c781a91fbdc0aa96013e4e2c626dd4162c80",
+              "variants/linux-amd64": "407093b23634fc6338e8905978d6aa9795f09a261763659d4fb7bc6067a8b9c9"
+            },
+            "icon": "assets/icon.png",
+            "main": {},
+            "manifestVersion": "0.7.0",
+            "name": "ferrata_bridge_ui",
+            "optional_dependencies": [
+              "ferrata_bridge_module"
+            ],
+            "type": "ui_qml",
+            "version": "0.1.0",
+            "view": "qml/Main.qml"
+          },
+          "icon": {
+            "path": "91be38ecba1bfa292bd97c1b63e361d2b261ddf17bfee071b6e611a998879fa4.png",
+            "sha256": "91be38ecba1bfa292bd97c1b63e361d2b261ddf17bfee071b6e611a998879fa4",
+            "size": 8965
+          },
+          "urls": [
+            "http://127.0.0.1:18546/ferrata_bridge_ui-v0.1.0/ferrata_bridge_ui-0.1.0.lgx"
+          ]
+        }
+      ]
+    }
+  ]
+}

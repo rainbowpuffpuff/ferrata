@@ -1,0 +1,46 @@
+{
+  "publisherRef": "ferrata_bridge_module-v0.1.0",
+  "releasedAt": "2026-11-24T17:01:00Z",
+  "sha256": "b160668aa824c8f08dc42d20a071c4f92173625a521671b7e4ec3028acdb7f7d",
+  "size": 28523245,
+  "rootHash": "0e46fbecf4c39caa9880bac11bc53c9abab4a4c703b9af9fa34db6a4f166fdd8",
+  "builtVariants": [
+    "darwin-arm64",
+    "linux-amd64",
+    "linux-arm64"
+  ],
+  "missingVariants": [],
+  "manifest": {
+    "author": "",
+    "category": "bridge",
+    "dependencies": [],
+    "description": "Ferrata (prototype, unaudited, not for production): the user side of the Ferrata bridge between Ethereum and LEZ: deposit commitments and vault calls, claims, burns, release witnesses and journals, recovery and status, with the bridge core",
+    "display_name": "Ferrata bridge",
+    "hashes": {
+      "assets": "14ccfceb7a10a21bdfd47ef6343fe620562da344faaf20a3023c8624308b3407",
+      "root": "0e46fbecf4c39caa9880bac11bc53c9abab4a4c703b9af9fa34db6a4f166fdd8",
+      "variants": "a6888dbdaf1caf24ae21840064689ba9bf6bdea0d0750500b5d143a734febd1f",
+      "variants/darwin-arm64": "ed06aa4251cfd8e45cf5e3c97bdba235db9f5bc9b9ad911ac06465785f8f407f",
+      "variants/linux-amd64": "161c64fd2e7b18a17b3171973ffbdb756e8b464d3c29fa1858a9ed5fee53acb7",
+      "variants/linux-arm64": "91fcef4a467151d791575a22c7832056f35c62d03159bbd9cda39cdb57d75d6c"
+    },
+    "icon": "",
+    "main": {
+      "darwin-arm64": "ferrata_bridge_module_plugin.dylib",
+      "linux-amd64": "ferrata_bridge_module_plugin.so",
+      "linux-arm64": "ferrata_bridge_module_plugin.so"
+    },
+    "manifestVersion": "0.7.0",
+    "name": "ferrata_bridge_module",
+    "type": "core",
+    "version": "0.1.0"
+  },
+  "signature": {
+    "algorithm": "ed25519",
+    "did": "did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6ImNLVmpDSnFiWEFqYTBtenc1VFBOODhqWUs2QXkwTmtpRWNldUduekN6bGsifQ",
+    "linkedDids": [],
+    "signature": "R0eqdK8UR08UjG6UDhpiJ/D5VTZbnlUiBaiDAzOI+WiBa73GrNMWEnD1A9Bi/duN7YIeMvw0UL4Jfe92QWb7Dw==",
+    "signer": {},
+    "version": 1
+  }
+}

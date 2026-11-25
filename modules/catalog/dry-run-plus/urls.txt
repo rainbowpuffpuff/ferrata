@@ -1,0 +1,2 @@
+http://127.0.0.1:18546/ferrata_bridge_module-v0.1.1/ferrata_bridge_module-0.1.1.lgx
+http://127.0.0.1:18546/ferrata_bridge_ui-v0.1.0/ferrata_bridge_ui-0.1.0.lgx

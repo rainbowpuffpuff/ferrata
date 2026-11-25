@@ -1,5 +1,5 @@
 module ferrata_bridge_module {
-  version "0.1.0"
+  version "0.1.1"
   depends []
 
   method version() -> tstr description "The module's version and what was staged beside it (the commit, LEZ's, each crate's sources'\nSHA-256), as JSON."

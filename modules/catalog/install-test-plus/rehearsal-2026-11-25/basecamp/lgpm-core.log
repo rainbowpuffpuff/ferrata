@@ -1,0 +1,5 @@
+Installing from file: <work>/www/ferrata_bridge_module-v0.1.1/ferrata_bridge_module-0.1.1.lgx...Warning: Package is signed by a key no trusted anchor validates: <work>/www/ferrata_bridge_module-v0.1.1/ferrata_bridge_module-0.1.1.lgx
+  signer DID: did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6IlFKbXZfbUJ4SzdMclZYVnBPLUtkUHBibnVDTFREZUtFWHJ2YllNRDYzc1EifQ
+  checked against keyring: (default)
+ done
+Installed to: <top>/tmp/cp-bc/core/modules

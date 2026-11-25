@@ -1,0 +1,1 @@
+[{"addedAt":"2026-11-25T01:44:07Z","did":"did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6IlFKbXZfbUJ4SzdMclZYVnBPLUtkUHBibnVDTFREZUtFWHJ2YllNRDYzc1EifQ","displayName":"Ferrata module releases","name":"ferrata"}]

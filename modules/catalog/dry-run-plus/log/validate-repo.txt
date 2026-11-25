@@ -1,0 +1,1 @@
+<repo>/modules/catalog/logos-repo.json: OK

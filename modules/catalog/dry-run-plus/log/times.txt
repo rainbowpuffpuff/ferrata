@@ -1,0 +1,2 @@
+build ferrata_bridge_module 173 s
+build ferrata_bridge_ui 5 s

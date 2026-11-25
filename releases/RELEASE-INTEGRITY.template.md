@@ -20,8 +20,9 @@ published data back from the releases (the source of truth), not from this repos
 
 ## The modules
 
-One row per module (`<module>-v<version>`), all six: `ferrata_attest_module`, `ferrata_bridge_module`,
-`ferrata_attestor_module`, `ferrata_monitor_module`, `ferrata_updater_module`, `ferrata_relayer_module`.
+One row per release (`<module>-v<version>`): the six core modules (`ferrata_attest_module`, `ferrata_bridge_module`,
+`ferrata_attestor_module`, `ferrata_monitor_module`, `ferrata_updater_module`, `ferrata_relayer_module`), the mini-app
+`ferrata_bridge_ui`, and every later version of one of them.
 
 | Module | Version | Release URL | Built from (source commit SHA) | rootHash | sha256 of the `.lgx` | Variants built |
 |---|---|---|---|---|---|---|
@@ -47,9 +48,14 @@ git ls-tree HEAD submodules/<module>            # 160000 commit <sha>  submodule
 # SOURCE_DATE_EPOCH or FERRATA_COMMIT of the shell (a Nix shell sets the first) out of it:
 git submodule update --init submodules/<module>
 git -C submodules/<module> show HEAD:rust-lib/<staged|attestor|monitor|vendor>/STAGED.json | jq -r .commit
+# a module published or moved by `release-publish.sh --update` (the mini-app, which has no STAGED.json, and every
+# later version) names its source commit in its commit message instead: "... exported from the Ferrata repository at <sha>"
+git -C submodules/<module> log -1 --format=%s
 git -C <ferrata checkout> checkout <that commit>
 env -u SOURCE_DATE_EPOCH -u FERRATA_COMMIT <ferrata checkout>/modules/scripts/export.sh <module> <scratch>/<module>
-git -C <scratch>/<module> rev-parse HEAD        # must equal the submodule pointer above
+git -C <scratch>/<module> rev-parse HEAD        # must equal the submodule pointer above (a first publication's)
+git -C <scratch>/<module> rev-parse 'HEAD^{tree}'   # an --update commit sits on the previous version: its tree
+git -C submodules/<module> rev-parse 'HEAD^{tree}'  # must equal the re-export's
 
 # the signature: lgx (logos-package, pinned) checks the package's content hashes and its signature and
 # reports the signer DID, and whether that DID is in the keyring it is given; give it a keyring holding
@@ -65,7 +71,7 @@ Checks the manifest itself should record, once filled:
 - [ ] every `rootHash` equals the one in that release's sidecar (the command above prints it)
 - [ ] every source commit SHA is the catalog repository's submodule pointer, not a paste from the build log
 - [ ] the URLs resolve (the release exists at `releases/tag/<module>-v<version>`, assets `.lgx` + `sidecar.json`)
-- [ ] `indexUrl` (`https://raw.githubusercontent.com/<ORG>/<CATALOG_REPO>/refs/heads/main/index/index.json`) lists all six:
+- [ ] `indexUrl` (`https://raw.githubusercontent.com/<ORG>/<CATALOG_REPO>/refs/heads/main/index/index.json`) lists every release:
 
 ```sh
 curl -fsSL 'https://raw.githubusercontent.com/<ORG>/<CATALOG_REPO>/refs/heads/main/index/index.json' \

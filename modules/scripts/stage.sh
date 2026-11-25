@@ -15,6 +15,8 @@
 #                            lez/ harness and the LEZ tree)
 #   ferrata_relayer_module:  stage-relayer.sh (rust-lib/vendor/: cli/'s library without lez-wallet, cli/wallet,
 #                            the crates they link and the LEZ tree)
+#   ferrata_bridge_ui:       nothing (the mini-app, a QML-only ui module: no crate; accepted so that export.sh
+#                            and release-publish.sh treat it as the catalog's seventh package)
 # Each records what was copied in a STAGED.json, which the module's version() reports.
 #
 #   modules/scripts/stage.sh [MODULE...]      (default: every module)
@@ -89,6 +91,7 @@ for m in "$@"; do
   case "$m" in
     ferrata_attest_module|ferrata_bridge_module) py+=("$m") ;;
     ferrata_attestor_module|ferrata_monitor_module|ferrata_updater_module|ferrata_relayer_module) ;;
+    ferrata_bridge_ui) ;;
     *) echo "stage.sh: no module $m" >&2; exit 2 ;;
   esac
 done

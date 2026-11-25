@@ -17,7 +17,14 @@
 # organization (every step in order, the secret from the key file, the release trigger not run, the key
 # nowhere on disk); a rerun with SOURCE_DATE_EPOCH and FERRATA_COMMIT inherited (ignored: nothing
 # created, nothing moved); a failure at the secret step, then the rerun that finishes; no TMPDIR at all;
-# two exports of a module a second apart, one commit.
+# --update on a published catalog whose main the index moved: refused without --modules, '-' refused without
+# --update, a missing catalog and a key it does not declare refused with nothing created; the default mode and
+# the dry run (started from "GitHub") leaving GitHub as it was; the mini-app added (one repository created,
+# its main and tag, the catalog's main one commit on the live one changing .gitmodules, the gitlink, the
+# workflow and the README), the dry run's commits equal to the ones --yes pushes, a rerun moving nothing;
+# a module moved from an older version (a fast-forward, tagged, the catalog's pointer moved alone); refused
+# before any push: the same version with other content, the version tag elsewhere, the version already
+# released by the catalog; two exports of a module a second apart, one commit.
 #
 #   bash modules/scripts/test-release-publish.sh [SCRATCH-DIR]   (default: a new directory under TMPDIR)
 set -euo pipefail
@@ -26,7 +33,8 @@ repo=$(cd "$here/../.." && pwd)
 S=${1:-$(mktemp -d "${TMPDIR:-/tmp}/test-release-publish.XXXXXX")}
 mkdir -p "$S"
 S=$(cd "$S" && pwd)
-rm -rf "$S/github" "$S/bin" "$S/keys" "$S/runs" "$S/systmp" "$S/exports" "$S/other" "$S/clone" "$S/reldry" "$S/otherdry"
+rm -rf "$S/github" "$S/bin" "$S/keys" "$S/runs" "$S/systmp" "$S/exports" "$S/other" "$S/clone" "$S/reldry" "$S/otherdry" \
+  "$S/uclone" "$S/udry" "$S/mvclone"
 mkdir -p "$S/github" "$S/bin" "$S/keys" "$S/runs" "$S/systmp" "$S/exports"
 P=$here/release-publish.sh
 MODS="ferrata_attestor_module ferrata_monitor_module"
@@ -305,6 +313,123 @@ check "resume: the secret set" test -f "$S/github/secrets/$ORG/$CAT/LOGOS_SIGNIN
 (unset TMPDIR; run notmpdir "$ORG" "$CAT" "$S/keys/key.jwk")
 check "no TMPDIR: exit 0" test "$(rc notmpdir)" = 0
 check "no TMPDIR: the workspace in the system default" test -n "$(sed -n "s#^  workspace: $S/systmp/release-publish\.#&#p" "$S/runs/notmpdir.out")"
+
+# ── --update: a published catalog changed by fast-forwards ─────────────────────────────────────
+# A catalog published by --yes (the two modules), then what GitHub adds to it: the index committed to main by
+# rebuild-index.yml, and the action's release tags. The update adds the mini-app (exported with nothing staged).
+U=update-org
+: > "$S/github/gh.log"
+run upub "$U" "$CAT" "$S/keys/key.jwk" --yes
+check "update: the catalog to update is published (--yes)" test "$(rc upub)" = 0
+git clone -q "file://$S/github/$U/$CAT.git" "$S/uclone" 2> /dev/null
+mkdir -p "$S/uclone/index" && echo '{"packages":[]}' > "$S/uclone/index/index.json"
+git -C "$S/uclone" add index && git -C "$S/uclone" -c user.name=bot -c user.email=bot@localhost commit -q -m "index: rebuilt"
+git -C "$S/uclone" push -q origin HEAD:refs/heads/main
+for m in $MODS; do git -C "$S/uclone" push -q origin "HEAD^:refs/tags/$m-v$(jq -r .version "$repo/modules/$m/metadata.json")"; done
+ULIVE=$(git -C "$S/uclone" rev-parse HEAD)
+urefs() { for n in $MODS ferrata_bridge_ui "$CAT"; do git -C "$S/github/$U/$n.git" for-each-ref --format='%(refname) %(objectname)' 2> /dev/null || echo "$n missing"; done; }
+: > "$S/github/gh.log"
+run_bare unomods "$U" "$CAT" - --update
+check "update without --modules: exit 2" test "$(rc unomods)" = 2
+run_bare unoupd "$U" "$CAT" - --modules ferrata_bridge_ui
+check "no key ('-') without --update: exit 2" test "$(rc unoupd)" = 2
+run_bare unocat other-org "$CAT" - --update --modules ferrata_bridge_ui --yes
+check "update of a catalog that does not exist: exit 1, says so" sh -c '[ "$(cat "$1.rc")" = 1 ] && grep -q "does not exist" "$1.out"' sh "$S/runs/unocat"
+check "update of a catalog that does not exist: nothing created" test "$(creates)" = 0
+run_bare uother "$U" "$CAT" "$S/keys/other.jwk" --update --modules ferrata_bridge_ui --yes
+check "update with a key the catalog does not declare: exit 1, nothing created" \
+  sh -c '[ "$(cat "$1.rc")" = 1 ] && grep -q "is not a signer" "$1.out"' sh "$S/runs/uother"
+check "update refusals: nothing created" test "$(creates)" = 0
+before=$(urefs)
+: > "$S/github/gh.log"
+run_bare uplan "$U" "$CAT" - --update --modules ferrata_bridge_ui
+check "update, default mode: exit 0, prints the release of the new module" sh -c '[ "$(cat "$1.rc")" = 0 ] && grep -q "gh workflow run release-ferrata_bridge_ui.yml" "$1.out"' sh "$S/runs/uplan"
+check "update, default mode: no gh call, nothing moved" sh -c '[ ! -s "$1" ] && [ "$2" = "$3" ]' sh "$S/github/gh.log" "$before" "$(urefs)"
+run_bare udry "$U" "$CAT" - --update --modules ferrata_bridge_ui --dry-run "$S/udry"
+check "update dry run: exit 0" test "$(rc udry)" = 0
+check "update dry run: no gh call, GitHub as it was" sh -c '[ ! -s "$1" ] && [ "$2" = "$3" ]' sh "$S/github/gh.log" "$before" "$(urefs)"
+check "update dry run: the catalog's new main is one commit on the live main" \
+  test "$(git -C "$S/udry/$CAT.git" rev-parse refs/heads/main^)" = "$ULIVE"
+check "update dry run: the release tags kept" git -C "$S/udry/$CAT.git" rev-parse "refs/tags/ferrata_monitor_module-v$(jq -r .version "$repo/modules/ferrata_monitor_module/metadata.json")"
+check "update dry run: the mini-app's submodule points at its repository's main" \
+  test "$(git -C "$S/udry/$CAT.git" rev-parse refs/heads/main:submodules/ferrata_bridge_ui)" = "$(git -C "$S/udry/ferrata_bridge_ui.git" rev-parse refs/heads/main)"
+check "update dry run: .gitmodules names the mini-app's GitHub URL" \
+  test "$(git -C "$S/udry/$CAT.git" config --blob refs/heads/main:.gitmodules --get submodule.submodules/ferrata_bridge_ui.url)" = "https://github.com/$U/ferrata_bridge_ui.git"
+check "update dry run: the other submodules' pointers unchanged" \
+  test "$(git -C "$S/udry/$CAT.git" rev-parse "refs/heads/main:submodules/ferrata_monitor_module")" = "$(git -C "$S/github/$U/$CAT.git" rev-parse "refs/heads/main:submodules/ferrata_monitor_module")"
+check "update dry run: the commit changes .gitmodules, the gitlink, the workflow and the README only" \
+  test "$(git -C "$S/udry/$CAT.git" diff --name-only "$ULIVE" refs/heads/main | tr '\n' ' ')" = ".github/workflows/release-ferrata_bridge_ui.yml .gitmodules README.md submodules/ferrata_bridge_ui "
+check "update dry run: the README's install line for the mini-app and the live DID" \
+  sh -c 'git -C "$1" show refs/heads/main:README.md | grep -q "logosctl install ferrata_bridge_ui -y" && git -C "$1" show refs/heads/main:README.md | grep -q -F "logosctl key add ferrata --did $2 "' sh "$S/udry/$CAT.git" "$DID"
+check "update dry run: the mini-app's tag v0.1.0 on its main" \
+  test "$(git -C "$S/udry/ferrata_bridge_ui.git" rev-parse 'refs/tags/v0.1.0^{}')" = "$(git -C "$S/udry/ferrata_bridge_ui.git" rev-parse refs/heads/main)"
+UDRY_CAT=$(git -C "$S/udry/$CAT.git" rev-parse refs/heads/main)
+UDRY_UI=$(git -C "$S/udry/ferrata_bridge_ui.git" rev-parse refs/heads/main)
+run_bare uyes "$U" "$CAT" - --update --modules ferrata_bridge_ui --yes
+check "update --yes: exit 0" test "$(rc uyes)" = 0
+check "update --yes: one repository created, the mini-app's" sh -c '[ "$(grep -c "^gh repo create" "$1")" = 1 ] && grep -q "^gh repo create $2/ferrata_bridge_ui " "$1"' sh "$S/github/gh.log" "$U"
+check "update --yes: no secret set, no release run" sh -c '! grep -q -E "^gh (secret|workflow)" "$1"' sh "$S/github/gh.log"
+check "update --yes: the catalog's main is the dry run's commit" test "$(git -C "$S/github/$U/$CAT.git" rev-parse refs/heads/main)" = "$UDRY_CAT"
+check "update --yes: the mini-app's main is the dry run's commit" test "$(git -C "$S/github/$U/ferrata_bridge_ui.git" rev-parse refs/heads/main)" = "$UDRY_UI"
+check "update --yes: the key nowhere in the workspace or the repositories" no_d_in "$(sed -n 's/^  workspace: //p' "$S/runs/uyes.out")" "$S/github"
+check "update --yes: the mini-app's commit names the source commit" \
+  sh -c 'git -C "$1" log -1 --format=%s refs/heads/main | grep -q -F "exported from the Ferrata repository at $2"' sh "$S/github/$U/ferrata_bridge_ui.git" "$(git -C "$repo" rev-parse HEAD)"
+before=$(urefs)
+: > "$S/github/gh.log"
+run_bare uyes2 "$U" "$CAT" - --update --modules ferrata_bridge_ui --yes
+check "update rerun: exit 0, nothing created, every ref as before" \
+  sh -c '[ "$(cat "$1.rc")" = 0 ] && ! grep -q "^gh repo create" "$2" && [ "$3" = "$4" ]' sh "$S/runs/uyes2" "$S/github/gh.log" "$before" "$(urefs)"
+check "update rerun: says the catalog holds the update" out_has uyes2 "already holds this update"
+
+# A module moved: its live main an older version (0.0.9, other content) with the catalog pointing at it and
+# released; the update commits the export's tree on top of it, tags it and moves the catalog's pointer.
+MV=ferrata_monitor_module
+MVV=$(jq -r .version "$repo/modules/$MV/metadata.json")
+git clone -q "file://$S/github/$U/$MV.git" "$S/mvclone" 2> /dev/null
+jq '.version = "0.0.9"' "$S/mvclone/metadata.json" > "$S/mvclone/m.json" && mv "$S/mvclone/m.json" "$S/mvclone/metadata.json"
+git -C "$S/mvclone" -c user.name=t -c user.email=t@localhost commit -q -a -m "old"
+OLD=$(git -C "$S/mvclone" rev-parse HEAD)
+git -C "$S/mvclone" push -q origin HEAD:refs/heads/main ":refs/tags/v$MVV"
+git -C "$S/uclone" pull -q origin main 2> /dev/null
+git -C "$S/uclone" update-index --cacheinfo "160000,$OLD,submodules/$MV"
+git -C "$S/uclone" -c user.name=t -c user.email=t@localhost commit -q -m "monitor at 0.0.9"
+git -C "$S/uclone" push -q origin HEAD:refs/heads/main "HEAD:refs/tags/$MV-v0.0.9" ":refs/tags/$MV-v$MVV"
+UCAT=$(git -C "$S/uclone" rev-parse HEAD)
+: > "$S/github/gh.log"
+run_bare umove "$U" "$CAT" "$S/keys/key.jwk" --update --modules "$MV" --yes
+UMV=$(git -C "$S/github/$U/$MV.git" rev-parse refs/heads/main)
+check "update of a moved module: exit 0, nothing created" sh -c '[ "$(cat "$1.rc")" = 0 ] && ! grep -q "^gh repo create" "$2"' sh "$S/runs/umove" "$S/github/gh.log"
+check "update of a moved module: its new main is a fast-forward of the old one" test "$(git -C "$S/github/$U/$MV.git" rev-parse "$UMV^")" = "$OLD"
+check "update of a moved module: its new main holds the export's version" \
+  test "$(git -C "$S/github/$U/$MV.git" show "$UMV:metadata.json" | jq -r .version)" = "$MVV"
+check "update of a moved module: tag v$MVV on its new main" test "$(git -C "$S/github/$U/$MV.git" rev-parse "refs/tags/v$MVV^{}")" = "$UMV"
+check "update of a moved module: the catalog's pointer moved, one commit on the old main" \
+  sh -c '[ "$(git -C "$1" rev-parse refs/heads/main:submodules/$2)" = "$3" ] && [ "$(git -C "$1" rev-parse refs/heads/main^)" = "$4" ]' sh "$S/github/$U/$CAT.git" "$MV" "$UMV" "$UCAT"
+check "update of a moved module: the commit changes the pointer only" \
+  test "$(git -C "$S/github/$U/$CAT.git" diff --name-only "$UCAT" refs/heads/main | tr '\n' ' ')" = "submodules/$MV "
+check "update of a moved module: prints its release" out_has umove "gh workflow run release-$MV.yml"
+# Refusals, each before anything is pushed: the same version with other content; the version tag elsewhere;
+# the catalog having released the version while the module's main would change.
+before=$(urefs)
+git -C "$S/mvclone" fetch -q origin && git -C "$S/mvclone" reset -q --hard origin/main
+echo extra > "$S/mvclone/extra.txt" && git -C "$S/mvclone" add extra.txt
+git -C "$S/mvclone" -c user.name=t -c user.email=t@localhost commit -q -m "same version, other content"
+git -C "$S/mvclone" push -q origin HEAD:refs/heads/main
+before=$(urefs)
+run_bare usamev "$U" "$CAT" - --update --modules "$MV" --yes
+check "update refused: the live main holds the same version with other content" \
+  sh -c '[ "$(cat "$1.rc")" = 1 ] && grep -q "a published version is never changed" "$1.out" && [ "$2" = "$3" ]' sh "$S/runs/usamev" "$before" "$(urefs)"
+git -C "$S/mvclone" push -q -f origin "$UMV:refs/heads/main" "+$OLD:refs/tags/v$MVV"
+before=$(urefs)
+run_bare utag "$U" "$CAT" - --update --modules "$MV" --yes
+check "update refused: the version tag on another commit" \
+  sh -c '[ "$(cat "$1.rc")" = 1 ] && grep -q "already has a tag v" "$1.out" && [ "$2" = "$3" ]' sh "$S/runs/utag" "$before" "$(urefs)"
+git -C "$S/mvclone" push -q -f origin "$OLD:refs/heads/main" ":refs/tags/v$MVV"
+git -C "$S/uclone" push -q origin "HEAD:refs/tags/$MV-v$MVV"
+before=$(urefs)
+run_bare urel "$U" "$CAT" - --update --modules "$MV" --yes
+check "update refused: the catalog released the version, the module's main would change" \
+  sh -c '[ "$(cat "$1.rc")" = 1 ] && grep -q "has released $2-v" "$1.out" && [ "$3" = "$4" ]' sh "$S/runs/urel" "$MV" "$before" "$(urefs)"
 
 # ── export.sh: the same source gives the same commit ───────────────────────────────────────────
 bash "$here/export.sh" ferrata_monitor_module "$S/exports/a" > /dev/null

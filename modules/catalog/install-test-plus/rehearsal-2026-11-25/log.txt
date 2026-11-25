@@ -1,0 +1,42 @@
+nix builds: 1 s
+Added trusted key: ferrata
+DID: did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6IlFKbXZfbUJ4SzdMclZYVnBPLUtkUHBibnVDTFREZUtFWHJ2YllNRDYzc1EifQ
+PASS download-ferrata_bridge_module (exit 0, 157 ms)
+PASS lgx-verify-ferrata_bridge_module (exit 0, 602 ms)
+ferrata_bridge_module: manifest type core
+PASS download-ferrata_bridge_ui (exit 0, 87 ms)
+PASS lgx-verify-ferrata_bridge_ui (exit 0, 22 ms)
+ferrata_bridge_ui: manifest type ui_qml
+Package signed: <repo>/modules/catalog/install-test-plus/rehearsal-2026-11-25/other-signed.lgx
+Signer DID: did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6IlhQcWI4RGFFU1BWbW42TGNaZU9MUXlWdEVmWVlZTzhia2xub3phOGZKVzQifQ
+PASS lgx-signature-unsigned (exit 0, 239 ms)
+PASS lgx-signature-other-signer (exit 0, 308 ms)
+PASS config-set (exit 0, 42 ms)
+PASS daemon-start (exit 0, 250 ms)
+PASS config-show (exit 0, 39 ms)
+PASS catalog-disable-default (exit 0, 48 ms)
+PASS catalog-add (exit 0, 99 ms)
+PASS catalog-source (exit 0, 88 ms)
+PASS catalog-refresh (exit 0, 82 ms)
+PASS catalog-ls (exit 0, 50 ms)
+PASS search (exit 0, 50 ms)
+PASS refuse-catalog-before-key (exit 1, 1364 ms)
+PASS key-add (exit 0, 49 ms)
+PASS key-ls (exit 0, 52 ms)
+PASS refuse-unsigned (exit 1, 1494 ms)
+PASS refuse-other-signer (exit 1, 1476 ms)
+PASS refuse-tampered (exit 1, 1417 ms)
+PASS nothing-installed-after-refusals (exit 0, 68 ms)
+PASS show-ferrata_bridge_module (exit 0, 60 ms)
+PASS install-ferrata_bridge_module (exit 0, 1496 ms)
+PASS roothash-ferrata_bridge_module (exit 0, 65 ms)
+PASS show-ferrata_bridge_ui (exit 0, 69 ms)
+PASS install-ferrata_bridge_ui (exit 0, 96 ms)
+PASS roothash-ferrata_bridge_ui (exit 0, 59 ms)
+PASS installed-as-core-ferrata_bridge_module (exit 0, 53 ms)
+PASS load-ferrata_bridge_module (exit 0, 88 ms)
+PASS version-ferrata_bridge_module (exit 0, 62 ms)
+PASS installed-as-ui-ferrata_bridge_ui (exit 0, 60 ms)
+PASS package-ls (exit 0, 49 ms)
+PASS daemon-stop (exit 0, 601 ms)
+box-install.sh: 34 of 34 steps as expected

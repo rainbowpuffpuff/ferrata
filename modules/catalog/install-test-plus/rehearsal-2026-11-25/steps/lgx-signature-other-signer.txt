@@ -1,0 +1,4 @@
+{
+  "did": "did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6IlhQcWI4RGFFU1BWbW42TGNaZU9MUXlWdEVmWVlZTzhia2xub3phOGZKVzQifQ",
+  "name": null
+}

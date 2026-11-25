@@ -9,7 +9,7 @@ The proposal (§B7) releases Ferrata's Logos modules from a catalog of its own w
 |---|---|---|
 | `logos-repo.json` | how clients (`lgpd`, the `package_downloader` module, the package-manager UI) identify the catalog; `indexUrl` names `index/index.json` on the catalog's `main`, which its `rebuild-index.yml` commits after every release | the base's template, filled in |
 | `.github/workflows/_release-module.yml` | calls `logos-co/logos-modules-release-action/.github/workflows/release.yml` pinned to the commit its `v1` tag names (`bbdc528…`, with the variants list and `signing_mode: inline`, the secret the workflows pass named `signing_key` from the repository's `LOGOS_SIGNING_KEY`) | the base's, with signing on, the pin, and a header; least-privilege `permissions:` per job in every file |
-| `.github/workflows/release-<module>.yml` (six: `ferrata_attest_module`, `ferrata_bridge_module`, `ferrata_attestor_module`, `ferrata_monitor_module`, `ferrata_updater_module`, `ferrata_relayer_module`) | one per module: `module_path: submodules/<module>` | the base's `release-module.yml.template`, as `scripts/add-module.sh` writes it |
+| `.github/workflows/release-<module>.yml` (seven: `ferrata_attest_module`, `ferrata_bridge_module`, `ferrata_attestor_module`, `ferrata_monitor_module`, `ferrata_updater_module`, `ferrata_relayer_module`, and the mini-app `ferrata_bridge_ui`, a ui module the same action builds) | one per module: `module_path: submodules/<module>` | the base's `release-module.yml.template`, as `scripts/add-module.sh` writes it |
 | `.github/workflows/release-all.yml` | releases every submodule | the base's, with least-privilege `permissions:` per job and the checkout pinned to a commit |
 
 Left out of the base: `unpublish.yml` (it deletes releases, which the release-integrity rules freeze), `validate-repo.yml`
@@ -26,7 +26,12 @@ the builder copies only `rust-lib/` and a flake sees only tracked files).
 (24 November 2026), the six modules as signed, immutable `<module>-v0.1.0` releases built by the action, the index
 on the catalog's `main`; read back in [`releases/RELEASE-INTEGRITY.md`](../../releases/RELEASE-INTEGRITY.md) and
 installed from in [`install-test-landclimber-2026-11-24/`](install-test-landclimber-2026-11-24/README.md). The mini-app
-(`ferrata_bridge_ui`, a ui module) is not in it. Publishing is one owner step, prepared by [`RELEASE.md`](RELEASE.md): `modules/scripts/release-publish.sh ORG CATALOG_REPO
+(`ferrata_bridge_ui`, a ui module) is not in it yet: it and `ferrata_bridge_module` 0.1.1 (the published 0.1.0 is
+immutable; the module's network session came after it) are added by one owner step, `release-publish.sh --update`
+([`RELEASE.md`](RELEASE.md), "Changing the published catalog"), whose dry run against the live catalog is
+[`dry-run-update/`](dry-run-update/README.md); the action's steps for both on `linux-amd64` are in
+[`dry-run-plus/`](dry-run-plus/), and the install test that follows the release, rehearsed on a local catalog, in
+[`install-test-plus/`](install-test-plus/README.md). Publishing is one owner step, prepared by [`RELEASE.md`](RELEASE.md): `modules/scripts/release-publish.sh ORG CATALOG_REPO
 SIGNING_KEY_FILE --yes` generates the published catalog's `logos-repo.json` (the signer's `did:jwk` under
 `trustedSigners`, the `indexUrl`), exports the module repositories, assembles the catalog, checks the
 remote side read-only, then creates the repositories, pushes them and sets the signing secret, and stops:

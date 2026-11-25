@@ -1,0 +1,16 @@
+[2026-11-25 01:44:05.606] [info] Inter-module access enforcement is OFF (no access policy set): any loaded module may call any other
+[2026-11-25 01:44:05.610] [info] [logos] Granting host services to 'capability_module': token_registry,token_delivery
+[2026-11-25 01:44:05.634] [out] [capability_module] [2026-11-25 01:44:05.634] [info] Granting host services to capability_module: ["token_registry","token_delivery"]
+[2026-11-25 01:44:05.635] [info] [logos] Module loaded: capability_module
+[2026-11-25 01:44:05.661] [info] [logos] Module loaded: modules_state
+[2026-11-25 01:44:05.692] [info] [logos] Module loaded: package_manager
+[2026-11-25 01:44:05.696] [info] [logos] Pushed module snapshot to modules_state
+[2026-11-25 01:44:05.722] [info] [logos] [storage_module] StorageModuleImpl: Initializing...
+[2026-11-25 01:44:05.723] [info] [logos] Module loaded: storage_module
+[2026-11-25 01:44:05.756] [info] [logos] Module loaded: package_downloader
+[2026-11-25 01:44:05.763] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+Logosctl daemon started (pid 8210, instance 6ae0603b595a)
+Daemon state: <repo>/modules/catalog/install-test-plus/rehearsal-2026-11-25/session/daemon/state.json
+Local client config: <repo>/modules/catalog/install-test-plus/rehearsal-2026-11-25/session/client/config.yaml
+[2026-11-25 01:44:05.765] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-25 01:44:14.800] [info] [logos] Module loaded: ferrata_bridge_module

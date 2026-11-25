@@ -73,10 +73,10 @@ What it does, in order:
    output, `lez/target` — `cd lez && cargo build --locked -p methods`, `RISC0_HOME` as `lez/RESULTS.md` says; on the
    machine the publish runs from.)
 4. **With `--yes`, checks the remote side before creating anything**, read-only: `gh` is there and logged
-   in, `ORG` is an organization, and every one of the seven that already exists can be read by git and
+   in, `ORG` is an organization, and every repository of the publication (each module's, the catalog) that already exists can be read by git and
    holds no different `main` and no different version tag. Any failure stops it with nothing created.
 5. **Then creates, pushes and sets the secret**, each step idempotent (a rerun after a failure resumes and
-   moves nothing): create the seven repositories; push each module's `main` and its `v<version>` tag; push
+   moves nothing): create the repositories; push each module's `main` and its `v<version>` tag; push
    the catalog; set the `LOGOS_SIGNING_KEY` Actions secret from the key file on standard input (`gh secret
    set LOGOS_SIGNING_KEY --repo ORG/CATALOG_REPO < KEY`, the `signing_key` the workflows pass in inline
    mode).
@@ -98,6 +98,58 @@ What it does, in order:
 7. Afterwards the owner fills [`releases/RELEASE-INTEGRITY.template.md`](../../releases/RELEASE-INTEGRITY.template.md)
    — every value's producing command is in it — and publishes that manifest with the solution.
 
+The modules are every `modules/<name>` with a `release-<name>.yml` in this directory's workflows: the six core modules
+and `ferrata_bridge_ui`, the mini-app. A ui module is built by the same action: the action reads only `name` and
+`version` from `metadata.json` and runs `nix build .#lgx-portable` in the module's checkout, which
+logos-module-builder's `mkLogosQmlModule` provides for a QML-only module as for a core one (its view, icon, metadata
+and the contracts of the modules it calls, in an `.lgx` per variant). Logos's own catalog
+(`logos-co/logos-modules-release`, `36d6d59`, 5 Nov 2026) builds its ui modules with the same reusable `release.yml`
+(its `pr-build.yml`, at v1.12); each of those has a C++ backend, while ours is QML-only, so the build of the mini-app
+itself is what shows it: [`dry-run-plus/`](dry-run-plus/) (the action's steps, `linux-amd64`).
+
+## Changing the published catalog: `--update`
+
+A published catalog is changed by fast-forwards only, never re-assembled: its `main` carries the index commits of
+`rebuild-index.yml` and is protected from force-pushes, and its releases and their tags are immutable. A module whose
+content changed gets a new version (its `<module>-v<version>` release is new); a new module gets its own repository.
+Both are one step:
+
+```sh
+modules/scripts/release-publish.sh ORG CATALOG_REPO - --update --modules 'M ...' --dry-run DIR   # first: what it would push
+modules/scripts/release-publish.sh ORG CATALOG_REPO - --update --modules 'M ...' --yes           # then
+```
+
+`-` in place of the key: an update sets no secret and changes no `logos-repo.json`, so it needs no private key; the
+signer its README names is read from the live `logos-repo.json` (a key file may be given instead: its DID must be one
+the catalog declares). From the live repositories, read with git:
+
+1. **Each module's new `main`**: its export's tree (as [`export.sh`](../scripts/export.sh) writes it from this
+   commit) committed on top of the live `main`, with export.sh's identity and the source commit's date, the message
+   naming the source commit (the mini-app has no `STAGED.json` to name it); nothing when the live `main` already holds
+   that tree; a new repository when there is none. Its `v<version>` tag on that commit.
+2. **Refused before anything is pushed**: a module whose content changed while its version did not (a published
+   version is never changed), its version tag on another commit, its `<module>-v<version>` already released by the
+   catalog while its `main` would change, a missing catalog, a key whose DID the catalog does not declare.
+3. **The catalog's new `main`**: one commit on the live `main` with the modules' `.gitmodules` entries and pointers,
+   their `release-<module>.yml`, and the README regenerated with the live signer (the mini-app's install line when
+   the catalog holds it). `logos-repo.json` and the shared workflows are left as they are; where this directory's copy
+   differs, the script says so and changes nothing.
+4. **The writes**, with `--yes`, after the read-only checks of the first publication (gh logged in, `ORG` an
+   organization, every existing repository readable by git): create the new repositories; push each module's `main`
+   and tag; push the catalog's `main` last (its pointers must resolve). No force-push anywhere: a `main` that moved
+   since it was read refuses the push, and a rerun makes the update again on the new `main`. Every step is skipped
+   when done, so a rerun resumes and moves nothing.
+5. **It stops and prints the rest**: immutable releases on each repository it created, then one
+   `gh workflow run release-<module>.yml --repo ORG/CATALOG_REPO` per module whose version the catalog has not
+   released, then the release-integrity manifest.
+
+A dry run starts each bare repository under `DIR` from the live one (every branch and tag fetched, read-only; an
+empty one for a repository GitHub does not have), the catalog's refusing non-fast-forwards and deletions as its
+ruleset does, so its commits are the ones `--yes` pushes from the same source commit and live state
+(`test-release-publish.sh` checks that equality, every refusal, the rerun, and a module moved from an older
+version). The record of the update that adds the mini-app and `ferrata_bridge_module` 0.1.1 to
+`landclimber/ferrata-modules`: [`dry-run-update/README.md`](dry-run-update/README.md).
+
 ## The base's files
 
 The catalog is `logos-modules-release-base@33fb564` with these differences, each for its reason:
@@ -106,12 +158,12 @@ The catalog is `logos-modules-release-base@33fb564` with these differences, each
 |---|---|---|
 | `logos-repo.json` | generated from this directory's copy (the base's template) | `release-publish.sh` writes `indexUrl` and `trustedSigners`; identity and description kept |
 | `.github/workflows/_release-module.yml`, `release-all.yml` | kept | the action pinned by commit, `signing_mode: inline`, least-privilege `permissions` per job |
-| `.github/workflows/release-module.yml.template` | its six outputs, `release-<module>.yml` | the per-module workflows `scripts/add-module.sh` would write from it |
+| `.github/workflows/release-module.yml.template` | its outputs, `release-<module>.yml`, one per module: the six core modules and the mini-app `ferrata_bridge_ui` | the per-module workflows `scripts/add-module.sh` would write from it (a catalog gets its own modules' only) |
 | `.github/workflows/rebuild-index.yml` | replaced by the catalog's own | the base's calls the action's, which rewrites a rolling `index` release; under immutable releases it cannot (rule 2). Ours runs the same index build and commits `index/index.json` to `main` |
 | `.github/workflows/unpublish.yml` | left out | it deletes releases and their tags; the release-integrity rules freeze every published release (a fix ships as a new version) and the tag ruleset forbids deleting tags |
 | `.github/workflows/validate-repo.yml` | left out | it checks a hand-edited `logos-repo.json` and `includes.json` on each push; ours is generated by the one step, includes no other catalog, and its check (`index.py validate-repo`) passes on the generated file (the dry run) and on the published one ([`install-test-landclimber-2026-11-24/read-back-checks.txt`](install-test-landclimber-2026-11-24/read-back-checks.txt)) |
 | `scripts/add-module.sh`, `scripts/catalog.sh` | left out | the maintainer's helpers: the one step writes what `add-module.sh` writes (the submodules and their workflows), and the `gh workflow run` commands it prints do what `catalog.sh` dispatches |
-| `README.md`, `submodules/.gitkeep` | replaced | the README by the install and trust instructions (rule 5); the placeholder by the six submodules |
+| `README.md`, `submodules/.gitkeep` | replaced | the README by the install and trust instructions (rule 5); the placeholder by the modules' submodules |
 
 ## Each rule of the lambda-prize release-integrity rules, and how this catalog meets it
 

@@ -1,0 +1,1 @@
+{"path":"<repo>/modules/catalog/install-test-plus/rehearsal-2026-11-25/session/daemon/config.yaml","status":"ok"}

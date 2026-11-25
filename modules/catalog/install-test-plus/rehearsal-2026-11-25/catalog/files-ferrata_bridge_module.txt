@@ -1,0 +1,11 @@
+assets/
+assets/lidl/
+assets/lidl/ferrata_bridge_module.lidl
+manifest.json
+manifest.sig
+variants/
+variants/linux-amd64/
+variants/linux-amd64/ferrata_bridge_module_plugin.so
+variants/linux-amd64/libboost_system.so.1.87.0
+variants/linux-amd64/libcrypto.so.3
+variants/linux-amd64/libssl.so.3
