@@ -359,11 +359,18 @@ deposit still in its claim delay is held (refused with the block it opens at) un
   account. With the network's relayer the tool downloads the guest it serves only if its image id is one the tool
   pins (`gasdrop`, `gasdrop_31` of docs/image-ids.md), checks that the receipt verifies with exactly the journal it
   computed before posting the job, and the dry run's `fee payer:` line names the relayer, where it was published and
-  the opt-out. A network that publishes no relayer (an answer 4xx: a bare sequencer) leaves the fee to your own
-  account, with the line saying what that reveals; one that cannot be read (5xx, transport) stops the claim. A drop is
-  sized for the claim and one burn: `ferrata burn` (private) pays its fee from a drop's one-time account that still holds
-  native LEZ (`ferrata-gas-drops.json`), asking nothing new of any relayer (LEZ's private nonce and nullifier need the
-  account's own secret key, so the relayer cannot recognise that spend); `--no-gas-drop` pays from the proving account. The tool
+  the opt-out. Only an answer 404 or 410 ("no relayer published": a bare sequencer) leaves the fee to your own account,
+  with the line saying what that reveals; every other answer (429 with its Retry-After, any other 4xx, 5xx, a timeout,
+  a transport error, a malformed document, a relayer paused or not taking jobs) stops the claim and names
+  `--no-gas-drop`: the weaker fee payer is never taken without it. The terms are read over https, or over http from this
+  machine only; the published inbox and guest must be https or the terms' own origin. The claim names the network's
+  relayer, so the deposit's registered relay fee (the same amount whoever is named; without a relayer it goes to the
+  configuration's fee recipient) is paid to it, as the dry run says. A drop is sized for the claim and one burn:
+  `ferrata burn` (private) pays its fee from a drop's one-time account that still holds native LEZ
+  (`ferrata-gas-drops.json`), asking nothing new of any relayer (LEZ's private nonce and nullifier need the account's
+  own secret key, so the relayer cannot recognise that spend); with no drop left it takes your own account only where
+  no relayer is published (otherwise it stops until `--no-gas-drop` confirms, and an unreadable network stops it too);
+  `--no-gas-drop` pays from the proving account. The tool
   makes a one-time private account (a new child of private account `/0` in LEZ's wallet), records it for the
   deposit's `N` beside the wallet (`ferrata-gas-drops.json`), proves the gas-drop receipt over the claim's witness,
   writes the relayer's job (the receipt and the account's public keys) to its inbox, waits for the relayer's credit

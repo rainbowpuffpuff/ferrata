@@ -1,0 +1,10 @@
+[crown-b] crown STAND-IN: vault 0x67ac447386f2ea14ef2fbf55ef33ce1d8f386516, configId 0xa78fc27222401bbe1eb0b8191b82d867586efc6b89d7bd7de60b7acb79ac0278, instance 0xabd362ebd8091508211f8c37dfd4c8e77d7ee313248579c5399aecf726b13c4a
+[crown-b] stage 1 finality update (block 9) Open (step 1)            applied        gas   1996051 block   20 + 15.8s 2d3ef5093b5db1cdf0296a20b3bad4320efca5f13334d04434f3c2763d96fbc9
+[crown-b] stage 1 finality update (block 9) Miller (step 2)          applied        gas   3305374 block   21 +  9.8s a65099ee9e6856b23359eddd743ee0cb8977c36e20ebefb87fc419d3b9c4a82f
+[crown-b] stage 1 finality update (block 9) Finish (step 3)          applied        gas   3718957 block   22 + 10.6s 62dc5fc820b748d09d767557635b7d31f41502f9064dd0057eb3d55b15b61fb5
+[crown-b] bridge Init (pairing: configId in the vault's slot 2)      applied        gas    224958 block   23 +  9.6s 199ce0223b88f2c6e2158ba07d3bd63770317e34643830a3164e8c1f80f3f131
+[crown-b] ETH schedule 0 announced and effective at 1795565007
+[crown-b] bridge Register ETH (registry entry, schedules 0 and 1, leaf count) applied        gas    453070 block   24 + 10.4s 81b07e773048c8755a9e93974c30648e33a7cff6a6fb265fe772009af3774f27
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 1
+[crown-b] bridge ImportRoot n=1 (stage 1, block 9)                   applied        gas    302845 block   25 + 10.0s d4e186cfadcbd97e20632b169af81280697d0192954994f2f2dc0104371e0d49
+[crown-b] blocks 20..=25 (T1 0x147f7e8e08de65aa4b0943bef372576f3bee4231d580cc048939fb1b8de6a442); 0 burn note(s) written to <work>/notes.json

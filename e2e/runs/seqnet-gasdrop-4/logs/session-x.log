@@ -1,0 +1,13 @@
+[00:03:31] crown LEZ session x (chain stand-in)
+[00:03:32] restored generation 1 (193M)
+[00:03:33] Bedrock node up: {"cryptarchia_info":{"lib":"99ae9d1e9269938084fcca10e22b12e87e4d78ec5f714361f7ca03dae7ffb504","lib_slot":10071967,"tip":"0ee99d5893ea35ed45f65dc090fc1c8166ce8ea24e705cfae418febe5f21f8fe","slot":10071972,"height":201,"state":"Online"},"phase":"InitialBlockDownload"}
+[00:03:36] node slot 0 is unix second 1785493027 (slots of 1 s)
+[00:04:09] sequencer start 1: scheduler after 32 s; its blocks fall 1 s after an epoch second
+[00:04:09] sequencer up, head block 19
+[00:04:09] hook <repo>/e2e/seqnet/hook-gasdrop.sh
+[00:06:23] driver exit 0
+[00:06:23] export failed (1)
+[00:06:24] sequencer stopped (exit 0)
+[00:06:32] node stopped (exit 143)
+[00:06:32] saved generation 2 (38917468 bytes; head block 32)
+[00:06:32] session x: ok

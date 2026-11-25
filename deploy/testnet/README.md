@@ -126,7 +126,7 @@ The way back (LEZ to Ethereum), rule (B):
 | `ferrata-relayer`, `monitor`, `crown-driver` | `cli/`, `monitor/`, `lez/crown/driver/` at commit `05650037` (`cargo build --release --locked`) | sha256 in `install-bridge.sh` |
 | `realblocks-crown`, `ferrata_attestor` | `checkpoint/` at commit `0c5906d5`, realblocks-crown with `checkpoint-chain/realblocks-chain.patch` (`checkpoint-chain/build.sh`) | sha256 in `install-bridge.sh` |
 | `cast` | Foundry v1.3.6's release tarball | sha256 in `install-bridge.sh` |
-| the holders' `ferrata` CLI on LEZ rc3 | `cli/` at `0c5906d5` with `cli-rc3/` (`cli-rc3/build.sh`, its lockfile) | its builder prints the sha256 |
+| the holders' `ferrata` CLI on LEZ rc3 | `cli/` at `0c5906d5` with `cli-rc3/` **of that commit** (`git show 0c5906d5:deploy/testnet/cli-rc3/build.sh`: its patch still carries the `DryRun` hunk, no features); the tree's own `cli-rc3/build.sh` goes with its own `cli/` (since `847bb4e5`: `--features lez-rc3`), and from the gas drop on builds `ferrata`, `ferrata-relayer`, `ferrata-gasdrop` and `seqnet-fund` (compiled on the build box from `priv7-gasdrop` `df7ffc0e`: `results/2026-11-25-cli-rc3-gasdrop.txt`; the row takes the merged commit once installed) | its builder prints the sha256 |
 | `web.tar.gz` (the site) | not built by these scripts: the build page (`build/`), the explorer bundle (`explorer/`), the names resolver (`names/`, from `names/js`), the web wallet (`wallet/`) and the messages module (`msg/`), each from this tree (`deploy/testnet/web/`, `names/js/`); `WEB_TGZ` of `deploy.sh bundle` | - |
 | `recursion_zkr.zip` | RISC Zero v3.0.5's `src/recursion_zkr.zip`, for `build-explorer` when RISC Zero's URL refuses the host (it did: 403); `RECURSION_ZKR` of `deploy.sh bundle` | sha256 `744b999f…` in `deploy.sh` and `provision.sh` |
 | AWS CLI, CloudWatch agent, Caddy, `cargo-leptos`, the Modal SDK | pinned versions in `provision.sh` and `host/modal-requirements.txt` | sha256 (Caddy: its repository key's fingerprint) |
@@ -152,7 +152,11 @@ aws ssm start-session --target <instance id>                     # a shell, if n
 
 Logs: `/var/log/ferrata/*.log` (logrotate daily, 200 MB cap, 5 kept, as `ferrata`: `install.sh` creates each unit's log
 owned by it); Caddy's access log `/var/log/caddy/access.log` (client IPs, 30 days); the sequencer's, updater's,
-monitor's, top-up's, gateway's and Caddy's go to CloudWatch Logs. Restarts are systemd's (`Restart=always`); the hardware is EC2's
+monitor's, top-up's, gateway's and Caddy's go to CloudWatch Logs (`/ferrata-testnet/access` for the last two, 30 days).
+The gas drop's routes (`/relayer/gas-drop`, its guest) have no access log (Caddy `log_skip`) and the gateway's line for an
+accepted job names neither the address nor the deposit's nullifier N; the relayer's own log, `/var/log/ferrata/gasdrop.log`
+(N, the one-time account, the credit's transaction; no addresses), stays on the host and is not shipped. What remains:
+the claim's own `sendTransaction` through `/rpc` is in the access log with its address, as every transaction is. Restarts are systemd's (`Restart=always`); the hardware is EC2's
 (auto-recover). A reset of the network: stop the units, move `/var/lib/ferrata/{node,sequencer,indexer,day1}` aside,
 `run install`, then `programs plan|fund|run` (new keys, new program accounts).
 
@@ -229,17 +233,21 @@ monitor's, top-up's, gateway's and Caddy's go to CloudWatch Logs. Restarts are s
 
 ## The gas-drop relayer: deploying it (as root over SSM, after review)
 
-1. Build `ferrata`, `ferrata-relayer` and `seqnet-fund` against LEZ v0.4.0-rc3 (`cli-rc3/build.sh SRC`, and
-   `cargo build --release --locked --features lez-rc3,seqnet --bin seqnet-fund` in the same tree) and the gas-drop guest
-   whose image id the tool pins (`bridge/`'s `gasdrop`, `0x89580416…`, docs/image-ids.md); install them in `/opt/ferrata/bin`.
+1. Build `ferrata`, `ferrata-relayer`, `ferrata-gasdrop` (the gateway's receipt checker) and `seqnet-fund` against LEZ
+   v0.4.0-rc3 with this tree's `cli-rc3/build.sh SRC` (it builds the four; compiled on the build box,
+   `results/2026-11-25-cli-rc3-gasdrop.txt`) and the gas-drop guest whose image id the tool pins (`bridge/`'s `gasdrop`,
+   `0x89580416…`, docs/image-ids.md); install them in `/opt/ferrata/bin`.
 2. `host/bin/ferrata-gasdrop-setup init GUEST 200000000 BRIDGE_ACCOUNT_HEX`: the user, `/var/lib/ferrata/gasdrop`, a fresh
-   seed, `/etc/ferrata/gasdrop.env`, the terms (`/etc/ferrata/gasdrop-terms.json`, paused) and the gateway's `GASDROP_*`;
-   it prints the relayer's LEZ public account /0.
+   seed, `/etc/ferrata/gasdrop.env`, the terms (`/etc/ferrata/gasdrop-terms.json`, with the vault and chain from
+   `/etc/ferrata/bridge.env`, paused) and the gateway's `GASDROP_*` (the checker `GASDROP_CHECK` among them: without it the
+   gateway takes no job); it prints the relayer's LEZ public account /0.
 3. Pay that account native LEZ from the operator's account (the faucet's tool: `ferrata-day1 transfer --from-key ... --to
    <account> --amount 20000000000 --rpc http://127.0.0.1:3040 ...`), then `ferrata-gasdrop-setup fund 15000000000` (public
    /0 to the drop account, private /0, proven here; the terms lose "paused").
-4. Install the new gateway, its unit (the inbox's `BindPaths`) and the Caddyfile (`/relayer/gas-drop` to the gateway),
-   then `ferrata-gasdrop-setup start`; check `curl -s https://<host>/relayer/gas-drop` and `ferrata-gasdrop-setup status`.
+4. Install the new gateway, its unit (the inbox's `BindPaths`) and the Caddyfile (`/relayer/gas-drop` to the gateway, no
+   access log: `caddy validate --config /etc/caddy/Caddyfile` before the reload), then `ferrata-gasdrop-setup start`;
+   check `curl -s https://<host>/relayer/gas-drop` (200, `accepting`), a junk POST (400, `pending` unchanged) and
+   `ferrata-gasdrop-setup status`.
 
 Pause it by setting `"paused": "<reason>"` in the terms (the tool then stops a claim, with the reason, rather than pay
 from the user's own account); stop with `systemctl disable --now ferrata-gasdrop`.
