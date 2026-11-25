@@ -1,0 +1,21 @@
+[2026-11-25 04:31:18.000] [info] Inter-module access enforcement is OFF (no access policy set): any loaded module may call any other
+[2026-11-25 04:31:18.006] [info] [logos] Granting host services to 'capability_module': token_registry,token_delivery
+[2026-11-25 04:31:18.025] [out] [capability_module] [2026-11-25 04:31:18.025] [info] Granting host services to capability_module: ["token_registry","token_delivery"]
+[2026-11-25 04:31:18.026] [info] [logos] Module loaded: capability_module
+[2026-11-25 04:31:18.045] [info] [logos] Module loaded: modules_state
+[2026-11-25 04:31:18.070] [info] [logos] Module loaded: package_manager
+[2026-11-25 04:31:18.074] [info] [logos] Pushed module snapshot to modules_state
+[2026-11-25 04:31:18.093] [info] [logos] [storage_module] StorageModuleImpl: Initializing...
+[2026-11-25 04:31:18.093] [info] [logos] Module loaded: storage_module
+[2026-11-25 04:31:18.115] [info] [logos] Module loaded: package_downloader
+[2026-11-25 04:31:18.121] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-25 04:31:18.123] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+Logosctl daemon started (pid 2295, instance 4f3c6007fcfe)
+Daemon state: <repo>/modules/catalog/install-test-landclimber-2026-11-25/session/daemon/state.json
+Local client config: <repo>/modules/catalog/install-test-landclimber-2026-11-25/session/client/config.yaml
+[2026-11-25 04:32:01.493] [info] [logos] Module loaded: ferrata_attest_module
+[2026-11-25 04:32:01.639] [info] [logos] Module loaded: ferrata_attestor_module
+[2026-11-25 04:32:01.791] [info] [logos] Module loaded: ferrata_bridge_module
+[2026-11-25 04:32:01.955] [info] [logos] Module loaded: ferrata_monitor_module
+[2026-11-25 04:32:02.119] [info] [logos] Module loaded: ferrata_relayer_module
+[2026-11-25 04:32:02.284] [info] [logos] Module loaded: ferrata_updater_module

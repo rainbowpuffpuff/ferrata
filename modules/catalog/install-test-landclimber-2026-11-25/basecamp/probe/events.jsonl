@@ -1,0 +1,11 @@
+{"t":"2026-11-25T04:33:18.445Z","transport":"module","inLogos":true}
+{"t":"2026-11-25T04:33:18.525Z","shot":"p01-view-opened","width":1600,"height":900}
+{"t":"2026-11-25T04:33:18.613Z","click":"sidebar.section.3"}
+{"t":"2026-11-25T04:33:19.329Z","shot":"p02-module-inspector","width":1600,"height":900}
+{"t":"2026-11-25T04:33:19.351Z","module":"ferrata_bridge_module","before":"Unload"}
+{"t":"2026-11-25T04:33:19.371Z","module":"ferrata_bridge_module","after":"Unload (loaded)"}
+{"t":"2026-11-25T04:33:19.428Z","shot":"p03-core-modules-loaded","width":1600,"height":900}
+{"t":"2026-11-25T04:33:19.453Z","click":"sidebar.app.ferrata_bridge_ui"}
+{"t":"2026-11-25T04:33:20.114Z","call":"wallet info (sync callModule)","reply":{"type":"string","raw":"\"{\\\"error\\\":\\\"no wallet session: open it first (wallet {\\\\\\\"method\\\\\\\":\\\\\\\"open\\\\\\\",\\\\\\\"params\\\\\\\":{\\\\\\\"chain\\\\\\\":URL}})\\\",\\\"ok\\\":false}\""}}
+{"t":"2026-11-25T04:33:20.124Z","callModuleAsync":"function"}
+{"t":"2026-11-25T04:33:20.187Z","shot":"p04-view-after-call","width":1600,"height":900}

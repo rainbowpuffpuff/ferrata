@@ -1,0 +1,1 @@
+installed ferrata_relayer_module rootHash: aac37f8b4a5ba583940c8f2b2ff5a258740a4dc618eb4a20212262f5967b846f; release sidecar: aac37f8b4a5ba583940c8f2b2ff5a258740a4dc618eb4a20212262f5967b846f

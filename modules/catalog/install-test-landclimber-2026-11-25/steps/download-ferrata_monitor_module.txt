@@ -1,0 +1,1 @@
+667107ffdfe9322e249a4b386d8b05a5538c7d10cf72e6ab9ca5e416ae8bb062  ferrata_monitor_module-0.1.0.lgx

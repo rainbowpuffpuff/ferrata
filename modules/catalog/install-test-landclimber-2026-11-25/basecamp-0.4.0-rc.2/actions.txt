@@ -1,0 +1,73 @@
+shot 01-welcome
+click 960 604
+sleep 5
+shot 02-home
+click 1255 487
+sleep 6
+shot 03-package-manager
+click 1625 262
+sleep 4
+shot 04-repositories
+click 1050 494
+sleep 1
+type https://raw.githubusercontent.com/landclimber/ferrata-modules/refs/heads/main/logos-repo.json
+sleep 1
+shot 05-url-typed
+click 1646 494
+sleep 10
+shot 06-repository-added
+click 365 475
+sleep 3
+shot 07-trusted-publishers-before
+click 208 878
+sleep 6
+click 1400 177
+sleep 1
+type ferrata
+sleep 4
+shot 08-catalog-packages
+click 1038 522
+sleep 2
+shot 09-bridge-versions-offered
+key Escape
+sleep 1
+click 1347 522
+sleep 6
+shot 10-trust-prompt-bridge
+click 946 670
+sleep 4
+shot 11-cancelled-nothing-installed
+click 1347 522
+sleep 6
+shot 12-trust-prompt-again
+click 1168 670
+sleep 20
+shot 13-bridge-installed
+click 1347 586
+sleep 8
+shot 14-ui-install-prompt
+click 1173 664
+sleep 15
+shot 15-ui-installed
+click 774 261
+sleep 3
+shot 16-installed-tab
+click 208 928
+sleep 3
+click 365 475
+sleep 3
+shot 17-trusted-publishers-after
+click 208 283
+sleep 10
+shot 18-app-open
+click 208 928
+sleep 3
+click 360 354
+sleep 4
+shot 19-module-inspector
+click 208 283
+sleep 4
+shot 20-app
+click 1690 207
+sleep 8
+shot 21-connect-wallet-module-answer

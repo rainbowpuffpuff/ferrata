@@ -25,12 +25,16 @@ the builder copies only `rust-lib/` and a flake sees only tracked files).
 **Published once,** by the owner, from `98375f82`: [`landclimber/ferrata-modules`](https://github.com/landclimber/ferrata-modules)
 (24 November 2026), the six modules as signed, immutable `<module>-v0.1.0` releases built by the action, the index
 on the catalog's `main`; read back in [`releases/RELEASE-INTEGRITY.md`](../../releases/RELEASE-INTEGRITY.md) and
-installed from in [`install-test-landclimber-2026-11-24/`](install-test-landclimber-2026-11-24/README.md). The mini-app
-(`ferrata_bridge_ui`, a ui module) is not in it yet: it and `ferrata_bridge_module` 0.1.1 (the published 0.1.0 is
-immutable; the module's network session came after it) are added by one owner step, `release-publish.sh --update`
-([`RELEASE.md`](RELEASE.md), "Changing the published catalog"), whose dry run against the live catalog is
-[`dry-run-update/`](dry-run-update/README.md); the action's steps for both on `linux-amd64` are in
-[`dry-run-plus/`](dry-run-plus/), and the install test that follows the release, rehearsed on a local catalog, in
+installed from in [`install-test-landclimber-2026-11-24/`](install-test-landclimber-2026-11-24/README.md). **Updated
+once,** by the owner, from `f9623cfd` (25 November 2026): the mini-app (`ferrata_bridge_ui`, a ui module) and
+`ferrata_bridge_module` 0.1.1 (the published 0.1.0 is immutable; the module's network session came after it), added by
+`release-publish.sh --update` ([`RELEASE.md`](RELEASE.md), "Changing the published catalog") and released by the
+action; read back in [`releases/RELEASE-INTEGRITY.md`](../../releases/RELEASE-INTEGRITY.md) ("The update of 25 November
+2026") and installed from, all seven packages by a headless Logos Core, the bridge module and the mini-app by
+Basecamp 0.4.0-rc.2's own Package Manager, in
+[`install-test-landclimber-2026-11-25/`](install-test-landclimber-2026-11-25/README.md). Its dry run against the live
+catalog is [`dry-run-update/`](dry-run-update/README.md); the action's steps for both on
+`linux-amd64` before the release, [`dry-run-plus/`](dry-run-plus/); the install test rehearsed on a local catalog,
 [`install-test-plus/`](install-test-plus/README.md). Publishing is one owner step, prepared by [`RELEASE.md`](RELEASE.md): `modules/scripts/release-publish.sh ORG CATALOG_REPO
 SIGNING_KEY_FILE --yes` generates the published catalog's `logos-repo.json` (the signer's `did:jwk` under
 `trustedSigners`, the `indexUrl`), exports the module repositories, assembles the catalog, checks the

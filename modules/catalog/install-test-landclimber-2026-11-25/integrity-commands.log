@@ -1,0 +1,99 @@
+# The catalog
+$ curl -fsSL https://raw.githubusercontent.com/landclimber/ferrata-modules/refs/heads/main/logos-repo.json | jq -r '.trustedSigners[0].did'
+did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6ImNLVmpDSnFiWEFqYTBtenc1VFBOODhqWUs2QXkwTmtpRWNldUduekN6bGsifQ
+$ git ls-remote https://github.com/landclimber/ferrata-modules.git refs/heads/main | awk '{print $1}'
+3292b160c6bb496a87b32b7c15547d18480f67ca
+$ git -c core.hooksPath=/dev/null clone -q https://github.com/landclimber/ferrata-modules WORK/ferrata-modules && git -C WORK/ferrata-modules rev-parse HEAD
+3292b160c6bb496a87b32b7c15547d18480f67ca
+$ git -C WORK/ferrata-modules show HEAD:logos-repo.json | jq -r '.trustedSigners[0].did'
+did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6ImNLVmpDSnFiWEFqYTBtenc1VFBOODhqWUs2QXkwTmtpRWNldUduekN6bGsifQ
+$ git -C WORK/ferrata-modules show HEAD:logos-repo.json | jq -r .indexUrl
+https://raw.githubusercontent.com/landclimber/ferrata-modules/refs/heads/main/index/index.json
+$ git -C WORK/ferrata-modules log --reverse --format='%h %an %ad: %s' --date=format:'%Y-%m-%d %H:%M' 9738dd09..HEAD
+32fbcbc ferrata-release-publish 2026-11-25 02:53: Ferrata module catalog: ferrata_bridge_module 0.1.1; ferrata_bridge_ui 0.1.0 added (modules/scripts/release-publish.sh --update)
+ad5a6df github-actions[bot] 2026-11-25 03:59: index: 7 package(s), rebuilt by rebuild-index.yml
+3292b16 github-actions[bot] 2026-11-25 04:08: index: 7 package(s), rebuilt by rebuild-index.yml
+$ git -C WORK/ferrata-modules diff --name-only 9738dd09 HEAD -- submodules .gitmodules .github
+.github/workflows/release-ferrata_bridge_ui.yml
+.gitmodules
+submodules/ferrata_bridge_module
+submodules/ferrata_bridge_ui
+$ git -C DRY/ferrata-modules.git rev-parse refs/heads/main
+32fbcbc7568753118962e0eda5e0b372644e6cfa
+$ curl -fsSL https://raw.githubusercontent.com/landclimber/ferrata-modules/refs/heads/main/index/index.json | jq -c '{repositoryName, packages: [.packages[] | .name as $n | .versions[] | "\($n) \(.manifest.version)"]}'
+{"repositoryName":"ferrata-modules","packages":["ferrata_bridge_ui 0.1.0","ferrata_bridge_module 0.1.1","ferrata_bridge_module 0.1.0","ferrata_updater_module 0.1.0","ferrata_relayer_module 0.1.0","ferrata_monitor_module 0.1.0","ferrata_attestor_module 0.1.0","ferrata_attest_module 0.1.0"]}
+# ferrata_bridge_module
+$ git -C WORK/ferrata-modules show HEAD:.gitmodules > /dev/null && curl -fsSL https://raw.githubusercontent.com/landclimber/ferrata_bridge_module/refs/heads/main/metadata.json | jq -r .version
+0.1.1
+$ gh release view 'ferrata_bridge_module-v0.1.1' --repo 'landclimber/ferrata-modules' --json url,isImmutable,tagName,publishedAt --jq '[.url, (.isImmutable|tostring), .publishedAt] | join(" ")'
+https://github.com/landclimber/ferrata-modules/releases/tag/ferrata_bridge_module-v0.1.1 true 2026-11-25T04:07:49Z
+$ git -C WORK/ferrata-modules ls-tree HEAD submodules/ferrata_bridge_module | awk '{print $3}'
+34ee2fcf5f6fc1214b4586eaca6c9d6c25672f8c
+$ git -c core.hooksPath=/dev/null clone -q --filter=blob:none --no-checkout https://github.com/landclimber/ferrata_bridge_module WORK/ferrata_bridge_module && git -C WORK/ferrata_bridge_module rev-parse HEAD
+34ee2fcf5f6fc1214b4586eaca6c9d6c25672f8c
+$ git -C WORK/ferrata_bridge_module log -1 --format=%s 34ee2fcf5f6fc1214b4586eaca6c9d6c25672f8c
+ferrata_bridge_module 0.1.1, exported from the Ferrata repository at f9623cfd90ae0af852d2dc7000e90821e8381f06
+$ curl -fsSL https://raw.githubusercontent.com/landclimber/ferrata_bridge_module/34ee2fcf5f6fc1214b4586eaca6c9d6c25672f8c/rust-lib/staged/STAGED.json | jq -r .commit
+f9623cfd90ae0af852d2dc7000e90821e8381f06
+$ git -C WORK/ferrata_bridge_module log -1 --format='%P' 34ee2fcf5f6fc1214b4586eaca6c9d6c25672f8c
+1728fa13777d92de8e2fcb9dfff1eea20f558a54
+$ git -C DRY/ferrata_bridge_module.git rev-parse refs/heads/main
+34ee2fcf5f6fc1214b4586eaca6c9d6c25672f8c
+$ git -C WORK/ferrata_bridge_module rev-parse '34ee2fcf5f6fc1214b4586eaca6c9d6c25672f8c^{tree}'
+1bbfe4fe0f656dca3fe51bff41db7012a8583df5
+$ git -C DRY/ferrata_bridge_module.git rev-parse 'refs/heads/main^{tree}'
+1bbfe4fe0f656dca3fe51bff41db7012a8583df5
+$ gh release download 'ferrata_bridge_module-v0.1.1' --repo 'landclimber/ferrata-modules' --pattern 'sidecar.json' --output - | jq -c '{rootHash, sha256, size, builtVariants, missingVariants, type: .manifest.type, signerDid: .signature.did}'
+{"rootHash":"92024bf12434e1dc35051d7f8ee9a467ad3eb16df9ea9e36e9d929cc92253463","sha256":"1ab1b2ff43d88f6f7171e83c5c31ab28f5cc9c270547298ef68d0cf7233582d1","size":35334105,"builtVariants":["darwin-arm64","linux-amd64","linux-arm64"],"missingVariants":[],"type":"core","signerDid":"did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6ImNLVmpDSnFiWEFqYTBtenc1VFBOODhqWUs2QXkwTmtpRWNldUduekN6bGsifQ"}
+$ gh release download 'ferrata_bridge_module-v0.1.1' --repo 'landclimber/ferrata-modules' --pattern '*.lgx' --dir WORK/pkgs
+
+$ sha256sum WORK/pkgs/ferrata_bridge_module-0.1.1.lgx | cut -d' ' -f1
+1ab1b2ff43d88f6f7171e83c5c31ab28f5cc9c270547298ef68d0cf7233582d1
+$ curl -fsSL https://raw.githubusercontent.com/landclimber/ferrata-modules/refs/heads/main/index/index.json | jq -c --arg t 'ferrata_bridge_module-v0.1.1' '.packages[].versions[] | select(.publisherRef == $t) | {rootHash, sha256}'
+{"rootHash":"92024bf12434e1dc35051d7f8ee9a467ad3eb16df9ea9e36e9d929cc92253463","sha256":"1ab1b2ff43d88f6f7171e83c5c31ab28f5cc9c270547298ef68d0cf7233582d1"}
+$ git -C WORK/ferrata-modules rev-list -n 1 refs/tags/ferrata_bridge_module-v0.1.1
+ad5a6df485826eab6124dcff18858b4ce4dc80f6
+$ gh api -X GET repos/landclimber/ferrata_bridge_module/immutable-releases --jq .enabled
+true
+# ferrata_bridge_ui
+$ git -C WORK/ferrata-modules show HEAD:.gitmodules > /dev/null && curl -fsSL https://raw.githubusercontent.com/landclimber/ferrata_bridge_ui/refs/heads/main/metadata.json | jq -r .version
+0.1.0
+$ gh release view 'ferrata_bridge_ui-v0.1.0' --repo 'landclimber/ferrata-modules' --json url,isImmutable,tagName,publishedAt --jq '[.url, (.isImmutable|tostring), .publishedAt] | join(" ")'
+https://github.com/landclimber/ferrata-modules/releases/tag/ferrata_bridge_ui-v0.1.0 true 2026-11-25T03:58:30Z
+$ git -C WORK/ferrata-modules ls-tree HEAD submodules/ferrata_bridge_ui | awk '{print $3}'
+972892161b21069ead711048443d687410eca1ce
+$ git -c core.hooksPath=/dev/null clone -q --filter=blob:none --no-checkout https://github.com/landclimber/ferrata_bridge_ui WORK/ferrata_bridge_ui && git -C WORK/ferrata_bridge_ui rev-parse HEAD
+972892161b21069ead711048443d687410eca1ce
+$ git -C WORK/ferrata_bridge_ui log -1 --format=%s 972892161b21069ead711048443d687410eca1ce
+ferrata_bridge_ui 0.1.0, exported from the Ferrata repository at f9623cfd90ae0af852d2dc7000e90821e8381f06
+$ git -C DRY/ferrata_bridge_ui.git rev-parse refs/heads/main
+972892161b21069ead711048443d687410eca1ce
+$ git -C WORK/ferrata_bridge_ui rev-parse '972892161b21069ead711048443d687410eca1ce^{tree}'
+44798d122d199829564cc8d0440ebcc147a3315c
+$ git -C DRY/ferrata_bridge_ui.git rev-parse 'refs/heads/main^{tree}'
+44798d122d199829564cc8d0440ebcc147a3315c
+$ gh release download 'ferrata_bridge_ui-v0.1.0' --repo 'landclimber/ferrata-modules' --pattern 'sidecar.json' --output - | jq -c '{rootHash, sha256, size, builtVariants, missingVariants, type: .manifest.type, signerDid: .signature.did}'
+{"rootHash":"f9d203fbaf0b5de328478d5a948f2326e84ff357b7090db3aba37187f838c8f4","sha256":"fd65af7325ca331cb21580d85fa689d9aa86ab600bbc5501c9fb079dc6a48a8a","size":150230,"builtVariants":["darwin-arm64","linux-amd64","linux-arm64"],"missingVariants":[],"type":"ui_qml","signerDid":"did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6ImNLVmpDSnFiWEFqYTBtenc1VFBOODhqWUs2QXkwTmtpRWNldUduekN6bGsifQ"}
+$ gh release download 'ferrata_bridge_ui-v0.1.0' --repo 'landclimber/ferrata-modules' --pattern '*.lgx' --dir WORK/pkgs
+
+$ sha256sum WORK/pkgs/ferrata_bridge_ui-0.1.0.lgx | cut -d' ' -f1
+fd65af7325ca331cb21580d85fa689d9aa86ab600bbc5501c9fb079dc6a48a8a
+$ curl -fsSL https://raw.githubusercontent.com/landclimber/ferrata-modules/refs/heads/main/index/index.json | jq -c --arg t 'ferrata_bridge_ui-v0.1.0' '.packages[].versions[] | select(.publisherRef == $t) | {rootHash, sha256}'
+{"rootHash":"f9d203fbaf0b5de328478d5a948f2326e84ff357b7090db3aba37187f838c8f4","sha256":"fd65af7325ca331cb21580d85fa689d9aa86ab600bbc5501c9fb079dc6a48a8a"}
+$ git -C WORK/ferrata-modules rev-list -n 1 refs/tags/ferrata_bridge_ui-v0.1.0
+32fbcbc7568753118962e0eda5e0b372644e6cfa
+$ gh api -X GET repos/landclimber/ferrata_bridge_ui/immutable-releases --jq .enabled
+true
+# The release runs
+$ gh run view 45543214624 --repo landclimber/ferrata-modules --json workflowName,headSha,event,conclusion,createdAt,updatedAt --jq '[.workflowName, .headSha, .event, .conclusion, .createdAt, .updatedAt] | join(" ")'
+Release ferrata_bridge_module 32fbcbc7568753118962e0eda5e0b372644e6cfa workflow_dispatch success 2026-11-25T03:55:02Z 2026-11-25T04:07:55Z
+$ gh run view 45543214624 --repo landclimber/ferrata-modules --json jobs --jq '[.jobs[] | "\(.name | sub("^release / release / "; "")): \(.conclusion)"] | join(", ")'
+setup: success, build (darwin-arm64): success, build (linux-arm64): success, build (linux-amd64): success, already-published: skipped, release: success
+$ gh run view 45543219299 --repo landclimber/ferrata-modules --json workflowName,headSha,event,conclusion,createdAt,updatedAt --jq '[.workflowName, .headSha, .event, .conclusion, .createdAt, .updatedAt] | join(" ")'
+Release ferrata_bridge_ui 32fbcbc7568753118962e0eda5e0b372644e6cfa workflow_dispatch success 2026-11-25T03:55:05Z 2026-11-25T03:58:34Z
+$ gh run view 45543219299 --repo landclimber/ferrata-modules --json jobs --jq '[.jobs[] | "\(.name | sub("^release / release / "; "")): \(.conclusion)"] | join(", ")'
+setup: success, build (darwin-arm64): success, build (linux-amd64): success, build (linux-arm64): success, already-published: skipped, release: success
+$ git -C WORK/ferrata-modules show 32fbcbc7:.github/workflows/_release-module.yml | grep -E 'uses: logos-co/logos-modules-release-action'
+    uses: logos-co/logos-modules-release-action/.github/workflows/release.yml@bbdc52871dc4305c8007923e1b08738ad2dd6b50 # v1 (= v1.8)
+$ gh release download ferrata_bridge_module-v0.1.0 --repo 'landclimber/ferrata-modules' --pattern 'sidecar.json' --output - | jq -c '{rootHash, sha256}'
+{"rootHash":"0e46fbecf4c39caa9880bac11bc53c9abab4a4c703b9af9fa34db6a4f166fdd8","sha256":"b160668aa824c8f08dc42d20a071c4f92173625a521671b7e4ec3028acdb7f7d"}

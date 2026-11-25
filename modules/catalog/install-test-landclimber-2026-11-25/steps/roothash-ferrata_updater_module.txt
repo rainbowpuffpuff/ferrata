@@ -1,0 +1,1 @@
+installed ferrata_updater_module rootHash: 0f23ee4c1eeabbfaa950aec7ab83ecb487a8cb44ae54f8101aac6257c651f867; release sidecar: 0f23ee4c1eeabbfaa950aec7ab83ecb487a8cb44ae54f8101aac6257c651f867

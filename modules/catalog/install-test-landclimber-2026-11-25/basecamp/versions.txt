@@ -1,0 +1,7 @@
+logos-basecamp b642a9aba732b80343a3a7b622dad8c65e534bdb#dev-portable: /nix/store/0a33za2w9w6yj3q799pfnx7wv3zncijp-logos-basecamp-dev-portable
+lgpm: /nix/store/zwvf5gbchf2q5bhmzfsww75rzfb4xaaf-logos-package-manager-cli-1.0.0-dev/bin/lgpm
+fd65af7325ca331cb21580d85fa689d9aa86ab600bbc5501c9fb079dc6a48a8a  <work>/pkgs/ferrata_bridge_ui-0.1.0.lgx
+1ab1b2ff43d88f6f7171e83c5c31ab28f5cc9c270547298ef68d0cf7233582d1  <work>/pkgs/ferrata_bridge_module-0.1.1.lgx
+Linux 4.19.0-gvisor x86_64
+nix (Nix) 2.28.3
+2026-11-25T04:33:15Z

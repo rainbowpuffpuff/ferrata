@@ -1,0 +1,73 @@
+04:46:50Z	shot 01-welcome	6.8
+04:46:51Z	click 960 604	6.9
+04:46:56Z	sleep 5	11.9
+04:46:56Z	shot 02-home	12.1
+04:46:56Z	click 1255 487	12.3
+04:47:02Z	sleep 6	18.3
+04:47:02Z	shot 03-package-manager	18.5
+04:47:02Z	click 1625 262	18.6
+04:47:06Z	sleep 4	22.6
+04:47:07Z	shot 04-repositories	22.8
+04:47:07Z	click 1050 494	22.9
+04:47:08Z	sleep 1	24.0
+04:47:09Z	type https://raw.githubusercontent.com/landclimber/ferrata-modules/refs/heads/main/logos-repo.json	25.3
+04:47:10Z	sleep 1	26.3
+04:47:10Z	shot 05-url-typed	26.5
+04:47:10Z	click 1646 494	26.6
+04:47:20Z	sleep 10	36.6
+04:47:21Z	shot 06-repository-added	36.9
+04:47:21Z	click 365 475	37.0
+04:47:24Z	sleep 3	40.0
+04:47:24Z	shot 07-trusted-publishers-before	40.2
+04:47:24Z	click 208 878	40.3
+04:47:30Z	sleep 6	46.3
+04:47:30Z	click 1400 177	46.4
+04:47:31Z	sleep 1	47.5
+04:47:31Z	type ferrata	47.6
+04:47:35Z	sleep 4	51.6
+04:47:35Z	shot 08-catalog-packages	51.8
+04:47:36Z	click 1038 522	51.9
+04:47:38Z	sleep 2	53.9
+04:47:38Z	shot 09-bridge-versions-offered	54.1
+04:47:38Z	key Escape	54.2
+04:47:39Z	sleep 1	55.2
+04:47:39Z	click 1347 522	55.3
+04:47:45Z	sleep 6	61.3
+04:47:45Z	shot 10-trust-prompt-bridge	61.6
+04:47:45Z	click 946 670	61.7
+04:47:49Z	sleep 4	65.7
+04:47:50Z	shot 11-cancelled-nothing-installed	65.9
+04:47:50Z	click 1347 522	66.0
+04:47:56Z	sleep 6	72.0
+04:47:56Z	shot 12-trust-prompt-again	72.3
+04:47:56Z	click 1168 670	72.4
+04:48:16Z	sleep 20	92.4
+04:48:16Z	shot 13-bridge-installed	92.6
+04:48:16Z	click 1347 586	92.8
+04:48:24Z	sleep 8	100.8
+04:48:25Z	shot 14-ui-install-prompt	101.0
+04:48:25Z	click 1173 664	101.1
+04:48:40Z	sleep 15	116.1
+04:48:40Z	shot 15-ui-installed	116.4
+04:48:40Z	click 774 261	116.5
+04:48:43Z	sleep 3	119.5
+04:48:43Z	shot 16-installed-tab	119.7
+04:48:44Z	click 208 928	119.8
+04:48:47Z	sleep 3	122.8
+04:48:47Z	click 365 475	123.0
+04:48:50Z	sleep 3	126.0
+04:48:50Z	shot 17-trusted-publishers-after	126.2
+04:48:50Z	click 208 283	126.3
+04:49:00Z	sleep 10	136.3
+04:49:00Z	shot 18-app-open	136.5
+04:49:00Z	click 208 928	136.7
+04:49:03Z	sleep 3	139.7
+04:49:03Z	click 360 354	139.8
+04:49:08Z	sleep 4	143.8
+04:49:08Z	shot 19-module-inspector	144.0
+04:49:08Z	click 208 283	144.2
+04:49:12Z	sleep 4	148.2
+04:49:12Z	shot 20-app	148.4
+04:49:12Z	click 1690 207	148.5
+04:49:20Z	sleep 8	156.5
+04:49:20Z	shot 21-connect-wallet-module-answer	156.8

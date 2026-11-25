@@ -1,0 +1,80 @@
+== /var/tmp/bc/home-c6/.local/share/Logos/LogosBasecamp
+total 1
+drwxr-xr-x 1 root root 180 Nov 25 04:48 .
+drwxr-xr-x 1 root root  60 Nov 25 04:46 ..
+drwx------ 1 root root  80 Nov 25 04:47 keyring
+drwxr-xr-x 1 root root  80 Nov 25 04:46 logs
+drwxr-xr-x 1 root root 180 Nov 25 04:48 module_data
+drwxr-xr-x 1 root root  60 Nov 25 04:48 modules
+-rw-r--r-- 1 root root  28 Nov 25 04:46 onboarding.ini
+drwxr-xr-x 1 root root  60 Nov 25 04:48 plugins
+drwxr-xr-x 1 root root  40 Nov 25 04:46 themes
+== modules
+total 0
+drwxr-xr-x 1 root root  60 Nov 25 04:48 .
+drwxr-xr-x 1 root root 180 Nov 25 04:48 ..
+drwxr-xr-x 1 root root 220 Nov 25 04:48 ferrata_bridge_module
+== plugins
+total 0
+drwxr-xr-x 1 root root  60 Nov 25 04:48 .
+drwxr-xr-x 1 root root 180 Nov 25 04:48 ..
+drwxr-xr-x 1 root root 200 Nov 25 04:48 ferrata_bridge_ui
+== keyring
+total 1
+drwx------ 1 root root  80 Nov 25 04:47 .
+drwxr-xr-x 1 root root 180 Nov 25 04:48 ..
+-rw------- 1 root root 215 Nov 25 04:46 logos.json
+-rw------- 1 root root 167 Nov 25 04:47 publisher-6339d50abb4f7fa8.json
+== module_data
+total 0
+drwxr-xr-x 1 root root 180 Nov 25 04:48 .
+drwxr-xr-x 1 root root 180 Nov 25 04:48 ..
+drwxr-xr-x 1 root root  60 Nov 25 04:46 capability_module
+drwxr-xr-x 1 root root  60 Nov 25 04:48 ferrata_bridge_module
+drwxr-xr-x 1 root root  60 Nov 25 04:46 modules_state
+drwxr-xr-x 1 root root  60 Nov 25 04:46 package_downloader
+drwxr-xr-x 1 root root  60 Nov 25 04:46 package_manager
+drwxr-xr-x 1 root root  60 Nov 25 04:46 package_manager_ui_backend
+drwxr-xr-x 1 root root  60 Nov 25 04:46 storage_module
+== logs
+total 26
+drwxr-xr-x 1 root root    80 Nov 25 04:46 .
+drwxr-xr-x 1 root root   180 Nov 25 04:48 ..
+lrwxrwxrwx 1 root root    28 Nov 25 04:46 basecamp.log -> basecamp_20261125_044644.log
+-rw-r--r-- 1 root root 26029 Nov 25 04:49 basecamp_20261125_044644.log
+== config files
+/var/tmp/bc/home-c6/.local/share/Logos/LogosBasecamp/keyring/logos.json
+/var/tmp/bc/home-c6/.local/share/Logos/LogosBasecamp/keyring/publisher-6339d50abb4f7fa8.json
+/var/tmp/bc/home-c6/.local/share/Logos/LogosBasecamp/onboarding.ini
+--- /var/tmp/bc/home-c6/.local/share/Logos/LogosBasecamp/keyring/logos.json
+{
+  "addedAt": "2026-11-25T04:46:45Z",
+  "did": "did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6IlpUdEIzaU9FYVZDWFVLUWw0Sm9sR3V1MkhMb19iOUhSQ2V2RjRINm81aUkifQ",
+  "name": "Logos",
+  "url": "https://logos.co"
+}
+
+--- /var/tmp/bc/home-c6/.local/share/Logos/LogosBasecamp/keyring/publisher-6339d50abb4f7fa8.json
+{
+  "addedAt": "2026-11-25T04:47:56Z",
+  "did": "did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6ImNLVmpDSnFiWEFqYTBtenc1VFBOODhqWUs2QXkwTmtpRWNldUduekN6bGsifQ"
+}
+
+--- /var/tmp/bc/home-c6/.local/share/Logos/LogosBasecamp/keyring/logos.json
+{
+  "addedAt": "2026-11-25T04:46:45Z",
+  "did": "did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6IlpUdEIzaU9FYVZDWFVLUWw0Sm9sR3V1MkhMb19iOUhSQ2V2RjRINm81aUkifQ",
+  "name": "Logos",
+  "url": "https://logos.co"
+}
+
+--- /var/tmp/bc/home-c6/.local/share/Logos/LogosBasecamp/keyring/publisher-6339d50abb4f7fa8.json
+{
+  "addedAt": "2026-11-25T04:47:56Z",
+  "did": "did:jwk:eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6ImNLVmpDSnFiWEFqYTBtenc1VFBOODhqWUs2QXkwTmtpRWNldUduekN6bGsifQ"
+}
+
+--- /var/tmp/bc/home-c6/.local/share/Logos/LogosBasecamp/onboarding.ini
+[onboarding]
+completed=true
+

@@ -1,4 +1,4 @@
-# Release integrity manifest — module catalog `landclimber/ferrata-modules`, modules v0.1.0
+# Release integrity manifest — module catalog `landclimber/ferrata-modules`: modules v0.1.0, then `ferrata_bridge_module` 0.1.1 and the mini-app
 
 The lambda-prize release-integrity manifest (rule 4) for the first publication of Ferrata's module catalog, filled
 from [`RELEASE-INTEGRITY.template.md`](RELEASE-INTEGRITY.template.md) on 24 November 2026. **Every value below is the
@@ -7,6 +7,14 @@ clone, `gh release view` / `gh release download`); the commands and their output
 [`integrity-commands.log`](../modules/catalog/install-test-landclimber-2026-11-24/integrity-commands.log) (`WORK` is
 the scratch directory). The install from this catalog into a headless Logos Core, signatures required, is
 [`modules/catalog/install-test-landclimber-2026-11-24/`](../modules/catalog/install-test-landclimber-2026-11-24/README.md).
+
+The catalog's update of 25 November 2026 (`ferrata_bridge_module` 0.1.1 and the mini-app `ferrata_bridge_ui` 0.1.0,
+the rest unchanged) has its own section, [The update of 25 November 2026](#the-update-of-25-november-2026), filled
+the same way on 25 November; its commands and outputs:
+[`integrity-commands.log`](../modules/catalog/install-test-landclimber-2026-11-25/integrity-commands.log), and the
+install of all seven packages from the updated catalog (a headless Logos Core with signatures required, and Basecamp
+0.4.0-rc.2's own Package Manager):
+[`modules/catalog/install-test-landclimber-2026-11-25/`](../modules/catalog/install-test-landclimber-2026-11-25/README.md).
 
 ## The catalog
 
@@ -63,6 +71,51 @@ lgx keyring add ferrata <DID> --dir keyring && lgx verify <module>-0.1.0.lgx --k
   and the downloaded `.lgx`'s sha256 equals the sidecar's.
 - [x] `indexUrl` lists all six, `repositoryName` `ferrata-modules` (the catalog's `name`).
 
+## The update of 25 November 2026
+
+`modules/scripts/release-publish.sh landclimber ferrata-modules - --update --modules 'ferrata_bridge_module
+ferrata_bridge_ui' --yes` from public `main` `f9623cfd` moved the bridge module's repository to 0.1.1 (a
+fast-forward), created the mini-app's, and pushed the catalog's new `main` (a fast-forward); the owner then ran the two
+release workflows. Every value below is a command's output, read back on 25 November 2026
+([`integrity-commands.log`](../modules/catalog/install-test-landclimber-2026-11-25/integrity-commands.log); `WORK` the
+scratch directory, `DRY` the update's offline dry run).
+
+| Value | Place in it | The command that produces it |
+|---|---|---|
+| Signer DID | unchanged: the DID above, from the raw URL and from the clone | as above |
+| Catalog commit the update pushed | `32fbcbc7568753118962e0eda5e0b372644e6cfa`, on `9738dd09` | `git log --reverse --format='%h %an %ad: %s' 9738dd09..HEAD` in the clone: `32fbcbc` ferrata-release-publish 2026-11-25 02:53: Ferrata module catalog: ferrata_bridge_module 0.1.1; ferrata_bridge_ui 0.1.0 added (modules/scripts/release-publish.sh --update); `ad5a6df` github-actions[bot] 2026-11-25 03:59: index: 7 package(s), rebuilt by rebuild-index.yml; `3292b16` github-actions[bot] 2026-11-25 04:08: index: 7 package(s), rebuilt by rebuild-index.yml |
+| The catalog's `main` today | `3292b160c6bb496a87b32b7c15547d18480f67ca` | `git ls-remote https://github.com/landclimber/ferrata-modules.git refs/heads/main` |
+| What the update changed | `.github/workflows/release-ferrata_bridge_ui.yml`, `.gitmodules`, `submodules/ferrata_bridge_module`, `submodules/ferrata_bridge_ui` (the other five pointers unchanged) | `git diff --name-only 9738dd09 HEAD -- submodules .gitmodules .github` |
+| Source commit | `f9623cfd90ae0af852d2dc7000e90821e8381f06`, public `main` of https://github.com/rainbowpuffpuff/ferrata | per module, below |
+| The local assembly it matches | the two module commits and the catalog commit `32fbcbc7`, each equal to the published one (and so their trees) | `release-publish.sh landclimber ferrata-modules - --update --modules 'ferrata_bridge_module ferrata_bridge_ui' --dry-run DRY` at `f9623cfd` (offline, started read-only from the live repositories), then `git -C DRY/<repository>.git rev-parse refs/heads/main` and `rev-parse 'refs/heads/main^{tree}'` |
+| What the index lists | `{"repositoryName":"ferrata-modules","packages":["ferrata_bridge_ui 0.1.0","ferrata_bridge_module 0.1.1","ferrata_bridge_module 0.1.0","ferrata_updater_module 0.1.0","ferrata_relayer_module 0.1.0","ferrata_monitor_module 0.1.0","ferrata_attestor_module 0.1.0","ferrata_attest_module 0.1.0"]}`: seven packages, eight versions | `curl -fsSL <indexUrl> \| jq -c '{repositoryName, packages: [.packages[] \| .name as $n \| .versions[] \| "\($n) \(.manifest.version)"]}'` |
+| The release runs | 45543214624 (`Release ferrata_bridge_module`, 03:55:02Z to 04:07:55Z) and 45543219299 (`Release ferrata_bridge_ui`, 03:55:05Z to 03:58:34Z): `workflow_dispatch` at `32fbcbc7`, conclusion success; jobs setup, build (darwin-arm64), build (linux-amd64), build (linux-arm64) and release: success (already-published: skipped) | `gh run view <id> --repo landclimber/ferrata-modules --json workflowName,headSha,event,conclusion,createdAt,updatedAt,jobs` |
+| The action | `uses: logos-co/logos-modules-release-action/.github/workflows/release.yml@bbdc52871dc4305c8007923e1b08738ad2dd6b50 # v1 (= v1.8)` | `git show 32fbcbc7:.github/workflows/_release-module.yml \| grep logos-modules-release-action` |
+| The release tags | `ferrata_bridge_ui-v0.1.0` at `32fbcbc7`; `ferrata_bridge_module-v0.1.1` at `ad5a6df4` (the action tags `main` as it is when it publishes; between the two, an index commit changed `index/` alone; the action's step that re-points a tag at the built commit was then refused by the tag ruleset: GH013 in run 45543214624's log) | `git rev-list -n 1 refs/tags/<tag>`; `git diff --quiet ad5a6df4 HEAD -- submodules .gitmodules .github logos-repo.json` |
+
+| Module | Version | Release URL | Built from: module commit (the catalog's submodule pointer) | Source commit | rootHash | sha256 of the `.lgx` | Variants built | Immutable | `lgx verify`, keyring = the DID alone | Installed package's rootHash |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `ferrata_bridge_module` | `0.1.1` | https://github.com/landclimber/ferrata-modules/releases/tag/ferrata_bridge_module-v0.1.1 | `34ee2fcf5f6fc1214b4586eaca6c9d6c25672f8c` (on `1728fa13`, the 0.1.0 commit) | `f9623cfd90ae0af852d2dc7000e90821e8381f06` (its `STAGED.json` and its commit message agree) | `92024bf12434e1dc35051d7f8ee9a467ad3eb16df9ea9e36e9d929cc92253463` | `1ab1b2ff43d88f6f7171e83c5c31ab28f5cc9c270547298ef68d0cf7233582d1` | darwin-arm64, linux-amd64, linux-arm64 | true | valid, signer trusted (box step `lgx-verify-ferrata_bridge_module`) | = sidecar (box step `roothash-ferrata_bridge_module`; Basecamp 0.4.0-rc.2's install, `installed.tsv`) |
+| `ferrata_bridge_ui` | `0.1.0` | https://github.com/landclimber/ferrata-modules/releases/tag/ferrata_bridge_ui-v0.1.0 | `972892161b21069ead711048443d687410eca1ce` (a new repository) | `f9623cfd90ae0af852d2dc7000e90821e8381f06` (its commit message: a QML-only module has no `STAGED.json`) | `f9d203fbaf0b5de328478d5a948f2326e84ff357b7090db3aba37187f838c8f4` | `fd65af7325ca331cb21580d85fa689d9aa86ab600bbc5501c9fb079dc6a48a8a` | darwin-arm64, linux-amd64, linux-arm64 | true | valid, signer trusted (box step `lgx-verify-ferrata_bridge_ui`) | = sidecar (box step `roothash-ferrata_bridge_ui`; Basecamp 0.4.0-rc.2's install, `installed.tsv`) |
+
+The producing commands, per release `<module>-v<version>` (as run; the transcript has each output): those of the first
+publication above, with the source commit from the module commit's message where there is no `STAGED.json`, as the
+template says (`git log -1 --format=%s <pointer>` in a blobless clone of the module repository:
+"ferrata_bridge_module 0.1.1, exported from the Ferrata repository at f9623cfd…", "ferrata_bridge_ui 0.1.0, exported
+from the Ferrata repository at f9623cfd…"). `ferrata_bridge_module-v0.1.0` is still published and offered beside
+0.1.1, unchanged: its sidecar's `rootHash` and `sha256` are the row above.
+
+- [x] Both sidecars' `signature.did` equal the catalog's `trustedSigners[0].did`, the DID above (the read-back,
+  [`read-back-checks.txt`](../modules/catalog/install-test-landclimber-2026-11-25/read-back-checks.txt): 212 checks
+  passed, 0 failed).
+- [x] Each `rootHash` is its release sidecar's, equal to the sidecar manifest's `hashes.root`, to `index.json`'s entry,
+  and to the installed package's (`logosctl package ls`; Basecamp's data directory).
+- [x] Each source commit is read from the module repository at the catalog's pointer, and the update's offline dry run
+  at that commit gave the same module commits.
+- [x] The URLs resolve: each release has two assets, the `.lgx` (sha256 and size equal to the sidecar's) and
+  `sidecar.json`; both releases Immutable.
+- [x] `indexUrl` lists seven packages, eight versions, `repositoryName` `ferrata-modules`.
+
 ## Integrity notes
 
 - **Signatures.** The `.lgx` packages are signed in the release workflow (`lgx sign`, inline, the `LOGOS_SIGNING_KEY`
@@ -79,6 +132,10 @@ lgx keyring add ferrata <DID> --dir keyring && lgx verify <module>-0.1.0.lgx --k
   (all tags: updates, deletions and force-pushes blocked, no bypass) and `main` (the default branch: deletion and
   force-pushes blocked; pushes allowed, `rebuild-index.yml` commits the index to it). Organization 2FA: required
   (`GET orgs/landclimber`: `two_factor_requirement_enabled: true`).
+- **The update's settings.** The new repository `landclimber/ferrata_bridge_ui` has immutable releases on (`GET
+  repos/landclimber/ferrata_bridge_ui/immutable-releases`: `enabled: true`), as the seven others still do; both new
+  releases show Immutable, and the tag ruleset and the organisation's 2FA are unchanged (the read-back). A client
+  that trusted the key on 24 November needs nothing new: the update is signed by the same DID.
 - **The index is not a release.** The base catalog's rolling `index` release (created before immutability was on, as
   the prize rule's PR #189 advises) turned immutable at the first rebuild, which republished it, and never held an
   asset; an immutable release's tag cannot be reused. The index is `index/index.json` on the catalog's `main`,

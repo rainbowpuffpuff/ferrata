@@ -44,9 +44,11 @@ On a box like the build box the portable Basecamp needs the host's OpenGL, xkbco
 and ALSA libraries (Ubuntu: `libgl1 libegl1 libopengl0 libglx-mesa0 libxkbcommon0 libfontconfig1 libharfbuzz0b
 libfribidi0 libasound2t64`, as the earlier Basecamp boxes installed them); without them it does not start.
 
-## Not yet run against the published catalog: the rehearsal
+## The rehearsal, before the release
 
-The two packages are not released yet ([`../RELEASE.md`](../RELEASE.md), "Changing the published catalog"). Both
+Both scripts have since run against the published catalog, after the release of 25 November 2026:
+[`../install-test-landclimber-2026-11-25/`](../install-test-landclimber-2026-11-25/README.md) (`box-install.sh` with all
+seven packages, 74 of 74; `basecamp-open.sh` on the published packages, 3 of 3). Before the release, both
 scripts ran, as committed, against a catalog served on the build box: [`rehearse.sh`](rehearse.sh), 25 November 2026,
 Modal build box (Linux x86-64 under gVisor, Nix 2.28.3). Every part from a source commit of this work before its merge
 (263 s, the Nix store of the earlier runs restored); then `install` and `basecamp` again from the next one, whose
@@ -68,4 +70,5 @@ modules/catalog/install-test-plus/rehearse.sh <scratch> modules/catalog/install-
 | `basecamp` | **the probe 3 of 3** in 6 s ([`rehearsal-2026-11-25/basecamp/`](rehearsal-2026-11-25/basecamp/)): the view opened (`p01-view-opened.png`); Basecamp loaded `ferrata_bridge_module` by itself, as the mini-app's optional dependency, when it opened the view (its log: `Module loaded: ferrata_bridge_module`), and the Module Inspector listed it loaded; the view's `logos.callModule("ferrata_bridge_module", "wallet", info)` got the module's own answer, `no wallet session: open it first` (`call-info.json`). The pictures of the Module Inspector (`p02`, `p03`) show Basecamp's Settings page: the inspector's rows are not in the grabbed widget; its state is the probe's check (`events.jsonl`). |
 
 What a rehearsal cannot show: the packages the action builds on GitHub's runners (the three variants merged), signed by
-the catalog's key, served by GitHub; that is the run after the release.
+the catalog's key, served by GitHub; that is the run after the release,
+[`../install-test-landclimber-2026-11-25/`](../install-test-landclimber-2026-11-25/README.md).

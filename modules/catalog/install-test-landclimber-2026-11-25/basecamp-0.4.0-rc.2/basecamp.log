@@ -1,0 +1,236 @@
+LogosBasecamp version 0.4.0-rc.2 (portable build)
+Build commits:
+  - logos-basecamp 4cea4bbaaf7e6f4b54242c919572ef43dbb18649
+  - logos-nix 7c1eb8bc390546f32aaf134866a1c7db8e9311cc
+  - logos-cpp-sdk 05e14426d73e798d4e000e1e8e47372b0fb40f37
+  - logos-module ceee1e35649cc938c213515c672fa40df0a32469
+  - logos-liblogos af19e519c9b579a1dab86e8dc3960925fc28b526
+  - logos-package-manager 73c21ab64e3ddc4b5745ec7c91405eb56c691de2
+  - logos-package-manager-module f12ef8597660b71770fd7984f91c28113c0ae8d9
+  - logos-package-downloader-module 1999184e5c1a40fe27657ce8068375c7a70f0840
+  - logos-storage-module 7548f41ae189917d58c37f0fb6d3a2700b99f59b
+  - logos-capability-module 0edae0eed8f7475f8e48e0202388f968865b2736
+  - logos-modules-state-module 726c4b755e78bd8ac131fb57a37294da11e03e7b
+  - logos-package 4bdd9041ebfbd06c2b22134afdcd27fce8a43f3c
+  - logos-package-manager-ui 15c5a4142f271a9cd5963ede1cf6180e4fcf0cb2
+  - logos-design-system 493a243454451a844a7b73ef501616141d1308de
+  - logos-view-module-runtime 3e69973acc259505f2ffb0ab8753cabd820193a9
+  - logos-qt-mcp 89d1d498d37700ccdc864fe93cd98ec840f95ffb
+  - nix-bundle-logos-module-install 4ebf721f3558919aa932ba250a93a7d62e932d47
+  - nix-bundle-dir 66d7f61792c4be0b7e3e6b9890dc1d58f52a4beb
+  - nix-bundle-appimage 677e6fce32369016a405d4129d2d0598d35d03ba
+  - nix-bundle-macos-app 3cf5c5941a791c1935acecfb4761f42941115b90
+Base data directory: /var/tmp/bc/home-c6/.local/share/Logos/LogosBasecamp
+[2026-11-25 04:46:44.270] [info] [logos] Granting host services to 'capability_module': token_registry,token_delivery
+[2026-11-25 04:46:44.299] [out] [capability_module] [2026-11-25 04:46:44.299] [info] Granting host services to capability_module: ["token_registry","token_delivery"]
+[2026-11-25 04:46:44.300] [info] [logos] Module loaded: capability_module
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_f5906b2698c1" at "04:46:44.302"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_f5906b2698c1"
+RemoteTransportConnection: Requesting object: "capability_module" at "04:46:44.302"
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "capability_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 8584224
+[LogosObject] Destroying RemoteLogosObject 0
+[2026-11-25 04:46:44.329] [info] [logos] Module loaded: modules_state
+RemoteTransportConnection: Connecting to registry: "local:logos_modules_state_f5906b2698c1" at "04:46:44.329"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_modules_state_f5906b2698c1"
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_f5906b2698c1" at "04:46:44.330"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_f5906b2698c1"
+Logos Core started successfully!
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_f5906b2698c1" at "04:46:44.330"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_f5906b2698c1"
+RemoteTransportConnection: Requesting object: "capability_module" at "04:46:44.330"
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "capability_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 8681680
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 8663888
+RemoteTransportConnection: Requesting object: "modules_state" at "04:46:44.331"
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "modules_state"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 8852528
+[2026-11-25 04:46:44.331] [info] [logos] Pushed module snapshot to modules_state
+Restricted package_manager to core, package_manager_ui_backend
+Restricted package_downloader to core, package_manager_ui_backend
+RemoteTransportConnection: Requesting object: "capability_module" at "04:46:44.334"
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "capability_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 8585312
+[LogosObject] Destroying RemoteLogosObject 0
+[2026-11-25 04:46:44.361] [info] [logos] Module loaded: package_manager
+RemoteTransportConnection: Connecting to registry: "local:logos_package_manager_f5906b2698c1" at "04:46:44.361"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_package_manager_f5906b2698c1"
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_f5906b2698c1" at "04:46:44.361"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_f5906b2698c1"
+package_manager module loaded by default.
+RemoteTransportConnection: Requesting object: "capability_module" at "04:46:44.363"
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "capability_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 8917904
+[LogosObject] Destroying RemoteLogosObject 0
+[2026-11-25 04:46:44.391] [info] [logos] [storage_module] StorageModuleImpl: Initializing...
+[2026-11-25 04:46:44.391] [info] [logos] Module loaded: storage_module
+RemoteTransportConnection: Connecting to registry: "local:logos_storage_module_f5906b2698c1" at "04:46:44.391"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_storage_module_f5906b2698c1"
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_f5906b2698c1" at "04:46:44.392"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_f5906b2698c1"
+RemoteTransportConnection: Requesting object: "capability_module" at "04:46:44.393"
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "capability_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 9009056
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 8854976
+[LogosObject] Destroying RemoteLogosObject 0
+[2026-11-25 04:46:44.421] [info] [logos] Module loaded: package_downloader
+RemoteTransportConnection: Connecting to registry: "local:logos_package_downloader_f5906b2698c1" at "04:46:44.421"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_package_downloader_f5906b2698c1"
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_f5906b2698c1" at "04:46:44.421"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_f5906b2698c1"
+package_downloader module loaded by default.
+Currently loaded modules:
+  - "package_manager"
+  - "storage_module"
+  - "package_downloader"
+  - "modules_state"
+  - "capability_module"
+Total modules: 5
+RemoteTransportConnection: Connecting to registry: "local:logos_package_manager_f5906b2698c1" at "04:46:44.423"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_package_manager_f5906b2698c1"
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_f5906b2698c1" at "04:46:44.424"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_f5906b2698c1"
+RemoteTransportConnection: Requesting object: "package_manager" at "04:46:44.424"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 8908448
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "package_manager"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 9180128
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 9129920
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 9176944
+RemoteTransportConnection: Connecting to registry: "local:logos_package_downloader_f5906b2698c1" at "04:46:44.426"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_package_downloader_f5906b2698c1"
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_f5906b2698c1" at "04:46:44.427"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_f5906b2698c1"
+MainUIBackend: reachability from "dummy"
+MainUIBackend created
+qrc:/qt/qml/Basecamp/AppManager/Basecamp/AppManager/AppManagerPanelHeader.qml:47:13: QML LogosTabBar: Binding loop detected for property "implicitWidth":
+qrc:/qt-project.org/imports/QtQuick/Controls/Basic/TabBar.qml:10:5
+MainContainer created
+System tray is not available on this system
+ShortcutBridge: bound 1 QML shortcut(s) on pane QQuickWidget
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 9405312
+RemoteTransportConnection: Connecting to registry: "local:logos_package_downloader_f5906b2698c1" at "04:46:45.780"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_package_downloader_f5906b2698c1"
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_f5906b2698c1" at "04:46:45.781"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_f5906b2698c1"
+RemoteTransportConnection: Requesting object: "package_downloader" at "04:46:45.781"
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "package_downloader"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 120078000
+RemoteTransportConnection: Requesting object: "package_downloader" at "04:46:51.019"
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "package_downloader"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 15529168
+[2026-11-25 04:46:51.022] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-25 04:46:51.024] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-25 04:46:51.026] [info] [logos] [storage_module] StorageModuleImpl::init called
+[2026-11-25 04:46:51.032] [out] [storage_module] INF 2026-11-25 04:46:51.031+00:00 Creating a private key and saving it       tid=5764
+[2026-11-25 04:46:51.032] [out] [storage_module] INF 2026-11-25 04:46:51.032+00:00 Bootstrapping node using a predefined network topics="libstorage libstoragelifecycle" tid=5764 network="[logos.test]: Logos testnet"
+[2026-11-25 04:46:51.033] [out] [storage_module] INF 2026-11-25 04:46:51.033+00:00 AutoNAT client enabled                     topics="libstorage libstoragelifecycle" tid=5764 scheduleInterval=1m numPeersToAsk=3 maxQueueSize=3 minConfidence=0.6
+[2026-11-25 04:46:51.035] [out] [storage_module] INF 2026-11-25 04:46:51.035+00:00 Threadpool started                         topics="libstorage libstoragelifecycle" tid=5764 numThreads=16
+[2026-11-25 04:46:51.038] [info] [logos] [storage_module] StorageModuleImpl::start called
+[2026-11-25 04:46:51.039] [out] [storage_module] WRN 2026-11-25 04:46:51.039+00:00 No key for a QueryResponse                 topics="storage repostore" tid=5764
+[2026-11-25 04:46:51.042] [out] [storage_module] INF 2026-11-25 04:46:51.042+00:00 Starting node with Mix relay pool          topics="storage node" tid=5764 count=4
+[2026-11-25 04:46:51.042] [out] [storage_module] WRN 2026-11-25 04:46:51.042+00:00 No Mix-compatible address among announced addrs topics="storage discovery" tid=5764 addrs=[]
+[2026-11-25 04:46:51.043] [out] [storage_module] INF 2026-11-25 04:46:51.042+00:00 Mix local address updated                  topics="storage discovery" tid=5764 address=/ip4/0.0.0.0/tcp/0
+[2026-11-25 04:46:51.043] [out] [storage_module] NTC 2026-11-25 04:46:51.042+00:00 Started Storage node                       topics="storage node" tid=5764 id=16U*7n6qKk addrs=[]
+MainContainer: Active section index changed to 2
+Loading UI module: "package_manager_ui"
+ShortcutBridge: bound 1 QML shortcut(s) on pane QQuickWidget
+Restricted package_manager_ui_backend to package_manager_ui
+Loading core dependencies for "package_manager_ui" : QList("package_manager", "package_downloader", "package_manager_ui_backend")
+RemoteTransportConnection: Requesting object: "capability_module" at "04:46:56.375"
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "capability_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 22587616
+[LogosObject] Destroying RemoteLogosObject 0
+[2026-11-25 04:46:56.407] [info] [logos] Module loaded: package_manager_ui_backend
+RemoteTransportConnection: Connecting to registry: "local:logos_package_manager_ui_backend_f5906b2698c1" at "04:46:56.408"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_package_manager_ui_backend_f5906b2698c1"
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_f5906b2698c1" at "04:46:56.408"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_f5906b2698c1"
+RemoteTransportConnection: Requesting object: "capability_module" at "04:46:56.408"
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "capability_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 83140288
+[LogosObject] Destroying RemoteLogosObject 0
+Restricted package_manager_ui_backend to package_manager_ui
+RemoteTransportConnection: Connecting to registry: "local:logos_package_manager_ui_backend_f5906b2698c1" at "04:46:56.409"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_package_manager_ui_backend_f5906b2698c1"
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_f5906b2698c1" at "04:46:56.410"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_f5906b2698c1"
+[2026-11-25 04:46:56.412] [info] [logos] [package_manager_ui_backend] Info: PackageManagerBackend: reachability backend "dummy" of QList("glib", "networkmanager")
+[2026-11-25 04:46:56.412] [info] [logos] [package_manager_ui_backend] Info: PackageManagerBackend: reachability QNetworkInformation::Reachability::Unknown
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 15530960
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 91631584
+RemoteTransportConnection: Requesting object: "capability_module" at "04:46:56.414"
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "capability_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 106500032
+[2026-11-25 04:46:56.414] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-25 04:46:56.416] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+RemoteTransportConnection: Requesting object: "package_manager_ui_backend" at "04:46:56.417"
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "package_manager_ui_backend"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 36050064
+logos.basecamp.sandbox: Sandbox configured for plugin=package_manager_ui: install="/var/tmp/bc/rc/squashfs-root/usr/plugins/package_manager_ui" entry="/var/tmp/bc/rc/squashfs-root/usr/plugins/package_manager_ui/qml" appLibDir=/var/tmp/bc/rc/squashfs-root/usr/lib untrustedRoots=2
+logos.basecamp.sandbox: Redirected Logos.Theme probe away from plugin tree "/var/tmp/bc/rc/squashfs-root/usr/plugins/package_manager_ui/qml/Logos/Theme/qmldir" [plugin=package_manager_ui]: shared Logos.* modules resolve from the vetted design-system dir.
+logos.basecamp.sandbox: Redirected Logos.Theme probe away from plugin tree "/var/tmp/bc/rc/squashfs-root/usr/plugins/package_manager_ui/Logos/Theme/qmldir" [plugin=package_manager_ui]: shared Logos.* modules resolve from the vetted design-system dir.
+logos.basecamp.sandbox: Redirected Logos.Controls probe away from plugin tree "/var/tmp/bc/rc/squashfs-root/usr/plugins/package_manager_ui/qml/Logos/Controls/qmldir" [plugin=package_manager_ui]: shared Logos.* modules resolve from the vetted design-system dir.
+logos.basecamp.sandbox: Redirected Logos.Controls probe away from plugin tree "/var/tmp/bc/rc/squashfs-root/usr/plugins/package_manager_ui/Logos/Controls/qmldir" [plugin=package_manager_ui]: shared Logos.* modules resolve from the vetted design-system dir.
+logos.basecamp.sandbox: Redirected Logos.Icons probe away from plugin tree "/var/tmp/bc/rc/squashfs-root/usr/plugins/package_manager_ui/qml/Logos/Icons/qmldir" [plugin=package_manager_ui]: shared Logos.* modules resolve from the vetted design-system dir.
+logos.basecamp.sandbox: Redirected Logos.Icons probe away from plugin tree "/var/tmp/bc/rc/squashfs-root/usr/plugins/package_manager_ui/Logos/Icons/qmldir" [plugin=package_manager_ui]: shared Logos.* modules resolve from the vetted design-system dir.
+file:///var/tmp/bc/rc/squashfs-root/usr/plugins/package_manager_ui/qml/Panels/TableHeader.qml:75:9: QML LogosTabBar: Binding loop detected for property "implicitWidth":
+qrc:/qt-project.org/imports/QtQuick/Controls/Basic/TabBar.qml:10:5
+Successfully loaded UI module: "package_manager_ui"
+ShortcutBridge: bound 1 QML shortcut(s) on pane QQuickWidget
+ShortcutBridge: bound 1 QML shortcut(s) on pane QQuickWidget
+[2026-11-25 04:46:57.309] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+MainContainer: Active section index changed to 3
+ShortcutBridge: bound 2 QML shortcut(s) on pane QQuickWidget
+[2026-11-25 04:47:23.748] [out] [storage_module] WRN 2026-11-25 04:47:23.747+00:00 TCP port mapping failed                    topics="nat" tid=5764 msg="plum: mapping 0 failed"
+[2026-11-25 04:47:24.430] [out] [storage_module] INF 2026-11-25 04:47:24.430+00:00 Mix local address updated                  topics="storage discovery" tid=5764 address=/ip4/129.212.221.44/tcp/8070/p2p/16Uiu2HAmVFXLh9fs5mExDDwzsah2rWdiHR2Fy3cPmF5xPx29vrbB/p2p-circuit
+[2026-11-25 04:47:24.430] [out] [storage_module] INF 2026-11-25 04:47:24.430+00:00 Signed peer record updated                 topics="storage node" tid=5764 addrs="[/ip4/129.212.221.44/tcp/8070/p2p/16Uiu2HAmVFXLh9fs5mExDDwzsah2rWdiHR2Fy3cPmF5xPx29vrbB/p2p-circuit, /ip4/129.212.221.44/tcp/8070/mix-transport/A_aTx0w5sTTjM1GEgYYDd1cbzpzGQZ8eiqL77znxAunKouXQ3WVLH-5B4g_222ZrPRKBRi-10dcrPmrbrQPMHQI=/p2p/16Uiu2HAmVFXLh9fs5mExDDwzsah2rWdiHR2Fy3cPmF5xPx29vrbB/p2p-circuit]" spr=spr:CiUIAhIhA3nj4DWrTLPQTqUYrfa8cQXL0vxFgU32C5yJG04yIgwXEgIDARrlAQonACUIAhIhA3nj4DWrTLPQTqUYrfa8cQXL0vxFgU32C5yJG04yIgwXENzQmdgGGjYKNASB1N0sBh-GpQMnACUIAhIhA_aTx0w5sTTjM1GEgYYDd1cbzpzGQZ8eiqL77znxAunKogIafAp6BIHU3SwGH4aBgMABQQP2k8dMObE04zNRhIGGA3dXG86cxkGfHoqi--858QLpyqLl0N1lSx_uQeIP9ttmaz0SgUYvtdHXKz5q260DzB0CpQMnACUIAhIhA_aTx0w5sTTjM1GEgYYDd1cbzpzGQZ8eiqL77znxAunKogIqRzBFAiEA_0YYQ7IIrahRrmbbikWUxUlXkPqDZHR4ROtM8Ju0Wr8CIFiXu4znoaMkpmP6SZr8vyjjksC3gHLR3QgSnhZs0qLe
+MainContainer: Active section index changed to 2
+ShortcutBridge: bound 1 QML shortcut(s) on pane QQuickWidget
+[2026-11-25 04:47:24.690] [out] [storage_module] INF 2026-11-25 04:47:24.689+00:00 Mix local address updated                  topics="storage discovery" tid=5764 address=/ip4/129.212.221.44/tcp/8070/p2p/16Uiu2HAmVFXLh9fs5mExDDwzsah2rWdiHR2Fy3cPmF5xPx29vrbB/p2p-circuit
+[2026-11-25 04:47:24.690] [out] [storage_module] INF 2026-11-25 04:47:24.690+00:00 Signed peer record updated                 topics="storage node" tid=5764 addrs="[/ip4/129.212.221.44/tcp/8070/p2p/16Uiu2HAmVFXLh9fs5mExDDwzsah2rWdiHR2Fy3cPmF5xPx29vrbB/p2p-circuit, /ip4/129.212.221.44/tcp/8070/mix-transport/A_aTx0w5sTTjM1GEgYYDd1cbzpzGQZ8eiqL77znxAunKouXQ3WVLH-5B4g_222ZrPRKBRi-10dcrPmrbrQPMHQI=/p2p/16Uiu2HAmVFXLh9fs5mExDDwzsah2rWdiHR2Fy3cPmF5xPx29vrbB/p2p-circuit, /ip4/47.76.178.164/tcp/8070/p2p/16Uiu2HAmFKREVxCD89jkdEw8oBJo3WHXr9esmuDoKGWi63i66rfD/p2p-circuit, /ip4/47.76.178.164/tcp/8070/mix-transport/AyePlG8L_W6LpMHk-0xMY0tkMEWSNT5Mhe44ppPkaG9EfccfucmnggvzCplJyLSqimv8ciTYSGT1mzT1zDDJkGg=/p2p/16Uiu2HAmFKREVxCD89jkdEw8oBJo3WHXr9esmuDoKGWi63i66rfD/p2p-circuit, /ip4/129.212.221.44/tcp/8070/p2p/16Uiu2HAmVFXLh9fs5mExDDwzsah2rWdiHR2Fy3cPmF5xPx29vrbB/p2p-circuit/mix-transport/A3nj4DWrTLPQTqUYrfa8cQXL0vxFgU32C5yJG04yIgwX2LRXb6nIwLtaWRPM6XwWIS_qiWo0piPLpvhRVxADc3M=]" spr=spr:CiUIAhIhA3nj4DWrTLPQTqUYrfa8cQXL0vxFgU32C5yJG04yIgwXEgIDARqZBAonACUIAhIhA3nj4DWrTLPQTqUYrfa8cQXL0vxFgU32C5yJG04yIgwXENzQmdgGGjYKNASB1N0sBh-GpQMnACUIAhIhA_aTx0w5sTTjM1GEgYYDd1cbzpzGQZ8eiqL77znxAunKogIafAp6BIHU3SwGH4aBgMABQQP2k8dMObE04zNRhIGGA3dXG86cxkGfHoqi--858QLpyqLl0N1lSx_uQeIP9ttmaz0SgUYvtdHXKz5q260DzB0CpQMnACUIAhIhA_aTx0w5sTTjM1GEgYYDd1cbzpzGQZ8eiqL77znxAunKogIaNgo0BC9MsqQGH4alAycAJQgCEiEDJ4-Ubwv9boukweT7TExjS2QwRZI1PkyF7jimk-Rob0SiAhp8CnoEL0yypAYfhoGAwAFBAyePlG8L_W6LpMHk-0xMY0tkMEWSNT5Mhe44ppPkaG9EfccfucmnggvzCplJyLSqimv8ciTYSGT1mzT1zDDJkGilAycAJQgCEiEDJ4-Ubwv9boukweT7TExjS2QwRZI1PkyF7jimk-Rob0SiAhp8CnoEgdTdLAYfhqUDJwAlCAISIQP2k8dMObE04zNRhIGGA3dXG86cxkGfHoqi--858QLpyqICgYDAAUEDeePgNatMs9BOpRit9rxxBcvS_EWBTfYLnIkbTjIiDBfYtFdvqcjAu1pZE8zpfBYhL-qJajSmI8um-FFXEANzcypHMEUCIQC7F9GdBPxflw0_la15RHMXrn9AXPiqaP9OX0fCzxS4LAIgb1NCsc8kY25I3MbU4cYTPVZTi1MtmpS4PDEvZDUAFwk
+[2026-11-25 04:47:40.575] [out] [storage_module] WRN 2026-11-25 04:47:40.574+00:00 TCP port mapping failed                    topics="nat" tid=5764 msg="plum: mapping 0 failed"
+Downloaded "ferrata_bridge_module" from "https://github.com/landclimber/ferrata-modules/releases/download/ferrata_bridge_module-v0.1.1/ferrata_bridge_module-0.1.1.lgx"
+Core module file installed: "/var/tmp/bc/home-c6/.local/share/Logos/LogosBasecamp/modules/ferrata_bridge_module/ferrata_bridge_module_plugin.so"
+Downloaded "ferrata_bridge_ui" from "https://github.com/landclimber/ferrata-modules/releases/download/ferrata_bridge_ui-v0.1.0/ferrata_bridge_ui-0.1.0.lgx"
+UI plugin file installed: "/var/tmp/bc/home-c6/.local/share/Logos/LogosBasecamp/plugins/ferrata_bridge_ui"
+MainContainer: Active section index changed to 3
+ShortcutBridge: bound 2 QML shortcut(s) on pane QQuickWidget
+App launcher clicked: "ferrata_bridge_ui"
+Loading UI module: "ferrata_bridge_ui"
+Loading core dependencies for "ferrata_bridge_ui" : QList()
+Loading optional dependency for "ferrata_bridge_ui" : "ferrata_bridge_module"
+RemoteTransportConnection: Requesting object: "capability_module" at "04:48:50.600"
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "capability_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 270753424
+[LogosObject] Destroying RemoteLogosObject 0
+[2026-11-25 04:48:50.637] [info] [logos] Module loaded: ferrata_bridge_module
+RemoteTransportConnection: Connecting to registry: "local:logos_ferrata_bridge_module_f5906b2698c1" at "04:48:50.638"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_ferrata_bridge_module_f5906b2698c1"
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_f5906b2698c1" at "04:48:50.638"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_f5906b2698c1"
+RemoteTransportConnection: Requesting object: "capability_module" at "04:48:50.639"
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "capability_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 234045856
+[LogosObject] Destroying RemoteLogosObject 0
+logos.basecamp.sandbox: Sandbox configured for plugin=ferrata_bridge_ui: install="/var/tmp/bc/home-c6/.local/share/Logos/LogosBasecamp/plugins/ferrata_bridge_ui" entry="/var/tmp/bc/home-c6/.local/share/Logos/LogosBasecamp/plugins/ferrata_bridge_ui/qml" appLibDir=/var/tmp/bc/rc/squashfs-root/usr/lib untrustedRoots=2
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 213605120
+logos.qmlbridge: DEPRECATED: ferrata_bridge_ui calls logos core from QML (logos.callModuleAsync). Move the call into a backend module ("backend": "module" in metadata.json); QML access to logos core is removed in the next breaking release.
+RemoteTransportConnection: Connecting to registry: "local:logos_ferrata_bridge_module_f5906b2698c1" at "04:48:50.832"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_ferrata_bridge_module_f5906b2698c1"
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_f5906b2698c1" at "04:48:50.832"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_f5906b2698c1"
+MainContainer: Added plugin dock to WorkspaceArea: "Ferrata Bridge" (module: "ferrata_bridge_ui" )
+MainContainer: Active section index changed to 0
+Successfully loaded UI module: "ferrata_bridge_ui"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 287341536
+RemoteTransportConnection: Requesting object: "capability_module" at "04:48:51.000"
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "capability_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 327127888
+[2026-11-25 04:48:51.011] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+RemoteTransportConnection: Requesting object: "ferrata_bridge_module" at "04:48:51.023"
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "ferrata_bridge_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 287385200
+MainContainer: Active section index changed to 3
+ShortcutBridge: bound 2 QML shortcut(s) on pane QQuickWidget
+App launcher clicked: "ferrata_bridge_ui"
+MainContainer: Active section index changed to 0

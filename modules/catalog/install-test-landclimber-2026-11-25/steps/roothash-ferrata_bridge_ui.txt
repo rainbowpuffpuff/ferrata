@@ -1,0 +1,1 @@
+installed ferrata_bridge_ui rootHash: f9d203fbaf0b5de328478d5a948f2326e84ff357b7090db3aba37187f838c8f4; release sidecar: f9d203fbaf0b5de328478d5a948f2326e84ff357b7090db3aba37187f838c8f4

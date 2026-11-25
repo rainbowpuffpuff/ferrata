@@ -1,0 +1,2 @@
+{"method":"version","module":"ferrata_monitor_module","result":"{\"methods\":[\"version\",\"check\",\"node_view\",\"run\",\"start\",\"status\",\"stop\",\"custody\"],\"module\":\"ferrata_monitor_module\",\"monitor\":{\"commit\":\"98375f82c754f2fa4a56e20418687a89b321228f\",\"source_sha256\":\"9e05e7b79bbf558847a9ce69658b5d06c916a171c385405458fe175f584b7235\",\"version\":\"0.1.0\"},\"version\":\"0.1.0\"}","status":"ok"}
+version: 0.1.0

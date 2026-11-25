@@ -1,0 +1,2 @@
+Daemon started (pid 2295)
+Logs: <repo>/modules/catalog/install-test-landclimber-2026-11-25/session/logs/daemon.log

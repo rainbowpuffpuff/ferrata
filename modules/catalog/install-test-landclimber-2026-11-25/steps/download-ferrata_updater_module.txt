@@ -1,0 +1,1 @@
+e693c9b2c966bc80dd22d5d994a8533c579bc8cbeac6d4797300c0ec81eda736  ferrata_updater_module-0.1.0.lgx

@@ -1,0 +1,612 @@
+{
+  "count": 48,
+  "elements": [
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 46,
+        "width": 80,
+        "x": 0,
+        "y": 0
+      },
+      "id": "6",
+      "objectName": "",
+      "text": "Workspace",
+      "type": "SidebarIconButton_QMLTYPE_11_QML_34"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 38,
+        "width": 38,
+        "x": 0,
+        "y": 0
+      },
+      "id": "7",
+      "objectName": "sidebar.section.3",
+      "text": "Settings",
+      "type": "SidebarCircleButton_QMLTYPE_32"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 12,
+        "width": 12,
+        "x": 39,
+        "y": 4
+      },
+      "id": "8",
+      "objectName": "",
+      "type": "QToolButton"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 20,
+        "width": 20,
+        "x": 52,
+        "y": 0
+      },
+      "id": "9",
+      "objectName": "",
+      "type": "LogosIconButton_QMLTYPE_70"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 20,
+        "width": 20,
+        "x": 0,
+        "y": 0
+      },
+      "id": "10",
+      "objectName": "",
+      "type": "QQuickMouseArea"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 50,
+        "width": 80,
+        "x": 0,
+        "y": 0
+      },
+      "id": "2",
+      "objectName": "sidebar.app.ferrata_bridge_ui",
+      "text": "Ferrata Bridge",
+      "type": "SidebarAppDelegate_QMLTYPE_13"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 38,
+        "width": 38,
+        "x": 0,
+        "y": 0
+      },
+      "id": "11",
+      "objectName": "",
+      "type": "QQuickMouseArea"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 38,
+        "width": 502,
+        "x": 28,
+        "y": 0
+      },
+      "id": "12",
+      "objectName": "",
+      "type": "LogosTextField_QMLTYPE_72"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 36,
+        "width": 200,
+        "x": 0,
+        "y": 0
+      },
+      "id": "13",
+      "objectName": "appManager.category.All",
+      "text": "All",
+      "type": "LogosItemDelegate_QMLTYPE_82"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 183,
+        "x": 0,
+        "y": 0
+      },
+      "id": "5",
+      "objectName": "tab.deposit",
+      "text": "Deposit",
+      "type": "TabButton_QMLTYPE_95"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 183,
+        "x": 184,
+        "y": 0
+      },
+      "id": "14",
+      "objectName": "tab.claim",
+      "text": "Claim",
+      "type": "TabButton_QMLTYPE_95"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 183,
+        "x": 368,
+        "y": 0
+      },
+      "id": "15",
+      "objectName": "tab.redeem",
+      "text": "Burn and release",
+      "type": "TabButton_QMLTYPE_95"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 183,
+        "x": 552,
+        "y": 0
+      },
+      "id": "16",
+      "objectName": "tab.positions",
+      "text": "Positions",
+      "type": "TabButton_QMLTYPE_95"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 183,
+        "x": 736,
+        "y": 0
+      },
+      "id": "17",
+      "objectName": "tab.registry",
+      "text": "Registry",
+      "type": "TabButton_QMLTYPE_95"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 183,
+        "x": 920,
+        "y": 0
+      },
+      "id": "18",
+      "objectName": "tab.admin",
+      "text": "Admin",
+      "type": "TabButton_QMLTYPE_95"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 183,
+        "x": 1104,
+        "y": 0
+      },
+      "id": "19",
+      "objectName": "tab.privacy",
+      "text": "Privacy",
+      "type": "TabButton_QMLTYPE_95"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 183,
+        "x": 1288,
+        "y": 0
+      },
+      "id": "20",
+      "objectName": "tab.settings",
+      "text": "Endpoints",
+      "type": "TabButton_QMLTYPE_95"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 38,
+        "width": 478,
+        "x": 0,
+        "y": 0
+      },
+      "id": "21",
+      "objectName": "",
+      "type": "QQuickTextInput"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 44,
+        "width": 150,
+        "x": 25,
+        "y": 85
+      },
+      "id": "22",
+      "objectName": "",
+      "text": "Manage Repositories",
+      "type": "LogosButton_QMLTYPE_41"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 106,
+        "x": 154,
+        "y": 0
+      },
+      "id": "23",
+      "objectName": "wallet.connect",
+      "text": "Connect wallet",
+      "type": "Button_QMLTYPE_120"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 560,
+        "x": 175,
+        "y": 0
+      },
+      "id": "24",
+      "objectName": "net.address",
+      "type": "TextField_QMLTYPE_218"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 560,
+        "x": 175,
+        "y": 0
+      },
+      "id": "25",
+      "objectName": "net.eth",
+      "text": "https://ethereum-sepolia-rpc.publicnode.com",
+      "type": "TextField_QMLTYPE_218"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 117,
+        "x": 740,
+        "y": 0
+      },
+      "id": "26",
+      "objectName": "net.paste",
+      "text": "Paste the phrase",
+      "type": "Button_QMLTYPE_120"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 560,
+        "x": 175,
+        "y": 0
+      },
+      "id": "27",
+      "objectName": "net.depositor",
+      "type": "TextField_QMLTYPE_218"
+    },
+    {
+      "enabled": false,
+      "geometry": {
+        "height": 40,
+        "width": 148,
+        "x": 0,
+        "y": 0
+      },
+      "id": "28",
+      "objectName": "net.open",
+      "text": "Open with this phrase",
+      "type": "Button_QMLTYPE_120"
+    },
+    {
+      "enabled": false,
+      "geometry": {
+        "height": 40,
+        "width": 100,
+        "x": 153,
+        "y": 0
+      },
+      "id": "29",
+      "objectName": "net.generate",
+      "text": "New phrase",
+      "type": "Button_QMLTYPE_120"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 240,
+        "x": 0,
+        "y": 86
+      },
+      "id": "30",
+      "objectName": "deposit.kind.private",
+      "text": "Private account (recommended)",
+      "type": "RadioButton_QMLTYPE_111"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 134,
+        "x": 0,
+        "y": 132
+      },
+      "id": "31",
+      "objectName": "deposit.kind.public",
+      "text": "Public account",
+      "type": "RadioButton_QMLTYPE_111"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 379,
+        "x": 0,
+        "y": 224
+      },
+      "id": "32",
+      "objectName": "deposit.delay",
+      "text": "Hold the claim for a random delay (recommended): 9 h",
+      "type": "CheckBox_QMLTYPE_135"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 502,
+        "x": 0,
+        "y": 270
+      },
+      "id": "33",
+      "objectName": "deposit.relayer",
+      "text": "Claim through a permissionless relayer (recommended): it pays the LEZ fee",
+      "type": "CheckBox_QMLTYPE_135"
+    },
+    {
+      "enabled": false,
+      "geometry": {
+        "height": 40,
+        "width": 107,
+        "x": 0,
+        "y": 0
+      },
+      "id": "34",
+      "objectName": "deposit.review",
+      "text": "Review deposit",
+      "type": "Button_QMLTYPE_120"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 40,
+        "x": 12,
+        "y": 0
+      },
+      "id": "35",
+      "objectName": "appManager.filterButton",
+      "type": "LogosIconButton_QMLTYPE_70"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 80,
+        "x": 64,
+        "y": 0
+      },
+      "id": "36",
+      "objectName": "appManager.reloadButton",
+      "text": "Reload",
+      "type": "LogosButton_QMLTYPE_41"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 100,
+        "x": 156,
+        "y": 0
+      },
+      "id": "37",
+      "objectName": "",
+      "text": "Manage Repositories",
+      "type": "LogosButton_QMLTYPE_41"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 44,
+        "width": 150,
+        "x": 0,
+        "y": 0
+      },
+      "id": "38",
+      "objectName": "",
+      "type": "QQuickMouseArea"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 34,
+        "width": 560,
+        "x": 0,
+        "y": 0
+      },
+      "id": "39",
+      "objectName": "",
+      "type": "QQuickMouseArea"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 140,
+        "x": 54,
+        "y": 0
+      },
+      "id": "40",
+      "objectName": "deposit.account",
+      "type": "SpinBox_QMLTYPE_216"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 78,
+        "x": 0,
+        "y": 0
+      },
+      "id": "41",
+      "objectName": "",
+      "text": "All",
+      "type": "LogosTabButton_QMLTYPE_94"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 78,
+        "x": 93.75,
+        "y": 0
+      },
+      "id": "42",
+      "objectName": "",
+      "text": "Installed",
+      "type": "LogosTabButton_QMLTYPE_94"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 78,
+        "x": 187.5,
+        "y": 0
+      },
+      "id": "43",
+      "objectName": "",
+      "text": "Not Installed",
+      "type": "LogosTabButton_QMLTYPE_94"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 40,
+        "x": 0,
+        "y": 0
+      },
+      "id": "44",
+      "objectName": "",
+      "type": "QQuickMouseArea"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 80,
+        "x": 0,
+        "y": 0
+      },
+      "id": "45",
+      "objectName": "",
+      "type": "QQuickMouseArea"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 100,
+        "x": 0,
+        "y": 0
+      },
+      "id": "46",
+      "objectName": "",
+      "type": "QQuickMouseArea"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 20,
+        "width": 20,
+        "x": 59,
+        "y": 8
+      },
+      "id": "47",
+      "objectName": "",
+      "type": "LogosIconButton_QMLTYPE_70"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 20,
+        "width": 20,
+        "x": 103,
+        "y": 8
+      },
+      "id": "48",
+      "objectName": "",
+      "type": "LogosIconButton_QMLTYPE_70"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 40,
+        "width": 60,
+        "x": 40,
+        "y": 0
+      },
+      "id": "49",
+      "objectName": "",
+      "text": "0",
+      "type": "QQuickTextInput"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 20,
+        "width": 20,
+        "x": 0,
+        "y": 0
+      },
+      "id": "50",
+      "objectName": "",
+      "type": "QQuickMouseArea"
+    },
+    {
+      "enabled": true,
+      "geometry": {
+        "height": 20,
+        "width": 20,
+        "x": 0,
+        "y": 0
+      },
+      "id": "51",
+      "objectName": "",
+      "type": "QQuickMouseArea"
+    }
+  ],
+  "id": 7,
+  "ok": true
+}

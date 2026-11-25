@@ -1,0 +1,215 @@
+after-release.sh: landclimber/ferrata-modules, 2026-11-25T04:20:40Z
+ok      index.py validate-repo logos-repo.json (logos-modules-release-tool 94462e6)
+ok      indexUrl is https://raw.githubusercontent.com/landclimber/ferrata-modules/refs/heads/main/index/index.json
+ok      one signer DID declared (did:jwk:)
+ok      signer DID equals EXPECTED_DID (the 24 Nov manifest's)
+ok      catalog main readable (3292b160c6bb496a87b32b7c15547d18480f67ca)
+ok      clone's HEAD is main
+ok      logos-repo.json in the clone equals the raw URL's
+ok      catalog has 7 submodules (want 7)
+ok      ferrata_attest_module: .gitmodules URL is https://github.com/landclimber/ferrata_attest_module.git
+ok      ferrata_attest_module: catalog pointer 06580ba15528 = module repo main
+ok      ferrata_attest_module: metadata.json name is the directory's (ferrata_attest_module)
+ok      ferrata_attest_module: metadata.json version (0.1.0)
+ok      ferrata_attest_module: tag v0.1.0 points at the pointer
+ok      ferrata_attest_module: same commit as the first publication's offline dry run
+ok      ferrata_attest_module: export records source commit 98375f82c754f2fa4a56e20418687a89b321228f (STAGED.json)
+ok      ferrata_attest_module: source commit is the first publication's (98375f82c754f2fa4a56e20418687a89b321228f)
+ok      ferrata_attestor_module: .gitmodules URL is https://github.com/landclimber/ferrata_attestor_module.git
+ok      ferrata_attestor_module: catalog pointer 9937299ceca6 = module repo main
+ok      ferrata_attestor_module: metadata.json name is the directory's (ferrata_attestor_module)
+ok      ferrata_attestor_module: metadata.json version (0.1.0)
+ok      ferrata_attestor_module: tag v0.1.0 points at the pointer
+ok      ferrata_attestor_module: same commit as the first publication's offline dry run
+ok      ferrata_attestor_module: export records source commit 98375f82c754f2fa4a56e20418687a89b321228f (STAGED.json)
+ok      ferrata_attestor_module: source commit is the first publication's (98375f82c754f2fa4a56e20418687a89b321228f)
+ok      ferrata_bridge_module: .gitmodules URL is https://github.com/landclimber/ferrata_bridge_module.git
+ok      ferrata_bridge_module: catalog pointer 34ee2fcf5f6f = module repo main
+ok      ferrata_bridge_module: metadata.json name is the directory's (ferrata_bridge_module)
+ok      ferrata_bridge_module: metadata.json version (0.1.1)
+ok      ferrata_bridge_module: tag v0.1.1 points at the pointer
+ok      ferrata_bridge_module: same commit as the update's offline dry run
+ok      ferrata_bridge_module: STAGED.json commit = the module commit message's (f9623cfd90ae0af852d2dc7000e90821e8381f06)
+ok      ferrata_bridge_module: export records source commit f9623cfd90ae0af852d2dc7000e90821e8381f06 (STAGED.json)
+ok      ferrata_bridge_module: source commit is the update's (f9623cfd90ae0af852d2dc7000e90821e8381f06)
+ok      ferrata_monitor_module: .gitmodules URL is https://github.com/landclimber/ferrata_monitor_module.git
+ok      ferrata_monitor_module: catalog pointer 834f0d893db2 = module repo main
+ok      ferrata_monitor_module: metadata.json name is the directory's (ferrata_monitor_module)
+ok      ferrata_monitor_module: metadata.json version (0.1.0)
+ok      ferrata_monitor_module: tag v0.1.0 points at the pointer
+ok      ferrata_monitor_module: same commit as the first publication's offline dry run
+ok      ferrata_monitor_module: export records source commit 98375f82c754f2fa4a56e20418687a89b321228f (STAGED.json)
+ok      ferrata_monitor_module: source commit is the first publication's (98375f82c754f2fa4a56e20418687a89b321228f)
+ok      ferrata_relayer_module: .gitmodules URL is https://github.com/landclimber/ferrata_relayer_module.git
+ok      ferrata_relayer_module: catalog pointer 4560ecdb11b1 = module repo main
+ok      ferrata_relayer_module: metadata.json name is the directory's (ferrata_relayer_module)
+ok      ferrata_relayer_module: metadata.json version (0.1.0)
+ok      ferrata_relayer_module: tag v0.1.0 points at the pointer
+ok      ferrata_relayer_module: same commit as the first publication's offline dry run
+ok      ferrata_relayer_module: export records source commit 98375f82c754f2fa4a56e20418687a89b321228f (STAGED.json)
+ok      ferrata_relayer_module: source commit is the first publication's (98375f82c754f2fa4a56e20418687a89b321228f)
+ok      ferrata_updater_module: .gitmodules URL is https://github.com/landclimber/ferrata_updater_module.git
+ok      ferrata_updater_module: catalog pointer c3266a324df2 = module repo main
+ok      ferrata_updater_module: metadata.json name is the directory's (ferrata_updater_module)
+ok      ferrata_updater_module: metadata.json version (0.1.0)
+ok      ferrata_updater_module: tag v0.1.0 points at the pointer
+ok      ferrata_updater_module: same commit as the first publication's offline dry run
+ok      ferrata_updater_module: export records source commit 98375f82c754f2fa4a56e20418687a89b321228f (STAGED.json)
+ok      ferrata_updater_module: source commit is the first publication's (98375f82c754f2fa4a56e20418687a89b321228f)
+ok      ferrata_bridge_ui: .gitmodules URL is https://github.com/landclimber/ferrata_bridge_ui.git
+ok      ferrata_bridge_ui: catalog pointer 972892161b21 = module repo main
+ok      ferrata_bridge_ui: metadata.json name is the directory's (ferrata_bridge_ui)
+ok      ferrata_bridge_ui: metadata.json version (0.1.0)
+ok      ferrata_bridge_ui: tag v0.1.0 points at the pointer
+ok      ferrata_bridge_ui: same commit as the update's offline dry run
+ok      ferrata_bridge_ui: export records source commit f9623cfd90ae0af852d2dc7000e90821e8381f06 (the module commit message)
+ok      ferrata_bridge_ui: source commit is the update's (f9623cfd90ae0af852d2dc7000e90821e8381f06)
+ok      source commit f9623cfd90ae0af852d2dc7000e90821e8381f06 on public main of rainbowpuffpuff/ferrata
+ok      source commit 98375f82c754f2fa4a56e20418687a89b321228f on public main of rainbowpuffpuff/ferrata
+ok      ferrata_attest_module-v0.1.0: published (not a draft, not a pre-release)
+ok      ferrata_attest_module-v0.1.0: Immutable
+ok      ferrata_attest_module-v0.1.0: two assets, the .lgx and sidecar.json
+ok      ferrata_attest_module-v0.1.0: sidecar.json
+ok      ferrata_attest_module-v0.1.0: sidecar rootHash = manifest hashes.root
+ok      ferrata_attest_module-v0.1.0: sidecar publisherRef = the tag
+ok      ferrata_attest_module-v0.1.0: signed by the catalog's DID
+ok      ferrata_attest_module-v0.1.0: sha256 of ferrata_attest_module-0.1.0.lgx = sidecar
+ok      ferrata_attest_module-v0.1.0: size of ferrata_attest_module-0.1.0.lgx = sidecar
+ok      ferrata_attest_module-v0.1.0: all three variants
+ok      ferrata_attestor_module-v0.1.0: published (not a draft, not a pre-release)
+ok      ferrata_attestor_module-v0.1.0: Immutable
+ok      ferrata_attestor_module-v0.1.0: two assets, the .lgx and sidecar.json
+ok      ferrata_attestor_module-v0.1.0: sidecar.json
+ok      ferrata_attestor_module-v0.1.0: sidecar rootHash = manifest hashes.root
+ok      ferrata_attestor_module-v0.1.0: sidecar publisherRef = the tag
+ok      ferrata_attestor_module-v0.1.0: signed by the catalog's DID
+ok      ferrata_attestor_module-v0.1.0: sha256 of ferrata_attestor_module-0.1.0.lgx = sidecar
+ok      ferrata_attestor_module-v0.1.0: size of ferrata_attestor_module-0.1.0.lgx = sidecar
+ok      ferrata_attestor_module-v0.1.0: all three variants
+ok      ferrata_bridge_module-v0.1.1: published (not a draft, not a pre-release)
+ok      ferrata_bridge_module-v0.1.1: Immutable
+ok      ferrata_bridge_module-v0.1.1: two assets, the .lgx and sidecar.json
+ok      ferrata_bridge_module-v0.1.1: sidecar.json
+ok      ferrata_bridge_module-v0.1.1: sidecar rootHash = manifest hashes.root
+ok      ferrata_bridge_module-v0.1.1: sidecar publisherRef = the tag
+ok      ferrata_bridge_module-v0.1.1: signed by the catalog's DID
+ok      ferrata_bridge_module-v0.1.1: sha256 of ferrata_bridge_module-0.1.1.lgx = sidecar
+ok      ferrata_bridge_module-v0.1.1: size of ferrata_bridge_module-0.1.1.lgx = sidecar
+ok      ferrata_bridge_module-v0.1.1: all three variants
+ok      ferrata_bridge_module-v0.1.1: release tag's commit ad5a6df48582 has main's submodules and workflows
+ok      ferrata_monitor_module-v0.1.0: published (not a draft, not a pre-release)
+ok      ferrata_monitor_module-v0.1.0: Immutable
+ok      ferrata_monitor_module-v0.1.0: two assets, the .lgx and sidecar.json
+ok      ferrata_monitor_module-v0.1.0: sidecar.json
+ok      ferrata_monitor_module-v0.1.0: sidecar rootHash = manifest hashes.root
+ok      ferrata_monitor_module-v0.1.0: sidecar publisherRef = the tag
+ok      ferrata_monitor_module-v0.1.0: signed by the catalog's DID
+ok      ferrata_monitor_module-v0.1.0: sha256 of ferrata_monitor_module-0.1.0.lgx = sidecar
+ok      ferrata_monitor_module-v0.1.0: size of ferrata_monitor_module-0.1.0.lgx = sidecar
+unknown ferrata_monitor_module-v0.1.0: builtVariants linux-amd64,linux-arm64 (missing darwin-arm64: a partial release)
+ok      ferrata_relayer_module-v0.1.0: published (not a draft, not a pre-release)
+ok      ferrata_relayer_module-v0.1.0: Immutable
+ok      ferrata_relayer_module-v0.1.0: two assets, the .lgx and sidecar.json
+ok      ferrata_relayer_module-v0.1.0: sidecar.json
+ok      ferrata_relayer_module-v0.1.0: sidecar rootHash = manifest hashes.root
+ok      ferrata_relayer_module-v0.1.0: sidecar publisherRef = the tag
+ok      ferrata_relayer_module-v0.1.0: signed by the catalog's DID
+ok      ferrata_relayer_module-v0.1.0: sha256 of ferrata_relayer_module-0.1.0.lgx = sidecar
+ok      ferrata_relayer_module-v0.1.0: size of ferrata_relayer_module-0.1.0.lgx = sidecar
+ok      ferrata_relayer_module-v0.1.0: all three variants
+ok      ferrata_updater_module-v0.1.0: published (not a draft, not a pre-release)
+ok      ferrata_updater_module-v0.1.0: Immutable
+ok      ferrata_updater_module-v0.1.0: two assets, the .lgx and sidecar.json
+ok      ferrata_updater_module-v0.1.0: sidecar.json
+ok      ferrata_updater_module-v0.1.0: sidecar rootHash = manifest hashes.root
+ok      ferrata_updater_module-v0.1.0: sidecar publisherRef = the tag
+ok      ferrata_updater_module-v0.1.0: signed by the catalog's DID
+ok      ferrata_updater_module-v0.1.0: sha256 of ferrata_updater_module-0.1.0.lgx = sidecar
+ok      ferrata_updater_module-v0.1.0: size of ferrata_updater_module-0.1.0.lgx = sidecar
+ok      ferrata_updater_module-v0.1.0: builtVariants include linux-amd64 (linux-amd64)
+ok      ferrata_bridge_ui-v0.1.0: published (not a draft, not a pre-release)
+ok      ferrata_bridge_ui-v0.1.0: Immutable
+ok      ferrata_bridge_ui-v0.1.0: two assets, the .lgx and sidecar.json
+ok      ferrata_bridge_ui-v0.1.0: sidecar.json
+ok      ferrata_bridge_ui-v0.1.0: sidecar rootHash = manifest hashes.root
+ok      ferrata_bridge_ui-v0.1.0: sidecar publisherRef = the tag
+ok      ferrata_bridge_ui-v0.1.0: signed by the catalog's DID
+ok      ferrata_bridge_ui-v0.1.0: sha256 of ferrata_bridge_ui-0.1.0.lgx = sidecar
+ok      ferrata_bridge_ui-v0.1.0: size of ferrata_bridge_ui-0.1.0.lgx = sidecar
+ok      ferrata_bridge_ui-v0.1.0: all three variants
+ok      ferrata_bridge_ui-v0.1.0: release tag's commit 32fbcbc75687 has main's submodules and workflows
+ok      ferrata_bridge_ui: manifest type ui_qml
+ok      ferrata_bridge_module: manifest type core
+ok      ferrata_bridge_module-v0.1.0: published (not a draft, not a pre-release)
+ok      ferrata_bridge_module-v0.1.0: Immutable
+ok      ferrata_bridge_module-v0.1.0: two assets, the .lgx and sidecar.json
+ok      ferrata_bridge_module-v0.1.0: sidecar.json
+ok      ferrata_bridge_module-v0.1.0: sidecar rootHash = manifest hashes.root
+ok      ferrata_bridge_module-v0.1.0: sidecar publisherRef = the tag
+ok      ferrata_bridge_module-v0.1.0: signed by the catalog's DID
+ok      ferrata_bridge_module-v0.1.0: sha256 of ferrata_bridge_module-0.1.0.lgx = sidecar
+ok      ferrata_bridge_module-v0.1.0: size of ferrata_bridge_module-0.1.0.lgx = sidecar
+ok      ferrata_bridge_module-v0.1.0 (superseded, still offered): rootHash as the 24 Nov manifest (0e46fbecf4c3)
+ok      index.json at indexUrl
+ok      index: 7 packages
+ok      index: 8 versions
+ok      index.json at indexUrl = the clone's index/index.json
+ok      index lists ferrata_attest_module-v0.1.0
+ok      index ferrata_attest_module-v0.1.0 rootHash = sidecar
+ok      index ferrata_attest_module-v0.1.0 sha256 = sidecar
+ok      index lists ferrata_attestor_module-v0.1.0
+ok      index ferrata_attestor_module-v0.1.0 rootHash = sidecar
+ok      index ferrata_attestor_module-v0.1.0 sha256 = sidecar
+ok      index lists ferrata_bridge_module-v0.1.1
+ok      index ferrata_bridge_module-v0.1.1 rootHash = sidecar
+ok      index ferrata_bridge_module-v0.1.1 sha256 = sidecar
+ok      index lists ferrata_monitor_module-v0.1.0
+ok      index ferrata_monitor_module-v0.1.0 rootHash = sidecar
+ok      index ferrata_monitor_module-v0.1.0 sha256 = sidecar
+ok      index lists ferrata_relayer_module-v0.1.0
+ok      index ferrata_relayer_module-v0.1.0 rootHash = sidecar
+ok      index ferrata_relayer_module-v0.1.0 sha256 = sidecar
+ok      index lists ferrata_updater_module-v0.1.0
+ok      index ferrata_updater_module-v0.1.0 rootHash = sidecar
+ok      index ferrata_updater_module-v0.1.0 sha256 = sidecar
+ok      index lists ferrata_bridge_ui-v0.1.0
+ok      index ferrata_bridge_ui-v0.1.0 rootHash = sidecar
+ok      index ferrata_bridge_ui-v0.1.0 sha256 = sidecar
+ok      index lists ferrata_bridge_module-v0.1.0
+ok      index ferrata_bridge_module-v0.1.0 rootHash = sidecar
+ok      index ferrata_bridge_module-v0.1.0 sha256 = sidecar
+ok      index repositoryName is the catalog's name
+ok      ferrata_bridge_ui's icon in the catalog (icons/91be38ecba1bfa292bd97c1b63e361d2b261ddf17bfee071b6e611a998879fa4.png)
+ok      landclimber/ferrata-modules: immutable releases enabled
+ok      landclimber/ferrata_attest_module: immutable releases enabled
+ok      landclimber/ferrata_attestor_module: immutable releases enabled
+ok      landclimber/ferrata_bridge_module: immutable releases enabled
+ok      landclimber/ferrata_monitor_module: immutable releases enabled
+ok      landclimber/ferrata_relayer_module: immutable releases enabled
+ok      landclimber/ferrata_updater_module: immutable releases enabled
+ok      landclimber/ferrata_bridge_ui: immutable releases enabled
+ok      landclimber/ferrata-modules: an active tag ruleset on all tags restricting updates and deletions
+ok      landclimber: 2FA required
+ok      run 45543214624 (.github/workflows/release-ferrata_bridge_module.yml): completed, success
+ok      run 45543214624: workflow_dispatch on main
+ok      run 45543214624: the workflow of a module in the catalog (ferrata_bridge_module)
+ok      run 45543214624: its commit 32fbcbc75687 has main's submodules and workflows
+ok      run 45543214624: .github/workflows/release-ferrata_bridge_module.yml calls _release-module.yml with module_path submodules/ferrata_bridge_module
+ok      run 45543214624: _release-module.yml at its commit pins logos-modules-release-action@bbdc52871dc4305c8007923e1b08738ad2dd6b50
+ok      run 45543214624: build (darwin-arm64) success
+ok      run 45543214624: build (linux-amd64) success
+ok      run 45543214624: build (linux-arm64) success
+ok      run 45543214624: release job success
+ok      run 45543214624: the sidecar's builtVariants are the legs that built
+ok      run 45543219299 (.github/workflows/release-ferrata_bridge_ui.yml): completed, success
+ok      run 45543219299: workflow_dispatch on main
+ok      run 45543219299: the workflow of a module in the catalog (ferrata_bridge_ui)
+ok      run 45543219299: its commit 32fbcbc75687 has main's submodules and workflows
+ok      run 45543219299: .github/workflows/release-ferrata_bridge_ui.yml calls _release-module.yml with module_path submodules/ferrata_bridge_ui
+ok      run 45543219299: _release-module.yml at its commit pins logos-modules-release-action@bbdc52871dc4305c8007923e1b08738ad2dd6b50
+ok      run 45543219299: build (darwin-arm64) success
+ok      run 45543219299: build (linux-amd64) success
+ok      run 45543219299: build (linux-arm64) success
+ok      run 45543219299: release job success
+ok      run 45543219299: the sidecar's builtVariants are the legs that built
+passed 212, failed 0, not readable here 1
