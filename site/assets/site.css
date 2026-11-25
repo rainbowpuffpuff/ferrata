@@ -21,7 +21,7 @@
   /* green, yellow, orange, red (the owner's), spread in lightness so they stay apart under colour-vision deficiency;
      each mark also carries its symbol: check, dash, hourglass, cross */
   --c-shown: #0f8a3c;
-  --net-bg: #0b7a35;
+  --net-bg: #0a6b2f;
   --net-ink: #ffffff;
   --c-part: #fcd34d;
   --c-waits: #f08a24;
