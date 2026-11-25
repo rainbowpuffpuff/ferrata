@@ -11,4 +11,4 @@ Measured ([verdict.json](verdict.json)): 31 of the 48 killed rounds died mid-run
 not, carries one signed message (`encoded`), equal to the zone run's own record; the collector's 3 of 4 is
 byte-identical to the proven `rbz-zone-n4-t3.input`, and checkpoint_b's executor accepts it
 ([exec.json](exec.json): journal equal to the native one, 6,261,183 user cycles). A replay: no endpoint fails here;
-the live attestor under kills and endpoint outages is the robust run's (`e2e/runs/seqnet-robust-6/`).
+the live attestor under kills and endpoint outages is the robust run's (`e2e/runs/seqnet-robust-7/`).

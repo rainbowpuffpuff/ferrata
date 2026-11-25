@@ -226,7 +226,7 @@ The design notes specify these; there is no code for them here. In short (in ful
   the two daemons' sends and the bridge module's user and admin sends go through Logos's send stack),
   LEZ through an unpatched `lez_core` (the bridge module's wallet session and, patched, the attestation module's reads
   and sends go through it), verified reads beyond the attestation
-  module's, the mini-app in the published catalog.
+  module's, the mini-app in the published catalog (its addition prepared and rehearsed, [row 261](docs/EVIDENCE.md)).
 - **The user's round trip on a LEZ sequencer through Logos Core's own modules:** inside Logos Basecamp the
   mini-app's round trip ran with LEZ through `lez_core`, its private claim and burn proven for real there (jobs the
   view polls, around Basecamp's 20 s cap on a view's call), but its Ethereum side read, signed and sent through a
@@ -237,9 +237,10 @@ The design notes specify these; there is no code for them here. In short (in ful
   zone of one sequencer and one local validator ([rows 129, 130](docs/EVIDENCE.md)), and live on Sepolia through a vault
   pinning that build, with a zone of one sequencer and one validator we ran ([rows 141, 142](docs/EVIDENCE.md),
   [e2e/crown/README.md](e2e/crown/README.md)).
-- **From the v3 specification:** rule (A)'s Δ_g of 3 h when participation is partial, the gas drop for burns and in the mini-app's claim
-  (the relayer daemon's sealed credit and the tool's claim ran on LEZ v0.4.0-rc1's sequencer, [row 205](docs/EVIDENCE.md);
-  with real proofs through `ferrata-gasdrop` and crown-driver on rc3, [row 124](docs/EVIDENCE.md)).
+- **From the v3 specification:** rule (A)'s Δ_g of 3 h when participation is partial, the gas drop in the mini-app's
+  claim and burn (the tool's claim and burn use the network's relayer by default on LEZ v0.4.0-rc1's sequencer,
+  [row 258](docs/EVIDENCE.md); the relayer daemon's sealed credit, [row 205](docs/EVIDENCE.md); with real proofs through
+  `ferrata-gasdrop` and crown-driver on rc3, [row 124](docs/EVIDENCE.md)).
 
 ## Not audited. Not for production.
 
