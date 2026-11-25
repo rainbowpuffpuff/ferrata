@@ -1,0 +1,2 @@
+2026-11-25T00:59:28 starting p4-laptop-attest-pad-1795564768: load 10.12 19.53 17.99, MemAvailable 22563120 kB
+owner exit 0 2026-11-25T02:16:12

@@ -1,0 +1,5 @@
+2026-11-24T23:58:14 ac=1 mem_avail_kib=22762420 busy_threads_30s=2.08 busy_avg_600s=2.08 load=4.47 7.78 7.07
+2026-11-24T23:58:44 ac=1 mem_avail_kib=22355800 busy_threads_30s=2.36 busy_avg_600s=2.22 load=3.68 7.27 6.92
+2026-11-24T23:59:14 ac=1 mem_avail_kib=22419768 busy_threads_30s=2.39 busy_avg_600s=2.28 load=3.16 6.80 6.77
+2026-11-24T23:59:44 ac=1 mem_avail_kib=22524372 busy_threads_30s=1.28 busy_avg_600s=2.03 load=2.46 6.28 6.60
+2026-11-24T23:59:44 gate passed; starting
