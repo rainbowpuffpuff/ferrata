@@ -34,7 +34,10 @@
 #                         front of the sequencer (U.5, Priv.7) (hook-gasdrop.sh)
 #   run.sh robust NAME    the cli round trip with two deposits, the relayer daemon's root import on the sequencer
 #                         (U.03), the claims' fees paid from the relayer daemon's gas drops (U.05), a claim killed
-#                         between its proof and its sending and a burn killed after its sending (R.07) (hook-robust.sh)
+#                         between its proof and its sending and a burn killed after its sending (R.07); the second
+#                         deposit killed after its Ethereum transaction, the import killed after its send, the
+#                         attestor killed and cut off, the prover and its client killed mid-proof, the release's relayer
+#                         killed before and after its transaction (R.06, R.07) (hook-robust.sh)
 #   run.sh basecamp NAME  the round trip in the mini-app inside Logos Basecamp, ferrata_bridge_module and lez_core
 #                         loaded in the same Basecamp (hook-basecamp.sh; first modules/ferrata_bridge_ui/scripts/
 #                         basecamp-build.sh, BASECAMP_BUILD=its OUT)
@@ -47,6 +50,8 @@
 # must be the program of lez/guests/bridge (0x847a4336..., sha256 537cbe7a..., docs/image-ids.md), which drive.sh checks:
 # the CLI of this tree keys its accounts by the configuration and no longer talks to the 0xccde6171... program.
 #
+# R0VM31: an r0vm 3.1.0 for the tools built with risc0-zkvm 3.1 (ferrata-e2e, realblocks-crown: checkpoint/ and bridge/
+# since the RISC Zero 3.1 migration); the zone's r0vm (3.0.5) stays for LEZ's wallet and the zone.
 # Environment: SEQNET_PROOFS=dev (default: the sequencer accepts RISC Zero dev-mode receipts and LEZ's wallet makes
 # fake ones) or real (the sequencer verifies, LEZ's wallet proves every private transaction on this machine's CPU).
 set -euo pipefail
@@ -87,15 +92,16 @@ build() {
   ( cd "$REPO/lez/crown/driver" && { [ -f Cargo.lock ] || cp "$REPO/lez/live/driver/Cargo.lock" Cargo.lock; } \
       && CARGO_TARGET_DIR="$TGT" cargo build --release ) > "$L/driver.log" 2>&1 \
     || { grep -E -A7 '^error' "$L/driver.log" | head -60; die "crown-driver build"; }
-  say "realblocks-crown, ferrata-e2e"
-  ( cd "$REPO/checkpoint" && cargo build --release -p realblocks --bin realblocks-crown ) > "$L/realblocks.log" 2>&1 \
-    || { grep -E -A7 '^error' "$L/realblocks.log" | head -40; die "realblocks-crown build"; }
+  say "realblocks-crown, ferrata_attestor, ferrata-e2e"
+  ( cd "$REPO/checkpoint" && cargo build --release -p realblocks --bin realblocks-crown && cargo build --release -p ferrata-attestor ) \
+    > "$L/realblocks.log" 2>&1 || { grep -E -A7 '^error' "$L/realblocks.log" | head -40; die "realblocks-crown or ferrata_attestor build"; }
   ( cd "$REPO/bridge" && cargo build --release -p ferrata-e2e ) > "$L/e2e.log" 2>&1 \
     || { grep -E -A7 '^error' "$L/e2e.log" | head -40; die "ferrata-e2e build"; }
   mkdir -p "$T/bin"
   cp "$gd" "$T/bin/gasdrop.bin"
   cp "$TGT/release/ferrata" "$TGT/release/ferrata-relayer" "$TGT/release/ferrata-gasdrop" "$TGT/release/seqnet-fund" "$TGT/release/seqnet-txs" \
-     "$TGT/release/crown-driver" "$REPO/checkpoint/target/release/realblocks-crown" "$REPO/bridge/target/release/ferrata-e2e" "$T/bin/"
+     "$TGT/release/crown-driver" "$REPO/checkpoint/target/release/realblocks-crown" "$REPO/checkpoint/target/release/ferrata_attestor" \
+     "$REPO/bridge/target/release/ferrata-e2e" "$T/bin/"
   say "the zone's bundle: $(basename "$BUNDLE"), with this tree's crown-driver and session.sh (lez/crown/build.sh repack)"
   mkdir -p "$T/crown-lez/bin"; cp "$T/bin/crown-driver" "$T/crown-lez/bin/crown-driver"
   CROWN_LEZ_TMP="$T/crown-lez" bash "$REPO/lez/crown/build.sh" repack "$BUNDLE" > "$L/repack.log" 2>&1 \

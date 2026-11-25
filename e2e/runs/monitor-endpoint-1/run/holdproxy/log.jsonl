@@ -1,0 +1,60 @@
+{"t": 1795560006.3056715, "method": "eth_chainId", "action": "forwarded", "status": 200}
+{"t": 1795560006.308374, "method": "eth_call", "action": "forwarded", "status": 200}
+{"t": 1795560006.3103583, "method": "eth_call", "action": "forwarded", "status": 200}
+{"t": 1795560006.3128936, "method": "eth_call", "action": "forwarded", "status": 200}
+{"t": 1795560006.3148744, "method": "eth_call", "action": "forwarded", "status": 200}
+{"t": 1795560006.3164015, "method": "eth_call", "action": "forwarded", "status": 200}
+{"t": 1795560006.3179429, "method": "eth_call", "action": "forwarded", "status": 200}
+{"t": 1795560006.319207, "method": "eth_call", "action": "forwarded", "status": 200}
+{"t": 1795560006.3204522, "method": "eth_call", "action": "forwarded", "status": 200}
+{"t": 1795560006.3220217, "method": "eth_getBlockByNumber", "action": "forwarded", "status": 200}
+{"t": 1795560006.3238673, "method": "eth_getBlockByNumber", "action": "forwarded", "status": 200}
+{"t": 1795560006.325155, "method": "eth_getLogs", "action": "forwarded", "status": 200}
+{"t": 1795560007.3282993, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560007.329312, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560008.3325617, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560008.3336415, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560009.336204, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560009.3378804, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560010.3406856, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560010.3418329, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560011.344979, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560011.3459303, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560012.3495653, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560012.350567, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560013.3538768, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560013.3554869, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560014.3582816, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560014.359779, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560015.3623152, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560015.3630974, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560016.3672183, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560016.3680842, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560017.3722456, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560017.3729506, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560018.3754158, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560018.3771029, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560019.3800154, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560019.3815334, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560020.3836281, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560020.3848295, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560021.388095, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560021.3892, "method": "eth_getBlockByNumber", "action": "outage"}
+{"t": 1795560022.3927212, "method": "eth_getBlockByNumber", "action": "forwarded", "status": 200}
+{"t": 1795560022.3945167, "method": "eth_getLogs", "action": "forwarded", "status": 200}
+{"t": 1795560022.396981, "method": "eth_call", "action": "forwarded", "status": 200}
+{"t": 1795560022.3984103, "method": "eth_call", "action": "forwarded", "status": 200}
+{"t": 1795560022.399908, "method": "eth_call", "action": "forwarded", "status": 200}
+{"t": 1795560022.4013226, "method": "eth_call", "action": "forwarded", "status": 200}
+{"t": 1795560022.4047725, "method": "eth_estimateGas", "action": "forwarded", "status": 200}
+{"t": 1795560022.40578, "method": "eth_getTransactionCount", "action": "forwarded", "status": 200}
+{"t": 1795560022.4064453, "method": "eth_chainId", "action": "forwarded", "status": 200}
+{"t": 1795560022.4067252, "method": "eth_feeHistory", "action": "forwarded", "status": 200}
+{"t": 1795560022.408668, "method": "eth_sendRawTransaction", "action": "forwarded, answer lost", "status": 200}
+{"t": 1795560022.4099364, "method": "eth_call", "action": "forwarded", "status": 200}
+{"t": 1795560023.4144492, "method": "eth_getBlockByNumber", "action": "forwarded", "status": 200}
+{"t": 1795560023.4162524, "method": "eth_getLogs", "action": "forwarded", "status": 200}
+{"t": 1795560024.4209385, "method": "eth_getBlockByNumber", "action": "forwarded", "status": 200}
+{"t": 1795560025.4255803, "method": "eth_getBlockByNumber", "action": "forwarded", "status": 200}
+{"t": 1795560026.430488, "method": "eth_getBlockByNumber", "action": "forwarded", "status": 200}
+{"t": 1795560026.5790226, "method": "eth_getBlockByNumber", "action": "forwarded", "status": 200}

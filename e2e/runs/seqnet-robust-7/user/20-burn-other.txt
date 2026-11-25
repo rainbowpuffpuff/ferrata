@@ -1,0 +1,25 @@
+$ env RISC0_DEV_MODE=1 ferrata --seed <work>/user/seed.txt --eth-rpc http://127.0.0.1:8545 --chain-id 11155111 --vault 0x7aa40900A493Bcb2140f441ED52B94B26E5E0688 --from-block 1 --sequencer http://127.0.0.1:3040 --lez-wallet <work>/user/lez-wallet --lez-password-file <work>/user/lez.pass --bridge-account 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d burn --amount 0.001 --recipient 0x280FcbD01aD0Eeb60be7c822D40a740f7cEf3983 --bridge-program <work>/zone/bundle/program/ferrata_bridge.bin --send --yes
+
+Latest block is 60
+an earlier burn (counter 1, 1000000000000000 base units of 0x0000000000000000000000000000000000000000 from private /0 to 0xD94903a1E51404BF7f5b94109D3495c72eEe2F41) is not on the zone yet (interrupted before it was known to be sent): it keeps its counter
+burn on LEZ (configuration 0x1e0d618e7baf086f739285bdf8cd6e6378666b4c6167b7b6f48f467c60390250):
+  amount       0.001 ETH (1000000000000000 base units, 18 decimals) from your private account /0
+  recipient    0x280FcbD01aD0Eeb60be7c822D40a740f7cEf3983 on Ethereum (bound into COut, encrypted in the memo)
+  would send   Burn to the bridge program 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d, proven locally by LEZ's wallet; note r 0x915669e9d621c38578c351173545a7d6e83411e11389ba285801bfceb5376f7f  COut 0xab6513cdb1a1bab0dd2941c8aaddc5086990e912fc50503c35bd3b19550023a7  burn counter 2
+  cost         at release, the burn fee 0 ETH (0 base units, 18 decimals) and the checkpoint fee 0.000001 ETH (1000000000000 base units, 18 decimals) in force now are deducted: the recipient receives 0.000997 ETH (997000000000000 base units, 18 decimals) through a relayer (relay fee 0.000002 ETH (2000000000000 base units, 18 decimals)), 0.000999 ETH (999000000000000 base units, 18 decimals) if you send the release yourself; the LEZ fee is paid inside the proof
+what becomes public (Burn (LEZ)):
+  public on Ethereum: nothing
+  public on LEZ:      the burn note: token, denomination, r, the recipient encrypted (c_out); the holder account, if it is public
+  stays private:      the Ethereum recipient (encrypted to you); a private holder and its balance
+privacy of these choices: Minimal: only the residual correlations (token, denomination, time)
+  ok Burn from a private account: the holder stays private.
+  ok Fresh recipient address: nothing on Ethereum ties the release to your depositor address.
+  ok Released through a relayer: the recipient needs no ETH for gas.
+public: private burn: the note (r, memo, mac, COut), the token, the denomination and the time; not the holder (a private account, shown as an alias) or the Ethereum recipient (encrypted in the memo)
+Latest block is 60
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+sent: b4ad348843679c09c44f98cf887f30162c632cea06cb0b746f95fdc2779f34b8
+burn counter 2 stays reserved in <work>/user/lez-wallet/ferrata-burns.json until the burn is on the zone

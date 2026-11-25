@@ -1,0 +1,35 @@
+{
+  "attestations": [
+    {
+      "attestation_key": "0xab79e5eb13b5030952571cb2851b4886e308822c8d5a5c51ff315206aea0cfd9",
+      "certificate": "0xa8c385d8b745d5a7238b7d381586a27bd0e76041481f99155f498a453eb9433a239c078c16fd05f0f0659428c882d1c26966c2ff55906078bf10661d05ad9a0c",
+      "channel_key": "0xd47f4ef1cb3bb5344d31bb12f9981c368a9eaf517cdc2607b59fb64625aa616d",
+      "file": "attestation-final.json",
+      "signature": "0x50f19c1b1059d74a382e9927e34a750c3a3358eecd31165c6829313e59d1f93120fe1a8ec4323615d8fb5b85e4e3aef37ccbfac666eb049aa41c1400e29c4e01",
+      "tip_id": 53
+    }
+  ],
+  "channel_tip_is_last_final_block": true,
+  "config_tip_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "deployment": {
+    "channel_id": "0x0101010101010101010101010101010101010101010101010101010101010101",
+    "evm_chain_id": 11155111,
+    "lez_config_id": "0x1e0d618e7baf086f739285bdf8cd6e6378666b4c6167b7b6f48f467c60390250",
+    "vault": "0x7aa40900a493bcb2140f441ed52b94b26e5e0688"
+  },
+  "final_msg_id": "0x3fd3ac95a6ad7a54597780dad81fa6f6c1d9bf77f4cdeeb68e0ae90244acb1b9",
+  "key_set": [
+    "0xd47f4ef1cb3bb5344d31bb12f9981c368a9eaf517cdc2607b59fb64625aa616d"
+  ],
+  "key_set_hash": "0xc5fce5b338ae6d91a8f2c3258ae3d984bbfa1198b35ff54c053dc9776dab2a9c",
+  "last_final_block": 53,
+  "lib_slot": 10070937,
+  "n": 1,
+  "posting_timeframe": 0,
+  "t": 1,
+  "tip_hash": "0x4e103f1d594707582773adb82a884159058be1237e7f74e43afd9467f851bb4c",
+  "tip_id": 53,
+  "tip_node_block": "6624dab2f8b06383f9132f10e4410c71589956f2ad3d5fdc328f9a88664dc1ad",
+  "tip_node_slot": 10070933,
+  "what": "zone attestors: each sequencer's channel key certified one attestation key (ferrata_attestor certify); each attestor read the node's final tier and signed the final-tier message v2 for T1 (ferrata_attestor attest); the records were checked here for this deployment, key set and tip"
+}

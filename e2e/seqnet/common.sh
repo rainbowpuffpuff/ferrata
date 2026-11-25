@@ -93,13 +93,13 @@ checkpoint() {
     sleep 20
     node_dump || continue
     rm -rf "$C/input"
-    "$BIN/realblocks-crown" --node "$W/node" --channel-key "$ZONE_STATE/sequencer_home/channel_signing_key" \
+    RISC0_SERVER_PATH="${R0VM31:-$RISC0_SERVER_PATH}" "$BIN/realblocks-crown" --node "$W/node" --channel-key "$ZONE_STATE/sequencer_home/channel_signing_key" \
       --genesis "$ZONE_STATE/bedrock/deployment-settings.yaml" --session-a "$SA" --vault "$VAULT" --config-id "$CID" \
       --genesis-state "$GS" --tip "$t1" --name "$name" --out "$C/input" > "$C/realblocks-crown.txt" 2>&1 && break
     [ "$i" = 30 ] && { tail -n 15 "$C/realblocks-crown.txt"; die "realblocks-crown: block $t1 not final after 10 min"; }
   done
   say "realblocks-crown: $(tail -n 2 "$C/realblocks-crown.txt" | tr '\n' ' ' | cut -c1-300)"
-  "$BIN/ferrata-e2e" exec --program "$R0BF/checkpoint_b.bin" --input "$C/input/$name.input" --meta "$C/input/$name.json" \
+  RISC0_SERVER_PATH="${R0VM31:-$RISC0_SERVER_PATH}" "$BIN/ferrata-e2e" exec --program "$R0BF/checkpoint_b.bin" --input "$C/input/$name.input" --meta "$C/input/$name.json" \
     > "$C/exec.txt" 2>&1 || { tail -n 15 "$C/exec.txt"; die "checkpoint_b's executor run"; }
   say "checkpoint_b executed (final program $CHECKPOINT_B_ID): $(tail -n 1 "$C/exec.txt" | cut -c1-300)"
   journal="$(jq -r .journal "$C/input/$name.json")"; journal="0x${journal#0x}"

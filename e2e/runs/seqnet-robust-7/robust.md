@@ -1,0 +1,37 @@
+# seqnet robust: U.03 and R.07 on a running LEZ sequencer
+
+- PASS R.07 deposit: the tool SIGKILLed with its signed deposit trapped before any node (depositCount 1, nonce 1 unchanged); its journal: [{"j":1,"nonce":1,"hash":null}]
+- PASS R.07 deposit: the same command again sent the trapped deposit with its j and nonce (deposit journal: an earlier run's deposit j = 1 of 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC (denomination 0 of token 0x000000000000000000000000000000000000000); mined (depositCount 2), the answer held and the tool SIGKILLed: still open in its journal
+- PASS R.07 deposit: the same command again found the interrupted deposit on the chain and sent nothing (deposit journal: an earlier run's deposit j = 1 of 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC (denomination 0 of token 0x0000000000000000000000000000000000000000, to your); across the three runs one deposit (Deposit events 1 -> 2, depositCount 1 -> 2, the depositor's nonce 1 -> 2), the journal closed
+- PASS R.06/R.07 import: the relayer SIGKILLed with its ImportRoot at the sequencer and the answer held; in flight in its state: {"leaf_count":2,"tx":"sending"}
+- PASS R.06/R.07 import: started again, the relayer found its import applied on LEZ and booked it (recovered), sending nothing: 1 ImportRoot sent across the kill, 1 on the zone
+- PASS U.03: ferrata-relayer imported root(cid, 2) on the running sequencer (tx sending, recovered true); 0 rounds before it was applied
+- PASS U.03: SIGTERM: a clean stop line ({"event":"stop","reason":"SIGTERM","rounds":1,"t":1795563743})
+- PASS U.03: nothing left in flight in the relayer's state
+- PASS U.05: the claim's dry run preselects the gas drop: fee payer: a fresh one-time private account, credited by the relayer (sealed) and swept in the claim's proof; the relaye
+- PASS M3: a claim naming a relayer that never answers handed it a job (gas-drop-95fbbaa8051a3791-bbbbbbbb.json) and stopped after its 15 s wait, nothing sent (one-time account 0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3)
+- PASS R.06 gas drop: the drops daemon SIGKILLed inside its first credit's send (held unsent by the proxy); its record: {"sends":1,"settled":false,"tx":"pending"}
+- PASS R.07 claim: the tool SIGKILLed after its proof, with the claim's sendTransaction held unsent ({"t": 1795563811.7083433, "fired": "trap sendTransaction"})
+- PASS R.07 claim: nothing reached the zone (2 private transactions before and after) and recovery from the seed still finds the deposit claimable
+- PASS R.07 claim + U.05: the claim again reused the one-time account and the credit the killed run had (no second job): gas drop: one-time account 0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3 (recorded for this deposit by an earlier run); the relay
+- PASS M3: the same deposit's claim naming the real relayer reused the one-time account (0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3) and handed that relayer a receipt of its own; the output names the silent one
+- PASS R.06 gas drop: after the kill and a send answered 503 the restarted daemon sent the credit again on the same account state and booked it from LEZ: {"sends":3,"resolvedLater":true,"tx":"d1fec916acd2447f32cb7690d9c1423c2826751e81d8c2c262a575c699011326"}; the claim's dry run claims exactly 1 pending credit
+- PASS R.06 gas drop (the second review's M1): two credits of the first drop reached the sequencer and were accepted: a later send (3 sends; the drop booked with d1fec916acd2447f32cb7690d9c1423c2826751e81d8c2c262a575c699011326) and the send answered 503 to the daemon, forwarded late (a7a5e6a7e8f78d41561c525a5bed06bf198db1597c6557a69afb4a60a0dea559); the claim's dry run claims exactly 1 pending credit (a credit sent again is built only on the drop's recorded state: of the two, one applied)
+- PASS R.06 gas drop: the second credit forwarded with its answer held and the daemon SIGKILLed (23:44:24); restarted, it booked the drop from LEZ (its drop account's nonce moved), nothing sent again: {"sends":1,"resolvedLater":true,"tx":"pending"}; the claim's dry run claims exactly 1 pending credit
+- PASS U.05: the relayer daemon sent 2 gas drops, one per deposit, each sealed to the claim's one-time account (0 jobs refused); both claims' dry runs claim that credit to their one-time fee payer, and both applied: gas drop: one-time account 0xc814a73facbb8f0e94fb439c2cad785f1792e95a8a86860e5eae78dc8c2f3213 (new); the relayer's credit of 50000000 native LEZ, seal
+- PASS U.05: the gas-drop daemon stopped cleanly on SIGTERM ({"event":"stop","reason":"SIGTERM","rounds":1,"t":1795563896})
+- PASS R.07 claim: after the interrupted claim, both deposits claimed once each (recover: 2 claimed)
+- PASS R.07 burn: the tool SIGKILLed with its burn at the sequencer and the answer held; its journal: [{"i":0,"amount":"1000000000000000","at":1795563912,"sent":null}]
+- PASS R.07 burn: the burn the killed tool sent was applied (the zone: 6 -> 7 private transactions)
+- PASS R.07 burn: the same command again found that burn on the zone and burnt nothing more (); the zone still 7 private transactions
+- PASS R.06 attestor: SIGKILLed 5 times (4 inside a round) and cut off from its node and its LEZ node (["node-outage 20 s","lez-outage 20 s","node-outage 20 s","lez-outage 20 s"]); 65 attestations over 19 tips (30..53), one signature per tip, every tip checked (19) the zone's block; its tip 53 taken by the checkpoint
+- PASS R.06 prover: its first call died mid-proof and was started again; the client SIGKILLed during the second and started again waited for that same call (fc-ab0116c0f6714d94): 2 calls for 1 proof, 1 job in the relayer's inbox, the request done ({"ok":true,"attempts":2,"resumed":true,"call_id":"fc-ab0116c0f6714d94","seconds":8.2})
+- PASS R.06 prover: the relayer submitted the client's job once (CandidateSubmitted 0 -> 1 over two rounds)
+- PASS R.07 release: the relayer SIGKILLed with the release built and its transaction trapped before the node (nothing on the chain, nonce 2); in flight: {"key":"release:0x9db026430aea908469557de7eac88ac88c6d4ee563c9bd8d81e9e86b05fc1238","nonce":2,"hash":null}
+- PASS R.07 release: started again, the relayer sent the lost release with its nonce; mined (Release events 0 -> 1), the answer held and the relayer SIGKILLed before it booked it (in flight: {"key":"release:0x9db026430aea908469557de7eac88ac88c6d4ee563c9bd8d81e9e86b05fc1238","nonce":2,"hash":null})
+- PASS R.07 release: started again, the relayer found its release mined under the recorded nonce and booked it (events ["inflight-lost","inflight-found"]); one release transaction on the chain (1; 1 other: its fee withdrawal), one Release (one per nullifier), the fresh address paid 0 -> 997000000000000 wei, nothing in flight
+- PASS the release through the relayer paid 997000000000000 wei to the fresh address
+- PASS R.07 burn: the tool saw 503 for a burn whose transaction the proxy holds; its counter 1 stays reserved: {"i":1,"amount":"1000000000000000","recipient":"0xd94903a1e51404bf7f5b94109d3495c72eee2f41"}
+- PASS R.07 burn: the burn with another recipient took counter 2, not the interrupted burn's 1, and was applied once (8 -> 9); the late transaction reached the sequencer ({"t":1795564121.5037055,"method":"sendTransaction","action":"late forward answered","status":200,"answer":"{\"jsonrpc\":\"2.0\",\"id\":17,\"result\":\"f951fad244ce5f64e6ff45f09446c90bfa395f722cd8b260e) and was refused (9 -> 9)
+
+33 passed, 0 failed

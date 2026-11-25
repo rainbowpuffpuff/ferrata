@@ -1,0 +1,20 @@
+deposit to the vault 0x7aa40900A493Bcb2140f441ED52B94B26E5E0688 on chain 11155111
+  denomination  0.001 ETH (1000000000000000 base units, 18 decimals)
+  mint fee      0 ETH (0 base units, 18 decimals)  (schedule 0)
+  relay fee     0.000002 ETH (2000000000000 base units, 18 decimals)  (paid to the relayer that submits your claim)
+  total         0.001002 ETH (1002000000000000 base units, 18 decimals)
+  depositor     0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC   j = 1
+  destination   your private LEZ account /0 (hidden: C commits to it)
+  commitment C  0xe7ebf372660194e478909f41b6cf3460e7c6629abb4acd110b81f2360217320a
+  claim delay   11 h after the deposit (from your seed; `ferrata claim` waits for it)
+would send: to 0x7aa40900A493Bcb2140f441ED52B94B26E5E0688  value 1002000000000000  data 0xf7edb8570000000000000000000000000000000000000000000000000000000000000000e7ebf372660194e478909f41b6cf3460e7c6629abb4acd110b81f2360217320a0000000000000000000000000000000000000000000000000000000000000001
+cost: 0.001002 ETH (1002000000000000 base units, 18 decimals) to the vault, and a network fee of about 0.000222299771077216 ETH (222299771077216 base units, 18 decimals) (174664 gas at 1272728044 wei, eth_estimateGas)
+what becomes public (Deposit (Ethereum)):
+  public on Ethereum: your depositor address; the token; the denomination and its fees; the time; the commitment C (random-looking)
+  public on LEZ:      nothing
+  stays private:      the LEZ account that will receive the tokens (C commits to it); which later claim spends it
+privacy of these choices: Minimal: only the residual correlations (token, denomination, time)
+  ok Fixed denomination: your deposit looks like every other deposit of 0.001 ETH (1000000000000000 base units, 18 decimals).
+  ok Private destination: the receiving account and its balance stay private on LEZ.
+  ok Delayed claim: held for 11 h, so the claim's time does not point at your deposit.
+  ok Private fee path: the claim's LEZ fee is paid inside its proof (or by a relayer); no fee payment ties the claim to you.

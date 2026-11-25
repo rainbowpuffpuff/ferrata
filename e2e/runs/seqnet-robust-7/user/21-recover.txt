@@ -1,0 +1,14 @@
+$ ferrata --seed <work>/user/seed.txt --eth-rpc http://127.0.0.1:8545 --chain-id 11155111 --vault 0x7aa40900A493Bcb2140f441ED52B94B26E5E0688 --from-block 1 --sequencer http://127.0.0.1:3040 --lez-wallet <work>/user/lez-wallet --lez-password-file <work>/user/lez.pass --bridge-account 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d recover
+
+vault 0x7aa40900A493Bcb2140f441ED52B94B26E5E0688: 2 deposits at block 3319, root 0xe86776cd487834cb1c6c9405433664e92f3b61cd80faacf49a8ceb6d8d52b380 (equal to depositRoot: checked)
+deposits of this seed: 2
+  leaf      0  j    0  0.001 ETH (1000000000000000 base units, 18 decimals)  to private /0  N 0x95fbbaa8051a3791  claimed
+  leaf      1  j    1  0.001 ETH (1000000000000000 base units, 18 decimals)  to private /0  N 0x8a2a17fc3640f8ea  claimed
+burn journal: counter 1, 1000000000000000 base units of 0x0000000000000000000000000000000000000000 from private /0 to 0xD94903a1E51404BF7f5b94109D3495c72eEe2F41 is reserved and not on the zone (interrupted before it was known to be sent)
+burns of this seed: 2 (next burn counter 3)
+  i    0  burn      0  0.001 ETH (1000000000000000 base units, 18 decimals)  to 0xD94903a1E51404BF7f5b94109D3495c72eEe2F41  released
+  i    2  burn      1  0.001 ETH (1000000000000000 base units, 18 decimals)  to 0x280FcbD01aD0Eeb60be7c822D40a740f7cEf3983  not released
+Latest block is 71
+Syncing to block 71. Blocks to sync: 11
+Synced to block 71 in 9.20728ms
+recovered: 0 unclaimed deposits, 1 unreleased burns, 0 holdings

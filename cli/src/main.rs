@@ -406,13 +406,19 @@ async fn run(cli: Cli, out: &mut flow::Out) -> Result<(&'static str, serde_json:
                 send: send.send,
                 yes: send.yes,
                 confirmations: send.confirmations,
+                // The deposit journal beside the user's other local state: the LEZ wallet's home, else the keystore's
+                // directory.
+                journal: c.lez_wallet.clone().or_else(|| {
+                    send.keystore.as_deref().and_then(std::path::Path::parent).map(std::path::Path::to_path_buf)
+                }),
             };
             let d = flow::deposit(&e, &seed, signer.as_ref(), &o, out).await?;
             let result = json!({
                 "commitment": hx(&d.commitment),
-                "nullifier": hx(&d.nullifier),
+                "nullifier": d.nullifier.map(|n| hx(&n)),
                 "j": d.j,
-                "sent": d.sent.map(|(tx, leaf)| json!({ "tx": tx.to_string(), "leaf": leaf })),
+                "sent": d.sent.map(|(tx, leaf)| json!({ "tx": tx.map(|t| t.to_string()), "leaf": leaf })),
+                "earlier": d.earlier,
             });
             ("deposit", result)
         }

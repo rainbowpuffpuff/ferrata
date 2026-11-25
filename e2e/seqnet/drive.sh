@@ -131,7 +131,7 @@ RUN=$RUN; W=$W; VOL=$VOL; BIN=$BIN; R0BF=$R0BF; PROOFS=$PROOFS; RPC=$RPC; MODE=$
 DEPLOYER=$DEPLOYER; RELAYER=$RELAYER; DEPOSITOR=$DEPOSITOR; KEYSTORE=$KEYSTORE; U=$U
 ADMIN=$ADMIN; FREEZER=$FREEZER; RELEASE_SENDER=$RELEASE_SENDER
 VAULT=$VAULT; MOCK=$MOCK; CID=$CID; GS=$GS; FROM=$FROM; SA=$SA; BRIDGE=$BRIDGE; ATTEST=$ATTEST
-CHECKPOINT_B_ID=$CHECKPOINT_B_ID; RELEASE_ID=$RELEASE_ID; BESIDE_SHORT=${SEQNET_SHORT:-$(dirname "$T")/mseq}
+R0VM31=${R0VM31:-}; CHECKPOINT_B_ID=$CHECKPOINT_B_ID; RELEASE_ID=$RELEASE_ID; BESIDE_SHORT=${SEQNET_SHORT:-$(dirname "$T")/mseq}
 EOF
 . "$W/env.sh"; . "$HERE/common.sh"
 F=("$BIN/ferrata" --seed "$U/seed.txt" --eth-rpc $RPC --chain-id 11155111 --vault "$VAULT" --from-block "$FROM")
@@ -142,9 +142,10 @@ if [ "$MODE" = cli ] || [ "$MODE" = deployer ] || [ "$MODE" = robust ] || [ "$MO
   u 02-status "${F[@]}" status || die "status"
   u 03-deposit-dry-run "${F[@]}" deposit --denomination 0 --from "$DEPOSITOR" || die "deposit dry run"
   u 04-deposit "${F[@]}" deposit --denomination 0 --keystore "$KEYSTORE" --password-file "$U/eth.pass" --send --yes || die "deposit"
-  # robust (hook-robust.sh): a second deposit, so that the burn killed after its sending leaves a holding to burn again.
+  # robust (hook-robust.sh): a second deposit, so that the burn killed after its sending leaves a holding to burn again;
+  # the tool killed twice on its way (deposit-leg.sh: R.07, the deposit leg).
   if [ "$MODE" = robust ]; then
-    u 04b-deposit "${F[@]}" deposit --denomination 0 --keystore "$KEYSTORE" --password-file "$U/eth.pass" --send --yes || die "deposit 2"
+    . "$HERE/deposit-leg.sh"; deposit_leg
   fi
   u 05-scan "${F[@]}" scan || die "scan"
   slots="$("$BIN/crown-driver" capture-slots | jq -r '.slots[].slot')"

@@ -1,0 +1,20 @@
+2026-11-24T23:42:24.158Z	start
+2026-11-24T23:42:39.249Z	kill	mid-round=1	state={"tip_id":32,"slot":null}
+2026-11-24T23:42:42.260Z	restart
+2026-11-24T23:42:55.271Z	node-outage 20 s
+2026-11-24T23:43:15.281Z	node-back
+2026-11-24T23:43:30.384Z	kill	mid-round=1	state={"tip_id":37,"slot":null}
+2026-11-24T23:43:33.395Z	restart
+2026-11-24T23:43:44.404Z	lez-outage 20 s
+2026-11-24T23:44:04.414Z	lez-back
+2026-11-24T23:44:15.809Z	kill	mid-round=1	state={"tip_id":41,"slot":null}
+2026-11-24T23:44:18.820Z	restart
+2026-11-24T23:44:31.830Z	node-outage 20 s
+2026-11-24T23:44:51.840Z	node-back
+2026-11-24T23:45:02.898Z	kill	mid-round=0	state={"tip_id":46,"slot":null}
+2026-11-24T23:45:05.909Z	restart
+2026-11-24T23:45:20.919Z	lez-outage 20 s
+2026-11-24T23:45:40.928Z	lez-back
+2026-11-24T23:45:52.409Z	kill	mid-round=1	state={"tip_id":51,"slot":null}
+2026-11-24T23:45:55.421Z	restart
+2026-11-24T23:46:09.493Z	stop

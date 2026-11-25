@@ -40,6 +40,15 @@
 #      bridge program applied two notes with one tag, one of them never releasable), and is applied; the late
 #      transaction, built on the private account's state the second burn spent, is refused; the interrupted burn's
 #      counter stays reserved in the journal
+#   i. R.07, the deposit leg (drive.sh, deposit-leg.sh): the second deposit's tool SIGKILLed with its transaction trapped,
+#      then with it mined and the answer held; the same command again finds it and deposits nothing
+#   j. R.06/R.07, after the import and before the claim: the relayer's ImportRoot forwarded to the sequencer with its
+#      answer held and the daemon SIGKILLed; started again, it books the import from LEZ (one ImportRoot)
+#   k. R.06, the attestor, the prover and its client (robust-r06.sh): the checkpoint over the real attestor's own
+#      attestation, the attestor SIGKILLed inside rounds and cut off from its node and its LEZ node meanwhile; proven
+#      through the prover client, whose prover dies mid-proof and which is SIGKILLed mid-proof; one job, one candidate
+#   l. R.07, the release leg: the relayer killed with the release built and its transaction trapped, then with it mined
+#      and the answer held; started again, it books it from the chain (one Release)
 # SEQNET_GAS_DROP=0: the claims' fees from the stand-in (seqnet-fund) instead of the relayer's drops (b, f, g skipped).
 # The daemons' standard output (their JSON lines, and LEZ's wallet's plain sync lines) goes to the work directory; the
 # records keep the JSON lines only.
@@ -48,6 +57,7 @@ set -uo pipefail
 . "$SEQNET_ENV"
 . "$REPO/e2e/seqnet/common.sh"
 . "$REPO/e2e/seqnet/late-credit.sh"   # late_credit_verdict (f)
+. "$REPO/e2e/seqnet/robust-r06.sh"     # the attestor, the prover and its client, the release leg (k, l)
 F=("$BIN/ferrata" --seed "$U/seed.txt" --eth-rpc "$RPC" --chain-id 11155111 --vault "$VAULT" --from-block "$FROM"
    --sequencer "$SEQ" --lez-wallet "$U/lez-wallet" --lez-password-file "$U/lez.pass" --bridge-account "$BRIDGE")
 RELAYER_PHRASE="legal winner thank year wave sausage worth useful legal winner thank yellow"   # BIP-39 test vector
@@ -57,6 +67,14 @@ pass=0; fail=0
 ok() { echo "- PASS $*" | tee -a "$R7"; pass=$((pass + 1)); say "PASS $*"; }
 bad() { echo "- FAIL $*" | tee -a "$R7"; fail=$((fail + 1)); say "FAIL $*"; }
 fact() { jq -n -c --arg k "$1" --argjson v "$2" '{($k): $v}' >> "$RJ"; }
+# i. the deposit leg's verdicts, from drive.sh (deposit-leg.sh)
+if [ -s "$W/deposit-leg.md" ]; then
+  cat "$W/deposit-leg.md" >> "$R7"
+  pass=$((pass + $(grep -c '^- PASS' "$W/deposit-leg.md"))); fail=$((fail + $(grep -c '^- FAIL' "$W/deposit-leg.md")))
+  cat "$W/deposit-leg.json" >> "$RJ" 2>/dev/null
+else
+  bad "R.07 deposit: no record of the interrupted deposit (drive.sh's deposit-leg.sh)"
+fi
 # The daemons' JSON lines (LEZ's wallet prints its sync, plain text, to the same standard output).
 jl() { grep '^{' "$1" 2>/dev/null; }
 # The zone's privacy-preserving transactions (the user's claims and burns are; the operator's, the relayer's and any
@@ -83,7 +101,7 @@ PR="$W/holdproxy-relayer"; mkdir -p "$PR"; echo pass > "$PR/ctl"
 python3 -I "$REPO/e2e/netfault/holdproxy.py" --upstream "$SEQ" --port-file "$PR/port" --ctl "$PR/ctl" --log "$PR/log.jsonl" \
   > "$PR/out" 2>&1 &
 PRPID=$!
-trap 'kill $PXPID $PRPID 2>/dev/null || true' EXIT
+trap 'kill $PXPID $PRPID $(cat "$W/proxies.pid" 2>/dev/null) 2>/dev/null; at_stop 2>/dev/null; true' EXIT
 for _ in $(seq 1 40); do [ -s "$PR/port" ] && break; sleep 0.25; done
 SEQ_RELAYER="http://127.0.0.1:$(cat "$PR/port")"
 
@@ -100,13 +118,31 @@ printf '%s\n' "$RELAYER_PHRASE" > "$RL/seed.txt"; printf 'seqnet-relayer\n' > "$
 RELAYER_LEZ="$(grep '^{' "$RL/fund.out" | jq -r '.to_public_0_hex' | head -n 1)"
 grep '^{' "$RL/fund.out" > "$RUN/lez/relayer-fund.jsonl"
 say "the relayer's LEZ public account $RELAYER_LEZ and its private account /0 (its gas drops' source) funded (seqnet-fund)"
-RD_LOG="$W/relayer-daemon.out"
-"$BIN/ferrata-relayer" --eth-rpc "$RPC" --vault "$VAULT" --chain-id 11155111 --unlocked "$RELAYER" --from-block "$FROM" \
-  --state "$W/relayer" --sequencer "$SEQ" --seed "$RL/seed.txt" --lez-wallet "$RL/wallet" --lez-password-file "$RL/lez.pass" \
-  --lez-account "$RELAYER_LEZ" --bridge-account "$BRIDGE" --import-roots --import-every 0 \
-  run --inbox "$W/relayer-inbox-imports" --poll-secs 5 > "$RD_LOG" 2> "$W/relayer-daemon.err" &
-RD=$!
-imported=""
+RD_LOG="$W/relayer-daemon.out"; : > "$RD_LOG"
+start_import() { # the import daemon, through the relayer's proxy (j)
+  "$BIN/ferrata-relayer" --eth-rpc "$RPC" --vault "$VAULT" --chain-id 11155111 --unlocked "$RELAYER" --from-block "$FROM" \
+    --state "$W/relayer" --sequencer "$SEQ_RELAYER" --seed "$RL/seed.txt" --lez-wallet "$RL/wallet" --lez-password-file "$RL/lez.pass" \
+    --lez-account "$RELAYER_LEZ" --bridge-account "$BRIDGE" --import-roots --import-every 0 \
+    run --inbox "$W/relayer-inbox-imports" --poll-secs 5 >> "$RD_LOG" 2>> "$W/relayer-daemon.err" &
+  RD=$!
+}
+# j. the import's sendTransaction forwarded to the sequencer with its answer held; the daemon SIGKILLed meanwhile
+pr_lines0="$(wc -l < "$PR/log.jsonl" 2>/dev/null || echo 0)"
+hi0="$(hits_of "$PR")"; echo "hold sendTransaction 40" > "$PR/ctl"
+start_import
+if wait_hit_of "$PR" "$hi0"; then
+  sleep 3; kill -9 "$RD" 2>/dev/null; wait "$RD" 2>/dev/null
+  inflight_rec="$(jq -c '{leaf_count, tx}' "$W/relayer/root-import-inflight.json" 2>/dev/null)"
+  fact importInflightAtKill "${inflight_rec:-null}"
+  [ -n "$inflight_rec" ] && ok "R.06/R.07 import: the relayer SIGKILLed with its ImportRoot at the sequencer and the answer held; in flight in its state: $inflight_rec" \
+    || bad "R.06/R.07 import: nothing in flight when the relayer was killed"
+else
+  kill -9 "$RD" 2>/dev/null; bad "R.06/R.07 import: the relayer's import never reached its proxy ($(jl "$RD_LOG" | tail -n 2 | jq -c '{event, reason}' 2>/dev/null | tr '\n' ' '))"
+fi
+sleep 45   # the held answer delivered to nobody; the import applied in the zone's blocks
+echo pass > "$PR/ctl"
+start_import
+imported=""""
 for _ in $(seq 1 180); do
   imported="$(jl "$RD_LOG" | jq -c 'select(.event == "root-imported" and .applied == true)' 2>/dev/null | head -n 1)"
   [ -n "$imported" ] && break
@@ -116,6 +152,14 @@ done
 kill -TERM "$RD" 2>/dev/null; wait "$RD" 2>/dev/null
 jl "$RD_LOG" > "$RUN/lez/relayer-daemon.jsonl"
 stopline="$(jl "$RD_LOG" | jq -c 'select(.event == "stop")' 2>/dev/null | tail -n 1)"
+imports_sent="$(tail -n +$((pr_lines0 + 1)) "$PR/log.jsonl" | jq -s '[.[] | select(.method == "sendTransaction" and (.action | test("^forwarded")))] | length')"
+import_roots="$("$BIN/seqnet-txs" --sequencer "$SEQ" --home "$W/txs-wallet-j" --bridge-account "$BRIDGE" --attest-account "$ATTEST" 2>/dev/null | awk -F'\t' 'NR > 1 && $9 == "ImportRoot"' | wc -l)"
+fact importAfterKill "$(jq -n -c --argjson s "$imports_sent" --argjson r "$import_roots" '{sendsForwarded: $s, importRootsOnZone: $r}')"
+if [ "$(echo "$imported" | jq -r '.recovered // false' 2>/dev/null)" = true ] && [ "$imports_sent" = 1 ] && [ "$import_roots" = 1 ]; then
+  ok "R.06/R.07 import: started again, the relayer found its import applied on LEZ and booked it (recovered), sending nothing: $imports_sent ImportRoot sent across the kill, $import_roots on the zone"
+else
+  bad "R.06/R.07 import: recovered $(echo "$imported" | jq -c '.recovered' 2>/dev/null), sends $imports_sent, ImportRoot on the zone $import_roots"
+fi
 if [ -n "$imported" ]; then
   ok "U.03: ferrata-relayer imported root(cid, $(echo "$imported" | jq -r .leafCount)) on the running sequencer (tx $(echo "$imported" | jq -r .tx), recovered $(echo "$imported" | jq -r '.recovered // false')); $(jl "$RD_LOG" | jq -s 'map(select(.event == "root-import-unconfirmed" or .event == "root-import-pending")) | length') rounds before it was applied"
   fact rootImport "$imported"
@@ -125,6 +169,11 @@ else
 fi
 if [ -n "$stopline" ] && [ "$(echo "$stopline" | jq -r .reason)" = SIGTERM ]; then ok "U.03: SIGTERM: a clean stop line ($stopline)"; else bad "U.03: no clean stop line on SIGTERM ($stopline)"; fi
 [ ! -e "$W/relayer/root-import-inflight.json" ] && ok "U.03: nothing left in flight in the relayer's state" || bad "U.03: an import left in flight"
+
+# ---- k. R.06: the attestor beside the zone's sequencer, killed and cut off while the user's commands run -------------
+at_start
+at_chaos > "$AT/chaos.log" 2>&1 &
+CHAOS=$!
 
 # ---- b. U.05: the relayer daemon's gas drops ---------------------------------------------------------------------------
 GAS_DROP="${SEQNET_GAS_DROP:-1}"
@@ -349,12 +398,12 @@ fi
 u 14-recover "${F[@]}" recover || die "recover"
 burns="$(grep -c -E 'burn .*counter|^  burn ' "$RUN/user/14-recover.txt" || true)"
 fact recoverBurnsLines "$burns"
-checkpoint                                                                 # e
+checkpoint_robust                                                          # e, k
 printf '0x5ea15ea1\n' > "$W/seal.hex"   # the mock verifier's: the stand-in prover accepts the journal below first
 u 15-release-held "${F[@]}" release --seal "$W/seal.hex" && say "note: the release was not held (its delay had passed)"
 pass_time 121 "the release delay (120 s after finalizeAttested)"
 u 16-release "${F[@]}" release --seal "$W/seal.hex" --job-out "$W/release-job.json" || die "release"
-relay_release "$W/release-job.json"
+release_robust "$W/release-job.json"                                      # l
 u 17-recover "${F[@]}" recover || die "recover"
 u 18-status "${F[@]}" status || die "status"
 paid="$(cast balance "$FRESH" --rpc-url "$RPC")"

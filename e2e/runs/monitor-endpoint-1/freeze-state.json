@@ -1,0 +1,230 @@
+{
+  "vault": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+  "nextBlock": 28,
+  "candidates": {
+    "0x24b771ad0d45b2301166947694b1ccdaf4c1d5f3273f51152687ab3c5cc09432": {
+      "candidate": {
+        "newState": "0x24b771ad0d45b2301166947694b1ccdaf4c1d5f3273f51152687ab3c5cc09432",
+        "parentState": "0x89a39679a46c1f7b5e2072e1d51441f7e7428e87f07b8377af0ea4654a427b3c",
+        "burnRoot": "0xc7c9aef098672a1c558f79b0e23e4f7d3474a7fa43e40817b1b8da52e6473913",
+        "burnCount": 13,
+        "importedLeafCount": 0,
+        "sunset": false,
+        "deltaAtSubmit": 3600,
+        "tipId": 13,
+        "tipHash": "0xb5f03d8cadc9986c8bc2c9cea064c3620cf92baa9e1c0d86ab9294682f1643db",
+        "n": 3,
+        "t": 2,
+        "submittedAt": 0
+      },
+      "status": "gone",
+      "verdict": null,
+      "firstSeenAt": 1795575030,
+      "cancelTx": null,
+      "cancelledAt": null
+    },
+    "0x6cd9b53bc170d758d505dea20141045264138e7b6d9af37a66e73657b9403fb0": {
+      "candidate": {
+        "newState": "0x6cd9b53bc170d758d505dea20141045264138e7b6d9af37a66e73657b9403fb0",
+        "parentState": "0x87b7083c97ffc8993a33858027626428ea1f2f43ff38985abedbb7d798e7e2cf",
+        "burnRoot": "0xbd38afd12e2186f3fea59ac30079094621f201e6909ee6eb24b9b4bd3fd8c767",
+        "burnCount": 17,
+        "importedLeafCount": 0,
+        "sunset": false,
+        "deltaAtSubmit": 3600,
+        "tipId": 17,
+        "tipHash": "0xc1f933ddb0e281cbc8c45895f76f628cad668670e6c086a70211aa4d8cb3c09a",
+        "n": 4,
+        "t": 3,
+        "submittedAt": 0
+      },
+      "status": "gone",
+      "verdict": null,
+      "firstSeenAt": 1795575030,
+      "cancelTx": null,
+      "cancelledAt": null
+    },
+    "0x78e89a6117e89e3f303cf7008194f63d53b7c89e0dc0ee4f972d2bd4d789f608": {
+      "candidate": {
+        "newState": "0x78e89a6117e89e3f303cf7008194f63d53b7c89e0dc0ee4f972d2bd4d789f608",
+        "parentState": "0x87b7083c97ffc8993a33858027626428ea1f2f43ff38985abedbb7d798e7e2cf",
+        "burnRoot": "0x5b35139c380ebb60e572ba3e23bfd120ac889ce80105d75b5017b09088b87b36",
+        "burnCount": 30,
+        "importedLeafCount": 0,
+        "sunset": false,
+        "deltaAtSubmit": 3600,
+        "tipId": 30,
+        "tipHash": "0x544564cf6af22b2a44116171274076c047da84b9e6bf42fa9bf170ddab3cc6cf",
+        "n": 4,
+        "t": 3,
+        "submittedAt": 0
+      },
+      "status": "gone",
+      "verdict": null,
+      "firstSeenAt": 1795575030,
+      "cancelTx": null,
+      "cancelledAt": null
+    },
+    "0x87b7083c97ffc8993a33858027626428ea1f2f43ff38985abedbb7d798e7e2cf": {
+      "candidate": {
+        "newState": "0x87b7083c97ffc8993a33858027626428ea1f2f43ff38985abedbb7d798e7e2cf",
+        "parentState": "0x89a39679a46c1f7b5e2072e1d51441f7e7428e87f07b8377af0ea4654a427b3c",
+        "burnRoot": "0xf317f97bbf738617ff7c0bcb2f4a93633602b1c6092cd9eb3645259f761b9774",
+        "burnCount": 14,
+        "importedLeafCount": 0,
+        "sunset": false,
+        "deltaAtSubmit": 3600,
+        "tipId": 14,
+        "tipHash": "0x2da9572fcfd1a80910efe7603a8905c39cd33f7cb4f2ad39f7cdd0a7671196b8",
+        "n": 4,
+        "t": 3,
+        "submittedAt": 0
+      },
+      "status": "gone",
+      "verdict": null,
+      "firstSeenAt": 1795575030,
+      "cancelTx": null,
+      "cancelledAt": null
+    },
+    "0x89a39679a46c1f7b5e2072e1d51441f7e7428e87f07b8377af0ea4654a427b3c": {
+      "candidate": {
+        "newState": "0x89a39679a46c1f7b5e2072e1d51441f7e7428e87f07b8377af0ea4654a427b3c",
+        "parentState": "0xa3cb64db34811f09d03bb54954e8ca49df16905edb0573bb011dd10fb6e336ca",
+        "burnRoot": "0x64cc8934ddf6b7a59d5bfa84fc1cfeab8697199183d3faff879f3954657106eb",
+        "burnCount": 10,
+        "importedLeafCount": 0,
+        "sunset": false,
+        "deltaAtSubmit": 3600,
+        "tipId": 10,
+        "tipHash": "0x9ba1286a334daaf7261a2a745b963c5cc514a24077cc2e1ac5b953003cc53ffa",
+        "n": 4,
+        "t": 3,
+        "submittedAt": 0
+      },
+      "status": "gone",
+      "verdict": null,
+      "firstSeenAt": 1795575030,
+      "cancelTx": null,
+      "cancelledAt": null
+    },
+    "0x9549de03cc5333c142be57183e11a657b81d1ae87fb95795a241ee88b6c2c4e7": {
+      "candidate": {
+        "newState": "0x9549de03cc5333c142be57183e11a657b81d1ae87fb95795a241ee88b6c2c4e7",
+        "parentState": "0x87b7083c97ffc8993a33858027626428ea1f2f43ff38985abedbb7d798e7e2cf",
+        "burnRoot": "0x8cfbe7f0907b89960073303438f44710a073e4a93c24af9d9e0c5bc6a02e84ab",
+        "burnCount": 16,
+        "importedLeafCount": 0,
+        "sunset": false,
+        "deltaAtSubmit": 3600,
+        "tipId": 16,
+        "tipHash": "0x97cc83aa3e837a692bebba0578aaf7becee800c9d7df4b4adaa6d2dbaa18a293",
+        "n": 4,
+        "t": 3,
+        "submittedAt": 0
+      },
+      "status": "gone",
+      "verdict": null,
+      "firstSeenAt": 1795575030,
+      "cancelTx": null,
+      "cancelledAt": null
+    },
+    "0x9abb56d2aa3b6ba37ddaa3fe01be0b78746e66fda534b759ff1e3fea8cd102d0": {
+      "candidate": {
+        "newState": "0x9abb56d2aa3b6ba37ddaa3fe01be0b78746e66fda534b759ff1e3fea8cd102d0",
+        "parentState": "0x87b7083c97ffc8993a33858027626428ea1f2f43ff38985abedbb7d798e7e2cf",
+        "burnRoot": "0x8cfbe7f0907b89960073303438f44710a073e4a93c24af9d9e0c5bc6a02e84ab",
+        "burnCount": 16,
+        "importedLeafCount": 0,
+        "sunset": false,
+        "deltaAtSubmit": 3600,
+        "tipId": 16,
+        "tipHash": "0xafd90c205c039338f5cf48231484be74ad71f67584b4453ebbc3cd7035a37208",
+        "n": 4,
+        "t": 3,
+        "submittedAt": 0
+      },
+      "status": "gone",
+      "verdict": null,
+      "firstSeenAt": 1795575030,
+      "cancelTx": null,
+      "cancelledAt": null
+    },
+    "0xdd87d29c26f5a60ee85314b63e04b7c0f7386b79de62f2a92b3b62f01b8b2b9c": {
+      "candidate": {
+        "newState": "0xdd87d29c26f5a60ee85314b63e04b7c0f7386b79de62f2a92b3b62f01b8b2b9c",
+        "parentState": "0x89a39679a46c1f7b5e2072e1d51441f7e7428e87f07b8377af0ea4654a427b3c",
+        "burnRoot": "0xf0741579edb479e0c0daf8203ab9f4e4e36326eeeb3869c8dca528a58c4f24bb",
+        "burnCount": 15,
+        "importedLeafCount": 0,
+        "sunset": false,
+        "deltaAtSubmit": 3600,
+        "tipId": 15,
+        "tipHash": "0x6de0cf4235a938a0e4e77629851a7559656960a7ea4cb5d61a99edc6a8907ac4",
+        "n": 4,
+        "t": 3,
+        "submittedAt": 0
+      },
+      "status": "gone",
+      "verdict": null,
+      "firstSeenAt": 1795575030,
+      "cancelTx": null,
+      "cancelledAt": null
+    },
+    "0xf680a4173085cc84f4fb70f52b71e7747662a258e073e0dc8059389d7924cd09": {
+      "candidate": {
+        "newState": "0xf680a4173085cc84f4fb70f52b71e7747662a258e073e0dc8059389d7924cd09",
+        "parentState": "0x89a39679a46c1f7b5e2072e1d51441f7e7428e87f07b8377af0ea4654a427b3c",
+        "burnRoot": "0x5061dd07f6e0fecba68757f822db3470bfaa5420bfae287021f30f8c2672e970",
+        "burnCount": 12,
+        "importedLeafCount": 0,
+        "sunset": false,
+        "deltaAtSubmit": 3600,
+        "tipId": 12,
+        "tipHash": "0x97cc83aa3e837a692bebba0578aaf7becee800c9d7df4b4adaa6d2dbaa18a293",
+        "n": 4,
+        "t": 3,
+        "submittedAt": 0
+      },
+      "status": "gone",
+      "verdict": null,
+      "firstSeenAt": 1795575030,
+      "cancelTx": null,
+      "cancelledAt": null
+    }
+  },
+  "cancelEvents": {
+    "0x24b771ad0d45b2301166947694b1ccdaf4c1d5f3273f51152687ab3c5cc09432": {
+      "0x15544c21e8b49a7bd7b37c7cd834f237c3a2f27e5b72bba07156f8da19fa315e": 11
+    },
+    "0x78e89a6117e89e3f303cf7008194f63d53b7c89e0dc0ee4f972d2bd4d789f608": {
+      "0x57ffb80a821bda499c4aa81b195559fdf5e7a460bab72589d8edf513ff41c80d": 19
+    },
+    "0x9549de03cc5333c142be57183e11a657b81d1ae87fb95795a241ee88b6c2c4e7": {
+      "0xa42b6e59730c013f89b92a4cb545be3722720aa25bc146eb5694c23db901b823": 23
+    },
+    "0x9abb56d2aa3b6ba37ddaa3fe01be0b78746e66fda534b759ff1e3fea8cd102d0": {
+      "0xee3225557aae2dc2c2c6b4fe74518ae06be426fa4e7eb52d5dfc7cf17b5d93c6": 21
+    },
+    "0xdd87d29c26f5a60ee85314b63e04b7c0f7386b79de62f2a92b3b62f01b8b2b9c": {
+      "0x0bfade85e9b1834a6c08a6fd273024b4e9e6b2c664fc94592a9f2013d8b54fb7": 14
+    },
+    "0xf680a4173085cc84f4fb70f52b71e7747662a258e073e0dc8059389d7924cd09": {
+      "0xfe31ce569b43540c5d142bb50747f7cb3fd7ca3fab2e233b2a40f12c6586e6f6": 8
+    }
+  },
+  "finalized": {
+    "0": "ok",
+    "1": "ok",
+    "2": "revoked"
+  },
+  "toAudit": {},
+  "alerted": [
+    "attestation:lez-honest:{\"finding\":\"conflictingTip\",\"channelKey\":\"0xafd6dd1c7cebc5fffd6b133c4d7125fdb07f3b8ff9e21dccfa7c076d0d7dcb24\",\"attKey\":\"0x8ae92695f404d5ff11a95e339d638d6ba68cc001a160a3f907dfeb23f7faf456\",\"tipId\":12,\"signedHash\":\"0x97cc83aa3e837a692bebba0578aaf7becee800c9d7df4b4adaa6d2dbaa18a293\",\"finalHash\":\"0xaed56b0c928d218dbb33e648e235c287daf2d0d43db00891ed017aa0ae8e6c15\"}",
+    "finalized-wrong:2:1795575030",
+    "revoked:2:27"
+  ],
+  "finalHeight": 20,
+  "finalHeightSince": 1795575030,
+  "pausedAt": null,
+  "polls": 2
+}

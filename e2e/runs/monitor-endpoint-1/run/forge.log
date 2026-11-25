@@ -1,0 +1,58 @@
+No files changed, compilation skipped
+Script ran successfully.
+
+== Return ==
+vault: contract FerrataVault 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 31337
+
+Estimated gas price: 2.000000001 gwei
+
+Estimated total gas used for script: 11723142
+
+Estimated amount required: 0.023446284011723142 ETH
+
+==========================
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: <repo>/vault/broadcast/MonitorFixture.s.sol/31337/run-latest.json
+
+Sensitive values saved to: <repo>/vault/cache/MonitorFixture.s.sol/31337/run-latest.json
+
+No files changed, compilation skipped
+Script ran successfully.
+
+== Return ==
+vault: contract FerrataVault 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 31337
+
+Estimated gas price: 0.020820731 gwei
+
+Estimated total gas used for script: 7591353
+
+Estimated amount required: 0.000158057518739043 ETH
+
+==========================
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: <repo>/vault/broadcast/MonitorFixture.s.sol/31337/run-latest.json
+
+Sensitive values saved to: <repo>/vault/cache/MonitorFixture.s.sol/31337/run-latest.json
+

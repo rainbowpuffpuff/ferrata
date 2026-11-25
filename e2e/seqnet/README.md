@@ -111,6 +111,7 @@ are named by `SEQNET_BUNDLE` (`lez/crown/build.sh`'s `bundle.tar.zst`) and `SEQN
 | `hook-cli.sh`, `hook-miniapp.sh`, `hook-lezcore.sh` | what runs while the zone runs (`lez/crown/session.sh x`) |
 | `common.sh` | the steps the hooks share: the operator's import, the gas drop's stand-in, the checkpoint, the relayer, the records |
 | `ops.sh` | the same steps for the mini-app's test, run between the user's actions |
+| `hook-robust.sh`, `deposit-leg.sh`, `robust-r06.sh`, `standin-prove.sh` | the robust run (`run.sh robust NAME`): the user's commands, the relayer, the attestor, the prover client and its stand-in prover interrupted and their endpoints failed (RFP-022 R.06, R.07; the cases in `hook-robust.sh`'s header) |
 | `ethtxs.py` | anvil's transactions, named |
 | `cli/src/bin/seqnet_fund.rs`, `seqnet_txs.rs`, `seqnet_chain.rs` | the gas drop's stand-in; the zone's transactions; the chain service of the mini-app's run |
 | `modules/ferrata_bridge_ui/qmltest-logos/` | the Qt Quick Test runner with Logos Core behind the view, and the test |

@@ -1,0 +1,199 @@
+{
+  "depositLeg": {
+    "depositCount": [
+      1,
+      2
+    ],
+    "nonce": [
+      1,
+      2
+    ],
+    "depositEvents": [
+      1,
+      2
+    ],
+    "depositorWei": [
+      "9999998927497238105106",
+      "9999997877861466853226"
+    ]
+  },
+  "importInflightAtKill": {
+    "leaf_count": 2,
+    "tx": "sending"
+  },
+  "importAfterKill": {
+    "sendsForwarded": 1,
+    "importRootsOnZone": 1
+  },
+  "rootImport": {
+    "applied": true,
+    "event": "root-imported",
+    "leafCount": 2,
+    "recovered": true,
+    "t": 1795563738,
+    "tx": "sending"
+  },
+  "drop1AtKill": {
+    "sends": 1,
+    "settled": false,
+    "tx": "pending"
+  },
+  "drop1": {
+    "amount": "50000000",
+    "applied": true,
+    "kind": "gas-drop",
+    "nullifier": "0x95fbbaa8051a37912e7edf81a337a9b1c78dcb9bd0d769f97908b45e6a917a9a",
+    "oneTimeAddress": "0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3",
+    "resolvedLater": true,
+    "sealed": true,
+    "sends": 3,
+    "tx": "d1fec916acd2447f32cb7690d9c1423c2826751e81d8c2c262a575c699011326"
+  },
+  "drop1Record": {
+    "sends": 3,
+    "settled": true,
+    "tx": "d1fec916acd2447f32cb7690d9c1423c2826751e81d8c2c262a575c699011326"
+  },
+  "drop1LateCredit": {
+    "t": 1795563818.1190953,
+    "method": "sendTransaction",
+    "action": "late forward answered",
+    "status": 200,
+    "answer": "{\"jsonrpc\":\"2.0\",\"id\":57,\"result\":\"a7a5e6a7e8f78d41561c525a5bed06bf198db1597c6557a69afb4a60a0dea559\"}"
+  },
+  "drop2": {
+    "amount": "50000000",
+    "applied": true,
+    "kind": "gas-drop",
+    "nullifier": "0x8a2a17fc3640f8eadbff550bf741a284ec9cc49e0a7e312fa33188f932dacda3",
+    "oneTimeAddress": "0xc814a73facbb8f0e94fb439c2cad785f1792e95a8a86860e5eae78dc8c2f3213",
+    "resolvedLater": true,
+    "sealed": true,
+    "sends": 1,
+    "tx": "pending"
+  },
+  "dropBook": {
+    "0x8a2a17fc3640f8eadbff550bf741a284ec9cc49e0a7e312fa33188f932dacda3": {
+      "one_time_address": "0xc814a73facbb8f0e94fb439c2cad785f1792e95a8a86860e5eae78dc8c2f3213",
+      "amount": 50000000,
+      "at": 1795563862,
+      "tx": "pending",
+      "from_nonce": "289042100386010598279060112202463155180",
+      "settled": true,
+      "sends": 1,
+      "sent_at": 1795563862
+    },
+    "0x95fbbaa8051a37912e7edf81a337a9b1c78dcb9bd0d769f97908b45e6a917a9a": {
+      "one_time_address": "0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3",
+      "amount": 50000000,
+      "at": 1795563762,
+      "tx": "d1fec916acd2447f32cb7690d9c1423c2826751e81d8c2c262a575c699011326",
+      "from_nonce": "11446187111063247654693622002334494559",
+      "settled": true,
+      "sends": 3,
+      "sent_at": 1795563804
+    }
+  },
+  "gasDrops": [
+    {
+      "amount": "50000000",
+      "applied": true,
+      "kind": "gas-drop",
+      "nullifier": "0x95fbbaa8051a37912e7edf81a337a9b1c78dcb9bd0d769f97908b45e6a917a9a",
+      "oneTimeAddress": "0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3",
+      "resolvedLater": true,
+      "sealed": true,
+      "sends": 3,
+      "tx": "d1fec916acd2447f32cb7690d9c1423c2826751e81d8c2c262a575c699011326"
+    },
+    {
+      "amount": "50000000",
+      "applied": true,
+      "kind": "gas-drop",
+      "nullifier": "0x8a2a17fc3640f8eadbff550bf741a284ec9cc49e0a7e312fa33188f932dacda3",
+      "oneTimeAddress": "0xc814a73facbb8f0e94fb439c2cad785f1792e95a8a86860e5eae78dc8c2f3213",
+      "resolvedLater": true,
+      "sealed": true,
+      "sends": 1,
+      "tx": "pending"
+    }
+  ],
+  "claimSweeps": 2,
+  "pendingBurn": [
+    {
+      "i": 0,
+      "amount": "1000000000000000",
+      "at": 1795563912,
+      "sent": null
+    }
+  ],
+  "recoverBurnsLines": 1,
+  "attestor": {
+    "attestations": 65,
+    "partialFiles": 0,
+    "tips": 19,
+    "firstTip": 30,
+    "lastTip": 53,
+    "tipsCheckedAgainstBlocks": 19,
+    "doubleSigned": {},
+    "offChain": [],
+    "signers": [
+      "ab79e5eb13b5030952571cb2851b4886e308822c8d5a5c51ff315206aea0cfd9"
+    ],
+    "kills": 5,
+    "killsMidRound": 4,
+    "outages": [
+      "node-outage 20 s",
+      "lez-outage 20 s",
+      "node-outage 20 s",
+      "lez-outage 20 s"
+    ],
+    "stateTip": 53
+  },
+  "prover": {
+    "done": {
+      "ok": true,
+      "attempts": 2,
+      "resumed": true,
+      "call_id": "fc-ab0116c0f6714d94",
+      "seconds": 8.2
+    },
+    "proverStarts": 2,
+    "proverEnds": [
+      {
+        "ok": false,
+        "died": true
+      },
+      {
+        "ok": true,
+        "died": false
+      }
+    ],
+    "inboxJobs": 1
+  },
+  "releaseLeg": {
+    "releaseEvents": [
+      0,
+      1
+    ],
+    "freshWei": [
+      "0",
+      "997000000000000"
+    ],
+    "sendsForwarded": 2,
+    "relayerEvents": [
+      "inflight-lost",
+      "inflight-found"
+    ],
+    "maxReleasesPerNullifier": 1,
+    "releaseTransactions": 1,
+    "otherRelayerTransactions": 1
+  },
+  "trappedBurn": {
+    "i": 1,
+    "amount": "1000000000000000",
+    "recipient": "0xd94903a1e51404bf7f5b94109d3495c72eee2f41"
+  },
+  "pass": 33,
+  "fail": 0
+}

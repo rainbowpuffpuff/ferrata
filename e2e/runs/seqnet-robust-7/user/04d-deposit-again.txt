@@ -1,0 +1,4 @@
+$ ferrata --seed <work>/user/seed.txt --eth-rpc http://127.0.0.1:8545 --chain-id 11155111 --vault 0x7aa40900A493Bcb2140f441ED52B94B26E5E0688 --from-block 1 deposit --denomination 0 --keystore <work>/user/keystore/depositor --password-file <work>/user/eth.pass --send --yes
+
+deposit journal: an earlier run's deposit j = 1 of 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC (denomination 0 of token 0x0000000000000000000000000000000000000000, to your private /0 account), nonce 1 is on the chain (it was interrupted before it saw it land)
+the same deposit asked again: not depositing a second time (`ferrata scan` lists it)
