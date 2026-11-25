@@ -21,7 +21,7 @@
   /* green, yellow, orange, red (the owner's), spread in lightness so they stay apart under colour-vision deficiency;
      each mark also carries its symbol: check, dash, hourglass, cross */
   --c-shown: #0f8a3c;
-  --net-bg: #0b7a35;
+  --net-bg: #0a6b2f;
   --net-ink: #ffffff;
   --c-part: #fcd34d;
   --c-waits: #f08a24;
@@ -345,8 +345,9 @@ dialog h2::before { display: none; }
     letter-spacing: .04em; color: var(--muted); margin-bottom: .2rem; }
   .req tr[hidden] { display: none; }
 }
-/* The header's sections scroll sideways on narrow screens: the edge fades to show there is more */
-@media (max-width: 900px) {
+/* The header's sections scroll sideways on narrow screens: the edge fades to show there is more (up to 1199 px: with the
+   Testers and Network buttons the sections no longer fit below that) */
+@media (max-width: 1199px) {
   .top nav { -webkit-mask-image: linear-gradient(to left, transparent, #000 1.6rem); mask-image: linear-gradient(to left, transparent, #000 1.6rem); }
   .top nav ul { width: max-content; padding-right: 1.6rem; }
 }
