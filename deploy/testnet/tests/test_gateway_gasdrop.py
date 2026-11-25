@@ -10,11 +10,16 @@ marked valid, as `ferrata-gasdrop check-job` accepts the real ones) BEFORE it co
 refused 400 and leave the inbox, the hourly and the per-network caps untouched (review F2); no checker, a checker that
 times out: 503, nothing counted; then a verified job accepted (0640, named by its N), the same N again (409), malformed
 jobs (400), an oversized body (413), the inbox full (429), the per-IP, per-network and hourly caps (429), the per-IP
-check budget (429), and the gateway's log naming neither the posting address nor N (review F5). Standard library only;
-no network beyond loopback.
+check budget (429), and the gateway's log naming neither the posting address nor N (review F5). Then the memory of
+admitted N (review round 2, R1): the same receipt re-posted after the relayer moved its job out of the inbox is answered
+409 with no check and no cap spent (also with other one-time keys, also after a restart: the record is on disk); it is
+forgotten GASDROP_ADMITTED_KEEP after the job left the inbox, and past GASDROP_ADMITTED_MAX rows the oldest finished
+first (never a job still in the inbox). Standard library only; no network beyond loopback.
 """
 import contextlib
 import hashlib
+import sqlite3
+import time
 import http.server
 import importlib.machinery
 import importlib.util
@@ -42,6 +47,7 @@ CHECKER = r'''
 import json, sys, time
 args = sys.argv[1:]
 open(sys.argv[0] + ".args", "w").write(json.dumps(args))
+open(sys.argv[0] + ".calls", "a").write("1\n")
 job = json.loads(sys.stdin.read())
 inner = job["receipt"].get("inner")
 n = bytes(job["receipt"]["journal"]["bytes"][116:148]).hex()
@@ -55,6 +61,12 @@ if inner in ({"Test": "valid"}, {"Test": "other-n"}):
 print(json.dumps({"ok": False, "reason": "refused: the receipt does not verify (not a proof)"}))
 sys.exit(1)
 '''
+
+
+def _rows(path):
+    """The gateway's record of admitted N: {n: when its job left the inbox, or None}."""
+    with contextlib.closing(sqlite3.connect(path)) as db:
+        return {n: f for n, f in db.execute("SELECT n, final FROM admitted")}
 
 
 def free_port():
@@ -104,6 +116,7 @@ def main():
         "GASDROP_GLOBAL_PER_HOUR": "4", "GASDROP_GET_RATE": "0.001", "GASDROP_GET_BURST": "50",
         "GASDROP_VERIFY_RATE": "0.001", "GASDROP_VERIFY_BURST": "6", "GASDROP_CHECK": "", "GASDROP_CHECK_TIMEOUT": "2",
         "GATEWAY_PER_IP_INFLIGHT": "6", "FAUCET_STATE": str(tmp / "faucet"),
+        "GASDROP_ADMITTED": str(tmp / "admitted.sqlite"),
     })
     loader = importlib.machinery.SourceFileLoader("gateway", str(GW))
     spec = importlib.util.spec_from_loader("gateway", loader)
@@ -224,6 +237,72 @@ def main():
     c, _, b = call(base)
     check(c == 503 and "refilled" in json.loads(b)["error"], "paused: the terms answer 503 with the reason (the tool stops)")
     check(call(base, job(bytes([0x1a]) * 32))[0] == 503, "paused: a job is refused with 503")
+    terms.write_text(json.dumps(t))
+
+    # ---- the memory of admitted N (review round 2, R1), on fresh gateways with roomy caps ---------------------------
+    def load(name, extra):
+        os.environ.update(extra)
+        ld = importlib.machinery.SourceFileLoader(name, str(GW))
+        mod = importlib.util.module_from_spec(importlib.util.spec_from_loader(name, ld))
+        ld.exec_module(mod)
+        p = free_port()
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", p), mod.Handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        return mod, f"http://127.0.0.1:{p}/relayer/gas-drop"
+
+    inbox2, done2 = tmp / "inbox2", tmp / "done2"
+    inbox2.mkdir()
+    done2.mkdir()
+    roomy = {"GASDROP_INFO": str(terms), "GASDROP_INBOX": str(inbox2), "GASDROP_CHECK": f"{sys.executable} -I {checker}",
+             "GASDROP_MAX_PENDING": "10", "GASDROP_PER_IP_PER_DAY": "100", "GASDROP_PER_NET_PER_DAY": "100",
+             "GASDROP_GLOBAL_PER_HOUR": "100", "GASDROP_VERIFY_BURST": "100", "GASDROP_ADMITTED": str(tmp / "admitted2.sqlite"),
+             "GASDROP_ADMITTED_KEEP": "2", "GASDROP_ADMITTED_MAX": "3"}
+    g2, base2 = load("gateway2", roomy)
+    calls = pathlib.Path(str(checker) + ".calls")
+
+    def ncalls():
+        return len(calls.read_text().splitlines()) if calls.exists() else 0
+
+    def relayer_takes(n):  # the relayer moves the job out of the inbox (done or refused)
+        os.rename(inbox2 / f"gas-drop-{n.hex()}.json", done2 / f"gas-drop-{n.hex()}.json")
+
+    na = bytes([0x41]) * 32
+    c, _, _ = call(base2, job(na), {"X-Real-IP": next(ip)})
+    check(c == 202, "R1: a verified job admitted (fresh gateway)")
+    relayer_takes(na)
+    before = (ncalls(), len(g2.DROP_LIMITS.seen), len(list(inbox2.iterdir())))
+    c, _, b = call(base2, job(na), {"X-Real-IP": next(ip)})
+    check(c == 409 and "taken already" in json.loads(b)["error"] and "takenAt" in json.loads(b),
+          "R1: the same receipt re-posted after the relayer moved its job out of the inbox: 409 (taken already)")
+    check((ncalls(), len(g2.DROP_LIMITS.seen), len(list(inbox2.iterdir()))) == before,
+          "R1: that re-post ran no check, spent no cap and wrote nothing")
+    other = job(na)
+    other["oneTimeVpk"] = "0x03" + "ef" * 600
+    check(call(base2, other, {"X-Real-IP": next(ip)})[0] == 409, "R1: the same N with other one-time keys (a new receipt): 409")
+    codes = [call(base2, job(na), {"X-Real-IP": f"198.18.{k}.1"})[0] for k in range(20)]
+    check(codes == [409] * 20 and len(g2.DROP_LIMITS.seen) == 1,
+          "R1: twenty re-posts from twenty networks: all 409, the hourly cap still counts one job")
+    g3, base3 = load("gateway3", roomy)
+    check(call(base3, job(na), {"X-Real-IP": next(ip)})[0] == 409 and len(g3.DROP_LIMITS.seen) == 0,
+          "R1: after a restart (a new gateway on the same record, its in-memory caps empty) the re-post is still 409")
+    time.sleep(2.5)  # GASDROP_ADMITTED_KEEP 2 s after the job left the inbox
+    c, _, _ = call(base2, job(na), {"X-Real-IP": next(ip)})
+    check(c == 202 and ncalls() == before[0] + 1,
+          "R1: forgotten GASDROP_ADMITTED_KEEP after its job left the inbox: checked and admitted again")
+    nb, nc, nd = bytes([0x42]) * 32, bytes([0x43]) * 32, bytes([0x44]) * 32
+    for n in (nb, nc, nd):
+        check(call(base2, job(n), {"X-Real-IP": next(ip)})[0] == 202, f"R1: job {n.hex()[:4]}… admitted")
+        relayer_takes(n)
+        time.sleep(0.05)
+    def rows():
+        return _rows(roomy["GASDROP_ADMITTED"])
+
+    check(call(base2, job(nd), {"X-Real-IP": next(ip)})[0] == 409, "R1: a finished job re-posted while remembered: 409")
+    r = rows()
+    check(len(r) == 3 and nb.hex() not in r and r.get(na.hex(), "x") is None and nc.hex() in r and nd.hex() in r,
+          "R1: at most GASDROP_ADMITTED_MAX (3) rows: the oldest finished job forgotten first, the one still in the inbox kept")
+    check(call(base2, job(nb), {"X-Real-IP": next(ip)})[0] == 202 and len(rows()) == 3 and nc.hex() not in rows(),
+          "R1: the N the bound forgot is admitted again and the bound holds after the insert (the next oldest finished goes)")
     print(f"all {ok} checks passed")
 
 

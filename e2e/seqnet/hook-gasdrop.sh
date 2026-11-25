@@ -16,7 +16,8 @@
 #      refused by the gateway before it counts. Then the opt-out sent: `claim --no-gas-drop --send --yes` stops for want
 #      of native LEZ, nothing sent and nothing asked of the relayer. Then the claim with no setting: the guest fetched and
 #      checked, the receipt proven and posted, the relayer's sealed credit awaited, the claim sent paid by the one-time
-#      account; the user's private /0 still holds no native LEZ.
+#      account; the user's private /0 still holds no native LEZ; the same job posted again once the relayer finished it is
+#      answered 409 (the gateway remembers every N it admitted), nothing checked or counted.
 #   d. the burn: its dry run names the drop's one-time account; the opt-out names the user's own account; with the drop
 #      record set aside (no drop left), the burn stops while a relayer is published (it needs --no-gas-drop) or the
 #      network answers 429, and takes the own account only where none is published (404); then the burn with no setting,
@@ -53,7 +54,7 @@ start_gw() {
     GATEWAY_READ_RATE=100000 GATEWAY_READ_BURST=100000 GATEWAY_SEND_RATE=100 GATEWAY_SEND_BURST=100 GATEWAY_SEND_GLOBAL_RATE=100 \
     GATEWAY_SEND_GLOBAL_BURST=100 GATEWAY_BYTES_RATE=1000000000 GATEWAY_BYTES_BURST=1000000000 GATEWAY_BYTES_GLOBAL_RATE=1000000000 \
     GATEWAY_BYTES_GLOBAL_BURST=1000000000 GATEWAY_BYTES_SHARE=1 GATEWAY_MAX_RESPONSE=100000000 GATEWAY_MAX_LIST=100000 \
-    GATEWAY_PER_IP_INFLIGHT=32 GATEWAY_SOCKET_TIMEOUT=120 "$@" \
+    GATEWAY_PER_IP_INFLIGHT=32 GATEWAY_SOCKET_TIMEOUT=120 GASDROP_ADMITTED="$W/gasdrop/admitted-$name.sqlite" "$@" \
     python3 -I "$REPO/deploy/testnet/host/bin/ferrata-gateway" > "$W/gateway-$name.out" 2>&1 &
   echo $! >> "$W/gw.pids"
   for _ in $(seq 1 40); do curl -fsS -m 2 -o /dev/null "http://127.0.0.1:$port/rpc" 2>/dev/null && return 0; sleep 0.5; done
@@ -198,6 +199,22 @@ fact claim "$(jq -n --arg o "$ONE_TIME" --arg j "$JOB" --argjson d "${DROP:-null
 jq -e 'length > 0' "$U/lez-wallet/ferrata-gas-drops.json" > /dev/null 2>&1 \
   && ok "the drop is recorded beside the wallet (ferrata-gas-drops.json: N -> the one-time account and the inbox URL)" \
   || bad "no drop record beside the wallet"
+# The claim's own job posted again once the relayer has finished it (review round 2, R1): 409 before any check or cap.
+DONE_JOB="$(ls "$GD/state/done/"gas-drop-*.json 2>/dev/null | head -n 1)"
+JOBS_BEFORE="$(jl "$W/gasdrop.out" | jq -s '[.[] | select(.event == "job-done" or .event == "job-refused")] | length')"
+if [ -n "$DONE_JOB" ]; then
+  RC="$(curl -s -o "$W/repost.out" -w '%{http_code}' -H 'content-type: application/json' --data-binary @"$DONE_JOB" \
+    "http://127.0.0.1:$GWP/relayer/gas-drop")"
+  sleep 5
+  if [ "$RC" = 409 ] && grep -q 'taken already' "$W/repost.out" && [ -z "$(ls -A "$GD/inbox")" ] \
+     && [ "$(jl "$W/gasdrop.out" | jq -s '[.[] | select(.event == "job-done" or .event == "job-refused")] | length')" = "$JOBS_BEFORE" ]; then
+    ok "R1: the claim's own job posted again after the relayer finished it: 409 (taken already), nothing checked, counted or handed over"
+  else
+    bad "the re-post of the finished job: $RC $(head -c 200 "$W/repost.out")"
+  fi
+else
+  bad "no finished job in the relayer's done/ to post again"
+fi
 B1="$(balances)"
 fact user_after_claim "${B1:-null}"
 [ "$(echo "$B1" | jq -r '.public_0 + "/" + .private_0' 2>/dev/null)" = "0/0" ] \
