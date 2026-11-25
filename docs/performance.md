@@ -236,8 +236,11 @@ and **633.5 s**, 3.34M user cycles in 6 segments, r0vm peak **9.19 GiB** (contai
 transaction 255,366 B, each settled with the receipt verified and refused with one bit flipped
 ([`perf-p4-laptop.md`](../lez/results/perf-p4-laptop.md), 21 November 2026). The owner's step, rehearsed as the owner
 would run it in an 8-CPU, 16-GiB container: 1,110.8 s for the attestation, all three transactions settled, 50 minutes in
-all. **Gaps:** a run on a real mid-range laptop (the owner's step: `bench/perf/p4-laptop-owner.sh` on the staged bundle);
-a chain of hops (a 320-hop claim is estimated at about 58M accelerated user cycles).
+all. On the owner's laptop, below the declared minimum (8 of its 16 threads, `low-power` profile, other work on the
+other cores, its swap full): **4,596.7 s**, 9.17 GiB, settled ([`perf-p4-laptop.md`](../lez/results/perf-p4-laptop.md),
+25 November 2026). **Gaps:** a laptop at the declared minimum (in a low-power profile about 30–39 min an attestation,
+*estimated*); a chain of hops (a 320-hop claim is estimated at about 58M accelerated user cycles; a limit of 5 hops
+is proposed from derived figures, not declared).
 
 ### P.5 End-to-end attestation latency
 
@@ -533,6 +536,8 @@ verifier.
 | private claim and private burn of the merged program, padded as LEZ's wallet pads them (what a client sends) | claim **1,146.0 s** / **600.7 s**, burn **988.9 s** / **525.9 s** at 8 / 16 CPUs (medians of 2); LEZ's circuit about 0.98–0.99M user cycles more; peak 9.25 GiB | the same | [`p4-minimum`](../lez/results/p4-minimum/README.md), [EVIDENCE](EVIDENCE.md) row 38 |
 | LEZ's own wallet: its cheapest private transaction (the yardstick) | **991.7 s** / **488.6 s** at 8 / 16 CPUs; 2,851,842 user cycles | the same | [`p4-minimum`](../lez/results/p4-minimum/README.md), row 34 |
 | private claim and private burn, padded, under macOS (CPU only) | claim **818.7 s** / **453.5 s**, burn **716.5 s** / **396.1 s** on an M1 with 16 GB / an M4 (medians of 2); the release's succinct proof **31.7 s** / **18.4 s**; r0vm peak 9.26–9.45 GiB | Mac minis, macOS 15.8 | [`p4-macos`](../lez/results/p4-macos/README.md), row 88 |
+| private claim and private burn, padded (B1), on the owner's laptop | **3,313.4 s** and **2,802.0 s**; peak 9.17 GiB; both settled | the owner's laptop, below the declared minimum (8 of 16 threads, `low-power`) | [`perf-p4-laptop.md`](../lez/results/perf-p4-laptop.md), row 264 |
+| release, current image (`release_31`): the holder's succinct proof on the owner's laptop | **129.0 s**; peak 1.39 GiB; verified | the same laptop | [`perf-p4-laptop.md`](../lez/results/perf-p4-laptop.md), row 265 |
 | recovery scan | median 128.9 ms per 100,000 deposits, 1,308.6 ms per 1,000,000 | laptop CPU, one thread | [`bridge.md`](design/bridge.md) §18.3 |
 
 Declared minimum: 16 GB and 8 cores with 16 threads, x86-64, or an Apple M1 with 16 GB. The release's succinct proof needs the holder's burn
@@ -540,9 +545,11 @@ secret `sOut`, so it is the user's; the wrap takes only the succinct receipt, so
 ([`bridge.md`](design/bridge.md) §12.2, §12.3). **The deployed bridge program** (image `0xccde6171…`, before milestone B1), padded, at a
 mid-range laptop's shape (8 CPUs, 16 GiB hard) and at 16 CPUs: private claim **1,093.0 s** (941.1 and 1,245.0 s) and
 **639.2 s**, private burn **932.8 s** (820.9 and 1,044.7 s) and **534.5 s**, r0vm peak **9.19 GiB**, each transaction
-settled with its receipt verified ([`perf-p4-laptop.md`](../lez/results/perf-p4-laptop.md)). **Gaps:** a run on a real
-mid-range laptop (the owner's step, `bench/perf/p4-laptop-owner.sh`); the current program image on a GPU; the wrap on
-Apple Silicon (not supported today).
+settled with its receipt verified ([`perf-p4-laptop.md`](../lez/results/perf-p4-laptop.md)). On the owner's laptop,
+below the declared minimum (8 of 16 threads, `low-power`): this tree's claim **3,313.4 s**, burn **2,802.0 s**, 9.17
+GiB, the release's succinct proof **129.0 s**, 1.39 GiB. **Gaps:** an x86 laptop at the declared minimum (in a
+low-power profile about 30–39 min a proof, *estimated*); the current program image on a GPU; the wrap on Apple
+Silicon (not supported today).
 
 ### P.5 Latency: deposit to mint, burn to release
 
@@ -633,10 +640,10 @@ private transaction are LEZ's and not counted.
 
 ## Gaps, in one list
 
-User-side proofs on a real mid-range laptop (cloud containers held to a laptop's shape, Mac minis and a GPU are
-measured, and the owner's script rehearsed in a laptop-shaped container; the owner's run is
-`bench/perf/p4-laptop-owner.sh`: P.4 of both RFPs); `ferrata-attest` and `ferrata_attest_module` not measured, the §8
-`monitor` not measured (RFP-021 P.6); the bridge's actions (RFP-022's program), the soft-requirement programs
+User-side proofs on a laptop at the declared minimum (cloud containers at its shape, Mac minis and a GPU are
+measured, and the owner's laptop below it, 8 of its 16 threads: P.4 of both RFPs), and hops inside the user's proof
+(RFP-021 P.4: a limit of 5 hops proposed, not declared); `ferrata-attest` and `ferrata_attest_module` not measured,
+the §8 `monitor` not measured (RFP-021 P.6); the bridge's actions (RFP-022's program), the soft-requirement programs
 (`statements`, `rebate`) and the second consumer (`ferrata_holdings`) at different state sizes (programs of their own;
 every message of RFP-021's attestation program and of its reference consumer is measured, §P.9); A3's 100-update gate and its waste ratio on a sequencer (RFP-021 R.9, R.10); the importer's LEZ-side
 resources as a daemon and `ferrata_attestor` (RFP-022 P.6); v5's ERC-20 calls and refunds on Sepolia's gas rules

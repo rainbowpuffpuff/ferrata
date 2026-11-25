@@ -553,9 +553,9 @@ end-to-end test, which CI runs on every push (row 84).
 [`docs/not-built.md`](../not-built.md); at this commit)
 
 - a wallet integration beyond the mini-app; the anonymity-set view in a wallet (the `ferrata` tool shows it, §9);
-- the gas drop for burns and in the mini-app's claim: the relayer daemon's credit sealed to a one-time private
-  account, swept by the `ferrata` tool's claim that pays its fee from it, ran on LEZ v0.4.0-rc1's sequencer with
-  dev-mode proofs (EVIDENCE row 205), and with LEZ's wallet on v0.4.0-rc3 with real proofs (row 124);
+- the gas drop in the mini-app's claim and burn: the `ferrata` tool's claim and burn pay their LEZ fees from the
+  network's relayer by default on LEZ v0.4.0-rc1's sequencer with dev-mode proofs (EVIDENCE rows 205, 258), and a
+  private claim paid its fee from a relayer's sealed credit on v0.4.0-rc3 with real proofs (row 124);
 - the relayer's root imports on a running LEZ sequencer through its Logos module (the standalone daemon ran them:
   `e2e/runs/seqnet-robust-1/`; the module's ran on the mini-app's devnet: rows 106, 107);
 - a transfer that credits a private recipient privately (transfers between holders are built: rows 74, 75); the
@@ -563,8 +563,9 @@ end-to-end test, which CI runs on every push (row 84).
 - a deployment of the bridge program since milestone B1, whose nullifier and holder accounts keyed by the
   configuration close the two tenant issues of 18 November (row 136): built and tested, it needs a new vault; this
   tree's tools speak only its accounts (§9);
-- a user-side proof on a laptop: the private claim and burn were proven on cloud CPUs held to 8 and 16 cores and on
-  M1 and M4 Mac minis under macOS (rows 33, 88);
+- a user-side proof on a laptop at the declared minimum: the owner's laptop proved the claim and burn below it (8 of
+  its 16 threads: 55.2 and 46.7 min, row 264); at the minimum they were proven on cloud CPUs held to 8 and 16 cores
+  and on M1 and M4 Mac minis under macOS (rows 33, 88);
 - the mini-app's round trip inside Basecamp with its Ethereum side through Logos Core's own modules and Logos's
   approval app (`evm_signer_ui`): headless, its reads, signatures and sends go through them (EVIDENCE row 199); inside
   Basecamp, through a stand-in service;
