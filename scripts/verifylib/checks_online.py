@@ -308,3 +308,26 @@ def _gasdrop_terms(ctx):
     return [f"terms: relayer {relayer[:10]}…, guest {img[:16]}… (docs/image-ids.md: a gas-drop row), "
             f"{terms.get('amount')} native units a drop, covers {', '.join(terms.get('covers', []))}",
             f"the relayer's account holds {bal:,} native units ({bal // int(terms.get('amount') or 1):,} drops)"]
+
+
+@check(id="faucet-terms-online", family="lez-network", mode="online", evidence=(243, 248),
+       title="The test network's faucet publishes its terms, and its account holds what it says on chain",
+       what="the gateway's GET /faucet: its account, its balance, the grant and its limits",
+       against="the account's balance as the network's RPC serves it (getAccountBalance), at least the published "
+               "balance's order and many grants", inputs=())
+def _faucet_terms(ctx):
+    from . import lez
+    try:
+        req = urllib.request.Request(ctx.lez_url + "/faucet", headers={"User-Agent": "ferrata-verify/1",
+                                                                      "Accept": "application/json"})
+        terms = json.loads(urllib.request.urlopen(req, timeout=30).read())
+    except urllib.error.HTTPError as e:
+        raise CheckFailed(f"{ctx.lez_url}/faucet answered HTTP {e.code}") from e
+    except (urllib.error.URLError, TimeoutError, ValueError) as e:
+        raise Skipped(f"the gateway could not be read: {e}") from e
+    acct, grant = terms.get("faucet_account"), int(terms.get("amount", 0))
+    bal = lez.Rpc(ctx.lez_url + "/rpc", budget_s=60).call("getAccountBalance", [acct])
+    if not isinstance(bal, int) or grant <= 0 or bal < grant:
+        raise CheckFailed(f"the faucet {acct} holds {bal} on chain; a grant is {grant}")
+    return [f"faucet {acct[:10]}…: a grant of {grant:,} native units (1 LGO = 10^9), limits {terms.get('limits')}",
+            f"its balance on chain {bal:,} ({bal // grant:,} grants); published {int(terms.get('balance', 0)):,}"]
