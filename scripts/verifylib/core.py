@@ -116,6 +116,7 @@ class Ctx:
     # Tests only (the command line never sets it): run-record-online reads from this block instead of block 1, with
     # the instances the record's chain.json names, because a recorded fixture cannot start at the chain's genesis.
     record_from_block: int | None = None
+    github_api: str = "https://api.github.com"  # GitHub's public API (tests point it at a stand-in)
 
     def path(self, rel: str) -> Path:
         return self.root / rel

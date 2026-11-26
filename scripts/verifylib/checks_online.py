@@ -442,7 +442,7 @@ def _github_runs(ctx):
             problems.append(f"{run}: no longer cited by docs/requirements-status.md, docs/EVIDENCE.md or the release record")
             continue
         try:
-            req = urllib.request.Request(f"https://api.github.com/repos/{repo}/actions/runs/{run}",
+            req = urllib.request.Request(f"{ctx.github_api}/repos/{repo}/actions/runs/{run}",
                                          headers={"Accept": "application/vnd.github+json",
                                                   "User-Agent": "ferrata-verify/1"})
             d = json.loads(urllib.request.urlopen(req, timeout=30).read())

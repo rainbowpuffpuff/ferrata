@@ -762,6 +762,80 @@ class Faucet(unittest.TestCase):
         self.assertEqual(r.status, "FAIL", r.lines)
 
 
+class StandInEth:
+    """A JSON-RPC stand-in for an Ethereum chain on 127.0.0.1: eth_chainId, eth_blockNumber, and eth_call answered by
+    `call(to, data)`."""
+
+    def __init__(self, chain_id: int, call):
+        outer = self
+
+        class H(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def do_POST(self):
+                req = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+                m, prm = req["method"], req.get("params", [])
+                res = {"eth_chainId": hex(chain_id), "eth_blockNumber": "0x100"}.get(m)
+                if m == "eth_call":
+                    res = call(prm[0]["to"].lower(), prm[0]["data"])
+                body = json.dumps({"jsonrpc": "2.0", "id": req.get("id"), "result": res}).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+        self.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
+        self.url = f"http://127.0.0.1:{self.server.server_address[1]}"
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+
+    def close(self):
+        self.server.shutdown()
+
+
+class Families(TamperCase):
+    """One tamper test for each family whose checks wrap a script or read an endpoint: the check must fail on an
+    altered copy, or on a stand-in endpoint that answers what the documents say is not so."""
+
+    def test_docs_a_broken_link(self):
+        self.assertPasses("links")
+        t = overlay({"docs/VERIFY.md": lambda b: b + b"\n[a page that is not there](not-there.md)\n"})
+        self.assertFails("links", t)
+
+    def test_unit_an_unpinned_action(self):
+        self.assertPasses("unit-actions-pinned")
+        t = overlay({".github/workflows/verify-online.yml": sub(
+            "uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4", "uses: actions/checkout@v4")})
+        self.assertFails("unit-actions-pinned", t)
+
+    def test_sepolia_a_vault_reopened(self):
+        from verifylib import checks_online
+        reopened = next(iter(checks_online.VAULTS.values())).lower()
+        for addr, want in ((None, "PASS"), (reopened, "FAIL")):
+            eth = StandInEth(11155111, lambda to, data, a=addr: "0x" + ("0" * 63 + "1" if to == a else "0" * 64) * 3)
+            try:
+                r = run("sepolia-vaults-closed", ROOT, sepolia_rpc=[eth.url])
+            finally:
+                eth.close()
+            self.assertEqual(r.status, want, r.lines)
+
+    def test_github_a_conclusion_not_the_documents(self):
+        from verifylib import checks_online
+        runs = {f"/repos/{repo}/actions/runs/{run_id}": {"path": f".github/workflows/{wf}", "conclusion": want,
+                                                          "head_sha": (sha or "f" * 8) + "0" * 32}
+                for repo, run_id, wf, want, sha, _ in checks_online.GITHUB_RUNS}
+        api = StandInRpc({}, runs)
+        try:
+            self.assertEqual(run("github-ci-runs", ROOT, github_api=api.url).status, "PASS")
+            failed = next(k for k, v in runs.items() if v["conclusion"] == "failure")
+            api.files[failed]["conclusion"] = "success"  # a recorded failure reported as green
+            r = run("github-ci-runs", ROOT, github_api=api.url)
+            self.assertEqual(r.status, "FAIL", r.lines)
+        finally:
+            api.close()
+
+
 class LezRead(unittest.TestCase):
     """scripts/lez-read.py, the explorer's reads from a terminal, against the stand-in RPC and recorded blocks."""
 
