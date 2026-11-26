@@ -11,12 +11,13 @@ import {MockERC20} from "./mocks/MockTokens.sol";
 import {ReferenceMerkle} from "./utils/ReferenceMerkle.sol";
 import {VaultTestBase} from "./utils/VaultTestBase.sol";
 
-/// @notice v5, D13 fees (proposal §B4): a deposit escrows its denomination plus the mint and relay fees of the
-///         schedule in force; a release pays the denomination less the relay, burn and checkpoint fees, the burn fee
-///         credited to the fee recipient and the checkpoint fee to the root's prover; protocol fees start at zero
-///         under a 1% ceiling and change seven days after they are announced; a deposit keeps the schedule of its leaf
-///         index. Expected amounts and published hashes are worked out here from the written rules (and the hashes
-///         from bridge-wire's byte layout), not read back from the vault.
+/// @notice v5, D13 fees (proposal §B4, amended for F.13): a deposit pays its denomination plus the mint and relay
+///         fees of the schedule in force, credits the mint fee to the fee recipient through `owed`, and escrows the
+///         denomination and relay fee; a release pays the denomination less the relay, burn and checkpoint fees, the
+///         burn fee credited to the fee recipient and the checkpoint fee to the root's prover. Protocol fees start at
+///         zero under a 1% ceiling and change seven days after announcement. Expected amounts and published hashes are
+///         worked out here from the written rules (and the hashes from bridge-wire's byte layout), not read back from
+///         the vault.
 contract FeesTest is VaultTestBase {
     /// A token registered at a fixed address, so the published slots have known answers (fee_vectors.py).
     address internal constant FEE_TOKEN = address(0xF00D);
@@ -128,9 +129,7 @@ contract FeesTest is VaultTestBase {
         return vm.load(address(vault), _feeSlot(FEE_TOKEN, index));
     }
 
-    function _announce(uint256[] memory mintFees, uint256[] memory burnFees, uint256[] memory checkpointFees)
-        internal
-    {
+    function _announce(uint256[] memory mintFees, uint256[] memory burnFees, uint256[] memory checkpointFees) internal {
         vm.prank(admin);
         vault.announceFees(FEE_TOKEN, mintFees, burnFees, checkpointFees);
     }
@@ -372,6 +371,9 @@ contract FeesTest is VaultTestBase {
         vm.prank(alice);
         vault.deposit(FEE_TOKEN, 0, keccak256("leaf 1"), 1); // leaf 1, the first under schedule 1
         assertEq(t.balanceOf(address(vault)), 2 * D0 + 2 * RELAY0 + 1e16);
+        assertEq(vault.escrowed(FEE_TOKEN), 2 * D0 + 2 * RELAY0);
+        assertEq(vault.owed(feeRecipient, FEE_TOKEN), 1e16);
+        assertEq(vault.totalOwed(FEE_TOKEN), 1e16);
         assertEq(_published(1), h);
         uint64 pendingAt;
         (current, pendingAt) = vault.feeState(FEE_TOKEN);
@@ -483,11 +485,11 @@ contract FeesTest is VaultTestBase {
         assertEq(current, 1);
     }
 
-    // ---- a deposit keeps the schedule of its leaf index -----------------------------------------------------------
+    // ---- refunds after fee changes ---------------------------------------------------------------------------------
 
-    /// @notice Deposits under schedules 0, 1 and 2, among other tokens' leaves, are refunded exactly what each
-    ///         escrowed: the denomination, the relay fee and the mint fee of the schedule of its leaf index.
-    function test_feeChange_aRefundReturnsTheEscrowOfItsLeafsSchedule() public {
+    /// @notice Deposits under schedules 0, 1 and 2, among other tokens' leaves, are refunded exactly their escrow:
+    ///         denomination + fixed relay fee. Every mint fee was credited at deposit and stays owed to feeRecipient.
+    function test_feeChange_refundsExcludeMintFeesPaidUnderDifferentSchedules() public {
         uint64 at = uint64(block.timestamp);
         _depositExactly(alice, 1, D1 + RELAY1); // leaf 0: schedule 0
         _announce(_two(1e16, 1e17), _two(0, 0), _two(0, 0));
@@ -509,20 +511,23 @@ contract FeesTest is VaultTestBase {
         _finalizeAfterDelta(c);
         vm.warp(block.timestamp + REVOKE_WINDOW + 1);
 
-        uint256[5] memory expected = [D1 + RELAY1, D1 + 1e17 + RELAY1, 0, D0 + 1e16 + RELAY0, D1 + 3e16 + RELAY1];
+        uint256[5] memory expected = [D1 + RELAY1, D1 + RELAY1, 0, D0 + RELAY0, D1 + RELAY1];
         for (uint64 i = 0; i < 5; i++) {
             if (i == 2) continue;
             address who = _leafData[i].depositor;
             uint256 before = t.balanceOf(who);
             _refundLeaf(i);
             assertEq(t.balanceOf(who) - before, expected[i]);
+            assertGe(t.balanceOf(address(vault)), vault.escrowed(FEE_TOKEN) + vault.totalOwed(FEE_TOKEN));
         }
         assertEq(vault.escrowed(FEE_TOKEN), 0);
+        assertEq(vault.totalOwed(FEE_TOKEN), 14e16);
+        assertEq(t.balanceOf(address(vault)), vault.totalOwed(FEE_TOKEN));
     }
 
-    /// @notice A refund finds its leaf's schedule among four (vault/MUTATION.md, Gambit registry-283: with three
-    ///         schedules at most, a binary search that sets `high = 1` instead of `high = mid` still lands right).
-    function test_feeChange_aRefundFindsItsLeafsScheduleAmongFour() public {
+    /// @notice Four schedules do not change the refund rule: each leaf returns the same fixed relay fee plus its
+    ///         denomination, never the different mint fee in force when it was deposited.
+    function test_feeChange_refundsAcrossFourSchedulesExcludeEveryMintFee() public {
         uint64 at = uint64(block.timestamp);
         _depositExactly(alice, 1, D1 + RELAY1); // leaf 0: schedule 0
         _announce(_two(1e16, 1e17), _two(0, 0), _two(0, 0));
@@ -542,14 +547,239 @@ contract FeesTest is VaultTestBase {
         _finalizeAfterDelta(c);
         vm.warp(block.timestamp + REVOKE_WINDOW + 1);
 
-        uint256[4] memory expected = [D1 + RELAY1, D1 + 1e17 + RELAY1, D1 + 3e16 + RELAY1, D1 + 2e16 + RELAY1];
         for (uint64 i = 0; i < 4; i++) {
             address who = _leafData[i].depositor;
             uint256 before = t.balanceOf(who);
             _refundLeaf(i);
-            assertEq(t.balanceOf(who) - before, expected[i]);
+            assertEq(t.balanceOf(who) - before, D1 + RELAY1);
+            assertEq(t.balanceOf(address(vault)), vault.escrowed(FEE_TOKEN) + vault.totalOwed(FEE_TOKEN));
         }
         assertEq(vault.escrowed(FEE_TOKEN), 0);
+        assertEq(vault.totalOwed(FEE_TOKEN), 15e16);
+        assertEq(t.balanceOf(address(vault)), vault.totalOwed(FEE_TOKEN));
+    }
+
+    // ---- mint fees are collected on Ethereum at deposit ------------------------------------------------------------
+
+    uint256 internal constant MINT0 = 1e16;
+    uint256 internal constant ETH_MINT1 = 1e15;
+
+    struct DepositSnapshot {
+        uint256 payer;
+        uint256 vaultBalance;
+        uint256 escrow;
+        uint256 owed;
+        uint256 payerOwed;
+        uint256 totalOwed;
+        uint256 feeRecipientBalance;
+    }
+
+    /// @dev One independently calculated deposit: payer debit, whole-vault balance delta, escrow and pull-payment
+    ///      ledger deltas, no credit to the payer, and exactly the expected Deposit and OwedCredited events.
+    function _assertDeposit(
+        address who,
+        address token,
+        uint8 denomIndex,
+        uint256 denomination,
+        uint256 relayFee,
+        uint256 mintFee
+    ) internal {
+        uint256 total = denomination + relayFee + mintFee;
+        if (token == ETH) {
+            vm.deal(who, who.balance + total);
+        } else {
+            require(token == FEE_TOKEN, "helper supports the fee token and ETH");
+            t.mint(who, total);
+            vm.prank(who);
+            t.approve(address(vault), total);
+        }
+        uint64 index = vault.depositCount(who);
+        uint64 leafIndex = vault.nextLeafIndex();
+        bytes32 commitment = keccak256(abi.encode("mint fee deposit", token, who, nonce++));
+        DepositSnapshot memory before = DepositSnapshot({
+            payer: _balance(token, who),
+            vaultBalance: _balance(token, address(vault)),
+            escrow: vault.escrowed(token),
+            owed: vault.owed(feeRecipient, token),
+            payerOwed: vault.owed(who, token),
+            totalOwed: vault.totalOwed(token),
+            feeRecipientBalance: _balance(token, feeRecipient)
+        });
+
+        if (mintFee != 0) {
+            vm.expectEmit(true, true, true, true, address(vault));
+            emit FerrataVault.OwedCredited(feeRecipient, token, mintFee);
+        }
+        vm.expectEmit(true, true, true, true, address(vault));
+        emit FerrataVault.Deposit(who, index, leafIndex, token, denomination, commitment);
+        vm.recordLogs();
+        vm.prank(who);
+        if (token == ETH) {
+            vault.depositETH{value: total}(denomIndex, commitment, index);
+        } else {
+            vault.deposit(token, denomIndex, commitment, index);
+        }
+
+        _assertMintCreditEventCount(mintFee);
+        _assertDepositEffects(who, token, denomination, relayFee, mintFee, total, before);
+    }
+
+    function _assertMintCreditEventCount(uint256 mintFee) internal {
+        uint256 credits;
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].emitter == address(vault) && logs[i].topics[0] == FerrataVault.OwedCredited.selector) {
+                credits++;
+            }
+        }
+        assertEq(credits, mintFee == 0 ? 0 : 1, "one credit only for a nonzero mint fee");
+    }
+
+    function _assertDepositEffects(
+        address who,
+        address token,
+        uint256 denomination,
+        uint256 relayFee,
+        uint256 mintFee,
+        uint256 total,
+        DepositSnapshot memory before
+    ) internal view {
+        assertEq(before.payer - _balance(token, who), total, "payer debit");
+        assertEq(_balance(token, address(vault)) - before.vaultBalance, total, "vault balance delta");
+        assertEq(vault.escrowed(token) - before.escrow, denomination + relayFee, "escrow excludes mint fee");
+        assertEq(vault.owed(feeRecipient, token) - before.owed, mintFee, "feeRecipient credit");
+        assertEq(vault.totalOwed(token) - before.totalOwed, mintFee, "totalOwed delta");
+        assertEq(vault.owed(who, token), before.payerOwed, "never credit the depositor");
+        assertEq(_balance(token, feeRecipient), before.feeRecipientBalance, "no push payment");
+        assertEq(_balance(token, address(vault)), vault.escrowed(token) + vault.totalOwed(token));
+    }
+
+    function _announceEthMintFee(uint256 mintFee) internal {
+        vm.prank(admin);
+        vault.announceFees(ETH, _threeAt1(mintFee), _three(0), _three(0));
+    }
+
+    /// @notice ERC-20 under schedule 0 emits no fee credit. A pending change does not apply early; at its due second
+    ///         the debit grows by its mint fee, while escrow still grows by denomination + relay only.
+    function test_deposit_erc20BeforeAndAfterAnnouncedMintFeeChange() public {
+        uint64 announcedAt = uint64(block.timestamp);
+        _assertDeposit(alice, FEE_TOKEN, 0, D0, RELAY0, 0);
+        _announce(_two(MINT0, 0), _two(0, 0), _two(0, 0));
+        vm.warp(announcedAt + FEE_NOTICE - 1);
+        _assertDeposit(bob, FEE_TOKEN, 0, D0, RELAY0, 0);
+        vm.warp(announcedAt + FEE_NOTICE);
+        _assertDeposit(alice, FEE_TOKEN, 0, D0, RELAY0, MINT0);
+    }
+
+    /// @notice The same boundaries and exact accounting for native ETH, on the default registrations' denomination 1.
+    function test_deposit_ethBeforeAndAfterAnnouncedMintFeeChange() public {
+        uint256 relayFee = 1 ether / 500;
+        uint64 announcedAt = uint64(block.timestamp);
+        _assertDeposit(alice, ETH, 1, 1 ether, relayFee, 0);
+        _announceEthMintFee(ETH_MINT1);
+        vm.warp(announcedAt + FEE_NOTICE - 1);
+        _assertDeposit(bob, ETH, 1, 1 ether, relayFee, 0);
+        vm.warp(announcedAt + FEE_NOTICE);
+        _assertDeposit(alice, ETH, 1, 1 ether, relayFee, ETH_MINT1);
+    }
+
+    function test_deposit_feeRecipientClaimsAccumulatedErc20MintFees() public {
+        _announce(_two(MINT0, 0), _two(0, 0), _two(0, 0));
+        vm.warp(block.timestamp + FEE_NOTICE);
+        _assertDeposit(alice, FEE_TOKEN, 0, D0, RELAY0, MINT0);
+        _assertDeposit(bob, FEE_TOKEN, 0, D0, RELAY0, MINT0);
+
+        vm.expectEmit(true, true, true, true, address(vault));
+        emit FerrataVault.OwedClaimed(feeRecipient, FEE_TOKEN, 2 * MINT0);
+        vm.prank(feeRecipient);
+        vault.claimOwed(FEE_TOKEN);
+        assertEq(t.balanceOf(feeRecipient), 2 * MINT0);
+        assertEq(vault.owed(feeRecipient, FEE_TOKEN), 0);
+        assertEq(vault.totalOwed(FEE_TOKEN), 0);
+        assertEq(t.balanceOf(address(vault)), vault.escrowed(FEE_TOKEN));
+    }
+
+    function test_deposit_feeRecipientClaimsAccumulatedEthMintFees() public {
+        uint256 relayFee = 1 ether / 500;
+        _announceEthMintFee(ETH_MINT1);
+        vm.warp(block.timestamp + FEE_NOTICE);
+        _assertDeposit(alice, ETH, 1, 1 ether, relayFee, ETH_MINT1);
+        _assertDeposit(bob, ETH, 1, 1 ether, relayFee, ETH_MINT1);
+
+        vm.expectEmit(true, true, true, true, address(vault));
+        emit FerrataVault.OwedClaimed(feeRecipient, ETH, 2 * ETH_MINT1);
+        vm.prank(feeRecipient);
+        vault.claimOwed(ETH);
+        assertEq(feeRecipient.balance, 2 * ETH_MINT1);
+        assertEq(vault.owed(feeRecipient, ETH), 0);
+        assertEq(vault.totalOwed(ETH), 0);
+        assertEq(address(vault).balance, vault.escrowed(ETH));
+    }
+
+    /// @notice Collection never pushes ETH: even a fee recipient reverting on every receive cannot block or tax a
+    ///         deposit. It can open its receiver later and withdraw the accumulated mint fee itself.
+    function test_deposit_revertingEthFeeRecipientDoesNotBlockDeposit() public {
+        ToggleRecipient rejectingFeeRecipient = new ToggleRecipient();
+        FerrataVault.Deployment memory d = _deployment(IRiscZeroVerifier(address(estop)), LEZ_CONFIG_ID);
+        d.feeRecipient = address(rejectingFeeRecipient);
+        FerrataVault v = new FerrataVault(d);
+        vm.startPrank(admin);
+        v.registerToken(ETH, _params(_denoms(0.1 ether, 1 ether, 10 ether), 1e12, 3000));
+        v.announceFees(ETH, _threeAt1(ETH_MINT1), _three(0), _three(0));
+        vm.stopPrank();
+        vm.warp(block.timestamp + FEE_NOTICE);
+
+        uint256 relayFee = 1 ether / 500;
+        uint256 total = 1 ether + relayFee + ETH_MINT1;
+        vm.deal(alice, total);
+        vm.prank(alice);
+        v.depositETH{value: total}(1, keccak256("unblocked"), 0);
+        assertEq(address(rejectingFeeRecipient).balance, 0);
+        assertEq(v.owed(address(rejectingFeeRecipient), ETH), ETH_MINT1);
+        assertEq(v.totalOwed(ETH), ETH_MINT1);
+        assertEq(v.escrowed(ETH), 1 ether + relayFee);
+        assertEq(address(v).balance, total);
+
+        rejectingFeeRecipient.setOpen(true);
+        rejectingFeeRecipient.claim(address(v), ETH);
+        assertEq(address(rejectingFeeRecipient).balance, ETH_MINT1);
+        assertEq(address(v).balance, v.escrowed(ETH));
+    }
+
+    /// @notice An ETH leaf from each side of a schedule change returns denomination + fixed relay fee only; the
+    ///         mint-fee liability remains fully backed after all escrows have been refunded.
+    function test_refund_ethAcrossSchedulesExcludesMintFeeAndKeepsFeeLedgerBacked() public {
+        uint256 relayFee = 1 ether / 500;
+        bytes32[2] memory commitments = [keccak256("eth refund 0"), keccak256("eth refund 1")];
+        _deposit(alice, ETH, 1, commitments[0]);
+        leaves.push(_leafHash(0, alice, ETH, 1 ether, commitments[0]));
+        _announceEthMintFee(ETH_MINT1);
+        vm.warp(block.timestamp + FEE_NOTICE);
+        _deposit(bob, ETH, 1, commitments[1]);
+        leaves.push(_leafHash(1, bob, ETH, 1 ether, commitments[1]));
+        assertEq(vault.totalOwed(ETH), ETH_MINT1);
+
+        vm.prank(freezer);
+        vault.retire();
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(vault, ROOT, 0, true);
+        _submit(c);
+        _finalizeAfterDelta(c);
+        vm.warp(block.timestamp + REVOKE_WINDOW + 1);
+        address[2] memory depositors = [alice, bob];
+        for (uint64 i = 0; i < 2; i++) {
+            bytes32[] memory siblings = ReferenceMerkle.path(leaves, i);
+            bytes32[32] memory path;
+            for (uint256 h = 0; h < 32; h++) {
+                path[h] = siblings[h];
+            }
+            uint256 before = depositors[i].balance;
+            vault.refund(i, depositors[i], ETH, 1, commitments[i], path);
+            assertEq(depositors[i].balance - before, 1 ether + relayFee);
+            assertGe(address(vault).balance, vault.escrowed(ETH) + vault.totalOwed(ETH));
+        }
+        assertEq(vault.escrowed(ETH), 0);
+        assertEq(vault.totalOwed(ETH), ETH_MINT1);
+        assertEq(address(vault).balance, ETH_MINT1);
     }
 
     // ---- releases -------------------------------------------------------------------------------------------------
@@ -736,11 +966,14 @@ contract FeesTest is VaultTestBase {
         assertEq(vb.owed(feeRecipient, FEE_TOKEN), 0);
     }
 
-    // ---- caps count the whole escrow movement ---------------------------------------------------------------------
+    // ---- caps count the whole amount paid ---------------------------------------------------------------------------
 
-    /// @notice The deposit buckets count what the deposit escrows (denomination and fees), which is what LEZ mints.
-    function test_caps_depositBucketsCountTheWholeEscrow() public {
-        uint256 total = D0 + RELAY0;
+    /// @notice The deposit buckets still count denomination + mint fee + relay fee even though only denomination +
+    ///         relay fee is escrowed and the mint fee is owed to the fee recipient.
+    function test_caps_depositBucketsCountTheWholePaymentIncludingMintFee() public {
+        _announce(_two(1e16, 0), _two(0, 0), _two(0, 0));
+        vm.warp(block.timestamp + FEE_NOTICE);
+        uint256 total = D0 + 1e16 + RELAY0;
         uint256 units = total / 1e12 * 2000; // value units: per lezUnit, the unit weight
         t.mint(alice, total);
         vm.prank(alice);
@@ -768,11 +1001,14 @@ contract FeesTest is VaultTestBase {
         (,, uint256 globalLeft) = vault.globalCap(FerrataVault.Direction.Deposit);
         assertEq(available, 0);
         assertEq(globalLeft, 0);
+        assertEq(vault.escrowed(FEE_TOKEN), D0 + RELAY0);
+        assertEq(vault.totalOwed(FEE_TOKEN), 1e16);
     }
 
     // ---- the arithmetic over the whole fee range ------------------------------------------------------------------
 
-    /// @notice Any schedule within the ceiling: the deposit escrows denomination + mint + relay, and the release
+    /// @notice Any schedule within the ceiling: the deposit pays denomination + mint + relay but escrows only
+    ///         denomination + relay, credits mint to feeRecipient, and the release
     ///         pays the denomination less burn, checkpoint and (if named) relay, the parts adding up to it.
     function testFuzz_feeArithmetic(uint256 mintUnits, uint256 burnFee, uint256 checkpointFee, bool withRelay) public {
         uint256 mintFee = bound(mintUnits, 0, D1 / 100 / 1e12) * 1e12;
@@ -786,8 +1022,9 @@ contract FeesTest is VaultTestBase {
         uint256 relayPaid = withRelay ? RELAY1 : 0;
         assertEq(t.balanceOf(recipient), D1 - burnFee - checkpointFee - relayPaid);
         assertEq(t.balanceOf(relayer), relayPaid);
-        assertEq(vault.owed(feeRecipient, FEE_TOKEN), burnFee);
+        assertEq(vault.owed(feeRecipient, FEE_TOKEN), mintFee + burnFee);
         assertEq(vault.owed(address(this), FEE_TOKEN), checkpointFee);
-        assertEq(vault.escrowed(FEE_TOKEN), mintFee + RELAY1); // backs what the claim minted besides the denomination
+        assertEq(vault.escrowed(FEE_TOKEN), RELAY1); // the claim mints only the relay fee besides the denomination
+        assertEq(t.balanceOf(address(vault)), vault.escrowed(FEE_TOKEN) + vault.totalOwed(FEE_TOKEN));
     }
 }

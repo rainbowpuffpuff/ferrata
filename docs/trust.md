@@ -714,7 +714,7 @@ transaction dumps of [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §3 and
 | timing | deposit-to-claim and burn-to-release intervals | the client proposes a delay (the `ferrata` tool and the mini-app: a claim delay of 1–12 h from the seed, a random release delay; EVIDENCE rows 84, 86) |
 | the root a claim reads | the deposit is at least that old | read the newest root |
 | a retry after a cap rejection | the first attempt's time | the client checks caps before proving |
-| a fee-schedule change | splits sets by date: the claim's fee range shows which schedule applied | schedules change rarely, with 7 days' notice |
+| a fee-schedule change | before ADR 0046 it split sets by date through the claim's public fee range; the paired claim now has no schedule range or mint-fee amount, though timing/root correlations remain | mint fee credited on Ethereum at deposit; schedules change rarely, with 7 days' notice |
 | the fee payer of a private transaction | the payer appears as a fresh alias with its reserve in plaintext; a first claim funded from a faucet or a purchase links to that source until the gas drop exists | fixed reserve per operation type; the gas drop: its receipt and the relayer's one credit per `N` (EVIDENCE rows 47, 48), and the credit sealed to a one-time private account and swept by the claim, with LEZ's wallet on v0.4.0-rc3 (row 124; in the relayer daemon and the `ferrata` tool on LEZ v0.4.0-rc1's sequencer with dev-mode proofs, row 205) |
 | a private read of a record | which record and which consumer program | read the newest record; hop inside the proof |
 | the plaintext claim | which deposit paid which mint | private by default; the client warns before allowing it |
