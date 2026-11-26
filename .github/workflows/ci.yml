@@ -568,6 +568,10 @@ jobs:
       # again from its files, offline (modules/results/live-testnet-2026-11-23/).
       - name: The live test-network record's figures and checks recomputed (modules/scripts/test_live_testnet.py)
         run: python3 -I modules/scripts/test_live_testnet.py
+      # RFP-022 P.6: the rule (B) attestor's CPU, memory and bytes read per round, summarized from a zone run's records
+      # (checkpoint/attestor/resources.py; zone-bridge.sh times every round).
+      - name: The attestor's resources from a run's records (checkpoint/attestor/test_resources.py)
+        run: python3 -I checkpoint/attestor/test_resources.py
       # RFP-022 U.5, Priv.7: the test network's gateway publishing its gas-drop relayer: the terms (404 only when none
       # are published), the inbox's checks, a job's receipt verified before it counts against any cap, no address or
       # nullifier in its log (deploy/testnet/host/bin/ferrata-gateway, standard library only).
