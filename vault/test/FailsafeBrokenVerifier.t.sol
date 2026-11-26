@@ -1,33 +1,39 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 pragma solidity ^0.8.26;
 
+import {IRiscZeroVerifier as IRiscZeroVerifierFull, Receipt as RiscZeroReceipt} from "risc0/IRiscZeroVerifier.sol";
+
 import {FerrataVault} from "../src/FerrataVault.sol";
 import {BrokenVerifierSetup} from "./invariant/BrokenVerifierInvariants.t.sol";
 import {ToggleRecipient} from "./mocks/MockRecipients.sol";
 import {MockERC20} from "./mocks/MockTokens.sol";
+import {NoExploitVerifier} from "./mocks/NoExploitVerifier.sol";
 import {ReferenceMerkle} from "./utils/ReferenceMerkle.sol";
 
-/// @title A broken verifier with no published proof of exploit, so the stop cannot be tripped (RFP-022 Security #9;
-///        ADR 0033, `vault/MIGRATION.md` section 4's fourth case and section 5's last paragraph)
-/// @notice The premise of every test here: the vault's verifier is unsound - the stand-in accepts every seal, so a
-///         forged checkpoint or a forged release verifies exactly as an honest proof does - but RISC Zero has
-///         published no proof of exploit, so `estop(receipt)` has no receipt to feed it and the emergency stop stays
-///         untripped (`brokenStop.paused()` is asserted false throughout). That is the case of RISC Zero's advisory
-///         GHSA-mm6c-35cm-g4x2 on the four Sepolia vaults. What the tests show is what the runbook of ADR 0033 holds,
-///         and why no escrow-moving exit exists in it:
+/// @title A broken verifier with no proof of exploit, so the stop is not tripped (RFP-022 Security #9; ADR 0033,
+///        `vault/MIGRATION.md` section 4's fourth case and section 5's last paragraph)
+/// @notice The premise of every test here: the vault's verifier is unsound - the stand-in (NoExploitVerifier) accepts
+///         every seal, so a forged checkpoint or a forged release verifies exactly as an honest proof does - but it
+///         verifies no receipt of the all-zero claim digest, so `estop(receipt)` refuses every receipt and the
+///         emergency stop stays untripped (test_brokenNoStop_aJunkReceiptDoesNotTripTheStop; `brokenStop.paused()` is
+///         asserted false throughout). That models RISC Zero's advisory GHSA-mm6c-35cm-g4x2 on the four Sepolia
+///         vaults, where no proof of exploit was published. What the tests show is what the runbook of ADR 0033
+///         holds, and why no escrow-moving exit exists in it:
 ///
 ///         - the freeze authority's freezes (releases, globally, which holds refunds too, checkpoints, deposits)
 ///           hold a forged release against an accepted root and the finalisation of a forged candidate submitted
 ///           before the freeze, while the freezes are renewed; a lapse reopens both forged paths;
 ///         - the admin's zeroed caps (the only containment the Sepolia vaults had, their freeze authority holding no
-///           key) refuse the forged release, a refund and new deposits;
-///         - no role has a function that moves escrow to an address of its choice;
+///           key, and their release floor zero) refuse the forged release, a refund and new deposits; at a nonzero
+///           floor the caps only slow a forged release, and the release freeze stops it (FailsafeBrokenVerifierFloorTest);
+///         - no role's function, of those called here (the others are named in the test), moves escrow to an address
+///           of its choice;
 ///         - the refund boundary is set by a finalised checkpoint, so under a broken verifier a forged sunset can
 ///           make a leaf LEZ imported and claimed refundable on Ethereum - the double spend that rules refunds out
 ///           as the exit, and why the runbook uses the global release freeze, not the per-token freezes the
 ///           guest-bug runbook uses (`MigrationFailsafe.t.sol`);
 ///         - an `owed` balance stays claimable by its own payee: the one thing that still moves.
-contract FailsafeBrokenVerifierTest is BrokenVerifierSetup {
+abstract contract FailsafeBrokenVerifierBase is BrokenVerifierSetup {
     bytes internal constant JUNK = hex"6a756e6b";
     bytes32 internal constant ROOT0 = keccak256("an honest burn root, finalised before the advisory");
     bytes32 internal constant ROOT1 = keccak256("a forged burn root, candidate when the advisory lands");
@@ -41,12 +47,18 @@ contract FailsafeBrokenVerifierTest is BrokenVerifierSetup {
         uint8 denomIndex;
         bytes32 commitment;
     }
+
     Leaf[] internal leafData;
     bytes32[] internal leaves;
 
     function setUp() public override {
         super.setUp();
         _deployBroken();
+    }
+
+    /// @dev Unsound, but with no proof of exploit: the stop in front of it cannot be tripped by a receipt.
+    function _brokenVerifier() internal override returns (IRiscZeroVerifierFull) {
+        return IRiscZeroVerifierFull(address(new NoExploitVerifier()));
     }
 
     // ------------------------------------------------------------------------------------------------------------
@@ -149,6 +161,25 @@ contract FailsafeBrokenVerifierTest is BrokenVerifierSetup {
         vault.setDepositsFrozen(true);
         vault.retire();
         vm.stopPrank();
+    }
+}
+
+contract FailsafeBrokenVerifierTest is FailsafeBrokenVerifierBase {
+    // ------------------------------------------------------------------------------------------------------------
+    // The premise: forgeries verify, the stop does not trip
+    // ------------------------------------------------------------------------------------------------------------
+
+    /// @notice The stand-in's premise, checked: a junk receipt of the all-zero claim digest does not trip the stop
+    ///         (no proof of exploit), a receipt of any other digest is not a proof of exploit at all, and a forged
+    ///         seal for any image and journal still verifies through the untripped stop.
+    function test_brokenNoStop_aJunkReceiptDoesNotTripTheStop() public {
+        vm.prank(attacker);
+        vm.expectRevert(NoExploitVerifier.NoProofOfExploit.selector);
+        brokenStop.estop(RiscZeroReceipt({seal: JUNK, claimDigest: bytes32(0)}));
+        vm.expectRevert(); // RiscZeroVerifierEmergencyStop.InvalidProofOfExploit
+        brokenStop.estop(RiscZeroReceipt({seal: JUNK, claimDigest: keccak256("another claim")}));
+        assertFalse(brokenStop.paused(), "no proof of exploit: the stop does not trip");
+        brokenStop.verify(JUNK, keccak256("any image"), keccak256("any journal"));
     }
 
     // ------------------------------------------------------------------------------------------------------------
@@ -259,8 +290,9 @@ contract FailsafeBrokenVerifierTest is BrokenVerifierSetup {
         uint256 taken = attacker.balance;
         assertGt(taken, 0);
 
-        // the admin zeroes the release caps (per token and globally; this test bed's immutable floor is zero) and
-        // the deposit caps
+        // the admin zeroes the release caps (per token and globally; this test bed's immutable floor is zero, as on
+        // the four Sepolia vaults - at a nonzero floor caps cannot stop a release: FailsafeBrokenVerifierFloorTest)
+        // and the deposit caps
         vm.startPrank(admin);
         vault.setTokenCap(ETH, FerrataVault.Direction.Release, 0, 0);
         vault.setGlobalCap(FerrataVault.Direction.Release, 0, 0);
@@ -384,10 +416,16 @@ contract FailsafeBrokenVerifierTest is BrokenVerifierSetup {
         return keccak256(abi.encode(vaultSide, ethSide, tokenSide));
     }
 
-    /// @notice Under the runbook, with the stop untripped, no role has a function that moves escrow to an address of
-    ///         its choice: the forged release and the forged checkpoint are refused for every caller, a refund is
+    /// @notice Under the runbook, with the stop untripped, no role's function called here moves escrow to an address
+    ///         of its choice: the forged release and the forged checkpoint are refused for every caller, a refund is
     ///         held by the global release freeze, `claimOwed` pays a payee only its own balance and only to itself,
-    ///         every admin function moves nothing, and a raw send is refused. What the freeze authority can do is
+    ///         the admin's registration, fee, listing, cap, delay and `delta` functions, the freeze authority's
+    ///         per-token freezes, cancellation and lifting, a watcher's pause, the admin handover and the timelocked
+    ///         role change (applied by anyone) and a due fee schedule move nothing, and a raw send is refused. Not
+    ///         called here: `revokeFrom` (test_brokenNoStop_aForgedSunsetMakesAnImportedLeafRefundable calls it;
+    ///         it marks roots revoked and pays nobody, FerrataVault.sol:1048-1063). That `refund` pays the leaf's
+    ///         depositor is not what this test checks (every refund here is frozen before it pays): the refund
+    ///         suites do (MigrationFailsafe.t.sol). What the freeze authority can do is
     ///         lift a freeze, which reopens the permissionless forged path for whoever forges first - a lapse, not
     ///         a redirect to an address of its choice, and why the runbook renews the freezes and never lifts them
     ///         (test_brokenNoStop_theRunbookHoldsTheForgedCheckpointAndReleaseWhileRenewed shows what a lapse pays).
@@ -488,6 +526,25 @@ contract FailsafeBrokenVerifierTest is BrokenVerifierSetup {
         vm.prank(freezer);
         vault.setCheckpointsFrozen(false);
 
+        // the admin hands over, and the timelocked role change (a new freeze authority) is applied by anyone after
+        // its 14 days, inside the 30-day freezes; the announced fee schedule, due after 7, is put in force by anyone
+        address newAdmin = makeAddr("a new admin");
+        address newFreezer = makeAddr("a new freeze authority");
+        vm.prank(admin);
+        vault.transferAdmin(newAdmin);
+        vm.prank(newAdmin);
+        vault.acceptAdmin();
+        vm.prank(newAdmin);
+        vault.proposeRoles([watcher, address(0), address(0)], newFreezer);
+        vm.warp(block.timestamp + 14 days);
+        vm.startPrank(attacker);
+        vault.applyRoles();
+        vault.applyFees(ETH);
+        vm.stopPrank();
+        assertEq(vault.admin(), newAdmin);
+        assertEq(vault.freezeAuthority(), newFreezer);
+        assertEq(newAdmin.balance + newFreezer.balance + dai.balanceOf(newAdmin) + dai.balanceOf(newFreezer), 0);
+
         // raw sends are refused
         (bool ok,) = address(vault).call{value: 1 ether}("");
         assertFalse(ok, "no receive");
@@ -535,5 +592,68 @@ contract FailsafeBrokenVerifierTest is BrokenVerifierSetup {
 contract FailsafeBrokenVerifierBTest is FailsafeBrokenVerifierTest {
     function _mode() internal pure override returns (FerrataVault.Mode) {
         return FerrataVault.Mode.B;
+    }
+}
+
+/// @notice At a nonzero release floor, as on the Sepolia 3.1 vault (`releaseCapFloor` 300,000,000 value units, 300 USD:
+///         vault/deployments/sepolia-31-B.verification.txt), the admin's caps cannot be zeroed: set as low as the floor
+///         lets them, a forged release of the smallest denomination still pays, and again whenever the floor's refill
+///         has refilled the buckets. Caps alone then only slow the forged path; the freeze authority's global release
+///         freeze stops it (ADR 0033's runbook, step 1). Rule (B), the rule the live vaults run.
+contract FailsafeBrokenVerifierFloorTest is FailsafeBrokenVerifierBase {
+    uint256 internal constant FLOOR_CAP = 300e6; // value units (1e-6 USD): 300 USD, 0.1 ETH at this suite's weight
+    uint256 internal constant FLOOR_REFILL = 3000; // value units a second: 1e12 wei of ETH a second
+
+    function _mode() internal pure override returns (FerrataVault.Mode) {
+        return FerrataVault.Mode.B;
+    }
+
+    function _releaseFloor() internal pure override returns (FerrataVault.CapParams memory) {
+        return FerrataVault.CapParams({capacity: FLOOR_CAP, refillPerSecond: FLOOR_REFILL});
+    }
+
+    function test_brokenNoStop_atANonzeroFloorCapsOnlySlowAForgedReleaseTheFreezeStopsIt() public {
+        _dep(alice, ETH, 0, keccak256("escrow a forged release takes"));
+        _dep(alice, ETH, 0, keccak256("escrow a second forged release takes"));
+        _dep(alice, ETH, 0, keccak256("escrow the freeze keeps"));
+        uint256 finalizedAt = _forgeFinalize(_forged(ROOT0, false, 0)); // the forger's root, already final
+        vm.warp(finalizedAt + REVOKE_WINDOW + 1); // ETH's release delay (the window) has passed
+
+        // the admin cannot zero the release caps; the lowest the floor allows is 0.1 ETH (300 USD) refilling at
+        // 1e12 wei (0.003 USD) a second, for ETH and globally
+        vm.startPrank(admin);
+        vm.expectRevert(FerrataVault.CapBelowFloor.selector);
+        vault.setTokenCap(ETH, FerrataVault.Direction.Release, 0, 0);
+        vm.expectRevert(FerrataVault.CapBelowFloor.selector);
+        vault.setGlobalCap(FerrataVault.Direction.Release, 0, 0);
+        vault.setTokenCap(ETH, FerrataVault.Direction.Release, 0.1 ether, 1e12);
+        vault.setGlobalCap(FerrataVault.Direction.Release, FLOOR_CAP, FLOOR_REFILL);
+        vm.stopPrank();
+
+        // a forged release of 0.1 ETH still pays; the buckets are then empty and the next one is refused
+        vm.prank(attacker);
+        vault.release(_request(ETH, 0, attacker, ROOT0, keccak256("forged 1")), JUNK);
+        uint256 taken = attacker.balance;
+        assertGt(taken, 0, "caps at the floor let a forged release out");
+        vm.prank(attacker);
+        vm.expectRevert(FerrataVault.TokenReleaseCapExceeded.selector);
+        vault.release(_request(ETH, 0, attacker, ROOT0, keccak256("forged 2")), JUNK);
+
+        // refilled (0.1 ETH at 1e12 wei a second: 100,000 s), the same forged path pays again
+        vm.warp(block.timestamp + 100_000);
+        vm.prank(attacker);
+        vault.release(_request(ETH, 0, attacker, ROOT0, keccak256("forged 2")), JUNK);
+        assertGt(attacker.balance, taken, "the caps only slow the forged path");
+        taken = attacker.balance;
+
+        // the global release freeze stops it, the buckets full again
+        vm.warp(block.timestamp + 100_000);
+        vm.prank(freezer);
+        vault.setReleasesFrozen(true);
+        vm.prank(attacker);
+        vm.expectRevert(FerrataVault.ReleasesAreFrozen.selector);
+        vault.release(_request(ETH, 0, attacker, ROOT0, keccak256("forged 3")), JUNK);
+        assertEq(attacker.balance, taken, "nothing more left the vault once releases were frozen");
+        assertFalse(brokenStop.paused(), "the stop never tripped");
     }
 }

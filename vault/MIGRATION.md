@@ -171,8 +171,9 @@ All in `test_migration_step6_v2RunsProofSystemBNeitherVaultAcceptsTheOther` and
   releases pay before that is bounded by the release buckets and the token's escrow. How the remaining escrow leaves
   such a vault is decided by [ADR 0033](../docs/decisions/0033-broken-verifier-without-proof-of-exploit.md): the
   containment runbook above, and no escrow-moving exit, since every exit (a release, or a refund after a sunset
-  checkpoint) rests on a proof the broken verifier would accept forged as well. Rehearsed, with the stop held
-  untripped, in [`test/FailsafeBrokenVerifier.t.sol`](test/FailsafeBrokenVerifier.t.sol).
+  checkpoint) rests on a proof the broken verifier would accept forged as well. Rehearsed in
+  [`test/FailsafeBrokenVerifier.t.sol`](test/FailsafeBrokenVerifier.t.sol) on a verifier that accepts every forged
+  seal but no proof of exploit, so the stop stays untripped.
 
 ## 5. Security #9: why there is no fund-recovery failsafe, and what happens to affected funds
 
@@ -228,7 +229,8 @@ renewed — releases globally, which holds refunds too — the admin's caps, ret
 because every exit rests on a proof the broken verifier would accept forged: a refund's sunset boundary is set by a
 checkpoint, so a forged sunset with a stale imported count makes a leaf LEZ imported refundable — a double spend on
 LEZ-side holders — and a reopened release pays whoever forges first. Every position strands except `owed` balances,
-claimable by their own payee. Rehearsed, stop held untripped, in [`test/FailsafeBrokenVerifier.t.sol`](test/FailsafeBrokenVerifier.t.sol).
+claimable by their own payee. Rehearsed, on a verifier with no proof of exploit, in
+[`test/FailsafeBrokenVerifier.t.sol`](test/FailsafeBrokenVerifier.t.sol).
 
 `../docs/trust.md` §6 tabulates the same failure classes for the whole bridge.
 

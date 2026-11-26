@@ -31,9 +31,19 @@ abstract contract BrokenVerifierSetup is VaultTestBase {
         return FerrataVault.Mode.A;
     }
 
+    /// @dev The broken verifier behind the stop: by default one that accepts every seal and every receipt.
+    function _brokenVerifier() internal virtual returns (IRiscZeroVerifierFull) {
+        return IRiscZeroVerifierFull(address(new AcceptAllVerifier()));
+    }
+
+    /// @dev The deployment's floor under every release bucket (D13): none unless a suite sets one.
+    function _releaseFloor() internal pure virtual returns (FerrataVault.CapParams memory) {
+        return FerrataVault.CapParams({capacity: 0, refillPerSecond: 0});
+    }
+
     /// @dev Replaces the base suite's vault with one whose verifier accepts every seal, behind the real emergency stop.
     function _deployBroken() internal {
-        brokenStop = new RiscZeroVerifierEmergencyStop(IRiscZeroVerifierFull(address(new AcceptAllVerifier())), freezer);
+        brokenStop = new RiscZeroVerifierEmergencyStop(_brokenVerifier(), freezer);
         // As at a deployment, nobody holds the stop's key: only RISC Zero's proof of an exploit trips it.
         vm.prank(freezer);
         brokenStop.renounceOwnership();
@@ -42,6 +52,7 @@ abstract contract BrokenVerifierSetup is VaultTestBase {
             _mode() == FerrataVault.Mode.A ? _deployment(v, LEZ_CONFIG_ID) : _deploymentB(v, LEZ_CONFIG_ID);
         dep.minReleaseDelay = MIN_DELAY;
         dep.globalReleaseCap = _cap(GLOBAL_CAP, GLOBAL_REFILL);
+        dep.releaseCapFloor = _releaseFloor();
         vault = new FerrataVault(dep);
 
         address[] memory tokens = new address[](4);
