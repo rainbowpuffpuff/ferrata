@@ -447,6 +447,38 @@ class Records(TamperCase):
         self.assertFails("m0", t)
 
 
+class Seals(TamperCase):
+    """verifylib/groth16.py on recorded seals, and the seal checks on altered evidence."""
+
+    @classmethod
+    def setUpClass(cls):
+        from verifylib import checks_seals, groth16
+        cls.g = groth16
+        cls.live = checks_seals._live_proofs(ROOT)
+
+    def test_a_live_proof_verifies_and_alterations_fail(self):
+        e = self.live[1]  # the release proof of the test network's live round trip (3.1.0)
+        self.assertEqual(self.g.verify_seal(e["seal"], e["image"], e["digest"])[:2], (True, "3.1.0"))
+        bad = bytearray(e["seal"])
+        bad[100] ^= 1
+        self.assertFalse(self.g.verify_seal(bytes(bad), e["image"], e["digest"])[0], "a seal byte")
+        self.assertFalse(self.g.verify_seal(e["seal"], e["image"][:-1] + b"\x00", e["digest"])[0], "the image id")
+        self.assertFalse(self.g.verify_seal(e["seal"], e["image"], bytes(32))[0], "the journal")
+        other = bytes.fromhex(self.g.PARAMS["3.0.0"]["selector"]) + e["seal"][4:]
+        self.assertFalse(self.g.verify_seal(other, e["image"], e["digest"])[0], "the other release's selector")
+        self.assertFalse(self.g.verify_seal(e["seal"][:-1], e["image"], e["digest"])[0], "a short seal")
+        big = e["seal"][:4] + self.g.P.to_bytes(32, "big") + e["seal"][36:]
+        self.assertFalse(self.g.verify_seal(big, e["image"], e["digest"])[0], "a coordinate not below p")
+
+    def test_the_check_fails_on_an_altered_proof(self):
+        self.assertPasses("seals-v3.1")
+        from verifylib.checks_seals import LIVE_PROOFS
+        seal = json.loads((ROOT / LIVE_PROOFS).read_text())["release"]["seal"]
+        flipped = seal[:-1] + ("0" if seal[-1] != "0" else "1")
+        t = overlay({LIVE_PROOFS: sub(seal, flipped)})
+        self.assertFails("seals-v3.1", t, "does not verify")
+
+
 class Hashes(TamperCase):
     def test_site_manifest(self):
         self.assertPasses("site-manifest-git")
