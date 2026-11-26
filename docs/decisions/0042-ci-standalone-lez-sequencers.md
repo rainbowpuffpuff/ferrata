@@ -14,9 +14,10 @@ and each CI run needed fresh Sepolia inputs rather than public-network write acc
 
 ## Options considered
 
-1. Keep CI's in-process state-machine and mock-verifier coverage only. *Recorded:* docs/EVIDENCE.md rows 251–252
-   contrast those jobs with the new standalone-sequencer runs; .github/workflows/sequencer.yml also lists the stand-ins
-   the public round trip retains. This leaves the running sequencer path outside repeatable CI.
+1. Keep CI's in-process state-machine and mock-verifier coverage only. *Reconstructed for contrast* (not recorded as
+   an option at the time); it was the state before: CI's in-process jobs (.github/workflows/ci.yml) and a standalone
+   sequencer built from source by a CI script on recorded data (docs/EVIDENCE.md row 164, which row 251 superseded).
+   This leaves the running sequencer path outside repeatable CI.
 2. Run two scheduled jobs that build standalone `sequencer_service` binaries from source: attestation against LEZ
    v0.4.0-rc3, and the bridge's public-variant round trip against v0.4.0-rc1. Fetch fresh public Sepolia data at run
    time, with freshness bounds and no recorded fallback. Use a local Sepolia fork and mock verifier for the bridge job,

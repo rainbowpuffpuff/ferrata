@@ -1,7 +1,7 @@
 # ADR 0043: Use the network's gas-drop relayer by default and fall back to the user's fee account only on 404 or 410
 
 - **Date:** 25 November 2026
-- **Status:** accepted; built, the test-network relayer deployed
+- **Status:** accepted; built and tested in dev mode; the test network's relayer not deployed yet
 - **Requirements:** RFP-022 Priv.7, U.5
 
 ## Context
@@ -48,8 +48,9 @@ its tests separately exercised each refusal to fall back.
 The cost is availability and an explicit trust choice. A published but unusable relayer stops the operation even when
 the user could pay, until the user supplies `--no-gas-drop`; where no relayer is published, a first claim still needs
 native LEZ from elsewhere and retains that correlation. Terms from another machine require HTTPS, with only local HTTP
-allowed. The client default was exercised against a local sequencer and gateway in dev mode; the deployment record
-covers the test network's relayer, not a claim that every client artifact has been replaced in production.
+allowed. The client default was exercised against a local sequencer and gateway in dev mode. The test network's relayer
+has deployment steps (`deploy/testnet/README.md`) but is not deployed yet (`docs/requirements-status.md`, Priv.7), so
+on that network a client still finds no relayer published and pays from the user's own account.
 
 ## Sources
 

@@ -48,6 +48,7 @@ which the committed replay and mount-layout fix address rather than conceal.
 ## Sources
 
 - Commit `0208be1a`; deploy/testnet/README.md, "What runs", "The Sepolia bridge demo" and "Operating notes"
+- Commit `05ddb446` and deploy/testnet/results/2026-11-24-relayer-exdev-replay.txt (the mount-layout fix; the replay)
 - docs/requirements-status.md, RFP-021 S.1 and RFP-022 S.1 (the unavailable Logos testnet and retained status)
 - docs/EVIDENCE.md row 150 (the separate v0.3.1 public-testnet deployment)
 - docs/EVIDENCE.md rows 242, 248 and 250 (the public zone, verifier and full round trip)

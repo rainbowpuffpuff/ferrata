@@ -2,7 +2,7 @@
 
 - **Date:** 23 November 2026
 - **Status:** accepted; built
-- **Requirements:** RFP-021 R.5, U.5, R.12
+- **Requirements:** RFP-021 R.5, U.5
 
 ## Context
 
@@ -15,10 +15,12 @@ U.5 also requires the stale-checkpoint refusal to be explained and acted on.
 ## Options considered
 
 1. Treat every unsuccessful invocation as though nothing was sent and generate the command afresh on the next run.
-   *Reconstructed for contrast* the implemented journal's cases show why this is unsafe: a transaction may already be
+   *Reconstructed for contrast* (not recorded as an option at the time); the implemented journal's cases show why this
+   is unsafe: a transaction may already be
    in the pool or a block when the answer is lost, and another transaction may have taken the newly generated nonce.
 2. Never resend after an interruption; require the user to inspect the chain and start another command explicitly.
-   *Reconstructed for contrast* the code instead records receipts and resume states automatically. This option would
+   *Reconstructed for contrast* (not recorded as an option at the time); the code instead records receipts and resume
+   states automatically. This option would
    abandon an unfinished multi-step update even when its exact signed transactions were still usable.
 3. Require `--state-dir` for `--send --yes`; journal the canonical intent and every signed transaction before the first
    send, then record each attempt and receipt. On the same command, report what applied, wait for what is non-final,

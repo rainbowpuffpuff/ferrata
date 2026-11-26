@@ -14,9 +14,11 @@ in the same process. A complete migration therefore needed a LEZ tag on 3.1, whi
 
 ## Options considered
 
-1. Wait to move everything together until LEZ publishes a tag on RISC Zero 3.1. *Recorded:*
-   docs/design/risc0-3.1-migration.md §2–§3, which defines that LEZ-side phase and says that it waits on Logos. This
-   would leave the deployed Ethereum verifier affected in the meantime.
+1. Wait to move everything together until LEZ publishes a tag on RISC Zero 3.1. *Reconstructed for contrast* (not
+   recorded as an option at the time); docs/design/risc0-3.1-migration.md §1–§3 record the constraint behind the split
+   (one process, one RISC Zero version: until LEZ moves, no process makes both a 3.1 release seal and an rc3-valid
+   private LEZ transaction) and that the LEZ-side phase waits on Logos. Waiting would have left the deployed Ethereum
+   verifier affected in the meantime.
 2. Split the migration: move the Ethereum-side guests, provers, verifier, fixtures and new vaults to 3.1 now; keep the
    LEZ programs and LEZ-linked hosts on LEZ's 3.0.5 until the first suitable LEZ tag, using a separate Ethereum-side
    prover for release seals in the interval.

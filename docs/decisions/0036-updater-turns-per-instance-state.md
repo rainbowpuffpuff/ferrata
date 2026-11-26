@@ -39,11 +39,12 @@ of 8 and two adoption parts. `lez/updater/tests/redating.rs` measured 66 rounds 
 per-job mutant never adopted the committee in its run.
 
 The bound is per state, not across an arbitrary sequence of states. A party that pays to apply older genuine updates
-creates new states and fresh turns; the documented measurements and `/health` consequences retain this limit. One
-updater can also spend each kind of turn before another's, and `finish_own_jobs = false` with sources whose best update
-changes every slot opens new jobs without finishing them, so the default still finishes the carried job. Duplicate-open
-costs rose in the recorded comparison: two updaters in one slot paid 51% more per applied update than before the
-per-state turns, and three paid 28% more. The tests are on the in-process chain, not a sequencer.
+creates new states and fresh turns; the documented measurements and `/health` consequences retain this limit. With
+sources whose best update changes every slot, a second updater opens its own job for the newer update once its own
+`Open` turn on the state has run; with `finish_own_jobs = false` such sources make an updater open jobs and finish
+none, so the default finishes the job it opened. Duplicate opens cost more in an independent review run, not
+reproduced by a committed test: two updaters in one slot paid 51% more per applied update than before the per-state
+turns, and three paid 28% more. The tests are on the in-process chain, not a sequencer.
 
 ## Sources
 

@@ -31,8 +31,9 @@ prevents releases and refunds and leaves escrow locked.
 
 The third, D1 (a). The deployment creates the RISC Zero verifier and stop itself, checks the verifier's 3.1.0 selector
 and control identifiers, and renounces the stop owner before token registration. It does not use RISC Zero's hosted
-stop address. The deployed vault has a held freeze authority, a watcher and bounded caps; the stop remains available
-only to a verifying proof of exploit.
+stop address. The deployed vault has a held freeze authority and bounded caps (`vault/deployments/sepolia-31-B.json`,
+EVIDENCE row 232); the fork rehearsal also set a watcher, which the deployment record does not list. The stop remains
+available only to a verifying proof of exploit.
 
 ## Rationale and trade-offs
 
@@ -44,8 +45,9 @@ can pause checkpoints. `estop(receipt)` remains the last resort rather than the 
 A one-way stop still strands all non-owed escrow, so the freeze must be used before a proof of exploit trips the stop.
 The freeze authority can repeatedly renew freezes and a compromised watcher can pause checkpoints until replaced;
 neither can move escrow. The deployment depends on those keys being held and operated, and on caps being configured,
-so renouncing the stop owner alone is not sufficient. How escrow can leave after a verifier itself is broken remains
-open because both releases and refunds rest on proofs.
+so renouncing the stop owner alone is not sufficient. How escrow can leave after a verifier itself is broken remained
+open here because both releases and refunds rest on proofs; ADR 0033 records the answer for a verifier found unsound
+with no proof of exploit.
 
 ## Sources
 

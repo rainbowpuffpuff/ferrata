@@ -13,9 +13,9 @@ needed both the prover-version migration and a checkpoint guest that matched the
 
 ## Options considered
 
-1. Pin the default `checkpoint_b_31` guest for the rc3 vault. *Recorded:* docs/sepolia.md says the earlier checkpoint
-   ids cannot follow a Logos Blockchain 0.3.5-rc.1 zone; docs/image-ids.md's 0.3.5 section gives the format they do
-   not compile. Its successful uses are against the other Bedrock layout, not this network's return leg.
+1. Pin the default `checkpoint_b_31` guest for the rc3 vault. *Reconstructed for contrast* (not recorded as an option
+   at the time); docs/sepolia.md records why it cannot serve (the earlier checkpoint ids cannot follow a Logos
+   Blockchain 0.3.5-rc.1 zone), and docs/image-ids.md's 0.3.5 section gives the format they do not compile. Its successful uses are against the other Bedrock layout, not this network's return leg.
 2. Pin `checkpoint_b_0_3_5_31`, the RISC Zero 3.1 rebuild of the second checkpoint build. Its `bedrock-0-3-5` feature
    reads the node's fork digest and requires it to equal the configuration's `bedrockGenesisId`; reject the same
    guest family built for a different node layout.
