@@ -19,6 +19,7 @@ class Row:
     soft: bool
     evidence: tuple  # EVIDENCE row numbers the status row cites
     text: str
+    evidence_text: str = ""  # the Evidence cell as written (files and runs it cites)
 
     @property
     def key(self) -> str:
@@ -54,7 +55,7 @@ def status_rows(root: Path) -> list:
             if len(cells) < 4 or cells[1] not in STATUSES:
                 continue
             rows.append(Row(rfp, cells[0], section, cells[1], section.startswith("Soft"),
-                            _evidence_numbers(cells[-1]), cells[2]))
+                            _evidence_numbers(cells[-1]), cells[2], cells[-1]))
     return rows
 
 

@@ -52,7 +52,9 @@ not show, and this record does not claim:
 - the host itself: whether the updater's process restarted, its logs, its disk, and why the sequencer paused. The
   host's Logos Blockchain node was disk-bound on 24 and 25 November (the operator's account, not chain data); on
   chain those two days hold 224 updates each (a Sepolia day has 225 epochs), no interval between updates over the
-  longest `RECORD.md` names, and one of the three pauses of block production (25 November, 10:02 UTC);
+  longest `RECORD.md` names, and one of the three pauses of block production: the one of 25 November at 10:02 UTC
+  matches the host's move to a larger instance with a faster data volume, the operator's intervention that ended the
+  disk-bound period (the operator's account); the other two pauses have no cause on record;
 - when each block became final on the network's Logos Blockchain node: a block's Bedrock status is served as it is
   at the time of the read (every block but the newest few read `Finalized`), not as it was when the block was made;
 - anything before the current chain: the network's first chain of 23 November (EVIDENCE row 248) is not served

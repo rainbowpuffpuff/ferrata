@@ -12,7 +12,10 @@ import json
 from pathlib import Path
 
 from . import tests_map
-from .core import REGISTRY, Ctx, command
+import re
+import tempfile
+
+from .core import REGISTRY, CheckFailed, Ctx, check, command, run_script
 from .rows import status_rows
 
 CHECK_MODULES = ("checks_records", "checks_hashes", "checks_seals", "checks_sigs", "checks_lc", "checks_online",
@@ -27,12 +30,6 @@ def _py(id, script, *args, **kw):
 
 def _register_wrappers() -> None:
     # ---- records: numbers re-derived from the committed records ---------------------------------------------------
-    _py("lab-roots", "lez/lab/roots.py", "lez/lab/results", family="record", mode="offline", evidence=(21,),
-        rows=("RFP-021 F.14", "RFP-021 F.15", "RFP-021 S.1"),
-        title="The lab's sessions: each applied finality update's finalized root equals the second provider's",
-        what="every lab session's applied finality update (its kept SSZ), the finalized header hashed here",
-        against="the block root the session's second beacon provider reported for that slot (sessions/*/fetch-*.json)",
-        inputs=("lez/lab/results",))
     _py("day1-rehearsal", "lez/testnet04/recheck.py", "lez/testnet04/results/rehearsal-1", family="record",
         mode="offline", evidence=(148,), rows=("RFP-021 S.1", "RFP-022 S.1"),
         title="The day-one kit's rehearsal on our rc3 zone, re-checked from its records",
@@ -52,11 +49,6 @@ def _register_wrappers() -> None:
         what="the relayer's credit, the claim that pays its fee from it and the refused claim without it",
         against="the session's recorded blocks and logs in lez/results/v0.4.0-rc3/gas-drop",
         inputs=("lez/results/v0.4.0-rc3/gas-drop",))
-    _py("m0", "scripts/m0.py", family="record", mode="offline", evidence=(50, 123, 124),
-        rows=("RFP-021 P.4", "RFP-022 P.4"),
-        title="Every M0 check of the proposal with its measured value and GO / NO-GO, read from the result files",
-        what="each M0 value as its result file records it (never typed in)",
-        against="the thresholds the proposal sets for M0 (scripts/m0.py prints the NO-GO ones)")
     _py("perf-records", "scripts/test_perf_records.py", family="record", mode="offline", evidence=(227,),
         rows=("RFP-022 P.5", "RFP-022 P.6"),
         title="RFP-022 P.5 and P.6: every documented figure recomputed from the raw records",
@@ -120,7 +112,7 @@ def _register_wrappers() -> None:
              "The deployed-programs check against a network (its refusals)"),
             ("unit-verify-live-roundtrip", "scripts/test_verify_live_roundtrip.py", (250,), (),
              "The live round trip's checker against altered answers"),
-            ("unit-site", "site/test_site.py", (), (), "The site's requirement pages and their evidence links"),
+
             ("unit-trust-pages", "deploy/testnet/web/trust/test_trust.py", (240,), (),
              "The test network's trust pages"),
             ("unit-live-testnet", "modules/scripts/test_live_testnet.py", (237,), (), "The modules' live-testnet driver"),
@@ -137,6 +129,10 @@ def _register_wrappers() -> None:
     ):
         _py(cid, script, family="unit", mode="offline", evidence=ev, rows=rows, title=title,
             what=f"{script}'s cases", against="the behaviour the script's docstring states")
+    _py("unit-site", "site/test_site.py", "--skip-freshness", family="unit", mode="offline",
+        title="The site's requirement pages and their evidence links (as CI runs it: the bundle's freshness against "
+              "this tree is the integration's step)", what="site/test_site.py's cases",
+        against="the requirement rows and EVIDENCE rows the pages are built from")
     for cid, shell, ev, rows, title in (
             ("unit-admin", "node admin/dump.mjs --selftest", (57,), ("RFP-022 U.2",),
              "The admin view's decoder (235 checks)"),
@@ -149,6 +145,61 @@ def _register_wrappers() -> None:
     ):
         command(id=cid, shell=shell, family="unit", mode="offline", evidence=ev, rows=rows, title=title,
                 needs=("node", "bash"), what=f"`{shell}`", against="the test files' expectations")
+
+
+@check(id="lab-roots", family="record", mode="offline", evidence=(21,),
+       rows=("RFP-021 F.14", "RFP-021 F.15", "RFP-021 S.1"),
+       title="The lab's sessions: each applied finality update's finalized root equals the second provider's",
+       what="every lab session's applied finality update (its kept SSZ), the finalized header hashed here",
+       against="the block root the session's second beacon provider reported for that slot (sessions/*/fetch-*.json)",
+       inputs=("lez/lab/roots.py", "lez/lab/results"))
+def _lab_roots(ctx):
+    # roots.py prints its verdict and exits 0 either way: the line "N of M sessions" and one "differs:" line each.
+    rc, out = run_script(ctx, ["python3", "-I", "lez/lab/roots.py", "lez/lab/results"])
+    m = next((re.match(r"(\d+) of (\d+) sessions", ln) for ln in out if re.match(r"\d+ of \d+ sessions", ln)), None)
+    if rc != 0 or m is None:
+        raise CheckFailed("\n".join([f"exit status {rc}"] + out[-10:]))
+    differs = [ln for ln in out if ln.startswith("differs:")]
+    if differs or m.group(1) != m.group(2) or m.group(2) == "0":
+        raise CheckFailed("\n".join([out[0]] + differs[:15]))
+    return [out[0]]
+
+
+M0_EXPECTED = {"1": "GO", "2": "GO", "3": "OPEN", "4": "GO"}  # scripts/m0.py's check numbers
+
+
+@check(id="m0", family="record", mode="offline", evidence=(50, 123, 124),
+       rows=("RFP-021 P.4", "RFP-022 P.4"),
+       title="The proposal's M0 checks: each value read from its result files, each verdict the one the documents state",
+       what="scripts/m0.py's four checks, every value read from the result file it names (never typed in)",
+       against="the verdicts the documents state: M0.1 GO (Linux and macOS), M0.2 GO, M0.4 GO; M0.3 OPEN (no v0.4 "
+               "token program released: Logos decides)", inputs=("scripts/m0.py", "lez/results/p4-minimum",
+                                                                "lez/results/v0.4.0-rc3"))
+def _m0(ctx):
+    with tempfile.TemporaryDirectory(dir=ctx.root / ".scratch" if (ctx.root / ".scratch").is_dir() else None) as d:
+        out_json = Path(d) / "m0.json"
+        rc, out = run_script(ctx, ["python3", "-I", "scripts/m0.py", "--json", str(out_json)])
+        if rc != 0 or not out_json.exists():
+            raise CheckFailed("\n".join([f"exit status {rc}"] + out[-10:]))
+        got = json.loads(out_json.read_text())
+    lines, problems = [], []
+    for c in got:
+        cid = str(c["check"])
+        want = M0_EXPECTED.get(cid)
+        verdict = str(c["verdict"])
+        lines.append(f"M0.{cid}: {verdict[:70]}")
+        if want is None:
+            problems.append(f"{cid}: a check the documents do not name")
+        elif want == "GO" and not (verdict.startswith("GO") and "NO-GO" not in verdict):
+            problems.append(f"{cid}: {verdict} (the documents say GO)")
+        elif want == "OPEN" and not verdict.startswith("OPEN"):
+            problems.append(f"{cid}: {verdict} (the documents say OPEN)")
+    missing = sorted(set(M0_EXPECTED) - {str(c["check"]) for c in got})
+    if missing:
+        problems.append(f"missing: {', '.join(missing)}")
+    if problems:
+        raise CheckFailed("\n".join(problems))
+    return lines
 
 
 _LOADED = False

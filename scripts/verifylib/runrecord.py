@@ -56,20 +56,22 @@ def _actor_ids(tx) -> list:
     return [a["account_id"] for a in tx["public_context"]["actors"]]
 
 
-def scan(blocks, program: bytes, idl: lc.Idl, last: int | None = None):
+def scan(blocks, program: bytes, idl: lc.Idl, last: int | None = None, first: int = 1, instances: dict | None = None):
     """Walk the blocks in order: hashes recomputed and linked, every transaction to `program` decoded.
     Returns (lines, chain): the record's lines and what the walk saw of the chain."""
     lines = []
     prev = None
     n = 0
     gaps = []
-    instances = {}  # instance account -> (chain config of its Init)
+    instances = dict(instances or {})  # instance account -> the chain configuration of its Init
     jobs = {}  # job account -> the open line's fields
     first_ts = None
     problems = []
     for raw in blocks:
         b = lez.decode_block(raw)
         h = b["header"]
+        if h["block_id"] < first:
+            continue
         if last is not None and h["block_id"] > last:
             break
         if not b["hash_ok"]:
@@ -374,6 +376,7 @@ def build(out: Path, site: str, cache: Path, last: int | None = None) -> dict:
     write_tsv(lines, out / "transactions.tsv")
     rows = read_tsv(out / "transactions.tsv")
     chain["program_account"] = lez.b58encode(program)
+    chain["first_block"] = 1
     chain["read_at_utc"] = fetched
     chain["instance_counters_read"] = states
     (out / "chain.json").write_text(json.dumps(chain, indent=1, sort_keys=True) + "\n")
@@ -545,60 +548,96 @@ def check_record(ctx):
     return lines
 
 
-@check(id="run-record-online", title="The run record against the public chain: every block and transaction read again",
-       family="run-record", mode="online", evidence=(242, 248), rows=("RFP-021 S.1",),
-       what=f"{RECORD_DIR}/transactions.tsv and chain.json: every line, and that no transaction to the attestation "
-            "program is missing from the list",
-       against="the network's public RPC: blocks 1 to the as-of block read again (getBlockRange), each hash "
-               "recomputed from its bytes and linked to the one before, each transaction decoded again; the program's "
-               "loader header naming the published image id",
-       needs=("python3", "network"), inputs=(RECORD_DIR,))
+def _rows_of(lines: list) -> list:
+    """The scan's lines as the TSV reads them back (strings)."""
+    buf = io.StringIO()
+    w = csv.DictWriter(buf, fieldnames=COLUMNS, delimiter="\t", lineterminator="\n")
+    w.writeheader()
+    for ln in lines:
+        w.writerow({k: ln[k] for k in COLUMNS})
+    return list(csv.DictReader(io.StringIO(buf.getvalue()), delimiter="\t"))
+
+
 def check_record_online(ctx):
     d = ctx.root / RECORD_DIR
     rows = read_tsv(d / "transactions.tsv")
     chain = json.loads((d / "chain.json").read_text())
-    rpc = lez.Rpc(ctx.lez_url + "/rpc")
+    rpc = lez.Rpc(ctx.lez_url + "/rpc", budget_s=120)
     try:
         tip = rpc.call("getLastBlockId")
     except lez.RpcError as e:
         raise Skipped(f"the network's RPC did not answer: {e}") from e
     as_of = chain["as_of"]["block"]
+    first = chain.get("first_block", 1)
     if tip < as_of:
         raise CheckFailed(f"the network's head {tip} is below the record's as-of block {as_of}: another chain?")
     program = lez.b58decode(chain["program_account"])
     cache = (ctx.cache or ctx.root / ".scratch/verify-cache") / "lez-blocks"
-    lines, chain2, problems = scan(_cached_or_fetch(rpc, 1, as_of, cache), program,
-                                   lc.Idl.load(ctx.root / "idl/ferrata_attestation.idl.json"), last=as_of)
-    if chain2["as_of"]["hash"] != chain["as_of"]["hash"]:
+    lines, chain2, problems = scan(_cached_or_fetch(rpc, first, as_of, cache), program,
+                                   lc.Idl.load(ctx.root / "idl/ferrata_attestation.idl.json"), last=as_of, first=first,
+                                   instances={k: v for k, v in chain.get("instances", {}).items()})
+    if chain2["as_of"] is None or chain2["as_of"]["block"] != as_of:
+        problems.append(f"the chain's blocks {first}-{as_of} could not all be read")
+    elif chain2["as_of"]["hash"] != chain["as_of"]["hash"]:
         problems.append(f"block {as_of}'s hash on the chain is {chain2['as_of']['hash'][:16]}…, the record says "
                         f"{chain['as_of']['hash'][:16]}…")
-    buf = io.StringIO()
-    w = csv.DictWriter(buf, fieldnames=COLUMNS, delimiter="\t", lineterminator="\n")
-    for ln in lines:
-        w.writerow({k: ln[k] for k in COLUMNS})
-    got = list(csv.DictReader(io.StringIO("\t".join(COLUMNS) + "\n" + buf.getvalue()), delimiter="\t"))
+    if chain2["blocks"] != chain["blocks"]:
+        problems.append(f"{chain2['blocks']} blocks read from {first} to {as_of}; the record walked {chain['blocks']}")
+    got = _rows_of(lines)
     if len(got) != len(rows):
-        problems.append(f"the chain holds {len(got)} transactions to the attestation program up to block {as_of}; "
+        problems.append(f"the chain holds {len(got)} transactions to the attestation program in blocks {first}-{as_of}; "
                         f"the record lists {len(rows)}")
     by_tx = {r["tx"]: r for r in got}
+    listed = {r["tx"] for r in rows}
     for i, r in enumerate(rows, 2):
         g = by_tx.get(r["tx"])
         if g is None:
-            problems.append(f"line {i}: transaction {r['tx'][:16]}… is not in the chain's blocks 1-{as_of}")
+            problems.append(f"line {i}: transaction {r['tx'][:16]}… is not in the chain's blocks {first}-{as_of}")
             continue
         diff = [k for k in COLUMNS if g[k] != r[k]]
         if diff:
             problems.append(f"line {i}: {r['tx'][:16]}… differs in {', '.join(diff)}")
-    probs, states = reconcile_state(rpc, lc.Idl.load(ctx.root / "idl/ferrata_attestation.idl.json"), program, got,
-                                    cache, as_of)
-    problems += probs
+    for g in got:
+        if g["tx"] not in listed:
+            problems.append(f"block {g['block']}: transaction {g['tx'][:16]}… ({g['step']}) is missing from the record")
     fail_if(problems, "the run record against the chain")
-    counters = "; ".join(f"{k[:10]}… {v['applied']} applied jobs at block {v['head']} "
-                         f"({v['applied_by_as_of']} by the as-of block)" for k, v in states.items())
-    return [f"blocks 1-{as_of} read from {ctx.lez_url}/rpc ({rpc.requests} requests, {rpc.bytes / 1e6:.1f} MB; "
-            f"a cache in {cache} is reused): every hash recomputed and linked",
-            f"{len(rows)} of {len(rows)} transactions equal, field by field; none missing; head now {tip}",
-            f"each instance's own counter and finalized slot equal what the chain's finishes give: {counters}"]
+    return [f"blocks {first}-{as_of} read from {ctx.lez_url}/rpc ({rpc.requests} requests, {rpc.bytes / 1e6:.1f} MB; "
+            f"blocks already read are kept in {cache.relative_to(ctx.root) if cache.is_relative_to(ctx.root) else cache}"
+            "; delete it to read them again): every hash recomputed and linked to the one before",
+            f"{len(rows)} of {len(rows)} transactions equal their line, field by field; none missing; head now {tip}"]
+
+
+check(id="run-record-online", title="The run record against the public chain: every block and transaction read again",
+      family="run-record", mode="online", evidence=(242, 248), rows=("RFP-021 S.1",),
+      what=f"{RECORD_DIR}/transactions.tsv and chain.json: every line, and that no transaction to the attestation "
+           "program is missing from the list",
+      against="the network's public RPC: the record's blocks read again (getBlockRange), each hash recomputed from "
+              "its bytes and linked to the one before, each transaction to the program decoded again",
+      needs=("python3", "network"), inputs=(RECORD_DIR,))(check_record_online)
+
+
+@check(id="run-record-counters", title="Each instance's own counter of applied jobs against the chain's finishes",
+       family="lez-network", mode="online", evidence=(242, 248), rows=("RFP-021 S.1",),
+       what="each instance's InstanceState as the network serves it now: `applied` and its store's finalized slot",
+       against="1 (Init's activation) + the applied finish steps in the chain's blocks up to the head read with it "
+               f"(the record's {RECORD_DIR}/transactions.tsv up to its as-of block, the chain after it), and the "
+               "newest one's finalized slot", needs=("python3", "network"), inputs=(RECORD_DIR,))
+def check_record_counters(ctx):
+    d = ctx.root / RECORD_DIR
+    rows = read_tsv(d / "transactions.tsv")
+    chain = json.loads((d / "chain.json").read_text())
+    rpc = lez.Rpc(ctx.lez_url + "/rpc", budget_s=120)
+    try:
+        rpc.call("getLastBlockId")
+    except lez.RpcError as e:
+        raise Skipped(f"the network's RPC did not answer: {e}") from e
+    cache = (ctx.cache or ctx.root / ".scratch/verify-cache") / "lez-blocks"
+    probs, states = reconcile_state(rpc, lc.Idl.load(ctx.root / "idl/ferrata_attestation.idl.json"),
+                                    lez.b58decode(chain["program_account"]), rows, cache, chain["as_of"]["block"])
+    fail_if(probs, "the instances' counters")
+    return [f"{k[:10]}…: {v['applied']} applied jobs at block {v['head']} = 1 + the finishes the chain holds "
+            f"({v['applied_by_as_of']} by the record's as-of block); finalized slot {v['finalized_slot']:,}"
+            for k, v in states.items()]
 
 
 @check(id="run-record-beacon", title="Every header the light client applied is Sepolia's canonical block at its slot",

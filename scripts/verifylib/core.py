@@ -110,6 +110,7 @@ class Ctx:
     beacon: list = dataclasses.field(default_factory=list)
     verbose: bool = False
     cache: Path | None = None
+    git_dir: Path | None = None  # where git objects are read (the tamper tests' copies have none of their own)
     out: Callable = print
 
     def path(self, rel: str) -> Path:
@@ -174,6 +175,15 @@ def run_check(c: Check, ctx: Ctx) -> Result:
         return Result(c, "FAIL", [f"no result within {c.timeout} s"], time.monotonic() - t0)
     except Exception as e:  # noqa: BLE001 - a crash of a check is a failure of it, reported with its cause
         return Result(c, "FAIL", [f"{type(e).__name__}: {e}"], time.monotonic() - t0)
+
+
+def run_script(ctx: "Ctx", argv: list, timeout: int = 1800, env: dict | None = None):
+    """(exit status, non-empty output lines) of a repository script run from ctx.root (python3 -> this Python)."""
+    e = dict(os.environ)
+    e.update(env or {})
+    argv = [sys.executable if a == "python3" else a for a in argv]
+    p = subprocess.run(argv, cwd=ctx.root, capture_output=True, text=True, timeout=timeout, env=e)
+    return p.returncode, [ln for ln in (p.stdout + "\n" + p.stderr).splitlines() if ln.strip()]
 
 
 def fail_if(problems: list, what: str) -> None:

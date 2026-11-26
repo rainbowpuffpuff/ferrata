@@ -644,3 +644,20 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: The admin view's self-test
         run: node admin/dump.mjs --selftest
+
+  # scripts/verify.py, the reviewer's re-check tool (docs/VERIFY.md): every offline check of its quick tier (numbers
+  # re-derived from the committed records, hashes and image ids, Groth16 seals verified locally, signatures, the
+  # documents' own checks, the tools' tests), then the tamper tests: each check family run on a copy of the
+  # repository with one piece of evidence altered (a seal's byte, a transaction hash, a recorded number, a manifest
+  # hash, a signature) must fail. The named tests of the requirement map are the other jobs' (verify.py --tests).
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0 # site-manifest-git reads the blobs of the commit the site's manifest names
+      - name: Every offline check of the quick tier
+        run: python3 -I scripts/verify.py --all --offline --strict
+      - name: The tamper tests of every check family
+        run: python3 -I scripts/test_verify.py
