@@ -409,6 +409,12 @@ jobs:
       - name: The watchers' rehearsal on anvil (monitor/tests/anvil-e2e.sh)
         working-directory: monitor
         run: MONITOR_E2E_OUT="$RUNNER_TEMP/monitor-e2e" bash tests/anvil-e2e.sh
+      # RFP-022 R.6: --send-via logos against a stand-in for tx_sender_module (e2e/netfault/txsender_stub.py): what the
+      # module did not broadcast goes the plain way at the number it burnt, and a send held behind a burnt number nobody
+      # filled is followed by the same call at that number (L5, the gap fill).
+      - name: The watcher's sends through tx_sender_module, its fallback and gap fill (monitor/tests/logos-fallback.sh)
+        working-directory: monitor
+        run: MONITOR_LF_OUT="$RUNNER_TEMP/logos-fallback" bash tests/logos-fallback.sh
 
   # The vault's Foundry suites (vault/README.md): unit, fuzz and invariant tests with the mock verifier, and
   # test/real/ with RISC Zero's real Groth16 verifier and committed real proofs. PrivacySuite is left out: it replays

@@ -12,9 +12,16 @@
 #       cancel the plain way at its node's next nonce, which is n: mined, the candidate gone
 #   L2  the next wrong candidate: cancelled through the module at n + 1, mined (nothing waits behind a gap)
 #   L3  stuck with nothing sent (`stuck-unsent send_status`: the row written, n + 2 burnt): plain, at n + 2, mined
-#   L4  the next one: through the module at n + 3, mined; the watcher's account ends at n + 4, nothing pending
+#   L4  the next one: through the module at n + 3, mined
+#   L5  the module burns again (`fail send_status`: n + 4) and the plain send right after it fails too (the watcher's
+#       account empty for that one poll: the node refuses the transaction for its fee); the next run (the account
+#       funded again, the module healthy): the module's request takes n + 5, which the node holds queued behind the
+#       gap at n + 4; not mined within --tx-timeout, the monitor sends the same cancel the plain way at the pending
+#       nonce, n + 4 (the gap filled), and the module's held request is mined after it (reverted: the candidate is
+#       gone); the watcher's account ends at n + 6, nothing pending or queued
 # Before the fix (an unknown outcome was an error, never the fallback) L1's cancel is not mined: every poll's new
-# request takes the module's next number, behind the gap at n.
+# request takes the module's next number, behind the gap at n. Before the gap fill (chain::gap_to_fill), L5's cancel is
+# not mined either: each poll's request is queued behind n + 4 and given up after --tx-timeout.
 #
 # Run from monitor/ (on the build box: mrun -- 'bash tests/logos-fallback.sh'; Foundry's vault/lib installed).
 # Results: target/logos-fallback/ (summary.md, alerts.jsonl, the stand-in's log and history), or $MONITOR_LF_OUT; the
@@ -156,12 +163,35 @@ n4=$(label logos-fallback/4)
 case_run L4 pass "$n4"
 check "L4 cancelled through tx_sender_module at nonce $((nonce0 + 3)), mined" \
   '[ "$(submitted_at "$n4")" = 0 ] && [ "$(jq -r .via.path <<< "$a")" = logos ] && [ "$txn" = $((nonce0 + 3)) ]'
+# L5: a burnt number and a failed plain send after it (the gap README "With --send-via logos" called not handled).
+n5=$(label logos-fallback/5)
+h0=$(hits); r0=$(requests | jq length)
+fund=$(cast balance --rpc-url "$rpc" "$watcher")
+echo "fail send_status" > "$ctl"
+submit "$(journal "$genesis" "$n5" 12 "$(label forged/12)" 4 3)"
+cast rpc --rpc-url "$rpc" anvil_setBalance "$watcher" 0x0 > /dev/null
+"$mon" "${margs[@]}" --max-polls 1 2>> "$run/monitor-stderr.log" || echo "monitor run exited $? (L5, the account empty)" >> "$run/monitor-stderr.log"
+burnt=$(requests | jq -r --argjson r "$r0" '.[$r:][0].nonce // "none"')
+check "L5 the module burnt nonce $burnt (failed, nothing sent) and the plain send after it failed (the account empty): the candidate still pending, nothing mined" \
+  '[ "$(hits)" -gt "$h0" ] && [ "$burnt" = $((nonce0 + 4)) ] && [ "$(submitted_at "$n5")" != 0 ] && [ "$(cast nonce --rpc-url "$rpc" "$watcher" --block latest)" = $((nonce0 + 4)) ]'
+cast rpc --rpc-url "$rpc" anvil_setBalance "$watcher" "$(printf '0x%x' "$fund")" > /dev/null
+echo pass > "$ctl"
+"$mon" "${margs[@]}" --max-polls 3 2>> "$run/monitor-stderr.log" || echo "monitor run exited $? (L5, funded again)" >> "$run/monitor-stderr.log"
+a=$(cancelled "$n5"); [ -n "$a" ] || a='{}'
+tx=$(jq -r '.tx // empty' <<< "$a")
+txn=none; [ -z "$tx" ] || txn=$(cast tx --rpc-url "$rpc" "$tx" nonce 2>/dev/null || echo none)
+req=$(requests | jq -c --argjson r "$r0" '.[$r:]')
+held=$(jq -r '.[1].nonce // "none"' <<< "$req")
+check "L5 then the module's next request ($held) was held behind the gap, and the cancel went the plain way at the burnt nonce $burnt, mined: the gap filled, the candidate gone" \
+  '[ "$held" = $((nonce0 + 5)) ] && [ "$(submitted_at "$n5")" = 0 ] && [ "$txn" = "$burnt" ] && [ "$(jq -r .via.gapFill <<< "$a")" = true ] && [ "$(jq -r .via.nonce <<< "$a")" = "$burnt" ]'
+path=$(jq -r 'if .via.gapFill then "plain (gap fill)" elif .via.fallback then "plain (fallback)" else .via.path end // "none"' <<< "$a")
+rows+=("| L5 | \`fail send_status\`, the account empty for one poll; then \`pass\` | $(jq length <<< "$req") | $burnt, $held | $path | $txn | $(failed_alerts "$n5") |")
 latest=$(cast nonce --rpc-url "$rpc" "$watcher" --block latest)
 pending=$(cast nonce --rpc-url "$rpc" "$watcher" --block pending)
 # anvil's pending nonce does not count transactions queued behind a gap: ask its pool too (review-integ9d L6).
 queued=$(cast rpc --rpc-url "$rpc" txpool_status | jq -r '.queued' | xargs printf '%d')
-check "the watcher's account: $((nonce0 + 4)) transactions mined, nothing pending or queued behind a gap (latest $latest, pending $pending, queued $queued)" \
-  '[ "$latest" = $((nonce0 + 4)) ] && [ "$pending" = "$latest" ] && [ "$queued" = 0 ]'
+check "the watcher's account: $((nonce0 + 6)) transactions mined (L5's held request after the gap fill), nothing pending or queued behind a gap (latest $latest, pending $pending, queued $queued)" \
+  '[ "$latest" = $((nonce0 + 6)) ] && [ "$pending" = "$latest" ] && [ "$queued" = 0 ]'
 
 # The node view's path in the alerts, without the checkout's location (as anvil-e2e.sh).
 sed -i -e 's#"file:[^"]*/monitor/\(results\|target\)/#"file:<checkout>/monitor/\1/#g' "$alerts"
