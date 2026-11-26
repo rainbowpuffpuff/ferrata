@@ -152,6 +152,13 @@ def _register_wrappers() -> None:
              "The modules' licence notices"),
             ("unit-actions-pinned", "scripts/ci/check-actions-pinned.py", (), (),
              "Every GitHub Action the workflows use is pinned by commit"),
+            ("unit-deploy-sepolia", "scripts/test_deploy_sepolia.py", (231, 232), (),
+             "The Sepolia deploy tool (vault/script/deploy_sepolia.py), offline"),
+            ("unit-netfault-autoresume", "e2e/netfault/test_autoresume.py", (), (),
+             "pubnet.py's resume rules after a failure (the journal, the fence)"),
+            ("unit-updater-mutants", "lez/updater/dev/test_mutants.py", (223, 226), (),
+             "The updater's mutation runner"),
+            ("unit-names-claims", "names/e2e/claims.py", (235,), (), "The names program's documented claims and fees"),
     ):
         _py(cid, script, family="unit", mode="offline", evidence=ev, rows=rows, title=title,
             what=f"{script}'s cases", against="the behaviour the script's docstring states")
@@ -160,6 +167,17 @@ def _register_wrappers() -> None:
               "this tree is the integration's step)", what="site/test_site.py's cases",
         against="the requirement rows and EVIDENCE rows the pages are built from")
     for cid, shell, ev, rows, title in (
+            ("unit-v03-guards", "bash lez-v03/tests/sendguard.sh && bash lez-v03/tests/verifystatus.sh && "
+             "bash lez-v03-bridge/tests/guards.sh", (131, 133, 150), (),
+             "The v0.3.1 ports' send guards (nothing reaches a public network unless asked twice)"),
+            ("unit-crown-guards", "bash e2e/crown/test_send_guard.sh && bash e2e/crown/test_deposit_guard.sh",
+             (41, 91, 142), (), "The live runner's send and deposit guards (a run sends only what its plan holds)"),
+            ("unit-seqnet-late-credit", "bash e2e/seqnet/test-late-credit.sh", (203,), (),
+             "A gas-drop credit that arrives late (the claim's fee payer)"),
+            ("unit-day1-daemons", "bash lez/testnet04/tests/daemon_cmds.sh", (148,), (),
+             "The day-one kit's daemon commands"),
+            ("unit-finality-sim", "cd docs/design/finality-rule/sim && python3 test_sim.py", (20,), (),
+             "The finality-rule simulator under its tests"),
             ("unit-admin", "node admin/dump.mjs --selftest", (57,), ("RFP-022 U.2",),
              "The admin view's decoder (235 checks)"),
             ("unit-msg", "node --test deploy/testnet/web/msg/test/*.test.mjs", (236,), (),
@@ -173,8 +191,9 @@ def _register_wrappers() -> None:
              (242,), ("RFP-021 S.7",), "The explorer's decoders (blocks, IDLs, Ethereum proofs) and the status page's "
              "alarm rules"),
     ):
+        needs = ("node", "bash", "python3") if "node" in shell else ("bash", "python3")
         command(id=cid, shell=shell, family="unit", mode="offline", evidence=ev, rows=rows, title=title,
-                needs=("node", "bash"), what=f"`{shell}`", against="the test files' expectations")
+                needs=needs, what=f"`{shell}`", against="the test files' expectations")
 
 
 @check(id="lab-roots", family="record", mode="offline", evidence=(21,),
