@@ -63,11 +63,3 @@ RuntimeError: eth_getBlockTransactionCountByNumber: {'code': 4444, 'message': 'p
 [12:50:58] run done at 2 min
 [12:50:58] == check: the records of e2e/runs/rc3-roundtrip-1/run
 [12:50:59] check: every step of the round trip as designed
-[12:59:09] == check: the records of e2e/runs/rc3-roundtrip-1/run
-[12:59:09] check: every step of the round trip as designed
-[13:00:55] == check: the records of e2e/runs/rc3-roundtrip-1/run
-[13:00:55] check: every step of the round trip as designed
-[13:01:04] == check: the records of e2e/runs/rc3-roundtrip-1/run
-[13:01:04] check: every step of the round trip as designed
-[13:01:04] == check: the records of e2e/runs/rc3-roundtrip-1/run
-[13:01:05] == check: the records of e2e/runs/rc3-roundtrip-1/run

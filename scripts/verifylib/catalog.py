@@ -337,8 +337,16 @@ def _rc3_roundtrip(ctx):
     fork = datetime.datetime.strptime(facts["fork"]["time"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc)
     end = int(fork.timestamp()) + int(facts["fork"].get("ageS", 0)) + sum(int(ln.split("\t")[2]) for ln in steps)
     env = dict(os.environ, FERRATA_CI_NOW=str(end), **scratch_env(ctx))
-    p = subprocess.run(["bash", "scripts/ci/sequencer-roundtrip.sh", RC3_RT, "check"], cwd=ctx.root, env=env,
-                       capture_output=True, text=True, timeout=300)
+    # The check stage logs into the results directory it checks: it runs on a copy, so the record is never written.
+    import shutil
+    import tempfile
+    work = ctx.root / ".scratch" / "verify-rc3"
+    work.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=work) as d:
+        copy = Path(d) / "rc3-roundtrip-1"
+        shutil.copytree(ctx.root / RC3_RT, copy, symlinks=True)
+        p = subprocess.run(["bash", "scripts/ci/sequencer-roundtrip.sh", str(copy.relative_to(ctx.root)), "check"],
+                           cwd=ctx.root, env=env, capture_output=True, text=True, timeout=300)
     out = [ln.strip() for ln in (p.stdout + p.stderr).splitlines() if ln.strip()]
     if p.returncode != 0:
         raise CheckFailed("\n".join(ln for ln in out if "MISSING" in ln or "FAIL" in ln or "STOP" in ln) or out[-1])

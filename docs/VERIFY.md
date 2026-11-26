@@ -65,7 +65,7 @@ python3 -I scripts/verify.py --coverage        # every row of docs/requirements-
 ## 2. The online checks (read-only)
 
 ```sh
-python3 -I scripts/verify.py --all --online    # the 20 online checks: about 15 minutes
+python3 -I scripts/verify.py --all --online    # the 20 online checks: about 20 minutes
 ```
 
 They send only reads (`eth_call`, `eth_getCode`, receipts and logs on Ethereum; `getBlockRange`, `getAccountView` on
