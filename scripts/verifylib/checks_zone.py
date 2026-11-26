@@ -15,7 +15,9 @@ import json
 import re
 from pathlib import Path
 
-from . import groth16
+from datetime import datetime
+
+from . import groth16, sigs
 from .core import check, fail_if
 
 RUN = "e2e/runs/zone-bridge-rc3-multi"
@@ -74,6 +76,42 @@ def _figure(problems: list, readme: str, source: str, name: str, actual, stated,
 
 def _run(rel: str) -> str:
     return f"{RUN}/{rel}"
+
+
+def _hex32(value: str) -> str:
+    return value.lower().removeprefix("0x")
+
+
+def _live_keys(ctx) -> list:
+    """The channel's accredited keys at the run's end, in the channel's order (zone/channel-end.json)."""
+    return [_hex32(key) for key in _json(ctx, _run("zone/channel-end.json"))["accredited_keys"]]
+
+
+def _key_set_hash(keys: list, posting_timeframe: int) -> bytes:
+    """attestor-core's key_set_hash: SHA-256("ferrata/keyset/v2" || n u32 || postingTimeframe u32 || keys), big-endian."""
+    data = b"ferrata/keyset/v2" + len(keys).to_bytes(4, "big") + posting_timeframe.to_bytes(4, "big")
+    return hashlib.sha256(data + b"".join(bytes.fromhex(key) for key in keys)).digest()
+
+
+def _deployment_prefix(tag: bytes, deployment: dict) -> bytes:
+    """attestor-core's Deployment::prefix: tag || evmChainId (uint256) || vault || lezConfigId || channelId."""
+    chain = deployment["evm_chain_id"]
+    chain = int(chain, 16) if isinstance(chain, str) else int(chain)
+    return (tag + chain.to_bytes(32, "big") + bytes.fromhex(_hex32(deployment["vault"]))
+            + bytes.fromhex(_hex32(deployment["lez_config_id"])) + bytes.fromhex(_hex32(deployment["channel_id"])))
+
+
+def _attestation_verifies(deployment: dict, key_set_hash: bytes, entry: dict, tip_hash: str, final_msg_id: str):
+    """(certificate verifies, signature verifies): attestor-core's verify_certificate and verify_attestation, with
+    the pure-Python Ed25519 of verifylib/sigs.py (RFC 8032; verify_strict's refusal of small-order keys not repeated)."""
+    channel_key = bytes.fromhex(_hex32(entry["channel_key"]))
+    att_key = bytes.fromhex(_hex32(entry["attestation_key"]))
+    certificate = _deployment_prefix(b"ferrata/attest-key/v1", deployment) + att_key
+    message = (_deployment_prefix(b"ferrata/final-tier/v2", deployment) + key_set_hash
+               + int(entry["tip_id"]).to_bytes(8, "big") + bytes.fromhex(_hex32(tip_hash))
+               + bytes.fromhex(_hex32(final_msg_id)))
+    return (sigs.ed25519_verify(channel_key, certificate, bytes.fromhex(_hex32(entry["certificate"]))),
+            sigs.ed25519_verify(att_key, message, bytes.fromhex(_hex32(entry["signature"]))))
 
 
 def _doc_rows(ctx) -> dict:
@@ -156,6 +194,13 @@ def zone_inscriptions(ctx):
             _expect(problems, len(signature) == 64 and len(payload_hash) == 32,
                     f"{inscriptions_rel}: block {row['block']}: signature/payload digest length changed")
 
+    ordered_blocks = sorted(blocks, key=lambda row: int(row["block"]))
+    for previous, row in zip(ordered_blocks, ordered_blocks[1:]):
+        parent = row["parent_msg_id"]
+        _expect(problems, parent == previous["msg_id"],
+                f"{blocks_rel}: block {row['block']}'s parent {parent[:16]}… is not block {previous['block']}'s message "
+                f"{previous['msg_id'][:16]}…")
+
     report = _text(ctx, report_rel)
     span = re.search(r"final inscriptions of LEZ blocks (\d+)\.\.=(\d+)", report)
     native = re.search(r"channel's (\d+) key\(s\) \(([^)]*)\): all (\d+) accepted; "
@@ -189,7 +234,8 @@ def zone_inscriptions(ctx):
     fail_if(problems, "zone inscription/channel records differ")
     ordered = [reported_counts.get(key, 0) for key in keys]
     return [f"{inscriptions_rel}: {len(inscriptions)} unique inscriptions for blocks {block_numbers[0]}..="
-            f"{block_numbers[-1]}, cross-checked field by field with {blocks_rel}",
+            f"{block_numbers[-1]}, cross-checked field by field with {blocks_rel}, each block's parent the message of "
+            "the block before it (block 2's parent, the channel's earlier inscription, is not in the record)",
             f"{channel_rel}: four distinct accredited keys, threshold {channel['configuration_threshold']}, "
             f"posting timeframe {channel['posting_timeframe']}; native report totals by channel order {ordered}",
             f"{report_rel}: all {accepted} accepted by its parse/re-hash/link/framing/BLAKE2b/verify_strict pass",
@@ -206,7 +252,7 @@ def zone_inscriptions(ctx):
        inputs=(README, f"{CHECKPOINT}/blocks.tsv", f"{CHECKPOINT}/burns.json",
                f"{CHECKPOINT}/zone-28-164.json", f"{CHECKPOINT}/attestor.json", f"{CHECKPOINT}/exec.json",
                f"{CHECKPOINT}/zone-28-164.input", PARAMS, *tuple(_run(f"zone/attestor-{i}/final.json") for i in range(4)),
-               *DOCS))
+               _run("zone/channel-end.json"), _run("identity.json"), *DOCS))
 def zone_checkpoint(ctx):
     problems = []
     readme = _text(ctx, README)
@@ -256,7 +302,8 @@ def zone_checkpoint(ctx):
     _same(problems, meta_rel, "attestations count", meta["attestations"], len(used))
     for entry in used:
         found = by_key.get(entry["channel_key"])
-        _expect(problems, found is not None, f"{attestor_rel}: used key {entry['channel_key']} is not accredited")
+        _expect(problems, found is not None, f"{attestor_rel}: used key {entry['channel_key']} has no final.json among "
+                                             "the four attestors'")
         if found:
             final_rel, final = found
             for field in ("attestation_key", "certificate", "channel_key", "signature"):
@@ -264,6 +311,36 @@ def zone_checkpoint(ctx):
                         f"{attestor_rel}: {field} differs from {final_rel}")
             _expect(problems, entry["tip_id"] == final["tip_id"] == 164,
                     f"{attestor_rel}/{final_rel}: attestation is not of tip 164")
+    # The key set is the channel's (zone/channel-end.json), not the four final.json files': every attestation used is by
+    # an accredited channel key, its key certified for this deployment by that channel key and its tip signed under the
+    # channel's key-set hash (attestor-core's messages, Ed25519).
+    live = _live_keys(ctx)
+    channel = _json(ctx, _run("zone/channel-end.json"))
+    _same(problems, attestor_rel, "the collector's key set is the channel's accredited keys, in order",
+          [_hex32(key) for key in attestor["key_set"]], live)
+    key_set_hash = _key_set_hash(live, int(channel["posting_timeframe"]))
+    _same(problems, attestor_rel, "the key-set hash (ferrata/keyset/v2 over the channel's keys)",
+          _hex32(attestor["key_set_hash"]), key_set_hash.hex())
+    identity = _json(ctx, _run("identity.json"))
+    deployment = attestor["deployment"]
+    _same(problems, attestor_rel, "the deployment's chain, vault and configuration",
+          (int(deployment["evm_chain_id"]), _hex32(deployment["vault"]), _hex32(deployment["lez_config_id"])),
+          (int(identity["chainId"]), _hex32(identity["vault"]), _hex32(_json(ctx, PARAMS)["lezConfigId"])))
+    verified = 0
+    for entry in used:
+        key = _hex32(entry["channel_key"])
+        _expect(problems, key in live, f"{attestor_rel}: an attestation by {key[:8]}…, not an accredited key of "
+                                       f"{_run('zone/channel-end.json')}")
+        certified, signed = _attestation_verifies(deployment, key_set_hash, entry, attestor["tip_hash"],
+                                                  attestor["final_msg_id"])
+        _expect(problems, certified, f"{attestor_rel}: {key[:8]}…'s certificate of its attestation key does not verify")
+        _expect(problems, signed, f"{attestor_rel}: {key[:8]}…'s attestation of tip {entry['tip_id']} does not verify")
+        verified += certified and signed and key in live
+    for final_rel, final in zip(final_rels, finals):
+        _same(problems, final_rel, "its key-set hash", _hex32(final["key_set_hash"]), key_set_hash.hex())
+        _expect(problems, _hex32(final["channel_key"]) in live, f"{final_rel}: not an accredited key's attestor")
+    _same(problems, attestor_rel, "attestations verified (certificate by an accredited channel key, tip signed by its "
+                                  "attestation key)", verified, 3)
     omitted = sorted(set(by_key) - set(used_keys))
     _same(problems, attestor_rel, "one attestor omitted", len(omitted), 1)
     _expect(problems, len(omitted) == 1 and omitted[0].startswith("0x90a548e0"),
@@ -288,8 +365,10 @@ def zone_checkpoint(ctx):
     fail_if(problems, "zone checkpoint records differ")
     return [f"{blocks_rel}: {block_count} contiguous blocks and {transactions:,} transactions; {burns_rel}: "
             f"{burn_count} burns and {imported_leaves} final imported leaves",
-            f"{attestor_rel} + four final.json records: {len(used)} distinct tip-164 attestations used; "
-            f"omitted {omitted[0][:10]}…; n={attestor['n']}, t={attestor['t']}",
+            f"{attestor_rel} + four final.json records: {len(used)} distinct tip-164 attestations used, {verified} of "
+            f"them verified (Ed25519: each attestation key certified by an accredited channel key of "
+            f"{_run('zone/channel-end.json')}, tip 164 signed under the channel's key-set hash); "
+            f"omitted {omitted[0][:10] if omitted else '-'}…; n={attestor['n']}, t={attestor['t']}",
             f"{exec_rel}: {execution['user_cycles']:,} user cycles; native-journal equality asserted, journal "
             f"length/SHA-256 and input length recomputed"]
 
@@ -308,7 +387,8 @@ REFUSAL_CASES = {
             "in the guest transcript and the guest's own error",
        against="checkpoint/refusals/native.txt, guest.txt and each case's JSON metadata, plus the run README",
        inputs=(README, f"{CHECKPOINT}/refusals/native.txt", f"{CHECKPOINT}/refusals/guest.txt",
-               *tuple(f"{CHECKPOINT}/refusals/zone-28-164-refuse-{case}.json" for case in REFUSAL_CASES), *DOCS))
+               *tuple(f"{CHECKPOINT}/refusals/zone-28-164-refuse-{case}.json" for case in REFUSAL_CASES),
+               _run("zone/channel-end.json"), *DOCS))
 def zone_refusals(ctx):
     problems = []
     readme = _text(ctx, README)
@@ -330,21 +410,26 @@ def zone_refusals(ctx):
     _same(problems, native_rel, "four native errors", native, expected)
     _same(problems, guest_rel, "native errors repeated by guest harness", guest_native, native)
     _same(problems, guest_rel, "guest errors equal native errors", guest, native)
+    live = _live_keys(ctx)
     for case, error in REFUSAL_CASES.items():
         rel = f"{CHECKPOINT}/refusals/zone-28-164-refuse-{case}.json"
         metadata = _json(ctx, rel)
+        _same(problems, rel, "the case's key set is the channel's accredited keys", [_hex32(k) for k in metadata["keys"]],
+              live)
         _same(problems, rel, "expected refusal", metadata["expect_refusal"], error)
         _same(problems, rel, "native record", metadata["native"], f"refused: {error}")
         attestations = metadata["attestations"]
-        keys = [row["channel_key"].removeprefix("0x") for row in attestations]
+        keys = [_hex32(row["channel_key"]) for row in attestations]
         if case == "below-t":
             _same(problems, rel, "attestations below threshold", len(attestations), 2)
         elif case == "outsider":
-            outside = [key for key in keys if key not in metadata["keys"]]
-            _same(problems, rel, "outside keys", len(outside), 1)
-        elif case == "repeated":
+            outside = [key for key in keys if key not in live]
+            _same(problems, rel, "attestations by a key outside the channel's set", len(outside), 1)
+        else:
+            _same(problems, rel, "every attestation by an accredited key", [k for k in keys if k not in live], [])
+        if case == "repeated":
             _same(problems, rel, "one repeated attestor", (len(attestations), len(set(keys))), (3, 2))
-        elif case == "stale-tip":
+        if case == "stale-tip":
             _same(problems, rel, "stale/tip ids", sorted(row["tip_id"] for row in attestations), [29, 164, 164])
         _readme(problems, readme, error.removeprefix("Core(").removesuffix(")"))
     _documents(ctx, problems, "RFP-022 F.7", ("two of four attestations, a key outside the set, one attestor twice and a "
@@ -418,6 +503,20 @@ def zone_proofs(ctx):
                     f"{events_rel}: {name}: call id differs from calls.tsv")
             _same(problems, events_rel, f"{name} event attempt(s)", row.get("attempt", row.get("attempts")), 1)
     _same(problems, events_rel, "resumed request", [row["name"] for row in resumed], ["0-checkpoint"])
+    _same(problems, events_rel, "one answer for each job", sorted(row.get("name") for row in answers), sorted(PROOF_JOBS))
+    for row in answers:
+        name = row.get("name")
+        if name not in PROOF_JOBS:
+            continue
+        done = _json(ctx, f"{PROVER}/done/{name}.json")
+        _expect(problems, row.get("ok") is True and row.get("error") is None,
+                f"{events_rel}: {name}: the answer is not a success (ok {row.get('ok')!r}, error {row.get('error')!r})")
+        for field in ("kind", "seconds", "resumed", "attempts", "call_id"):
+            _same(problems, events_rel, f"{name} {field} (as the done record)", row.get(field), done.get(field))
+        _same(problems, events_rel, f"{name} seconds (as calls.tsv)", row.get("seconds"),
+              float(call_rows[name]["seconds"]) if name in call_rows else None)
+        _expect(problems, str(row.get("job", "")).endswith(f"/inbox/{name}.json"),
+                f"{events_rel}: {name}: its job is not the inbox's {name}.json")
 
     summary_rel = f"{PROVER}/summary.txt"
     summary = _text(ctx, summary_rel)
@@ -526,7 +625,9 @@ def zone_proofs(ctx):
        against="vault-checks.json, final logs/zone-bridge.log, crown/release records and manifest, plus the run README",
        inputs=(README, _run("vault-checks.json"), _run("logs/zone-bridge.log"), _run("manifest.json"),
                _run("crown.json"), f"{CHECKPOINT}/zone-28-164.json", f"{CHECKPOINT}/burns.json",
-               f"{RUN}/releases/release-public-0.json", f"{RUN}/releases/release-private-1.json", *DOCS))
+               f"{RUN}/releases/release-public-0.json", f"{RUN}/releases/release-private-1.json",
+               f"{RUN}/releases/receipts/release-public-0/seal.hex", f"{RUN}/releases/receipts/release-private-1/seal.hex",
+               *DOCS))
 def zone_anvil(ctx):
     problems = []
     readme = _text(ctx, README)
@@ -552,9 +653,15 @@ def zone_anvil(ctx):
     for fixture_index, crown_release in enumerate(crown["releases"]):
         statement = statements[fixture_index]
         for crown_field, statement_field in (("nullifier", "nullifier"), ("recipient", "recipient"),
-                                             ("relayer", "relayer"), ("burnRoot", "burn_root")):
+                                             ("relayer", "relayer"), ("burnRoot", "burn_root"),
+                                             ("relayFee", "relay_fee"), ("token", "token")):
             _same(problems, _run("crown.json"), f"release {fixture_index} {crown_field}",
-                  crown_release[crown_field].lower(), statement[statement_field].lower())
+                  str(crown_release[crown_field]).lower(), str(statement[statement_field]).lower())
+        _same(problems, _run("crown.json"), f"release {fixture_index} denomination", crown_release["denomIndex"], 0)
+        # the request the vault was sent carries the seal zone-rc3-multi-proofs verifies for that statement
+        receipt_seal = _hex(ctx, f"{RUN}/releases/receipts/release-{crown_release['name']}/seal.hex")
+        _same(problems, _run("crown.json"), f"release {crown_release['name']} seal (as its verified receipt)",
+              _hex32(crown_release["seal"]), receipt_seal.hex())
 
     meta = _json(ctx, f"{CHECKPOINT}/zone-28-164.json")
     burns = _json(ctx, f"{CHECKPOINT}/burns.json")
@@ -657,6 +764,8 @@ def zone_fork(ctx):
             f"{transcript_rel}: verifier 3.1.0/selector/renounced-stop record absent")
 
     params = _json(ctx, PARAMS)
+    _same(problems, PARAMS, "the vault's floors (nMin, tMin)", (params["nMin"], params["tMin"]), (4, 3))
+    _documents(ctx, problems, "EVIDENCE row 266", ("floors nMin 4, tMin 3",))
     fork_params = _json(ctx, _run("fork-rehearsal-31/params.json"))
     for field in ("checkpointImageIdB", "releaseImageId", "lezConfigId", "genesisState", "nMin", "tMin"):
         _same(problems, _run("fork-rehearsal-31/params.json"), field, fork_params[field], params[field])
@@ -708,6 +817,15 @@ def zone_resources(ctx):
     _figure(problems, readme, "zone/attestor-*/resources.tsv", "rounds per attestor", per_rounds, [25] * 4)
     signed = [sum(row["ok"] for row in rows_by_attestor[rel]) for rel in rows_by_attestor]
     _same(problems, "zone/attestor-*/resources.tsv", "signed rounds per attestor", signed, [25] * 4)
+    for rel in rows_by_attestor:
+        times = [datetime.strptime(line.split("\t")[0], "%Y-%m-%dT%H:%M:%SZ")
+                 for line in _text(ctx, rel).splitlines() if line.strip()]
+        # the attestor's loop: a round, then 60 s of sleep (zone-bridge.sh attest_loop), so 60-61 s apart; its last row
+        # is the final round (final_rounds), started once the zone reached T1, a few seconds after the loop's last
+        gaps = [(b - a).total_seconds() for a, b in zip(times, times[1:])]
+        _expect(problems, len(gaps) == 24 and all(gap in (60.0, 61.0) for gap in gaps[:-1]) and 0 < gaps[-1] < 60,
+                f"{rel}: the rounds' timestamps are not 24 a minute apart (60-61 s) and then the final round: gaps "
+                f"{sorted(set(gaps))}")
     every = [row for rows in rows_by_attestor.values() for row in rows]
     _same(problems, "zone/attestor-*/resources.tsv", "total rounds", len(every), 100)
     summary = resources.summary(every, 60)
@@ -730,11 +848,14 @@ def zone_resources(ctx):
     log = _text(ctx, log_rel)
     _expect(problems, "four attestors started (a round every 60 s" in log,
             f"{log_rel}: four-attestor/60-second cadence record absent")
-    _documents(ctx, problems, "RFP-022 P.6", ("four attestors, 25 rounds each, one round every 60 s",
+    _documents(ctx, problems, "RFP-022 P.6", ("four attestors, 25 rounds each: 24 a minute apart (60–61 s), then the final "
+                                              "round, whose attestations the checkpoint took",
                                               "a round 0.17 CPU s and 0.19 s wall (medians; at most 0.36 and 0.94), "
                                               "peak RSS 18.0 MiB, 35,714 bytes read (the first round 2.6 MB)",
                                               "0.003 of a core and 314 MiB read a day (row 266)"))
-    _documents(ctx, problems, "EVIDENCE row 266", ("100 rounds, 0.17 CPU s and 0.19 s wall a round (medians), peak RSS "
+    _documents(ctx, problems, "EVIDENCE row 266", ("100 rounds (each attestor's 24 a minute apart, then the final round, "
+                                                   "whose attestations the checkpoint took), 0.17 CPU s and 0.19 s wall a "
+                                                   "round (medians), peak RSS "
                                                    "18.0 MiB, 35,714 B read a round (the first 2.6 MB), 0.003 of a "
                                                    "core and 314 MiB a day at one round a minute",))
     fail_if(problems, "zone attestor resource records differ")

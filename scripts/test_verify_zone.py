@@ -23,6 +23,8 @@ from verifylib.core import Ctx, REGISTRY, run_check  # noqa: E402
 SCRATCH = ROOT / ".scratch" / "verify-zone-tests"
 RUN = "e2e/runs/zone-bridge-rc3-multi"
 README = f"{RUN}/README.md"
+FIXTURE = "vault/test/real/fixtures/zone-bridge-rc3-multi.json"
+KEY_6462 = "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac"  # an accredited channel key, the attestor of zone/attestor-2
 
 CHECK_IDS = (
     "zone-rc3-multi-inscriptions",
@@ -202,6 +204,99 @@ class ZoneBridgeVerifyTamperTests(unittest.TestCase):
         self._assert_fails("zone-rc3-multi-anvil", ("docs/EVIDENCE.md", "| 266 | ", "| 299 | "))
         self._assert_fails("zone-rc3-multi-resources", ("docs/requirements-status.md", "| P.6 | in part | Provers,",
                                                         "| P.6x | in part | Provers,"))
+
+    def _assert_fails_multi(self, cid: str, edits, contains: str | None = None) -> None:
+        """Several files altered together (rel, old, new, count): what one record alone would not show."""
+        check = self.checks[cid]
+        with tempfile.TemporaryDirectory(prefix=cid + "-", dir=SCRATCH) as temporary:
+            root = self._copy(check, Path(temporary))
+            for rel, old, new, count in edits:
+                text = (root / rel).read_text(encoding="utf-8")
+                self.assertEqual(text.count(old), count, f"tamper target {rel}: {old[:60]!r}")
+                (root / rel).write_text(text.replace(old, new), encoding="utf-8")
+            result = run_check(check, Ctx(root=root))
+        self.assertEqual(result.status, "FAIL", f"{cid} did not detect tampering: {result.lines}")
+        if contains:
+            self.assertTrue(any(contains in line for line in result.lines), result.lines)
+
+    def test_10_review_round_1_experiments(self):
+        """The integration's review round 1 (H1, M1-M4, L1): each of these altered records passed before its fix."""
+        outsider = "1" * 64
+        cases = {
+            # H1: an attestation and its final.json moved to a key outside the channel, the key sets left alone
+            "zone-rc3-multi-checkpoint": [(f"{RUN}/checkpoint/attestor.json", '"channel_key": "0x%s"' % KEY_6462,
+                                           '"channel_key": "0x%s"' % outsider, 1),
+                                          (f"{RUN}/zone/attestor-2/final.json", '"channel_key": "%s"' % KEY_6462,
+                                           '"channel_key": "%s"' % outsider, 1)],
+            # H1: the outsider case's key set and attestations swapped, so the "outsider" is an accredited key
+            "zone-rc3-multi-refusals": [(f"{RUN}/checkpoint/refusals/zone-28-164-refuse-outsider.json", "f1564eb3", "@@", 1),
+                                        (f"{RUN}/checkpoint/refusals/zone-28-164-refuse-outsider.json", "90a548e0",
+                                         "f1564eb3", 1),
+                                        (f"{RUN}/checkpoint/refusals/zone-28-164-refuse-outsider.json", "@@", "90a548e0",
+                                         1)],
+            # M1: block 3's parent no longer block 2's message
+            "zone-rc3-multi-inscriptions": [(f"{RUN}/checkpoint/blocks.tsv", "\t4af4cf304867724d3e3aec24ab06fec266b18ecfe5bad519224acde4d9dc8f9a\t-", "\t" + "0" * 64 + "\t-", 1)],
+            # M2: the checkpoint's answer event a failure
+            "zone-rc3-multi-proofs": [(f"{RUN}/prover/events.jsonl",
+                                       '"name": "0-checkpoint", "kind": "checkpoint-b", "ok": true',
+                                       '"name": "0-checkpoint", "kind": "checkpoint-b", "ok": false', 1)],
+            # M3: both crown requests with a relay fee their seals do not prove
+            "zone-rc3-multi-anvil": [(f"{RUN}/crown.json", '"relayFee": "0x' + "0" * 64 + '"',
+                                      '"relayFee": "0x' + "0" * 63 + '1"', 2)],
+            # M4: both parameter files with other floors
+            "zone-rc3-multi-fork": [(f"{RUN}/params.json", '"nMin": 4', '"nMin": 5', 1),
+                                    (f"{RUN}/params.json", '"tMin": 3', '"tMin": 4', 1),
+                                    (f"{RUN}/fork-rehearsal-31/params.json", '"nMin": 4', '"nMin": 5', 1),
+                                    (f"{RUN}/fork-rehearsal-31/params.json", '"tMin": 3', '"tMin": 4', 1)],
+            # L1: a round's timestamp moved onto the next one's
+            "zone-rc3-multi-resources": [(f"{RUN}/zone/attestor-0/resources.tsv", "2026-11-26T09:41:34Z",
+                                          "2026-11-26T09:42:34Z", 1)],
+        }
+        for cid, edits in cases.items():
+            with self.subTest(check=cid):
+                self._assert_fails_multi(cid, edits)
+
+    def test_11_guards_alone(self):
+        """Guards that other comparisons used to mask (review round 1, the surviving code mutants)."""
+        seal = (ROOT / RUN / "checkpoint/receipts/seal.hex").read_text(encoding="utf-8").strip().removeprefix("0x")
+        forged = seal[:200] + ("0" if seal[200] != "0" else "1") + seal[201:]
+        # the checkpoint's seal altered everywhere the check reads it: only the Groth16 verification can tell
+        self._assert_fails_multi("zone-rc3-multi-proofs", [
+            (f"{RUN}/checkpoint/receipts/seal.hex", seal, forged, 1),
+            (f"{RUN}/prover/done/0-checkpoint.json", seal, forged, 1),
+            (f"{RUN}/prover/requests/done/0-checkpoint.json", seal, forged, 1),
+            (FIXTURE, seal, forged, 1)], "Groth16")
+        self._assert_fails_multi("zone-rc3-multi-checkpoint", [
+            (f"{RUN}/checkpoint/exec.json", '"journal_equals_native":true', '"journal_equals_native":false', 1)],
+            "native journal")
+        self._assert_fails_multi("zone-rc3-multi-anvil", [
+            (f"{RUN}/vault-checks.json", '"finalState": "0x', '"finalState": "0x00', 1)], "final state")
+
+    def test_12_signatures_and_counts_alone(self):
+        """An attestation's signature altered in both records that carry it, the outsider case's outsider made
+        accredited, and the fork's floors alone changed: each caught by its own comparison."""
+        import json as _json
+        attestor = _json.loads((ROOT / RUN / "checkpoint/attestor.json").read_text(encoding="utf-8"))
+        entry = attestor["attestations"][0]
+        sig = entry["signature"].removeprefix("0x")
+        bad = sig[:-2] + ("00" if sig[-2:] != "00" else "01")
+        final = next(i for i in range(4) if sig in (ROOT / RUN / f"zone/attestor-{i}/final.json").read_text())
+        self._assert_fails_multi("zone-rc3-multi-checkpoint", [
+            (f"{RUN}/checkpoint/attestor.json", sig, bad, 1),
+            (f"{RUN}/zone/attestor-{final}/final.json", sig, bad, 2)], "does not verify")  # its signature and encoding
+        outsider = _json.loads((ROOT / RUN / "checkpoint/refusals/zone-28-164-refuse-outsider.json").read_text())
+        live = [k.lower().removeprefix("0x") for k in outsider["keys"]]
+        out_key = next(a["channel_key"] for a in outsider["attestations"]
+                       if a["channel_key"].lower().removeprefix("0x") not in live)
+        self._assert_fails_multi("zone-rc3-multi-refusals", [
+            (f"{RUN}/checkpoint/refusals/zone-28-164-refuse-outsider.json", out_key, live[1], 1)],
+            "outside the channel's set")
+        self._assert_fails_multi("zone-rc3-multi-fork", [(f"{RUN}/fork-rehearsal-31/params.json", '"tMin": 3', '"tMin": 2', 1)],
+                                 "tMin")
+        # the collector's recorded key-set hash, which the signatures are verified under once recomputed
+        self._assert_fails_multi("zone-rc3-multi-checkpoint", [
+            (f"{RUN}/checkpoint/attestor.json", "a300aec501d6fa09b60964a4e85ca7fe91cd4d21f2689199176441254dd03469",
+             "b300aec501d6fa09b60964a4e85ca7fe91cd4d21f2689199176441254dd03469", 1)], "key-set hash")
 
     def test_04_ids_inputs_and_evidence_metadata(self):
         self.assertEqual(set(self.checks), set(CHECK_IDS))

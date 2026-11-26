@@ -380,7 +380,7 @@ shown by its test.
 [`e2e/runs/zone-bridge-rc3-multi/`](../../e2e/runs/zone-bridge-rc3-multi/README.md): `zone-bridge.sh` with `ZB_LEZ` =
 LEZ v0.4.0-rc3 (upstream's four-sequencer devnet on one Logos Blockchain 0.3.5-rc.1 node), `ZB_N_MIN=4 ZB_T_MIN=3`,
 the RISC Zero 3.1 programs. Four keys accredited, threshold 3; the 165 final inscriptions of LEZ blocks 2..=166 by all
-four keys (46, 46, 38, 35); four attestors, 25 rounds each (`resources.py`: 0.17 CPU s, 0.2 s wall, 18.0 MiB and
+four keys (46, 46, 38, 35); four attestors, 25 rounds each, 24 a minute apart, then the final round, whose attestations the checkpoint took (`resources.py`: 0.17 CPU s, 0.19 s wall, 18.0 MiB and
 35,714 bytes read a round, medians). Input `zone-28-164`: 136 blocks, 287 transactions, two burns, two imported
 leaves, three of the four attestations of tip 164; 22,149,862 user cycles, journal equal to the native one. Refused
 natively and by `checkpoint_b_0_3_5` in the executor: two of four, a key outside the set, one attestor twice, a stale

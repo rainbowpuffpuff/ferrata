@@ -177,6 +177,87 @@ class Registry(unittest.TestCase):
         self.assertEqual(missing, [], "shown hard rows with no check")
 
 
+SEAL_DIRS = ("e2e/runs", "vault/test", "bridge/artifacts", "lez/results", "checkpoint/artifacts", "bench/report",
+             "checkpoint/realblocks")  # where the seal catalog finds the recorded seals
+
+
+def walkable(t: Path, rels=SEAL_DIRS) -> Path:
+    """An overlay whose seal records a directory walk reaches (the seal catalog walks without following symlinked
+    directories when the copy has no git): every directory on the way and below `rels` a real one, every file a
+    symlink, except the files the overlay altered (real files, kept). Nothing is written through a symlink."""
+    def real(out: Path, src: Path) -> None:
+        if out.is_symlink():
+            out.unlink()
+        if not out.exists():
+            out.mkdir()
+            for e in src.iterdir():
+                (out / e.name).symlink_to(e)
+
+    for rel in rels:
+        cur, src = t, ROOT
+        for part in Path(rel).parts:
+            cur, src = cur / part, src / part
+            real(cur, src)
+        for d, _dirs, names in os.walk(ROOT / rel):
+            out = t / Path(d).relative_to(ROOT)
+            real(out, Path(d))
+            for n in names:
+                if not (out / n).exists() and not (out / n).is_symlink():
+                    (out / n).symlink_to(Path(d) / n)
+    return t
+
+
+class EvidenceRows(TamperCase):
+    """evidence-rows-integ: EVIDENCE rows 271-274 and the rows citing them, held to what the checks recompute (review
+    round 1 of the integration, M5 and L2: these figures were labels no check read). Each altered copy must fail on
+    the figure altered, not on another (the copies are walkable, so the seal counts are the tree's)."""
+
+    def test_a_walkable_copy_passes(self):
+        self.assertPasses("evidence-rows-integ", walkable(overlay({})))
+
+    def test_passes_on_the_tree(self):
+        self.assertPasses("evidence-rows-integ")
+
+    def test_row_271_wrong_count(self):
+        t = walkable(overlay({"docs/EVIDENCE.md": sub(": 672 updates applied, every one by", ": 673 updates applied, every one by")}))
+        self.assertFails("evidence-rows-integ", t, "672 updates applied")
+
+    def test_row_273_wrong_count(self):
+        t = walkable(overlay({"docs/EVIDENCE.md": sub("16 of 16 of 3.1.0", "17 of 17 of 3.1.0")}))
+        self.assertFails("evidence-rows-integ", t, "does not state '79 of 79 seals of 3.0.0 and 16 of 16 of 3.1.0'")
+
+    def test_row_274_wrong_count(self):
+        t = walkable(overlay({"docs/EVIDENCE.md": sub("14 of 14 steps ok; CI's check stage passes", "15 of 15 steps ok; CI's check stage passes")}))
+        self.assertFails("evidence-rows-integ", t, "does not state '14 of 14 steps ok'")
+
+    def test_row_272_wrong_total(self):
+        row = next(ln for ln in (ROOT / "docs/EVIDENCE.md").read_text().splitlines() if ln.startswith("| 272 | "))
+        total = re.search(r"\| (\d+) checks: ", row).group(1)
+        t = walkable(overlay({"docs/EVIDENCE.md": sub(f"| {total} checks: ", f"| {int(total) + 1} checks: ")}))
+        self.assertFails("evidence-rows-integ", t, "EVIDENCE row 272")
+
+    def test_status_rows_and_verify_md(self):
+        t = walkable(overlay({"docs/requirements-status.md": sub("the longest interval 20 min 40 s", "the longest interval 20 min 41 s")}))
+        self.assertFails("evidence-rows-integ", t, "RFP-021 S.1")
+        t = walkable(overlay({"docs/requirements-status.md": sub("(`--coverage`: 127 of 127)", "(`--coverage`: 126 of 127)")}))
+        self.assertFails("evidence-rows-integ", t, "RFP-022 R.11")
+        t = walkable(overlay({"docs/VERIFY.md": sub("45 run only on a", "43 run only on a")}))
+        self.assertFails("evidence-rows-integ", t, "docs/VERIFY.md")
+
+    def test_a_missing_row_or_citation(self):
+        """Row 274 renumbered away; RFP-022 F.7 no longer citing row 273: each fails."""
+        t = walkable(overlay({"docs/EVIDENCE.md": sub("| 274 | ", "| 299 | ")}))
+        self.assertFails("evidence-rows-integ", t, "EVIDENCE row 274: not found")
+        t = walkable(overlay({"docs/requirements-status.md": sub("206, 266, 273; `vault/test/real/ZoneBridgeRc3Multi.t.sol`",
+                                                                 "206, 266; `vault/test/real/ZoneBridgeRc3Multi.t.sol`")}))
+        self.assertFails("evidence-rows-integ", t, "does not cite row 273")
+
+    def test_the_record_moves_the_check(self):
+        """A step of the rc3 round trip marked failed: the row's 14 of 14 no longer holds."""
+        t = walkable(overlay({"e2e/runs/rc3-roundtrip-1/run/steps.tsv": sub("\tok\t", "\tfailed\t")}))
+        self.assertFails("evidence-rows-integ", t, "EVIDENCE row 274")
+
+
 # ---- the command line ---------------------------------------------------------------------------------------------
 
 def cli(*args, root=ROOT):
