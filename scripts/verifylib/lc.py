@@ -124,7 +124,9 @@ def compact_update(b: bytes, n: int = 512) -> dict:
     next_branch = [r.take(32) for _ in range(SYNC_BRANCH[fork])]
     finalized = _beacon(r.bytes_vec())
     finality_branch = [r.take(32) for _ in range(FINALITY_BRANCH[fork])]
-    bits = r.take(n // 8)
+    bits = r.take((n + 7) // 8)  # SyncAggregate::ssz_len: the bitvector's bytes, n bits rounded up
+    if n % 8 and bits[-1] >> (n % 8):
+        raise DecodeError("sync committee bits: a padding bit is set")
     r.take(96)  # the aggregate signature
     signature_slot = r.u64()
     r.finish("CompactUpdate")

@@ -1,8 +1,8 @@
 {
  "as_of": {
-  "block": 25303,
-  "hash": "ec70f0b0211f621eb2df9aecd5d9a003fcd3d57cb3f2a06638abe13c075c2226",
-  "time_utc": "2026-11-26T08:57:52.807Z"
+  "block": 25776,
+  "hash": "bc2fb5d276468067704359d2b694fdfe9f2a04846d576239b623cbf24080eff0",
+  "time_utc": "2026-11-26T10:17:22.807Z"
  },
  "chain": {
   "block_gaps_over_60s": [
@@ -25,7 +25,7 @@
     "to_utc": "2026-11-26T06:21:52.807Z"
    }
   ],
-  "blocks": 25303,
+  "blocks": 25776,
   "first_block_with_time": {
    "block": 2,
    "time_utc": "2026-11-23T10:11:09.094Z"
@@ -56,13 +56,14 @@
    ],
    "finalized_epochs_advanced_per_update": {
     "0": 31,
-    "1": 626,
+    "1": 636,
     "13": 1,
+    "2": 1,
     "3": 2
    },
    "finalized_slots": [
     11640832,
-    11662400
+    11662784
    ],
    "first_update": {
     "attested_slot": 11640896,
@@ -84,7 +85,7 @@
     "time_utc": "2026-11-23T10:14:29.094Z"
    },
    "intervals": {
-    "count": 660,
+    "count": 671,
     "longest": {
      "from_block": 9287,
      "from_utc": "2026-11-24T12:00:41.903Z",
@@ -96,24 +97,34 @@
     "over_1h": [],
     "over_3h": []
    },
-   "jobs_opened_not_finished": [],
+   "jobs_opened_not_finished": [
+    {
+     "block": 25775,
+     "finalized_slot": 11662816,
+     "job": "HkLnGtospoxELTEfgtfwfUX3Ta8DCfVLXBgSeUzF2z3A",
+     "open_at_as_of": true,
+     "opened_s_before_as_of": 10.0,
+     "sender": "Fdgg7HoWP8geUFUon9ha7Lw29xTjqFFb1GJABUcEMeBb",
+     "time_utc": "2026-11-26T10:17:12.807Z"
+    }
+   ],
    "lag_behind_finality_s": {
     "max": 5815.1,
-    "median": 997.9,
+    "median": 998.2,
     "min": 853.9
    },
    "last_update": {
-    "attested_slot": 11662464,
-    "block": 25294,
-    "finalized_root": "455be179328c2d09f99ad158dd342b9ca3d4f4eabe426293ee0d0db20e7761a8",
-    "finalized_slot": 11662400,
-    "lag_s": 982.8,
+    "attested_slot": 11662849,
+    "block": 25745,
+    "finalized_root": "05492d6cab8803e7651aa754cd31145d78bd7566bbe9dc06465c7e95afa3a1d3",
+    "finalized_slot": 11662784,
+    "lag_s": 924.8,
     "next_committee": false,
     "participants": 493,
     "period": 1423,
     "sender": "Fdgg7HoWP8geUFUon9ha7Lw29xTjqFFb1GJABUcEMeBb",
-    "signature_slot": 11662465,
-    "time_utc": "2026-11-26T08:56:22.808Z"
+    "signature_slot": 11662851,
+    "time_utc": "2026-11-26T10:12:12.807Z"
    },
    "longest_intervals": [
     {
@@ -129,6 +140,13 @@
      "seconds": 1220.0,
      "to_block": 19149,
      "to_utc": "2026-11-25T15:39:50.216Z"
+    },
+    {
+     "from_block": 25294,
+     "from_utc": "2026-11-26T08:56:22.808Z",
+     "seconds": 1090.0,
+     "to_block": 25403,
+     "to_utc": "2026-11-26T09:14:32.808Z"
     },
     {
      "from_block": 24336,
@@ -178,13 +196,6 @@
      "seconds": 560.0,
      "to_block": 14124,
      "to_utc": "2026-11-25T01:29:51.903Z"
-    },
-    {
-     "from_block": 9591,
-     "from_utc": "2026-11-24T12:51:21.903Z",
-     "seconds": 550.0,
-     "to_block": 9646,
-     "to_utc": "2026-11-24T13:00:31.903Z"
     }
    ],
    "open_to_finish_s": {
@@ -237,30 +248,30 @@
     },
     "Fdgg7HoWP8geUFUon9ha7Lw29xTjqFFb1GJABUcEMeBb": {
      "first_block": 28,
-     "last_block": 25294,
+     "last_block": 25775,
      "steps": {
       "adopt": 8,
-      "finish": 661,
-      "miller": 661,
-      "open": 661
+      "finish": 672,
+      "miller": 672,
+      "open": 673
      },
-     "transactions": 1991
+     "transactions": 2025
     }
    },
    "steps": {
     "adopt applied": 8,
     "attest applied": 2,
-    "finish applied": 661,
+    "finish applied": 672,
     "init applied": 1,
-    "miller applied": 661,
-    "open applied": 661
+    "miller applied": 672,
+    "open applied": 673
    },
-   "updates_applied": 661,
+   "updates_applied": 672,
    "updates_per_utc_day": {
     "2026-11-23": 129,
     "2026-11-24": 224,
     "2026-11-25": 224,
-    "2026-11-26": 84
+    "2026-11-26": 95
    }
   },
   "HAh9gu1BzmaueyQjxeVuZa2sVN8Na9W36DA3sQXFSAxi": {
@@ -483,5 +494,5 @@
    }
   }
  },
- "transactions": 2083
+ "transactions": 2117
 }

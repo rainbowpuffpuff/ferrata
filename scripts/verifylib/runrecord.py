@@ -197,10 +197,14 @@ def summarize(rows: list, chain: dict) -> dict:
         opens = [r for r in rs if r["step"] == "open"]
         finished_jobs = {r["job"] for r in finishes}
         last_finish = max((int(r["block"]) for r in finishes), default=-1)
+        as_of_ms = parse_iso(chain["as_of"]["time_utc"]) if chain.get("as_of") else None
+        # A job with no finish opened before the newest finish was left: the updater went on to later updates. One
+        # opened after it is open at the as-of block: running, or left; the chain up to that block cannot tell.
         unfinished = [{"block": int(r["block"]), "time_utc": r["time_utc"], "job": r["job"], "sender": r["sender"],
                        "finalized_slot": _int(r["finalized_slot"]),
-                       # a job opened after the newest finish is still running at the as-of block, not left
-                       "in_progress_at_as_of": int(r["block"]) > last_finish}
+                       "open_at_as_of": int(r["block"]) > last_finish,
+                       "opened_s_before_as_of": round((as_of_ms - parse_iso(r["time_utc"])) / 1000, 3)
+                       if as_of_ms is not None else None}
                       for r in opens if r["outcome"] == "applied" and r["job"] not in finished_jobs]
         updates = []
         for r in finishes:
@@ -434,8 +438,12 @@ def render(summary: dict) -> str:
                    f"{len(iv['over_1h'])} over 1 h, {len(iv['over_3h'])} over 3 h.")
         out.append(f"- Committee adoptions (an update carrying the next sync committee, adopted): "
                    f"{len(v['committee_adoptions'])}; sync-committee periods crossed: {len(v['period_crossings'])}.")
-        out.append(f"- Refused (in the block's reverted list): {len(v['refused'])}. Jobs opened and left "
-                   f"unfinished: {sum(1 for j in v['jobs_opened_not_finished'] if not j['in_progress_at_as_of'])}.")
+        left = [j for j in v["jobs_opened_not_finished"] if not j["open_at_as_of"]]
+        still = [j for j in v["jobs_opened_not_finished"] if j["open_at_as_of"]]
+        out.append(f"- Refused (in the block's reverted list): {len(v['refused'])}. Jobs opened and left unfinished "
+                   f"(an update finished after them, theirs never): {len(left)}"
+                   + (f"; open at the as-of block, opened {', '.join(_dur(j['opened_s_before_as_of']) for j in still)} "
+                      "before it (running or left: the chain up to that block cannot tell)" if still else "") + ".")
         if v["lag_behind_finality_s"]:
             lag = v["lag_behind_finality_s"]
             out.append(f"- Each update's LEZ block time minus its finalized slot's time: median {_dur(lag['median'])}, "
@@ -540,11 +548,12 @@ def check_record(ctx):
                      f"crossings; longest interval {lg['seconds'] / 60:.1f} min" if lg else
                      f"instance {inst[:10]}…: {v['updates_applied']} updates applied")
         if lg:
-            left = [j for j in v["jobs_opened_not_finished"] if not j["in_progress_at_as_of"]]
-            running = len(v["jobs_opened_not_finished"]) - len(left)
+            left = [j for j in v["jobs_opened_not_finished"] if not j["open_at_as_of"]]
+            still = len(v["jobs_opened_not_finished"]) - len(left)
             lines.append(f"  intervals over 1 h: {len(iv['over_1h'])}, over 3 h: {len(iv['over_3h'])}; "
                          f"refused: {len(v['refused'])}; jobs opened and left unfinished: {len(left)}"
-                         + (f"; {running} job running at the as-of block" if running else ""))
+                         + (f"; {still} job open at the as-of block (running or left: the chain cannot tell yet)"
+                            if still else ""))
     return lines
 
 

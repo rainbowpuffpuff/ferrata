@@ -1,8 +1,8 @@
 {
  "as_of": {
-  "block": 25303,
-  "hash": "ec70f0b0211f621eb2df9aecd5d9a003fcd3d57cb3f2a06638abe13c075c2226",
-  "time_utc": "2026-11-26T08:57:52.807Z"
+  "block": 25776,
+  "hash": "bc2fb5d276468067704359d2b694fdfe9f2a04846d576239b623cbf24080eff0",
+  "time_utc": "2026-11-26T10:17:22.807Z"
  },
  "block_gaps_over_60s": [
   {
@@ -24,7 +24,8 @@
    "to_utc": "2026-11-26T06:21:52.807Z"
   }
  ],
- "blocks": 25303,
+ "blocks": 25776,
+ "first_block": 1,
  "first_block_with_time": {
   "block": 2,
   "time_utc": "2026-11-23T10:11:09.094Z"
@@ -32,17 +33,17 @@
  "instance_counters_read": {
   "3pQmc7V8CuUZNmYeqUYTrnc1NgExoQvHw5VfKzpkaVFH": {
    "active": true,
-   "applied": 662,
-   "applied_by_as_of": 662,
-   "finalized_slot": 11662400,
-   "head": 25303
+   "applied": 673,
+   "applied_by_as_of": 673,
+   "finalized_slot": 11662784,
+   "head": 25776
   },
   "HAh9gu1BzmaueyQjxeVuZa2sVN8Na9W36DA3sQXFSAxi": {
    "active": true,
    "applied": 28,
    "applied_by_as_of": 28,
    "finalized_slot": 11644928,
-   "head": 25303
+   "head": 25776
   }
  },
  "instances": {
@@ -74,5 +75,5 @@
   }
  },
  "program_account": "6f9zuRR63bSN5AEeffqZeACYCwFmqfe5JJhPshuJfYNg",
- "read_at_utc": "2026-11-26T08:57:58Z"
+ "read_at_utc": "2026-11-26T10:17:24Z"
 }
