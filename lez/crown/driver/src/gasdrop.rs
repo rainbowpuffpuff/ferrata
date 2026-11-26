@@ -224,7 +224,7 @@ async fn claim_parts(live: &Live, bridge_bin: &GuestBinary, chain: &Chain, ident
         range,
         relayer: Some(*relayer.value()),
     };
-    let publics = vec![root_pda, token_pda, config_pda, n_pda, holder_pda(bridge, fee_recipient()), holder_pda(bridge, relayer)];
+    let publics = vec![root_pda, token_pda, config_pda, n_pda, holder_pda(bridge, &cid, fee_recipient()), holder_pda(bridge, &cid, relayer)];
     let siblings: [[u8; 32]; 32] = w.path.clone().try_into().map_err(|_| anyhow!("the path is not 32 siblings"))?;
     let input = GasDropInput {
         claim: ClaimInput {
@@ -557,7 +557,7 @@ pub async fn claim(live: &mut Live, args: &Args, bridge_bin: &GuestBinary, dir: 
         "credit": pending_json(credit),
         "creditSealed": sealed,
         "recoveryBindingAtOneTimeAddress": binding.is_some(),
-        "relayerHolder": holdings_json(holder_state(live, c.bridge, relayer).await?),
+        "relayerHolder": holdings_json(holder_state(live, c.bridge, &c.cid, relayer).await?),
     });
     println!("[gas-drop] the claimant before its claim: {before}");
     ensure!(credit.native_credit() == Some(amount), "the pending credit is {:?}, not the relayer's {amount}", credit.native_credit());
@@ -635,8 +635,8 @@ pub async fn claim(live: &mut Live, args: &Args, bridge_bin: &GuestBinary, dir: 
         .map(|s| borsh::from_slice::<BridgeState>(&s))
         .transpose()?;
     let main_holdings = holdings_json(main_holder);
-    let relayer_holdings = holdings_json(holder_state(live, c.bridge, relayer).await?);
-    let fee_recipient_holdings = holdings_json(holder_state(live, c.bridge, fee_recipient()).await?);
+    let relayer_holdings = holdings_json(holder_state(live, c.bridge, &c.cid, relayer).await?);
+    let fee_recipient_holdings = holdings_json(holder_state(live, c.bridge, &c.cid, fee_recipient()).await?);
     let spent = matches!(bridge_state(live, c.n_pda).await?, Some(BridgeState::Nullifier(_)));
     fs::write(dir.join("claimed-after.txt"), if spent { format!("0x{}\n", hex::encode(c.nullifier)) } else { String::new() })?;
     let one_time_after = private_balance(&wallet, keys.one_time);
