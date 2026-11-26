@@ -242,13 +242,26 @@ class RunRecordOffline(TamperCase):
 class StandInRpc:
     """A JSON-RPC stand-in on 127.0.0.1 serving recorded blocks: getLastBlockId, getBlockRange, getBlock."""
 
-    def __init__(self, blocks: dict):
+    def __init__(self, blocks: dict, files: dict | None = None):
         self.blocks = blocks
+        self.files = files or {}  # GET path -> JSON
+        self.txs = {}
+        for b64 in blocks.values():
+            for tx in lez.decode_block(base64.b64decode(b64))["transactions"]:
+                self.txs[tx["hash"].hex()] = base64.b64encode(tx["raw"]).decode()
         outer = self
 
         class H(http.server.BaseHTTPRequestHandler):
             def log_message(self, *a):
                 pass
+
+            def do_GET(self):
+                body = json.dumps(outer.files.get(self.path)).encode()
+                self.send_response(200 if self.path in outer.files else 404)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
 
             def do_POST(self):
                 req = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
@@ -259,6 +272,8 @@ class StandInRpc:
                     res = [outer.blocks[i] for i in range(p[0], p[1] + 1) if i in outer.blocks]
                 elif m == "getBlock":
                     res = outer.blocks.get(p[0])
+                elif m == "getTransaction":
+                    res = outer.txs.get(p[0])
                 else:
                     res = None
                 body = json.dumps({"jsonrpc": "2.0", "id": req.get("id"), "result": res}).encode()
@@ -359,6 +374,54 @@ class RunRecordOnline(TamperCase):
         self.rpc.blocks[bid] = base64.b64encode(bytes(raw)).decode()
         r = self.online(self.copy())
         self.assertEqual(r.status, "FAIL", "\n".join(r.lines))
+
+
+class LezRead(unittest.TestCase):
+    """scripts/lez-read.py, the explorer's reads from a terminal, against the stand-in RPC and recorded blocks."""
+
+    def setUp(self):
+        fx = json.loads(FIXTURE.read_text())
+        self.blocks = {fx["first"] + i: b for i, b in enumerate(fx["blocks"])}
+        chain = json.loads((ROOT / RR / "chain.json").read_text())
+        progs = {"programs": {"ferrata_attestation": {"program_account": chain["program_account"],
+                                                      "image_id": "0x" + runrecord.ATTESTATION_IMAGE}}}
+        self.rpc = StandInRpc(dict(self.blocks), {"/programs.json": progs})
+        lines, _, _ = runrecord.scan((base64.b64decode(self.blocks[i]) for i in sorted(self.blocks)),
+                                     lez.b58decode(chain["program_account"]),
+                                     runrecord.lc.Idl.load(ROOT / "idl/ferrata_attestation.idl.json"),
+                                     first=fx["first"], instances=chain["instances"])
+        self.open = next(ln for ln in lines if ln["step"] == "open")
+
+    def tearDown(self):
+        self.rpc.close()
+
+    def read(self, *args):
+        p = subprocess.run([sys.executable, "-I", str(ROOT / "scripts/lez-read.py"), "--lez", self.rpc.url, "--json",
+                            *args], capture_output=True, text=True, timeout=120)
+        return p.returncode, (json.loads(p.stdout) if p.stdout.strip() else None), p.stderr
+
+    def test_block_with_an_update(self):
+        rc, out, err = self.read("block", str(self.open["block"]))
+        self.assertEqual(rc, 0, err)
+        self.assertTrue(out["hash_ok"])
+        call = next(t["call"] for t in out["transactions"] if t["call"]["program_name"] == "ferrata_attestation")
+        self.assertEqual(call["instruction"], "open")
+        self.assertEqual(call["update"]["finalized_slot"], self.open["finalized_slot"])
+        self.assertEqual(call["update"]["participants"], self.open["participants"])
+
+    def test_transaction(self):
+        rc, out, err = self.read("tx", self.open["tx"])
+        self.assertEqual(rc, 0, err)
+        self.assertTrue(out["hash_ok"])
+        self.assertEqual(out["signers"], [self.open["sender"]])
+
+    def test_a_block_that_does_not_hash(self):
+        bid = self.open["block"]
+        raw = bytearray(base64.b64decode(self.rpc.blocks[bid]))
+        raw[85] ^= 1  # a byte of the body: the block's hash no longer covers it
+        self.rpc.blocks[bid] = base64.b64encode(bytes(raw)).decode()
+        rc, out, err = self.read("block", str(bid))
+        self.assertEqual(rc, 1, (out, err))
 
 
 class Records(TamperCase):
