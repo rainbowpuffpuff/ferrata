@@ -7,6 +7,7 @@
 #![allow(clippy::too_many_arguments)]
 
 use alloy::{
+    consensus::Transaction as _,
     eips::BlockId,
     network::{EthereumWallet, TransactionBuilder as _},
     primitives::{Address, Bytes, B256, U256},
@@ -317,13 +318,16 @@ impl Chain {
     /// otherwise (retried at the next poll). The plain send takes the node's next nonce: when it goes through, that
     /// fills a number the module burnt without broadcasting (its ledger never hands it out again, so its own later
     /// sends would wait behind the gap); if it fails too, that is not handled: the module's later sends come back as
-    /// [`Outcome::Broadcast`], so this fallback does not run again, and they wait behind the number. Against a
+    /// [`Outcome::Broadcast`] and wait behind the number. That gap is filled too: when a transaction the module
+    /// broadcast is not mined within `tx_timeout` and its nonce is above the account's pending nonce (the node holds
+    /// it queued behind a number nobody sent), the same call goes the plain way at that pending nonce, the burnt
+    /// number ([`gap_to_fill`]; [`Via::GapFill`]); the module's held transactions are then mined after it. Against a
     /// transaction of the module's that did leave, at most one extra call: a second `cancelCandidate` or
     /// `revokeFrom` reverts (usually already at the gas estimate, so nothing is sent), and a second
     /// `pauseCheckpoints` moves the pause's end by the seconds between the two blocks.
     async fn send(&self, input: Bytes, label: &'static str) -> Result<Sent> {
         let from = self.me.context("the monitor holds no key")?;
-        let tx = TransactionRequest::default().with_from(from).with_to(self.vault).with_input(input.clone());
+        let mut tx = TransactionRequest::default().with_from(from).with_to(self.vault).with_input(input.clone());
         self.p.call(tx.clone()).await.map_err(|e| anyhow!("the vault would revert: {e}"))?;
         let mut via = Via::Plain;
         if let Some(route) = self.logos.clone() {
@@ -332,10 +336,24 @@ impl Chain {
                 .await
                 .map_err(|e| anyhow!("the send through Logos Core did not finish: {e}"))?;
             match outcome {
-                Outcome::Broadcast { hash, request_id, polls, millis } => {
-                    let receipt = self.receipt(hash).await?;
-                    return self.mined(receipt, Via::Logos { request_id, polls, millis }).await;
-                }
+                Outcome::Broadcast { hash, request_id, polls, millis } => match self.receipt(hash).await {
+                    Ok(receipt) => return self.mined(receipt, Via::Logos { request_id, polls, millis }).await,
+                    Err(e) => {
+                        // Not mined in time. Behind a gap (a number the module burnt, which the plain send after it
+                        // did not fill), nothing it broadcasts will be: fill the gap with this same call.
+                        let key = self.logos.as_ref().is_some_and(|r| r.fallback);
+                        let gap = match self.p.get_transaction_by_hash(hash).await {
+                            Ok(Some(t)) => {
+                                let pending = self.p.get_transaction_count(from).pending().await?;
+                                gap_to_fill(t.nonce(), pending, key)
+                            }
+                            _ => None,
+                        };
+                        let Some(nonce) = gap else { return Err(e) };
+                        tx = tx.with_nonce(nonce);
+                        via = Via::GapFill { nonce, behind: hash };
+                    }
+                },
                 Outcome::NotSent(why) | Outcome::Unknown { reason: why, .. }
                     if self.logos.as_ref().is_some_and(|r| r.fallback) =>
                 {
@@ -402,5 +420,38 @@ impl Chain {
             return Ok(Sent::Moot);
         }
         self.send(IFerrataVault::revokeFromCall { index: U256::from(index) }.abi_encode().into(), "revokeFrom").await
+    }
+}
+
+/// What to do with a transaction the module broadcast that was not mined in time: `Some(n)` when the account's pending
+/// nonce `pending` is below the transaction's own `tx_nonce` (the node holds it queued behind a gap: a number that was
+/// burnt and never sent) and the monitor holds the key, `n` being the number to fill (the pending nonce); `None`
+/// otherwise (merely slow, or no key: the error stands and the next poll looks at the vault again).
+pub fn gap_to_fill(tx_nonce: u64, pending: u64, key_held: bool) -> Option<u64> {
+    (key_held && tx_nonce > pending).then_some(pending)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::gap_to_fill;
+
+    #[test]
+    fn a_queued_transaction_above_the_pending_nonce_is_behind_a_gap() {
+        // the module burnt 4 (nothing sent), the plain send at 4 failed, its next request took 5: queued behind 4
+        assert_eq!(gap_to_fill(5, 4, true), Some(4));
+        assert_eq!(gap_to_fill(9, 4, true), Some(4), "however far behind, the first missing number is filled");
+    }
+
+    #[test]
+    fn a_slow_transaction_at_or_below_the_pending_nonce_is_not() {
+        // pending counts it (or one before it): it can be mined as it is; filling would replace a real transaction
+        assert_eq!(gap_to_fill(4, 4, true), None);
+        assert_eq!(gap_to_fill(4, 5, true), None);
+        assert_eq!(gap_to_fill(0, 0, true), None);
+    }
+
+    #[test]
+    fn without_the_key_nothing_is_filled() {
+        assert_eq!(gap_to_fill(5, 4, false), None);
     }
 }

@@ -8,9 +8,19 @@
 #
 # The channel key is read once, by its owner (ferrata), to sign the certificate; the attestor never sees it. The
 # attestor's state file is its guard against signing two histories: never delete it while the zone runs.
+#
+# FERRATA_ATTESTOR_INSTANCE=i (deploy/testnet/MULTIKEY.md; the unit ferrata-bridge-attestor@i): the attestor beside the
+# zone's further sequencer i (ferrata-sequencer@i: its home /var/lib/ferrata/sequencer-i, its RPC on 127.0.0.1:3040+i),
+# in $B/attestor-i, its key certified by that sequencer's channel key. Unset: the first sequencer's, as deployed.
 set -euo pipefail
 B=/var/lib/ferrata/bridge; A="$B/attestor"; ATT=/opt/ferrata/bin/ferrata_attestor
 NODE=http://127.0.0.1:18080; LEZ=http://127.0.0.1:3040; ROUND_S="${ROUND_S:-60}"
+SEQ_HOME=/var/lib/ferrata/sequencer
+if [ -n "${FERRATA_ATTESTOR_INSTANCE:-}" ]; then
+  I="$FERRATA_ATTESTOR_INSTANCE"
+  [[ "$I" =~ ^[1-9]$ ]] || { echo "FERRATA_ATTESTOR_INSTANCE=$I: one digit, 1 to 9" >&2; exit 2; }
+  A="$B/attestor-$I"; SEQ_HOME="/var/lib/ferrata/sequencer-$I"; LEZ="http://127.0.0.1:$((3040 + I))"
+fi
 case "${1:-}" in
   setup)
     id ferrata-attestor >/dev/null 2>&1 || useradd --system --home-dir /nonexistent --no-create-home --shell /usr/sbin/nologin ferrata-attestor
@@ -31,7 +41,7 @@ EOF
     if [ ! -f "$A/cert.json" ]; then
       T="$(mktemp -d "$B/.cert.XXXXXX")"; chown ferrata:ferrata "$T"
       cp "$A/deployment.json" "$T/deployment.json"; chown ferrata:ferrata "$T/deployment.json"
-      runuser -u ferrata -- env -i PATH=/usr/bin:/bin "$ATT" certify --channel-key /var/lib/ferrata/sequencer/channel_signing_key \
+      runuser -u ferrata -- env -i PATH=/usr/bin:/bin "$ATT" certify --channel-key "$SEQ_HOME/channel_signing_key" \
         --att-pub "$(cat "$A/pub.txt")" --deployment "$T/deployment.json" --out "$T/cert.json"
       install -o ferrata-attestor -g ferrata-attestor -m 644 "$T/cert.json" "$A/cert.json"; rm -rf "$T"
     fi

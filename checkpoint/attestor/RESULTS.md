@@ -375,6 +375,23 @@ crate 3 of 3 (none skipped), `attestor-e2e.sh` 24 of 24. Not re-run: the live st
 `return-leg.sh`, `attestor-zone-live.sh`) and the module through Logos Core; their record check is the helper's,
 shown by its test.
 
+## 11. Four LEZ v0.4.0-rc3 sequencers, three of four keys, under RISC Zero 3.1 (RFP-022 F.7; 26 November)
+
+[`e2e/runs/zone-bridge-rc3-multi/`](../../e2e/runs/zone-bridge-rc3-multi/README.md): `zone-bridge.sh` with `ZB_LEZ` =
+LEZ v0.4.0-rc3 (upstream's four-sequencer devnet on one Logos Blockchain 0.3.5-rc.1 node), `ZB_N_MIN=4 ZB_T_MIN=3`,
+the RISC Zero 3.1 programs. Four keys accredited, threshold 3; the 165 final inscriptions of LEZ blocks 2..=166 by all
+four keys (46, 46, 38, 35); four attestors, 25 rounds each (`resources.py`: 0.17 CPU s, 0.2 s wall, 18.0 MiB and
+35,714 bytes read a round, medians). Input `zone-28-164`: 136 blocks, 287 transactions, two burns, two imported
+leaves, three of the four attestations of tip 164; 22,149,862 user cycles, journal equal to the native one. Refused
+natively and by `checkpoint_b_0_3_5` in the executor: two of four, a key outside the set, one attestor twice, a stale
+round of a kept key (`attestor-refusals --real`). Proofs on Modal's GPU through the bridge's prover client, killed once
+while it waited and resumed on the same call: checkpoint 249.7 s, releases 569.1 s and 179.9 s, seals of RISC Zero
+3.1. Vault (floors 4, 3) behind verifier 3.1.0 on anvil: final, both releases paid 999,000,000,000,000 wei once, each
+release's and the checkpoint's mined calldata called again refused (`NullifierAlreadyUsed`, `ParentNotFinal`);
+`ZoneBridgeRc3MultiTest` 7 of 7 on the run's seals; on a fork of Sepolia at block 12,216,620: FORK REHEARSAL 31 OK.
+A rotation to five keys on rc3 under the same programs worked at the zone (five keys accredited 30 s after the stake)
+but its run was lost twice with its box (the box's client went away), so key-set changes stay shown on rc1 (§9).
+
 ## What failed on the way
 
 - The recorded `realblocks/out/real-lab-186-202.input` no longer decodes (`BadLength { what: "suffix" }`): it

@@ -146,9 +146,13 @@ SPEL's LEZ v0.4 line is logos-co/spel pull request #301 (head `c90ca0b`, 16 Nove
    ("cannot describe `(Root , u128)`: only paths and arrays are supported"). With
    [`spel-v2/patches/spel-c90ca0b-idl-gen-tuples.patch`](spel-v2/patches/spel-c90ca0b-idl-gen-tuples.patch) (23
    lines: a tuple described as a struct with positional fields, `Tuple_Root_u128`, which Borsh encodes the same way,
-   so the IDL's grammar and every decoder are unchanged; drafted for SPEL, not opened) it generates 28 messages and
+   so the IDL's grammar and every decoder are unchanged) it generates 28 messages and
    32 types: **0 differences in 60** against [`ferrata_bridge.idl.json`](ferrata_bridge.idl.json) (whose name for
-   that tuple is `FeeShare`), and decodes 50 of 50 committed vectors.
+   that tuple is `FeeShare`), and decodes 50 of 50 committed vectors. The patch is drafted as a pull request for
+   SPEL, tested in SPEL's own suite and not opened:
+   [`spel-v2/upstream-pr/0001-idl-gen-tuples.patch`](spel-v2/upstream-pr/0001-idl-gen-tuples.patch) (the code plus
+   those tests and a CHANGELOG entry, as `git format-patch`) and
+   [`spel-v2/upstream-pr/PR.md`](spel-v2/upstream-pr/PR.md) (its title and description).
 
 Messages are decoded as SPEL's version 2 defines them (the tag byte, then the fields): the check adds the IDL's
 `messages` as an enum type for `decode_named`. Record: [`generated/spel-v2.txt`](generated/spel-v2.txt) (Modal

@@ -19,6 +19,10 @@
 #      a watcher's pause refuses a forged checkpoint; a freeze refuses a forged release; lifted, the forgery is paid.
 #
 #   script/fork-rehearsal-31.sh [<log directory>]     FERRATA_FORK_URL: a public Sepolia RPC (default publicnode)
+# Another recorded run (RFP-022 F.7: the four-sequencer rc3 zone of e2e/runs/zone-bridge-rc3-multi, nMin 4, tMin 3):
+# FERRATA_REHEARSAL_RUN (default ../e2e/runs/zone-bridge-rc3) and FERRATA_REHEARSAL_FIXTURE (default
+# test/real/fixtures/zone-bridge-rc3.json), the run's deployer again of nonce 0 on Sepolia. A run proven under RISC Zero
+# 3.1 from the start has no seal of 3.0.5: the step showing one refused (SelectorMismatch) is then skipped, and says so.
 # Prints FORK REHEARSAL 31 OK at the end; <log directory>/transcript.txt has every step with its gas and time.
 set -euo pipefail
 here="$(cd "$(dirname "$0")/.." && pwd)"
@@ -27,8 +31,8 @@ export FOUNDRY_DISABLE_NIGHTLY_WARNING=1
 logs="${1:-broadcast/fork-rehearsal-31}"
 mkdir -p "$logs"
 logs="$(cd "$logs" && pwd)"
-run="../e2e/runs/zone-bridge-rc3"
-fixture="test/real/fixtures/zone-bridge-rc3.json"
+run="${FERRATA_REHEARSAL_RUN:-../e2e/runs/zone-bridge-rc3}"
+fixture="${FERRATA_REHEARSAL_FIXTURE:-test/real/fixtures/zone-bridge-rc3.json}"
 fork_url="${FERRATA_FORK_URL:-https://ethereum-sepolia-rpc.publicnode.com}"
 port="${FERRATA_FORK_PORT:-8545}"
 rpc="http://127.0.0.1:$port"
@@ -67,7 +71,7 @@ say "deployer $deployer (nonce 0 on Sepolia), the vault expected at $expect; fre
 
 # The session's configuration and genesis; the programs of RISC Zero 3.1 (the fixture's ids: docs/image-ids.md).
 jq --arg b "$(jq -r .imageId "$fixture")" --arg r "$(jq -r .releaseImageId "$fixture")" \
-  '._source = "fork-rehearsal-31.sh: e2e/runs/zone-bridge-rc3/params.json with the RISC Zero 3.1 programs" |
+  --arg src "fork-rehearsal-31.sh: ${run#../}/params.json with the RISC Zero 3.1 programs" '._source = $src |
    .checkpointImageIdB = $b | .releaseImageId = $r |
    .checkpointImageIdA = "0x9140ec7479debc9b40529b0805095d4cfdef93a1e0500c6687a1d7ec4d7c42de"' \
   "$run/params.json" > deployments/fork-31-params.json   # forge reads ./deployments (foundry.toml fs_permissions)
@@ -115,7 +119,12 @@ export FERRATA_FIXTURE="$fixture"
 
 step "checkBinding()" "$relayer" 0
 step "deposits()" "$deployer" 1
-step "oldSealRefused(bytes)" "$relayer" 0 "0x$(tr -d ' \n' < "$run/checkpoint/receipts/seal.hex" | sed 's/^0x//')"
+old="0x$(tr -d ' \n' < "$run/checkpoint/receipts/seal.hex" | sed 's/^0x//')"
+if [ "${old:0:10}" = 0xe71e6620 ]; then
+  say "the run's checkpoint was proven under RISC Zero 3.1 only: no seal of 3.0.5 to show refused (step skipped)"
+else
+  step "oldSealRefused(bytes)" "$relayer" 0 "$old"
+fi
 step "submit()" "$relayer" 1
 warp 3601
 step "finalize()" "$relayer" 1

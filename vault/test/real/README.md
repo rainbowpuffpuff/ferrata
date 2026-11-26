@@ -23,6 +23,7 @@ and the fixtures' other fields are the runs' own.
 | `zone-bridge-rotation.json` | `e2e/runs/zone-bridge-2` (the same, a key rotation) | the same |
 | `zone-bridge-3.json`, `zone-bridge-4.json` | `e2e/runs/zone-bridge-3`, `-4` | the same |
 | `zone-bridge-rc3.json`, `zone-bridge-rc3-2.json` | `e2e/runs/zone-bridge-rc3`, `-rc3-2` (LEZ v0.4.0-rc3, Logos Blockchain 0.3.5-rc.1) | checkpoint (`checkpoint_b_0_3_5_31`), two releases |
+| `zone-bridge-rc3-multi.json` | `e2e/runs/zone-bridge-rc3-multi` (LEZ v0.4.0-rc3, four sequencers, three of four keys; proven on Modal's GPU) | checkpoint (`checkpoint_b_0_3_5_31`), two releases (`release_31`) |
 | `rule-b-multi.json` | `checkpoint/attestor/runs/devnet-n3/rbm-lab-n3-t2` | checkpoint (`checkpoint_b_31`) |
 | `rule-b-zone.json` | `checkpoint/attestor/runs/zone/rbz-zone-n4-t3` | checkpoint (`checkpoint_b_31`) |
 | `crown-live-3-releases.json` (new) | `e2e/runs/crown-live-3`'s two releases: inputs rebuilt by `ferrata-e2e crown-release` from the run's `burns.json` and `burn-notes.json` ([`inputs/crown-live-3/`](inputs/crown-live-3/); both metas byte for byte the run's) | two releases, read by `test/standin/` and `test/Verifier31.t.sol` |

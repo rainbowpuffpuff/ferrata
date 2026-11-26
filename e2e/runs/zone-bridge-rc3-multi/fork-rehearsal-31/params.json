@@ -1,0 +1,13 @@
+{
+  "_source": "fork-rehearsal-31.sh: e2e/runs/zone-bridge-rc3-multi/params.json with the RISC Zero 3.1 programs",
+  "checkpointImageIdA": "0x9140ec7479debc9b40529b0805095d4cfdef93a1e0500c6687a1d7ec4d7c42de",
+  "checkpointImageIdB": "0x8917f58e76aa805dedc04fc5e2b70404f5078b66b271ec44aaa0c78d9f5eaf04",
+  "releaseImageId": "0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd",
+  "lezConfigId": "0x93663700f9cb9db8cb689eae71e8a0c622f23ca29666a8c62090845d8b8726ac",
+  "genesisState": "0x1cff75614094ff05e5128c428a564000c62b6104fb4183eca74f17169164b9ba",
+  "nMin": 4,
+  "tMin": 3,
+  "postingTimeframe": 0,
+  "ethLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "tokenLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000"
+}

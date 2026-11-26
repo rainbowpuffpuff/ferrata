@@ -92,6 +92,49 @@ needs no protocol-level capability, and weakens others' privacy only by removing
 candidate sets, against the recipient and against whoever the recipient tells. A user deciding to disclose should know
 that it also tells the recipient something about the other users of the same denominations.
 
+## The `ferrata-disclose` command and public-view files
+
+The wallet and third party use the same library through two commands:
+
+```sh
+ferrata-disclose make --bridge-seed-file SEED --destinations DESTINATIONS.json --view VIEW.json --out DISCLOSURE.json
+ferrata-disclose verify --disclosure DISCLOSURE.json --view VIEW.json
+```
+
+`make` writes the disclosure from the wallet's own 32-byte bridge seed, read from a file (64 hex digits; never an
+argument, which process listings and shell history would show), and the wallet's own destination accounts. `verify` prints its report as JSON
+and exits 0 on success. A library refusal is a JSON object with `error.kind` (the
+`DisclosureError` variant), the optional `leafIndex` and `field`, and `message`; it exits 1.
+Invalid command arguments, files, hex, or input JSON print usage on stderr and exit 2.
+
+`VIEW.json`, public chain data only, is an object with `chainId`, `vault`, `configId`, `deposits`,
+`spentNullifiers` and `burns` (any other field is refused). Hashes and 256-bit amounts are 64 lowercase hex
+characters without `0x`; addresses are 40 and burn MACs are 32. Integer indices and counters are
+JSON numbers. The fields are:
+
+* Deposits are one object per vault `Deposit` event: `leafIndex`, the depositor's counter `j`,
+  `depositor`, `token`, `amount` (32-byte big-endian), and `commitment`. The array is in leaf order.
+* `spentNullifiers` is the array of claimed deposit nullifiers recorded on LEZ.
+* Burns are `burnIndex` plus the note's public fields `r`, `memo`, `mac`, `token`, `amount`, and
+  `cOut`. Their amount is also a 32-byte big-endian word.
+`DESTINATIONS.json`, the wallet's own and read by `make` only, is `{"destinations": [...]}`: each
+candidate has `kind` (1 private, 2 public), `account` (its candidate counter), and `dest`, the LEZ
+accounts the wallet's seed derives. The scan tries every declared kind/account pair up to one past
+the largest account number; omitted pairs cannot recover a deposit. An empty array discloses no
+deposits but can still disclose burns. These candidates are wallet-supplied account identifiers,
+not additional proof, and `verify` never reads them. See the binary's top doc comment for a
+complete JSON example.
+
+`DISCLOSURE.json` is the library document described above, not a second format. The verifier must
+obtain its public-chain fields independently; accepting a view supplied by the discloser gives no
+independent chain verification.
+
+A complete non-synthetic public-test replay is committed at
+[`disclosure-replay/crown-rc3-rehearsal-1/`](disclosure-replay/crown-rc3-rehearsal-1/README.md).
+Its README maps every view field to the recorded run file, including the event-log decoding and
+burn-tree indices. The CLI integration tests re-verify that exact pair and reject a one-byte
+change to a disclosed claim.
+
 ## Running the tests
 
 From `bridge/`:

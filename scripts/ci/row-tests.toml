@@ -971,10 +971,10 @@ tests = [
   { path = "cli/tests/gasdrop.rs", kind = "test", ci = "roundtrip" },
   { path = "cli/tests/relayer_crash.rs", kind = "test", ci = "box", run = "cd cli && bash tests/relayer-crash.sh" },
   { path = "e2e/netfault/relayer-lez.sh", kind = "test", ci = "box", run = "bash e2e/netfault/relayer-lez.sh OUT" },
-  { path = "monitor/tests/logos-fallback.sh", kind = "test", ci = "box", run = "cd monitor && bash tests/logos-fallback.sh" },
+  { path = "monitor/tests/logos-fallback.sh", kind = "test", ci = "monitor" },
   { path = "e2e/runs/relayer-crash/README.md", kind = "record" },
 ]
-note = "monitor SIGKILLed mid-window and restarted still cancels exactly once; with its state file lost it rescans and makes exactly one cancellation; a watcher without gas cancels once funded (rows 43, 96); the relayer records a gas drop before sending and refuses a second after a restart (row 47); the relayer daemon killed at each of its transactions, at random and in the record's narrow windows, behind failing endpoints, through a stand-in of tx_sender_module, and on LEZ (root imports on the devnet's zone, gas drops on rc1's sequencer): every job once (row 203); monitor's sends the module fails go the plain way (8 of 8); monitor's own endpoint failing, its fallback's own send failing after a burnt nonce, the prover and the attestors are not shown"
+note = "monitor SIGKILLed mid-window and restarted still cancels exactly once; with its state file lost it rescans and makes exactly one cancellation; a watcher without gas cancels once funded (rows 43, 96); the relayer records a gas drop before sending and refuses a second after a restart (row 47); the relayer daemon killed at each of its transactions, at random and in the record's narrow windows, behind failing endpoints, through a stand-in of tx_sender_module, and on LEZ (root imports on the devnet's zone, gas drops on rc1's sequencer): every job once (row 203); monitor's sends the module fails go the plain way, and a send held behind a number the module burnt, after the fallback's own send failed, is followed by the same call at that number (10 of 10, in CI); monitor's own endpoint failing, the prover and the attestors are not shown"
 
 [[row]]
 id = "RFP-022 R.7"

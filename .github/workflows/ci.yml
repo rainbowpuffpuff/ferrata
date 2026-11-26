@@ -101,6 +101,11 @@ jobs:
       - name: The bridge core's tests
         working-directory: bridge
         run: cargo test -p ferrata-bridge-core --locked
+      # RFP-022 Soft.2: voluntary disclosure, the library and its command (make, verify), and the replay of a recorded
+      # run's public data (docs/privacy/disclosure-replay/): verified, and a one-byte change to a claim refused.
+      - name: The disclosure library, its command and the recorded replay (bridge/crates/ferrata-disclose)
+        working-directory: bridge
+        run: cargo test -p ferrata-disclose --locked
 
   # One round trip, every step asserted (e2e/ci/README.md): the v5 vault under rule (B) on anvil with
   # the vault tests' mock verifier; LEZ v0.4.0-rc1's state transition in the harness (dev mode);
@@ -409,6 +414,12 @@ jobs:
       - name: The watchers' rehearsal on anvil (monitor/tests/anvil-e2e.sh)
         working-directory: monitor
         run: MONITOR_E2E_OUT="$RUNNER_TEMP/monitor-e2e" bash tests/anvil-e2e.sh
+      # RFP-022 R.6: --send-via logos against a stand-in for tx_sender_module (e2e/netfault/txsender_stub.py): what the
+      # module did not broadcast goes the plain way at the number it burnt, and a send held behind a burnt number nobody
+      # filled is followed by the same call at that number (L5, the gap fill).
+      - name: The watcher's sends through tx_sender_module, its fallback and gap fill (monitor/tests/logos-fallback.sh)
+        working-directory: monitor
+        run: MONITOR_LF_OUT="$RUNNER_TEMP/logos-fallback" bash tests/logos-fallback.sh
 
   # The vault's Foundry suites (vault/README.md): unit, fuzz and invariant tests with the mock verifier, and
   # test/real/ with RISC Zero's real Groth16 verifier and committed real proofs. PrivacySuite is left out: it replays
@@ -568,11 +579,23 @@ jobs:
       # again from its files, offline (modules/results/live-testnet-2026-11-23/).
       - name: The live test-network record's figures and checks recomputed (modules/scripts/test_live_testnet.py)
         run: python3 -I modules/scripts/test_live_testnet.py
+      # RFP-022 P.6: the rule (B) attestor's CPU, memory and bytes read per round, summarized from a zone run's records
+      # (checkpoint/attestor/resources.py; zone-bridge.sh times every round).
+      - name: The attestor's resources from a run's records (checkpoint/attestor/test_resources.py)
+        run: python3 -I checkpoint/attestor/test_resources.py
+      # RFP-021 S.8, RFP-022 Sec.1 (no audit yet): the audit scope's inventory is generated from this tree, and the
+      # document carries exactly the generated tables (scripts/audit_scope.py).
+      - name: The audit scope's source inventory (scripts/test_audit_scope.py)
+        run: python3 -I scripts/test_audit_scope.py
       # RFP-022 U.5, Priv.7: the test network's gateway publishing its gas-drop relayer: the terms (404 only when none
       # are published), the inbox's checks, a job's receipt verified before it counts against any cap, no address or
       # nullifier in its log (deploy/testnet/host/bin/ferrata-gateway, standard library only).
       - name: The gateway's gas-drop routes (deploy/testnet/tests/test_gateway_gasdrop.py)
         run: python3 -I deploy/testnet/tests/test_gateway_gasdrop.py
+      # RFP-022 F.7 on the test network (deploy/testnet/MULTIKEY.md): the zone's configurations for 1 + N sequencers on one
+      # host, and the checkpoint builder taking t(n) attestations of one tip from the host's attestors (one key: as before).
+      - name: The test network's further sequencer keys and t-of-n checkpoints (deploy/testnet/tests/test_zone_keys.py, test_checkpoint_attestors.py)
+        run: python3 -I deploy/testnet/tests/test_zone_keys.py && python3 -I deploy/testnet/tests/test_checkpoint_attestors.py
       # The build page (site/README.md): a fresh build's counts equal the status document's and every link it emits
       # resolves; the committed bundle's freshness is left to its rebuild (--skip-freshness).
       - name: The build page, built fresh and checked (site/test_site.py --skip-freshness)
