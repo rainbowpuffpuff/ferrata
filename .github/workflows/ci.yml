@@ -577,6 +577,10 @@ jobs:
       # nullifier in its log (deploy/testnet/host/bin/ferrata-gateway, standard library only).
       - name: The gateway's gas-drop routes (deploy/testnet/tests/test_gateway_gasdrop.py)
         run: python3 -I deploy/testnet/tests/test_gateway_gasdrop.py
+      # RFP-022 F.7 on the test network (deploy/testnet/MULTIKEY.md): the zone's configurations for 1 + N sequencers on one
+      # host, and the checkpoint builder taking t(n) attestations of one tip from the host's attestors (one key: as before).
+      - name: The test network's further sequencer keys and t-of-n checkpoints (deploy/testnet/tests/test_zone_keys.py, test_checkpoint_attestors.py)
+        run: python3 -I deploy/testnet/tests/test_zone_keys.py && python3 -I deploy/testnet/tests/test_checkpoint_attestors.py
       # The build page (site/README.md): a fresh build's counts equal the status document's and every link it emits
       # resolves; the committed bundle's freshness is left to its rebuild (--skip-freshness).
       - name: The build page, built fresh and checked (site/test_site.py --skip-freshness)

@@ -25,12 +25,25 @@ while [ $# -gt 0 ]; do
   case "$1" in --tip) TIP="$2"; shift 2 ;; --prove) PROVE=1; shift ;; --wait-burn) WAIT=1; shift ;; --rebuild) REBUILD="$2"; shift 2 ;;
     *) echo "usage: $0 [--tip T | --wait-burn] [--prove] | --rebuild DIR" >&2; exit 2 ;; esac
 done
-B="${FERRATA_BRIDGE_DIR:-/var/lib/ferrata/bridge}"; A="$B/attestor"; export FERRATA_BRIDGE_ENV="${FERRATA_BRIDGE_ENV:-/etc/ferrata/bridge.env}"; API=http://127.0.0.1:18080; RPC=http://127.0.0.1:3040
+B="${FERRATA_BRIDGE_DIR:-/var/lib/ferrata/bridge}"; A="$B/attestor"; export FERRATA_BRIDGE_ENV="${FERRATA_BRIDGE_ENV:-/etc/ferrata/bridge.env}"; API="${FERRATA_NODE_API:-http://127.0.0.1:18080}"; RPC=http://127.0.0.1:3040
 CHANNEL=0101010101010101010101010101010101010101010101010101010101010101; SETTLE_S="${SETTLE_S:-120}"
 RC="${FERRATA_REALBLOCKS_CROWN:-/opt/ferrata/bin/realblocks-crown}"
 j() { python3 -I -c "import json,sys; print(json.load(open(sys.argv[1]))$2)" "$1"; }
 log() { echo "$(date -u +%FT%TZ) $*"; }
-newest_tip() { ls "$A/rounds" | sed -n 's/^tip-\([0-9]*\)\.json$/\1/p' | sort -n | tail -n 1; }
+# The attestors of this host: $A (the sequencer's, since the first deployment) and $A-<i> beside it, one per further
+# sequencer (deploy/testnet/MULTIKEY.md: the zone's key set grown to several sequencers). A checkpoint carries the
+# attestations of one tip by at least t(n) of them, n the channel's accredited keys (t(1) = 1: one attestor as before).
+attestor_dirs() { local d; for d in "$A" "$A"-[0-9]*; do if [ -d "$d/rounds" ]; then echo "$d"; fi; done; }
+need_attestations() { # t(n) of the node's channel: max(1, min(ceil(2n/3), n - 1)); the node unreadable: no build
+  local n
+  n="$(curl -fsS -m 10 "$API/channel/$CHANNEL" | python3 -I -c 'import json,sys; print(len(json.load(sys.stdin)["accredited_keys"]))')" || return 1
+  python3 -I -c 'import sys; n = int(sys.argv[1]); print(max(1, min(-(-2 * n // 3), n - 1)))' "$n"
+}
+newest_tip() { # the newest tip signed by at least t(n) of this host's attestors
+  local need; need="$(need_attestations)" || { echo "the node's channel could not be read: no tip" >&2; return 1; }
+  attestor_dirs | while read -r d; do ls "$d/rounds"; done | sed -n 's/^tip-\([0-9]*\)\.json$/\1/p' | sort -n | uniq -c \
+    | awk -v need="$need" '$1 >= need {print $2}' | tail -n 1
+}
 GENESIS="$(j "$B/params.json" '["genesisState"]')"; T0_ID="$(j "$B/identity.json" '["tip"]["id"]')"
 
 # The vault's finalState (eth_call finalState(), selector 0x22f3099c) over the relayer's endpoint.
@@ -70,7 +83,7 @@ crown() {
   if [ -n "${PARENT_STATE:-}" ]; then parent_args=(--parent-state "$PARENT_STATE" --genesis-state "$FINAL"); else parent_args=(--genesis-state "$GENESIS"); fi
   "$RC" --node "$W/node" --genesis /var/lib/ferrata/node/deployment-settings.yaml \
     --session-a "$B/identity.json" --vault "$(j "$B/config.json" '["vault"]')" --config-id "$(j "$B/config.json" '["configId"]')" \
-    "${parent_args[@]}" --tip "$tip" --n-min 1 --t-min 1 --att "$W/attestation.json" \
+    "${parent_args[@]}" --tip "$tip" --n-min 1 --t-min 1 --att "$(ls "$W"/attestation*.json | paste -sd, -)" \
     --out "$W" --name "$name" | tee "$W/realblocks-crown.txt"
   [ -s "$W/state.json" ] || { echo "$RC wrote no state.json: not the build with --parent-state" >&2; return 1; }
   python3 -I -c 'import json,sys; m=json.load(open(sys.argv[1])); b=json.load(open(sys.argv[2])); s=json.load(open(sys.argv[4])); print(json.dumps({"name": sys.argv[3], "parent_tip": b.get("parent_tip"), "tip": m.get("tip"), "blocks": m.get("blocks"), "input_bytes": m.get("input_bytes"), "parent_state": "0x" + m["parent_state"].removeprefix("0x"), "new_state": m.get("new_state"), "burn_count": m.get("burn_count"), "new_burns": len(b.get("burns", [])), "burn_root": m.get("burn_root"), "imported_leaf_count": m.get("imported_leaf_count"), "state_digest": s["digest"], "burns": [{k: x.get(k) for k in ("burn_index", "block", "amount", "memo", "origin")} for x in b.get("burns", [])]}))' "$W/$name.json" "$W/burns.json" "$name" "$W/state.json" | tee "$W/summary.json"
@@ -78,10 +91,16 @@ crown() {
 
 # build T: the checkpoint at attested tip T on the chosen parent into $B/checkpoint/zone-<parent tip>-<T>.
 build() {
-  local tip="$1"; local ATTF="$A/rounds/tip-$tip.json"; [ -s "$ATTF" ] || { echo "no attestation of tip $tip in $A/rounds" >&2; return 1; }
+  local tip="$1" d k=0 found=()
+  for d in $(attestor_dirs); do [ -s "$d/rounds/tip-$tip.json" ] && found+=("$d/rounds/tip-$tip.json"); done
+  [ "${#found[@]}" -gt 0 ] || { echo "no attestation of tip $tip in $A/rounds or $A-<i>/rounds" >&2; return 1; }
   choose_parent || return 1
   NAME="zone-$PARENT_TIP-$tip"; W="$B/checkpoint/$NAME"; rm -rf "$W"; mkdir -p "$W/node/blocks"
-  cp "$ATTF" "$W/attestation.json"
+  # the first attestor's as attestation.json (as before), every other one's as attestation-<k>.json
+  for d in "${found[@]}"; do
+    if [ "$k" = 0 ]; then cp "$d" "$W/attestation.json"; else cp "$d" "$W/attestation-$k.json"; fi
+    k=$(( k + 1 ))
+  done
   curl -fsS -m 10 -o "$W/node/info.json" "$API/cryptarchia/info"
   curl -fsS -m 10 -o "$W/node/channel.json" "$API/channel/$CHANNEL"
   local lib from to
@@ -153,7 +172,7 @@ PY
       [ -n "$hits" ] && { log "bridge calls in blocks $hits"; hot_until=$(( $(date +%s) + 1800 )); }
       next=$(( head + 1 ))
     fi
-    tip="$(newest_tip)"
+    tip="$(newest_tip || true)"   # (the node unreadable this round: no tip, the next round reads it again)
     if [ "$(date +%s)" -lt "$hot_until" ] && [ -n "$tip" ] && [ "$tip" != "$built" ]; then
       built="$tip"; log "building at attested tip $tip"
       if build "$tip" > "$B/checkpoint/wait-build.log" 2>&1; then

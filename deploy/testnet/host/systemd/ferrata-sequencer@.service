@@ -1,0 +1,34 @@
+[Unit]
+Description=LEZ v0.4.0-rc3 sequencer_service %i of the Ferrata testnet (a further key of the zone: deploy/testnet/MULTIKEY.md)
+After=ferrata-node.service ferrata-sequencer.service
+Requires=ferrata-node.service
+RequiresMountsFor=/var/lib/ferrata
+
+[Service]
+User=ferrata
+Group=ferrata
+WorkingDirectory=/var/lib/ferrata/sequencer-%i
+Environment=RUST_LOG=info,sequencer_core=debug,risc0_zkvm=warn,kameo=warn
+Environment=XDG_CACHE_HOME=/opt/ferrata/cache
+Environment=RISC0_SERVER_PATH=/opt/ferrata/bin/r0vm
+Environment=PATH=/opt/ferrata/bin:/usr/local/bin:/usr/bin:/bin
+Environment=FERRATA_SEQ_HOME=/var/lib/ferrata/sequencer-%i FERRATA_SEQ_RPC=127.0.0.1:304%i
+Environment=FERRATA_SEQ_LOG=/var/log/ferrata/sequencer-%i.log FERRATA_PHASE_FILE=/var/lib/ferrata/status/sequencer-%i-phase.json
+UnsetEnvironment=RISC0_DEV_MODE
+# Started in phase with the node's epochs (deploy/testnet/host/bin/ferrata-sequencer-run).
+ExecStart=/usr/bin/python3 -I /opt/ferrata/bin/ferrata-sequencer-run
+Restart=always
+RestartSec=10
+TimeoutStopSec=120
+KillMode=mixed
+LimitNOFILE=65536
+StandardOutput=append:/var/log/ferrata/sequencer-run-%i.log
+StandardError=append:/var/log/ferrata/sequencer-run-%i.log
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/ferrata/sequencer-%i /var/lib/ferrata/status /var/log/ferrata
+
+[Install]
+WantedBy=multi-user.target
