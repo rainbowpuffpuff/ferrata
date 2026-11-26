@@ -6,6 +6,10 @@ Every document in this folder, one line each. Start with [EVIDENCE.md](EVIDENCE.
 
 - [EVIDENCE.md](EVIDENCE.md): the index. One row per piece of evidence: its numbers, where it ran, whether its
   proofs were real, and the command that re-checks it.
+- [VERIFY.md](VERIFY.md): the reviewer's path from `git clone` to every check `scripts/verify.py` makes of the
+  evidence, offline then online, with the named tests and a round trip of your own.
+- [cli-coverage.md](cli-coverage.md): every component and user-facing feature with the command line that exercises
+  it, the test that runs that command, whether it is offline or online, and what is not reachable from a terminal.
 - [traceability.md](traceability.md): every requirement of RFP-021 and RFP-022 with its design, the evidence that
   exists today and the milestone that would deliver it.
 - [requirements-status.md](requirements-status.md): the status of every requirement row (shown, in part, not yet, waits on

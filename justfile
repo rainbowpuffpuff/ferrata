@@ -60,3 +60,15 @@ deploy-testnet *args:
 # The four Halmos properties that did not finish in 900 s, with a longer budget (HALMOS_LONG_TIMEOUT, default 4800 s).
 halmos-long:
     {{box}} scripts/halmos-long.sh install run
+
+# Re-check the evidence: every check, its requirement rows and EVIDENCE rows (docs/VERIFY.md; --list, --all, --online).
+verify *args:
+    python3 -I scripts/verify.py "$@"
+
+# Read our public LEZ test network (or --lez URL) from a terminal: head, block N, tx HASH, programs, instance ACCOUNT.
+lez-read *args:
+    python3 -I scripts/lez-read.py "$@"
+
+# Print the commands CI's jobs run, as scripts/ci/ci_model.py reads the workflows (one job, several, or all).
+ci-commands *jobs:
+    python3 -I scripts/ci/ci_model.py --trace "$@"

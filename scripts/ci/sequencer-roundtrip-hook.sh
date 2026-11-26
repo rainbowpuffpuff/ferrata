@@ -78,7 +78,7 @@ int() { [[ "$1" =~ ^(0x[0-9a-fA-F]+|0|[1-9][0-9]*)$ ]] && echo $(( $1 )); }
 u() {
   local n="$1" rc; shift
   { echo "\$ ${*//$B\//}"; echo; "$@"; } > "$R/user/$n.txt" 2>&1; rc=$?
-  sed -i -e "s#$W/#<work>/#g" -e "s#$B/##g" "$R/user/$n.txt"
+  sed -i -e "s#$W/#<work>/#g" -e "s#$B/##g" -e "s#RISC0_HOME=[^ ]*#RISC0_HOME=<risc0-home>#g" "$R/user/$n.txt"
   printf '%s\texit %s\n' "$n" "$rc" >> "$R/user/INDEX"
   return $rc
 }
@@ -154,7 +154,7 @@ export CROWN_STAND_IN_SLOT="$STAND_IN_SLOT"
 # A standalone zone has no Logos Blockchain channel: session A's channel and genesis are tags (the bridge program
 # checks neither; the checkpoint's key set is ci_zone's, below).
 printf '{"accredited_keys": ["%s"], "posting_timeframe": 0, "config_tip_hash": "%s"}\n' "$(printf '01%.0s' $(seq 32))" "$(printf '00%.0s' $(seq 32))" > "$W/channel.json"
-printf 'ferrata CI: a LEZ v0.4.0-rc1 standalone sequencer (mock Bedrock), no Logos Blockchain genesis\n' > "$W/zone-genesis.txt"
+printf 'ferrata CI: a LEZ %s standalone sequencer (mock Bedrock), no Logos Blockchain genesis\n' "${LEZ_TAG:-v0.4.0-rc1}" > "$W/zone-genesis.txt"
 D=(--program-bin "$B/ferrata_lez.bin" --bridge-bin "$B/ferrata_bridge.bin" --rpc "$SEQ" --run-dir "$W/crown" --wait-final no
    --sequencer-log "$ZONE_LOG/sequencer.log")
 "$B/crown-driver" crown-a --chain stand-in "${D[@]}" --channel "$W/channel.json" --genesis "$W/zone-genesis.txt" \

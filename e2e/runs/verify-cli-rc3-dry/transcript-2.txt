@@ -1,0 +1,35 @@
+
+== tool 1abb937e0a81ccf5…; 2026-11-26T10:06:34Z
+
+== $ ferrata scan
+vault 0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787: 2 deposits at block 12215803, root 0x09b3b7293c83bc0a810db542c9b91af758a014a5e3778758d4857a9254bc71e7 (equal to depositRoot: checked)
+deposits of this seed: 0
+exit 0
+
+== $ ferrata claim
+error: nothing to claim: every deposit of this seed is claimed or refunded (`ferrata recover` lists them)
+exit 1
+
+== $ ferrata claim --leaf 0 --no-delay
+error: leaf 0 is not a deposit of this seed (`ferrata scan` lists them)
+exit 1
+
+== $ ferrata burn --amount 0.001 --recipient 0x000000000000000000000000000000000000dEaD
+Latest block is 25747
+Syncing to block 25747. Blocks to sync: 25747
+Synced to block 25747 in 20.213873631s
+error: refused: LEZ bridge program exit code 254 INSUFFICIENT_BALANCE (checked before sending: the holding is 0 base units): the holding is smaller than the denomination burned
+exit 1
+
+== $ ferrata release --burn 0
+error: no burn with counter 0 of this seed (`ferrata recover` lists them)
+exit 1
+
+== pager log (tail)
+10:10:50 HTTP 429, again in 5 s
+10:11:10 HTTP 429, again in 5 s
+10:11:42 HTTP 429, again in 5 s
+10:12:02 HTTP 429, again in 5 s
+10:12:35 eth: https://rpc.sepolia.ethpandaops.io HTTP 429: again in 2 s
+
+== done 2026-11-26T10:13:05Z

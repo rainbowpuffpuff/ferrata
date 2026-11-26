@@ -1,7 +1,7 @@
 # How CI works
 
-Four workflows. [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml), on every push, pull request and manual
-dispatch (`workflow_dispatch`), runs the fifteen jobs below (the table also lists `lez-full.yml`'s `lez-harness-full`)
+Five workflows. [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml), on every push, pull request and manual
+dispatch (`workflow_dispatch`), runs the sixteen jobs below (the table also lists `lez-full.yml`'s `lez-harness-full`)
 on GitHub's `ubuntu-latest` runners with `lez-harness`
 split across a 6-shard matrix (20 runner jobs total, none skipped on any trigger; `concurrency` gives every run on
 `main` its own `github.run_id` group with `cancel-in-progress: false` so runs on `main` never queue behind or
@@ -13,10 +13,13 @@ push/PR CI. [`macos.yml`](../../.github/workflows/macos.yml), on pushes to `main
 a user's machine runs and builds five of the six modules' `.lgx` for macOS (arm64) on `macos-15` (RFP-022 S.2; the
 updater's module builds for x86-64 Linux only). [`sequencer.yml`](../../.github/workflows/sequencer.yml), on pushes to `main`, daily at 05:43 UTC and by hand, runs two
 jobs against LEZ's own sequencer built from source in standalone mode: `sequencer-attest` (RFP-021 S.2) and
-`sequencer-roundtrip` (RFP-022 R.10), each on Sepolia data read when it runs (rows below). No job needs a secret, and
-no job sends anything to a public network: the network is used to fetch dependencies (crates, Foundry libraries, RISC
-Zero's toolchains, the pinned upstream sources and spec vectors) and, in `sequencer.yml` only, to read Sepolia from
-public endpoints.
+`sequencer-roundtrip` (RFP-022 R.10), each on Sepolia data read when it runs (rows below).
+[`verify-online.yml`](../../.github/workflows/verify-online.yml), daily at 06:29 UTC and by hand, runs
+`scripts/verify.py --all --online`, the reviewer's online checks ([`docs/VERIFY.md`](../VERIFY.md) §2): read-only
+requests to Sepolia, Ethereum mainnet, our public LEZ test network, the live site and Sepolia beacon APIs. No job needs
+a secret, and no job sends anything to a public network: the network is used to fetch dependencies (crates, Foundry
+libraries, RISC Zero's toolchains, the pinned upstream sources and spec vectors) and, in `sequencer.yml` and
+`verify-online.yml` only, to read public endpoints.
 
 Prototype evidence for a grant proposal. **Not audited. Not for production.**
 
@@ -32,6 +35,7 @@ Prototype evidence for a grant proposal. **Not audited. Not for production.**
 | `image-ids` | `scripts/test_image_ids.py`: `docs/image-ids.md` names each program once, and `verify-sepolia.py` and `compare_ids.py` resolve the right row | Python | a program is named twice, or a tool resolves the wrong row |
 | `idl` | `idl/check.py`: the IDL alone decodes every committed borsh vector of both programs | Python | a vector does not decode as the IDL says |
 | `admin` | `node admin/dump.mjs --selftest`: the admin view's self-test | Node | the self-test fails |
+| `verify` | the vault built at its pinned libraries, then `python3 -I scripts/verify.py --all --offline --strict`: every offline check of the reviewer's re-check tool's quick tier ([`docs/VERIFY.md`](../VERIFY.md)), then `scripts/test_verify.py` and `scripts/test_verify_lc.py`: the tool's registry and command line, and each check family run on a copy of the repository with one piece of evidence altered; then `git status`: nothing they ran changed the tree | Python 3.11+, Node, Foundry (anvil, cast), git (full history) | a check fails or skips, an altered copy passes, or the tree changed |
 | `modules-resolve` | [`scripts/ci/modules-resolve.sh`](../../scripts/ci/modules-resolve.sh): five Logos Core modules' crates (`ferrata_{attest,bridge,attestor,monitor,relayer}_module`) staged as the module builder sees them, with the logos-rust-sdk revision their `flake.lock` pins, then `cargo metadata --locked` in each; then `ferrata_attest_module`'s `calls/tests/failing_endpoint.rs` (RFP-021 R.5); then `cli/`'s library compiled as `ferrata_relayer_module` uses it, without `lez-wallet` (`cargo +1.98.1 check --locked --no-default-features --lib`) | Rust 1.93 and 1.98.1, the upstream sources (`scripts/fetch-upstream.sh`), Python, `libpcsclite-dev` and `protoc` | a module's staged crate does not resolve with its committed `Cargo.lock` (for instance a crate it vendors gained a dependency its staging does not copy, as `ferrata-cli` did on 21 November 2026), or `cli/` uses a `lez-wallet`-only crate outside `#[cfg(feature = "lez-wallet")]` (the default-feature builds would not see it), or the module's failing-endpoint test; `ferrata_updater_module` is left out (its staging needs `lez/`'s guests) |
 | `witness-independence` | [`scripts/ci/witness-independence.sh`](../../scripts/ci/witness-independence.sh): the bridge's `host invariance 64`; then `cargo test -p ferrata-bridge-core` in `bridge/` | Rust 1.93, RISC Zero's toolchains ([`scripts/ci/install-risc0.sh`](../../scripts/ci/install-risc0.sh)) | the release or claim guest's cycle count (user cycles and segment sizes) differs between any two of 64 random valid witnesses (SPEC-v2 §5.2), or a bridge core test fails |
 | `roundtrip` | [`e2e/ci/run.sh`](../../e2e/ci/run.sh): one deposit there and back, every step asserted ([`e2e/ci/README.md`](../../e2e/ci/README.md)); then the `ferrata` tool's own end-to-end test, [`cli/tests/e2e.sh`](../../cli/tests/e2e.sh) (deposits through the binary, scan, claim, eleven burns, a release, recovery from the seed phrase; its checkpoint is a journal the test builds); then the relayer's library tests and `cli/tests/gasdrop.rs` (a real gas-drop receipt, no dev mode); then the attestation CLI's library tests (`cargo test --lib attest`) and `cli/tests/attest_faults.rs` (RFP-021 R.5, U.5) | Rust 1.93 and 1.98.1, RISC Zero's toolchains, Foundry 1.3.6, the upstream sources (`scripts/fetch-upstream.sh`), `libpcsclite-dev` | any step of the round trip, or the build, or an attestation fault or code-53 test |
