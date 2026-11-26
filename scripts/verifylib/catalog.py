@@ -21,7 +21,7 @@ from .core import REGISTRY, CheckFailed, Ctx, check, command, fail_if, run_scrip
 from .rows import status_rows
 
 CHECK_MODULES = ("checks_hashes", "checks_seals", "checks_sigs", "checks_lc", "checks_online",
-                 "runrecord")
+                 "runrecord", "checks_zone")
 
 
 def _py(id, script, *args, **kw):

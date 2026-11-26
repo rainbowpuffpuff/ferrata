@@ -696,7 +696,7 @@ jobs:
       - name: Every offline check of the quick tier
         run: python3 -I scripts/verify.py --all --offline --strict
       - name: The tamper tests of every check family
-        run: python3 -I scripts/test_verify.py && python3 -I scripts/test_verify_lc.py
+        run: python3 -I scripts/test_verify.py && python3 -I scripts/test_verify_lc.py && python3 -I scripts/test_verify_zone.py
       - name: The checks and their tests left the tree as they found it
         if: always()
         run: |
