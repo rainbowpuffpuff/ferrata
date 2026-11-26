@@ -174,11 +174,12 @@ two-hour cadence (§2).
   | G2: G3 with a daemon that never defers | 8 (4.8–5.0 s) | 60 s | 35 / 45 s | 26 / 0 | 11.1M | 1.095 | 1.311 | 1.311 | 0.588 |
 
   A longer window costs latency and saves gas: fewer races, and intermediate updates skipped (a later update's job
-  covers them). G6 and G7 compare windows 8 and 30 at one reveal step over 106 updates each (A3's gate asks 100):
-  the median latency grows from 105 to 275 s, the execution gas per revealed update falls from 8.9M to 4.1M, and both
-  meet A3's two limits without its adversarial daemon (refused / applied at most 0.10; each honest daemon's share
-  0.35–0.65). Caveats: the replay reveals updates 81 to 122 times faster than the lab recorded them (one about every two hours, its session schedule),
-  about 40–60 times the design's hourly cadence, so jobs overlap more than in operation; G5's 90-s reveal step against
+  covers them). G6 and G7 compare windows 8 and 30 at one reveal step over 106 updates each (A3's gate asks 100;
+  each run on its own box's build of the same sources): the median latency grows from 105 to 275 s, the execution gas
+  per revealed update falls from 8.9M to 4.1M, and both meet A3's two limits without its adversarial daemon (refused /
+  applied at most 0.10; each honest daemon's share 0.35–0.65). Caveats: the replay reveals updates 81 to 122 times
+  faster than the lab recorded them (one about every two hours, its session schedule), about 40–60 times the design's
+  hourly cadence, so jobs overlap more than in operation; G5's 90-s reveal step against
   60 s confounds its comparison with G3 and G4, and G2–G5 hold 11 to 42 jobs, under A3's planned 100 updates. Most of
   the waste at window 1 (G4: 111.1M abandoned against 50.0M refused) is abandoned jobs, at window 8 (G3) about half
   (17.4M against 18.0M), and at 106 updates most of it at both windows (G6: 127.0M abandoned against 85.3M refused; G7:
@@ -764,7 +765,7 @@ checkpoints after a sunset until holders have released ([`bridge.md`](../design/
 
 The relayer module's root imports on a running LEZ sequencer (the standalone daemon ran them on rc1's sequencer,
 `e2e/runs/seqnet-robust-1/`; the module's ran on the mini-app's devnet, §6.6); the gas drop for burns and in the
-mini-app's claim (the daemon's sealed credit ran on rc1's sequencer, §6.4, EVIDENCE row 205); `verify_checkpoint` as an API of Logos Core's Ethereum module (its execution check runs through `verified_proxy_module`); the attestation side's `monitor`; job clean-up; the acceptance run with its adversarial daemon at 100 updates on a sequencer (in process it ran on 58 recorded updates; on a sequencer two honest daemons alone ran 106, §3.4);
+mini-app's claim (the daemon's sealed credit ran on rc1's sequencer, §6.4, EVIDENCE row 205); `verify_checkpoint` as an API of Logos Core's Ethereum module (its execution check runs through `verified_proxy_module`); the attestation side's `monitor`; job clean-up; the acceptance run with its adversarial daemon at 100 updates on a sequencer (in process it runs with it on 246 recorded updates, CI's `lez/updater/tests/recorded.rs`; on a sequencer two honest daemons alone ran 106, §3.4);
 the amortised costs at the recommended cadence with real proving (milestones A4, B4); a deployment on a LEZ network
 Logos runs. Sources: [`attestation.md`](../design/attestation.md) §15; [`bridge.md`](../design/bridge.md) §1, §18.6,
 §19; [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §9.

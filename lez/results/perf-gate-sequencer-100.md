@@ -6,9 +6,14 @@
 size: each run reveals 106 of the lab's recorded mainnet updates (96 finality updates and 10 sync-committee period
 updates; `GATE_ENTRIES=106`; A3's gate asks 100), one every 60 s (`GATE_STEP=60`), to two honest `ferrata-updater`
 daemons polling every 4 s and no adversary (`GATE_ADVERSARY=0`); `gate-g6` at the default deferral window of 8 rounds,
-`gate-g7` at 30, everything else equal (each run's `machine.txt`). Each run is `bash bench/perf/gate-sequencer.sh NAME`
-with those parameters, after `bench/perf/gate-build.sh` built the updater and the zone's bundle on that run's box
-(their sha256 in `machine.txt`). The machine paths in the logs are written `<repo>` (the worktree on the box).
+`gate-g7` at 30, the other parameters equal (each run's `machine.txt`). Each run is
+`bash bench/perf/gate-sequencer.sh NAME` with those parameters (the scripts of commit `0bc83204`), after
+`bench/perf/gate-build.sh` built the updater and the zone's bundle on that run's box from commit `40e8d799`'s sources:
+`0bc83204` changes none of the updater's (`git diff --stat 40e8d799 0bc83204 -- lez/updater lez/wire lez/advance
+lez/bridge-wire crates` prints nothing) and, of the zone's, only `lez/crown/driver/src/gasdrop.rs`, which the rc1 build
+leaves out. The two boxes' builds differ (G6's updater sha256 `61b2c350…`, G7's `eb0488c0…`; each run's `machine.txt`
+and `hook.log`); why was not examined, so the windows are compared on two builds of the same sources. The machine
+paths in the logs are written `<repo>` (the worktree on the box).
 
 **The clock is set back.** The recorded chain's bootstrap left its weak-subjectivity period on 24 November 2026, so
 each run sets every process's wall clock back five days with libfaketime (`FAKETIME=-5d`, monotonic clocks real);
@@ -18,11 +23,12 @@ each run sets every process's wall clock back five days with libfaketime (`FAKET
 refused steps at most 0.10 of their gas on applied steps, each honest daemon paying 35–65% of the honest fees):
 `gate-g6` (window 8) **0.0989** and honest-1's share **0.522**; `gate-g7` (window 30) **0.0327** and **0.521**. Both
 runs meet both limits, window 8 by 0.0011. A3's gate as the design words it also has an adversarial daemon; these runs
-have none (the one run with it on a sequencer is G2 of `perf-gate-sequencer.md`, 30 updates). In both runs no step
-was applied twice, and all 96 revealed finality updates were covered, at window 8 64 by their own job (latency median
-105 s, p90 175 s), at window 30 23 (median 275 s, p90 546 s). A3's ratio leaves out the applied steps of abandoned
-jobs (opened, then overtaken by another job): 127,031,995 execution gas at window 8 and 72,748,924 at window 30, so
-that all the daemons' gas is **1.289** and **1.249** times the completed jobs' ("All daemons together" below).
+have none (the one run with it on a sequencer is G2 of `perf-gate-sequencer.md`, 30 updates). In both runs no step was
+applied twice, and all 96 revealed finality updates were covered: 64 of them by their own job at window 8 (latency
+median 105 s, p90 175 s), 23 at window 30 (median 275 s, p90 546 s). A3's ratio counts the applied steps of abandoned
+jobs (opened, then overtaken by another job) as applied, not as waste: 127,031,995 execution gas at window 8 and
+72,748,924 at window 30, so that all the daemons' gas is **1.289** and **1.249** times the completed jobs' ("All daemons
+together" below).
 
 **Every refused step raced a step in its own block.** The table of refused steps pairs a refused step with the same
 step of the same job applied, so `gate-g6`'s three refused `Finish` steps with exit code 82 (`StoreChanged`) show as

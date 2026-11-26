@@ -604,6 +604,33 @@ class TestGate100(unittest.TestCase):
         self.has("no adversary (`GATE_ADVERSARY=0`); `gate-g6` at the default deferral window of 8 rounds, `gate-g7` at 30")
         self.has("(`FAKETIME=-5d`, monotonic clocks real)")
 
+    def test_the_reveals_are_the_recorded_updates(self):
+        """Each run's reveals.tsv is the lab's recorded mainnet updates in the replay's order (sorted names), entry by
+        entry, with the slots bench/perf/beacon_replay.py reads from each SSZ file; each UTC stamp is its own Unix time's
+        (truncated to the second, the Unix time rounded to the millisecond), the times rising; and the header names each
+        run's updater build as its machine.txt and hook.log do."""
+        import beacon_replay
+        expect = []
+        for i, p in enumerate(sorted((ROOT / "lez/lab/results/record/net/mainnet/updates").glob("*.ssz"))[:106], 1):
+            kind = p.name.split(".")[1]
+            expect.append([str(i), p.name, kind, *map(str, beacon_replay.slots(kind, p.read_bytes()))])
+        self.assertEqual(len(expect), 106)
+        stamp = lambda x: datetime.fromtimestamp(int(x), timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        shas = []
+        for name, _ in self.RUNS:
+            rows = [line.split("\t") for line in rd(f"bench/perf/results/{name}/reveals.tsv").splitlines()[1:]]
+            self.assertEqual([r[:6] for r in rows], expect)
+            last = 0.0
+            for r in rows:
+                t = float(r[7])
+                self.assertIn(r[6], (stamp(t), stamp(t - 0.0005)), r)
+                self.assertGreater(t, last, r)
+                last = t
+            sha = re.search(r"ferrata-updater sha256 ([0-9a-f]{64})", rd(f"bench/perf/results/{name}/machine.txt")).group(1)
+            self.assertIn(f"updater sha256 {sha};", rd(f"bench/perf/results/{name}/hook.log"))
+            shas.append(sha)
+        self.has(f"G6's updater sha256 `{shas[0][:8]}…`, G7's `{shas[1][:8]}…`")
+
     def test_a3s_figures_from_the_journals(self):
         """The honest daemons' execution gas on refused steps over applied steps, honest-1's share of the fees (applied
         and refused), and no (job, step, label) applied twice: summed from the journals, not read from the generator."""
@@ -652,8 +679,8 @@ class TestGate100(unittest.TestCase):
         k6, k7 = self.keys["gate-g6"], self.keys["gate-g7"]
         for k in (k6, k7):
             self.assertEqual((k["lat_n"], k["fin_revealed"], k["twice"]), (96, 96, 0))
-        self.has(f"all {k6['lat_n']} revealed finality updates were covered, at window 8 {k6['own']} by their own job "
-                 f"(latency median {k6['lat_med']:.0f} s, p90 {k6['lat_p90']:.0f} s), at window 30 {k7['own']} "
+        self.has(f"all {k6['lat_n']} revealed finality updates were covered: {k6['own']} of them by their own job at "
+                 f"window 8 (latency median {k6['lat_med']:.0f} s, p90 {k6['lat_p90']:.0f} s), {k7['own']} at window 30 "
                  f"(median {k7['lat_med']:.0f} s, p90 {k7['lat_p90']:.0f} s)")
         self.has(f"{g(k6['gas_aband'])} execution gas at window 8 and {g(k7['gas_aband'])} at window 30, so that all the "
                  f"daemons' gas is **{k6['mult']:.3f}** and **{k7['mult']:.3f}** times the completed jobs'")
