@@ -34,7 +34,7 @@ FAMILIES = {
 }
 TIERS = ("quick", "tests")
 TOOLS = {"python3": "python3", "node": "node", "cargo": "cargo", "forge": "forge", "git": "git", "bash": "bash",
-         "r0vm": "r0vm", "docker": "docker", "cast": "cast", "anvil": "anvil"}
+         "r0vm": "r0vm", "docker": "docker", "cast": "cast", "anvil": "anvil", "jq": "jq", "curl": "curl"}
 
 
 class CheckFailed(Exception):

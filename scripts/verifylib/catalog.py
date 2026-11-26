@@ -28,6 +28,15 @@ def _py(id, script, *args, **kw):
                    **kw)
 
 
+# The tools a unit check's script calls besides Python (a missing one makes the check a SKIP that names it).
+UNIT_NEEDS = {"unit-deploy-sepolia": ("python3", "anvil", "cast", "forge"),
+              "unit-netfault-autoresume": ("python3", "anvil", "cast"),
+              "unit-names-claims": ("python3", "node"),
+              "unit-v03-guards": ("bash", "python3", "curl", "jq", "anvil", "cast"),
+              "unit-crown-guards": ("bash", "python3", "anvil", "cast"),
+              "unit-seqnet-late-credit": ("bash", "python3", "jq")}
+
+
 def _register_wrappers() -> None:
     # ---- records: numbers re-derived from the committed records ---------------------------------------------------
     _py("day1-rehearsal", "lez/testnet04/recheck.py", "lez/testnet04/results/rehearsal-1", family="record",
@@ -161,6 +170,7 @@ def _register_wrappers() -> None:
             ("unit-names-claims", "names/e2e/claims.py", (235,), (), "The names program's documented claims and fees"),
     ):
         _py(cid, script, family="unit", mode="offline", evidence=ev, rows=rows, title=title,
+            needs=UNIT_NEEDS.get(cid, ("python3",)),
             what=f"{script}'s cases", against="the behaviour the script's docstring states")
     _py("unit-site", "site/test_site.py", "--skip-freshness", family="unit", mode="offline",
         title="The site's requirement pages and their evidence links (as CI runs it: the bundle's freshness against "
@@ -191,7 +201,7 @@ def _register_wrappers() -> None:
              (242,), ("RFP-021 S.7",), "The explorer's decoders (blocks, IDLs, Ethereum proofs) and the status page's "
              "alarm rules"),
     ):
-        needs = ("node", "bash", "python3") if "node" in shell else ("bash", "python3")
+        needs = UNIT_NEEDS.get(cid) or (("node", "bash", "python3") if "node" in shell else ("bash", "python3"))
         command(id=cid, shell=shell, family="unit", mode="offline", evidence=ev, rows=rows, title=title,
                 needs=needs, what=f"`{shell}`", against="the test files' expectations")
 
