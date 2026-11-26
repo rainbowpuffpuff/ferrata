@@ -301,6 +301,22 @@ class RunRecordOffline(TamperCase):
             c["instance_counters_read"][inst]["applied_by_as_of"] += 1
         self.assertFails("run-record", self.forged(edit), "counter")
 
+    def test_a_counter_forged_consistently(self):
+        """The counter read at the as-of block and the one by it, both one more: only the finishes can tell."""
+        def edit(c):
+            inst = next(iter(c["instance_counters_read"]))
+            c["instance_counters_read"][inst]["applied_by_as_of"] += 1
+            c["instance_counters_read"][inst]["applied"] += 1
+        self.assertFails("run-record", self.forged(edit), "finishes give")
+
+    def test_as_of_time_before_the_lines(self):
+        """The as-of block's time moved before the newest line's, nothing else changed."""
+        rows = runrecord.read_tsv(ROOT / RR / "transactions.tsv")
+
+        def edit(c):
+            c["as_of"]["time_utc"] = rows[-1]["time_utc"][:11] + "00:00:00.000Z"
+        self.assertFails("run-record", self.forged(edit), "before the newest line")
+
     def test_a_pause_forged(self):
         def edit(c):
             c["block_gaps_over_60s"][0]["seconds"] += 10
