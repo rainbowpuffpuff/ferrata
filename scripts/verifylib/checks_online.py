@@ -331,3 +331,45 @@ def _faucet_terms(ctx):
         raise CheckFailed(f"the faucet {acct} holds {bal} on chain; a grant is {grant}")
     return [f"faucet {acct[:10]}…: a grant of {grant:,} native units (1 LGO = 10^9), limits {terms.get('limits')}",
             f"its balance on chain {bal:,} ({bal // grant:,} grants); published {int(terms.get('balance', 0)):,}"]
+
+
+@check(id="sepolia-31-vault", family="sepolia", mode="online", evidence=(232,), rows=("RFP-022 R.8",),
+       title="The RISC Zero 3.1 vault of our test network, deployed on Sepolia, read back against its record",
+       what="vault/deployments/sepolia-31-B.json and vault/script/params/sepolia-31.json: every address the "
+            "deployer's creation at its nonce, the verifier 3.1.0, the emergency stop, the programs, configuration, "
+            "roles, delta, floors and caps", needs=("bash", "cast", "network"),
+       against="Sepolia by cast call (read-only), through vault/deployments/sepolia-31-B.check.sh",
+       inputs=("vault/deployments/sepolia-31-B.json", "vault/deployments/sepolia-31-B.check.sh"))
+def _sepolia_31(ctx):
+    # Two of its reads are at past blocks (the vault's code before and at its creation block): an endpoint that
+    # prunes history cannot answer them, so the endpoints are tried in turn until one serves them.
+    history = ("pruned", "missing trie node", "header not found", "historical state", "is not available")
+    tried = []
+    for rpc in ctx.sepolia_rpc:
+        rc, out = _run(ctx, ["bash", "vault/deployments/sepolia-31-B.check.sh", "."], env={"RPC": rpc}, timeout=900)
+        fails = [ln for ln in out if ln.startswith("FAIL")]
+        if rc == 0 and not fails:
+            return [f"{sum(1 for ln in out if ln.startswith('ok'))} reads equal the record ({rpc})"] + out[-1:]
+        pruned = any(h in ln for ln in fails for h in history)
+        if pruned and all(any(h in ln for h in history) or "has code at block" in ln for ln in fails):
+            tried.append(rpc)
+            continue
+        raise CheckFailed("\n".join([f"exit status {rc} ({rpc})"] + (fails or out)[-20:]))
+    raise Skipped(f"no Sepolia endpoint served the past blocks the record names ({', '.join(tried)}): give an "
+                  "archive endpoint with --sepolia-rpc")
+
+
+@check(id="sepolia-verifiers", family="sepolia", mode="online", evidence=(154, 232), rows=("RFP-022 R.8",),
+       title="Each Sepolia vault's Groth16 verifier: 3.1.0, or 3.0.0 only behind closed caps",
+       what="the verifier behind each vault's emergency stop (its SELECTOR) for the four 3.0 vaults and the 3.1 vault",
+       against="vault/script/check-verifier.sh's rule: 3.1.0 ok; 3.0.0 (which accepts forged claims) ok only while "
+               "the vault's deposit and release caps both read 0", needs=("bash", "cast", "network"),
+       inputs=("vault/script/check-verifier.sh",))
+def _sepolia_verifiers(ctx):
+    rpc = _first_rpc(ctx.sepolia_rpc, 11155111)
+    lines, problems = [], []
+    for name, addr in list(VAULTS.items()) + [("test-network", "0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787")]:
+        rc, out = _run(ctx, ["bash", "vault/script/check-verifier.sh", addr, rpc], timeout=300)
+        (lines if rc == 0 else problems).append(f"{name} {addr[:10]}…: " + (out[-1] if out else f"exit {rc}"))
+    fail_if(problems, "the vaults' verifiers")
+    return lines
