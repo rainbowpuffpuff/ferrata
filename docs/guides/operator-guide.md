@@ -157,9 +157,10 @@ two-hour cadence (§2).
   `H(key, job, step) mod W` rounds (an `Open`, and a step of a job the daemon does not carry, counted from the first
   round a step of that kind was due on the instance's state), `key` the daemon's own (so the wait differs per daemon and
   per step), reads the job's account just before sending, and an updater continues the open job of the update it chose.
-- **The strategy's effect, measured on a running LEZ v0.4.0-rc1 sequencer** (21 November 2026;
-  [`perf-gate-sequencer.md`](../../lez/results/perf-gate-sequencer.md), `bash bench/perf/gate-sequencer.sh`): two honest
-  daemons following recorded mainnet updates, configured to poll every 4 s, the window `W` in rounds. Latency: a
+- **The strategy's effect, measured on a running LEZ v0.4.0-rc1 sequencer** (21 and 26 November 2026;
+  [`perf-gate-sequencer.md`](../../lez/results/perf-gate-sequencer.md) for G2–G5,
+  [`perf-gate-sequencer-100.md`](../../lez/results/perf-gate-sequencer-100.md) for G6 and G7,
+  `bash bench/perf/gate-sequencer.sh`): two honest daemons following recorded mainnet updates, configured to poll every 4 s, the window `W` in rounds. Latency: a
   revealed finality update to the first `Finish`, final on Bedrock, that leaves the instance at least as fresh. Gas:
   all execution gas, abandoned jobs (opened, then overtaken by another job) and refused steps included.
 
@@ -168,14 +169,20 @@ two-hour cadence (§2).
   | G4 | 1 (17.6 s) | 60 s | 105 / 106 s | 20 / 1 | 16.0M | 1.721 | 0.721 | 0.149 | 0.493 |
   | G3 | 8 (5.9–6.2 s) | 60 s | 126 / 176 s | 12 / 9 | 8.1M | 1.222 | 0.222 | 0.102 | 0.563 |
   | G5 | 30 (4.6–4.8 s) | 90 s | 306 / 576 s | 5 / 12 | 4.6M | 1.081 | 0.081 | 0.0036 | 0.609 |
+  | G6: 106 updates | 8 (6.0–6.4 s) | 60 s | 105 / 175 s | 64 / 32 | 8.9M | 1.289 | 0.289 | 0.0989 | 0.522 |
+  | G7: 106 updates | 30 (4.8 s) | 60 s | 275 / 546 s | 23 / 73 | 4.1M | 1.249 | 0.249 | 0.0327 | 0.521 |
   | G2: G3 with a daemon that never defers | 8 (4.8–5.0 s) | 60 s | 35 / 45 s | 26 / 0 | 11.1M | 1.095 | 1.311 | 1.311 | 0.588 |
 
   A longer window costs latency and saves gas: fewer races, and intermediate updates skipped (a later update's job
-  covers them). Caveats: the replay reveals updates 81 to 122 times faster than the lab recorded them (one about every
-  two hours, its session schedule), about 40–60 times the design's hourly cadence, so jobs overlap more than in
-  operation; G5's 90-s reveal step against 60 s confounds its comparison with G3 and G4;
-  the runs hold 11 to 42 jobs, under A3's planned 100 updates. Most of the waste at window 1 (G4: 111.1M abandoned against
-  50.0M refused) is abandoned jobs, at window 8 (G3) about half (17.4M against 18.0M): a daemon that lost a race opens a job for the next update on the store the winner is about to change. A policy of
+  covers them). G6 and G7 compare windows 8 and 30 at one reveal step over 106 updates each (A3's gate asks 100):
+  the median latency grows from 105 to 275 s, the execution gas per revealed update falls from 8.9M to 4.1M, and both
+  meet A3's two limits without its adversarial daemon (refused / applied at most 0.10; each honest daemon's share
+  0.35–0.65). Caveats: the replay reveals updates 81 to 122 times faster than the lab recorded them (one about every two hours, its session schedule),
+  about 40–60 times the design's hourly cadence, so jobs overlap more than in operation; G5's 90-s reveal step against
+  60 s confounds its comparison with G3 and G4, and G2–G5 hold 11 to 42 jobs, under A3's planned 100 updates. Most of
+  the waste at window 1 (G4: 111.1M abandoned against 50.0M refused) is abandoned jobs, at window 8 (G3) about half
+  (17.4M against 18.0M), and at 106 updates most of it at both windows (G6: 127.0M abandoned against 85.3M refused; G7:
+  72.7M against 13.7M): a daemon that lost a race opens a job for the next update on the store the winner is about to change. A policy of
   not opening a job on a store another party's open job will change (join or wait) would remove it; it is not built.
 - **The acceptance run (measured, dev mode).** Two honest `ferrata-updater`s and one adversarial
   updater, on the lab's 58 recorded updates (14 mainnet, 44 Sepolia; not the 100 planned: all that was recorded then), each round a block settled in a shuffled order, `W` = 8 rounds: every update
@@ -757,7 +764,7 @@ checkpoints after a sunset until holders have released ([`bridge.md`](../design/
 
 The relayer module's root imports on a running LEZ sequencer (the standalone daemon ran them on rc1's sequencer,
 `e2e/runs/seqnet-robust-1/`; the module's ran on the mini-app's devnet, §6.6); the gas drop for burns and in the
-mini-app's claim (the daemon's sealed credit ran on rc1's sequencer, §6.4, EVIDENCE row 205); `verify_checkpoint` as an API of Logos Core's Ethereum module (its execution check runs through `verified_proxy_module`); the attestation side's `monitor`; job clean-up; the acceptance run at 100 updates and on a sequencer (it ran on 58 recorded updates in process, §3.4);
+mini-app's claim (the daemon's sealed credit ran on rc1's sequencer, §6.4, EVIDENCE row 205); `verify_checkpoint` as an API of Logos Core's Ethereum module (its execution check runs through `verified_proxy_module`); the attestation side's `monitor`; job clean-up; the acceptance run with its adversarial daemon at 100 updates on a sequencer (in process it ran on 58 recorded updates; on a sequencer two honest daemons alone ran 106, §3.4);
 the amortised costs at the recommended cadence with real proving (milestones A4, B4); a deployment on a LEZ network
 Logos runs. Sources: [`attestation.md`](../design/attestation.md) §15; [`bridge.md`](../design/bridge.md) §1, §18.6,
 §19; [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §9.

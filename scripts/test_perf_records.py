@@ -658,6 +658,28 @@ class TestGate100(unittest.TestCase):
         self.has(f"{g(k6['gas_aband'])} execution gas at window 8 and {g(k7['gas_aband'])} at window 30, so that all the "
                  f"daemons' gas is **{k6['mult']:.3f}** and **{k7['mult']:.3f}** times the completed jobs'")
 
+    def test_the_operator_guides_rows_and_figures(self):
+        """docs/guides/operator-guide.md §3.4 (R.10's documented effect of the window on latency): its G6 and G7 rows
+        and the figures of the sentence comparing them, each from the generator's figures for the run."""
+        guide = rd("docs/guides/operator-guide.md")
+        folded = " ".join(guide.split())
+        cells = {}
+        for name, window in self.RUNS:
+            k = self.keys[name]
+            lo, hi = (f"{x:.1f}" for x in k["round_s"])
+            cells[name] = dict(gas=f"{k['total_gas'] / k['revealed'] / 1e6:.1f}M", aband=f"{k['gas_aband'] / 1e6:.1f}M",
+                               ref=f"{k['gas_ref'] / 1e6:.1f}M")
+            row = (f"| {name[5:].upper()}: {k['revealed']} updates | {window} ({lo if lo == hi else f'{lo}–{hi}'} s) | "
+                   f"{k['reveal_step']:.0f} s | {k['lat_med']:.0f} / {k['lat_p90']:.0f} s | {k['own']} / {k['later']} | "
+                   f"{cells[name]['gas']} | {k['mult']:.3f} | {k['waste']:.3f} | {k['r9']:.4f} | {k['share']:.3f} |")
+            self.assertEqual(guide.count(row), 1, row)
+        k6, k7, c6, c7 = self.keys["gate-g6"], self.keys["gate-g7"], cells["gate-g6"], cells["gate-g7"]
+        for needle in (f"the median latency grows from {k6['lat_med']:.0f} to {k7['lat_med']:.0f} s, the execution gas "
+                       f"per revealed update falls from {c6['gas']} to {c7['gas']}",
+                       f"(G6: {c6['aband']} abandoned against {c6['ref']} refused; G7: {c7['aband']} against {c7['ref']})",
+                       "meet A3's two limits without its adversarial daemon"):
+            self.assertEqual(folded.count(needle), 1, needle)
+
 
 def g(n):
     """A gas figure as the generator prints it (bench/perf/summarize_gate.py's `g`)."""
