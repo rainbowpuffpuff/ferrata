@@ -1,0 +1,78 @@
+{
+ "as_of": {
+  "block": 25303,
+  "hash": "ec70f0b0211f621eb2df9aecd5d9a003fcd3d57cb3f2a06638abe13c075c2226",
+  "time_utc": "2026-11-26T08:57:52.807Z"
+ },
+ "block_gaps_over_60s": [
+  {
+   "after_block": 134,
+   "from_utc": "2026-11-23T10:33:09.094Z",
+   "seconds": 83.145,
+   "to_utc": "2026-11-23T10:34:32.239Z"
+  },
+  {
+   "after_block": 17140,
+   "from_utc": "2026-11-25T10:02:31.911Z",
+   "seconds": 158.301,
+   "to_utc": "2026-11-25T10:05:10.212Z"
+  },
+  {
+   "after_block": 24375,
+   "from_utc": "2026-11-26T06:17:40.217Z",
+   "seconds": 252.59,
+   "to_utc": "2026-11-26T06:21:52.807Z"
+  }
+ ],
+ "blocks": 25303,
+ "first_block_with_time": {
+  "block": 2,
+  "time_utc": "2026-11-23T10:11:09.094Z"
+ },
+ "instance_counters_read": {
+  "3pQmc7V8CuUZNmYeqUYTrnc1NgExoQvHw5VfKzpkaVFH": {
+   "active": true,
+   "applied": 662,
+   "applied_by_as_of": 662,
+   "finalized_slot": 11662400,
+   "head": 25303
+  },
+  "HAh9gu1BzmaueyQjxeVuZa2sVN8Na9W36DA3sQXFSAxi": {
+   "active": true,
+   "applied": 28,
+   "applied_by_as_of": 28,
+   "finalized_slot": 11644928,
+   "head": 25303
+  }
+ },
+ "instances": {
+  "3pQmc7V8CuUZNmYeqUYTrnc1NgExoQvHw5VfKzpkaVFH": {
+   "adoption_parts": 2,
+   "chain_id": 11155111,
+   "epochs_per_sync_committee_period": 256,
+   "genesis_time": 1655733600,
+   "genesis_validators_root": "d8ea171f3c94aea21ebc42a1ed61052acf3f9209c00e4efbaaddac09ed9b8078",
+   "min_sync_committee_participants": 1,
+   "seconds_per_slot": 12,
+   "slots_per_epoch": 32,
+   "store_fork": 4,
+   "sync_committee_size": 512,
+   "ws_period_epochs": 3532
+  },
+  "HAh9gu1BzmaueyQjxeVuZa2sVN8Na9W36DA3sQXFSAxi": {
+   "adoption_parts": 2,
+   "chain_id": 11155111,
+   "epochs_per_sync_committee_period": 256,
+   "genesis_time": 1655733600,
+   "genesis_validators_root": "d8ea171f3c94aea21ebc42a1ed61052acf3f9209c00e4efbaaddac09ed9b8078",
+   "min_sync_committee_participants": 1,
+   "seconds_per_slot": 12,
+   "slots_per_epoch": 32,
+   "store_fork": 4,
+   "sync_committee_size": 512,
+   "ws_period_epochs": 3532
+  }
+ },
+ "program_account": "6f9zuRR63bSN5AEeffqZeACYCwFmqfe5JJhPshuJfYNg",
+ "read_at_utc": "2026-11-26T08:57:58Z"
+}
