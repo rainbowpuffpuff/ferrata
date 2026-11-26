@@ -68,3 +68,7 @@ verify *args:
 # Read our public LEZ test network (or --lez URL) from a terminal: head, block N, tx HASH, programs, instance ACCOUNT.
 lez-read *args:
     python3 -I scripts/lez-read.py "$@"
+
+# Print the commands CI's jobs run, as scripts/ci/ci_model.py reads the workflows (one job, several, or all).
+ci-commands *jobs:
+    python3 -I scripts/ci/ci_model.py --trace "$@"

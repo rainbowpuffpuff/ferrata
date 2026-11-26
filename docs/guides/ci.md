@@ -1,7 +1,7 @@
 # How CI works
 
-Four workflows. [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml), on every push, pull request and manual
-dispatch (`workflow_dispatch`), runs the fifteen jobs below (the table also lists `lez-full.yml`'s `lez-harness-full`)
+Five workflows. [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml), on every push, pull request and manual
+dispatch (`workflow_dispatch`), runs the sixteen jobs below (the table also lists `lez-full.yml`'s `lez-harness-full`)
 on GitHub's `ubuntu-latest` runners with `lez-harness`
 split across a 6-shard matrix (20 runner jobs total, none skipped on any trigger; `concurrency` gives every run on
 `main` its own `github.run_id` group with `cancel-in-progress: false` so runs on `main` never queue behind or
@@ -13,10 +13,13 @@ push/PR CI. [`macos.yml`](../../.github/workflows/macos.yml), on pushes to `main
 a user's machine runs and builds five of the six modules' `.lgx` for macOS (arm64) on `macos-15` (RFP-022 S.2; the
 updater's module builds for x86-64 Linux only). [`sequencer.yml`](../../.github/workflows/sequencer.yml), on pushes to `main`, daily at 05:43 UTC and by hand, runs two
 jobs against LEZ's own sequencer built from source in standalone mode: `sequencer-attest` (RFP-021 S.2) and
-`sequencer-roundtrip` (RFP-022 R.10), each on Sepolia data read when it runs (rows below). No job needs a secret, and
-no job sends anything to a public network: the network is used to fetch dependencies (crates, Foundry libraries, RISC
-Zero's toolchains, the pinned upstream sources and spec vectors) and, in `sequencer.yml` only, to read Sepolia from
-public endpoints.
+`sequencer-roundtrip` (RFP-022 R.10), each on Sepolia data read when it runs (rows below).
+[`verify-online.yml`](../../.github/workflows/verify-online.yml), daily at 06:29 UTC and by hand, runs
+`scripts/verify.py --all --online`, the reviewer's online checks ([`docs/VERIFY.md`](../VERIFY.md) §2): read-only
+requests to Sepolia, Ethereum mainnet, our public LEZ test network, the live site and Sepolia beacon APIs. No job needs
+a secret, and no job sends anything to a public network: the network is used to fetch dependencies (crates, Foundry
+libraries, RISC Zero's toolchains, the pinned upstream sources and spec vectors) and, in `sequencer.yml` and
+`verify-online.yml` only, to read public endpoints.
 
 Prototype evidence for a grant proposal. **Not audited. Not for production.**
 
