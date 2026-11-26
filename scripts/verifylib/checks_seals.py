@@ -89,7 +89,7 @@ def _seal_check(ctx, release: str):
     return lines
 
 
-@check(id="seals-v3.0", family="seal", mode="offline", evidence=(149, 41, 91, 141),
+@check(id="seals-v3.0", family="seal", mode="offline", evidence=(149, 41, 91, 141, 273),
        rows=("RFP-022 F.7",),
        title="Every recorded RISC Zero 3.0.0 Groth16 seal verified locally (pure Python)",
        what="each Groth16 seal of release 3.0.0 the tree records (the crown runs' checkpoints and releases, the "
@@ -101,11 +101,11 @@ def seals_v30(ctx):
     return _seal_check(ctx, "3.0.0")
 
 
-@check(id="seals-v3.1", family="seal", mode="offline", evidence=(231, 232, 250),
-       rows=("RFP-022 R.8", "RFP-022 R.10"),
+@check(id="seals-v3.1", family="seal", mode="offline", evidence=(231, 232, 250, 266, 273),
+       rows=("RFP-022 R.8", "RFP-022 R.10", "RFP-022 F.7"),
        title="Every recorded RISC Zero 3.1.0 Groth16 seal verified locally (pure Python)",
        what="each Groth16 seal of release 3.1.0 the tree records with its image id and journal: the vault's 3.1 "
-            "fixtures and the test network's live round trip (its checkpoint and release proofs, e2e/runs/"
+            "fixtures, the four-key rc3 run (e2e/runs/zone-bridge-rc3-multi) and the test network's live round trip (its checkpoint and release proofs, e2e/runs/"
             "live-roundtrip-2026-11-24/proofs.json, the ones the vault verified on Sepolia)",
        against="RiscZeroGroth16Verifier 3.1.0's own check (risc0-ethereum v3.1.0, selector 0xe71e6620, the verifier "
                "our test network's vault pins), in verifylib/groth16.py",

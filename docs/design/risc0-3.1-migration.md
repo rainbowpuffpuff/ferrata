@@ -112,7 +112,9 @@ the freeze authority freezes releases and checkpoints, the admin sets the deposi
 and replaced. The choice is the owner's and the spec's ([bridge spec v2](spec/bridge-spec-v2.md) §6, D13 of the
 [v3 changes](spec/bridge-spec-v3-changes.md), [`trust.md`](../trust.md) §4-5).
 Open for the spec either way: how escrow leaves a vault whose verifier is broken, since every exit (release, or a
-refund after a sunset checkpoint) rests on a proof.
+refund after a sunset checkpoint) rests on a proof. Answered on 26 November 2026 by
+[ADR 0033](../decisions/0033-broken-verifier-without-proof-of-exploit.md): no escrow-moving exit meets Security #9's
+constraints without a sound verifier; the runbook above contains, and the affected funds stay in the vault.
 
 ## 5. Tests that must pass
 

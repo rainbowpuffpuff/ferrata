@@ -590,11 +590,13 @@ min from the burns to the first release ([`e2e/runs/crown-live-1/README.md`](../
 | `ferrata-relayer run` (releases and finalisations), idle and while it finalises a checkpoint | 0.87 CPU-seconds in 1,284 s (0.0007 of a core) | **20.3 MiB peak** | JSON-RPC 408 KB up, 976 KB down (about 93 MB a day, *derived*) | measured ([`perf-daemons.md`](../lez/results/perf-daemons.md)) |
 | the updater, whose records the root imports need | 0.043–0.092 of one core | 57.3–57.8 MiB peak | 10.3–10.4 MB from the beacon API in 31 min (gate G2, replayed about 122 times faster than the lab recorded them, 60 times the design's hourly cadence) | RFP-021 P.6 |
 | `monitor` and the relayer as Logos modules (`ferrata_monitor_module`, `ferrata_relayer_module` in one headless Logos Core), the same anvil run | monitor 0.33 CPU s in 1,278.5 s (0.0003 of a core); relayer 0.70 (0.0005) | 66.4 and 73.9 MiB resident (each host process, shared pages counted; about 57 MiB of it a host process's own) | JSON-RPC 86,279 / 254,039 B and 411,356 / 983,811 B, the binaries' to within 1% | measured (`modules/results/live-testnet-2026-11-23/`, `bench/perf/daemons-anvil-modules.sh`) |
+| `ferrata_attestor` (rule (B): an attestor beside every sequencer), four of them on LEZ v0.4.0-rc3's four-sequencer zone, one round every 60 s, 25 rounds each | a round 0.17 CPU s and 0.19 s wall (medians; at most 0.36 and 0.94); 0.003 of a core at that cadence (*derived*) | **18.0 MiB peak** | 35,714 B read a round from its node and LEZ node (the first round 2.6 MB); about 314 MiB a day (*derived*) | measured (`e2e/runs/zone-bridge-rc3-multi/zone/attestor-*/resources.tsv`, `checkpoint/attestor/resources.py`; EVIDENCE row 266) |
 
 Both Ethereum-side daemons ran against a local anvil with a rule (B) FerrataVault v5 (12-s blocks; ten idle minutes, a
 candidate checked and finalised, ten idle minutes). **Gaps:** the importer's LEZ-side work (the relayer's root imports,
 a prototype, EVIDENCE row 106) was not measured as a daemon (the relayer ran with `importRoots: false`); one import
-transaction is P.2's. `ferrata_attestor` (rule (B): an attestor beside every sequencer) was not measured. `monitor`'s
+transaction is P.2's. `ferrata_attestor` was measured on a build-box zone, each round timed by GNU time and the bytes
+of its answers counted (the row above), not on a production host. `monitor`'s
 LEZ view came from a file (`--node file:`), so its traffic to a LEZ node is not measured.
 
 ### P.7 State growth at 1M and 10M operations
@@ -646,7 +648,7 @@ measured, and the owner's laptop below it, 8 of its 16 threads: P.4 of both RFPs
 the §8 `monitor` not measured (RFP-021 P.6); the bridge's actions (RFP-022's program), the soft-requirement programs
 (`statements`, `rebate`) and the second consumer (`ferrata_holdings`) at different state sizes (programs of their own;
 every message of RFP-021's attestation program and of its reference consumer is measured, §P.9); A3's 100-update gate and its waste ratio on a sequencer (RFP-021 R.9, R.10); the importer's LEZ-side
-resources as a daemon and `ferrata_attestor` (RFP-022 P.6); v5's ERC-20 calls and refunds on Sepolia's gas rules
+resources as a daemon and `monitor`'s LEZ traffic (RFP-022 P.6); v5's ERC-20 calls and refunds on Sepolia's gas rules
 (RFP-022 P.3); the source-chain finality of LEZ testnet 0.4, which is not released (RFP-022 P.5's outbound leg ran on a
 devnet). Every one is a milestone
 deliverable ([`attestation.md`](design/attestation.md) §13; [`bridge.md`](design/bridge.md) §18.6;

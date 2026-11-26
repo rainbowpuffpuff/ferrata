@@ -623,7 +623,7 @@ def chain_consistency(rows: list, chain: dict) -> list:
 
 
 @check(id="run-record", title="The light client's run on our public LEZ test network: every figure recomputed",
-       family="run-record", mode="offline", evidence=(242, 248), rows=("RFP-021 S.1",),
+       family="run-record", mode="offline", evidence=(242, 248, 271), rows=("RFP-021 S.1", "RFP-022 S.1"),
        what=f"{RECORD_DIR}/summary.json and RECORD.md: updates applied, committee adoptions, period crossings, every "
             "interval between updates (the longest, those over 1 h and 3 h), refusals, unfinished jobs, senders, lag",
        against=f"the transaction list {RECORD_DIR}/transactions.tsv (one line per transaction to the attestation "
@@ -766,7 +766,7 @@ def check_record_online(ctx):
 
 
 check(id="run-record-online", title="The run record against the public chain: every block and transaction read again",
-      family="run-record", mode="online", evidence=(242, 248), rows=("RFP-021 S.1",),
+      family="run-record", mode="online", evidence=(242, 248, 271), rows=("RFP-021 S.1", "RFP-022 S.1"),
       what=f"{RECORD_DIR}/transactions.tsv and chain.json: every line, and that no transaction to the attestation "
            "program is missing from the list",
       against="the network's public RPC: the record's blocks read again (getBlockRange), each hash recomputed from "
@@ -775,7 +775,7 @@ check(id="run-record-online", title="The run record against the public chain: ev
 
 
 @check(id="run-record-counters", title="Each instance's own counter of applied jobs against the chain's finishes",
-       family="lez-network", mode="online", evidence=(242, 248), rows=("RFP-021 S.1",),
+       family="lez-network", mode="online", evidence=(242, 248, 271), rows=("RFP-021 S.1", "RFP-022 S.1"),
        what="each instance's InstanceState as the network serves it now: `applied` and its store's finalized slot",
        against="1 (Init's activation) + the applied finish steps in the chain's blocks up to the head read with it "
                f"(the record's {RECORD_DIR}/transactions.tsv up to its as-of block, the chain after it), and the "
@@ -804,7 +804,7 @@ def check_record_counters(ctx):
 
 
 @check(id="run-record-beacon", title="Every header the light client applied is Sepolia's canonical block at its slot",
-       family="beacon", mode="online", evidence=(242, 248), rows=("RFP-021 S.1",),
+       family="beacon", mode="online", evidence=(242, 248, 271), rows=("RFP-021 S.1", "RFP-022 S.1"),
        what=f"the finalized header (slot and hash_tree_root) of every update the record lists as applied, "
             f"decoded from the update the chain holds ({RECORD_DIR}/transactions.tsv)",
        against="public Sepolia beacon APIs (scripts/pubnet-endpoints.json, or --beacon): /eth/v1/beacon/headers/SLOT's "

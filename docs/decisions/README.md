@@ -12,7 +12,9 @@ repository already holds: the design notes ([`attestation.md`](../design/attesta
 its sources; a date is the one its source states, or the day the source entered the repository. The author's own
 working log is a private file and is not copied here ([`how-it-was-built.md`](../how-it-was-built.md), "The decision
 log"). From now on a decision is recorded here when it is taken: a new record with the next number, and a record
-that a later one replaces keeps its text and says "superseded by ADR n" in its status. At each milestone delivery
+that a later one replaces keeps its text and says "superseded by ADR n" in its status. Records 0034–0045 did not
+follow that rule: they were written on 26 November 2026 from the commits and documents of decisions taken on 21–25
+November and not recorded then; each names the commit that took it, and its date is the decision's. At each milestone delivery
 the log is checked against the design notes and brought up to date in the same tagged commit.
 
 **Options.** The chosen option is the last; the decision it records is in the record's sources. Every other option

@@ -88,7 +88,7 @@ def _register_wrappers() -> None:
           against="the committed lez/results/perf-projections.md, byte for byte, and the figures in it",
           inputs=("bench/perf/projections.py", PROJ, "lez/results/perf-state.md", "lez/results/perf-tracking.md",
                   "lez/results/perf-state-ethereum.txt"))(_perf_projections)
-    check(id="rc3-roundtrip-record", family="record", mode="offline", rows=(),
+    check(id="rc3-roundtrip-record", family="record", mode="offline", evidence=(274,), rows=("RFP-022 R.10",),
           title="CI's bridge round trip rebuilt against LEZ v0.4.0-rc3 (docs/VERIFY.md §5's rehearsal): its records",
           what=f"{RC3_RT}/run/: the 14 steps in order and ok, the deposit minted and burnt, the checkpoint's burn root "
                "accepted, the release paid less its fees, the same release refused (NullifierAlreadyUsed)",
@@ -136,6 +136,14 @@ def _register_wrappers() -> None:
             family="docs", mode="offline", title="Every relative link in the README and docs resolves",
             what="every relative link in README.md, docs/ and the READMEs CI names",
             against="the tracked files", inputs=("scripts/check-links.py",))
+    _py("audit-scope", "scripts/test_audit_scope.py", family="docs", mode="offline",
+        rows=("RFP-021 R.6", "RFP-021 S.8", "RFP-022 Sec.1"),
+        title="The audit's scope: its source inventory generated from this tree, and the document carrying exactly it",
+        what="docs/security/audit-scope.md's inventory tables (every production source file, its lines, artifact and "
+             "entry points; the reused components and their versions) and scripts/audit_scope.py's counter",
+        against="scripts/audit_scope.py run on this tree's tracked files: the document's tables equal its output both "
+                "ways; every listed file tracked, every total the sum of its rows",
+        inputs=("docs/security/audit-scope.md", "scripts/audit_scope.py"))
     _py("idl", "idl/check.py", family="docs", mode="offline", evidence=(55, 58),
         rows=("RFP-021 U.4", "RFP-022 U.4"),
         title="The IDLs in SPEL's format: decoded by SPEL's crate shapes, every recorded message read",
@@ -186,6 +194,12 @@ def _register_wrappers() -> None:
             ("unit-updater-mutants", "lez/updater/dev/test_mutants.py", (223, 226), (),
              "The updater's mutation runner"),
             ("unit-names-claims", "names/e2e/claims.py", (235,), (), "The names program's documented claims and fees"),
+            ("unit-attestor-resources", "checkpoint/attestor/test_resources.py", (266,), (),
+             "The attestors' resources summary (checkpoint/attestor/resources.py) on made-up records"),
+            ("unit-zone-keys", "deploy/testnet/tests/test_zone_keys.py", (), (),
+             "The test network's further sequencer keys (ferrata-zone-keys: plan, configs, stake, start)"),
+            ("unit-checkpoint-attestors", "deploy/testnet/tests/test_checkpoint_attestors.py", (), (),
+             "The host's checkpoint builder taking t(n) attestations of one tip from its attestors"),
     ):
         _py(cid, script, family="unit", mode="offline", evidence=ev, rows=rows, title=title,
             needs=UNIT_NEEDS.get(cid, ("python3",)),

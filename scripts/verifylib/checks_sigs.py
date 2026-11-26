@@ -29,7 +29,7 @@ def _keys(ctx):
     return principal, namespace, key, pub, mini
 
 
-@check(id="basecamp-sums-signed", family="signature", mode="offline", evidence=(241, 256),
+@check(id="basecamp-sums-signed", family="signature", mode="offline", evidence=(241, 256, 273),
        rows=("RFP-021 S.9", "RFP-021 S.10", "RFP-022 S.2"),
        title="The Basecamp release's sums, signed with the release key (SSHSIG and minisign), verified locally",
        what=f"{DL}/SHA256SUMS (every package of the release and its SHA-256) with SHA256SUMS.sig and SHA256SUMS.minisig",

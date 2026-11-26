@@ -659,7 +659,14 @@ the stops of the four Sepolia vaults had not tripped. Until a stop trips, the bo
 the token's escrow, the clocks, revocation and freezes where a freeze authority holds a key, and the caps. On the
 Sepolia vaults (no freeze-authority key) that left the escrow and the clocks until the admin set every release and
 deposit cap to zero on 21 November 2026, which is what stops a forgery there
-([security note](security/risc0-groth16-advisory-2026-11-21/README.md), [EVIDENCE](EVIDENCE.md) row 154).
+([security note](security/risc0-groth16-advisory-2026-11-21/README.md), [EVIDENCE](EVIDENCE.md) row 154). How the
+remaining escrow leaves such a vault is decided by
+[ADR 0033](decisions/0033-broken-verifier-without-proof-of-exploit.md): it does not. No escrow-moving exit meets
+Security #9's constraints without a sound verifier, so the freeze authority's runbook contains instead (releases frozen
+globally, so refunds too; checkpoints and deposits frozen; each freeze renewed before it lapses; the caps; retirement),
+the affected funds and in-flight positions stay in the vault while it holds, and only `owed` balances still move, to
+their own payees ([EVIDENCE](EVIDENCE.md) row 269). The runbook is procedure, not enforced by the vault: a lapsed
+freeze reopens the forged path.
 
 | Failure | What happens | Positions lost | Bound |
 |---|---|---|---|

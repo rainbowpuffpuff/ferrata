@@ -17,7 +17,7 @@ without them those checks are skipped, and say so. Nothing else is built or inst
 ```sh
 git clone https://github.com/rainbowpuffpuff/ferrata && cd ferrata
 python3 -I scripts/verify.py --list            # every check: its family, mode, requirement rows and EVIDENCE rows
-python3 -I scripts/verify.py --all             # the 79 quick offline checks: about 6 minutes
+python3 -I scripts/verify.py --all             # the 83 quick offline checks: about 6 minutes
 python3 -I scripts/test_verify.py              # the tamper tests: about 30 seconds
 python3 -I scripts/test_verify_lc.py           # the light-client records' tamper tests: seconds
 ```
@@ -35,9 +35,10 @@ PASS  run-record  [run-record, offline]  0.4 s
 ```
 
 and the run ends with `N checks in T s: N PASS, 0 FAIL, 0 SKIP`. The exit status is 1 if a check failed, 0
-otherwise; `--strict` makes a skip a failure too (CI's `verify` job runs `--all --offline --strict`). One check fails
-on purpose until a row's wording is corrected: `lc-stage4-attest-costs` holds RFP-021 P.1's "at most 32% of LEZ's 5M
-target" to the largest recorded case, 1,619,960 cycles, which is 32.3992%.
+otherwise; `--strict` makes a skip a failure too (CI's `verify` job runs `--all --offline --strict`). A check holds a
+row's wording to its record: `lc-stage4-attest-costs`, for one, holds RFP-021 P.1's "at most 32.4% of LEZ's 5M target"
+to the largest recorded case, 1,619,960 cycles, which is 32.3992% (it failed on the row's earlier "at most 32%" until
+the row was corrected).
 
 What the offline checks re-check, by family (`--list` gives each check):
 

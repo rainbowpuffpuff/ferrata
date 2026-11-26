@@ -91,9 +91,10 @@ STATUS_NUMBER = {
 }
 
 
-# RFP-021 P.1 says "at most 32%" of the 5M target; the largest case is 32.3992% (review round 1, M10), so
-# lc-stage4-attest-costs fails on the repository until ROWS-PROPOSED's P.1 is folded. Its tampered copies start from
-# the folded wording, so that each tamper still has to be what fails.
+# RFP-021 P.1 said "at most 32%" of the 5M target; the largest case is 32.3992% (review round 1, M10), so
+# lc-stage4-attest-costs failed on the repository until the row said "at most 32.4%" (folded on 26 November 2026).
+# Its tampered copies start from the folded wording, so that each tamper still has to be what fails; a copy with the
+# old wording must fail (test_10_p1_share_wording).
 P1_OLD, P1_FOLDED = "at most 32% of LEZ's 5M target", "at most 32.4% of LEZ's 5M target"
 
 

@@ -291,8 +291,10 @@ tests = [
   { path = "crates/ferrata-spectests/results/helios-step-oracle-2026-11-24.txt", kind = "record" },
   { path = "crates/ferrata-spectests/tests/mpt_proofs.rs", kind = "test", ci = "test" },
   { path = "crates/ferrata-spectests/tests/bls_vectors.rs", kind = "test", ci = "test" },
+  { path = "scripts/test_audit_scope.py", kind = "test", ci = "links", run = "python3 -I scripts/test_audit_scope.py" },
+  { path = "docs/security/audit-scope.md", kind = "document" },
 ]
-note = "BLS is blst (upstream audited; zkcrypto as a cross-check), 61 official vectors on both libraries; Merkle-Patricia and RLP checked against alloy-trie and alloy-rlp; the light-client logic is Ferrata's own transcription against the specification, checked on the program's step path against Helios 0.12.0, source unmodified, built with this repo's lockfile (bls12_381 0.8.0) on all 321 recorded real updates, 33 official vectors (96 two-way compared, 15 post-force_update checked one way), 467 field/edge/SSZ-framing mutations, 17 bootstrap/store mutations, 45 re-signed semantic edges, and 400 CI / 10,000 full random mutations, alongside 18 step-path-only wire/witness/job and 8 adoption key-root binding refusals"
+note = "BLS is blst (upstream audited; zkcrypto as a cross-check), 61 official vectors on both libraries; Merkle-Patricia and RLP checked against alloy-trie and alloy-rlp; the light-client logic is Ferrata's own transcription against the specification, checked on the program's step path against Helios 0.12.0, source unmodified, built with this repo's lockfile (bls12_381 0.8.0) on all 321 recorded real updates, 33 official vectors (96 two-way compared, 15 post-force_update checked one way), 467 field/edge/SSZ-framing mutations, 17 bootstrap/store mutations, 45 re-signed semantic edges, and 400 CI / 10,000 full random mutations, alongside 18 step-path-only wire/witness/job and 8 adoption key-root binding refusals; the audit's scope is written for an auditor (docs/security/audit-scope.md), its source inventory generated from the tree and held to the document in CI (scripts/test_audit_scope.py)"
 
 [[row]]
 id = "RFP-021 R.7"
@@ -449,8 +451,9 @@ tests = [
   { path = "lez/live/results/run.tsv", kind = "record", run = "cd lez/live && ./verify-run.sh" },
   { path = "lez/lab/README.md", kind = "document" },
   { path = "lez/testnet04/day1.sh", kind = "test", ci = "box", run = "FERRATA_TESTNET_SEND=yes lez/testnet04/day1.sh go URL" },
+  { path = "lez/updater/results/public-network-run/README.md", kind = "record" },
 ]
-note = "waits on Logos: LEZ testnet 0.4 does not exist. Shown instead: the recorded rc1 sequencer run re-checked by verify-run.sh, the lab's seven days following Sepolia and mainnet (EVIDENCE row 21), sessions on rc2 and rc3 (rows 22, 112, 123) and the day-one deployment rehearsed on our own rc3 zone (row 148). No CI test: it needs LEZ testnet 0.4, which is not released, and sending to public networks"
+note = "waits on Logos: LEZ testnet 0.4 does not exist. Shown instead: the recorded rc1 sequencer run re-checked by verify-run.sh, the lab's seven days following Sepolia and mainnet (EVIDENCE row 21), sessions on rc2 and rc3 (rows 22, 112, 123) and the day-one deployment rehearsed on our own rc3 zone (row 148); on our public rc3 test network the light client kept current unattended since its chain began, reconstructed from public chain data (row 271; scripts/verify.py run-record). No CI test: it needs LEZ testnet 0.4, which is not released, and sending to public networks"
 
 [[row]]
 id = "RFP-021 S.2"
@@ -536,8 +539,10 @@ note = "the operator's refusals measured (5,981 to 31,919 cycles for a replayed 
 id = "RFP-021 S.8"
 tests = [
   { path = "scripts/ci/check-unaudited.sh", kind = "test", ci = "links", run = "bash scripts/ci/check-unaudited.sh" },
+  { path = "scripts/test_audit_scope.py", kind = "test", ci = "links", run = "python3 -I scripts/test_audit_scope.py" },
+  { path = "docs/security/audit-scope.md", kind = "document" },
 ]
-note = "no functional test is possible until the audit Logos contracts is delivered; the check tests what the bid promises until then: the code is marked unaudited / not for production in README.md, SECURITY.md, the catalog's description and every module's metadata description. Not an audit and no substitute for one: REVIEW-core.md, the fuzz targets, the security tools"
+note = "no functional test is possible until the audit Logos contracts is delivered; the check tests what the bid promises until then: the code is marked unaudited / not for production in README.md, SECURITY.md, the catalog's description and every module's metadata description. Not an audit and no substitute for one: REVIEW-core.md, the fuzz targets, the security tools; the audit's scope is written for an auditor (docs/security/audit-scope.md), its source inventory generated from the tree and held to the document in CI (scripts/test_audit_scope.py)"
 
 [[row]]
 id = "RFP-021 S.9"
@@ -568,7 +573,7 @@ id = "RFP-021 S.11"
 tests = [
   { path = "scripts/check-decisions.py", kind = "test", ci = "links", run = "python3 -I scripts/check-decisions.py" },
 ]
-note = "status not yet in this tree: the author's working decision log is private and decisions are spread over the design notes (docs/how-it-was-built.md). Branch rfp-docs-final adds docs/decisions/ (25 dated records, context, options, decision, rationale, sources) with scripts/check-decisions.py as its check"
+note = "docs/decisions/: 45 dated records (context, options, decision, rationale and trade-offs, sources), their form and every cited path checked by scripts/check-decisions.py in CI's links job; 0034-0045 written on 26 November 2026 from the commits of decisions taken on 21-25 November. That the log is kept current at each milestone can be shown only over the coming milestones"
 
 [[row]]
 id = "RFP-021 VS.1"
@@ -696,8 +701,11 @@ tests = [
   { path = "vault/test/real/RuleBMulti.t.sol", kind = "test", ci = "vault" },
   { path = "e2e/runs/zone-rc3-four-keys/README.md", kind = "record" },
   { path = "checkpoint/fidelity/tests/rule.rs", kind = "test", ci = "box", run = "cd checkpoint/fidelity && cargo +1.98.1 test -- --nocapture" },
+  { path = "vault/test/real/ZoneBridgeRc3Multi.t.sol", kind = "test", ci = "vault" },
+  { path = "e2e/runs/zone-bridge-rc3-multi/README.md", kind = "record" },
+  { path = "checkpoint/attestor/tests/real_refusals.rs", kind = "test", ci = "box", run = "cd checkpoint && cargo test --locked -p ferrata-attestor --test real_refusals" },
 ]
-note = "a burn root accepted only through the checkpoint proof, every LEZ block re-hashed, the release checked by the pinned base verifier: rule (B) over real LEZ blocks through RISC Zero's real verifier (lab zone, EVIDENCE row 24; t = 3 of four sequencers, row 65; live on Sepolia, rows 41, 91; the four-sequencer zone with the bridge program, rows 100-101); an rc3 zone of four sequencers ran, its stall traced, no bridge on it (row 206)"
+note = "a burn root accepted only through the checkpoint proof, every LEZ block re-hashed, the release checked by the pinned base verifier: rule (B) over real LEZ blocks through RISC Zero's real verifier (lab zone, EVIDENCE row 24; t = 3 of four sequencers, row 65; live on Sepolia, rows 41, 91; the four-sequencer zone with the bridge program, rows 100-101); an rc3 zone of four sequencers ran, its stall traced (row 206); the bridge on an rc3 zone of four sequencers, three of four keys under RISC Zero 3.1, both burns released through verifier 3.1.0 on anvil and a fork of Sepolia, the replays and four rule refusals refused (row 266: ZoneBridgeRc3Multi.t.sol, 7 tests, CI's vault job; the refusals from the run's real attestations, real_refusals.rs, on the build box). Not shown: an ERC-20 released against real proofs"
 
 [[row]]
 id = "RFP-022 F.8"
@@ -837,8 +845,9 @@ tests = [
   { path = "lez/bridge-wire/tests/idl_vectors.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-lez-bridge-wire --locked --test idl_vectors" },
   { path = "idl/spel-v2/run.sh", kind = "test", ci = "box", run = "RECORDED=... bash idl/spel-v2/run.sh" },
   { path = "idl/generated/spel-v2.txt", kind = "record" },
+  { path = "idl/spel-v2/upstream-pr/PR.md", kind = "document" },
 ]
-note = "waits on Logos: SPEL's v0.4 line is an open pull request; with our tuple patch its generator makes the bridge's messages and types, 0 differences (EVIDENCE row 194). Shown instead: the hand-written IDL decodes every instruction, type and variant of the bridge program (37 vectors), parsed and decoded by SPEL's own crate (EVIDENCE row 55); the idl job checks the committed vectors in CI"
+note = "waits on Logos: SPEL's v0.4 line is an open pull request; with our tuple patch its generator makes the bridge's messages and types, 0 differences (EVIDENCE row 194); the patch is ready as a pull request for SPEL's v0.4 line, not opened: 21 of 21 of SPEL's idl_gen suite with it, 14 before (row 270; in SPEL's tree at c90ca0b, git am the patch, then cargo test --locked -p spel-framework-core --features idl-gen,decode --test idl_gen: idl/spel-v2/upstream-pr/PR.md). Shown instead: the hand-written IDL decodes every instruction, type and variant of the bridge program (37 vectors), parsed and decoded by SPEL's own crate (EVIDENCE row 55); the idl job checks the committed vectors in CI"
 
 [[row]]
 id = "RFP-022 U.5"
@@ -950,8 +959,9 @@ tests = [
   { path = "cli/tests/both_halves.rs", kind = "test", ci = "box", run = "e2e/both-halves/run.sh" },
   { path = "e2e/both-halves/results/migration.md", kind = "record" },
   { path = "lez/harness/tests/bridge_time.rs", kind = "test", ci = "lez-harness" },
+  { path = "vault/test/FailsafeBrokenVerifier.t.sol", kind = "test", ci = "vault" },
 ]
-note = "freezes, caps and delisting only delay on both sides; a capped claim (255) or freeze (242) stays claimable and succeeds after the refill or once the freeze ends; the disclosed exceptions are the sunset, the emergency stop and a retirement (Refund.t.sol, EmergencyStop.t.sol, Sunset)"
+note = "freezes, caps and delisting only delay on both sides; a capped claim (255) or freeze (242) stays claimable and succeeds after the refill or once the freeze ends; the disclosed exceptions are the sunset, the emergency stop and a retirement (Refund.t.sol, EmergencyStop.t.sol, Sunset), and ADR 0033's freezes under a broken verifier with no proof of exploit, which hold releases and refunds while renewed (FailsafeBrokenVerifier.t.sol)"
 
 [[row]]
 id = "RFP-022 R.5"
@@ -973,8 +983,11 @@ tests = [
   { path = "e2e/netfault/relayer-lez.sh", kind = "test", ci = "box", run = "bash e2e/netfault/relayer-lez.sh OUT" },
   { path = "monitor/tests/logos-fallback.sh", kind = "test", ci = "monitor" },
   { path = "e2e/runs/relayer-crash/README.md", kind = "record" },
+  { path = "deploy/testnet/tests/prover-kill-resume-modal.sh", kind = "test", ci = "box", run = "deploy/testnet/tests/prover-kill-resume-modal.sh OUT REQ.json ..." },
+  { path = "e2e/runs/zone-bridge-rc3-multi/README.md", kind = "record" },
+  { path = "monitor/results/logos-fallback/README.md", kind = "record" },
 ]
-note = "monitor SIGKILLed mid-window and restarted still cancels exactly once; with its state file lost it rescans and makes exactly one cancellation; a watcher without gas cancels once funded (rows 43, 96); the relayer records a gas drop before sending and refuses a second after a restart (row 47); the relayer daemon killed at each of its transactions, at random and in the record's narrow windows, behind failing endpoints, through a stand-in of tx_sender_module, and on LEZ (root imports on the devnet's zone, gas drops on rc1's sequencer): every job once (row 203); monitor's sends the module fails go the plain way, and a send held behind a number the module burnt, after the fallback's own send failed, is followed by the same call at that number (10 of 10, in CI); monitor's own endpoint failing, the prover and the attestors are not shown"
+note = "monitor SIGKILLed mid-window and restarted still cancels exactly once; with its state file lost it rescans and makes exactly one cancellation; a watcher without gas cancels once funded (rows 43, 96); the relayer records a gas drop before sending and refuses a second after a restart (row 47); the relayer daemon killed at each of its transactions, at random and in the record's narrow windows, behind failing endpoints, through a stand-in of tx_sender_module, and on LEZ (root imports on the devnet's zone, gas drops on rc1's sequencer): every job once (row 203); monitor's sends the module fails go the plain way, and a send held behind a number the module burnt, after the fallback's own send failed, is followed by the same call at that number (10 of 10, in CI); the checkpoint and release prover's client killed mid-proof against Modal itself resumed the same call and wrote each job once (row 266, on the build box); the real tx_sender_module and the module killed are not shown"
 
 [[row]]
 id = "RFP-022 R.7"
@@ -1012,8 +1025,10 @@ tests = [
   { path = "e2e/ci/run.sh", kind = "test", ci = "roundtrip" },
   { path = "e2e/runs/crown-live-3/README.md", kind = "record" },
   { path = "e2e/runs/zone-bridge-1/README.md", kind = "record" },
+  { path = "e2e/rc3-roundtrip/run.sh", kind = "test", ci = "box", run = "e2e/rc3-roundtrip/run.sh NAME" },
+  { path = "e2e/runs/rc3-roundtrip-1/README.md", kind = "record" },
 ]
-note = "CI runs the deposit and redemption round trip in its public variant (a plaintext claim, a public burn) through LEZ v0.4.0-rc1's standalone sequencer built from source and anvil forking Sepolia at its finalized block of the moment, every step asserted (job sequencer-roundtrip of sequencer.yml: on pushes to main, daily and by hand); the stand-ins are the roundtrip job's: the vault tests' mock verifier accepting exactly the journals the rule (B) and release guests computed (executed, dev mode), a light-client committee the run holds (anvil has no beacon chain), ci_zone's test committee inscribing the sequencer's applied transactions, the gas drop (seqnet-fund); its build-box run of 24 Nov 2026 is recorded; CI also runs the round trip over LEZ's state transition (row 76); the private claim and burn run by hand through running sequencers (rows 102, 103, 125, 126); the round trips live on Sepolia (rows 41, 91, 142, 250) are not in CI"
+note = "CI runs the deposit and redemption round trip in its public variant (a plaintext claim, a public burn) through LEZ v0.4.0-rc1's standalone sequencer built from source and anvil forking Sepolia at its finalized block of the moment, every step asserted (job sequencer-roundtrip of sequencer.yml: on pushes to main, daily and by hand); the stand-ins are the roundtrip job's: the vault tests' mock verifier accepting exactly the journals the rule (B) and release guests computed (executed, dev mode), a light-client committee the run holds (anvil has no beacon chain), ci_zone's test committee inscribing the sequencer's applied transactions, the gas drop (seqnet-fund); its build-box run of 24 Nov 2026 is recorded; CI also runs the round trip over LEZ's state transition (row 76); the private claim and burn run by hand through running sequencers (rows 102, 103, 125, 126); the round trips live on Sepolia (rows 41, 91, 142, 250) are not in CI; rebuilt against LEZ v0.4.0-rc3 once on a build machine, 14 of 14 steps (row 274; e2e/rc3-roundtrip/run.sh, not in CI)"
 
 [[row]]
 id = "RFP-022 R.11"
@@ -1124,8 +1139,10 @@ tests = [
   { path = "checkpoint/results/bench.log", kind = "record" },
   { path = "lez/results/perf-daemons.md", kind = "record" },
   { path = "e2e/runs/crown-live-3/README.md", kind = "record" },
+  { path = "checkpoint/attestor/test_resources.py", kind = "test", ci = "links", run = "python3 -I checkpoint/attestor/test_resources.py" },
+  { path = "e2e/runs/zone-bridge-rc3-multi/README.md", kind = "record" },
 ]
-note = "executor cycle counts by zone load (idle hour 5.99M, 50 private transactions 37.9M); the one-block checkpoint proven in 1,157.5 s, wrap 195.1-215.2 s, peak 9.85 GB; rule (B) checkpoints over real zones 31.9 s on one L40S (row 91) and 701.1 s on the build box's CPU (row 100); monitor (0.0004 of a core, 14.0 MiB) and the relayer (0.0007, 20.3 MiB) with their bandwidth (lez/results/perf-daemons.md); the importer as a daemon, ferrata_attestor, monitor's LEZ traffic and the daemons as Logos modules: none yet. No CI test measures the resources themselves: they are of real proving on stated hardware (CPU and GPU) and of daemons on a stated machine; what CI runs recomputes the documented figures from the committed records (scripts/test_perf_records.py); the monitor's CI rehearsal prints its resident memory and a rescan's time on GitHub's runner (monitor/tests/anvil-e2e.sh), not a documented figure"
+note = "executor cycle counts by zone load (idle hour 5.99M, 50 private transactions 37.9M); the one-block checkpoint proven in 1,157.5 s, wrap 195.1-215.2 s, peak 9.85 GB; rule (B) checkpoints over real zones 31.9 s on one L40S (row 91) and 701.1 s on the build box's CPU (row 100); monitor (0.0004 of a core, 14.0 MiB) and the relayer (0.0007, 20.3 MiB) with their bandwidth (lez/results/perf-daemons.md); the daemons as Logos modules (row 237); ferrata_attestor on the four-key rc3 zone, 0.17 CPU s and 18.0 MiB a round (row 266, summarized by checkpoint/attestor/resources.py); the importer as a daemon and monitor's LEZ traffic: none yet. No CI test measures the resources themselves: they are of real proving on stated hardware (CPU and GPU) and of daemons on a stated machine; what CI runs recomputes the documented figures from the committed records (scripts/test_perf_records.py); the monitor's CI rehearsal prints its resident memory and a rescan's time on GitHub's runner (monitor/tests/anvil-e2e.sh), not a documented figure"
 
 [[row]]
 id = "RFP-022 P.7"
@@ -1143,6 +1160,7 @@ tests = [
   { path = "e2e/runs/crown-live-3/README.md", kind = "record" },
   { path = "lez/results/v0.4.0-rc3/README.md", kind = "record" },
   { path = "lez/testnet04/day1.sh", kind = "test", ci = "box", run = "FERRATA_TESTNET_SEND=yes lez/testnet04/day1.sh go URL" },
+  { path = "lez/updater/results/public-network-run/README.md", kind = "record" },
 ]
 note = "waits on Logos: LEZ testnet 0.4 does not exist. Shown instead: the whole round trip live on Sepolia twice (EVIDENCE rows 41, 91) and the final programs' private claim, burn and gas drop proven for real and applied by rc3's sequencer (rows 123, 124); the bridge program's day-one deployment (lez/testnet04/, stage (e), row 148) is built and rehearsed, the vault's Sepolia step prepared, not sent. No CI test: it needs LEZ testnet 0.4, which is not released, and sending to Sepolia"
 
@@ -1171,14 +1189,16 @@ id = "RFP-022 S.4"
 tests = [
   { path = "scripts/check-decisions.py", kind = "test", ci = "links", run = "python3 -I scripts/check-decisions.py" },
 ]
-note = "status not yet in this tree (docs/how-it-was-built.md). Branch rfp-docs-final adds docs/decisions/, 25 records of which 0013-0025 are the bridge's, with scripts/check-decisions.py as its check"
+note = "as RFP-021 S.11: docs/decisions/, the bridge's records among them (0013-0026, 0029-0033, 0034, 0035, 0037-0039, 0041-0045), checked by scripts/check-decisions.py in CI's links job"
 
 [[row]]
 id = "RFP-022 Sec.1"
 tests = [
   { path = "scripts/ci/check-unaudited.sh", kind = "test", ci = "links", run = "bash scripts/ci/check-unaudited.sh" },
+  { path = "scripts/test_audit_scope.py", kind = "test", ci = "links", run = "python3 -I scripts/test_audit_scope.py" },
+  { path = "docs/security/audit-scope.md", kind = "document" },
 ]
-note = "no functional test is possible until the review Logos pays for from the bid is delivered; the check tests what the bid promises until then: the code is marked unaudited / not for production in README.md, SECURITY.md, the catalog's description and every module's metadata description. Static analysis, Halmos and the internal review are tooling, not an audit"
+note = "no functional test is possible until the review Logos pays for from the bid is delivered; the check tests what the bid promises until then: the code is marked unaudited / not for production in README.md, SECURITY.md, the catalog's description and every module's metadata description. Static analysis, Halmos and the internal review are tooling, not an audit; the audit's scope is written for an auditor (docs/security/audit-scope.md), its source inventory generated from the tree and held to the document in CI (scripts/test_audit_scope.py)"
 
 [[row]]
 id = "RFP-022 Sec.2"
@@ -1188,8 +1208,9 @@ tests = [
   { path = "vault/test/JournalBinding.t.sol", kind = "test", ci = "vault" },
   { path = "checkpoint/fidelity/tests/formats.rs", kind = "test", ci = "box", run = "cd checkpoint/fidelity && cargo +1.98.1 test -- --nocapture" },
   { path = "e2e/ci/run.sh", kind = "test", ci = "roundtrip" },
+  { path = "vault/test/real/ZoneBridgeRc3Multi.t.sol", kind = "test", ci = "vault" },
 ]
-note = "under RISC Zero's verifier 3.1.0 with real 3.1 seals (rule (B)): a flipped seal byte, another program's or another journal's seal, a swapped proof, a seal of risc0 3.0.5 and replays refused; altered requests refused; wrong inputs, state and tampering refused on LEZ (249, 110; a flipped receipt bit by LEZ's settlement, rows 75, 88; LEZ verifies with risc0 3.0.5). Rule (A) has no real-seal test under 3.1 (vault/test/real/README.md)."
+note = "under RISC Zero's verifier 3.1.0 with real 3.1 seals (rule (B)): a flipped seal byte, another program's or another journal's seal, a swapped proof, a seal of risc0 3.0.5 and replays refused; altered requests refused; wrong inputs, state and tampering refused on LEZ (249, 110; a flipped receipt bit by LEZ's settlement, rows 75, 88; LEZ verifies with risc0 3.0.5). The same with the four-key rc3 run's real seals: a flipped seal byte and another image refused (ZoneBridgeRc3Multi.t.sol, row 266). Rule (A) has no real-seal test under 3.1 (vault/test/real/README.md)."
 
 [[row]]
 id = "RFP-022 Sec.3"
@@ -1197,8 +1218,9 @@ tests = [
   { path = "bridge/crates/ferrata-bridge-core/tests/outbound.rs", kind = "test", ci = "witness-independence" },
   { path = "vault/test/JournalBinding.t.sol", kind = "test", ci = "vault" },
   { path = "cli/tests/relayer.sh", kind = "test", ci = "box", run = "cd cli && bash tests/relayer.sh" },
+  { path = "vault/test/real/ZoneBridgeRc3Multi.t.sol", kind = "test", ci = "vault" },
 ]
-note = "C and C_out bind the destination under a seed-derived secret, the release journal binds recipient, relayer and fee, the gas-drop receipt binds N, a one-time address and the relayer: redirected, fee-raised and replayed releases refused under the real verifier (EVIDENCE row 46), a redirected claim refused on LEZ (249, 252)"
+note = "C and C_out bind the destination under a seed-derived secret, the release journal binds recipient, relayer and fee, the gas-drop receipt binds N, a one-time address and the relayer: redirected, fee-raised and replayed releases refused under the real verifier (EVIDENCE row 46; with the four-key rc3 run's real 3.1 seals, row 266: the recipient, the relayer, the relay fee or the nullifier changed alone refused, ZoneBridgeRc3Multi.t.sol), a redirected claim refused on LEZ (249, 252)"
 
 [[row]]
 id = "RFP-022 Sec.4"
@@ -1227,8 +1249,9 @@ tests = [
   { path = "cli/tests/both_halves.rs", kind = "test", ci = "box", run = "e2e/both-halves/run.sh" },
   { path = "e2e/both-halves/results/randomised.md", kind = "record" },
   { path = "scripts/verify-sepolia.py", kind = "test", ci = "local", run = "python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-3" },
+  { path = "vault/test/real/ZoneBridgeRc3Multi.t.sol", kind = "test", ci = "vault" },
 ]
-note = "the invariants hold over 256 runs x 100 calls (balance = escrowed + totalOwed + donations, escrowed = deposits - releases - refunds) and the supply invariant on both rules (F.13's row); after the live round trip the vault's balance equals escrowed + totalOwed (EVIDENCE row 42); invalid mints and releases refused (Sec.2); over both real halves at once, 496 checks over eight randomised seeds (EVIDENCE row 184)"
+note = "the invariants hold over 256 runs x 100 calls (balance = escrowed + totalOwed + donations, escrowed = deposits - releases - refunds) and the supply invariant on both rules (F.13's row); after the live round trip the vault's balance equals escrowed + totalOwed (EVIDENCE row 42); invalid mints and releases refused (Sec.2); over both real halves at once, 496 checks over eight randomised seeds (EVIDENCE row 184); the four-key rc3 run's releases, under verifier 3.1.0 with real seals, paid only for their real burns, each once (ZoneBridgeRc3Multi.t.sol, row 266)"
 
 [[row]]
 id = "RFP-022 Sec.7"
@@ -1266,8 +1289,10 @@ tests = [
   { path = "vault/test/EmergencyStop.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/Revocation.t.sol", kind = "test", ci = "vault" },
   { path = "vault/script/deploy.sh", kind = "test", ci = "box", run = "vault/script/deploy.sh" },
+  { path = "vault/test/FailsafeBrokenVerifier.t.sol", kind = "test", ci = "vault" },
+  { path = "docs/decisions/0033-broken-verifier-without-proof-of-exploit.md", kind = "document" },
 ]
-note = "stop-only, no fund recovery (MIGRATION.md sections 4 and 5, trust.md section 6): after the verifier stop no role moves escrow, owed balances still pay their payee, refunds are refused even with a final sunset checkpoint; a bug in one of Ferrata's guests is met by the release and checkpoint freezes and revokeFrom: renewed, the release freeze holds releases and refunds, left to lapse it reopens the forged path; per-token release freezes let d2 be refunded while releases stay shut; a revoked forged checkpoint pays nothing and b1 still releases (MigrationFailsafe.t.sol, 7 tests, CI's vault job); the guardian and proof-of-exploit stops (EmergencyStop.t.sol; Halmos, EVIDENCE row 35); revocation inside and outside the window; the deployment script renounces the stop's owner and checks it, live on Sepolia (rows 41, 91)"
+note = "stop-only, no fund recovery (MIGRATION.md sections 4 and 5, trust.md section 6): after the verifier stop no role moves escrow, owed balances still pay their payee, refunds are refused even with a final sunset checkpoint; a bug in one of Ferrata's guests is met by the release and checkpoint freezes and revokeFrom: renewed, the release freeze holds releases and refunds, left to lapse it reopens the forged path; per-token release freezes let d2 be refunded while releases stay shut; a revoked forged checkpoint pays nothing and b1 still releases (MigrationFailsafe.t.sol, 7 tests, CI's vault job); the guardian and proof-of-exploit stops (EmergencyStop.t.sol; Halmos, EVIDENCE row 35); revocation inside and outside the window; the deployment script renounces the stop's owner and checks it, live on Sepolia (rows 41, 91); a broken verifier with no proof of exploit (ADR 0033, row 269): no escrow-moving exit meets Security #9's constraints, the containment runbook (releases frozen globally, checkpoints frozen, each freeze renewed, caps, retirement) rehearsed under rules (A) and (B) with a verifier that accepts every seal but no proof of exploit (FailsafeBrokenVerifier.t.sol, 13 tests, CI's vault job)"
 
 [[row]]
 id = "RFP-022 Priv.1"
