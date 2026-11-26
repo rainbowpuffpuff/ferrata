@@ -114,11 +114,48 @@ class AuditScopeOutputTest(unittest.TestCase):
 
 
     def test_the_document_carries_exactly_the_generated_tables(self) -> None:
-        """docs/security/audit-scope.md embeds every table line the generator prints, so a source change that moves
-        a count, or a lockfile that moves a version, fails here until the document is regenerated."""
-        doc = (ROOT / "docs/security/audit-scope.md").read_text(encoding="utf-8").splitlines()
-        missing = [line for line in self.output.splitlines() if line.startswith("|") and line not in doc]
-        self.assertEqual(missing, [], "regenerate the tables of docs/security/audit-scope.md")
+        """Each of the generator's tables is in docs/security/audit-scope.md as one table, line for line, and every
+        table of the document with a generated table's header is that table: a source change that moves a count, a
+        lockfile that moves a version, or a row added or left behind by hand fails here."""
+
+        def tables(lines: list[str]) -> list[list[str]]:
+            out: list[list[str]] = []
+            previous = ""
+            for line in lines:
+                if line.startswith("|"):
+                    if out and out[-1] and previous.startswith("|"):
+                        out[-1].append(line)
+                    else:
+                        out.append([line])
+                previous = line
+            return out
+
+        doc = tables((ROOT / "docs/security/audit-scope.md").read_text(encoding="utf-8").splitlines())
+        generated = tables(self.output.splitlines())
+        headers = {t[0] for t in generated}
+        for table in generated:
+            self.assertTrue(table in doc, f"regenerate the table under {table[0]!r} in docs/security/audit-scope.md")
+        for table in doc:
+            if table[0] in headers:
+                self.assertTrue(table in generated, f"a table under {table[0]!r} that the generator does not print")
+
+
+class CountLinesTest(unittest.TestCase):
+    def count(self, text: str) -> tuple[int, int, int]:
+        path = ROOT / ".scratch-audit-scope-test.rs"
+        try:
+            path.write_text(text, encoding="utf-8")
+            return AUDIT.count_lines(path.name)
+        finally:
+            path.unlink(missing_ok=True)
+
+    def test_lifetimes_and_char_literals_are_code(self) -> None:
+        text = "// a comment\nfn f<'de>(c: char) -> &'static str {\n    let q = '\\'';\n\n    x // y\n}\nfn g(x: &'a str) {}\n"
+        self.assertEqual(self.count(text), (5, 1, 1))
+
+    def test_an_unterminated_block_comment_is_refused(self) -> None:
+        with self.assertRaises(AssertionError):
+            self.count("fn f() {}\n/* open\n")
 
 
 if __name__ == "__main__":

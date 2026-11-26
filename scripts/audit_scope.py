@@ -18,6 +18,8 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+# A Rust char literal ('a', '\'', '\n', '\x7f', '\u{1F600}'); any other single quote is a lifetime or a label (code).
+CHAR_LITERAL = re.compile(r"'(?:\\(?:x[0-9a-fA-F]{2}|u\{[0-9a-fA-F]{1,6}\}|.)|[^\\'])'")
 
 # path prefix -> (short purpose, deployed artifact, externally reachable input)
 GROUPS = {
@@ -178,7 +180,12 @@ def count_lines(path: str) -> tuple[int, int, int]:
                 has_comment = True
                 i += 2
                 continue
-            if line[i] in "\"'":
+            if line[i] == "'":
+                literal = CHAR_LITERAL.match(line, i)
+                i = literal.end() if literal else i + 1
+                has_code = True
+                continue
+            if line[i] == '"':
                 quote = line[i]
                 has_code = True
             elif not line[i].isspace():
