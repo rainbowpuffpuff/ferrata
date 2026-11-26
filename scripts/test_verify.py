@@ -170,6 +170,19 @@ class CommandLine(TamperCase):
         self.assertEqual(rc, 0)
         self.assertIn("run-record  [run-record, offline, quick]", out)
 
+    def test_list_json(self):
+        SCRATCH.mkdir(parents=True, exist_ok=True)
+        f = SCRATCH / "test-verify-list.json"
+        try:
+            rc, out = cli("run-record", "family:signature", "--list", "--json", str(f))
+            self.assertEqual(rc, 0, out)
+            got = json.loads(f.read_text())
+            self.assertEqual({c["id"] for c in got}, {c.id for c in REGISTRY.values()
+                                                      if c.id == "run-record" or c.family == "signature"})
+            self.assertTrue(all(c["what"] and c["against"] for c in got))
+        finally:
+            f.unlink(missing_ok=True)
+
     def test_row_selector(self):
         for sel in ("RFP-021:F.14", "021/F.14", "F.14@021", "RFP-021 F.14"):
             rc, out = cli(sel, "--list")
@@ -231,6 +244,65 @@ class RunRecordOffline(TamperCase):
         t = overlay({f"{RR}/RECORD.md": sub("0 over 3 h", "1 over 3 h")})
         self.assertFails("run-record", t, "RECORD.md")
 
+    def forged(self, chain_edit=None):
+        """A copy whose chain.json is edited and whose summary.json and RECORD.md are regenerated from it with the
+        record's own functions, so that only the consistency checks can catch it (review round 1, H1)."""
+        chain = json.loads((ROOT / RR / "chain.json").read_text())
+        rows = runrecord.read_tsv(ROOT / RR / "transactions.tsv")
+        if chain_edit:
+            chain_edit(chain)
+        summary = json.loads(json.dumps(runrecord.summarize(rows, chain)))
+        return overlay({f"{RR}/chain.json": lambda _b: (json.dumps(chain, indent=1, sort_keys=True) + "\n").encode(),
+                        f"{RR}/summary.json": lambda _b: (json.dumps(summary, indent=1, sort_keys=True) + "\n").encode(),
+                        f"{RR}/RECORD.md": lambda _b: runrecord.render(summary).encode()})
+
+    def test_forging_helper_is_faithful(self):
+        self.assertPasses("run-record", self.forged())
+
+    def test_chain_facts_forged_together(self):
+        """Review round 1, H1's mutation: as-of block, hash and time, blocks, pauses, read time and counters all
+        replaced, the derived files regenerated."""
+        def edit(c):
+            c["as_of"] = {"block": 999999, "hash": "0" * 64, "time_utc": "1970-01-01T00:00:00.000Z"}
+            c["blocks"] = 999999
+            c["block_gaps_over_60s"] = []
+            c["read_at_utc"] = "1970-01-01T00:00:00Z"
+            c["instance_counters_read"] = {}
+        r = self.assertFails("run-record", self.forged(edit), "chain.json")
+        self.assertFalse(any("recomputed and linked" in ln for ln in r.lines), r.lines)
+
+    def test_blocks_count_forged(self):
+        self.assertFails("run-record", self.forged(lambda c: c.update(blocks=c["blocks"] + 1)), "blocks")
+
+    def test_a_counter_forged(self):
+        def edit(c):
+            inst = next(iter(c["instance_counters_read"]))
+            c["instance_counters_read"][inst]["applied_by_as_of"] += 1
+        self.assertFails("run-record", self.forged(edit), "counter")
+
+    def test_a_pause_forged(self):
+        def edit(c):
+            c["block_gaps_over_60s"][0]["seconds"] += 10
+        self.assertFails("run-record", self.forged(edit), "pause")
+
+    def test_an_instance_configuration_forged(self):
+        def edit(c):
+            inst = next(iter(c["instances"]))
+            c["instances"][inst]["sync_committee_size"] = 256
+        self.assertFails("run-record", self.forged(edit), "Init line")
+
+    def test_as_of_hash_not_the_lines(self):
+        """A line in the as-of block names that block's hash: chain.json's must be the same."""
+        rows = runrecord.read_tsv(ROOT / RR / "transactions.tsv")
+        last = rows[-1]
+
+        def edit(c):
+            c["as_of"] = {"block": int(last["block"]), "hash": "1" * 64, "time_utc": last["time_utc"]}
+            c["blocks"] = int(last["block"])
+            for v in c["instance_counters_read"].values():
+                v["head"] = int(last["block"])
+        self.assertFails("run-record", self.forged(edit), "as-of block's hash")
+
     def test_an_interval_hidden(self):
         """Dropping an update shortens nothing silently: the intervals and counts recomputed differ."""
         rows = (ROOT / RR / "transactions.tsv").read_text().splitlines()
@@ -239,12 +311,48 @@ class RunRecordOffline(TamperCase):
         self.assertFails("run-record", t, "summary.json")
 
 
-class StandInRpc:
-    """A JSON-RPC stand-in on 127.0.0.1 serving recorded blocks: getLastBlockId, getBlockRange, getBlock."""
+class ScannerState(unittest.TestCase):
+    """runrecord.scan's attribution state changes only with what the chain applied (review round 1, M5)."""
 
-    def __init__(self, blocks: dict, files: dict | None = None):
+    def test_a_refused_init_changes_nothing(self):
+        program, inst, job, signer = b"\x01" * 32, b"\x02" * 32, b"\x03" * 32, b"\x09" * 32
+        good = {"chain_id": 11155111, "sync_committee_size": 512, "adoption_parts": 2}
+        hostile = {"chain_id": 666, "sync_committee_size": 1, "adoption_parts": 9}
+
+        class FakeIdl:
+            def instruction(self, msg):
+                return {b"I1": ("init", {"config": good}), b"I2": ("init", {"config": hostile})}[msg]
+
+        def block(i, msg, reverted):
+            tx = {"root": {"to": {"program_account_id": program, "account_id": inst}, "message": msg},
+                  "hash": bytes([i]) * 32, "signers": [signer], "nonces": [],
+                  "public_context": {"actors": [{"account_id": inst}, {"account_id": job}]}}
+            return {"header": {"block_id": i, "timestamp": 1_000_000 + 10_000 * i, "hash": bytes([i]) * 32,
+                               "prev_block_hash": bytes([i - 1]) * 32}, "hash_ok": True,
+                    "reverted": [0] if reverted else [], "transactions": [tx]}
+
+        real = runrecord.lez.decode_block
+        runrecord.lez.decode_block = lambda raw: raw
+        try:
+            lines, chain, probs = runrecord.scan([block(1, b"I1", False), block(2, b"I2", True)], program, FakeIdl())
+        finally:
+            runrecord.lez.decode_block = real
+        self.assertEqual(probs, [])
+        self.assertEqual([ln["outcome"] for ln in lines], ["applied", "reverted"])
+        self.assertEqual(chain["instances"][lez.b58encode(inst)]["sync_committee_size"], 512)
+        self.assertEqual(chain["instances"][lez.b58encode(inst)]["chain_id"], 11155111)
+
+
+class StandInRpc:
+    """A JSON-RPC stand-in on 127.0.0.1 serving recorded blocks: getLastBlockId, getBlockRange, getBlock,
+    getTransaction, and getAccountView for the accounts it is given."""
+
+    def __init__(self, blocks: dict, files: dict | None = None, accounts: dict | None = None,
+                 balances: dict | None = None):
         self.blocks = blocks
+        self.balances = balances or {}  # account, base58 -> native balance
         self.files = files or {}  # GET path -> JSON
+        self.accounts = accounts or {}  # (account, program), base58 -> the actor state's bytes
         self.txs = {}
         for b64 in blocks.values():
             for tx in lez.decode_block(base64.b64decode(b64))["transactions"]:
@@ -274,6 +382,12 @@ class StandInRpc:
                     res = outer.blocks.get(p[0])
                 elif m == "getTransaction":
                     res = outer.txs.get(p[0])
+                elif m == "getAccountBalance":
+                    res = outer.balances.get(p[0])
+                elif m == "getAccountView":
+                    key = (p[0]["account_id"], p[0]["program_account_id"])
+                    res = ({"nonce": 0, "data": {"actor_states": {key[1]: list(outer.accounts[key])}}}
+                           if key in outer.accounts else None)
                 else:
                     res = None
                 body = json.dumps({"jsonrpc": "2.0", "id": req.get("id"), "result": res}).encode()
@@ -294,9 +408,20 @@ class StandInRpc:
 FIXTURE = ROOT / "scripts/verifylib/testdata/lez-rc3-blocks-25190-25260.json"
 
 
+def attestation_program_files(program: str):
+    """What the stand-in serves for the network's attestation program: /programs.json naming it, and its immutable
+    loader header naming the attestation image (as LEZ's loader writes it)."""
+    files = {"/programs.json": {"programs": {"ferrata_attestation": {"program_account": program,
+                                                                    "image_id": "0x" + runrecord.ATTESTATION_IMAGE}}}}
+    header = bytes([0]) + bytes.fromhex(runrecord.ATTESTATION_IMAGE) + bytes(32) + bytes([1])
+    return files, {(program, lez.b58encode(runrecord.LOADER)): header}
+
+
 class RunRecordOnline(TamperCase):
     """run-record-online against a stand-in RPC serving 71 recorded blocks of the test network, on a record of
-    those blocks made by the same code the maintainer's build uses."""
+    those blocks made by the same code the maintainer's build uses. The fixture cannot start at the chain's first
+    block, so these runs set Ctx.record_from_block (the command line never does) and take the instances' Init
+    configuration from the record; everything after that is the production path."""
 
     def setUp(self):
         fx = json.loads(FIXTURE.read_text())
@@ -312,7 +437,10 @@ class RunRecordOnline(TamperCase):
         self.base = Path(tempfile.mkdtemp(prefix="test-verify-rr-", dir=SCRATCH))
         runrecord.write_tsv(lines, self.base / "transactions.tsv")
         (self.base / "chain.json").write_text(json.dumps(ch, indent=1, sort_keys=True) + "\n")
-        self.rpc = StandInRpc(dict(self.blocks))
+        self.first = fx["first"]
+        self.program = chain["program_account"]
+        files, accounts = attestation_program_files(self.program)
+        self.rpc = StandInRpc(dict(self.blocks), files, accounts)
 
     def tearDown(self):
         self.rpc.close()
@@ -327,7 +455,7 @@ class RunRecordOnline(TamperCase):
         return overlay(edits)
 
     def online(self, root):
-        return run("run-record-online", root, lez_url=self.rpc.url)
+        return run("run-record-online", root, lez_url=self.rpc.url, record_from_block=self.first)
 
     def test_unaltered(self):
         r = self.online(self.copy())
@@ -376,6 +504,243 @@ class RunRecordOnline(TamperCase):
         self.assertEqual(r.status, "FAIL", "\n".join(r.lines))
 
 
+class RunRecordOnlineMore(RunRecordOnline):
+    """run-record-online, run-record-counters and run-record-beacon on the same stand-ins (review round 1, M4)."""
+
+    def test_unaltered(self):
+        pass  # RunRecordOnline's
+
+    def test_the_program_the_record_names(self):
+        other = lez.b58encode(b"\x07" * 32)
+        r = self.online(self.copy(chain=sub(self.program, other)))
+        self.assertEqual(r.status, "FAIL", r.lines)
+        self.assertTrue(any("the network's attestation program" in ln for ln in r.lines), r.lines)
+
+    def test_an_empty_list(self):
+        header = (self.base / "transactions.tsv").read_text().splitlines()[0] + "\n"
+        r = self.online(self.copy(tsv=lambda _b: header.encode()))
+        self.assertEqual(r.status, "FAIL", r.lines)
+
+    def test_counters_with_no_instance_on_chain(self):
+        """The stand-in's chain holds no Init: no counter can be read, and that is a failure, not a pass."""
+        r = run("run-record-counters", self.copy(), lez_url=self.rpc.url)
+        self.assertEqual(r.status, "FAIL", r.lines)
+        self.assertTrue(any("no applied Init" in ln for ln in r.lines), r.lines)
+
+    def beacon(self, roots: dict):
+        return StandInRpc({}, {f"/eth/v1/beacon/headers/{slot}": {"data": {"root": root, "canonical": True}}
+                               for slot, root in roots.items()})
+
+    def test_beacon_against_sepolia_golden(self):
+        """The record's applied headers against a stand-in serving the roots Sepolia's beacon API served."""
+        golden = json.loads(GOLDEN.read_text())["updates"]
+        b = self.beacon({u["finalized_slot"]: u["finalized_root"] for u in golden})
+        try:
+            r = run("run-record-beacon", self.copy(), beacon=[b.url])
+            self.assertEqual(r.status, "PASS", r.lines)
+            u = golden[0]
+            b.files[f"/eth/v1/beacon/headers/{u['finalized_slot']}"]["data"]["root"] = "0x" + "ab" * 32
+            r = run("run-record-beacon", self.copy(), beacon=[b.url])
+            self.assertEqual(r.status, "FAIL", r.lines)
+        finally:
+            b.close()
+
+    def test_beacon_with_no_update(self):
+        header = (self.base / "transactions.tsv").read_text().splitlines()[0] + "\n"
+        r = run("run-record-beacon", self.copy(tsv=lambda _b: header.encode()), beacon=["http://127.0.0.1:9"])
+        self.assertEqual(r.status, "FAIL", r.lines)
+
+
+GOLDEN = ROOT / "scripts/verifylib/testdata/sepolia-beacon-golden.json"
+BLOCK_9421 = ROOT / "scripts/verifylib/testdata/lez-rc3-block-9421.json"
+
+
+def _merkle_ok(leaf: bytes, branch: list, gindex: int, root: bytes) -> bool:
+    """The consensus specs' is_valid_merkle_branch, written here apart from the decoders."""
+    import hashlib
+    depth, index, node = gindex.bit_length() - 1, gindex - (1 << (gindex.bit_length() - 1)), leaf
+    if len(branch) != depth:
+        return False
+    for i, sib in enumerate(branch):
+        node = hashlib.sha256(sib + node if (index >> i) & 1 else node + sib).digest()
+    return node == root
+
+
+class Decoders(unittest.TestCase):
+    """The light-client decoders (verifylib/lc.py, lez.py) against values that do not come from them: Sepolia's
+    beacon API (GOLDEN), the Merkle branches each update carries to its attested state root, and Ethereum's own
+    SSZ updates of mainnet (lez/lab/), and malformed inputs (review round 1, M1 and M2)."""
+
+    FINALIZED_ROOT_GINDEX = {"Electra": 169, "Gloas": 735}
+    NEXT_SYNC_COMMITTEE_GINDEX = {"Electra": 87, "Gloas": 2946}
+
+    @classmethod
+    def setUpClass(cls):
+        cls.idl = runrecord.lc.Idl.load(ROOT / "idl/ferrata_attestation.idl.json")
+        chain = json.loads((ROOT / RR / "chain.json").read_text())
+        program = lez.b58decode(chain["program_account"])
+        cls.raw_blocks, cls.opens = [], {}
+        for f in (FIXTURE, BLOCK_9421):
+            for b64 in json.loads(f.read_text())["blocks"]:
+                raw = base64.b64decode(b64)
+                cls.raw_blocks.append(raw)
+                for tx in lez.decode_block(raw)["transactions"]:
+                    if tx["root"] and tx["root"]["to"]["program_account_id"] == program:
+                        name, args = cls.idl.instruction(tx["root"]["message"])
+                        if name == "open":
+                            cls.opens[tx["hash"].hex()] = (tx["root"]["message"], args["update"])
+        cls.golden = json.loads(GOLDEN.read_text())["updates"]
+
+    def test_every_golden_update_is_in_the_fixtures(self):
+        self.assertEqual({u["tx"] for u in self.golden} - set(self.opens), set())
+
+    def test_against_sepolia(self):
+        for g in self.golden:
+            u = runrecord.lc.compact_update(self.opens[g["tx"]][1])
+            bits = bytes.fromhex(g["sync_committee_bits"][2:])
+            with self.subTest(block=g["block"]):
+                self.assertEqual((u["attested_slot"], u["finalized_slot"], u["signature_slot"]),
+                                 (g["attested_slot"], g["finalized_slot"], g["signature_slot"]))
+                self.assertEqual("0x" + u["finalized_root"].hex(), g["finalized_root"])
+                self.assertEqual("0x" + u["attested_root"].hex(), g["attested_root"])
+                self.assertEqual(u["sync_committee_bits"], bits)
+                self.assertEqual("0x" + u["sync_committee_signature"].hex(), g["sync_committee_signature"])
+                self.assertEqual(u["participants"], int.from_bytes(bits, "little").bit_count())
+
+    def test_branches_to_the_attested_state(self):
+        for g in self.golden:
+            u = runrecord.lc.compact_update(self.opens[g["tx"]][1])
+            with self.subTest(block=g["block"]):
+                self.assertTrue(_merkle_ok(u["finalized_root"], u["finality_branch"],
+                                           self.FINALIZED_ROOT_GINDEX[u["fork"]], u["attested_state_root"]))
+                if u["next_committee"]:
+                    import hashlib
+                    s = u["next_committee_summary"]
+                    agg = hashlib.sha256(s[32:80] + bytes(16)).digest()
+                    leaf = hashlib.sha256(s[:32] + agg).digest()
+                    self.assertTrue(_merkle_ok(leaf, u["next_committee_branch"],
+                                               self.NEXT_SYNC_COMMITTEE_GINDEX[u["fork"]], u["attested_state_root"]))
+        self.assertTrue(any(runrecord.lc.compact_update(self.opens[g["tx"]][1])["next_committee"] for g in self.golden))
+
+    def test_trailing_bytes(self):
+        raw = self.raw_blocks[0]
+        with self.assertRaises(lez.DecodeError):
+            lez.decode_block(raw + b"\0")
+        msg, upd = self.opens[self.golden[0]["tx"]]
+        with self.assertRaises(lez.DecodeError):
+            self.idl.instruction(msg + b"\0")
+        with self.assertRaises(lez.DecodeError):
+            runrecord.lc.compact_update(upd + b"\0")
+
+    def _with_attested(self, upd: bytes, header: bytes) -> bytes:
+        n = int.from_bytes(upd[1:5], "little")
+        return upd[:1] + len(header).to_bytes(4, "little") + header + upd[5 + n:]
+
+    def test_a_malformed_header(self):
+        """Review round 1, M1: bytes appended inside the attested header's vector (its length adjusted)."""
+        upd = self.opens[self.golden[0]["tx"]][1]
+        n = int.from_bytes(upd[1:5], "little")
+        with self.assertRaises(lez.DecodeError):
+            runrecord.lc.compact_update(self._with_attested(upd, upd[5:5 + n] + b"junk"))
+        with self.assertRaises(lez.DecodeError):
+            runrecord.lc.compact_update(self._with_attested(upd, upd[5:5 + n - 32]))
+
+    def _with_bits(self, upd: bytes, bits: bytes) -> bytes:
+        tail = 64 + 96 + 8  # the 512 bits, the signature, the signature slot
+        return upd[:-tail] + bits + upd[-tail + 64:]
+
+    def test_small_committees(self):
+        """Ferrata accepts any power-of-two committee: the bitvector is n bits rounded up to bytes, padding zero."""
+        upd = self.opens[self.golden[0]["tx"]][1]
+        for n, bits in ((1, b"\x01"), (2, b"\x03"), (4, b"\x0f"), (8, b"\xff"), (16, b"\xff\x7f")):
+            with self.subTest(n=n):
+                u = runrecord.lc.compact_update(self._with_bits(upd, bits), n)
+                self.assertEqual(u["participants"], int.from_bytes(bits, "little").bit_count())
+        with self.assertRaises(lez.DecodeError):
+            runrecord.lc.compact_update(self._with_bits(upd, b"\x1f"), 4)  # a padding bit set
+        with self.assertRaises(lez.DecodeError):
+            runrecord.lc.compact_update(self._with_bits(upd, b"\x0f\x00"), 4)  # one byte too many
+
+    def test_electra_from_mainnet_ssz(self):
+        """A pre-Gloas layout: Ethereum's own SSZ light-client updates of mainnet (lez/lab/), re-encoded as a
+        CompactUpdate here; the decoded finalized header must be the one the update's finality branch proves."""
+        import hashlib
+        d = ROOT / "lez/lab/results/record/net/mainnet/updates"
+
+        def split(b, fields):
+            fixed = sum(4 if f is None else f for f in fields)
+            parts, offs, pos = [], [], 0
+            for i, f in enumerate(fields):
+                if f is None:
+                    offs.append((i, int.from_bytes(b[pos:pos + 4], "little")))
+                    parts.append(None)
+                    pos += 4
+                else:
+                    parts.append(b[pos:pos + f])
+                    pos += f
+            for k, (i, o) in enumerate(offs):
+                parts[i] = b[o:offs[k + 1][1] if k + 1 < len(offs) else len(b)]
+            self.assertEqual(offs[0][1], fixed)
+            return parts
+
+        # LightClientUpdate (Electra): attested, next committee, its branch (6), finalized, finality branch (7),
+        # sync aggregate, signature slot; LightClientFinalityUpdate: the same without the committee and its branch
+        period = split((d / "00001.period.electra.ssz").read_bytes(), [None, 512 * 48 + 48, 6 * 32, None, 7 * 32, 160, 8])
+        final = split((d / "00002.finality.electra.ssz").read_bytes(), [None, None, 7 * 32, 160, 8])
+        cases = [("period", period[0], period[1], period[2], period[3], period[4], period[5], period[6]),
+                 ("finality", final[0], None, bytes(6 * 32), final[1], final[2], final[3], final[4])]
+        for name, att, committee, nbranch, fin, fbranch, agg, sslot in cases:
+            summary = b""
+            if committee is not None:
+                leaves = [hashlib.sha256(committee[i:i + 48] + bytes(16)).digest() for i in range(0, 512 * 48, 48)]
+                while len(leaves) > 1:
+                    leaves = [hashlib.sha256(leaves[i] + leaves[i + 1]).digest() for i in range(0, len(leaves), 2)]
+                summary = leaves[0] + committee[512 * 48:]
+            enc = (bytes([3]) + len(att).to_bytes(4, "little") + att + bytes([committee is not None]) + summary + nbranch
+                   + len(fin).to_bytes(4, "little") + fin + fbranch + agg + sslot)
+            u = runrecord.lc.compact_update(enc)
+            with self.subTest(update=name):
+                self.assertEqual(u["fork"], "Electra")
+                self.assertEqual(u["finalized_slot"], int.from_bytes(fin[:8], "little"))
+                self.assertEqual(u["attested_slot"], int.from_bytes(att[:8], "little"))
+                self.assertEqual(u["signature_slot"], int.from_bytes(sslot, "little"))
+                self.assertEqual(u["participants"], int.from_bytes(agg[:64], "little").bit_count())
+                self.assertTrue(_merkle_ok(u["finalized_root"], u["finality_branch"], 169, u["attested_state_root"]))
+                if committee is not None:
+                    agg_root = hashlib.sha256(summary[32:80] + bytes(16)).digest()
+                    self.assertTrue(_merkle_ok(hashlib.sha256(summary[:32] + agg_root).digest(),
+                                               u["next_committee_branch"], 87, u["attested_state_root"]))
+                with self.assertRaises(lez.DecodeError):  # the Electra header has a payload: Gloas's layout refuses it
+                    runrecord.lc.compact_update(bytes([4]) + enc[1:])
+
+
+class Faucet(unittest.TestCase):
+    """faucet-terms-online against a stand-in gateway (review round 1, M8)."""
+
+    ACCT = "ob15kRVNHFC2VxygSRqk55tLDeQ5bwTrvrbSYWkN1Gs"
+
+    def faucet(self, published: int, on_chain: int, amount: int = 10**10, hourly: int = 120):
+        terms = {"faucet_account": self.ACCT, "balance": published, "amount": str(amount),
+                 "limits": {"global_per_hour": hourly}}
+        rpc = StandInRpc({}, {"/faucet": terms}, balances={self.ACCT: on_chain})
+        try:
+            return run("faucet-terms-online", ROOT, lez_url=rpc.url)
+        finally:
+            rpc.close()
+
+    def test_published_and_chain_agree(self):
+        self.assertEqual(self.faucet(10**15, 10**15).status, "PASS")
+        self.assertEqual(self.faucet(10**15, 10**15 - 3 * 10**10).status, "PASS")  # three grants in between
+
+    def test_a_published_balance_the_chain_does_not_hold(self):
+        r = self.faucet(10**18, 10**15)
+        self.assertEqual(r.status, "FAIL", r.lines)
+
+    def test_under_a_day_of_grants(self):
+        r = self.faucet(10**12, 10**12)  # 100 grants, under 24 x 120
+        self.assertEqual(r.status, "FAIL", r.lines)
+
+
 class LezRead(unittest.TestCase):
     """scripts/lez-read.py, the explorer's reads from a terminal, against the stand-in RPC and recorded blocks."""
 
@@ -409,6 +774,20 @@ class LezRead(unittest.TestCase):
         self.assertEqual(call["update"]["finalized_slot"], self.open["finalized_slot"])
         self.assertEqual(call["update"]["participants"], self.open["participants"])
 
+    def test_a_scalar_account(self):
+        """The names IDL's `Sequence` account is a bare u64 (review round 1, L1)."""
+        names, acct = lez.b58encode(b"\x05" * 32), lez.b58encode(b"\x06" * 32)
+        rpc = StandInRpc({}, {"/programs.json": {"programs": {"ferrata_names": {"program_account": names,
+                                                                                 "image_id": "0x" + "00" * 32}}}},
+                         {(acct, names): (7).to_bytes(8, "little")})
+        try:
+            p = subprocess.run([sys.executable, "-I", str(ROOT / "scripts/lez-read.py"), "--lez", rpc.url, "--json",
+                                "account", acct, names], capture_output=True, text=True, timeout=120)
+        finally:
+            rpc.close()
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(json.loads(p.stdout)["Sequence"], 7, p.stdout)
+
     def test_transaction(self):
         rc, out, err = self.read("tx", self.open["tx"])
         self.assertEqual(rc, 0, err)
@@ -431,6 +810,27 @@ class Records(TamperCase):
         num = re.search(r"\d{1,3},\d{3},\d{3}", text).group(0)
         t = overlay({"lez/results/perf-tracking.md": sub(num, num[:-1] + str((int(num[-1]) + 1) % 10))})
         self.assertFails("perf-tracking", t)
+
+    def test_perf_projections(self):
+        """The generator is copied into the copy (an edit leaving it as is), so it reads the copy's records."""
+        self.assertPasses("perf-projections")
+        gen = {"bench/perf/projections.py": lambda b: b}
+        t = overlay({**gen, "lez/results/perf-state.md": sub("| header(id, slot) record | 365 | 421 | 453 |",
+                                                             "| header(id, slot) record | 365 | 421 | 454 |")})
+        self.assertFails("perf-projections", t, "not what bench/perf/projections.py derives")
+        t = overlay({**gen, "lez/results/perf-projections.md": sub("| 9,087 | 4.12 MB | 20.58 MB |",
+                                                                   "| 9,087 | 4.12 MB | 20.68 MB |")})
+        self.assertFails("perf-projections", t, "not what bench/perf/projections.py derives")
+        t = overlay({**gen, "docs/requirements-status.md": sub("(4.12 MB and 20.58 MB)", "(4.12 MB and 20.68 MB)")})
+        self.assertFails("perf-projections", t, "no longer says")
+
+    def test_rc3_roundtrip_record(self):
+        self.assertPasses("rc3-roundtrip-record")
+        rt = "e2e/runs/rc3-roundtrip-1/run"
+        t = overlay({f"{rt}/steps.tsv": sub("burn\tok\t", "burn\tFAILED\t")})
+        self.assertFails("rc3-roundtrip-record", t)
+        t = overlay({f"{rt}/facts.json": sub('"0xcad2ae02"', '"0xcad2ae03"')})
+        self.assertFails("rc3-roundtrip-record", t)
 
     def test_lab_roots(self):
         self.assertPasses("lab-roots")

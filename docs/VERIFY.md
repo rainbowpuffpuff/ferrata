@@ -177,5 +177,11 @@ above); the first full round trip on this network, with a deposit through the se
 signed in the page, and the host's relayer's checkpoint and release (EVIDENCE row 250; `sepolia-live-roundtrip`
 re-reads it); the `ferrata` tool's private claim and burn on LEZ sequencers we started (EVIDENCE rows 102, 258) and in
 CI's round trip on LEZ v0.4.0-rc1 (job `sequencer-roundtrip`, the public variant, with stand-ins it names); the same
-round trip on LEZ v0.4.0-rc3: RC3_ROUNDTRIP. The commands of this table, sending, end to end with your own keys
-against this network, have not been run by anyone outside the project yet.
+round trip rebuilt against LEZ v0.4.0-rc3, this network's LEZ, on a local standalone sequencer and anvil forking
+Sepolia, on 26 November 2026 (`e2e/rc3-roundtrip/run.sh`; records in `e2e/runs/rc3-roundtrip-1/`, its `REHEARSAL.md`
+says exactly what ran; `python3 -I scripts/verify.py rc3-roundtrip-record` re-checks them): `deposit`, `scan`,
+`claim` held by its delay then sent, the same claim refused, `burn`, the checkpoint, `release` paid and the same
+release refused, every step ok. Its claim is the plaintext variant CI runs, not the private one of the table: the
+private claim has not been rehearsed against rc3, and its proofs there were RISC Zero's dev mode. The commands of
+this table, sending, end to end with your own keys against this network, have not been run by anyone outside the
+project yet.

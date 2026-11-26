@@ -75,8 +75,9 @@ def plain(v):
 
 
 class Reader:
-    def __init__(self, site: str):
+    def __init__(self, site: str, committee: int = 512):
         self.site = site.rstrip("/")
+        self.committee = committee
         self.rpc = lez.Rpc(self.site + "/rpc", budget_s=120)
         self._programs = None
         self._idls = {}
@@ -127,8 +128,8 @@ class Reader:
                 call["args"] = {k: (f"<{len(v)} bytes>" if isinstance(v, bytes) and len(v) > 64 else plain(v))
                                 for k, v in args.items()}
                 if name == "ferrata_attestation" and ins == "open":
-                    u = lc.compact_update(args["update"])
-                    call["update"] = {k: (v.hex() if isinstance(v, bytes) else v) for k, v in u.items()}
+                    u = lc.compact_update(args["update"], self.committee)
+                    call["update"] = plain(u)
             except lez.DecodeError as e:
                 call["decode_error"] = str(e)
         else:
@@ -192,6 +193,7 @@ class Reader:
         hdr = lc._beacon(store[1:113])
         cfg = st["config"]
         return {"instance": acct, "program": prog, "id": st["id"], "chain_id": cfg["chain_id"], "active": st["active"],
+                "sync_committee_size": cfg["sync_committee_size"],
                 "applied_jobs": st["applied"], "fork": lc.FORKS[store[0]] if store[0] < len(lc.FORKS) else store[0],
                 "finalized_slot": hdr["slot"], "finalized_root": "0x" + lc.beacon_root(hdr).hex(),
                 "finalized_slot_time_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(
@@ -220,11 +222,14 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--lez", help="the network's site (default: scripts/reproduce/deployed-programs.json's network)")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--committee", type=int, default=512, metavar="N",
+                    help="the sync committee size an Open's update is decoded for (default 512, Sepolia's and mainnet's; "
+                         "an instance's Init sets it, `lez-read instance ACCOUNT` shows it)")
     ap.add_argument("what", choices=["head", "block", "tx", "programs", "instance", "account"])
     ap.add_argument("args", nargs="*")
     a = ap.parse_args(argv)
     site = a.lez or json.loads((ROOT / "scripts/reproduce/deployed-programs.json").read_text())["network"]
-    r = Reader(site)
+    r = Reader(site, a.committee)
     try:
         if a.what == "head":
             out = r.block(r.rpc.call("getLastBlockId"))

@@ -12,6 +12,7 @@ import hashlib
 import io
 import json
 import operator
+import os
 import re
 import subprocess
 from collections import Counter
@@ -534,11 +535,11 @@ def lc_r7(ctx):
             "LIMIT: the late resume itself is summary-only; jobs.tsv supplies the cited live lab per-update ledger, not 106 late-run logs"]
 
 
-@check(id="lc-stage-refusals", title="R.2/R.8/F.3: stage refusal tables and 32 direct Attest refusals",
+@check(id="lc-stage-refusals", title="R.8/F.3: stage refusal tables and 32 direct Attest refusals",
        family="record", mode="offline", tier="quick",
-       rows=("RFP-021 R.2", "RFP-021 R.8", "RFP-021 F.3", "RFP-021 P.7"), evidence=(3, 6, 22, 71, 72, 112, 170),
+       rows=("RFP-021 R.8", "RFP-021 F.3", "RFP-021 P.7"), evidence=(3, 6, 22, 71, 72, 112, 170),
        what="summary-handler gas/exit reconciliation, duplicate/replay codes and direct-Attest refusal count",
-       against="stage1-refusals.md, stage4-attest-refusals.md and RFP-021 R.2/R.8/F.3/P.7 status text",
+       against="stage1-refusals.md, stage4-attest-refusals.md and RFP-021 R.8/F.3/P.7 status text",
        inputs=(STATUS, "lez/results/stage1-refusals.md", "lez/results/stage4-attest-refusals.md"))
 def lc_stage_refusals(ctx):
     problems = []
@@ -568,7 +569,8 @@ def lc_stage_refusals(ctx):
     return [f"stage1: {len(one)} rows; stage4: {len(four)} rows, {len(direct)} direct Attest + 9 consumer refusals",
             "every non-reverted execution-gas cell equals its handler-cycle sum and its separate handler ledger",
             "R.8 single rows hold 207/205/52; P.7 row 1's applied forged Open holds 2,195,028 gas",
-            "LIMIT: these two tables hold no before/after states or successful retry, so R.2 atomicity/recovery is asserted only in prose"]
+            "not checked here: R.2 (state unchanged after a refusal, the same claim then applied); these tables hold no "
+            "before/after states or retry, so this check does not name R.2"]
 
 
 @check(id="lc-stage4-attest-costs", title="P.1/Soft.2: eight attestation costs and the four-fact call",
@@ -591,13 +593,28 @@ def lc_stage4_costs(ctx):
             "Soft.2: four-fact call no longer costs 454,255 in one Attest handler")
     _expect(problems, soft is not None and "account, two slots, a log" in soft[1],
             "Soft.2: four facts are not account + two slots + log")
-    _phrases(problems, _row(ctx, "P.1"), "P.1", f"{low:,} to {high:,} cycles", "at most 32% of LEZ's 5M target")
+    _phrases(problems, _row(ctx, "P.1"), "P.1", f"{low:,} to {high:,} cycles")
+    share = high * 100 / 5_000_000
+    stated = re.search(r"(at most|under|up to|about)?\s*(\d+(?:\.\d+)?)% of LEZ's 5M target", _row(ctx, "P.1"))
+    if stated is None:
+        problems.append("P.1: no share of LEZ's 5M target stated")
+    else:
+        word, x = stated.group(1), float(stated.group(2))
+        if word in ("at most", "up to"):
+            ok = x >= share
+        elif word == "under":
+            ok = x > share
+        else:  # the share itself, or "about": the exact one rounded to the digits given
+            digits = len(stated.group(2).split(".")[1]) if "." in stated.group(2) else 0
+            ok = round(share, digits) == x
+        _expect(problems, ok, f"P.1 says '{stated.group(0)}'; the largest case is {high:,} of 5,000,000 = "
+                              f"{share:.4f}%: that is not what the row's words say")
     _phrases(problems, _row(ctx, "Soft.2"), "Soft.2", "Four facts under one record in one call, 454,255 cycles")
     fail_if(problems, "stage4 attestation-cost/status mismatch")
-    return [f"eight applied cases; min {low:,}, max {high:,}; max is {high / 5_000_000 * 100:.4f}% of 5M, table's rounded whole-percent 32%",
+    return [f"eight applied cases; min {low:,}, max {high:,}; max is {share:.4f}% of 5M (the record's table rounds "
+            "to whole percents), and P.1's stated share holds for it",
             "all eight summary gas cells equal their independent Attest handler rows; rounded gas*100/5M percentages match",
-            "four facts (account + two slots + log) in one Attest call: 454,255 cycles",
-            "LIMIT: 'at most 32%' is literally false for the exact 32.3992%; it matches only the record's rounded whole-percent display"]
+            "four facts (account + two slots + log) in one Attest call: 454,255 cycles"]
 
 
 @check(id="lc-perf-state", title="P.7: account sizes and exact per-record state growth",
@@ -656,18 +673,30 @@ def lc_perf_state(ctx):
     return [f"three account rows satisfy actor+56=Account and Account+32=keyed: keyed sizes {expected_names}",
             f"serialized-state growth is exactly 453B/record across 0→1,000→10,000→100,000",
             "five statement groups and all 32 update-step rows are gas-invariant across K",
-            "LIMIT: 9,087-record cadence and 4.12/20.58/10.09MB projections are not in perf-state.md; only their status text is checked"]
+            "LIMIT: the 9,087-record cadence and the 4.12/20.58/10.09 MB projections are not in perf-state.md: perf-projections derives them again"]
 
 
-def _ssz_files(root: Path) -> list[str]:
-    """Every .ssz file of the repository: the tracked ones when `root` is a git checkout's top level, else (a copy made
-    by the tamper tests) every one under it outside build and scratch directories."""
+def _ssz_files(root: Path) -> tuple[list[str], list[str]]:
+    """The .ssz files of the tree as they are on disk (outside build and scratch directories, following the tamper
+    tests' symlinks), and, when `root` is a git checkout's top level, only the tracked ones among them plus the
+    tracked ones missing from disk. Returns (files, missing)."""
+    skip = {".git", ".scratch", "target", "node_modules", "lib", "out", "cache"}
+    found, seen = set(), set()
+    for dirpath, dirnames, filenames in os.walk(root, followlinks=True):
+        real = os.path.realpath(dirpath)
+        if real in seen:  # a symlink loop, or a directory reached twice
+            dirnames[:] = []
+            continue
+        seen.add(real)
+        dirnames[:] = [d for d in dirnames if d not in skip]
+        rel = Path(dirpath).relative_to(root)
+        found.update(str(rel / f) if rel.parts else f for f in filenames if f.endswith(".ssz"))
     top = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=root, capture_output=True, text=True)
     if top.returncode == 0 and Path(top.stdout.strip()).resolve() == root.resolve():
         out = subprocess.run(["git", "ls-files", "-z", "--", "*.ssz"], cwd=root, capture_output=True, text=True).stdout
-        return sorted(x for x in out.split("\0") if x)
-    skip = {".git", ".scratch", "target", "node_modules", "lib", "out", "cache"}
-    return sorted(str(p.relative_to(root)) for p in root.rglob("*.ssz") if not set(p.relative_to(root).parts) & skip)
+        tracked = {x for x in out.split("\0") if x}
+        return sorted(found & tracked), sorted(tracked - found)
+    return sorted(found), []
 
 
 ORACLE_TXT = "crates/ferrata-spectests/results/helios-step-oracle-2026-11-24.txt"
@@ -703,7 +732,8 @@ def lc_helios(ctx):
     problems = []
     output = _text(ctx, ORACLE_TXT)
     doc = _text(ctx, ORACLE_MD)
-    ssz = _ssz_files(ctx.root)
+    ssz, missing = _ssz_files(ctx.root)
+    _expect(problems, not missing, f"R.6: tracked .ssz files missing from the tree: {', '.join(missing[:3])}")
     boot_files = [p for p in ssz if p.rsplit("/", 1)[-1].endswith("bootstrap.ssz")]
     _expect(problems, len(ssz) == 332 and len(boot_files) == 13,
             f"R.6: actual SSZ inventory is {len(ssz)} files/{len(boot_files)} bootstrap files")

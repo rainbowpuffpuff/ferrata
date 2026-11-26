@@ -20,6 +20,7 @@ import argparse
 import csv
 import io
 import json
+import re
 import statistics
 import sys
 import time
@@ -102,12 +103,15 @@ def scan(blocks, program: bytes, idl: lc.Idl, last: int | None = None, first: in
                         nonce=next((nn["nonce"] for nn in tx["nonces"] if tx["signers"] and nn["account"] == tx["signers"][0]), "-"))
             ids = [lez.b58encode(a) for a in _actor_ids(tx)]
             if name == "init":
-                # Init writes instance(id) and the job of its first committee's adoption (job(id, 0…)).
+                # Init writes instance(id) and the job of its first committee's adoption (job(id, 0…)). Only an
+                # applied Init counts: a refused one (a re-Init of a live instance, say) changes nothing on chain,
+                # so it changes nothing here either.
                 inst = lez.b58encode(root["to"]["account_id"])
                 cfg = args["config"]
-                instances[inst] = cfg
                 job = next((a for a in ids if a != inst), "-")
-                jobs[job] = line
+                if line["outcome"] == "applied":
+                    instances[inst] = cfg
+                    jobs[job] = line
                 line.update(instance=inst, job=job, detail=f"chain_id={cfg['chain_id']} committee="
                             f"{cfg['sync_committee_size']} adoption_parts={cfg['adoption_parts']}")
             elif name == "open":
@@ -322,19 +326,26 @@ def instance_state(rpc: lez.Rpc, idl: lc.Idl, program: bytes, account: str) -> d
     return {"applied": st["applied"], "active": st["active"], "finalized_slot": int.from_bytes(store[1:9], "little")}
 
 
-def reconcile_state(rpc: lez.Rpc, idl: lc.Idl, program: bytes, lines: list, cache: Path, as_of: int) -> list:
-    """Each instance's on-chain counter against the record: `applied` (Init's activation and every update the program
-    applied) must equal 1 + the record's applied finishes + those in the blocks after the as-of block up to the head
-    read with it, and the store's finalized slot the newest applied update's. Returns problems (empty: it holds)."""
+def reconcile_state(rpc: lez.Rpc, idl: lc.Idl, program: bytes, lines: list, cache: Path, as_of: int,
+                    expected: set | None = None) -> list:
+    """Each instance's on-chain counter against the chain: `applied` (Init's activation and every update the program
+    applied) must equal 1 + the applied finishes in the chain's blocks up to the head read with it, and the store's
+    finalized slot the newest applied update's. The instances are those the chain's applied Inits set (not the
+    record's lines); `expected`, the record's, must be the same set. Returns (problems, states)."""
     problems = []
     for attempt in range(3):
         head = rpc.call("getLastBlockId")
-        states = {inst: instance_state(rpc, idl, program, inst)
-                  for inst in sorted({ln["instance"] for ln in lines if ln["step"] == "init"})}
+        later, now, probs = scan(_cached_or_fetch(rpc, 1, head, cache), program, idl, last=head)
+        states = {inst: instance_state(rpc, idl, program, inst) for inst in sorted(now["instances"])}
         if rpc.call("getLastBlockId") == head:
             break
-    later, _, probs = scan(_cached_or_fetch(rpc, 1, head, cache), program, idl, last=head)
+    else:
+        problems.append("the network's head moved while the counters were read, three times")
     problems += probs
+    if not states:
+        problems.append(f"the chain's blocks 1-{head} hold no applied Init of the attestation program: no counter to read")
+    if expected is not None and set(states) != set(expected):
+        problems.append(f"the chain's instances {sorted(states)} are not the record's {sorted(expected)}")
     for inst, st in states.items():
         fin = [ln for ln in later if ln["instance"] == inst and ln["step"] == "finish" and ln["outcome"] == "applied"]
         if st["applied"] != 1 + len(fin):
@@ -486,13 +497,138 @@ def render(summary: dict) -> str:
 ROWS = ("RFP-021 U.3", "RFP-021 S.1", "RFP-021 S.7", "RFP-021 R.4")
 
 
+HEX64 = re.compile(r"[0-9a-f]{64}")
+ISO_MS = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z")
+
+
+def chain_consistency(rows: list, chain: dict) -> list:
+    """What the record's chain facts (chain.json) must satisfy with its own transaction list: the shape of each fact,
+    times and hashes agreeing with the lines, the pauses the lines prove, the instances their Inits set, the counters
+    their finishes give. Returns problems. None of this reads the chain: run-record-online does."""
+    problems = []
+    a = chain.get("as_of") or {}
+    if not (isinstance(a.get("block"), int) and HEX64.fullmatch(str(a.get("hash", ""))) and ISO_MS.fullmatch(str(a.get("time_utc", "")))):
+        return [f"chain.json: as_of is not a block number, a 32-byte hash and a time: {a}"]
+    first = chain.get("first_block")
+    if first != 1:
+        problems.append(f"chain.json: first_block is {first}; the record reads the chain from block 1")
+        first = 1
+    if chain.get("blocks") != a["block"] - first + 1:
+        problems.append(f"chain.json: {chain.get('blocks')} blocks read, but blocks {first}-{a['block']} are "
+                        f"{a['block'] - first + 1}")
+    as_of_ms = parse_iso(a["time_utc"])
+    fbt = chain.get("first_block_with_time") or {}
+    if not (isinstance(fbt.get("block"), int) and ISO_MS.fullmatch(str(fbt.get("time_utc", "")))) or \
+            not first <= fbt["block"] <= a["block"]:
+        problems.append(f"chain.json: first_block_with_time is not a block of the record with a time: {fbt}")
+        fbt = None
+    read_at = str(chain.get("read_at_utc", ""))
+    if not re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", read_at) or \
+            parse_iso(read_at.replace("Z", ".999Z")) < as_of_ms:
+        problems.append(f"chain.json: read at {read_at!r}, before its as-of block's time {a['time_utc']}")
+    # the lines against the as-of block, and against each other
+    seen, prev, by_block = set(), None, {}
+    for i, r in enumerate(rows, 2):
+        if not (HEX64.fullmatch(r["tx"]) and HEX64.fullmatch(r["block_hash"]) and ISO_MS.fullmatch(r["time_utc"])):
+            problems.append(f"line {i}: its hashes or time are not well formed")
+            continue
+        b, t = int(r["block"]), parse_iso(r["time_utc"])
+        if r["tx"] in seen:
+            problems.append(f"line {i}: transaction {r['tx'][:16]}… listed twice")
+        seen.add(r["tx"])
+        if b in by_block and by_block[b] != (r["block_hash"], r["time_utc"]):
+            problems.append(f"line {i}: block {b}'s hash or time differs from an earlier line's")
+        by_block[b] = (r["block_hash"], r["time_utc"])
+        if b == a["block"] and r["block_hash"] != a["hash"]:
+            problems.append(f"line {i}: the as-of block's hash is not chain.json's")
+        if prev is not None:
+            pb, pi, pt = prev
+            if (b, int(r["index"])) <= (pb, pi):
+                problems.append(f"line {i}: not after the line before it (block, index)")
+            elif t < pt:
+                problems.append(f"line {i}: block {b}'s time is before block {pb}'s")
+        prev = (b, int(r["index"]), t)
+    if by_block:
+        lo, hi = min(by_block), max(by_block)
+        if lo < first or hi > a["block"]:
+            problems.append(f"chain.json: the lines' blocks {lo}-{hi} are not within the record's blocks "
+                            f"{first}-{a['block']}")
+        newest = max(parse_iso(v[1]) for v in by_block.values())
+        if newest > as_of_ms:
+            problems.append(f"chain.json: the as-of block's time {a['time_utc']} is before the newest line's {iso(newest)}")
+        if fbt and min(parse_iso(v[1]) for v in by_block.values()) < parse_iso(fbt["time_utc"]):
+            problems.append(f"chain.json: the first block with a time ({fbt['time_utc']}) is after a line's time")
+    # the pauses: listed ones well formed; and between two lines with no pause listed in between, each block came
+    # within 60 s of the one before, so the lines' times differ by at most 60 s a block
+    gaps = chain.get("block_gaps_over_60s")
+    if not isinstance(gaps, list):
+        problems.append("chain.json: block_gaps_over_60s is not a list")
+        gaps = []
+    after = []
+    for g in gaps:
+        try:
+            ok = (first <= g["after_block"] < a["block"] and ISO_MS.fullmatch(g["from_utc"]) and ISO_MS.fullmatch(g["to_utc"])
+                  and round((parse_iso(g["to_utc"]) - parse_iso(g["from_utc"])) / 1000, 3) == g["seconds"] and g["seconds"] > 60)
+        except (KeyError, TypeError, ValueError):
+            ok = False
+        if not ok:
+            problems.append(f"chain.json: a pause is not well formed: {g}")
+        else:
+            after.append(g["after_block"])
+    if after != sorted(set(after)):
+        problems.append("chain.json: the pauses are not in block order, or one is listed twice")
+    blocks = sorted(by_block.items())
+    for (b1, (_, t1)), (b2, (_, t2)) in zip(blocks, blocks[1:]):
+        if not any(b1 <= x < b2 for x in after) and parse_iso(t2) - parse_iso(t1) > 60_000 * (b2 - b1):
+            problems.append(f"blocks {b1} to {b2}: {(parse_iso(t2) - parse_iso(t1)) / 1000:.0f} s for {b2 - b1} "
+                            "blocks, but chain.json lists no pause of more than 60 s between them")
+    # the instances: those the applied Inits of the list set, with their configuration
+    inits = {r["instance"]: r for r in rows if r["step"] == "init" and r["outcome"] == "applied"}
+    insts = chain.get("instances") or {}
+    if set(insts) != set(inits):
+        problems.append(f"chain.json: instances {sorted(insts)} are not the list's applied Inits {sorted(inits)}")
+    for inst, r in inits.items():
+        cfg = insts.get(inst) or {}
+        want = (f"chain_id={cfg.get('chain_id')} committee={cfg.get('sync_committee_size')} "
+                f"adoption_parts={cfg.get('adoption_parts')}")
+        if inst in insts and r["detail"] != want:
+            problems.append(f"instance {inst[:10]}…: its Init line says {r['detail']!r}, chain.json {want!r}")
+    named = {r["instance"] for r in rows if r["instance"] != "-"} - set(inits)
+    if named:
+        problems.append(f"lines name instances no applied Init of the list set: {sorted(named)}")
+    # the counters read with the record: 1 (Init) + the applied finishes, and the newest one's finalized slot
+    counters = chain.get("instance_counters_read") or {}
+    if set(counters) != set(inits):
+        problems.append(f"chain.json: counters read for {sorted(counters)}, the instances are {sorted(inits)}")
+    for inst, c in counters.items():
+        fin = [r for r in rows if r["instance"] == inst and r["step"] == "finish" and r["outcome"] == "applied"]
+        try:
+            if c["applied_by_as_of"] != 1 + len(fin):
+                problems.append(f"instance {inst[:10]}…: counter by the as-of block {c['applied_by_as_of']}, the list's "
+                                f"finishes give 1 + {len(fin)}")
+            if c["head"] < a["block"] or c["applied"] < c["applied_by_as_of"]:
+                problems.append(f"instance {inst[:10]}…: counter read at block {c['head']}: {c['applied']} applied")
+            if c["head"] == a["block"]:
+                if c["applied"] != c["applied_by_as_of"]:
+                    problems.append(f"instance {inst[:10]}…: read at the as-of block, {c['applied']} applied, not "
+                                    f"{c['applied_by_as_of']}")
+                if fin and c["finalized_slot"] != int(fin[-1]["finalized_slot"]):
+                    problems.append(f"instance {inst[:10]}…: store's finalized slot {c['finalized_slot']}, the newest "
+                                    f"applied update's is {fin[-1]['finalized_slot']}")
+        except (KeyError, TypeError) as e:
+            problems.append(f"instance {inst[:10]}…: counter entry incomplete ({e})")
+    return problems
+
+
 @check(id="run-record", title="The light client's run on our public LEZ test network: every figure recomputed",
        family="run-record", mode="offline", evidence=(242, 248), rows=("RFP-021 S.1",),
-       what=f"{RECORD_DIR}/summary.json: updates applied, committee adoptions, period crossings, every interval "
-            "between updates (the longest, those over 1 h and 3 h), refusals, unfinished jobs, senders, lag",
+       what=f"{RECORD_DIR}/summary.json and RECORD.md: updates applied, committee adoptions, period crossings, every "
+            "interval between updates (the longest, those over 1 h and 3 h), refusals, unfinished jobs, senders, lag",
        against=f"the transaction list {RECORD_DIR}/transactions.tsv (one line per transaction to the attestation "
-               "program, decoded from the chain) and chain.json; the list's own consistency (blocks in order, each "
-               "finish after its job's open, slots and periods as their decoding gives)",
+               "program, decoded from the chain) and chain.json; their consistency with each other (blocks, times and "
+               "hashes of the lines against the as-of block, the pauses the lines prove, the instances their Inits "
+               "set, the counters their finishes give, each step after its job's open). The chain itself is read "
+               "again by run-record-online, run-record-counters and run-record-beacon, not here",
        inputs=(RECORD_DIR,))
 def check_record(ctx):
     d = ctx.root / RECORD_DIR
@@ -501,16 +637,11 @@ def check_record(ctx):
     rows = read_tsv(d / "transactions.tsv")
     chain = json.loads((d / "chain.json").read_text())
     summary = json.loads((d / "summary.json").read_text())
-    problems = []
-    last_block = -1
+    if not rows:
+        raise CheckFailed(f"{RECORD_DIR}/transactions.tsv lists no transaction")
+    problems = chain_consistency(rows, chain)
     opened = {}
     for i, r in enumerate(rows, 2):
-        b = int(r["block"])
-        if b < last_block:
-            problems.append(f"line {i}: block {b} before block {last_block}")
-        last_block = b
-        if len(r["tx"]) != 64 or len(r["block_hash"]) != 64:
-            problems.append(f"line {i}: a hash is not 32 bytes of hex")
         if r["step"] in ("open", "init") and r["outcome"] == "applied":
             opened[r["job"]] = r
         if r["step"] in ("miller", "adopt", "finish") and r["job"] != "-":
@@ -521,8 +652,6 @@ def check_record(ctx):
                 problems.append(f"line {i}: {r['step']}'s instance is not its job's")
             elif o["step"] == "open" and any(r[k] != o[k] for k in UPDATE_FIELDS):
                 problems.append(f"line {i}: {r['step']}'s update fields are not its open's")
-        if chain["as_of"] and b > chain["as_of"]["block"]:
-            problems.append(f"line {i}: block {b} after the as-of block {chain['as_of']['block']}")
     if (d / "RECORD.md").read_text() != render(summary):
         problems.append("RECORD.md is not what summary.json renders to")
     again = summarize(rows, chain)
@@ -538,8 +667,10 @@ def check_record(ctx):
         if not problems:
             problems.append("summary.json differs from the figures recomputed from the list")
     fail_if(problems, "the run record")
-    lines = [f"as of LEZ block {chain['as_of']['block']} ({chain['as_of']['time_utc']}); {len(rows)} transactions "
-             f"to the attestation program; {chain['blocks']} blocks walked, each hash recomputed and linked"]
+    lines = [f"as of LEZ block {chain['as_of']['block']} ({chain['as_of']['time_utc']}), as chain.json records it: "
+             f"{len(rows)} transactions to the attestation program; the list and chain.json agree (times, hashes, "
+             f"{len(chain['block_gaps_over_60s'])} pauses, instances, counters); not read from the chain here "
+             "(run-record-online does)"]
     for inst, v in summary["instances"].items():
         iv = v["intervals"]
         lg = iv["longest"]
@@ -576,22 +707,35 @@ def check_record_online(ctx):
         tip = rpc.call("getLastBlockId")
     except lez.RpcError as e:
         raise Skipped(f"the network's RPC did not answer: {e}") from e
+    problems = []
+    if not rows:
+        problems.append(f"{RECORD_DIR}/transactions.tsv lists no transaction: nothing to read again")
+    program = program_account(ctx.lez_url, rpc)  # the network's /programs.json and the loader header on chain
+    if lez.b58encode(program) != chain.get("program_account"):
+        problems.append(f"the record names program {chain.get('program_account')}; the network's attestation program "
+                        f"is {lez.b58encode(program)}")
     as_of = chain["as_of"]["block"]
-    first = chain.get("first_block", 1)
     if tip < as_of:
         raise CheckFailed(f"the network's head {tip} is below the record's as-of block {as_of}: another chain?")
-    program = lez.b58decode(chain["program_account"])
+    # From the chain's first block, with no instance taken from the record; tests alone start later (Ctx)
+    first, seed = (1, None) if ctx.record_from_block is None else (ctx.record_from_block, chain.get("instances", {}))
     cache = (ctx.cache or ctx.root / ".scratch/verify-cache") / "lez-blocks"
-    lines, chain2, problems = scan(_cached_or_fetch(rpc, first, as_of, cache), program,
-                                   lc.Idl.load(ctx.root / "idl/ferrata_attestation.idl.json"), last=as_of, first=first,
-                                   instances={k: v for k, v in chain.get("instances", {}).items()})
+    lines, chain2, probs = scan(_cached_or_fetch(rpc, first, as_of, cache), program,
+                                lc.Idl.load(ctx.root / "idl/ferrata_attestation.idl.json"), last=as_of, first=first,
+                                instances=seed)
+    problems += probs
     if chain2["as_of"] is None or chain2["as_of"]["block"] != as_of:
         problems.append(f"the chain's blocks {first}-{as_of} could not all be read")
-    elif chain2["as_of"]["hash"] != chain["as_of"]["hash"]:
-        problems.append(f"block {as_of}'s hash on the chain is {chain2['as_of']['hash'][:16]}…, the record says "
-                        f"{chain['as_of']['hash'][:16]}…")
+    else:
+        for k in ("hash", "time_utc"):
+            if chain2["as_of"][k] != chain["as_of"][k]:
+                problems.append(f"block {as_of}'s {k} on the chain is {chain2['as_of'][k]}, the record says "
+                                f"{chain['as_of'][k]}")
     if chain2["blocks"] != chain["blocks"]:
-        problems.append(f"{chain2['blocks']} blocks read from {first} to {as_of}; the record walked {chain['blocks']}")
+        problems.append(f"{chain2['blocks']} blocks read from {first} to {as_of}; the record says {chain['blocks']}")
+    for k in ("first_block_with_time", "block_gaps_over_60s", "instances"):
+        if json.loads(json.dumps(chain2[k])) != chain.get(k):
+            problems.append(f"chain.json's {k} is not what the chain's blocks {first}-{as_of} give")
     got = _rows_of(lines)
     if len(got) != len(rows):
         problems.append(f"the chain holds {len(got)} transactions to the attestation program in blocks {first}-{as_of}; "
@@ -613,6 +757,9 @@ def check_record_online(ctx):
     return [f"blocks {first}-{as_of} read from {ctx.lez_url}/rpc ({rpc.requests} requests, {rpc.bytes / 1e6:.1f} MB; "
             f"blocks already read are kept in {cache.relative_to(ctx.root) if cache.is_relative_to(ctx.root) else cache}"
             "; delete it to read them again): every hash recomputed and linked to the one before",
+            f"the program: the network's attestation program ({lez.b58encode(program)[:10]}…, its immutable loader "
+            f"header naming image {ATTESTATION_IMAGE[:12]}…); the as-of block's hash and time, the pauses, the "
+            f"instances' configurations: as the record says",
             f"{len(rows)} of {len(rows)} transactions equal their line, field by field; none missing; head now {tip}"]
 
 
@@ -640,10 +787,15 @@ def check_record_counters(ctx):
         rpc.call("getLastBlockId")
     except lez.RpcError as e:
         raise Skipped(f"the network's RPC did not answer: {e}") from e
+    program = program_account(ctx.lez_url, rpc)
+    problems = []
+    if lez.b58encode(program) != chain.get("program_account"):
+        problems.append(f"the record names program {chain.get('program_account')}; the network's attestation program "
+                        f"is {lez.b58encode(program)}")
     cache = (ctx.cache or ctx.root / ".scratch/verify-cache") / "lez-blocks"
-    probs, states = reconcile_state(rpc, lc.Idl.load(ctx.root / "idl/ferrata_attestation.idl.json"),
-                                    lez.b58decode(chain["program_account"]), rows, cache, chain["as_of"]["block"])
-    fail_if(probs, "the instances' counters")
+    probs, states = reconcile_state(rpc, lc.Idl.load(ctx.root / "idl/ferrata_attestation.idl.json"), program, rows,
+                                    cache, chain["as_of"]["block"], expected=set(chain.get("instances") or {}))
+    fail_if(problems + probs, "the instances' counters")
     return [f"{k[:10]}…: {v['applied']} applied jobs at block {v['head']} = 1 + the finishes the chain holds "
             f"({v['applied_by_as_of']} by the record's as-of block); finalized slot {v['finalized_slot']:,}"
             for k, v in states.items()]
@@ -657,8 +809,13 @@ def check_record_counters(ctx):
                "root, canonical", needs=("python3", "network"), inputs=(RECORD_DIR,))
 def check_record_beacon(ctx):
     rows = read_tsv(ctx.root / RECORD_DIR / "transactions.tsv")
-    want = sorted({(int(r["finalized_slot"]), r["finalized_root"]) for r in rows
-                   if r["step"] == "finish" and r["outcome"] == "applied"})
+    applied = [r for r in rows if r["step"] == "finish" and r["outcome"] == "applied"]
+    bad = [r["tx"][:16] for r in applied if not (r["finalized_slot"].isdigit() and HEX64.fullmatch(r["finalized_root"]))]
+    if bad:
+        raise CheckFailed(f"applied finishes with no decoded update (slot and root): {', '.join(bad[:5])}…")
+    want = sorted({(int(r["finalized_slot"]), r["finalized_root"]) for r in applied})
+    if not want:
+        raise CheckFailed(f"{RECORD_DIR}/transactions.tsv lists no applied update: nothing to hold to Sepolia")
     problems = []
     used = {}
     for slot, root in want:

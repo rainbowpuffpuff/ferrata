@@ -113,6 +113,9 @@ class Ctx:
     cache: Path | None = None
     git_dir: Path | None = None  # where git objects are read (the tamper tests' copies have none of their own)
     out: Callable = print
+    # Tests only (the command line never sets it): run-record-online reads from this block instead of block 1, with
+    # the instances the record's chain.json names, because a recorded fixture cannot start at the chain's genesis.
+    record_from_block: int | None = None
 
     def path(self, rel: str) -> Path:
         return self.root / rel
@@ -155,6 +158,7 @@ def run_check(c: Check, ctx: Ctx) -> Result:
             lines = [got] if isinstance(got, str) else list(got or [])
             return Result(c, "PASS", lines, time.monotonic() - t0)
         env = dict(os.environ)
+        env.update(scratch_env(ctx))
         env.update(c.env or {})
         env["FERRATA_VERIFY"] = "1"
         argv = list(c.argv) if c.argv else ["bash", "-c", c.shell]
@@ -178,9 +182,17 @@ def run_check(c: Check, ctx: Ctx) -> Result:
         return Result(c, "FAIL", [f"{type(e).__name__}: {e}"], time.monotonic() - t0)
 
 
+def scratch_env(ctx: "Ctx") -> dict:
+    """TMPDIR for the scripts a check runs: the repository's .scratch/tmp, never the system's temporary directory."""
+    d = ctx.root / ".scratch" / "tmp"
+    d.mkdir(parents=True, exist_ok=True)
+    return {"TMPDIR": str(d)}
+
+
 def run_script(ctx: "Ctx", argv: list, timeout: int = 1800, env: dict | None = None):
     """(exit status, non-empty output lines) of a repository script run from ctx.root (python3 -> this Python)."""
     e = dict(os.environ)
+    e.update(scratch_env(ctx))
     e.update(env or {})
     argv = [sys.executable if a == "python3" else a for a in argv]
     p = subprocess.run(argv, cwd=ctx.root, capture_output=True, text=True, timeout=timeout, env=e)

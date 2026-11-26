@@ -91,6 +91,19 @@ STATUS_NUMBER = {
 }
 
 
+# RFP-021 P.1 says "at most 32%" of the 5M target; the largest case is 32.3992% (review round 1, M10), so
+# lc-stage4-attest-costs fails on the repository until ROWS-PROPOSED's P.1 is folded. Its tampered copies start from
+# the folded wording, so that each tamper still has to be what fails.
+P1_OLD, P1_FOLDED = "at most 32% of LEZ's 5M target", "at most 32.4% of LEZ's 5M target"
+
+
+def _fold_p1(root: Path) -> None:
+    path = root / "docs/requirements-status.md"
+    text = path.read_text(encoding="utf-8")
+    if P1_OLD in text:
+        path.write_text(text.replace(P1_OLD, P1_FOLDED, 1), encoding="utf-8")
+
+
 def _replace(path: Path, old: str, new: str) -> None:
     text = path.read_text(encoding="utf-8")
     if text.count(old) != 1:
@@ -127,7 +140,7 @@ class LightClientVerifyTamperTests(unittest.TestCase):
         inputs = set(check.inputs)
         if check.id == "lc-helios-step-oracle":
             # The checker inventories every repository .ssz, but reads no other file there.
-            inputs.update(checks_lc._ssz_files(ROOT))
+            inputs.update(checks_lc._ssz_files(ROOT)[0])
         for rel in sorted(inputs):
             src = ROOT / rel
             dst = destination / rel
@@ -136,6 +149,8 @@ class LightClientVerifyTamperTests(unittest.TestCase):
             else:
                 dst.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src, dst)
+        if check.id == "lc-stage4-attest-costs":
+            _fold_p1(destination)
         return destination
 
     def _run(self, check, root: Path):
@@ -154,9 +169,17 @@ class LightClientVerifyTamperTests(unittest.TestCase):
         self.assertTrue(result.lines)
 
     def test_01_unaltered_repository_passes(self):
+        p1_unfolded = P1_OLD in (ROOT / "docs/requirements-status.md").read_text(encoding="utf-8")
         for cid, check in self.checks.items():
             with self.subTest(check=cid):
                 result = self._run(check, ROOT)
+                if cid == "lc-stage4-attest-costs" and p1_unfolded:
+                    self.assertEqual(result.status, "FAIL", f"{cid}: {result.lines}")
+                    self.assertTrue(any("P.1 says 'at most 32%" in ln for ln in result.lines), result.lines)
+                    with tempfile.TemporaryDirectory(prefix=cid + "-", dir=SCRATCH) as td:
+                        folded = run_check(check, Ctx(root=self._copy(check, Path(td))))
+                    self.assertEqual(folded.status, "PASS", f"{cid} with P.1 folded: {folded.lines}")
+                    continue
                 self.assertEqual(result.status, "PASS", f"{cid}: {result.lines}")
 
     def test_02_case_verdict_or_code_tamper_fails(self):
@@ -199,6 +222,36 @@ class LightClientVerifyTamperTests(unittest.TestCase):
     def test_07_unlisted_chain_data_file_fails(self):
         rel = f"{FIXTURES}/mainnet-attest-2026-11-10/unlisted.json"
         self._assert_fails("lc-fixture-hashes", lambda root: (root / rel).write_text("{}", encoding="utf-8"))
+
+    def test_08_ssz_deleted_or_added_fails(self):
+        """Review round 1, M3: the inventory is the tree on disk, in a copy as in a checkout."""
+        rel = "lez/lab/results/record/net/mainnet/updates/00002.finality.electra.ssz"
+        self._assert_fails("lc-helios-step-oracle", lambda root: (root / rel).unlink())
+        self._assert_fails("lc-helios-step-oracle",
+                           lambda root: (root / rel).with_name("99999.finality.electra.ssz").write_bytes(b"\0"))
+
+    def test_09_tracked_ssz_missing_in_a_checkout(self):
+        import subprocess
+        with tempfile.TemporaryDirectory(prefix="ssz-git-", dir=SCRATCH) as td:
+            root = Path(td)
+            (root / "d").mkdir()
+            for name in ("a.ssz", "d/b.ssz"):
+                (root / name).write_bytes(b"\0")
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            subprocess.run(["git", "add", "a.ssz", "d/b.ssz"], cwd=root, check=True)
+            (root / "d/b.ssz").unlink()
+            (root / "untracked.ssz").write_bytes(b"\0")
+            self.assertEqual(checks_lc._ssz_files(root), (["a.ssz"], ["d/b.ssz"]))
+
+    def test_10_p1_share_wording(self):
+        """The share of the 5M target P.1 states must hold for the largest case, 32.3992%."""
+        cases = {"at most 32%": "FAIL", "at most 32.4%": "PASS", "under 33%": "PASS", "under 32.3%": "FAIL",
+                 "32.4%": "PASS", "about 32%": "PASS", "32.5%": "FAIL", "up to 32.3992%": "PASS"}
+        for words, want in cases.items():
+            with self.subTest(words=words):
+                result = self._tampered_result("lc-stage4-attest-costs", lambda root, w=words: _status_tamper(
+                    root, "P.1", P1_FOLDED, f"{w} of LEZ's 5M target"))
+                self.assertEqual(result.status, want, result.lines)
 
 
 if __name__ == "__main__":

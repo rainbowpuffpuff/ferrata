@@ -311,10 +311,12 @@ def _gasdrop_terms(ctx):
 
 
 @check(id="faucet-terms-online", family="lez-network", mode="online", evidence=(243, 248),
-       title="The test network's faucet publishes its terms, and its account holds what it says on chain",
-       what="the gateway's GET /faucet: its account, its balance, the grant and its limits",
-       against="the account's balance as the network's RPC serves it (getAccountBalance), at least the published "
-               "balance's order and many grants", inputs=())
+       title="The test network's faucet publishes its terms; its balance on chain is the published one and covers a "
+             "day of grants",
+       what="the gateway's GET /faucet: its account, its balance (read live), the grant and its limits",
+       against="the account's balance as the network's RPC serves it right after (getAccountBalance): equal to the "
+               "published balance within five grants (grants or a top-up between the two reads), and at least a day "
+               "of grants at the published global hourly limit (100 grants if none is published)", inputs=())
 def _faucet_terms(ctx):
     from . import lez
     try:
@@ -325,12 +327,25 @@ def _faucet_terms(ctx):
         raise CheckFailed(f"{ctx.lez_url}/faucet answered HTTP {e.code}") from e
     except (urllib.error.URLError, TimeoutError, ValueError) as e:
         raise Skipped(f"the gateway could not be read: {e}") from e
-    acct, grant = terms.get("faucet_account"), int(terms.get("amount", 0))
+    acct = terms.get("faucet_account")
+    try:
+        grant, published = int(terms.get("amount", 0)), int(terms.get("balance"))
+    except (TypeError, ValueError) as e:
+        raise CheckFailed(f"/faucet publishes no usable grant or balance: {terms}") from e
     bal = lez.Rpc(ctx.lez_url + "/rpc", budget_s=60).call("getAccountBalance", [acct])
-    if not isinstance(bal, int) or grant <= 0 or bal < grant:
-        raise CheckFailed(f"the faucet {acct} holds {bal} on chain; a grant is {grant}")
+    hourly = (terms.get("limits") or {}).get("global_per_hour")
+    need = 24 * int(hourly) if isinstance(hourly, int) and hourly > 0 else 100
+    problems = []
+    if not isinstance(bal, int) or grant <= 0:
+        raise CheckFailed(f"the faucet {acct} holds {bal!r} on chain; a grant is {grant}")
+    if abs(published - bal) > 5 * grant:
+        problems.append(f"/faucet publishes a balance of {published:,}; the chain holds {bal:,} for {acct}")
+    if bal < need * grant:
+        problems.append(f"the faucet holds {bal:,}: {bal // grant:,} grants, under a day at the hourly limit ({need:,})")
+    fail_if(problems, "the faucet")
     return [f"faucet {acct[:10]}…: a grant of {grant:,} native units (1 LGO = 10^9), limits {terms.get('limits')}",
-            f"its balance on chain {bal:,} ({bal // grant:,} grants); published {int(terms.get('balance', 0)):,}"]
+            f"its balance on chain {bal:,}, the published {published:,}: {bal // grant:,} grants, at least {need:,} "
+            "(a day at the global hourly limit)"]
 
 
 @check(id="sepolia-31-vault", family="sepolia", mode="online", evidence=(232,), rows=("RFP-022 R.8",),

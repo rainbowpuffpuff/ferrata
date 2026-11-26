@@ -100,12 +100,15 @@ def mode_filter(args, checks, explicit_ids) -> tuple:
     return run, left
 
 
+def list_json(checks) -> list:
+    return [{"id": c.id, "title": c.title, "family": c.family, "mode": c.mode, "tier": c.tier,
+             "rows": list(c.rows), "evidence": list(c.evidence), "what": c.what, "against": c.against,
+             "needs": list(c.needs), "command": c.shell or (" ".join(c.argv) if c.argv else None)} for c in checks]
+
+
 def print_list(checks, as_json: bool) -> None:
     if as_json:
-        print(json.dumps([{"id": c.id, "title": c.title, "family": c.family, "mode": c.mode, "tier": c.tier,
-                           "rows": list(c.rows), "evidence": list(c.evidence), "what": c.what,
-                           "against": c.against, "needs": list(c.needs),
-                           "command": c.shell or (" ".join(c.argv) if c.argv else None)} for c in checks], indent=1))
+        print(json.dumps(list_json(checks), indent=1))
         return
     for c in checks:
         print(f"{c.id}  [{c.family}, {c.mode}, {c.tier}]  {c.title}")
@@ -158,7 +161,7 @@ def main(argv=None) -> int:
         run, _ = mode_filter(args, checks, explicit) if (args.online or args.both or args.tests) else (checks, [])
         print_list(run, as_json=False)
         if args.json:
-            Path(args.json).write_text("")
+            Path(args.json).write_text(json.dumps(list_json(run), indent=1) + "\n")
         return 0
     run, left = mode_filter(args, checks, explicit)
     ctx = catalog.context(root, args)
