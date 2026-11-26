@@ -542,5 +542,127 @@ class TestGeneratedRecords(unittest.TestCase):
                       "recorded them, 60 times the design's hourly cadence)")
 
 
+class TestGate100(unittest.TestCase):
+    """`lez/results/perf-gate-sequencer-100.md` (RFP-021 R.9 and R.10 at A3's size: runs G6 and G7, 106 recorded
+    updates, windows 8 and 30): a hand-written header, then `bench/perf/summarize_gate.py`'s output on the two runs,
+    byte for byte; the runs are the ones the header describes (each `machine.txt`, `done.txt`, `reveals.tsv`, two
+    daemons); A3's two figures, the steps applied twice and the claim that every refused step raced an applied step of
+    its own block are recomputed from the journals themselves; the header's other figures are the generator's (its
+    `summarize`). Each figure is asserted as the header's own string (whitespace folded), with its count."""
+
+    RUNS = (("gate-g6", 8), ("gate-g7", 30))
+    DOC = "lez/results/perf-gate-sequencer-100.md"
+
+    @classmethod
+    def setUpClass(cls):
+        dirs = [f"bench/perf/results/{name}" for name, _ in cls.RUNS]
+        cls.out = subprocess.run([sys.executable, "-I", "bench/perf/summarize_gate.py", *dirs], cwd=ROOT,
+                                 capture_output=True, encoding="utf-8", check=True).stdout
+        cls.doc = rd(cls.DOC)
+        head = cls.doc[: len(cls.doc) - len(cls.out)] if cls.doc.endswith(cls.out) else ""
+        cls.header = " ".join(head.split())
+        sys.path.insert(0, str(ROOT / "bench" / "perf"))
+        import contextlib
+        import io
+        import summarize_gate
+        with contextlib.redirect_stdout(io.StringIO()):
+            cls.keys = {name: summarize_gate.summarize(ROOT / d) for (name, _), d in zip(cls.RUNS, dirs)}
+        cls.journals = {}
+        for name, _ in cls.RUNS:
+            rows = []
+            for d in ("honest-1", "honest-2"):
+                for line in rd(f"bench/perf/results/{name}/state-{d}/journal.tsv").splitlines():
+                    f = line.split("\t")
+                    if len(f) >= 12:  # round, step, job, slot, status, exit, gas exec, gas storage, fee, block, t, label
+                        rows.append(dict(daemon=d, step=f[1], job=f[2], status=f[4], exit=f[5], gas=int(f[6] or 0),
+                                         fee=int(f[8] or 0), block=int(f[9] or -1), label=f[11]))
+            cls.journals[name] = rows
+
+    def has(self, needle, count=1):
+        n = self.header.count(needle)
+        self.assertEqual(n, count, f"{self.DOC}'s header states '{needle}' {n} time(s), not {count}")
+
+    def test_the_record_is_its_header_then_the_generator_output(self):
+        self.assertTrue(self.out.startswith("## Run `gate-g6`"))
+        self.assertTrue(self.doc.endswith(self.out))
+        self.assertTrue(self.header.startswith("# RFP-021 R.9 and R.10 at a hundred updates"))
+        self.assertNotIn("## Run", self.header)
+
+    def test_the_runs_are_the_ones_described(self):
+        for name, window in self.RUNS:
+            run = f"bench/perf/results/{name}"
+            machine = rd(f"{run}/machine.txt")
+            self.assertIn(f"\nGATE_ENTRIES=106 GATE_STEP=60 GATE_WINDOW={window} GATE_POLL=4 GATE_ADVERSARY=0\n", machine)
+            self.assertIn("\nFAKETIME=-5d ", machine)
+            self.assertIn("FAKETIME_DONT_FAKE_MONOTONIC=1)", machine)
+            self.assertEqual(rd(f"{run}/done.txt"), "done=1\n")
+            kinds = [line.split("\t")[2] for line in rd(f"{run}/reveals.tsv").splitlines()[1:]]
+            self.assertEqual((len(kinds), kinds.count("finality"), kinds.count("period")), (106, 96, 10))
+            self.assertEqual(sorted(p.name for p in (ROOT / run).glob("state-*")), ["state-honest-1", "state-honest-2"])
+        self.has("each run reveals 106 of the lab's recorded mainnet updates (96 finality updates and 10 sync-committee "
+                 "period updates; `GATE_ENTRIES=106`; A3's gate asks 100), one every 60 s (`GATE_STEP=60`)")
+        self.has("no adversary (`GATE_ADVERSARY=0`); `gate-g6` at the default deferral window of 8 rounds, `gate-g7` at 30")
+        self.has("(`FAKETIME=-5d`, monotonic clocks real)")
+
+    def test_a3s_figures_from_the_journals(self):
+        """The honest daemons' execution gas on refused steps over applied steps, honest-1's share of the fees (applied
+        and refused), and no (job, step, label) applied twice: summed from the journals, not read from the generator."""
+        stated = {}
+        for (name, window) in self.RUNS:
+            rows = self.journals[name]
+            applied = sum(r["gas"] for r in rows if r["status"] == "applied")
+            refused = sum(r["gas"] for r in rows if r["status"] == "refused")
+            fees = {d: sum(r["fee"] for r in rows if r["daemon"] == d and r["status"] in ("applied", "refused"))
+                    for d in ("honest-1", "honest-2")}
+            ratio, share = refused / applied, fees["honest-1"] / sum(fees.values())
+            self.assertLessEqual(ratio, 0.10)
+            self.assertTrue(0.35 <= share <= 0.65)
+            self.assertEqual((f"{ratio:.4f}", f"{share:.3f}"),
+                             (f"{self.keys[name]['r9']:.4f}", f"{self.keys[name]['share']:.3f}"))
+            done = [(r["job"], r["step"], r["label"]) for r in rows if r["status"] == "applied"]
+            self.assertEqual(len(done), len(set(done)))
+            stated[window] = (ratio, share)
+        r8, s8 = stated[8]
+        r30, s30 = stated[30]
+        self.has(f"`gate-g6` (window 8) **{r8:.4f}** and honest-1's share **{s8:.3f}**; "
+                 f"`gate-g7` (window 30) **{r30:.4f}** and **{s30:.3f}**. Both runs meet both limits, "
+                 f"window 8 by {0.10 - r8:.4f}.")
+        self.has("In both runs no step was applied twice")
+
+    def test_every_refused_step_raced_an_applied_step_of_its_block(self):
+        """Each refused step shares its block with the same step of the same job applied, or (exit 82, StoreChanged) is
+        a `Finish` whose job another job's applied `Finish` overtook in that block; the header names those blocks."""
+        store_changed = {}
+        for name, _ in self.RUNS:
+            rows = self.journals[name]
+            applied = {(r["job"], r["step"], r["block"]) for r in rows if r["status"] == "applied"}
+            finishes = {(r["job"], r["block"]) for r in rows if r["status"] == "applied" and r["step"] == "finish"}
+            for r in (r for r in rows if r["status"] == "refused"):
+                if (r["job"], r["step"], r["block"]) in applied:
+                    continue
+                self.assertEqual((r["step"], r["exit"]), ("finish", "82"), r)
+                self.assertTrue(any(b == r["block"] and j != r["job"] for j, b in finishes), r)
+                store_changed.setdefault(name, []).append(r["block"])
+        self.assertEqual({k: sorted(v) for k, v in store_changed.items()}, {"gate-g6": [243, 267, 289]})
+        self.has("`gate-g6`'s three refused `Finish` steps with exit code 82 (`StoreChanged`) show as \"0 of 3\"")
+        self.has("another job (blocks 243, 267 and 289)")
+        self.assertIn("| honest daemons | finish | 82 | 3 | 11,055,840 | 0 of 3 |", self.out)
+
+    def test_the_headers_other_figures_are_the_generators(self):
+        k6, k7 = self.keys["gate-g6"], self.keys["gate-g7"]
+        for k in (k6, k7):
+            self.assertEqual((k["lat_n"], k["fin_revealed"], k["twice"]), (96, 96, 0))
+        self.has(f"all {k6['lat_n']} revealed finality updates were covered, at window 8 {k6['own']} by their own job "
+                 f"(latency median {k6['lat_med']:.0f} s, p90 {k6['lat_p90']:.0f} s), at window 30 {k7['own']} "
+                 f"(median {k7['lat_med']:.0f} s, p90 {k7['lat_p90']:.0f} s)")
+        self.has(f"{g(k6['gas_aband'])} execution gas at window 8 and {g(k7['gas_aband'])} at window 30, so that all the "
+                 f"daemons' gas is **{k6['mult']:.3f}** and **{k7['mult']:.3f}** times the completed jobs'")
+
+
+def g(n):
+    """A gas figure as the generator prints it (bench/perf/summarize_gate.py's `g`)."""
+    return f"{int(round(n)):,}"
+
+
 if __name__ == "__main__":
     unittest.main()
