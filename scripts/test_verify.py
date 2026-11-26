@@ -116,6 +116,27 @@ class TamperCase(unittest.TestCase):
 # ---- the registry -------------------------------------------------------------------------------------------------
 
 class Registry(unittest.TestCase):
+    def test_documents_state_the_counts(self):
+        """The counts docs/cli-coverage.md and docs/VERIFY.md state are the registry's (review round 1, L4)."""
+        words = {w: i for i, w in enumerate("zero one two three four five six seven eight nine ten eleven twelve"
+                                            .split())}
+        quick = [c for c in REGISTRY.values() if c.mode == "offline" and c.tier == "quick"]
+        online = [c for c in REGISTRY.values() if c.mode == "online"]
+        cov = (ROOT / "docs/cli-coverage.md").read_text()
+        ver = (ROOT / "docs/VERIFY.md").read_text()
+        found = 0
+        for pattern, text, want in (
+                (r"the (\d+) quick offline checks", cov, len(quick)),
+                (r"The (\d+) online checks", cov, len(online)),
+                (r"(\d+) quick offline checks", ver, len(quick)),
+                (r"(\d+) online checks", ver, len(online)),
+                (r"Node 20 or later for (\w+) of the checks", ver, sum("node" in c.needs for c in quick))):
+            for m in re.finditer(pattern, text):
+                n = int(m.group(1)) if m.group(1).isdigit() else words[m.group(1)]
+                self.assertEqual(n, want, f"the documents say {m.group(0)!r}; the registry has {want}")
+                found += 1
+        self.assertGreaterEqual(found, 4, "the documents no longer state the counts this test reads")
+
     def test_rows_exist(self):
         keys = {r.key for r in ROWS}
         for c in REGISTRY.values():
