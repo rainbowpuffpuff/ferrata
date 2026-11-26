@@ -344,7 +344,7 @@ def _rc3_roundtrip(ctx):
     work.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=work) as d:
         copy = Path(d) / "rc3-roundtrip-1"
-        shutil.copytree(ctx.root / RC3_RT, copy, symlinks=True)
+        shutil.copytree(ctx.root / RC3_RT, copy, symlinks=False)  # files, never links back into the record
         p = subprocess.run(["bash", "scripts/ci/sequencer-roundtrip.sh", str(copy.relative_to(ctx.root)), "check"],
                            cwd=ctx.root, env=env, capture_output=True, text=True, timeout=300)
     out = [ln.strip() for ln in (p.stdout + p.stderr).splitlines() if ln.strip()]
