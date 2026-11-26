@@ -583,6 +583,10 @@ jobs:
       # (checkpoint/attestor/resources.py; zone-bridge.sh times every round).
       - name: The attestor's resources from a run's records (checkpoint/attestor/test_resources.py)
         run: python3 -I checkpoint/attestor/test_resources.py
+      # RFP-021 S.8, RFP-022 Sec.1 (no audit yet): the audit scope's inventory is generated from this tree, and the
+      # document carries exactly the generated tables (scripts/audit_scope.py).
+      - name: The audit scope's source inventory (scripts/test_audit_scope.py)
+        run: python3 -I scripts/test_audit_scope.py
       # RFP-022 U.5, Priv.7: the test network's gateway publishing its gas-drop relayer: the terms (404 only when none
       # are published), the inbox's checks, a job's receipt verified before it counts against any cap, no address or
       # nullifier in its log (deploy/testnet/host/bin/ferrata-gateway, standard library only).
