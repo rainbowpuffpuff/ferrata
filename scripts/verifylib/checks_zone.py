@@ -336,9 +336,20 @@ def zone_checkpoint(ctx):
         _expect(problems, certified, f"{attestor_rel}: {key[:8]}…'s certificate of its attestation key does not verify")
         _expect(problems, signed, f"{attestor_rel}: {key[:8]}…'s attestation of tip {entry['tip_id']} does not verify")
         verified += certified and signed and key in live
+    finals_verified = 0
     for final_rel, final in zip(final_rels, finals):
         _same(problems, final_rel, "its key-set hash", _hex32(final["key_set_hash"]), key_set_hash.hex())
         _expect(problems, _hex32(final["channel_key"]) in live, f"{final_rel}: not an accredited key's attestor")
+        _same(problems, final_rel, "its deployment (the collector's)",
+              (int(str(final["deployment"]["evm_chain_id"]), 16), _hex32(final["deployment"]["vault"]),
+               _hex32(final["deployment"]["lez_config_id"]), _hex32(final["deployment"]["channel_id"])),
+              (int(deployment["evm_chain_id"]), _hex32(deployment["vault"]), _hex32(deployment["lez_config_id"]),
+               _hex32(deployment["channel_id"])))
+        certified, signed = _attestation_verifies(final["deployment"], key_set_hash, final, final["tip_hash"],
+                                                  final["final_msg_id"])
+        _expect(problems, certified and signed, f"{final_rel}: its attestation of tip {final['tip_id']} does not verify "
+                                                f"(certificate {certified}, signature {signed})")
+        finals_verified += certified and signed
     _same(problems, attestor_rel, "attestations verified (certificate by an accredited channel key, tip signed by its "
                                   "attestation key)", verified, 3)
     omitted = sorted(set(by_key) - set(used_keys))
@@ -366,8 +377,9 @@ def zone_checkpoint(ctx):
     return [f"{blocks_rel}: {block_count} contiguous blocks and {transactions:,} transactions; {burns_rel}: "
             f"{burn_count} burns and {imported_leaves} final imported leaves",
             f"{attestor_rel} + four final.json records: {len(used)} distinct tip-164 attestations used, {verified} of "
-            f"them verified (Ed25519: each attestation key certified by an accredited channel key of "
-            f"{_run('zone/channel-end.json')}, tip 164 signed under the channel's key-set hash); "
+            f"them verified, and all {finals_verified} attestors' final attestations (Ed25519: each attestation key "
+            f"certified by an accredited channel key of {_run('zone/channel-end.json')}, tip 164 signed under the "
+            "channel's key-set hash); "
             f"omitted {omitted[0][:10] if omitted else '-'}…; n={attestor['n']}, t={attestor['t']}",
             f"{exec_rel}: {execution['user_cycles']:,} user cycles; native-journal equality asserted, journal "
             f"length/SHA-256 and input length recomputed"]

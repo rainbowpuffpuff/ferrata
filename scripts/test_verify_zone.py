@@ -298,6 +298,24 @@ class ZoneBridgeVerifyTamperTests(unittest.TestCase):
             (f"{RUN}/checkpoint/attestor.json", "a300aec501d6fa09b60964a4e85ca7fe91cd4d21f2689199176441254dd03469",
              "b300aec501d6fa09b60964a4e85ca7fe91cd4d21f2689199176441254dd03469", 1)], "key-set hash")
 
+    def test_13_bindings_alone(self):
+        """Review round 2's surviving guards: the run's identity, the collector's key set, an attestor's key-set hash."""
+        self._assert_fails_multi("zone-rc3-multi-checkpoint", [
+            (f"{RUN}/identity.json", '"vault": "0x1FF833f6FBD6a92A648aEE9004C088875ED54439"',
+             '"vault": "0x2FF833f6FBD6a92A648aEE9004C088875ED54439"', 1)], "deployment")
+        omitted = "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729"  # the attestor left out
+        self._assert_fails_multi("zone-rc3-multi-checkpoint", [
+            (f"{RUN}/checkpoint/attestor.json", "0x" + omitted, "0x" + "2" * 64, 1)], "collector's key set")
+        self._assert_fails_multi("zone-rc3-multi-checkpoint", [
+            (f"{RUN}/zone/attestor-3/final.json", "a300aec501d6fa09b60964a4e85ca7fe91cd4d21f2689199176441254dd03469",
+             "b300aec501d6fa09b60964a4e85ca7fe91cd4d21f2689199176441254dd03469", 1)], "key-set hash")
+        # the attestor left out of the checkpoint: its own final attestation, signature altered (and its encoding)
+        import json as _json
+        sig = _json.loads((ROOT / RUN / "zone/attestor-3/final.json").read_text())["signature"].removeprefix("0x")
+        self._assert_fails_multi("zone-rc3-multi-checkpoint", [
+            (f"{RUN}/zone/attestor-3/final.json", sig, sig[:-2] + ("00" if sig[-2:] != "00" else "01"), 2)],
+            "does not verify")
+
     def test_04_ids_inputs_and_evidence_metadata(self):
         self.assertEqual(set(self.checks), set(CHECK_IDS))
         for cid, check in self.checks.items():
