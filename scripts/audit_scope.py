@@ -142,8 +142,13 @@ def language(path: str) -> str:
 
 
 def count_lines(path: str) -> tuple[int, int, int]:
-    """Return (code, comment, blank), lexing // and nested /* */ comments."""
-    text = (ROOT / path).read_text(encoding="utf-8")
+    """Return (code, comment, blank) of a tracked file, lexing // and nested /* */ comments."""
+    return count_text((ROOT / path).read_text(encoding="utf-8"), path)
+
+
+def count_text(text: str, path: str) -> tuple[int, int, int]:
+    """(code, comment, blank) of `text`, the contents of `path` (its extension selects the quoting rules)."""
+    solidity = path.endswith(".sol")
     code = comment = blank = 0
     depth = 0
     for line in text.splitlines():
@@ -180,12 +185,12 @@ def count_lines(path: str) -> tuple[int, int, int]:
                 has_comment = True
                 i += 2
                 continue
-            if line[i] == "'":
+            if line[i] == "'" and not solidity:  # in Solidity a single quote delimits a string, as below
                 literal = CHAR_LITERAL.match(line, i)
                 i = literal.end() if literal else i + 1
                 has_code = True
                 continue
-            if line[i] == '"':
+            if line[i] == '"' or line[i] == "'":
                 quote = line[i]
                 has_code = True
             elif not line[i].isspace():

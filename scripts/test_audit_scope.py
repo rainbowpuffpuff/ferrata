@@ -141,17 +141,16 @@ class AuditScopeOutputTest(unittest.TestCase):
 
 
 class CountLinesTest(unittest.TestCase):
-    def count(self, text: str) -> tuple[int, int, int]:
-        path = ROOT / ".scratch-audit-scope-test.rs"
-        try:
-            path.write_text(text, encoding="utf-8")
-            return AUDIT.count_lines(path.name)
-        finally:
-            path.unlink(missing_ok=True)
+    def count(self, text: str, name: str = "lexer-test.rs") -> tuple[int, int, int]:
+        return AUDIT.count_text(text, name)
 
     def test_lifetimes_and_char_literals_are_code(self) -> None:
         text = "// a comment\nfn f<'de>(c: char) -> &'static str {\n    let q = '\\'';\n\n    x // y\n}\nfn g(x: &'a str) {}\n"
         self.assertEqual(self.count(text), (5, 1, 1))
+
+    def test_a_solidity_single_quoted_string_is_a_string(self) -> None:
+        text = "string s = 'a/*b//c';\nuint x; // y\n// z\n"
+        self.assertEqual(self.count(text, "lexer-test.sol"), (2, 1, 0))
 
     def test_an_unterminated_block_comment_is_refused(self) -> None:
         with self.assertRaises(AssertionError):
