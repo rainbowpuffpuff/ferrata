@@ -346,7 +346,9 @@ def _g2(xr: int, xi: int, yr: int, yi: int, check_subgroup: bool = True):
 
 def verify_seal(seal: bytes, image_id: bytes, journal_digest: bytes):
     """(ok, release, reason): `RiscZeroGroth16Verifier.verify(seal, imageId, journalDigest)` of the release the seal's
-    selector names; never raises on malformed input."""
+    selector names; never raises on malformed input. Stricter than the contract in two ways, both refusals of what it
+    would accept: the seal must be exactly 260 bytes (the contract's `abi.decode` ignores bytes after the proof), and
+    B must be in the order-r subgroup (checked here whatever the pairing precompile does)."""
     try:
         if len(image_id) != 32 or len(journal_digest) != 32:
             return False, "", "the image id and the journal digest are 32 bytes each"

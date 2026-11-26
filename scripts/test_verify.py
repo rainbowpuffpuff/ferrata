@@ -965,6 +965,25 @@ class Seals(TamperCase):
         big = e["seal"][:4] + self.g.P.to_bytes(32, "big") + e["seal"][36:]
         self.assertFalse(self.g.verify_seal(big, e["image"], e["digest"])[0], "a coordinate not below p")
 
+    def test_points_the_contract_refuses(self):
+        """Infinity, negated, swapped and mis-ordered points, another image, trailing bytes: all refused."""
+        e = self.live[1]
+        s, P = e["seal"], self.g.P
+        w = [int.from_bytes(s[4 + 32 * i: 36 + 32 * i], "big") for i in range(8)]
+
+        def mk(ws):
+            return s[:4] + b"".join(v.to_bytes(32, "big") for v in ws)
+        cases = {"A at infinity": mk([0, 0] + w[2:]), "C at infinity": mk(w[:6] + [0, 0]),
+                 "B at infinity": mk(w[:2] + [0] * 4 + w[6:]), "A and C swapped": mk(w[6:8] + w[2:6] + w[0:2]),
+                 "A negated": mk([w[0], (P - w[1]) % P] + w[2:]), "C negated": mk(w[:6] + [w[6], (P - w[7]) % P]),
+                 "B's x real and imaginary swapped": mk(w[:2] + [w[3], w[2], w[4], w[5]] + w[6:]),
+                 "a trailing byte (the contract's abi.decode would ignore it; refused here)": s + b"\0"}
+        for name, seal in cases.items():
+            with self.subTest(case=name):
+                self.assertFalse(self.g.verify_seal(seal, e["image"], e["digest"])[0])
+        other = next(x for x in self.live if x["image"] != e["image"])
+        self.assertFalse(self.g.verify_seal(s, other["image"], e["digest"])[0], "another image id")
+
     def test_the_check_fails_on_an_altered_proof(self):
         self.assertPasses("seals-v3.1")
         from verifylib.checks_seals import LIVE_PROOFS
