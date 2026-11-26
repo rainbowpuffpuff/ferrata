@@ -109,3 +109,6 @@ __pycache__/
 
 # lez-v03-bridge/sepolia.sh: Sepolia deployment records written where forge may write (vault/deployments/), copied to the run
 /vault/deployments/v03bridge-*
+
+# Local scratch of scripts/verify.py (its block cache) and of whoever works in this tree; never committed
+/.scratch/
