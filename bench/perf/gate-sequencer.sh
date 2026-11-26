@@ -30,6 +30,9 @@ cp "$T/crown-lez/bundle.tar.zst" "$VOL/bundle.tar.zst"
   echo "bundle sha256 $(sha256sum "$VOL/bundle.tar.zst" | cut -c1-64)"
   echo "ferrata-updater sha256 $(sha256sum "$T/bin/ferrata-updater" | cut -c1-64)"
   echo "GATE_ENTRIES=${GATE_ENTRIES:-24} GATE_STEP=${GATE_STEP:-150} GATE_WINDOW=${GATE_WINDOW:-8} GATE_POLL=${GATE_POLL:-4} GATE_ADVERSARY=${GATE_ADVERSARY:-1}"
+  # A run after the recorded chain's bootstrap left its weak-subjectivity period (24 Nov 2026) sets every process's
+  # clock back with libfaketime (FAKETIME, LD_PRELOAD): the dates in this record are then the faked ones.
+  if [ -n "${FAKETIME:-}" ]; then echo "FAKETIME=$FAKETIME LD_PRELOAD=${LD_PRELOAD:-} (libfaketime: every process's wall clock; monotonic clocks real: FAKETIME_DONT_FAKE_MONOTONIC=${FAKETIME_DONT_FAKE_MONOTONIC:-0})"; fi
 } > "$OUT/machine.txt"
 export CROWN_LEZ_VOL="$VOL" CROWN_LEZ_WORK="$W/zone" CROWN_CHAIN=stand-in
 say "session A: a new zone, the programs deployed"

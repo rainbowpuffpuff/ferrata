@@ -54,6 +54,9 @@ pub enum Via {
     Logos { request_id: String, polls: u32, millis: u64 },
     /// `tx_sender_module` did not broadcast it (why), so it went the plain way.
     Fallback { reason: String },
+    /// The module broadcast `behind`, which the node held queued behind a number nobody sent: it went the plain way at
+    /// that number, `nonce`, filling the gap (`chain::gap_to_fill`).
+    GapFill { nonce: u64, behind: B256 },
 }
 
 impl Via {
@@ -65,6 +68,9 @@ impl Via {
                         "millisToBroadcast": millis })
             }
             Via::Fallback { reason } => json!({ "path": "plain", "fallback": true, "reason": reason }),
+            Via::GapFill { nonce, behind } => {
+                json!({ "path": "plain", "gapFill": true, "nonce": nonce, "behind": format!("{behind:#x}") })
+            }
         }
     }
 }

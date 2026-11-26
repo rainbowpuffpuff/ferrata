@@ -26,6 +26,9 @@
 #   prove     the checkpoint's succinct proof on the CPU, identity_p254 (-> work/checkpoint/input.json for mwrap)
 #   releases  crown-release (one release statement per burn), executor, CPU proofs, identity_p254 each
 #   groth16 P the Groth16 receipt of P (checkpoint | release-<name>) from work/P/proof.json (mwrap on the laptop)
+#   gpu-jobs  instead of prove and groth16 (with ZB_RELEASES_PROVE=0 for releases): one prover request per proof, for
+#             deploy/testnet/tests/prover-kill-resume-modal.sh (the bridge's prover client on Modal's GPU, killed once)
+#   gpu-seals the client's answers ($RUN/prover/done) as receipts/<proof>/seal.hex, journal.hex, prover.json
 #   vault     the local anvil from its saved state: submitCandidate, W warped, finalizeAttested, the release delay
 #             warped, the releases; the vault's state checked
 #   fixture   vault/test/real/fixtures/${ZB_FIXTURE:-zone-bridge}.json for ZoneBridge.t.sol (the journal, the seals, the
@@ -43,14 +46,28 @@
 # Environment: ZB_BUNDLE (the crown-live-3 LEZ bundle: binaries, the final LEZ programs, the fixture), ZB_PROGRAMS (R0BF
 # checkpoint_b.bin, checkpoint.bin, release.bin, ids.jsonl of docs/image-ids.md), ZB_DRIVER, ZB_TMP (box scratch),
 # ZB_ROUND_S (60), ZB_LEAVE_OUT (the attestor left out; default the last; `none`: all of them), ZB_ROTATE,
-# ZB_ROTATE_RUN_S, ZB_FIXTURE; for the stages after `zone`: ZB_CHECKPOINT_B (the rule (B) program's name in ZB_PROGRAMS,
+# ZB_ROTATE_RUN_S, ZB_FIXTURE, ZB_RELEASES_PROVE (0: stage releases writes the statements and runs them in the
+# executor, not the prover); for the stages after `zone`: ZB_CHECKPOINT_B (the rule (B) program's name in ZB_PROGRAMS,
 # default checkpoint_b; checkpoint_b_0_3_5 for a zone on Logos Blockchain 0.3.5-rc.1, whose `zone` stage is
 # lez/live/hooks/return-leg.sh), ZB_N_MIN and ZB_T_MIN (the vault's floors, default 4 and 3).
+#
+# LEZ v0.4.0-rc3 (RFP-022 F.7 on the current release candidate): ZB_LEZ names the LEZ tree whose devnet configuration
+# and Bedrock settings the zone uses (default upstream/lez-v0.4.0-rc1; rc3's four-sequencer devnet is byte-identical,
+# its Bedrock settings are Logos Blockchain 0.3.5-rc.1's, which the bundle must carry in lez-config/: a crown-rc3 bundle
+# repacked with this tree's crown-driver built for rc3, lez/crown/build.sh repack). On a 0.3.5-rc.1 node (its
+# GET /chain/fork answers) the fork digest becomes session A's bedrockGenesisId (crown-a --fork-digest), as
+# lez/live/hooks/return-leg.sh does with one sequencer. ZB_CHECKPOINT_A names the rule (A) program the vault pins beside
+# ZB_CHECKPOINT_B (default checkpoint; checkpoint_0_3_5 on rc3). ZB_DEPLOYER_LABEL: the label whose keccak names the anvil
+# deployer (default ferrata/zone-bridge/anvil-deployer; a fresh label gives an address with nonce 0 on Sepolia too, so
+# that vault/script/fork-rehearsal-31.sh can deploy the same vault at the same address on a fork of it).
+# Every attestor round is timed (GNU time: wall, user and system CPU, peak RSS) and the bytes of the node's and the LEZ
+# node's answers it read are counted (zone/attestor-<i>/resources.tsv: RFP-022 P.6's ferrata_attestor), and each
+# attestor's earliest signed round is kept (zone/attestor-<i>/first-round.json: the stale tip of stage input's refusals).
 set -euo pipefail
 STAGE="${1:?stage}"; RUN_ARG="${2:?run dir (under e2e/runs/)}"
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SPIKE="$(cd "$REPO/.." && pwd)"
-LEZ="$SPIKE/upstream/lez-v0.4.0-rc1"; DEV="$LEZ/lez/configs/docker-all-in-one/devnet"
+LEZ="${ZB_LEZ:-$SPIKE/upstream/lez-v0.4.0-rc1}"; DEV="$LEZ/lez/configs/docker-all-in-one/devnet"
 T="${ZB_TMP:-$SPIKE/tmp/zone-bridge}"
 mkdir -p "$RUN_ARG"; RUN="$(cd "$RUN_ARG" && pwd)"; NAME="$(basename "$RUN")"
 case "$RUN" in "$REPO"/e2e/runs/*) ;; *) echo "the run directory must be under e2e/runs/ (forge reads it there)"; exit 2 ;; esac
@@ -224,12 +241,15 @@ heights() { local i out="" n; n="$(cat "$W/nseq" 2>/dev/null || echo 4)"; for i 
   | sed -n 's/.*"result":\([0-9]*\).*/\1/p')/"; done; echo "${out%/}"; }
 lib_slot() { { curl -fsS -m 5 "$API/cryptarchia/info" 2>/dev/null || true; } | sed -n 's/.*"lib_slot":\([0-9]*\).*/\1/p'; }
 
-attest_round() { # i out: one attestation of the node's final tier by attestor i (fresh answers each round)
-  local i="$1" out="$2" A="$W/att-$i" rc=0
-  rm -rf "$A/answers"; mkdir -p "$A/answers"
+attest_round() { # i out: one attestation of the node's final tier by attestor i (fresh answers each round), timed
+  local i="$1" out="$2" A="$W/att-$i" rc=0 tf
+  rm -rf "$A/answers"; mkdir -p "$A/answers"; tf="$A/time.txt"; rm -f "$tf"
+  /usr/bin/time -f '%e %U %S %M' -o "$tf" \
   "$ATT" attest --deployment "$W/deployment.json" --cert "$A/cert.json" --att-key "$A/key" --node "$API" \
     --lez "http://127.0.0.1:$((19300 + i))" --save "$A/answers" --slot-from "$FROM" --state "$A/state.json" \
     --out "$out" >> "$A/attest.log" 2>&1 || rc=$?
+  # wall s, user s, sys s, peak RSS KiB (GNU time), bytes of the answers read (node and LEZ node), exit
+  echo -e "$(date -u +%FT%TZ)\t$(tail -n 1 "$tf" 2>/dev/null | tr ' ' '\t')\t$(du -sb "$A/answers" | cut -f1)\t$rc" >> "$A/resources.tsv"
   return "$rc"
 }
 
@@ -363,6 +383,26 @@ stage_zone() {
     done ) > "$W/logs/poll.log" 2>&1 &
   LOOP_PID+=($!)
 
+  # -- a 0.3.5-rc.1 node (LEZ v0.4.0-rc3) answers GET /chain/fork: its digest is the configuration's bedrockGenesisId
+  local DIGEST="" FD=()
+  if curl -fsS -m 10 -o "$W/chain-fork.json" "$API/chain/fork" 2>/dev/null; then
+    DIGEST="$(jq -r .fork_digest "$W/chain-fork.json" | sed 's/^0x//' | tr 'A-F' 'a-f')"
+    [[ "$DIGEST" =~ ^[0-9a-f]{64}$ ]] || die "/chain/fork: $(cat "$W/chain-fork.json")"
+    cp "$W/chain-fork.json" "$RUN/zone/chain-fork.json"; FD=(--fork-digest "$DIGEST")
+    log "node: Logos Blockchain with a fork digest (GET /chain/fork): $DIGEST"
+  fi
+
+  # -- the stand-in beacon chain's bootstrap slot: a zone that stamps its blocks with the wall clock (LEZ v0.4.0-rc3) takes
+  #    the instance's Init only inside its checkpoint's weak-subjectivity period, and crown-driver's default slot (Sepolia
+  #    period 1409) left it on 25 November 2026; as CI's sequencer round trip (scripts/ci/sequencer-roundtrip-hook.sh):
+  #    64 slots into the current Sepolia period, or the previous one in the period's first 600 slots
+  if [ -z "${CROWN_STAND_IN_SLOT:-}" ]; then
+    local now_slot period; now_slot=$(( ($(date +%s) - 1655733600) / 12 )); period=$(( now_slot / 8192 ))
+    if [ $(( now_slot - period * 8192 )) -ge 600 ]; then CROWN_STAND_IN_SLOT=$(( period * 8192 + 64 )); else CROWN_STAND_IN_SLOT=$(( (period - 1) * 8192 + 64 )); fi
+    export CROWN_STAND_IN_SLOT
+  fi
+  log "the stand-in beacon chain's bootstrap slot: $CROWN_STAND_IN_SLOT (CROWN_STAND_IN_SLOT)"
+
   # -- session A on the zone: crown-driver against seq-0 (transactions gossip to the turn's sequencer)
   local D=(--rpc "http://127.0.0.1:19300" --run-dir "$W/driver" --program-bin "$B/program/ferrata_lez.bin"
            --bridge-bin "$B/program/ferrata_bridge.bin" --chain stand-in --fixture "$B/fixture" --sequencer-log "$W/logs/seq-0.log")
@@ -370,10 +410,13 @@ stage_zone() {
   log "crown-a: $(jq -c '{keys: (.accredited_keys | length), posting_timeframe, configuration_threshold}' "$W/channel.json")"
   export FERRATA_DROP_AFTER_BLOCKS=40
   timeout 7200 env -u RISC0_DEV_MODE "$DRV" crown-a "${D[@]}" --channel "$W/channel.json" \
-    --genesis "$W/bedrock/deployment-settings.yaml" --identity-out "$W/session-a.json" > "$W/logs/driver-a.log" 2>&1 \
+    --genesis "$W/bedrock/deployment-settings.yaml" "${FD[@]}" --identity-out "$W/session-a.json" > "$W/logs/driver-a.log" 2>&1 \
     || { tail -n 25 "$W/logs/driver-a.log" | scrub; die "crown-a"; }
   tail -n 4 "$W/logs/driver-a.log" | scrub | tee -a "$RUN/logs/zone-bridge.log"
   cp "$W/session-a.json" "$W/channel.json" "$RUN/lez/session-a/"; cp "$W/bedrock/deployment-settings.yaml" "$RUN/lez/session-a/"
+  if [ -n "$DIGEST" ]; then
+    [ "$(jq -r .bedrockGenesisId "$W/session-a.json" | sed 's/^0x//')" = "$DIGEST" ] || die "session A's bedrockGenesisId is not the fork digest"
+  fi
   local T0 T0H KEYS PT CTH; T0="$(jq -r .tip.id "$W/session-a.json")"; T0H="$(jq -r .tip.hash "$W/session-a.json")"
   KEYS="$(jq -r '.channel.keys | join(",")' "$W/session-a.json")"; PT="$(jq -r .channel.postingTimeframe "$W/session-a.json")"
   CTH="$(jq -r .channel.configTipHash "$W/session-a.json")"
@@ -385,7 +428,7 @@ stage_zone() {
   ANVIL_PID=$!
   for i in $(seq 1 60); do cast chain-id --rpc-url "$R" > /dev/null 2>&1 && break; sleep 1; done
   local DEPLOYER N VAULT CID GS Z=0x0000000000000000000000000000000000000000000000000000000000000000
-  DEPLOYER="$(cast to-check-sum-address "0x$(cast keccak 'ferrata/zone-bridge/anvil-deployer' | cut -c27-66)")"
+  DEPLOYER="$(cast to-check-sum-address "0x$(cast keccak "${ZB_DEPLOYER_LABEL:-ferrata/zone-bridge/anvil-deployer}" | cut -c27-66)")"
   cast rpc anvil_setBalance "$DEPLOYER" 0x3635C9ADC5DEA00000 --rpc-url "$R" > /dev/null
   N="$(cast nonce "$DEPLOYER" --rpc-url "$R")"
   VAULT="$(cast compute-address "$DEPLOYER" --nonce $(( N + 3 )) | awk '{print $NF}')"   # verifier N, stop N+1, registry N+2
@@ -393,12 +436,13 @@ stage_zone() {
   GS="$(python3 -I "$REPO/e2e/crown/identity.py" genesis-state --tip-id "$T0" --tip-hash "$T0H" --keys "$KEYS" \
         --posting-timeframe "$PT" --config-tip-hash "$CTH")"
   log "anvil (local, chain id $CHAIN_ID, no fork): deployer $DEPLOYER (impersonated) nonce $N; vault $VAULT; configId $CID; genesisState $GS"
-  jq -n --arg v "$VAULT" --arg c "$CID" --arg g "$GS" --argjson ch "$CHAIN_ID" --arg d "$DEPLOYER" '{label:
+  jq -n --arg v "$VAULT" --arg c "$CID" --arg g "$GS" --argjson ch "$CHAIN_ID" --arg d "$DEPLOYER" --arg f "$DIGEST" '{label:
     "STAND-IN Ethereum side: a local anvil (no fork, Sepolia chain id because crown-driver pins it), W and the release delay warped; the zone, its programs and proofs are real",
-    chainId: $ch, vault: $v, configId: $c, genesisState: $g, delta: 3600, deployer: $d}' > "$RUN/identity.json"
-  jq -n --arg c "$CID" --arg g "$GS" --arg a "$(id_of checkpoint)" --arg b "$(id_of checkpoint_b)" --arg r "$(id_of release)" \
-    --arg z "$Z" '{_source: "zone-bridge (checkpoint/attestor/zone-bridge.sh): the zone of four sequencers, nMin 4, tMin 3",
-    checkpointImageIdA: $a, checkpointImageIdB: $b, releaseImageId: $r, lezConfigId: $c, genesisState: $g, nMin: 4, tMin: 3,
+    chainId: $ch, vault: $v, configId: $c, genesisState: $g, delta: 3600, deployer: $d} + (if $f == "" then {} else {forkDigest: $f} end)' > "$RUN/identity.json"
+  jq -n --arg c "$CID" --arg g "$GS" --arg a "$(id_of "${ZB_CHECKPOINT_A:-checkpoint}")" --arg b "$(id_of "$CKB")" --arg r "$(id_of release)" \
+    --arg z "$Z" --argjson nm "${ZB_N_MIN:-4}" --argjson tm "${ZB_T_MIN:-3}" --arg lez "$(basename "$LEZ")" \
+    '{_source: ("zone-bridge (checkpoint/attestor/zone-bridge.sh): the zone of four sequencers (" + $lez + "), nMin \($nm), tMin \($tm)"),
+    checkpointImageIdA: $a, checkpointImageIdB: $b, releaseImageId: $r, lezConfigId: $c, genesisState: $g, nMin: $nm, tMin: $tm,
     postingTimeframe: 0, ethLezDefinition: $z, tokenLezDefinition: $z}' > "$RUN/params.json"
   local d0 d1 C0 C1 base slots sargs=()
   d0="$("$DRV" destinations | jq -r .public0)"; d1="$("$DRV" destinations | jq -r .private0)"
@@ -467,6 +511,9 @@ stage_zone() {
     jq '{tip_id, tip_hash, key_set_hash, node}' "$W/att-$i/final.json" > /dev/null
     scrub < "$W/att-$i/attest.log" | tail -n 400 > "$RUN/zone/attestor-$i/attest.log"
     ls "$W/att-$i/rounds" > "$RUN/zone/attestor-$i/tips-signed.txt"
+    cp "$W/att-$i/resources.tsv" "$RUN/zone/attestor-$i/resources.tsv" 2>/dev/null || true
+    local first; first="$(ls "$W/att-$i/rounds" | sed -n 's/^tip-\([0-9]*\)\.json$/\1/p' | sort -n | head -n 1)"
+    [ -n "$first" ] && cp "$W/att-$i/rounds/tip-$first.json" "$RUN/zone/attestor-$i/first-round.json"
   done
 
   # -- the node's answers (the checkpoint's input is built from these alone): read from the first slot the attestors
@@ -543,6 +590,25 @@ stage_input() {
   if "$E" exec --program "$PROGRAMS/$CKB.bin" --input "$T/$n-below.input" --meta "$T/two-exec-meta.json" > "$C/exec-below.txt" 2>&1; then
     die "the guest accepted t - 1 attestations"; fi
   grep -o 'checkpoint refused: [^"]*' "$C/exec-below.txt" | head -n 1 | tee -a "$C/exec-below.txt"
+  # RFP-022 F.7's refusals over the run's real attestations (checkpoint/attestor's attestor-refusals --real): t - 1 of
+  # them alone, with an attestation by a key outside the live set, with one of them twice, and with the earliest round
+  # of the attestor left out (a real signature of an older tip); each refused natively (its meta) and by the guest
+  local REF="$REPO/checkpoint/target/release/attestor-refusals" RD="$T/refusals-$NAME" stale=() f c want got
+  [ -x "$REF" ] || die "no $REF (stage build)"
+  [ -f "$RUN/zone/attestor-$(left_out)/first-round.json" ] && stale=(--stale "$RUN/zone/attestor-$(left_out)/first-round.json")
+  rm -rf "$RD"; mkdir -p "$RD" "$C/refusals"
+  "$REF" --base "$C/$n.input" --real "$(all_but_one)" "${stale[@]}" --out-dir "$RD" --prefix "$n-refuse" | tee "$C/refusals/native.txt"
+  : > "$C/refusals/guest.txt"
+  for f in "$RD"/*.input; do
+    c="$(basename "$f" .input)"; cp "$RD/$c.json" "$C/refusals/$c.json"
+    want="$(jq -r .expect_refusal "$RD/$c.json" | grep -oE 'InsufficientAttestations|NotAccredited|DuplicateAttestor|NotADescendant' | head -n 1)"
+    [ -n "$want" ] || die "$c: no expected refusal in its meta"
+    if "$E" exec --program "$PROGRAMS/$CKB.bin" --input "$f" --meta "$T/two-exec-meta.json" > "$RD/$c.exec.txt" 2>&1; then
+      die "the guest accepted $c"; fi
+    got="$(grep -o 'checkpoint refused: [^"]*' "$RD/$c.exec.txt" | head -n 1)"
+    case "$got" in *"$want"*) ;; *) die "$c: the guest refused with '$got', the native run with $want" ;; esac
+    echo "$c: native $(jq -r .native "$RD/$c.json"); guest $got" | tee -a "$C/refusals/guest.txt"
+  done
 }
 
 # ---- prove ------------------------------------------------------------------------------------------------------
@@ -562,6 +628,10 @@ stage_releases() {
   for f in "$REL"/release-*.input; do
     p="$(basename "$f" .input)"
     "$E" exec --program "$PROGRAMS/release.bin" --input "$f" --meta "$REL/$p.json" > "$REL/$p.exec.json"
+    # ZB_RELEASES_PROVE=0: the statements and their executor runs only; the proofs are made elsewhere (a GPU through
+    # the bridge's prover client: deploy/testnet/tests/prover-kill-resume-modal.sh, then receipts/<p>/seal.hex,
+    # journal.hex and prover.json)
+    [ "${ZB_RELEASES_PROVE:-1}" = 0 ] && continue
     "$E" prove --program "$PROGRAMS/release.bin" --input "$f" --meta "$REL/$p.json" --out-dir "$REL/receipts/$p" | tee "$REL/$p.prove.json"
     mkdir -p "$W/work/$p" "$RUN/work/$p"
     "$E" p254 --receipt "$REL/receipts/$p/receipt-succinct.bin" --image-id "$(id_of release)" --out-dir "$W/work/$p"
@@ -580,9 +650,75 @@ stage_groth16() {
   "$E" verify --receipt "$d/receipt-groth16.bin" --image-id "$img" --meta "$meta"
 }
 
+# ---- gpu-jobs, gpu-seals: the proofs on a GPU through the bridge's prover client ----------------------------------
+# gpu-jobs writes one prover request per proof (the checkpoint, then each release statement of stage releases) into
+# $T/gpu-<run>/; deploy/testnet/tests/prover-kill-resume-modal.sh $RUN/prover <those requests> proves them on Modal's GPU
+# (the client killed once mid-proof and resumed); gpu-seals turns its answers into receipts/<proof>/seal.hex, journal.hex
+# and prover.json, each journal held to the statement's own (the native one), for stages vault, fixture and verify.
+stage_gpu_jobs() {
+  local C="$RUN/checkpoint" n G="$T/gpu-$NAME/requests" m p
+  n="$(cname)"; rm -rf "$G"; mkdir -p "$G"
+  jq -n --arg i "$C/$n.input" --arg m "$C/$n.json" '{kind: "checkpoint-b", input: $i, meta: $m}' > "$G/0-checkpoint.json"
+  for m in "$RUN"/releases/release-*.json; do
+    case "$m" in *.exec.json|*.prove.json) continue ;; esac
+    p="$(basename "$m" .json)"
+    jq -n --arg i "$RUN/releases/$p.input" --arg m "$m" '{kind: "release", input: $i, meta: $m}' > "$G/1-$p.json"
+  done
+  ls "$G"
+}
+stage_gpu_seals() {
+  local C="$RUN/checkpoint" n D="$RUN/prover/done" d p want
+  n="$(cname)"
+  [ -f "$D/0-checkpoint.json" ] || die "no answer $D/0-checkpoint.json (deploy/testnet/tests/prover-kill-resume-modal.sh)"
+  for d in "$D"/*.json; do
+    [ "$(jq -r .ok "$d")" = true ] || die "$d: not ok"
+    case "$(basename "$d" .json)" in
+      0-checkpoint) p="$C/receipts"; want="$(jq -r .journal "$C/$n.json")" ;;
+      1-release-*) p="$RUN/releases/receipts/$(basename "$d" .json | sed 's/^1-//')"
+                   want="$(jq -r .journal "$RUN/releases/$(basename "$d" .json | sed 's/^1-//').json")" ;;
+      *) die "$d: not a request of gpu-jobs" ;;
+    esac
+    mkdir -p "$p"
+    [ "$(jq -r .journal "$d" | sed 's/^0x//')" = "$(echo "$want" | sed 's/^0x//')" ] || die "$d: the proof's journal is not the statement's"
+    jq -r .seal "$d" | sed 's/^0x//' > "$p/seal.hex"; jq -r .journal "$d" | sed 's/^0x//' > "$p/journal.hex"
+    jq '{name, kind, image_id, ok, seconds, call_id, attempts, resumed, prover}' "$d" > "$p/prover.json"
+    echo "$(basename "$d" .json): seal $(head -c 10 "$p/seal.hex")..., $(( $(tr -d '\n' < "$p/seal.hex" | wc -c) / 2 )) bytes, journal = the statement's"
+  done
+}
+
 # ---- vault: the local anvil from its saved state ------------------------------------------------------------------
+# A rerun of stage vault starts again from the zone stage's saved chain ($W/anvil-state.json), on which none of the
+# stage's own transactions exist; an earlier attempt's (its manifest stages, their journal rows and logs) are moved to
+# vault-attempt-<n>/, kept, so that the stage sends them again instead of skipping them as done or waiting for them.
+vault_attempt_aside() {
+  local stages a=1 f
+  stages="$(jq -r '.stages | keys[] | select(. == "submit" or . == "finalizeAttested" or startswith("release-"))' \
+    "$RUN/manifest.json" 2>/dev/null)"
+  [ -n "$stages" ] || return 0
+  while [ -e "$RUN/vault-attempt-$a" ]; do a=$((a + 1)); done
+  mkdir -p "$RUN/vault-attempt-$a"
+  cp "$RUN/manifest.json" "$RUN/net/journal.jsonl" "$RUN/vault-attempt-$a/"
+  for f in $stages; do [ -f "$RUN/logs/$f.log" ] && mv "$RUN/logs/$f.log" "$RUN/vault-attempt-$a/"; done
+  python3 -I - "$RUN/manifest.json" "$RUN/net/journal.jsonl" $stages <<'PY'
+import json, sys
+manifest, journal, stages = sys.argv[1], sys.argv[2], set(sys.argv[3:])
+m = json.load(open(manifest))
+for s in stages:
+    m["stages"].pop(s, None)
+json.dump(m, open(manifest, "w"), indent=2)
+rows = [json.loads(line) for line in open(journal) if line.strip()]
+gone = {r["hash"] for r in rows if r.get("event") == "signed" and r.get("stage") in stages}
+with open(journal, "w") as out:
+    for r in rows:
+        if r.get("hash") not in gone:
+            out.write(json.dumps(r, sort_keys=True) + "\n")
+PY
+  log "an earlier vault attempt's transactions ($(echo $stages)) are not on the chain this stage starts from: set aside in vault-attempt-$a/"
+}
+
 stage_vault() {
   [ -s "$W/anvil-state.json" ] || die "no saved anvil state at $W/anvil-state.json"
+  vault_attempt_aside
   local C="$RUN/checkpoint" n rel="[]" e p VAULT
   n="$(cname)"; VAULT="$(jq -r .vault "$RUN/identity.json")"
   [ "$(hexfile "$C/receipts/journal.hex")" = "$(jq -r .journal "$C/$n.json")" ] || die "checkpoint journal != native"
@@ -626,8 +762,23 @@ stage_vault() {
     log "release $k: recipient $rcpt +$(python3 -I -c "print($after - $before)") wei; nullifierUsed $used"
     paid="$(jq -c --arg r "$rcpt" --arg n "$nul" --arg w "$(python3 -I -c "print($after - $before)")" '. + [{recipient: $r, nullifier: $n, paidWei: $w}]' <<< "$paid")"
   done
+  # replays (nothing is paid twice): each release's and the checkpoint's mined calldata called again from its sender
+  # (e2e/crown/sepolia.sh would skip a stage its journal holds, and Crown.s.sol one already on chain, so neither can
+  # send a replay); each must revert with the vault's error for it (a spent nullifier; a parent no longer final), so
+  # that an RPC failure or another refusal cannot pass for the replay's
+  local replays="[]" why stage h input out
+  for stage in $(seq 0 $(( nrel - 1 )) | sed 's/^/release-/') submit; do
+    h="$(jq -r --arg s "$stage" '.stages[$s][-1].hash' "$RUN/manifest.json")"
+    input="$(cast tx "$h" input --rpc-url "$R")"
+    if out="$(cast call "$VAULT" "$input" --from "$ETH_FROM" --rpc-url "$R" 2>&1)"; then die "$stage called again was not refused"; fi
+    why=NullifierAlreadyUsed; [ "$stage" = submit ] && why=ParentNotFinal
+    grep -qi "$(cast sig "$why()" | sed 's/^0x//')" <<< "$out" || {
+      echo "$out" > "$W/logs/replay-$stage.log"; die "$stage called again: refused, but not with $why (logs/replay-$stage.log)"; }
+    log "$stage (transaction $h) called again: refused ($why)"
+    replays="$(jq -c --arg w "$stage" --arg h "$h" --arg r "$why" '. + [{what: $w, transaction: $h, refused: $r}]' <<< "$replays")"
+  done
   jq -n --arg f "$final" --arg root "$root" --argjson paid "$paid" --arg bal "$(cast balance "$VAULT" --rpc-url "$R")" \
-    '{finalState: $f, burnRoot: $root, burnRootAccepted: true, releases: $paid, vaultBalanceWeiAfter: $bal}' > "$RUN/vault-checks.json"
+    --argjson rp "$replays" '{finalState: $f, burnRoot: $root, burnRootAccepted: true, releases: $paid, replaysRefused: $rp, vaultBalanceWeiAfter: $bal}' > "$RUN/vault-checks.json"
   "$S" "$RUN" status | tee -a "$RUN/logs/zone-bridge.log"
 }
 
@@ -662,13 +813,27 @@ stage_verify() {
   cmp -s "$v/burns.json" "$C/burns.json" || die "the re-derived burns.json differs"
   echo "checkpoint input, journal and burns re-derived from the recorded node answers and attestations: equal"
   "$E" image-id "$PROGRAMS/$CKB.bin" "$PROGRAMS/release.bin"
-  "$E" verify --receipt "$C/receipts/receipt-succinct.bin" --image-id "$(id_of "$CKB")" --meta "$C/$n.json"
-  "$E" verify --receipt "$C/receipts/receipt-groth16.bin" --image-id "$(id_of "$CKB")" --meta "$C/$n.json"
+  if [ -f "$C/receipts/receipt-succinct.bin" ]; then
+    "$E" verify --receipt "$C/receipts/receipt-succinct.bin" --image-id "$(id_of "$CKB")" --meta "$C/$n.json"
+    "$E" verify --receipt "$C/receipts/receipt-groth16.bin" --image-id "$(id_of "$CKB")" --meta "$C/$n.json"
+  else
+    # proven on a GPU through the bridge's prover client (zone-bridge.sh gpu-jobs, then gpu-seals): the record holds the
+    # 260-byte Groth16 seal and the journal; RISC Zero's verifier checks the seal in the vault stage and the fixture's tests
+    [ -f "$C/receipts/prover.json" ] || die "no receipt and no prover record for the checkpoint"
+    [ "$(hexfile "$C/receipts/journal.hex")" = "$(jq -r .journal "$C/$n.json")" ] || die "the GPU proof's journal is not the native one"
+    echo "checkpoint: proven on the GPU (receipts/prover.json); its journal is the native one; its seal is checked by RISC Zero's verifier (stage vault)"
+  fi
   for m in "$RUN"/releases/release-*.json; do
     case "$m" in *.exec.json|*.prove.json) continue ;; esac
     p="$(basename "$m" .json)"
-    "$E" verify --receipt "$RUN/releases/receipts/$p/receipt-succinct.bin" --image-id "$(id_of release)" --meta "$m"
-    "$E" verify --receipt "$RUN/releases/receipts/$p/receipt-groth16.bin" --image-id "$(id_of release)" --meta "$m"
+    if [ -f "$RUN/releases/receipts/$p/receipt-succinct.bin" ]; then
+      "$E" verify --receipt "$RUN/releases/receipts/$p/receipt-succinct.bin" --image-id "$(id_of release)" --meta "$m"
+      "$E" verify --receipt "$RUN/releases/receipts/$p/receipt-groth16.bin" --image-id "$(id_of release)" --meta "$m"
+    else
+      [ -f "$RUN/releases/receipts/$p/prover.json" ] || die "$p: no receipt and no prover record"
+      [ "$(hexfile "$RUN/releases/receipts/$p/journal.hex")" = "$(jq -r .journal "$m")" ] || die "$p: the GPU proof's journal"
+      echo "$p: proven on the GPU (prover.json); its journal is the statement's; its seal is checked by the vault stage"
+    fi
   done
   [ "$(jq -r .candidate.seal "$RUN/crown.json")" = "0x$(hexfile "$C/receipts/seal.hex")" ] && echo "crown.json: the candidate's seal = the verified receipt's"
 }
@@ -685,6 +850,8 @@ set +e
     input) stage_input ;;
     prove) stage_prove ;;
     releases) stage_releases ;;
+    gpu-jobs) stage_gpu_jobs ;;
+    gpu-seals) stage_gpu_seals ;;
     groth16) stage_groth16 "$@" ;;
     vault) stage_vault ;;
     fixture) stage_fixture ;;
@@ -695,7 +862,7 @@ set +e
 rc=$?
 set -e
 case "$STAGE" in
-  zone|answers|input|prove|releases|groth16|vault|fixture|records)
+  zone|answers|input|prove|releases|gpu-seals|groth16|vault|fixture|records)
     records_final || { log "STOP: the records name this machine or an agent's folder (listed above)"; [ "$rc" -ne 0 ] || rc=1; } ;;
 esac
 exit "$rc"

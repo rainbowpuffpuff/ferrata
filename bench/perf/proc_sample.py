@@ -3,7 +3,7 @@
 (VmRSS, VmHWM), bytes read and written through syscalls (rchar, wchar), into a CSV (bench/perf: a daemon's
 resources). --pid NAME=PID, repeatable.
   python3 -I proc_sample.py --pid honest-1=1234 --pid honest-2=1240 --out samples.csv --every 5"""
-import argparse, os, signal, sys, time
+import argparse, os, select, signal, sys, time
 
 def read(pid):
     with open(f"/proc/{pid}/stat") as f:
@@ -46,7 +46,7 @@ def main():
             except OSError:
                 pass
         out.flush()
-        time.sleep(a.every)
+        select.select([], [], [], a.every)  # not time.sleep: EINVAL under the gate runs' libfaketime (beacon_replay.py)
 
 if __name__ == "__main__":
     sys.exit(main())

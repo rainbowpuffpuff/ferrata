@@ -1,0 +1,14 @@
+{
+  "destinations": [
+    {
+      "kind": 2,
+      "account": 0,
+      "dest": "54d662b664519cb8aef608ae84a63e041cc16019e4a07c34828311996f0c817a"
+    },
+    {
+      "kind": 1,
+      "account": 1,
+      "dest": "2d6cb849edc6d8b1599c558ecd87bc09b4420bdc60f1b3be85547a5834b153fc"
+    }
+  ]
+}

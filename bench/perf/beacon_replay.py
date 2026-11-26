@@ -16,6 +16,7 @@ client downloads are counted apart. On SIGTERM or SIGINT it writes --stats (JSON
 import argparse
 import json
 import os
+import select
 import signal
 import struct
 import sys
@@ -191,7 +192,10 @@ def main():
     signal.signal(signal.SIGINT, stop)
     while True:
         replay.tick()
-        time.sleep(1)
+        # Not time.sleep: under libfaketime with a real monotonic clock (FAKETIME_DONT_FAKE_MONOTONIC=1, as the gate
+        # runs set the clock back: gate-sequencer.sh) Python's time.sleep fails with EINVAL; select's relative timeout
+        # is left alone.
+        select.select([], [], [], 1)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+# The test network's zone grown from one sequencer key to 1 + N (RFP-022 F.7 with more than one sequencer key on the
+# network we run; deploy/testnet/MULTIKEY.md is the runbook, with what it changes for good and what can go wrong).
+# Run as root on the host, one step at a time; nothing here is undone by another step.
+#
+#   ferrata-zone-keys plan N                        read only: the channel's keys and threshold, the configurations
+#                                                   `configs N` would write, the ports they take
+#   ferrata-zone-keys configs N [--src F] [--out D] the configurations of sequencers 1..N (D/sequencer_config-<i>.json)
+#                                                   and the first's (D/sequencer_config-0.json): fixed gossip ports
+#                                                   19100 + i on loopback, each the others' bootstrap peer, metrics on
+#                                                   9000 + i, homes /var/lib/ferrata/sequencer-<i>; F: the first
+#                                                   sequencer's configuration (default its home's). Writes only D
+#                                                   (default /etc/ferrata/zone-keys).
+#   ferrata-zone-keys setup N                       `sequencer_service setup` of each further home as user ferrata,
+#                                                   with the node's funding key (no channel created): prints each key
+#   ferrata-zone-keys stake --wallet-home W --from Public/<account> [--send]
+#                                                   `sequencer_service stake` of each further key from a funded LEZ
+#                                                   account of W (dry without --send: the commands printed)
+#   ferrata-zone-keys wait N                        until the channel accredits 1 + N keys (the first sequencer's
+#                                                   channel_signing actor proposes the new set; Bedrock applies it)
+#   ferrata-zone-keys start N                       the first sequencer's gossip fixed (its home configuration
+#                                                   replaced by sequencer_config-0.json, the old one kept) and it
+#                                                   restarted; ferrata-sequencer@1..N started; each further attestor
+#                                                   set up and ferrata-bridge-attestor@1..N started
+set -euo pipefail
+DATA=/var/lib/ferrata; OPT=/opt/ferrata; API=http://127.0.0.1:18080
+CHANNEL=0101010101010101010101010101010101010101010101010101010101010101
+die() { echo "ferrata-zone-keys: $*" >&2; exit 1; }
+num() { [[ "${1:-}" =~ ^[1-8]$ ]] || die "N: 1 to 8 further sequencers"; }
+channel() { curl -fsS -m 10 "$API/channel/$CHANNEL"; }
+keys_now() { channel | python3 -I -c 'import json,sys; c=json.load(sys.stdin); print(len(c["accredited_keys"]))'; }
+
+configs() { # N SRC OUT
+  python3 -I - "$1" "$2" "$3" <<'PY'
+import copy, json, os, sys
+n, src, out = int(sys.argv[1]), sys.argv[2], sys.argv[3]
+base = json.load(open(src))
+os.makedirs(out, exist_ok=True)
+ports = [19100 + i for i in range(n + 1)]
+for i in range(n + 1):
+    c = copy.deepcopy(base)
+    c["home"] = "/var/lib/ferrata/sequencer" if i == 0 else f"/var/lib/ferrata/sequencer-{i}"
+    c["gossip"] = {"listen_addr": f"/ip4/127.0.0.1/udp/{ports[i]}/quic-v1",
+                   "bootstrap_peers": [f"/ip4/127.0.0.1/udp/{p}/quic-v1" for j, p in enumerate(ports) if j != i]}
+    c["metrics_listen_address"] = f"127.0.0.1:{9000 + i}"
+    # everything else (the genesis, the node, the channel, the fee reserve) is the first sequencer's: one zone
+    with open(os.path.join(out, f"sequencer_config-{i}.json"), "w") as f:
+        json.dump(c, f, indent=2)
+        f.write("\n")
+    print(f"sequencer {i}: home {c['home']}, gossip {c['gossip']['listen_addr']}, metrics {c['metrics_listen_address']}")
+PY
+}
+
+case "${1:-}" in
+  plan)
+    num "${2:-}"; N="$2"
+    echo "channel now: $(channel | python3 -I -c 'import json,sys; c=json.load(sys.stdin); print({k: c.get(k) for k in ("accredited_keys", "configuration_threshold", "posting_timeframe", "tip_slot")})')"
+    T="$(mktemp -d "${TMPDIR:-$DATA}/.zone-keys-plan.XXXXXX")"; trap 'rm -rf "$T"' EXIT
+    configs "$N" "$DATA/sequencer/sequencer_config.json" "$T"
+    for i in $(seq 0 "$N"); do
+      for p in $((19100 + i)) $((9000 + i)) $((3040 + i)); do
+        if ss -lntu 2>/dev/null | awk '{print $5}' | grep -q ":$p\$"; then echo "port $p is taken (sequencer $i)"; fi
+      done
+    done
+    echo "after start: the channel would accredit $((1 + N)) keys, its threshold t($((1 + N))); every further sequencer, its attestor and the first all on this host (one operator: the mechanism, not independent keys)"
+    ;;
+  configs)
+    num "${2:-}"; N="$2"; shift 2; SRC="$DATA/sequencer/sequencer_config.json"; OUT=/etc/ferrata/zone-keys
+    while [ $# -gt 0 ]; do case "$1" in --src) SRC="$2"; shift 2 ;; --out) OUT="$2"; shift 2 ;; *) die "configs: $1?" ;; esac; done
+    configs "$N" "$SRC" "$OUT"
+    ;;
+  setup)
+    # the node's funding key, as install.sh sets the first sequencer up with (its notes fund every inscription: the
+    # sequencers share it, as upstream's four-sequencer devnet does; deploy/testnet/MULTIKEY.md, "What can go wrong")
+    num "${2:-}"; N="$2"; FUNDING_PK="${FERRATA_FUNDING_PK:-2e03b2eff5a45478e7e79668d2a146cf2c5c7925bce927f2b1c67f2ab4fc0d26}"
+    for i in $(seq 1 "$N"); do
+      H="$DATA/sequencer-$i"; C=/etc/ferrata/zone-keys/sequencer_config-$i.json
+      [ -f "$C" ] || die "no $C: configs $N first"
+      [ -e "$H/sequencer_config.json" ] && { echo "sequencer $i: $H set up already"; continue; }
+      install -d -o ferrata -g ferrata -m 750 "$H"
+      runuser -u ferrata -- "$OPT/bin/sequencer_service" setup "$H" --config "$C" --funding-public-key "$FUNDING_PK" > "/var/log/ferrata/sequencer-$i-setup.log" 2>&1
+      echo "sequencer $i: channel key $(grep -o 'channel signing public key *[0-9a-f]*' "/var/log/ferrata/sequencer-$i-setup.log" | awk '{print $NF}')"
+    done
+    ;;
+  stake)
+    shift; W=""; FROM=""; SEND=0
+    while [ $# -gt 0 ]; do case "$1" in --wallet-home) W="$2"; shift 2 ;; --from) FROM="$2"; shift 2 ;; --send) SEND=1; shift ;; *) die "stake: $1?" ;; esac; done
+    [ -d "$W" ] && [[ "$FROM" == Public/* ]] || die "stake --wallet-home DIR --from Public/<account> [--send]"
+    for H in "$DATA"/sequencer-[1-8]; do
+      [ -f "$H/sequencer_config.json" ] || continue
+      k="$(grep -o 'channel signing public key *[0-9a-f]*' "/var/log/ferrata/$(basename "$H")-setup.log" | awk '{print $NF}')"
+      [[ "$k" =~ ^[0-9a-f]{64}$ ]] || die "$H: its channel key is not in its setup log"
+      cmd=("$OPT/bin/sequencer_service" stake --wallet-home "$W" --sequencer-key "$k" --from "$FROM")
+      if [ "$SEND" = 1 ]; then echo "staking $k ($H)"; "${cmd[@]}"; else echo "(dry) ${cmd[*]}"; fi
+    done
+    ;;
+  wait)
+    num "${2:-}"; N="$2"; want=$((1 + N))
+    for _ in $(seq 1 180); do k="$(keys_now || echo 0)"; [ "$k" = "$want" ] && { echo "the channel accredits $k keys"; channel; echo; exit 0; }; sleep 10; done
+    die "the channel accredits $(keys_now) keys after 30 min, not $want"
+    ;;
+  start)
+    num "${2:-}"; N="$2"
+    [ "$(keys_now)" = "$((1 + N))" ] || die "the channel does not accredit $((1 + N)) keys yet (wait $N)"
+    C0=/etc/ferrata/zone-keys/sequencer_config-0.json; [ -f "$C0" ] || die "no $C0: configs $N first"
+    cp -a "$DATA/sequencer/sequencer_config.json" "$DATA/sequencer/sequencer_config.json.before-zone-keys"
+    install -o ferrata -g ferrata -m 640 "$C0" "$DATA/sequencer/sequencer_config.json"
+    systemctl restart ferrata-sequencer.service
+    for i in $(seq 1 "$N"); do
+      systemctl start "ferrata-sequencer@$i.service"
+      FERRATA_ATTESTOR_INSTANCE="$i" "$OPT/bin/ferrata-bridge-attestor" setup
+      systemctl start "ferrata-bridge-attestor@$i.service"
+    done
+    systemctl --no-pager status ferrata-sequencer.service "ferrata-sequencer@*" "ferrata-bridge-attestor*" | grep -E '●|Active:' || true
+    ;;
+  *) sed -n 2,30p "$0"; exit 2 ;;
+esac

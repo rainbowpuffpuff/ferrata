@@ -187,12 +187,14 @@ when that send goes through, it fills a number the module burnt without broadcas
 otherwise wait behind; against a transaction of the module's that did leave it costs at most one extra call (a second
 `cancelCandidate` or `revokeFrom` reverts; a second `pauseCheckpoints` moves the pause's end by the seconds between
 the two). If the plain send fails once right after the module burnt a nonce (an error from the monitor's own endpoint,
-or a watcher account out of gas money at that moment), the monitor does not recover: the module's later sends come
-back broadcast, so the fallback does not run again, and they wait behind that number; no cancel is mined. Not handled
-(the monitor would have to keep the burnt nonce in its state and send the plain way until the account's nonce is past
-it). Without the key it is an error, retried at the next poll. `bash tests/logos-fallback.sh` runs this against a stand-in for
-`tx_sender_module` on anvil ([`results/logos-fallback/`](results/logos-fallback/README.md): every cancel mined, at the
-burnt number when the module failed and the plain send went through; with the previous code none was).
+or a watcher account out of gas money at that moment), the module's later sends come back broadcast and the node holds
+them queued behind that number: when one is not mined within `--tx-timeout` and its nonce is above the account's
+pending nonce, the monitor sends the same call the plain way at the pending nonce, which fills the gap, and the module's
+held sends are mined after it (`chain::gap_to_fill`; alerts name it `via.gapFill`). Without the key it is an error,
+retried at the next poll. `bash tests/logos-fallback.sh` runs this against a stand-in for `tx_sender_module` on anvil
+([`results/logos-fallback/`](results/logos-fallback/README.md): every cancel mined, at the burnt number when the module
+failed and the plain send went through, and at it again when that plain send failed and a later request was held
+behind it; with the code before each fix, none was).
 
 ## Not built
 

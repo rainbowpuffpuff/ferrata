@@ -1,0 +1,8 @@
+[10:08:36] client 1 started on 3 requests (Modal workspace from MODAL_PROFILE; the first, 0-checkpoint, is killed once it is spawned)
+[10:08:44] client 1 killed (SIGKILL) while it waited for call fc-01M8BN8880R6Y1QYQP3PNPSD0W (0-checkpoint)
+[10:25:25] 0-checkpoint: answered by the call client 1 spawned (fc-01M8BN8880R6Y1QYQP3PNPSD0W), resumed by client 2, one attempt
+request              call id spawned                call id answered               attempts  resumed  ok    seconds
+0-checkpoint         fc-01M8BN8880R6Y1QYQP3PNPSD0W  fc-01M8BN8880R6Y1QYQP3PNPSD0W  1         true     true  249.7
+1-release-private-1  fc-01M8BNHDMYTKCDEFK93D435RZF  fc-01M8BNHDMYTKCDEFK93D435RZF  1         false    true  569.1
+1-release-public-0   fc-01M8BP1EVZJWCQDXFD13Q9TRJG  fc-01M8BP1EVZJWCQDXFD13Q9TRJG  1         false    true  179.9
+[10:25:25] PROVER KILL-RESUME OK
