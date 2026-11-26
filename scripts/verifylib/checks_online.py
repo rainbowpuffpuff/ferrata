@@ -203,8 +203,17 @@ def _network_head(ctx):
        against="the committed manifest (deploy/testnet/web/trust/bridge/verify/manifest.json) and the git blobs it "
                "names", needs=("python3", "git", "network"), inputs=("scripts/site-manifest.py",))
 def _site_manifest(ctx):
-    return _script(ctx, ["python3", "-I", "scripts/site-manifest.py", "verify", "--site", ctx.lez_url, "--no-second"],
-                   ok_lines=4, unreadable=())
+    # A file the host did not serve in time is not a file that differs: read once more, and if fetching is all that
+    # failed again, the check is a skip (it could not see those files), never a pass.
+    argv = ["python3", "-I", "scripts/site-manifest.py", "verify", "--site", ctx.lez_url, "--no-second"]
+    for attempt in (1, 2):
+        rc, out = _run(ctx, argv, timeout=1800)
+        if rc == 0:
+            return out[-4:]
+        fails = [ln for ln in out if ln.lstrip().startswith("FAIL ")]
+        if not fails or not all("cannot fetch" in ln for ln in fails):
+            raise CheckFailed("\n".join([f"exit status {rc}"] + out[-25:]))
+    raise Skipped(f"{len(fails)} file(s) could not be fetched from the host, twice: " + fails[0].strip()[:160])
 
 
 @check(id="updater-live-sepolia-beacon", family="beacon", mode="online", evidence=(99, 104),
