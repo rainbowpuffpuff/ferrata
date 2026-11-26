@@ -1,0 +1,460 @@
+# Command-line coverage: every component and feature from a terminal
+
+Every component and user-facing feature this repository builds, with the command line that exercises it, the test that
+runs that command and the CI job that runs the test, whether it is offline or online, and the gaps: what a reviewer
+cannot reach from a terminal, or reaches by a path that no test or CI job runs. The gaps are ranked at the end, each
+with what would close it; the ones closed alongside this page say how, in [Closed alongside this page](#closed-alongside-this-page).
+
+The re-check of the evidence itself is one tool, `scripts/verify.py` ([VERIFY.md](VERIFY.md)); this page is the map of
+the components behind it.
+
+**How it was made.** From the tracked files: each subcommand checked in its argument parser (the clap enums of
+`cli/src/main.rs`, `cli/src/attest.rs`, `cli/src/relayerd.rs`, `cli/src/bin/gasdrop.rs`, `monitor/src/main.rs` and
+`monitor/attest/src/main.rs`; the `case` dispatch of the shell drivers; `argparse` or the docstrings of the Python tools;
+the method dispatch of the JS CLIs). The tables of the mini-app, the web wallet and the Logos modules were checked
+against the line references they give in `Main.qml`, `app.js`, `applock.js`, `claim.js`, `bridge.js` and `session.rs`.
+Pass counts come from the committed records unless a row says it was run again; "(not verified)" marks what the files
+could not confirm.
+
+**Legend**
+
+- **CI jobs.**
+  - `.github/workflows/ci.yml`, on every push, pull request and manual dispatch: `test`, `witness-independence`,
+    `roundtrip`, `lez-harness` (shards harness-1 to harness-4, updater-gate, updater-privacy), `names`, `msg`,
+    `monitor`, `vault`, `deps`, `modules-resolve`, `links`, `release-publish`, `image-ids`, `idl`, `admin` and
+    `verify` (`python3 -I scripts/verify.py --all --offline --strict`, then the tamper tests).
+  - `sequencer.yml`, on push to main, daily and by hand: `sequencer-attest`, `sequencer-roundtrip`.
+  - `lez-full.yml`, daily and by hand: `lez-harness-full`.
+  - `macos.yml`, on push to main and by hand: `user-side`, `modules`. Its header records no green run yet.
+  - `verify-online.yml`, daily and by hand: `online` (`python3 -I scripts/verify.py --all --online`, read-only).
+  - "none" means no workflow runs it.
+  - "map: box" and "map: local" mean `scripts/ci/row-tests.toml` lists the test as run on the build box or by hand.
+- **Network.**
+  - **Offline:** no network beyond the pinned dependencies (cargo's registry, `forge install` at the pins,
+    `scripts/fetch-vectors.sh`, `scripts/fetch-upstream.sh`).
+  - **Online:** reads public endpoints: Sepolia JSON-RPC, beacon APIs, GitHub, or the test network, whose address is
+    in `scripts/reproduce/deployed-programs.json` under the key `network`. "Sends" means it also signs and sends.
+  - **Box:** heavy work: real RISC Zero proving, LEZ sequencer and node builds (about 20 GB), Nix with
+    logos-module-builder, Qt 6, Docker, or Modal GPUs. Many box scripts are written for the owner's Modal build-box
+    wrapper (`mrun`), which is not in the repository.
+- **Toolchains for the offline Rust suites:** Rust 1.93.0 and 1.98.1; RISC Zero through `scripts/ci/install-risc0.sh`
+  (r0vm 3.0.5, guest Rust 1.88.0 and 1.91.1); Foundry 1.3.6; LEZ and Logos Blockchain sources through
+  `scripts/fetch-upstream.sh`; `libpcsclite-dev` and `protobuf-compiler`.
+- **G1 to G18** in the Gap column refer to [Gaps, ranked](#gaps-ranked) at the end.
+
+---
+
+## 1. The reviewer's entry points
+
+| Feature | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| One tool for every re-check, selected by requirement row, EVIDENCE row, family or check id (`docs/VERIFY.md`) | `python3 -I scripts/verify.py --list`, `--coverage`, `--all` (the quick offline tier), `--all --online`, `--all --both --tests`, `RFP-021:F.4`, `evidence:151`, `family:NAME`, `CHECK_ID`; `--json FILE`, `--strict`; `just verify …` | `verify.py --all --offline --strict` (the 79 quick offline checks) and `scripts/test_verify.py` and `scripts/test_verify_lc.py`, the tamper tests (CI `verify`). The 20 online checks: CI `verify-online` (daily, read-only) | `--all`: offline (Python 3.11+, Node, git history). `--online`: online, read-only. `--tests`: the toolchains | G1 |
+| The live Sepolia round trips | `python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-3` (also `crown-live-4`, `crown-live-1`; `--rpc URL`); `e2e/crown.sh verify crown-live-3` (needs Foundry's `cast`) | `scripts/test_image_ids.py` covers only its image-id lookups (CI `image-ids`). The script itself: map: local, and verify.py's online checks `sepolia-crown-live-1`, `-3`, `-4` (CI `verify-online`, daily) | Online, read-only | G12 |
+| The first round trip on the test network | `python3 -I scripts/verify-live-roundtrip.py --check` | `scripts/test_verify_live_roundtrip.py`, which feeds it altered answers (CI `links`); verify.py's online check `sepolia-live-roundtrip` (CI `verify-online`, daily) | Online, read-only; the test is offline | G12 |
+| Our seals against RISC Zero's mainnet verifier (superseded as evidence on 21 Nov) | `python3 -I scripts/verify-mainnet-risc0.py [--rpc URL --block N] [--list]` | none. verify.py's online check `mainnet-risc0-3.0-stopped` reads the 3.0.0 verifier's emergency stop instead (CI `verify-online`, daily) | Online, read-only (`--list` sends nothing) | G12 |
+| The M0 checks, GO / NO-GO | `just m0` = `python3 -I scripts/m0.py [--online] [--json FILE] [--strict] [--p4 DIR]` | `scripts/test_m0.py` and verify.py's `m0` (CI `verify`) | Offline; `--online` re-reads upstream tags | — |
+| Every hard row mapped to a test, and CI's claims checked | `python3 -I scripts/ci/check-row-tests.py [--list] [--require-ci RFP-022]` | the script itself and `scripts/ci/test_ci_model.py` (CI `links`) | Offline | — (the six harness tests the shards run are marked `lez-harness`) |
+| The quickstart and the terminal guide | `docs/guides/quickstart.md`, `docs/components.md` "Reproduce", `docs/VERIFY.md` (linked from README.md and `docs/README.md`) | — | — | G17 |
+
+## 2. The light-client core and its measurements (`crates/`, `bench/`, `fuzz/`)
+
+| Feature | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| The 52 official sync cases, mainnet and Sepolia replays, the Helios step-path oracle subset, adversarial suites, mutation guards, weak subjectivity | `scripts/fetch-vectors.sh && cargo test --workspace --locked` | the 22 files of `crates/ferrata-spectests/tests/` and `crates/ferrata-core/tests/fuzz_regressions.rs` (CI `test`; macOS `user-side`) | Offline | — |
+| The `no_std` build for the guest ISA; the declared minimum Rust | `cargo build -p ferrata-core --no-default-features --features zkcrypto --target riscv32im-unknown-none-elf --release --locked`; `cargo +1.85.0 check --workspace --locked` | CI `test`; macOS `user-side` (the first command) | Offline | — |
+| The full Helios sweep (10,000 mutations) | `bash scripts/helios-oracle-full.sh [--out FILE]` | map: local (CI `test` runs a 400-mutation subset) | Offline, long | — |
+| Planted mutants and the review's mutants | `python3 scripts/mutants.py [M108 …]`; `python3 scripts/review-mutants.py` | map: box | Offline, long (the whole suite per mutant) | — |
+| Fuzzing, seven targets | `cd fuzz && RUSTFLAGS=-Coverflow-checks=on cargo fuzz build -a -s none && ./run.sh 1560 5 out` | the fixed findings replayed by `fuzz_regressions.rs` (CI `test`) | Offline; hours; cargo-fuzz | — |
+| Guest cycle counts (a measurement) | `cd bench && cargo build --release -p host && ./target/release/host blst-accel`; `bench/run.sh [CONFIG …]` | none | Offline (RISC Zero executor) | — |
+| Fixture refresh | `python3 scripts/fetch-mainnet-e2e.py`; `scripts/fetch-sepolia-checkpoint.py`; `scripts/fetch-sepolia-gloas.py` | none | Online | — |
+
+## 3. The attestation program, its consumers, the attestation CLIs, the IDL (`lez/`, `cli/src/attest.rs`, `idl/`)
+
+| Feature | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| The program through LEZ v0.4.0-rc1's state machine: updates, attestations, the reference consumer, red team, costs, successors, stall, hops | `cd lez && RISC0_HOME=$PWD/../../risc0-home-lez RISC0_DEV_MODE=1 cargo test -p harness --locked -- --test-threads 1`, or `scripts/ci/lez-harness.sh [--shard NAME]` (`--dry-run` prints the commands) | the 43 non-feature-gated test binaries of `lez/harness/tests/` (CI `lez-harness` harness-1 to harness-4; `lez-harness-full` daily) | Offline | G18 |
+| `ferrata-attest` (in process, recorded Sepolia data): `status`, `config`, `advance --period P` or `--finality`, `slot [--expect-eq V]`, `account`, `log`, `receipt --tx I`; `--then`, `--send`, `--follow-to`, `--message-out` | `cd lez && cargo build -p harness --locked --bin ferrata-attest && RISC0_DEV_MODE=1 target/debug/ferrata-attest --follow-to 1408 config --then advance --period 1409 --send …` (`lez/ATTEST-CLI.md`) | `lez/harness/tests/attest_cli.rs` (CI `lez-harness` harness-2) | Offline | — |
+| `ferrata attest` against a running LEZ sequencer: `config`, `status`, `init`, `advance`, `state`, `wallet`, `receipt`, `attest` | `ferrata attest --lez-rpc URL --program 0x… --key payer.key --state-dir DIR [--record F] SUBCOMMAND … [--send --yes]` (`lez/ATTEST-CLI.md`, "On a running sequencer") | `cli/tests/attest_faults.rs` and `cargo test --lib attest` (CI `roundtrip`): LEZ's block application on loopback, a scripted Ethereum endpoint that fails on demand, kills and reruns. On a real zone: `bash cli/tests/attest-seq.sh rf1` (map: box) | CI: offline. A real zone: box | G9 |
+| Private attestation and the second consumer, proven for real | `cd lez && cargo build -p harness --locked --bin prove_private && RISC0_DEV_MODE=0 target/debug/prove_private` (also `prove_attest`, `prove_holdings`); `lez/results/p4-minimum/minimum.py` | map: box | Box (CPU minutes to an hour, or a GPU through `gpu-prover/`) | — |
+| Recorded statements (RFP-021 Soft.1) and the operator rebate (Soft.5) | `cd lez && RISC0_DEV_MODE=1 cargo test -p harness --features statements --locked --test statements`; `--features rebate --test rebate` | none: feature-gated, so in no shard and no job | Offline | G7 |
+| Residue and handoff experiments (bench copies, not deployed) | `--features residue-experimental --test residue_experimental`, `residue_handoff`, `residue_placements`; `cd bench && cargo test --release -p residue` (and `residue-agg`, `residue-handoff`, `misbehaviour`) | none | Offline | G7 (low) |
+| The IDL in SPEL's format | `python3 -I idl/check.py` (`--decode PROGRAM TYPE FILE`, `--recorded FILE`); `cd idl/spel-check && cargo run --locked`; `RECORDED=… bash idl/spel-v2/run.sh` | `idl/check.py` (CI `idl`). `lez/bridge-wire/tests/idl_vectors.rs`, which writes the vectors `check.py` decodes, is map: box | Offline | G7 |
+| On a running sequencer: the live driver and the inbound crossing | `cd lez/live && ./verify-run.sh --dir DIR BINARIES…`; `cd lez && live/inbound/run.sh stand-in` or `real CAPTURE_1` | `scripts/ci/sequencer-attest.sh`: LEZ v0.4.0-rc3's standalone sequencer, fresh Sepolia data, one real private proof (CI `sequencer-attest`). `verify-run.sh` is map: local | Online; box-sized (72 to 92 min per run on a hosted runner) | — |
+| The lab: two instances that ran unattended | `lez/lab/lab.sh verify`; `python3 -I lez/lab/roots.py lez/lab/results` | verify.py check `lab-roots` (CI `verify`) | `roots.py` offline; `lab.sh` box | — |
+| The LEZ v0.3.1 port and its run on the public LEZ testnet | `cd lez-v03 && scripts/build.sh --lez && cargo test --release --locked -p harness-v03 --test v03 --test third_party --test adversarial`; `tests/sendguard.sh`, `tests/verifystatus.sh`; `./testnet.sh local`, `plan`, `run`, `resend` or `verify`; `ferrata-v03 new-wallet`, `queue`, `resend`, `wait`, `status`, `finalized`, `record` or `verify RUN` | none | Harness and guard tests offline; `verify` online; `run` sends | G8 |
+| The bridge's leg back from the public LEZ testnet (a stand-in) | `python3 -I lez-v03-return/stage2.py check`; `e2e/testnet-return.sh fork RUN`; `cd vault && forge test --match-path "test/standin/*"` | `lez-v03-return/test_standin.py`, `test_stage2.py`, `test_attestor_checks.py` and `stage2.py check` (verify.py `unit-v03-*`, `v03-stage2`: CI `verify`); `test/standin/` (CI `vault`) | Offline, except `fork`, which reads Sepolia | — |
+
+## 4. The updater and the attestation-side monitor (`lez/updater/`, `monitor/attest/`)
+
+| Feature | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| `ferrata-updater` on the in-process chain | `cd lez && cargo build -p ferrata-updater --features harness --locked && RISC0_DEV_MODE=1 target/debug/ferrata-updater --config updater/dev/dev.toml [--rounds N] [--quiet]` | the 13 files of `lez/updater/tests/` (CI `lez-harness` updater-gate and updater-privacy) | Offline | — |
+| The daemon as a process: one TOML file, `/health`, `/metrics`, SIGTERM | `cd lez && RISC0_DEV_MODE=1 updater/dev/demo.sh OUT_DIR` | map: box. `tests/health.rs` and `serve.rs` check the same in process (CI) | Offline | G13 |
+| The sequencer backend | `cd lez/updater/sequencer && cargo build --release && target/release/ferrata-updater --config FILE`, with `daemon.ledger = "sequencer"`; on the crown app: `e2e/crown.sh updater crown-NAME --bin PATH …`, then `updater-status`, `updater-stop`, `updater-fetch` | none. It is its own workspace, with one unit test in `src/day1.rs` | Box (LEZ node-side crates); online when following Sepolia | G13 |
+| The 8-hour live run, and the updater module's run on a sequencer, re-checked | `python3 -I lez/updater/results/live-sepolia/check.py lez/updater/results/live-sepolia/zone-2 [--beacon URL]` (also `modules/results/updater-sequencer-2026-11-13/zone`) | verify.py `updater-live-sepolia`, `updater-module-sequencer` (CI `verify`); with `--beacon`: `updater-live-sepolia-beacon` (online; CI `verify-online`, daily) | Offline; online with `--beacon` | — |
+| The light client kept current on the test network since 23 November, reconstructed from chain data (`lez/updater/results/public-network-run/`) | `python3 -I scripts/verify.py run-record` (offline), `run-record-online`, `run-record-counters`, `run-record-beacon` | `run-record` (CI `verify`); the three online checks (CI `verify-online`, daily) | Offline; the three others online | G12 |
+| The re-dating fixes, each undone in turn | `python3 -I lez/updater/dev/mutants.py NAME` | `lez/updater/dev/test_mutants.py` (none) | Offline, long | G8 |
+| The client-diversity probe | `python3 -I lez/updater/results/client-diversity-2026-11-18/probe.py OUT --net mainnet=URL` | none | Online | — |
+| `attest-monitor`: the stall, weak-subjectivity, divergence and ahead-of-finality alarms | `cd monitor/attest && cargo build --release`; `attest-monitor check` or `watch --state lez:URL --program 0x… --instance 0x… --provider URL …` (exits 0, 10 or 20) | `monitor/attest/tests/monitor.rs` and its unit tests (map: box) | Offline (needs LEZ's sources for `lee_core`) | G7, G11 |
+
+## 5. The day-one kit (`lez/testnet04/`)
+
+| Feature | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| Deploy on LEZ testnet 0.4 with one command: the attestation program, a Sepolia instance, the updater, an attestation of the vault, optionally the bridge | `lez/testnet04/day1.sh discover`, `plan`, `run`, `go`, `verify`, `status`, `daemon-status` or `daemon-stop URL` (`run` and `go` refuse unless `FERRATA_TESTNET_SEND=yes`); `lez/testnet04/watch.sh` | The rehearsal: `rehearse.sh` and `tests/idempotence-hook.sh`, run as `lez/live/run.sh` hooks (map: box, `day1.sh go`). The records: `python3 -I lez/testnet04/recheck.py lez/testnet04/results/rehearsal-1` (verify.py check `day1-rehearsal`: CI `verify`). `lez/testnet04/tests/daemon_cmds.sh` (a stand-in daemon, no network; none) | `discover`, `plan`, `verify`, `status`: online, read-only. `run`, `go`: online, sends. Rehearsal: box. `recheck.py`, `daemon_cmds.sh`: offline | G8, G13 (`ferrata-day1` is built in no job) |
+
+## 6. The bridge program, the bridge core, disclosure (`lez/`, `bridge/`)
+
+| Feature | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| The bridge program through LEZ's state machine: pairing, registry, `ImportRoot`, claims, burns, fees, caps, freezes, roles, `Sunset`, delisting, depth, tenants | `cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_inbound --test bridge_private --test bridge_burn --test bridge_controls --test bridge_vault_storage …` | `lez/harness/tests/bridge_*.rs`, `tenant.rs`, `redteam_bridge.rs`, `state_growth_bridge.rs`, `interrupted_operations.rs` (CI `lez-harness`) | Offline | G18 |
+| The private claim, burn and transfer, proven for real | `cd lez && cargo build -p harness --locked --bin prove_bridge && RISC0_DEV_MODE=0 target/debug/prove_bridge [--transfer --settle …]`; gpu-prover job `lez-bridge` | map: box | Box | — |
+| The bridge core: commitments, trees, nullifiers, statements, recovery | `cd bridge && cargo test -p ferrata-bridge-core --locked`; every non-proving check: `cd bridge && scripts/check.sh` | `bridge/crates/ferrata-bridge-core/tests/*.rs` (CI `witness-independence`; macOS `user-side`) | Offline | `scripts/check.sh` as a whole runs in no job |
+| Guest cycle counts independent of the witness | `scripts/ci/witness-independence.sh 64` | CI `witness-independence` | Offline (r0vm) | — |
+| The release, claim and gas-drop guests, driven natively | `cd bridge && cargo run --release -p host -- SUBCOMMAND`, where SUBCOMMAND is `scenario`, `execute`, `invariance N`, `prove F`, `p254 F`, `groth16 F`, `verify F`, `fixtures`, `claim-check N`, `prove-claim`, `reindex`, `gasdrop N` or `prove-gasdrop N`; `scripts/prove-bench.sh` | map: box | `prove` and `groth16`: box (Docker on x86-64 for the wrap) | — |
+| The v2 vault with RISC Zero's real verifier | `cd bridge/evm-verify && forge test -vv` | `test/v2/VaultV2.t.sol`, `Groth16Verify.t.sol`, `JournalEquality.t.sol` (map: box) | Offline (Foundry only) | G7 |
+| Voluntary disclosure (RFP-022 Soft.2) | `cd bridge && cargo test --locked -p ferrata-disclose` | `bridge/crates/ferrata-disclose/tests/disclose.rs` (none) | Offline | G7; no CLI (library only) |
+| Both halves at once: randomised supply, fee schedules, a migration | `e2e/both-halves/run.sh`, or with `randomised`, `fee_schedules` or `migration` (`FERRATA_BOTH_HALVES_SEEDS`, `_STEPS`) | `cli/tests/both_halves.rs` (map: box) | Offline (the `roundtrip` job's build) | G7 |
+
+## 7. The vault and its verifiers (`vault/`)
+
+| Feature | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| The vault's suites: unit, fuzz, invariants, real Groth16 proofs, the stand-in verifier, the 3.1 verifier | `cd vault && forge test --no-match-contract PrivacySuite` | `vault/test/**/*.t.sol` (CI `vault`) | Offline (pinned libraries; solc 0.8.26 fetched once) | — |
+| The pinned libraries | `python3 -I scripts/vault_libs.py check` | CI `vault`; `scripts/test_vault_libs.py` (CI `links`) | Offline | — |
+| The deployment script | `vault/script/deploy.sh`; `bash e2e/seqnet/test-vault-deploy.sh` (on anvil); `vault/script/deploy_sepolia.py` (the owner) | `test-vault-deploy.sh` (CI `vault`). `scripts/test_deploy_sepolia.py`, which runs `deploy_core.py` on a local anvil with Sepolia's chain id (none) | Offline, except `deploy_sepolia.py`, which sends | G8 |
+| Rehearsals on a fork of Sepolia | `vault/script/fork-rehearsal.sh`; `bash vault/script/fork-rehearsal-31.sh` | none | Online (anvil reads Sepolia; nothing sent) | — |
+| The verifier behind a deployed vault | `vault/script/check-verifier.sh …`; `vault/script/test-check-verifier.sh` | none | Online, read-only | G12 |
+| A deployment's manifest and sources | `vault/script/verify-sepolia.sh MANIFEST`; `vault/script/sourcify.sh status`; `RPC=URL bash vault/deployments/sepolia-31-B.check.sh .` | none | Online, read-only | G12 |
+| Coverage, mutation, static analysis | `cd vault && forge coverage --report summary`; `WORKERS=28 RUN=run2 ./run-mutation.sh`; `scripts/security-tools.sh install slither aderyn halmos-groups`; `just halmos-long` | none | Box (Gambit, Halmos for hours) | — |
+| Admin actions on a deployed vault: token and global caps, freezes, role proposals, fee announcements, retirement | No script or subcommand. `cast send` forms appear only for `setGlobalCap`, in `docs/security/risc0-groth16-advisory-2026-11-21/README.md`. The mini-app's Admin tab and `ferrata_bridge_module.admin` send them through Logos Core | the functions themselves: `Admin.t.sol`, `Caps.t.sol`, `Freeze.t.sol`, `Fees.t.sol`, `Revocation.t.sol` and others (CI `vault`, in Solidity). No test of a terminal path | — | G4 |
+
+## 8. The user's tool `ferrata` (`cli/`)
+
+The subcommands, from `cli/src/main.rs`: `keys`, `deposit`, `scan`, `recover`, `claim`, `burn`, `release`, `attest`
+(section 3) and `status`. The global options are `--seed`, `--eth-rpc`, `--vault`, `--chain-id`, `--from-block`,
+`--chunk`, `--sequencer`, `--lez-wallet`, `--lez-password-file`, `--bridge-account`, `--gap` and `--json`. The sending
+options are `--keystore`, `--password-file`, `--send`, `--yes` and `--confirmations`.
+
+| Feature | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| Keys and accounts from the seed | `ferrata --seed FILE keys [--accounts N] [--show-secrets]` | `scripts/ci/sequencer-roundtrip-hook.sh` (CI `sequencer-roundtrip`); `e2e/seqnet/drive.sh` (box) | Offline command | G10 (nothing creates a seed) |
+| Deposit, private by default; a public destination with its acknowledgement; ERC-20 with `--approve`; printed without a keystore with `--from` | `ferrata deposit --denomination I [--token A] [--kind public --i-accept-public-account] [--account N] [--approve] [--from ADDR] --keystore F --password-file F [--send --yes]` | `cli/tests/e2e.rs` runs the binary through `cli/tests/e2e.sh` (CI `roundtrip`); a public deposit in `sequencer-roundtrip` | Offline (anvil); `sequencer-roundtrip` online (forks Sepolia) | — |
+| Scan and status | `ferrata scan`; `ferrata status [--token A …]` | `e2e.rs` (CI `roundtrip`) | Offline | — |
+| Recovery from the seed alone | `ferrata recover` | the binary in `sequencer-roundtrip`; `e2e.rs` recovers through the library | Online (that job) | — |
+| Claim: private, after the claim delay, and the fee from the network's gas drop, by default | `ferrata claim [--leaf N] [--no-delay] [--plaintext --i-accept-plaintext-links-deposit] [--relayer HEX] [--payer A] [--bridge-program F] [--gas-drop-inbox DIR or URL] [--gas-drop-elf F] [--gas-drop-wait S] [--no-gas-drop] [--send --yes]`, with `--sequencer --lez-wallet --lez-password-file --bridge-account` | Private, on a running sequencer: `bash e2e/seqnet/run.sh cli NAME` (also `robust`, `gasdrop`; map: box). Plaintext: `sequencer-roundtrip`. In `roundtrip` the LEZ side goes through the library on the harness, not through the binary | Private: box. Plaintext: online | G9 |
+| Burn: from a private account by default | `ferrata burn [--from public --i-accept-public-account] [--account N] [--token A] --amount X --recipient 0x… [--payer A] [--bridge-program F] [--no-gas-drop] [--send --yes]` | As for claim; the public burn in `sequencer-roundtrip` | As for claim | G9 |
+| Release: through any relayer by default | `ferrata release [--burn I] [--self-send or --relayer A] [--job-out F] [--program F --prove] [--input-out F] [--seal F] [--send --yes]` | `e2e.rs` (a relayer's job; CI `roundtrip`); `--prove` in dev mode in `sequencer-roundtrip` | Offline; that job online | — |
+| Refusals, holds and every freeze (RFP-022 U.8); the burn-counter journal (R.7) | `cli/tests/e2e.sh`; `cd cli && cargo test --locked --lib burns` | `e2e.rs` and `burns` (CI `roundtrip`); `python3 -I e2e/runs/cli-u8/mutants.py` (none) | Offline | — |
+| The deposit journal after an interruption (R.7), the privacy indicator, codes, units, seed derivation, scan, flows, the wallet crate | `cd cli && cargo test --locked --lib deposits` (also `privacy`, `codes`, `units`, `seed`, `scan`, `flow`, `lez`, `logos_send`); `cargo test --locked -p ferrata-wallet` | none. CI's `--lib` filters are `relayer`, `gasdrop_net`, `burns` and `attest` only | Offline | G7 |
+| The binary that reaches the test network (LEZ v0.4.0-rc3) | `deploy/testnet/cli-rc3/build.sh SRC` (`lez-select.sh v0.4.0-rc3`, a patch, a lockfile swap, `--features lez-rc3`) | Record `deploy/testnet/results/2026-11-25-cli-rc3-gasdrop.txt` (built; "not run against the test network") | Box | G9 |
+| The mini-app's devnet backend | `cd cli && FERRATA_DEVNET_PORT=18600 RISC0_DEV_MODE=1 cargo run --example miniapp_devnet` | `modules/ferrata_bridge_ui/scripts/box-test.sh` (map: box) | Offline | G6 |
+
+## 9. The relayer and the gas drop
+
+| Feature | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| `ferrata-relayer`: root imports, users' release jobs, rule (B) checkpoints, finalisation, fees, the burn watch, gas drops | `ferrata-relayer [--eth-rpc --vault --chain-id --state DIR] [--keystore F --password-file F or --unlocked A] [--import-roots --import-every S] [--gas-drops-only] [--wrap-command F] [--send-via plain or logos] run [--inbox DIR] [--poll-secs N] [--rounds N]`; `ferrata-relayer status` | `cargo test --lib relayer` (CI `roundtrip`). `cli/tests/relayer.sh`, with `relayer_fork.rs` (map: box). `cli/tests/relayer-crash.sh` with `relayer_crash.rs` (map: box). `bash e2e/netfault/relayer-lez.sh OUT` (box). `modules/scripts/relayer-e2e.sh OUT` (box) | Library tests offline. `relayer_fork`: online (forks Sepolia). `relayer-crash`: offline (local anvil) | G7. Root imports on a running sequencer: box only |
+| `ferrata-gasdrop`: `prove`, `relay`, `check-job` | `ferrata-gasdrop prove --elf F --input F --out F`; `relay --receipt F --image-id H --me H --chain-id N --vault H --roots F --claimed F --book F --amount N --credit-command CMD`; `check-job --image-id H --relayer H --chain-id N --vault H < JOB` | `cli/tests/gasdrop.rs`, on a real receipt, no dev mode (CI `roundtrip`) | Offline; `prove` is box | — |
+| The network's relayer, used by `ferrata claim` by default | `ferrata claim` with no gas-drop option; `curl` to `<site>/relayer/gas-drop` | `cargo test --lib gasdrop_net` (CI `roundtrip`); `bash e2e/seqnet/run.sh gasdrop NAME` (map: box) | Offline / box | — |
+| The gateway's gas-drop inbox: `GET /relayer/gas-drop`, `GET /relayer/gas-drop/guest`, `POST /relayer/gas-drop` | `curl` against the test network; on the host, as root: `ferrata-gasdrop-setup init`, `fund`, `start`, `status` | `deploy/testnet/tests/test_gateway_gasdrop.py` (CI `links`); verify.py's online check `gasdrop-terms-online` reads the published terms (CI `verify-online`, daily) | The test is offline; the live routes are online | — |
+| M0 check 2 on rc3 with real proofs | `python3 -I lez/scripts/gas-drop-summary.py lez/results/v0.4.0-rc3/gas-drop` | verify.py check `m0-gas-drop` (CI `verify`) | Offline | — |
+| The devnet tools (feature `seqnet`) | `seqnet-fund`, `seqnet-txs`, `seqnet-chain` | `cargo test --features seqnet --bin seqnet-chain` (CI `roundtrip`) | Offline | — |
+
+## 10. The watchers' monitor (`monitor/`)
+
+| Feature | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| `monitor run`, `check`, `node-view`: checks each candidate, cancels in time, pauses, alerts, audits the attestors | `cd monitor && cargo build --release`; `MONITOR_KEY=… target/release/monitor run --rpc URL --vault 0x… --node file:PATH or cmd:CMD …` | `cargo test --locked` and `bash tests/anvil-e2e.sh` (CI `monitor`) | Offline | — |
+| The monitor on a fork of the live vault | `bash monitor/tests/fork-live-vault.sh` (`FERRATA_FORK_URL`) | map: box | Online (forks Sepolia) | — |
+| The `--send-via logos` fallback | `cd monitor && bash tests/logos-fallback.sh` | map: box | Offline (local anvil, a stand-in `tx_sender_module`) | G7 |
+| The node view on the test network | `deploy/testnet/host/bin/ferrata-bridge-nodeview` | none | Host | — |
+| Rule (B) attestations read by the monitor | not built (README, "Specified but not built") | — | — | — |
+
+## 11. The checkpoint program, the rule (B) attestor, the checkpoint prover (`checkpoint/`, `gpu-prover/`, the host's prover client)
+
+| Feature | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| The checkpoint core and attestor core: rule (A), rule (B), key rotations, the red team, Bedrock 0.3.5 | `cd checkpoint && cargo +1.88 test -p checkpoint-core -p attestor-core` (also `--features bedrock-0-3-5`; `--test redteam`) | none. The rule (B) guest runs inside `roundtrip`, but these suites do not | Offline | G7 |
+| The parser on real LEZ block formats (fidelity) | `cd checkpoint/fidelity && cargo +1.98.1 test -- --nocapture` | `tests/formats.rs`, `tests/rule.rs` (map: box). `ci_zone` is built in `roundtrip` | Offline (LEZ and Logos Blockchain sources) | G7 |
+| `ferrata_attestor`: `keygen`, `pubkey`, `deployment`, `certify`, `attest`, `verify`, `collect`, … | `cd checkpoint && cargo +1.88 test -p ferrata-attestor --locked`. Zones: `attestor/zone.sh`, `zone-attest.sh`, `zone-bridge.sh verify e2e/runs/zone-bridge-N`, `kill-replay.sh`, `devnet.sh`, `prove.sh` | the five test files of `checkpoint/attestor/tests/` (none) | Tests offline; zones box | G7 |
+| The checkpoint host: `ids`, `micro`, `bench`, `gen-b`, `compose`, `prove`, `groth16`, `verify` | `checkpoint/host` | none | `prove` and `groth16`: box | — |
+| GPU proving on Modal | `modal run --detach gpu-prover/modal_app.py::main` (also `::batch_run`, `::lez`, `::build`); `gpu-prover/scripts/fetch.sh && scripts/verify.sh && python3 -I scripts/summarize.py` | none | Box (a Modal account, a GPU); online | G1. `verify.sh` needs downloaded receipts. The committed seals have no local check in the tree: verify.py's `seal` family, which `docs/VERIFY.md` describes, has no checks (`checks_seals` is not tracked) |
+| The test network's prover client | `deploy/testnet/host/bin/ferrata-bridge-prover prove`, `watch` or `check` | `deploy/testnet/tests/test_prover_client.py`, against a stand-in Modal (CI `links`) | The test is offline; the live client needs Modal | — |
+| The host's rule (B) pipeline | `ferrata-bridge-attestor`, `-checkpoint`, `-release`, `-lez-import`, `-lez-init`, `-start`, `-configure`, `-identity`, `-keys`, `-roles` (in `deploy/testnet/host/bin/`) | `deploy/testnet/tests/test_checkpoint_parent.py`, `test_units.py` (CI `verify`); `deploy/testnet/tests/relayer-replay/replay.sh` (online fork; none) | Host (root) | — |
+
+## 12. The Logos Core modules (`modules/`)
+
+The two ways to call a method:
+- **Natively**, without Logos Core: `modules/<m>/rust-lib/target/release/examples/call METHOD [REQUEST_FILE]`, or
+  `cargo run --example call -- METHOD [FILE]`, after `scripts/fetch-upstream.sh` and `modules/scripts/native.sh`.
+- **Through Logos Core**, with a headless `logosctl` built with Nix (`modules/scripts/check.sh`):
+  `logosctl --config-dir S daemon start --detach`, then `install DIR/*.lgx -y`, then `module load M`, then
+  `[--timeout MS] call M METHOD @req.json --json`, then `daemon stop`. The e2e scripts switch to it with
+  `CALL=logosctl LOGOSCTL=BIN SESSION=DIR`.
+
+| Feature | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| `ferrata_attest_module`. 11 methods: `version`, `dry_run_attest`, `verify_checkpoint`, `fetch_log_proof`, `build_attest_tx`, `read_attestation`, `read_instance`, `advance`, `lez`, `lez_read`, `lez_submit` | `modules/scripts/check.sh` (natively and through Logos Core: `version`, `dry_run_attest`, `verify_checkpoint`); `modules/scripts/e2e.sh OUT` (`read_instance`, `fetch_log_proof`, `dry_run_attest`, `build_attest_tx`, `read_attestation`, `advance`; `CALL=logosctl`; `ETH_VIA=eth_rpc_module` through `logos-io.sh`). `lez*` only through `logosctl`: `ATTEST_SEQ_HOOK=modules/ferrata_attest_module/scripts/logos-run-hook.sh bash cli/tests/attest-seq.sh r6` | `rust-lib/calls/tests/failing_endpoint.rs` (CI `modules-resolve`). The 22 unit tests of the calls crate (none). `check.sh`, `e2e.sh`, the hook (map: box) | Unit tests offline; `check.sh` box (Linux x86-64, Nix); the hook box (a zone, a patched `lez_core`) | G5 |
+| `ferrata_bridge_module`. 12 methods: `version`, `deposit`, `claim`, `burn`, `release`, `recover`, `status`, `prove_release`, `import_root`, `registry`, `wallet`, `admin` | `check.sh` (the first seven). `RELEASE_ELF=… modules/scripts/bridge_e2e.sh OUT` (`import_root`, `registry`, `claim`, `release`, `prove_release`, `status`; natively or through `logosctl`). `modules/scripts/real_release_proof.sh LOGOSCTL LGX_DIR RELEASE_ELF OUT`. `admin`: `bash modules/scripts/bridge-send-stack.sh build OUT`, then `run OUT`; `bash modules/scripts/bridge-eth-native.sh OUT`. `wallet`: `e2e/seqnet/hook-lezcore.sh`, `hook-logoseth.sh`; natively `cargo run --example call -- wallet FILE` | `rust-lib/calls/tests/endpoints.rs` (CI `modules-resolve`). The 70 unit tests (none). The scripts (map: box) | `bridge_e2e.sh` offline (Foundry, r0vm); the send stack and seqnet box | G2, G4, G5 |
+| `ferrata_attestor_module`. 14 methods: `version`, `keygen`, `pubkey`, `deployment`, `certify`, `tier`, `attest`, `verify`, `collect`, `assemble`, `base`, `start`, `status`, `stop` | `check.sh`; `modules/scripts/attestor-e2e.sh OUT` (`status` and `stop` only through `logosctl`); `modules/scripts/attestor-zone-live.sh BUNDLE OUT` | 3 unit tests (none) | `attestor-e2e`: offline (committed zone records); zone-live: box | G5 |
+| `ferrata_monitor_module`. 8 methods: `version`, `check`, `node_view`, `run`, `start`, `status`, `stop`, `custody` | `check.sh`; `modules/scripts/monitor-e2e.sh OUT` (through `logosctl` it runs `monitor/tests/anvil-e2e.sh` with `MONITOR_CMD=monitor-module.sh`); `custody` only in `modules/scripts/send-stack.sh run OUT` | 2 unit tests (none). CI `monitor` runs `anvil-e2e.sh` with the binary, not the module | Offline (Foundry); `send-stack` box | G5 |
+| `ferrata_updater_module`. 7 methods: `version`, `check_config`, `run`, `start`, `status`, `metrics`, `stop` | `check.sh`; `modules/scripts/updater-e2e.sh OUT`; `modules/scripts/verified-proxy-session.sh`; `modules/scripts/live-testnet.sh` | 3 unit tests (none). Left out of `modules-resolve` and macOS | `updater-e2e`: offline; live-testnet: online, sends with `FERRATA_TESTNET_SEND=yes` | G5 |
+| `ferrata_relayer_module`. 6 methods: `version`, `run`, `start`, `status`, `stop`, `custody` | `check.sh` (`version`, `run`); `modules/scripts/relayer-e2e.sh OUT` (`PARTS="fork roots"`; `LGX=DIR` or `SESSION=` for Logos Core); `custody` only in `send-stack.sh run` | 4 unit tests (none). `modules-resolve` only compiles `cli/` without `lez-wallet` | `roots`: offline; `fork`: online | G5 |
+| The modules' Ethereum I/O through Logos Core's own modules | `RELEASE_ELF=… modules/scripts/logos-io.sh OUT`; `modules/scripts/send-stack.sh build OUT`, then `run OUT`; `modules/scripts/verified-proxy.sh build-logos OUT`, then `build-ferrata OUT`, then `run OUT` | none (records in `modules/results/`) | Box (Nix, Logos Core sources from GitHub) | G5 |
+| Five modules as macOS `.lgx` | `macos.yml` job `modules`: `modules/scripts/export.sh`, `nix build .#lgx-portable`, `lgx verify` | macOS `modules` (build and verify only; no method called) | Box (Nix) | G5 |
+
+## 13. The module catalog (`modules/catalog/`)
+
+| Feature | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| The owner's publish step | `modules/scripts/release-publish.sh ORG CATALOG_REPO SIGNING_KEY_FILE [--modules 'M …'] [--update] [--dry-run DIR or --yes]`. With no flag it prints the plan. The update: `release-publish.sh ORG CATALOG_REPO - --update --modules 'M …' --dry-run DIR`, then `--yes` (`modules/catalog/RELEASE.md`) | `bash modules/scripts/test-release-publish.sh DIR`: a stub `gh`, git over `file://` only, every refusal, reruns, resumption, `--update` (CI `release-publish`) | The test is offline. `--yes` is online (`gh` logged in) and sends | — |
+| The release action's steps, locally | `modules/scripts/release-local.sh OUT_DIR` (`MODULES`, `DRY_RUN_DIR`) | map: box | Box (Linux x86-64, Nix); online | — |
+| Install from a local catalog and run the modules' e2e scripts against the installed modules | `modules/scripts/catalog-install.sh RELEASE_DIR LOGOSCTL WORK_DIR` (`CATALOG_E2E=1`, `CATALOG_E2E_MORE="…"`) | map: box. The map's `run` line omits the three required arguments | Offline (HTTPS on loopback); a portable `logosctl` | G18 |
+| Install from the published catalog, signatures required | The `logosctl` sequence in `modules/catalog/install-test-<org>-2026-11-24/box-install.sh` and `install-test-plus/box-install.sh`: `daemon config set`, `catalog add URL`, `catalog source http`, `catalog refresh`, `search ferrata`, `key add`, `install M -y`, `module load`, `call M version --json` | The recorded runs: 56/56 and 74/74 (none) | Box (Nix); online | G12. After installing, only `version` is called |
+| Published release integrity | The `gh`, `curl`, `jq`, `sha256sum` and `lgx` commands listed in `releases/RELEASE-INTEGRITY.md`; `modules/catalog/install-test-<org>-2026-11-25/read-back.sh ORG CATALOG_REPO` | verify.py's online check `catalog-index-online`: the published catalog's index against the release record (CI `verify-online`, daily) | Online, read-only | G12 |
+| The Basecamp release (signed `.lgx` for the test network's `/basecamp/`) | `modules/scripts/basecamp-release.sh build`, `keygen`, `sign`, `verify REL`; `modules/scripts/basecamp-install-test.sh` | `modules/scripts/test-basecamp-release.sh` (synthetic releases; none); `python3 -I deploy/testnet/web/basecamp/test_page.py [--packages DIR]` and `modules/scripts/test_module_notices.py` (CI `verify`) | The tests are offline; build and install are box | G8 |
+
+## 14. The mini-app (`modules/ferrata_bridge_ui`, a QML view)
+
+Every action of the view is a `ferrata_bridge_module.wallet('{"method", "params"}')` call (`qml/Main.qml:302`).
+Outside Logos, the same body is POSTed to the devnet backend (`cli/examples/miniapp_devnet.rs`). The module's
+dispatch is `rust-lib/calls/src/session.rs:177-314`. The view's test scripts:
+- `scripts/box-test.sh`: `qmltest/tst_miniapp.qml` against the devnet. Offline; Qt 6 `qmltestrunner`, Foundry,
+  RISC Zero.
+- `scripts/network-ui-test.sh`: `qmltest/tst_network.qml` with a stand-in module, and `tests/seal-test.mjs`.
+  Offline; Qt 6 and Node.
+- `e2e/seqnet/run.sh miniapp NAME` and `logoseth NAME`: `qmltest-logos/tst_miniapp_logos.qml` through `logosctl`.
+  Box.
+- `scripts/basecamp-build.sh` with `run.sh basecamp NAME`: `basecamp/roundtrip.mjs`. Box.
+- `scripts/basecamp-ui-tests.sh`. Nix.
+- `e2e/endpoints/run.sh build`, then `live NAME`: `tst_endpoints_logos.qml`. Box; online with `U9_PUBLIC=1`.
+
+No workflow runs any of them.
+
+| Feature (handler, `Main.qml` line → `wallet` method) | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| Connect wallet, pick an account, Cancel (`wallet.connect` 706 → `info`, `jobs`, `scan`) | `ferrata keys` lists the seed's accounts; `wallet info` through `e2e/seqnet/hook-lezcore.sh` | `tst_miniapp` test_01, test_14 (box-test); `tst_miniapp_logos` test_01; Cancel untested (none) | Offline / box | G6 |
+| The approval prompt, Approve and Reject (`propose` 585, `approve` 612, `reject` 613; local to the view) | `ferrata` is a dry run until `--send --yes` | every flow; Reject only in test_05 (none) | — | View-only by design |
+| Header status and Refresh (`header.refresh` 727 → `info`, `scan`) | `ferrata status`; `ferrata recover` | test_02 (box-test) | Offline | G6 |
+| Deposit: amount, private or public with acknowledgement, account, delay, relayer (`deposit.review` 892 → `price`, `deposit`; an `eth` job) | `ferrata deposit --denomination N [--kind public --i-accept-public-account] [--account A] … --send --yes`; `logosctl call ferrata_bridge_module deposit @req.json --json` | test_04, 05, 14 (box-test); `tst_miniapp_logos` 03, 07b; `roundtrip.mjs`; `tst_network` 04 | Offline / box | G6 |
+| Deposit again anyway (`deposit.again` 897 → `deposit {again: true}`) | none | `tst_miniapp_logos` 09 only (`logoseth`, box) | Box | G6, G13 |
+| The leak indicator, the step tables and the Privacy tab (`privacy.js`) | Every `ferrata` report prints what becomes public (`cli/src/privacy.rs`) | `scripts/check-guides.py` holds the tables to `privacy.rs` (CI `links`); the view's rendering in box-test summaries | Offline | — |
+| Devnet stand-ins: relay, checkpoint, let the delay pass (`claim.relay` 919, `redeem.checkpoint` 1018, `letTimePass` 571; the module refuses all three) | `ferrata-relayer`; `e2e/seqnet/ops.sh import`, `checkpoint`, `pass-time S`; curl to the devnet's `/rpc` | test_07, 11, 11b, 12 (box-test) | Offline | Devnet only |
+| Claim, private or plaintext with acknowledgement (`claim.submit` 947 → `claim`, a job) | `ferrata claim --leaf N [--plaintext --i-accept-plaintext-links-deposit] [--no-delay] --send --yes`; `logosctl … call ferrata_bridge_module claim …` | test_06b to 09f, test_12 (box-test); `tst_miniapp_logos` 05, 08; `roundtrip.mjs`; `claim.skipDelay` untested | Offline / box | G6 |
+| Burn to a fresh address, with a release delay (`burn.submit` 998 → `burn`, a job) | `ferrata burn --amount X --recipient A [--from public --i-accept-public-account] --send --yes` | test_09, 10, 11b; `tst_miniapp_logos` 06; `roundtrip.mjs` | Offline / box | G6 |
+| Release (`release.submit` 1039 → `release`, an `eth` job) | `ferrata release --burn I [--relayer A or --self-send] [--prove --program F] --send --yes`; `logosctl … release` or `prove_release` | test_10b, 11, 11c, 11d; `tst_miniapp_logos` 07; `release.skipDelay` untested | Offline / box | G6 |
+| Positions, recovery, refresh (`positions.recover` 1056 → `scan`) | `ferrata recover`; `ferrata scan` (deposits only) | test_06, 11, 11d; `tst_miniapp_logos` 04, 05, 07, 09; `tst_network` 02 | Offline / box | G6 |
+| The registry: fees, caps, utilisation, freezes (`registry.refresh` 1087 → `registry`, `price`) | `ferrata status [--token A]`; `logosctl … registry`; `admin {"action":"status"}` | test_03, 12; `tst_miniapp_logos` 02, 05, 07c; `tst_network` 03 | Offline / box | — |
+| Admin: roles and controls (`admin.refresh` 1129 → `admin.status`, `eth` path only) | Not in `ferrata`; `bridge-send-stack.sh` through `logosctl`; `node admin/dump.mjs RPC VAULT` (a separate, read-only view) | test_12; `tst_miniapp_logos` 07b, 07c | Box for the module path | G4 |
+| Admin: `SetCap` on LEZ (`admin.setcap` 1144 → `admin.set_cap`, a job held for the role's wallet) | none in `ferrata`; `bridge-eth-native.sh` builds `lez_set_cap` natively; approval through `ops.sh approve-lez` | test_12 (box-test); `tst_miniapp_logos` 07c; the calls crate's `admin.rs` and `session.rs` unit tests (none) | Box | G4 |
+| Admin: LEZ Freeze and Lift (`admin.freeze` 1172, `admin.unfreeze` 1186; devnet only, the module answers "not on this path") | none | test_12 (box-test) | Offline | G4 |
+| Admin: the vault's caps, freezes and any vault action (1212, 1229, 1242, `admin.any.send` 1279 → `admin.vault` through `tx_sender_module`) | Not in `ferrata`; `bridge-send-stack.sh` `admin` with `set_token_cap`, `set_token_deposits_frozen`, `register_token`, `set_deposits_enabled`, `announce_fees` or `set_release_delay` | `tst_miniapp_logos` 07b, 07c (`logoseth`, box) | Box | G4 |
+| Endpoints: Apply and test, Show in use (`settings.apply` 1331 → `set_endpoints`, then `info`) | No switch command: `--eth-rpc` and `--sequencer` on each `ferrata` command | `rust-lib/calls/tests/endpoints.rs` (CI `modules-resolve`); test_02 (box-test); `tst_endpoints_logos` (U9, box) | Offline; U9 public is online | — |
+| Network session: open with a phrase, new phrase, close (`net.open` 781, `net.generate` 783, `net.close` 738 → `seal_key`, `open_network`, `close`; later calls carry a MAC) | Not in `ferrata`, which reads a `--seed` file. Logos callers other than `module:ferrata_bridge_ui` are refused (`session.rs:124, 152-172`). The only terminal path is native: `cargo run --example call -- wallet FILE` (its docstring drives the session with a `client` line); no tracked script uses it | `tst_network` 00 to 03, 07 to 12, and `seal-test.mjs` (network-ui-test, none); unit tests `net.rs`, `seal.rs`, `session.rs` (none) | Offline (a stand-in) | G2 |
+| Network session: the faucet and LGO balances (`net.faucet` 800, `net.balances` 801 → `faucet`, `balances`) | none in `ferrata`; the faucet over HTTP (`POST /faucet`, documented in the test network's `AGENTS.md`) | none in QML. The unit tests use `balances` only as a replay probe | Online on the network | G2 |
+| Network session: plaintext claim and public burn (approve, then confirm), and the release hand-off (`prepareNet` 1401 → `confirm` 1417; 1477) | `ferrata claim --plaintext …`, `ferrata burn --from public …`, `ferrata release` (against an rc3 build: §8) | `tst_network` 05, 06; the hand-off untested | Offline (a stand-in) | G2 |
+| Job polling, resume on reopen, the Logos signer's prompt (490, 458, 504, 620 → `job`, `jobs`) | none: `ferrata` runs each step to its end | `tst_miniapp_logos` 08, 07b, 07c, 09; `roundtrip.mjs` with reopen; `jobs.rs` unit tests; the `evm.signing.approve` request untested | Box | G6 |
+| Errors and warnings: the banner, the host timeout, the wrong session, the Qt debug-log warning (808, 328, 773) | `ferrata` prints the same codes | test_00, 06b, 09 to 09f, 10b, 11c, 12; `tst_network` 03, 09, 10 | Offline | G6 |
+
+## 15. The web wallet (`deploy/testnet/web/wallet`)
+
+The page's CSP is `connect-src 'self'`: it reaches only its own origin (`/rpc`, `/faucet`, `/relayer/gas-drop`,
+`config.json`), and Sepolia only through an injected EIP-1193 wallet. In the committed `config.json` the
+attestation, messages, names and bridge program ids are `null`, so the Prove, Inbox, Names and Bridge panels are off
+until the host's `deploy/testnet/web-config.py` fills them.
+
+The wallet's tests:
+- **Node:** `cd deploy/testnet/web/wallet && node --test test/*.test.mjs`: 8 files, offline. Two tests skip without
+  LEZ's rc3 source beside the repository.
+- **Local browser end to end:** `bash test/box.sh build`, then `bash test/box.sh e2e NAME`. Box: LEZ rc3's standalone
+  sequencer and wallet CLI built from source, Playwright with Chromium, loopback only; the bridge part adds Foundry.
+- **PWA:** `python3 test/pwa_e2e.py --out DIR`, `pwa_webkit.py` and `pwa_measure.py`. Playwright; offline.
+- **Live:** `live_e2e.py`, `live_inbox.py`, `live_names.py`, `live_prove.py`, `pwa_live.py`. Online; they send
+  valueless transactions.
+- **Read-only:** `public_read.py`. Online.
+
+CI `msg` runs `test/gasdrop.test.mjs`. CI `verify` runs all eight files and
+`node test/pwa-files.mjs --check` (verify.py's `unit-wallet`; the two tests that need LEZ's source skip there). No
+workflow runs the browser suites.
+
+| Feature (JS) | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| Create a wallet: a new phrase, kept in the page (`app.js:102`, `lez.js:128`, `keystore.js:39`) | none creates a phrase. `ferrata --seed FILE keys` derives from one | `conformance.test.mjs` (LEZ key vectors), `review.test.mjs` (CI `verify`); `e2e_test.py` (box); `live_e2e.py` (online) | Offline / box | G3, G10 |
+| Import a phrase or a raw key (`app.js:130`) | `ferrata keys`; LEZ's own `wallet account import public --private-key HEX`, used in `test/e2e.sh` | `e2e_test.py` (box); `live_e2e.py` | Box | G10 |
+| Back up the phrase; export a key (`app.js:445`, `:453`) | `ferrata keys --show-secrets` prints kAuth and kView, not the phrase | phrase: `e2e_test.py`. Key export: no test | Box | G3 |
+| Add and switch accounts (`app.js:186-187`) | `ferrata keys --accounts N` | `e2e_test.py`, `live_e2e.py` | Box / online | — |
+| Unlock, lock, idle lock, erase (`app.js:153, :65, :77, :163`) | none | `review.test.mjs`, `pwa.test.mjs` (CI `verify`); `e2e_test.py` (box) | Offline | G3 (browser-only) |
+| App lock: PIN, passkey (WebAuthn PRF), lock when hidden (`applock.js:70, :81, :126, :154, :215`) | none | `pwa.test.mjs` "PIN unlock…", "passkey wrap…" (CI `verify`); `pwa_e2e.py` with a virtual authenticator, `pwa_webkit.py` | Offline (Playwright for e2e) | G3 (browser-only) |
+| Balance, nonce, network information (`app.js:275, :298` → `getAccountBalance`, `getAccountsNonces`, `getAccount`, `getLastBlockId`, `getFeeState`, …) | `curl -s <site>/rpc -H 'content-type: application/json' --data '{…}'` for each method (the test network's `AGENTS.md`) | `e2e_test.py` (box); `public_read.py` (online) | Online | — |
+| Faucet (`app.js:314` → `POST /faucet`) | `curl -X POST <site>/faucet -H 'Content-Type: application/json' -d '{"account":"ID","public_key":"HEX"}'` (`AGENTS.md`, the gateway's docstring) | `deploy/testnet/tests/test_gateway.py` (CI `verify`); `e2e_test.py` with `serve.py`'s stand-in faucet (box); `live_*.py`; the online check `faucet-terms-online` (CI `verify-online`, daily) | Online, sends | G10 |
+| Public transfer and its outcome (`app.js:364, :400, :419`; `lez.js:212, :433`) | not in `ferrata`; LEZ's own `wallet auth-transfer send --from Public/A --to Public/B --amount N` (used by `test/box.sh` and `serve.py`; documented in no guide) | `conformance.test.mjs`, `review.test.mjs` (CI `verify`); `e2e_test.py` with a reverted transfer (box); `live_e2e.py` | Offline / box / online | G10 |
+| Receive code, QR display and scan (`app.js:500, :516`; `qr.js:11, :31, :69`) | none | `pwa.test.mjs` (CI `verify`); `pwa_e2e.py` (zbar, a fake camera), `pwa_webkit.py` | Offline (Playwright) | G3 (browser-only) |
+| Activity for an account (`history.js:63, :91, :24` → `getBlockRange`) | none per account; `seqnet-txs` lists every transaction of a devnet | `review.test.mjs` (CI `verify`); `e2e_test.py`; `live_e2e.py`; `public_read.py` | Online | G3, G11 |
+| Private accounts; a private transfer (`private.js:10`; `lez.js:485`). The page cannot send a private transfer | `ferrata keys` lists the private ids; no tracked script makes a private LEZ transfer | `private.test.mjs` (CI `verify`, where it skips: no LEZ source there); `e2e_test.py` Private tab (box) | Offline / box | G10 |
+| Attest from the browser (Prove tab: `prove.js:58, :78, :127`; `attest.js:69`; proofs through EIP-1193) | `ferrata attest --lez-rpc URL --program 0xP --key payer.key --state-dir D attest --instance 0xI --record-slot S --eth URL --block N --storage ADDR:SLOT[:eq:V] [--header-rlp F] --send --yes`. The test network's `AGENTS.md` says it "has not yet been run against this rc3 network" | `attest.test.mjs`, 5 tests (CI `verify`); `live_prove.py` (online) | Online | G9 |
+| Bridge deposit: ETH, ERC-20, approve, test-token mint (`bridge.js:216, :285, :326, :271`; EIP-1193 only) | `ferrata deposit --denomination I [--token A] [--kind public --i-accept-public-account] [--approve] --keystore F --password-file F --send --yes`; the mint: `cast send TOKEN 'mint(address,uint256)' …` | `bridge.test.mjs` (CI `verify`); `e2e_test.py` with anvil (box); `fork_bridge.py` (online fork); `box.sh metamask` → `metamask_test.py` (no record in git; EVIDENCE row 244 says the approval screen could not be driven) | Offline / box / online | G3 |
+| Find deposits; holdings (`bridge.js:367, :428`; `claim.js:154, :315`) | `ferrata scan`, `ferrata recover`, `ferrata status` | none | Online | G3 (no test of the page's search) |
+| Public claim, with `ImportFees` and `ImportRoot` (`bridge.js:403`; `claim.js:181, :218`) | `ferrata claim --plaintext --i-accept-plaintext-links-deposit [--leaf N] --send --yes`. Imports: the operator's `ferrata-bridge-lez-import [--fees] --send`, or `ferrata-relayer --import-roots` | `claim.test.mjs`, 9 encodings (CI `verify`). No test drives the claim itself (`results/live-claim-2026-11-23/` records a manual run). Whether a page deposit can be claimed by the CLI is untested (not verified) | Online | G3 (a user's `ImportFees` is browser-only) |
+| Public burn (`bridge.js:452, :474`; `claim.js:356, :380`) | `ferrata burn --from public --i-accept-public-account --amount X --recipient 0x… --send --yes` | `claim.test.mjs` (outbound vectors), `review.test.mjs` (CI `verify`) | Offline | — |
+| Private claim and burn; release | not in the page (text only); `ferrata claim`, `ferrata burn`, `ferrata release --burn N`; host: `ferrata-bridge-release FILE.input` | — | — | — |
+| The fee payer line, from the network's gas-drop relayer (`bridge.js:105, :109, :131` → `GET /relayer/gas-drop`) | `curl <site>/relayer/gas-drop`; `ferrata claim` uses it by default | `gasdrop.test.mjs` (CI `msg`) | Offline | — |
+| Inbox and encrypted messages, program v1 (`inbox.js:22`: publish, policy, send, contacts, block, delete) | `node deploy/testnet/web/msg/ferrata-msg.mjs` writes to v2 only; `inbox --legacy` and `status --legacy` read v1 | none in `wallet/test`; `live_inbox.py` (13/13 recorded; online), `pwa_live.py` | Online | G3 (v1 writes are browser-only) |
+| Names, program v1 (`app.js:234`: Commit, Register, SetPrimary; `:200` reverse; `:337` resolve) | none for v1: `node names/js/cli.mjs` speaks v2 only | none in `wallet/test`; `live_names.py` (9/9 recorded; online) | Online | G3 |
+| Notifications and block checks (`notify.js:103, :70, :34`; `sw.js:120`) | none | `pwa.test.mjs` (block hashes; CI `verify`); `pwa_e2e.py --upstream`; `pwa_live.py` | Offline / online | G3 (browser-only) |
+| Install, offline use, the service worker, updates (`pwa.js:22, :39, :68`; `sw.js:61, :106`) | `node test/pwa-files.mjs --check` (or `--list`) checks the offline build's file list | `pwa.test.mjs` and `pwa-files.mjs --check` (CI `verify`); `pwa_e2e.py` (installable, offline, update, a tampered build refused), `pwa_webkit.py`, `pwa_firstvisit.py`, `pwa_measure.py` | Offline (Playwright) | G3 (browser-only) |
+| Settings and `config.json` (`settings.js:7`; `app.js:22, :479`) | `curl <site>/wallet/config.json`; the host's `web-config.py` writes it | `review.test.mjs`, `deploy/testnet/tests/test_web_config.py`, `test_install_web.py` (CI `verify`); `pwa_e2e.py` | Offline | — |
+| The Android app: a Trusted Web Activity of `/wallet/` | `deploy/testnet/web/android/build.sh`; `deploy/testnet/web/android/test_page.py` | none | Box; the page test online (Playwright) | — |
+
+## 16. The explorer, status, registry and agents pages; trust and accessibility (`deploy/testnet/web/`)
+
+| Feature | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| Explorer: blocks, transactions, accounts, programs, search, Ferrata's messages decoded with the IDLs, in-browser proof checks | `bash deploy/testnet/web/explorer/test/run.sh [PORT]`: `decode.test.mjs`, `eth.test.mjs`, `alarms.test.mjs`, `fixtures.mjs`, the agents' scripts against `replay_rpc.py`, then `browser_test.py` | the three Node tests (verify.py `unit-explorer`: CI `verify`); `fixtures.mjs`, the agents' scripts against the replay and `browser_test.py` (none) | Offline. Stages 1 to 3 need Node and Python; `browser_test.py` needs Playwright | G8 |
+| The agents' check of the live network: head block hash, each instance's finalized root against a beacon API | `python3 deploy/testnet/web/explorer/agents/ferrata_check.py <site>/`; `node deploy/testnet/web/explorer/agents/ferrata_check.mjs <site>/` | against a replay in `run.sh` (none); verify.py's online check `lez-network-head` wraps the Python one (CI `verify-online`, daily) | Online, read-only | G12 |
+| Every RPC method | `curl -s <site>/rpc …`, one example per method in `deploy/testnet/web/explorer/AGENTS.md` | none | Online | — |
+| The explorer's reads from a terminal: the head, a block, a transaction, the programs with their loader headers, an instance, an account; Ferrata's messages decoded with the IDLs | `python3 -I scripts/lez-read.py [--lez URL] head`, `block N`, `tx HASH`, `programs`, `instance ACCOUNT`, `account ACCOUNT PROGRAM` (`--json`); `just lez-read …` | `scripts/test_verify.py`, against a stand-in RPC and recorded blocks (CI `verify`) | Live reads online; the test offline | G11 |
+| Status page: each instance's lag, weak-subjectivity end, alarms (`/status/`, from the host's `ferrata-status`) | `curl <site>/status/status.json`; `lez-read instance ACCOUNT` (the finalized header); for the alarms, the closest is `attest-monitor check` (§4) | `alarms.test.mjs` (verify.py `unit-explorer`: CI `verify`) | Online | G11 (`attest-monitor` against the test network's gateway is not verified) |
+| Registry page: programs held to their loader headers | `scripts/reproduce/deployed.sh build`, then `compare --network URL`; `lez-read programs` | `scripts/reproduce/test_check_network.py` (verify.py `unit-check-network`: CI `verify`); the online check `lez-network-programs` (CI `verify-online`, daily) | `compare` online; the test offline | — |
+| Trust pages (`/trust/`, `/bridge/`, privacy, security, verify, apps, accessibility) | `python3 -I deploy/testnet/web/trust/build.py [--check]`; `python3 -I deploy/testnet/web/trust/test_trust.py` | `test_trust.py` (verify.py `unit-trust-pages`: CI `verify`); `build.py --check` (none) | Offline | G8 |
+| Accessibility (axe-core, keyboard) | `python3 -I scripts/a11y/check.py --site URL --out results.json` | none | Online; Playwright with Chromium and Firefox | — |
+
+## 17. Names (`names/`, the `ferrata_names` program, its JS CLI)
+
+| Feature | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| Reading: `check`, `resolve`, `whois`, `reverse`, `account`, `rules` | `node names/js/cli.mjs [--rpc URL] [--program ID] resolve NAME …` (Node 22.7+ or 20.19+; no `bin` entry) | `names/js/test/names.test.mjs`, `review.test.mjs`; `review.test.mjs` spawns the CLI (CI `names`) | Tests offline; live reads online | — |
+| Writing: `register` (commit, then reveal), `commit`, `reveal`, `renew`, `transfer`, `accept`, `release`, `forget`, `set-target`, `set-primary`, `keygen` | `node names/js/cli.mjs --key FILE register NAME [--target ID] …` (`--dry-run`, `--no-wait`, `--json`) | `review.test.mjs`: commit signing, an early reveal refused (CI `names`). The full write path against a sequencer: `names/e2e/box.sh build`, then `harness`, `ids`, `e2e NAME` (box; local rc3 sequencer) | Box for writes | G15 |
+| The program through LEZ's state machine | `scripts/ci/names.sh`; `cd lez && RISC0_DEV_MODE=1 cargo test -p harness --features names --test names --test names_review -- --test-threads 1` | CI `names` | Offline | — |
+| The IDL against the program's encodings | `python3 -I idl/tools/check_names_idl.py` | CI `names` | Offline | — |
+| The counts the README and EVIDENCE cite | `python3 -I names/e2e/claims.py [--run]` | none | Offline | G8 |
+| The wallet's names panel (program v1) | none (see §15) | — | — | G3 |
+
+## 18. Encrypted messages (`deploy/testnet/web/msg`, the `ferrata_msg` and `ferrata_msg_v2` programs)
+
+| Feature | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| The CLI: `keygen`, `publish`, `send ACCOUNT TEXT [--expect-key FP]`, `inbox [--legacy]`, `status [ACCOUNT] [--legacy]`, `delete`, `clear`, `contact`, `uncontact`, `block`, `unblock`, `policy open` or `policy contacts` | `node deploy/testnet/web/msg/ferrata-msg.mjs COMMAND [--rpc URL] [--program ID] [--key FILE]` | The library: `node --test deploy/testnet/web/msg/test/*.test.mjs` (CI `msg`). The CLI itself only in `test/box.sh e2e BIN` (box; local rc3 sequencer). `docs.test.mjs` checks the docs only | Library tests offline; the CLI box or online | G15 |
+| Both programs through LEZ's state machine; the wire crates; the IDLs | `cd lez && RISC0_DEV_MODE=1 cargo test -p harness --features msg --locked --test messages --test messages_v2 --test messages_findings`; `cargo test -p ferrata-lez-msg-wire -p ferrata-lez-msg-v2-wire --locked`; `python3 -I idl/tools/msg_idl.py --check` | CI `msg` | Offline | — |
+
+## 19. Admin tools (`admin/`, `vault/script/`)
+
+| Feature | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| The admin view's decoder: keccak, SHA-256, the ABI codec, the vault's selectors and topics (235 checks) | `node admin/dump.mjs --selftest` | CI `admin` | Offline | — |
+| A deployed vault's whole state, read-only | `node admin/dump.mjs <rpcUrl> <vault> [fromBlock]` | none | Online, read-only | — |
+| The states the live vault has not shown: freezes, watchers, role proposals, announced fees | `admin/README.md`'s manual sequence: `anvil`, then `forge script script/AdminScenario.s.sol --rpc-url … --broadcast`, then `node admin/dump.mjs …` | none. The record is `admin/results/local-anvil-scenario.txt` | Offline | G14 |
+| In a real browser | `admin/tools/browser-check.mjs` | none | Playwright | — |
+| The vault's admin scripts | see §7: `check-verifier.sh`, `sourcify.sh`, `verify-sepolia.sh`, `deploy.sh`, `deploy_sepolia.py`, the fork rehearsals; the advisory's `reads.sh URL BLOCK OUT`, `estimate.sh URL OUT` and `fork-rehearsal.sh URL BLOCK OUTDIR` (`docs/security/risc0-groth16-advisory-2026-11-21/`) | none, except `test-vault-deploy.sh` (CI `vault`) | Online, read-only (`fork-rehearsal.sh` forks) | G4, G12 |
+
+## 20. The site and its manifest (`site/`, `scripts/site-manifest.py`)
+
+| Feature | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| The build page, its counts and links | `python3 -I site/build.py [--check]`; `python3 -I site/test_site.py [--skip-freshness] [--strict] [--online]` | `test_site.py --skip-freshness` (CI `links`); the bundle's freshness (`--check`) by design not in CI | Offline | — |
+| The page in a browser | `python3 site/test_ui.py` | none | Playwright | — |
+| The host serves exactly the repository's files (three-way check) | `python3 -I scripts/site-manifest.py verify [--site URL] [--manifest FILE or --github REF] [--second URL] [-v]` | verify.py's online check `site-manifest-online` runs it (CI `verify-online`, daily); `site-manifest-git` (CI `verify`) holds the committed manifest to git's blobs, with code of its own. No offline test of the script | Online, read-only (GET only) | G12 |
+| The manifest after a deploy (the maintainer) | `python3 -I scripts/site-manifest.py build --served FILE --out FILE --ref REF --made TIME` | none | Offline | G12 |
+| Refresh from upstream | `python3 -I site/extract_rfp.py RFP_CHECKOUT`; `site/snapshot_proposal.py`; `site/capture.py` | none | Online | — |
+
+## 21. Release engineering (`justfile`, `scripts/release.sh`, `scripts/reproduce*`)
+
+| Feature | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| A versioned release: programs with image ids, the vault's bytecode, the CLI, `MANIFEST.json`, `SHA256SUMS` | `just release VERSION [OUT]`, which runs `scripts/release.sh build`, `package`, `verify --strict` and `record` | `scripts/test_release_scripts.py`, end to end with stubs; `scripts/test_release_manifest.py` (CI `links`) | Box (it builds the guests) | — |
+| Check a release directory | `just release-verify DIR` = `scripts/release.sh verify DIR` | the same tests | Offline (r0vm for the image ids) | — |
+| Deploy a release on a LEZ testnet and an EVM chain (a plan unless `--send`) | `just deploy-testnet --release DIR --lez URL --evm-rpc URL --chain-id N [--mode A or B] [--skip-lez or --skip-evm] [--send]` | `scripts/test-deploy-local.sh RELEASE_DIR WORK_DIR` (map: box) | Online when sent | — |
+| The proposal's numbers; user-side proofs at the declared minimum | `just bench`; `BENCH_MODAL_PROFILE=… just bench-user` | none | Box (Modal) | — |
+| The guests rebuilt and compared with `docs/image-ids.md` and a vault's pins | `scripts/reproduce-image-ids.sh build --out DIR`; `compare --out DIR [--vault 0x… --rpc URL]`; `docker` | `scripts/reproduce/test_image_id_tools.py` (CI `links`); `scripts/test_image_ids.py` (CI `image-ids`) | Box (about 30 GB of disk); `compare --vault` online | — |
+| Five checks and every guest, in one pinned container | `scripts/reproduce/run.sh` (Docker, a 10 GB image); `modal run --detach scripts/reproduce/modal_app.py` | records in `scripts/reproduce/runs/` | Box | — |
+| The test network's programs held to this source | `scripts/reproduce/deployed.sh build`, then `compare --network URL` | `scripts/reproduce/test_check_network.py` (CI `verify`); the online check `lez-network-programs` (CI `verify-online`, daily) | Online compare | — |
+| Supply chain: native archives, notices, dependency policy | `python3 -I scripts/fetch_native.py env`; `python3 -I scripts/deny_all.py [--advisories off or baseline]`; `scripts/security-tools.sh install audit deny` | `scripts/test_fetch_native.py`, `test_deny_all.py` (CI `links`); `deny_all.py` (CI `deps`) | Offline after fetch | — |
+
+## 22. The privacy suite (`scripts/privacy/`)
+
+| Feature | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| Milestone B2's gate: 20 users' round trip, every public byte collected, an adversary pairing each side, the field table, recovery from the seed | `export RISC0_HOME=$PWD/../risc0-home-lez && bash scripts/privacy/run.sh OUT && python3 -I scripts/privacy/check-results.py OUT` | `lez/harness/tests/privacy_suite.rs`, `vault/test/PrivacySuite.t.sol`, `check-results.py` (CI `lez-harness` updater-privacy; `lez-harness-full`) | Offline | — |
+| The gate's negative controls | `python3 -I scripts/privacy/controls.py target/privacy docs/privacy/controls`; `cd vault && forge test --match-contract BrokenVerifier -vv` | `BrokenVerifier` runs in CI `vault`; `controls.py` in none | Offline | G8 |
+| The gate with real proofs | `scripts/privacy/real.sh build`, `dev`, `volume`, `gpu`, `wrap`, `finish`, `analyze` | none | Box (an L4 GPU on Modal) | — |
+
+## 23. The CI scripts (`scripts/ci/`)
+
+| Feature | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| The LEZ suites, sharded | `scripts/ci/lez-harness.sh [--shard NAME] [build]`; `--dry-run`; `python3 -I scripts/ci/check-lez-shards.py` | `lez-harness`, `lez-harness-full`; `scripts/ci/test_lez_shards.py` (CI `links`) | Offline | — |
+| The CI model and the row-to-test map | `python3 -I scripts/ci/ci_model.py --trace [JOB…]` or `--compare-yq`; `check-row-tests.py` | `test_ci_model.py` (CI `links`) | Offline | — |
+| Portability, the audit marking | `python3 -I scripts/ci/check-portable.py`; `bash scripts/ci/check-unaudited.sh` | CI `links` | Offline | — |
+| Actions pinned by commit | `python3 -I scripts/ci/check-actions-pinned.py` (exit 0 at this commit: 0 unpinned); `scripts/ci/pin-actions.py [--write]` (online) | verify.py `unit-actions-pinned` (CI `verify`) | Offline | — |
+| Names, modules, witnesses, sequencer jobs | `scripts/ci/names.sh [build]`; `modules-resolve.sh`; `witness-independence.sh N`; `sequencer-attest.sh DIR STAGE`; `sequencer-roundtrip.sh DIR STAGE`; `install-risc0.sh` | their jobs; `test-sequencer-records.sh` (CI `links`) | `sequencer-*`: online | — |
+
+## 24. Other drivers found in the tree
+
+| Feature | CLI command(s) | Test that runs it (file; CI job) | Offline/online | Gap |
+|---|---|---|---|---|
+| CI's round trip on one machine | `scripts/fetch-upstream.sh && scripts/ci/install-risc0.sh && e2e/ci/run.sh [build]` (`cli/tests/roundtrip_b.rs`) | CI `roundtrip` | Offline | — |
+| The user's private round trip on a running LEZ sequencer and node: through the tool, the mini-app, `lez_core`, Basecamp, Logos Core's send stack; a second deployer from a fresh clone | `bash e2e/seqnet/run.sh build` (also `build-miniapp`, `build-logoseth`, `build-lezcore`), then `cli`, `miniapp`, `lezcore`, `basecamp`, `deployer`, `logoseth`, `robust` or `gasdrop NAME` | `hook-gasdrop.sh`, `hook-robust.sh` (map: box); `test-late-credit.sh` against a record (offline; none) | Box ("never on a laptop"; the crown-live-3 bundle is not in git, but step 0 of the deployer guide's §11 builds it from source) | G9, G16 |
+| The crown run: Sepolia to LEZ and back | `e2e/crown.sh setup`, `start [--fork]`, `status`, `fetch`, `stop`, `verify RUN`, `updater…` (a Modal app) | `e2e/crown/test_send_guard.sh`, `test_deposit_guard.sh` (local anvil and a stub `forge`; none) | Box; `verify` online | G8, G16 |
+| Endpoints under faults | `e2e/netfault/run.sh SEED`; `many.sh`; `attacks/attacks.sh` | `e2e/netfault/test_autoresume.py` (none) | Offline (local anvil) | G7, G8 |
+| The mini-app's endpoint switch inside Logos Core (U9) | `e2e/endpoints/run.sh build`, then `live NAME` | map: box | Box; scenario E online | — |
+| The finality-rule simulator | `cd docs/design/finality-rule/sim && python3 experiments.py` (25 min on 14 processes); `python3 test_sim.py` | none | Offline | G8 |
+| The web depositor (MetaMask) | `python3 web/depositor/serve.py`; `bash web/depositor/test/run.sh` (local anvil, Playwright) | none | Offline (Playwright) | G8 |
+| The test network's host (the owner) | `deploy/testnet/deploy.sh status`, `deploy.sh programs verify`; `provision.sh`, `install*.sh`; `deploy/testnet/host/bin/*` | `deploy/testnet/tests/test_gateway.py`, `test_units.py`, `test_install_web.py`, `test_web_config.py`, `test_checkpoint_parent.py` (CI `verify`); `test_prover_client.py`, `test_gateway_gasdrop.py` (CI `links`) | Host and AWS; the tests offline | — |
+
+---
+
+## Gaps, ranked
+
+G1 to G18 are the labels the tables use. The rows below are in rank order:
+1. first, what keeps a reviewer from reaching a feature from a terminal at all;
+2. then features whose terminal path exists but which no CI job runs;
+3. last, box-only paths and documentation drift.
+
+"Smallest path" means the least new code that would close the gap. Each row states what remains open; what was closed
+alongside this page is in the next section.
+
+| Rank | Gap | What is unreachable or untested from a CLI | Smallest CLI path that would close it | Test that should run it |
+|---|---|---|---|---|
+| 1 | G2 | **The mini-app's network session is reachable only from the view.** This covers opening with a phrase, the faucet, LGO balances, approve-then-confirm for a plaintext claim and a public burn, and the release hand-off. `session.rs:124, 152-172` refuses every Logos Core caller other than `module:ferrata_bridge_ui`, so `logosctl` cannot drive it (inferred from the code, not run). The native `call wallet FILE` example can drive it, but no tracked script does. The faucet and balances calls have no test anywhere, and no CI job runs the 70 unit tests of `ferrata-bridge-calls` (`net.rs`, `seal.rs`, `session.rs`) or `network-ui-test.sh` | Commit a calls file for `cargo run --example call -- wallet FILE` (one `{"method","params"}` per line, with a `client` line) and play it against the stand-ins `tests/endpoints.rs` already serves on loopback. Add a second, online file against the test network; it sends a valueless faucet transaction | `cargo test --locked -p ferrata-bridge-calls` (all targets, not only `--test endpoints`) in CI `modules-resolve`, plus a new `--test network_session` that replays the file; `modules/ferrata_bridge_ui/scripts/network-ui-test.sh` in a Qt 6 job |
+| 2 | G3 | **Web wallet flows that only the browser reaches:** app lock (PIN, passkey), lock and erase, QR display and scan, notifications and the block checks, PWA install, offline use and update, activity per account, key export, a user's `ImportFees`. The wallet writes names v1 and messages v1, while `names/js/cli.mjs` is v2 only and `ferrata-msg.mjs` writes v2 only, so those two panels have no CLI equivalent. CI `verify` runs the wallet's eight Node test files; no job runs its Playwright suites (`pwa_e2e.py`, `e2e_test.py`) | The browser-only flows are UI by nature; their terminal path is the Playwright test itself, `python3 deploy/testnet/web/wallet/test/pwa_e2e.py --out DIR` (offline, served locally). For names and messages, either point the wallet's panels at v2 (`web-config.py` chooses v1 on purpose) or document that v1 writes are browser-only | `pwa_e2e.py`, and `test/box.sh e2e` (which needs LEZ rc3's sequencer built), in a Playwright CI job |
+| 3 | G4 | **No terminal path for admin actions on a deployed instance.** On the vault: token and global caps, deposit and release freezes, role proposals, fee announcements, retirement. On LEZ: `SetCap`, `Freeze`, `Sunset`, the roles. `cast send` is documented only for `setGlobalCap` (the 21 November advisory). Otherwise these actions exist only as the mini-app's Admin tab and `ferrata_bridge_module.admin`, both through Logos Core (box); LEZ Freeze and Lift exist only on the devnet | A `ferrata admin` subcommand, or a `vault/script/admin.sh ACTION ARGS` wrapper around `cast send` and `cast call`, dry-run by default as `ferrata` is, with the role's key from a keystore. For LEZ, an `admin` mode of `ferrata` that prints or sends the role's message, reusing the module's `admin.rs` builders | In CI `vault`, which has Foundry and Node: `forge script script/AdminScenario.s.sol` on anvil, each admin action through the new command, then `node admin/dump.mjs` to read the result. For LEZ actions, a harness test driving the new subcommand in a `lez-harness` shard |
+| 4 | G5 | **No Logos Core method is called in CI.** No job calls a method through `logosctl`. No job runs the calls crates' unit tests (attest 22, bridge 70, attestor 3, monitor 2, updater 3, relayer 4); CI runs only `--test failing_endpoint` and `--test endpoints`. Only box scripts reach `custody` (monitor, relayer), `lez`, `lez_read` and `lez_submit` (attest), and the attestor's `pubkey` and `deployment`. `ferrata_updater_module` is in no CI job at all. The `logosctl` forms are documented only for: the attestation calls (consumer guide §13); the bridge calls except `wallet` and `admin` (user guide §13); the relayer's `start`; the updater's install and load | `cargo test --locked` (all targets) for the five staged calls crates in CI `modules-resolve`, which already stages them. In `modules/README.md`, one documented `logosctl` session per module, using the forms `check.sh:224-237` runs | The calls crates' tests in `modules-resolve`. `modules/scripts/check.sh` in a scheduled Nix job (about 45 to 47 min cold, 286 s cached, per EVIDENCE rows 7 and 59) |
+| 5 | G9 | **The private path through the `ferrata` binary on a running sequencer is box-only.** The private `claim` and `burn`, and `ferrata attest` against a real zone, run only in box scripts (`e2e/seqnet/run.sh cli`, `robust`, `gasdrop`; `cli/tests/attest-seq.sh`). `sequencer.yml` says "the private claim and burn are not in this job yet". The binary that reaches the test network (LEZ rc3, `--features lez-rc3`) is built only by `deploy/testnet/cli-rc3/build.sh`, in no job. The test network's own `AGENTS.md` says `ferrata attest` "has not yet been run against this rc3 network". `docs/VERIFY.md` §5 gives the user's round trip against the test network from the command line, but it is a manual flow that sends, and no job runs it. CI's public round trip has now run against rc3 once, on the build box (`e2e/rc3-roundtrip/run.sh`; records `e2e/runs/rc3-roundtrip-1/`, re-checked in CI `verify` by `rc3-roundtrip-record`): it found crown-driver's rc3 build broken at `40e8d799` (its gas-drop module; fixed), which no job builds | Run `sequencer-roundtrip` with `FERRATA_CI_LEZ_TAG=v0.4.0-rc3` too (the scripts take it now; `e2e/rc3-roundtrip/run.sh` shows the build steps). Add the private claim and burn to `scripts/ci/sequencer-roundtrip-hook.sh`; the job already proves one private transaction for real, and this is its own stated next step. Run `ferrata attest` against the standalone sequencer in `sequencer-attest`. Add a `just cli-rc3` recipe for `deploy/testnet/cli-rc3/build.sh` | CI `sequencer-roundtrip` and `sequencer-attest`; `cli-rc3/build.sh` with `ferrata --help` checks, on a schedule |
+| 6 | G7 | **Offline Rust and Foundry suites that no CI job runs:**<br>– `checkpoint-core`, `attestor-core` and `ferrata-attestor` (5 test files), and `checkpoint/fidelity`;<br>– `monitor/attest` (`attest-monitor`, 28 integration tests);<br>– `cli`'s library modules `deposits`, `privacy`, `codes`, `units`, `seed`, `scan`, `flow`, `lez` and `logos_send`, and `-p ferrata-wallet`;<br>– `lez/bridge-wire`, including `idl_vectors.rs`, which writes the vectors CI's `idl` job decodes, and `lez/wire-class`;<br>– `ferrata-disclose` (Soft.2);<br>– the feature-gated harness suites `statements` (Soft.1), `rebate` (Soft.5) and `residue_*`;<br>– `bridge/evm-verify`;<br>– `cli/tests/relayer-crash.sh` and `monitor/tests/logos-fallback.sh` (both local anvil only);<br>– `e2e/both-halves/run.sh` and `e2e/netfault/run.sh` | Add steps to the jobs that already have the toolchain:<br>– `roundtrip`: `cd checkpoint && cargo +1.88 test -p checkpoint-core -p attestor-core -p ferrata-attestor --locked`; `cd cli && cargo test --locked --lib` (unfiltered) and `-p ferrata-wallet`; `bash cli/tests/relayer-crash.sh`; `e2e/both-halves/run.sh` (it reuses `e2e/ci/run.sh build`);<br>– `monitor`: `bash tests/logos-fallback.sh`; `scripts/fetch-upstream.sh && cd monitor/attest && cargo test --locked`;<br>– `msg`, which already builds `lez/`: `cargo test -p ferrata-lez-bridge-wire -p ferrata-lez-wire-class --locked`; `-p harness --features statements,rebate --test statements --test rebate`;<br>– `vault`: `cd bridge/evm-verify && forge test`;<br>– `witness-independence`: `cargo test -p ferrata-disclose` | The named test files themselves; `scripts/ci/check-row-tests.py` then counts them as CI |
+| 7 | G10 | **No `ferrata` path to create a seed, to transfer on LEZ (public or private), or to use the faucet.** The box tests use LEZ's own `wallet` CLI (`auth-transfer send`, `account import`) and `seqnet-fund`; no guide documents either for users. The faucet is reached only with `curl`, documented in the test network's `AGENTS.md` and the gateway's docstring; verify.py's online check `faucet-terms-online` reads only its terms | Document LEZ's `wallet auth-transfer send` and the faucet's `curl` in `docs/guides/user-guide.md`. Add `ferrata keys --new FILE`, which writes a BIP-39 seed with mode 600 | `e2e.rs`, creating its seed with `ferrata keys --new` (CI `roundtrip`) |
+| 8 | G6 | **No CI job runs the mini-app view's tests:** `box-test.sh` (offline; Qt 6, Foundry, RISC Zero), `network-ui-test.sh` (offline; Qt 6, Node), `basecamp-ui-tests.sh` (Nix). View functions with no test: Cancel on connect, `claim.skipDelay`, `release.skipDelay`, the release hand-off, the Logos signer's `evm.signing.approve` prompt. "Deposit again anyway" is tested only in `logoseth` (box) and has no `ferrata` flag | Both scripts already run from a terminal: `modules/ferrata_bridge_ui/scripts/network-ui-test.sh`, then `box-test.sh` | Both scripts in a Qt 6 CI job (Qt from apt; `box-test.sh` adds the round trip's toolchains); new `tst_miniapp` functions for the four untested actions |
+| 9 | G8 | **Offline tests that no CI job runs.** Still outside CI:<br>– `modules/scripts/test-basecamp-release.sh`;<br>– the explorer's `fixtures.mjs` and the agents' scripts against `replay_rpc.py` (stages 2 and 3 of `explorer/test/run.sh`);<br>– `deploy/testnet/web/trust/build.py --check`;<br>– `scripts/privacy/controls.py` (after `scripts/privacy/run.sh`);<br>– with Playwright: `web/depositor/test/run.sh`, `explorer/test/browser_test.py` (whose status-page case is time-dependent: it fails at `40e8d799` too, "3 epochs behind the (mock) beacon API"), `site/test_ui.py`, `admin/tools/browser-check.mjs` | One `_py(...)` or `command(...)` line each in `scripts/verifylib/catalog.py`, as for the 31 registered alongside this page; `controls.py` after `check-results.py` in shard updater-privacy | CI `verify` (the quick tier); `lez-harness` updater-privacy; a Playwright job for the browser ones |
+| 10 | G1 | **What `scripts/verify.py` still lacks.** It has every family the documents name, CI `verify` runs its quick offline tier and its tamper tests, `verify-online.yml` runs its online checks daily, and README.md, `docs/README.md` and `just verify` point to it. Still missing:<br>– a check per requirement row of the quick tier: some shown rows are backed only by their named tests (`--tests`, toolchains) and the online checks (the coverage table of [VERIFY.md](VERIFY.md) gives the numbers);<br>– the summary-only records: where a record keeps only a summary line (Helios's single mutation verdicts, the F.8 byte comparison), the checks re-derive what it holds and say so | Per-case records for the summary-only results (the scripts that make them can write them); a quick-tier check for each shown row that has only named tests | `scripts/test_verify.py` |
+| 11 | G12 | **Online re-checks not yet wrapped or tested.** verify.py's online checks now cover the Sepolia round trips, the closed vaults and every vault's verifier, the 3.1 vault's deployment record, RISC Zero 3.0.0's stop on mainnet, the test network's programs, head, run record and counters, its gas-drop and faucet terms, the site's manifest, the published catalog's index, the updater's live run, and `verify-online.yml` runs them daily. Not yet wrapped: `day1.sh discover` and `verify`, `sourcify.sh status`. `scripts/site-manifest.py` has no offline test of its own. After installing from the published catalog, only `version` is called | Register the two remaining scripts as online checks. Write an offline test of `site-manifest.py verify` against a stand-in host, which must fail on altered files, as `test_verify_live_roundtrip.py` does with altered answers. Call one method per module after the published install (`box-install.sh`) | `verify-online.yml`; the new offline test in CI `verify` |
+| 12 | G11 | **Two things the pages compute have no terminal equivalent.** `scripts/lez-read.py` gives the explorer's reads from a terminal, and CI `verify` tests it. Still missing:<br>– the status page's alarms (lag, weak-subjectivity end; the rules are `alarms.test.mjs`'s, run in CI `verify`). The closest is `attest-monitor check`, not verified against the test network's gateway;<br>– the explorer's in-browser re-verification of an attestation request's proofs (Keccak, RLP, the tries, the conditions). `lez-read.py`'s docstring claims decoding, not this | Add `lez-read instance ACCOUNT --alarms`, computing the status page's rules, and `lez-read tx HASH --verify`, re-checking an `Attest` request's proofs against an Ethereum RPC. Or record one `attest-monitor check` run against the test network | Extend `scripts/test_verify.py`'s `lez-read` tests, using the recorded blocks they already use |
+| 13 | G13 | **Updater and day-one pieces that no CI job builds or runs.** No CI job builds the updater's sequencer backend (`lez/updater/sequencer`) or `ferrata-day1`. No job runs `updater/dev/demo.sh`, which checks the process (the TOML file, `/health`, `/metrics`, SIGTERM) and needs only the harness build `lez-harness` makes | `cargo build --release --locked` in `lez/updater/sequencer`, inside `sequencer-attest`, which already builds LEZ rc3's sequencer and driver; `RISC0_DEV_MODE=1 updater/dev/demo.sh OUT` in shard updater-gate | CI `sequencer-attest`; `lez-harness` (updater-gate) |
+| 14 | G15 | **The messages and names CLIs' write paths run only on the box.** `ferrata-msg.mjs`'s argument handling and writes run only in `test/box.sh e2e`, on a local rc3 sequencer; CI tests only the library. The names CLI's full `register`, `renew`, `transfer` and `set-primary` run only in `names/e2e/box.sh e2e` | An offline Node test that spawns `ferrata-msg.mjs`: `keygen --key FILE` (which sends nothing), the usage errors (exit 2), and `status` and `inbox` against a stub RPC, as `names/js/test/review.test.mjs` does for its CLI | That test in CI `msg`. For names, extend `review.test.mjs` with a `register` against a stub RPC that checks the signed bytes |
+| 15 | G14 | **The admin view's anvil scenario is a manual command sequence** (`admin/README.md`), not a script, and nothing tests it. The browser check needs Playwright | `admin/tools/anvil-scenario.sh`: `anvil`, then `forge script script/AdminScenario.s.sol --broadcast`, then `node admin/dump.mjs`, then a diff against `admin/results/local-anvil-scenario.txt` with the addresses masked | That script in CI `vault`, which has Foundry and Node |
+| 16 | G16 | **Box-only drivers whose wrapper is outside the repository:** `e2e/seqnet`, the crown app, `gpu-prover`, the names, messages and wallet `box.sh`, the day-one rehearsal, `scripts/privacy/real.sh`, `modules/scripts/check.sh`. Their READMEs assume the owner's Modal build box (`mrun`), and `e2e/seqnet` says "never on a laptop". Their inputs can be built from source (the deployer guide's §11 step 0), but only `docs/VERIFY.md` §5 gives a plain-Linux path, and only for the user's round trip | A section "On your own Linux machine" in `docs/VERIFY.md`, giving for each box driver its build and run commands without `mrun`, its inputs (`SEQNET_BUNDLE` from `lez/crown/build.sh`) and the measured resources | None new: the second-deployer record (`docs/guides/runs/2026-11-21-second-deployer/`) already shows the path once |
+| 17 | G17 | **The justfile covers few checks.** It has `verify`, `lez-read` and `ci-commands JOB…` (each CI job's commands as `scripts/ci/ci_model.py --trace` reads them from the workflows), beside `bench`, `bench-user`, `m0`, `release`, `release-verify`, `deploy-testnet` and `halmos-long`. No recipe runs a component's tests | Recipes for the jobs whose commands need no setup (`idl`, `admin`, `links`, `verify`), and `just lez-harness SHARD` (`scripts/ci/lez-harness.sh --shard`) | A `test_ci_model.py` case comparing the recipes with the jobs |
+| 18 | G18 | **Drift that misleads a terminal user:**<br>– the docs count "eleven" bridge methods and "eight" attestation methods, against 12 and 11 in code;<br>– the wallet README says 41 Node tests (the files declare 48) and omits the required `--out` of `fork_bridge.py`;<br>– the mini-app README says 17/17 where its RESULTS.md says 27/27 | Update the counts | `scripts/check-guides.py` (CI `links`), extended to compare the method counts with each module's `src/lib.rs` trait |
+
+## Closed alongside this page
+
+| Gap | Closed by | Test |
+|---|---|---|
+| G1 (most) | `scripts/verify.py` with every family (record, hash, seal, signature, run-record, docs, unit, sepolia, lez-network, site, beacon); `docs/VERIFY.md`; `verify-online.yml` (daily, read-only); README.md and `docs/README.md` point to it; `just verify` | `scripts/test_verify.py` and the families' own tamper tests (CI `verify`) |
+| G8 (most) | 31 offline tests and record re-checks that no CI job ran, registered as quick-tier checks (the host's tests, the Basecamp page, the explorer's decoders and alarm rules, the M0 script, the v0.3.1 return leg, the send and deposit guards, the day-one daemon commands, the finality simulator, the updater's mutation runner, the names program's claims, the updater's live records) | CI `verify` |
+| G9 (part) | CI's public round trip rebuilt against LEZ v0.4.0-rc3 and run once on the build box (`e2e/rc3-roundtrip/run.sh`); crown-driver's rc3 build fixed; the CI scripts take the LEZ tag (`FERRATA_CI_LEZ_TAG`) | `rc3-roundtrip-record` re-checks the records with CI's own check stage (CI `verify`) |
+| G11 (the reads) | `scripts/lez-read.py`: the explorer's reads from a terminal (head, block, transaction, programs, instance, account), each hash recomputed, Ferrata's messages and LEZ's built-in programs decoded | `scripts/test_verify.py`'s `LezRead`, against recorded blocks served by a stand-in RPC (CI `verify`) |
+| G12 (most) | the online re-checks wrapped as verify.py online checks and run daily (row 11 above lists them), with `github-ci-runs`: every GitHub Actions run the documents cite, held to its workflow, commit and recorded conclusion | `verify-online.yml`; the stand-in tests of `scripts/test_verify.py` |
+| G17 (part) | `just verify`, `just lez-read`, `just ci-commands` | — |
+| G18 (part) | `scripts/ci/row-tests.toml`: six harness tests marked `box` are run by the `lez-harness` shards (`ci = "lez-harness"`, which `check-row-tests.py` confirms); `catalog-install.sh`'s three arguments in its `run` line; `unit-wallet` declares `python3` | `scripts/ci/check-row-tests.py` (CI `links`) |
+
+### Not verified
+
+- **What the network session refuses:** that `logosctl` presents a caller name other than `module:ferrata_bridge_ui`, and
+  so is refused. This is inferred from `session.rs`, not run.
+- **What the test network serves:** the `config.json` it actually serves, and whether `attest-monitor` reads its
+  gateway.
+- **Pass counts and timings:** they come from committed records and were not re-run.
+- **Builder flakes:** `nix run .` and the other flake outputs come from logos-module-builder `5f74cdb`, which is not in
+  this tree.
+- **CI's runs of the new jobs:** `verify` and `verify-online.yml` have run locally, not yet on GitHub. At this commit
+  every offline check passes but one, `lc-stage4-attest-costs`, which fails on RFP-021 P.1's "at most 32%" (the
+  largest case is 32.3992%) until the row's wording is corrected.

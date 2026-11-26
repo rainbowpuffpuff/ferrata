@@ -42,7 +42,8 @@
 #
 # Environment: FERRATA_DAY1_BIN (ferrata-day1 and ferrata-updater, built against the network's LEZ tag:
 #   README.md "Build"), FERRATA_DAY1_PROGRAMS (ferrata_lez.bin, ferrata_bridge.bin), FERRATA_DAY1_STATE (run data),
-#   FERRATA_DAY1_KEYS (keys), all beside the repository by default (tmp/testnet04/), never inside it;
+#   FERRATA_DAY1_KEYS (keys), all beside the repository by default (tmp/testnet04/, or FERRATA_DAY1_HOME), never
+#   inside it;
 #   FERRATA_DAY1_BRIDGE=1 adds stage (e); FERRATA_FOLLOWER_CROSS_ZONE=1 for a network whose programs include the
 #   cross-zone ones (discover says so); FERRATA_DAY1_NODE: a Logos Blockchain node's API, for discover.
 set -euo pipefail
@@ -57,8 +58,9 @@ PROGRAM_IMAGE="816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df"
 BRIDGE_SHA256="537cbe7a4c6900419b54e556b9741a9e37d86adf53f5e65683aa2b22c8e9a036"   # docs/image-ids.md ferrata_bridge_b1 (since ADR 0032, 22 Nov 2026)
 BRIDGE_IMAGE="847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515"
 FETCH_PY="$REPO/lez-v03/scripts/fetch.py"               # public beacon and execution APIs, generic User-Agent
-TOOL_DIR="${FERRATA_DAY1_BIN:-$BESIDE/tmp/testnet04/bin}"
-PROGRAMS="${FERRATA_DAY1_PROGRAMS:-$BESIDE/tmp/testnet04/final}"
+T04="${FERRATA_DAY1_HOME:-$BESIDE/tmp/testnet04}"           # the day-one kit's own folder (tests use one of theirs)
+TOOL_DIR="${FERRATA_DAY1_BIN:-$T04/bin}"
+PROGRAMS="${FERRATA_DAY1_PROGRAMS:-$T04/final}"
 RETRIES="${FERRATA_DAY1_RETRIES:-40}"                   # a stage that fails (the endpoint down, a restart) is tried again
 RETRY_SECONDS="${FERRATA_DAY1_RETRY_SECONDS:-15}"
 DAEMON_PORT="${FERRATA_DAY1_DAEMON_PORT:-9464}"
@@ -70,7 +72,7 @@ case "$cmd" in
   discover|plan|run|go|verify|status) URL="${1:-}"; [ -n "$URL" ] || die "usage: day1.sh $cmd URL" ;;
   daemon-status|daemon-stop) URL="${1:-${FERRATA_DAY1_URL:-}}"
     if [ -z "$URL" ] && [ -z "${FERRATA_DAY1_STATE:-}" ]; then
-      for p in "$BESIDE"/tmp/testnet04/state/*/daemon/pid; do
+      for p in "$T04"/state/*/daemon/pid; do
         [ -f "$p" ] && kill -0 "$(cat "$p")" 2>/dev/null && echo "running: pid $(cat "$p"), $(sed -n 's/^rpc = "\(.*\)"$/URL \1/p' "$(dirname "$p")/updater.toml" 2>/dev/null) ($(dirname "$(dirname "$p")"))" >&2
       done
       die "usage: day1.sh $cmd URL (the URL run was given; or FERRATA_DAY1_URL, or FERRATA_DAY1_STATE): without it the daemon's state is not known"
@@ -79,8 +81,8 @@ case "$cmd" in
 esac
 slug() { printf '%s' "$1" | sed -E 's#^[a-z]+://##; s#[^A-Za-z0-9.-]+#_#g; s#_+$##'; }
 NAME="$(slug "${URL:-none}")"
-STATE="${FERRATA_DAY1_STATE:-$BESIDE/tmp/testnet04/state/$NAME}"
-KEYS="${FERRATA_DAY1_KEYS:-$BESIDE/tmp/testnet04/keys/$NAME}"
+STATE="${FERRATA_DAY1_STATE:-$T04/state/$NAME}"
+KEYS="${FERRATA_DAY1_KEYS:-$T04/keys/$NAME}"
 FETCH="$STATE/fetch"
 mkdir -p "$STATE"
 TOOL="$TOOL_DIR/ferrata-day1"

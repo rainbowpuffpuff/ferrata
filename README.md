@@ -28,6 +28,7 @@ What is here are prototypes and their measurements. **Not audited. Not for produ
 | To | Read |
 |---|---|
 | see every result, with the command that re-checks it | [docs/EVIDENCE.md](docs/EVIDENCE.md) |
+| re-check every claim from a terminal: each check with its requirement rows, offline in minutes, then online | [docs/VERIFY.md](docs/VERIFY.md): `python3 -I scripts/verify.py --all`; every component's command-line path: [docs/cli-coverage.md](docs/cli-coverage.md) |
 | check the live Sepolia round trip yourself | [docs/guides/verify.md](docs/guides/verify.md) |
 | find where each RFP requirement is met | [docs/traceability.md](docs/traceability.md) |
 | see the status of each requirement | [docs/requirements-status.md](docs/requirements-status.md): of the 59 and 68 hard requirements of RFP-021 and RFP-022, 49 and 46 shown, 6 and 19 in part, 1 and 1 not yet, 3 and 2 waiting on Logos (our own strict count, 25 November 2026) |
@@ -64,6 +65,15 @@ it ran, whether its proofs were real or in dev mode, what is stand-in data, and 
 ## Check it yourself
 
 Commands run from the repository root.
+
+Every check below, and the rest, from one tool that names the requirement rows and EVIDENCE rows each one backs
+([docs/VERIFY.md](docs/VERIFY.md); Python's standard library only):
+
+```sh
+python3 -I scripts/verify.py --list              # the checks
+python3 -I scripts/verify.py --all               # every offline one, in minutes
+python3 -I scripts/verify.py --all --online      # the read-only re-reads of Sepolia, our LEZ test network and the site
+```
 
 The live Sepolia round trip, checked from its committed records, read-only (Python's standard library only; it
 asks a public endpoint unless you give your own with `--rpc URL` or `SEPOLIA_RPC_URL`):

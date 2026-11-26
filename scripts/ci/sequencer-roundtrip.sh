@@ -70,7 +70,9 @@ touch "$LOG"
 . "$REPO/scripts/ci/sequencer-records.sh"
 trap 'scrub_paths "$OUT" "$BESIDE" "$HOME" "$REPO"' EXIT
 
-export LEZ_TAG=v0.4.0-rc1
+# The LEZ tag of the sequencer, the crown driver and the tool: v0.4.0-rc1 in CI; e2e/rc3-roundtrip/run.sh runs the same
+# round trip against v0.4.0-rc3 (FERRATA_CI_LEZ_TAG), with tools it builds itself (only the run, check and summary stages).
+export LEZ_TAG="${FERRATA_CI_LEZ_TAG:-v0.4.0-rc1}"
 # One scratch directory beside the repository, and one target directory in it for LEZ's sequencer, crown-driver and
 # cli/: they build LEZ v0.4.0-rc1's crates from the same sources, which cargo then shares.
 T="${FERRATA_CI_ROUNDTRIP_TMP:-$BESIDE/tmp/ci-seq-roundtrip}"
@@ -196,7 +198,7 @@ stage_run() {
   export FERRATA_LIVE_BEDROCK=mock FERRATA_LIVE_BLOCK_TIME=3s FERRATA_LIVE_PHASES=hook
   export FERRATA_LIVE_HOOK="$REPO/scripts/ci/sequencer-roundtrip-hook.sh" FERRATA_LIVE_OUT="$OUT/zone"
   export FERRATA_PROGRAM_BIN="$TOOLS/ferrata_lez.bin" FERRATA_SCRIPTED_BIN="$TOOLS/scripted.bin"
-  say "== run: LEZ v0.4.0-rc1's sequencer (standalone: its mock Bedrock, no Logos Blockchain node), blocks every 3 s; the round trip in its hook"
+  say "== run: LEZ $LEZ_TAG's sequencer (standalone: its mock Bedrock, no Logos Blockchain node), blocks every 3 s; the round trip in its hook"
   run_logged "run: LEZ sequencer (standalone) + scripts/ci/sequencer-roundtrip-hook.sh" bash "$REPO/lez/live/run.sh" run
   say "run done at $(minutes)"
 }
@@ -258,13 +260,13 @@ PY
 
 # ---- summary -------------------------------------------------------------------------------------------------------
 stage_summary() {
-  python3 -I - "$OUT" "${GITHUB_STEP_SUMMARY:-}" <<'PY' || echo "sequencer-roundtrip: the summary could not be written" >&2
+  python3 -I - "$OUT" "${GITHUB_STEP_SUMMARY:-}" "$LEZ_TAG" <<'PY' || echo "sequencer-roundtrip: the summary could not be written" >&2
 import json, os, sys
-out, step_summary = sys.argv[1:3]
+out, step_summary, lez_tag = sys.argv[1:4]
 run = os.path.join(out, "run")
 lines = ["# CI: the bridge round trip through a LEZ sequencer in standalone mode and a local fork of Sepolia", "",
          "RFP-022 Reliability #10 (job `sequencer-roundtrip` of `.github/workflows/sequencer.yml`, script",
-         "`scripts/ci/sequencer-roundtrip.sh`): LEZ v0.4.0-rc1's `sequencer_service` built with its `standalone` feature (its",
+         "`scripts/ci/sequencer-roundtrip.sh`): LEZ %s's `sequencer_service` built with its `standalone` feature (its" % lez_tag,
          "mock Bedrock actor; no Logos Blockchain node), blocks every 3 s; anvil forking Sepolia at its finalized block of",
          "the moment. Stand-ins, exactly: the light client's committee (anvil has no beacon chain), the vault's verifier",
          "(the vault tests' `MockRiscZeroVerifier`, accepting only the journals the checkpoint and release guests computed",

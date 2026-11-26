@@ -1,0 +1,57 @@
+{
+ "about": "Golden values for scripts/test_verify.py's decoder tests, from Sepolia's public beacon API (read-only GETs on 2026-11-26T10:28:20Z), not from this repository's decoders: for each Open of the recorded LEZ blocks (scripts/verifylib/testdata/), the canonical roots of its update's attested and finalized slots (/eth/v1/beacon/headers/SLOT) and the sync aggregate of the block at its signature slot (/eth/v2/beacon/blocks/SLOT: body.sync_aggregate), whose parent is the attested block.",
+ "fetched_utc": "2026-11-26T10:28:20Z",
+ "updates": [
+  {
+   "block": 25198,
+   "tx": "622a0a5c29591c9050d5a583528a9991715e888ba9ff9b269ff3c9fc1135ab81",
+   "attested_slot": 11662400,
+   "finalized_slot": 11662336,
+   "signature_slot": 11662401,
+   "attested_root": "0x455be179328c2d09f99ad158dd342b9ca3d4f4eabe426293ee0d0db20e7761a8",
+   "attested_canonical": true,
+   "finalized_root": "0x03d1e8b2b239ef09e4a7ee9e6b281e7c8c6b27bf23349a0cefb10c6ba0682e39",
+   "finalized_canonical": true,
+   "signature_block_parent_root": "0x455be179328c2d09f99ad158dd342b9ca3d4f4eabe426293ee0d0db20e7761a8",
+   "sync_committee_bits": "0xf5fbfffffffffefffffffffffeffff7fffffffffffff7feffff77fffeffffff7ffbfffdfffffffffdfffffffffffffffffffbfffff7fffffdfffffffffffefff",
+   "sync_committee_signature": "0x814a2e668af4e08709f57803c0ec860d4cb47ff50c5faf8c764ae5f10578853d691ed75a852d151582b139fcdc2264b208b8c7c8a99df2a906bd337092a5df3aad3b25442fa69112fd3ab9e4ddeb80b0b9ff7f0170ba4da7a75e5d09f5a63fbb",
+   "sources": [
+    "https://ethereum-sepolia-beacon-api.publicnode.com"
+   ]
+  },
+  {
+   "block": 25239,
+   "tx": "53aa5924f9a219b930751cc2f8afa807bfae568feadc7bb43c028772a2b1008d",
+   "attested_slot": 11662434,
+   "finalized_slot": 11662368,
+   "signature_slot": 11662435,
+   "attested_root": "0x8d4fb65c5541a28827b9600956286100fc7cd182e25658dbb32d947e29f43187",
+   "attested_canonical": true,
+   "finalized_root": "0x3acc4f4c03c14dfffa28a6f41414f260c6538e6993997e0b54b7842c905c920a",
+   "finalized_canonical": true,
+   "signature_block_parent_root": "0x8d4fb65c5541a28827b9600956286100fc7cd182e25658dbb32d947e29f43187",
+   "sync_committee_bits": "0xf5fbfffffffffefffffffffffeffff7fffffffffffff7feffff77fffeffffff7ffbfffdfffffffffdfffffffffffffffffffbfffff7fffffdfffffffffffefff",
+   "sync_committee_signature": "0x8ceae955584f579ed16937530db77e5b157ef14b3aaec9a3e5f573fb12a736e19c0234284ffab798814a1ae34d3394890141930db49e038831da2ed69b3e37eb102fa917a350adfcf2610022d9538dae449a9f5be39a180f7f7f904adfea9ea8",
+   "sources": [
+    "https://ethereum-sepolia-beacon-api.publicnode.com"
+   ]
+  },
+  {
+   "block": 9421,
+   "tx": "12a099345212c0f8e3c03619814bba4e1b14c2b43dec0e7f3a255614e46440e2",
+   "attested_slot": 11649088,
+   "finalized_slot": 11649024,
+   "signature_slot": 11649089,
+   "attested_root": "0x94592892c55601e4ba7a55e48357703d3d2c07ff65ccac4764af367ab1ce4197",
+   "attested_canonical": true,
+   "finalized_root": "0xa5f802a576c15165dbf01b65bfe2b97a2327ea8638dd3a366f880aca1b20d006",
+   "finalized_canonical": true,
+   "signature_block_parent_root": "0x94592892c55601e4ba7a55e48357703d3d2c07ff65ccac4764af367ab1ce4197",
+   "sync_committee_bits": "0xfffffffefefefffefffffffffffeffffefdffffffffffefffffffffffcfbfffffffffffffffffff7fffffff7fffffffb7ffffffffffffffffff7ffeffffffffd",
+   "sync_committee_signature": "0xb47672192928719790ffde86718504f506d76c2ffb50c737f4e334f7a45ebd1762bcf8fe2ba0163611941c7e79594c0d18d91ff6ad42dac6d7f356a1e43af4f1c56994a31f93ca5f71528081cdcb1446ece7aae5b11712b611e69784b2925bd4",
+   "sources": [
+    "https://ethereum-sepolia-beacon-api.publicnode.com"
+   ]
+  }
+ ]
+}

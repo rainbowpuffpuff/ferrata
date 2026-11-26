@@ -1,0 +1,498 @@
+{
+ "as_of": {
+  "block": 25776,
+  "hash": "bc2fb5d276468067704359d2b694fdfe9f2a04846d576239b623cbf24080eff0",
+  "time_utc": "2026-11-26T10:17:22.807Z"
+ },
+ "chain": {
+  "block_gaps_over_60s": [
+   {
+    "after_block": 134,
+    "from_utc": "2026-11-23T10:33:09.094Z",
+    "seconds": 83.145,
+    "to_utc": "2026-11-23T10:34:32.239Z"
+   },
+   {
+    "after_block": 17140,
+    "from_utc": "2026-11-25T10:02:31.911Z",
+    "seconds": 158.301,
+    "to_utc": "2026-11-25T10:05:10.212Z"
+   },
+   {
+    "after_block": 24375,
+    "from_utc": "2026-11-26T06:17:40.217Z",
+    "seconds": 252.59,
+    "to_utc": "2026-11-26T06:21:52.807Z"
+   }
+  ],
+  "blocks": 25776,
+  "first_block_with_time": {
+   "block": 2,
+   "time_utc": "2026-11-23T10:11:09.094Z"
+  }
+ },
+ "instances": {
+  "3pQmc7V8CuUZNmYeqUYTrnc1NgExoQvHw5VfKzpkaVFH": {
+   "chain_id": 11155111,
+   "committee_adoptions": [
+    {
+     "block": 75,
+     "finalized_slot": 11640832,
+     "period": 1421,
+     "time_utc": "2026-11-23T10:23:19.094Z"
+    },
+    {
+     "block": 9453,
+     "finalized_slot": 11649024,
+     "period": 1422,
+     "time_utc": "2026-11-24T12:28:21.903Z"
+    },
+    {
+     "block": 19191,
+     "finalized_slot": 11657216,
+     "period": 1423,
+     "time_utc": "2026-11-25T15:46:50.217Z"
+    }
+   ],
+   "finalized_epochs_advanced_per_update": {
+    "0": 31,
+    "1": 636,
+    "13": 1,
+    "2": 1,
+    "3": 2
+   },
+   "finalized_slots": [
+    11640832,
+    11662784
+   ],
+   "first_update": {
+    "attested_slot": 11640896,
+    "block": 75,
+    "finalized_root": "49cd05dd2796f3e0539e53797dfd2a9f76c4887b5124eb9bbbf2b7fe8b3efaec",
+    "finalized_slot": 11640832,
+    "lag_s": 5815.1,
+    "next_committee": true,
+    "participants": 486,
+    "period": 1421,
+    "sender": "Fdgg7HoWP8geUFUon9ha7Lw29xTjqFFb1GJABUcEMeBb",
+    "signature_slot": 11640897,
+    "time_utc": "2026-11-23T10:23:19.094Z"
+   },
+   "init": {
+    "block": 22,
+    "detail": "chain_id=11155111 committee=512 adoption_parts=2",
+    "sender": "FGGQDAMqDPyJBtsH7owtRBCneMA4btdCSEGLvb3Uydm9",
+    "time_utc": "2026-11-23T10:14:29.094Z"
+   },
+   "intervals": {
+    "count": 671,
+    "longest": {
+     "from_block": 9287,
+     "from_utc": "2026-11-24T12:00:41.903Z",
+     "seconds": 1240.0,
+     "to_block": 9411,
+     "to_utc": "2026-11-24T12:21:21.903Z"
+    },
+    "median_s": 380.001,
+    "over_1h": [],
+    "over_3h": []
+   },
+   "jobs_opened_not_finished": [
+    {
+     "block": 25775,
+     "finalized_slot": 11662816,
+     "job": "HkLnGtospoxELTEfgtfwfUX3Ta8DCfVLXBgSeUzF2z3A",
+     "open_at_as_of": true,
+     "opened_s_before_as_of": 10.0,
+     "sender": "Fdgg7HoWP8geUFUon9ha7Lw29xTjqFFb1GJABUcEMeBb",
+     "time_utc": "2026-11-26T10:17:12.807Z"
+    }
+   ],
+   "lag_behind_finality_s": {
+    "max": 5815.1,
+    "median": 998.2,
+    "min": 853.9
+   },
+   "last_update": {
+    "attested_slot": 11662849,
+    "block": 25745,
+    "finalized_root": "05492d6cab8803e7651aa754cd31145d78bd7566bbe9dc06465c7e95afa3a1d3",
+    "finalized_slot": 11662784,
+    "lag_s": 924.8,
+    "next_committee": false,
+    "participants": 493,
+    "period": 1423,
+    "sender": "Fdgg7HoWP8geUFUon9ha7Lw29xTjqFFb1GJABUcEMeBb",
+    "signature_slot": 11662851,
+    "time_utc": "2026-11-26T10:12:12.807Z"
+   },
+   "longest_intervals": [
+    {
+     "from_block": 9287,
+     "from_utc": "2026-11-24T12:00:41.903Z",
+     "seconds": 1240.0,
+     "to_block": 9411,
+     "to_utc": "2026-11-24T12:21:21.903Z"
+    },
+    {
+     "from_block": 19027,
+     "from_utc": "2026-11-25T15:19:30.216Z",
+     "seconds": 1220.0,
+     "to_block": 19149,
+     "to_utc": "2026-11-25T15:39:50.216Z"
+    },
+    {
+     "from_block": 25294,
+     "from_utc": "2026-11-26T08:56:22.808Z",
+     "seconds": 1090.0,
+     "to_block": 25403,
+     "to_utc": "2026-11-26T09:14:32.808Z"
+    },
+    {
+     "from_block": 24336,
+     "from_utc": "2026-11-26T06:11:00.290Z",
+     "seconds": 652.517,
+     "to_block": 24376,
+     "to_utc": "2026-11-26T06:21:52.807Z"
+    },
+    {
+     "from_block": 10549,
+     "from_utc": "2026-11-24T15:31:21.903Z",
+     "seconds": 630.0,
+     "to_block": 10612,
+     "to_utc": "2026-11-24T15:41:51.903Z"
+    },
+    {
+     "from_block": 10165,
+     "from_utc": "2026-11-24T14:27:01.903Z",
+     "seconds": 620.001,
+     "to_block": 10226,
+     "to_utc": "2026-11-24T14:37:21.904Z"
+    },
+    {
+     "from_block": 11321,
+     "from_utc": "2026-11-24T17:40:01.903Z",
+     "seconds": 580.001,
+     "to_block": 11379,
+     "to_utc": "2026-11-24T17:49:41.904Z"
+    },
+    {
+     "from_block": 18713,
+     "from_utc": "2026-11-25T14:27:10.217Z",
+     "seconds": 579.999,
+     "to_block": 18771,
+     "to_utc": "2026-11-25T14:36:50.216Z"
+    },
+    {
+     "from_block": 21405,
+     "from_utc": "2026-11-25T21:55:50.216Z",
+     "seconds": 560.001,
+     "to_block": 21461,
+     "to_utc": "2026-11-25T22:05:10.217Z"
+    },
+    {
+     "from_block": 14068,
+     "from_utc": "2026-11-25T01:20:31.903Z",
+     "seconds": 560.0,
+     "to_block": 14124,
+     "to_utc": "2026-11-25T01:29:51.903Z"
+    }
+   ],
+   "open_to_finish_s": {
+    "max": 422.591,
+    "median": 160.0
+   },
+   "participants": {
+    "max": 494,
+    "min": 463
+   },
+   "period_crossings": [
+    {
+     "block": 9411,
+     "finalized_slot": 11649024,
+     "from_period": 1421,
+     "time_utc": "2026-11-24T12:21:21.903Z",
+     "to_period": 1422
+    },
+    {
+     "block": 19149,
+     "finalized_slot": 11657216,
+     "from_period": 1422,
+     "time_utc": "2026-11-25T15:39:50.216Z",
+     "to_period": 1423
+    }
+   ],
+   "periods": [
+    1421,
+    1422,
+    1423
+   ],
+   "refused": [],
+   "senders": {
+    "8P8cvbc1xmwuX6rCN42wcG4eAenV51vz9G9m19fm3F4b": {
+     "first_block": 152,
+     "last_block": 152,
+     "steps": {
+      "attest": 1
+     },
+     "transactions": 1
+    },
+    "FGGQDAMqDPyJBtsH7owtRBCneMA4btdCSEGLvb3Uydm9": {
+     "first_block": 22,
+     "last_block": 81,
+     "steps": {
+      "attest": 1,
+      "init": 1
+     },
+     "transactions": 2
+    },
+    "Fdgg7HoWP8geUFUon9ha7Lw29xTjqFFb1GJABUcEMeBb": {
+     "first_block": 28,
+     "last_block": 25775,
+     "steps": {
+      "adopt": 8,
+      "finish": 672,
+      "miller": 672,
+      "open": 673
+     },
+     "transactions": 2025
+    }
+   },
+   "steps": {
+    "adopt applied": 8,
+    "attest applied": 2,
+    "finish applied": 672,
+    "init applied": 1,
+    "miller applied": 672,
+    "open applied": 673
+   },
+   "updates_applied": 672,
+   "updates_per_utc_day": {
+    "2026-11-23": 129,
+    "2026-11-24": 224,
+    "2026-11-25": 224,
+    "2026-11-26": 95
+   }
+  },
+  "HAh9gu1BzmaueyQjxeVuZa2sVN8Na9W36DA3sQXFSAxi": {
+   "chain_id": 11155111,
+   "committee_adoptions": [
+    {
+     "block": 1807,
+     "finalized_slot": 11640832,
+     "period": 1421,
+     "time_utc": "2026-11-23T15:13:12.238Z"
+    }
+   ],
+   "finalized_epochs_advanced_per_update": {
+    "1": 23,
+    "2": 1,
+    "45": 1,
+    "58": 1
+   },
+   "finalized_slots": [
+    11640832,
+    11644928
+   ],
+   "first_update": {
+    "attested_slot": 11640896,
+    "block": 1807,
+    "finalized_root": "49cd05dd2796f3e0539e53797dfd2a9f76c4887b5124eb9bbbf2b7fe8b3efaec",
+    "finalized_slot": 11640832,
+    "lag_s": 23208.2,
+    "next_committee": true,
+    "participants": 486,
+    "period": 1421,
+    "sender": "CJtEhDN6dEk51bmMaczgqXsJ28s2QyhAtjQiKTKzKdB5",
+    "signature_slot": 11640897,
+    "time_utc": "2026-11-23T15:13:12.238Z"
+   },
+   "init": {
+    "block": 1698,
+    "detail": "chain_id=11155111 committee=512 adoption_parts=2",
+    "sender": "7KVZiQuiFM5154PYF3UezwNcg1FcDRToD6VAyggBdiK9",
+    "time_utc": "2026-11-23T14:55:02.238Z"
+   },
+   "intervals": {
+    "count": 26,
+    "longest": {
+     "from_block": 2302,
+     "from_utc": "2026-11-23T16:35:42.238Z",
+     "seconds": 17480.001,
+     "to_block": 4050,
+     "to_utc": "2026-11-23T21:27:02.239Z"
+    },
+    "median_s": 380.001,
+    "over_1h": [
+     {
+      "from_block": 2302,
+      "from_utc": "2026-11-23T16:35:42.238Z",
+      "seconds": 17480.001,
+      "to_block": 4050,
+      "to_utc": "2026-11-23T21:27:02.239Z"
+     }
+    ],
+    "over_3h": [
+     {
+      "from_block": 2302,
+      "from_utc": "2026-11-23T16:35:42.238Z",
+      "seconds": 17480.001,
+      "to_block": 4050,
+      "to_utc": "2026-11-23T21:27:02.239Z"
+     }
+    ]
+   },
+   "jobs_opened_not_finished": [],
+   "lag_behind_finality_s": {
+    "max": 23208.2,
+    "median": 904.2,
+    "min": 866.2
+   },
+   "last_update": {
+    "attested_slot": 11644992,
+    "block": 4493,
+    "finalized_root": "bf50a83b4e082548f9bc824fe98eb656aca5408d91962e0d3d7391cc74d15fc6",
+    "finalized_slot": 11644928,
+    "lag_s": 916.2,
+    "next_committee": false,
+    "participants": 486,
+    "period": 1421,
+    "sender": "7KVZiQuiFM5154PYF3UezwNcg1FcDRToD6VAyggBdiK9",
+    "signature_slot": 11644993,
+    "time_utc": "2026-11-23T22:40:52.238Z"
+   },
+   "longest_intervals": [
+    {
+     "from_block": 2302,
+     "from_utc": "2026-11-23T16:35:42.238Z",
+     "seconds": 17480.001,
+     "to_block": 4050,
+     "to_utc": "2026-11-23T21:27:02.239Z"
+    },
+    {
+     "from_block": 4104,
+     "from_utc": "2026-11-23T21:36:02.239Z",
+     "seconds": 990.0,
+     "to_block": 4203,
+     "to_utc": "2026-11-23T21:52:32.239Z"
+    },
+    {
+     "from_block": 2032,
+     "from_utc": "2026-11-23T15:50:42.239Z",
+     "seconds": 400.0,
+     "to_block": 2072,
+     "to_utc": "2026-11-23T15:57:22.239Z"
+    },
+    {
+     "from_block": 4415,
+     "from_utc": "2026-11-23T22:27:52.238Z",
+     "seconds": 390.001,
+     "to_block": 4454,
+     "to_utc": "2026-11-23T22:34:22.239Z"
+    },
+    {
+     "from_block": 1882,
+     "from_utc": "2026-11-23T15:25:42.238Z",
+     "seconds": 390.0,
+     "to_block": 1921,
+     "to_utc": "2026-11-23T15:32:12.238Z"
+    },
+    {
+     "from_block": 2110,
+     "from_utc": "2026-11-23T16:03:42.238Z",
+     "seconds": 390.0,
+     "to_block": 2149,
+     "to_utc": "2026-11-23T16:10:12.238Z"
+    },
+    {
+     "from_block": 2149,
+     "from_utc": "2026-11-23T16:10:12.238Z",
+     "seconds": 390.0,
+     "to_block": 2188,
+     "to_utc": "2026-11-23T16:16:42.238Z"
+    },
+    {
+     "from_block": 2226,
+     "from_utc": "2026-11-23T16:23:02.239Z",
+     "seconds": 390.0,
+     "to_block": 2265,
+     "to_utc": "2026-11-23T16:29:32.239Z"
+    },
+    {
+     "from_block": 4223,
+     "from_utc": "2026-11-23T21:55:52.238Z",
+     "seconds": 390.0,
+     "to_block": 4262,
+     "to_utc": "2026-11-23T22:02:22.238Z"
+    },
+    {
+     "from_block": 4376,
+     "from_utc": "2026-11-23T22:21:22.238Z",
+     "seconds": 390.0,
+     "to_block": 4415,
+     "to_utc": "2026-11-23T22:27:52.238Z"
+    }
+   ],
+   "open_to_finish_s": {
+    "max": 179.999,
+    "median": 99.999
+   },
+   "participants": {
+    "max": 486,
+    "min": 486
+   },
+   "period_crossings": [],
+   "periods": [
+    1421
+   ],
+   "refused": [
+    {
+     "block": 4400,
+     "sender": "7KVZiQuiFM5154PYF3UezwNcg1FcDRToD6VAyggBdiK9",
+     "step": "attest",
+     "time_utc": "2026-11-23T22:25:22.239Z",
+     "tx": "8e0029a563a2129c1b88cedce25d2fb55a63f69d7cec07e450f99eff2ef26e2f"
+    }
+   ],
+   "senders": {
+    "7KVZiQuiFM5154PYF3UezwNcg1FcDRToD6VAyggBdiK9": {
+     "first_block": 1698,
+     "last_block": 4493,
+     "steps": {
+      "attest": 3,
+      "finish": 1,
+      "init": 1,
+      "miller": 1,
+      "open": 1
+     },
+     "transactions": 7
+    },
+    "CJtEhDN6dEk51bmMaczgqXsJ28s2QyhAtjQiKTKzKdB5": {
+     "first_block": 1779,
+     "last_block": 4454,
+     "steps": {
+      "adopt": 4,
+      "finish": 26,
+      "miller": 26,
+      "open": 26
+     },
+     "transactions": 82
+    }
+   },
+   "steps": {
+    "adopt applied": 4,
+    "attest applied": 2,
+    "attest reverted": 1,
+    "finish applied": 27,
+    "init applied": 1,
+    "miller applied": 27,
+    "open applied": 27
+   },
+   "updates_applied": 27,
+   "updates_per_utc_day": {
+    "2026-11-23": 27
+   }
+  }
+ },
+ "transactions": 2117
+}
