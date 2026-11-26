@@ -8,8 +8,8 @@ from pathlib import Path
 
 from .lez import DecodeError, Reader
 
-INTS = {"u8": 1, "u16": 2, "u32": 4, "u64": 8, "u128": 16}
-PRIMS32 = {"account_id", "AccountId", "program_id", "ProgramId"}
+INTS = {"u8": 1, "u16": 2, "u32": 4, "u64": 8, "u128": 16, "i8": 1, "i16": 2, "i32": 4, "i64": 8, "i128": 16}
+PRIMS32 = {"account_id", "AccountId", "[u8; 32]", "[u8;32]", "program_id", "ProgramId", "[u32; 8]", "[u32;8]"}  # idl.js
 FORKS = ("Altair", "Capella", "Deneb", "Electra", "Gloas")
 # floorlog2 of the generalized indices of crates/ferrata-core/src/merkle.rs, by fork (types.rs: *_branch_len)
 SYNC_BRANCH = {"Altair": 5, "Capella": 5, "Deneb": 5, "Electra": 6, "Gloas": 11}
@@ -73,7 +73,10 @@ class Idl:
     def value(self, r: Reader, t):
         if isinstance(t, str):
             if t in INTS:
-                return r.uint(INTS[t])
+                w, v = INTS[t], r.uint(INTS[t])
+                if t[0] == "i" and v >= 1 << (8 * w - 1):  # two's complement, as idl.js reads it
+                    v -= 1 << (8 * w)
+                return v
             if t == "bool":
                 return r.flag()
             if t == "string":

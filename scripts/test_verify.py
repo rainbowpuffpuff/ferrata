@@ -351,6 +351,24 @@ class RunRecordOffline(TamperCase):
 class ScannerState(unittest.TestCase):
     """runrecord.scan's attribution state changes only with what the chain applied (review round 1, M5)."""
 
+    def test_a_refused_duplicate_open_keeps_the_open_time(self):
+        """Open applied at t, Finish at t + 350 s, a refused duplicate Open at the Finish's time (round 2, L1)."""
+        base = {c: "-" for c in runrecord.COLUMNS}
+        inst, job = "I" * 44, "J" * 44
+
+        def line(block, t, step, outcome):
+            return {**base, "block": str(block), "time_utc": t, "block_hash": "0" * 64, "index": "0",
+                    "tx": f"{block:064x}", "step": step, "outcome": outcome, "instance": inst, "job": job,
+                    "sender": "S", "finalized_slot": "64", "finalized_root": "1" * 64}
+        rows = [line(10, "2026-11-23T10:00:00.000Z", "open", "applied"),
+                line(45, "2026-11-23T10:05:50.000Z", "finish", "applied"),
+                line(46, "2026-11-23T10:05:50.000Z", "open", "reverted")]
+        chain = {"as_of": {"block": 50, "hash": "0" * 64, "time_utc": "2026-11-23T10:06:30.000Z"}, "blocks": 50,
+                 "first_block_with_time": None, "block_gaps_over_60s": [], "instances": {inst: {}}}
+        v = runrecord.summarize(rows, chain)["instances"][inst]
+        self.assertEqual(v["open_to_finish_s"], {"median": 350.0, "max": 350.0})
+        self.assertEqual(v["jobs_opened_not_finished"], [])
+
     def test_a_refused_init_changes_nothing(self):
         program, inst, job, signer = b"\x01" * 32, b"\x02" * 32, b"\x03" * 32, b"\x09" * 32
         good = {"chain_id": 11155111, "sync_committee_size": 512, "adoption_parts": 2}
@@ -659,6 +677,30 @@ class Decoders(unittest.TestCase):
                                                self.NEXT_SYNC_COMMITTEE_GINDEX[u["fork"]], u["attested_state_root"]))
         self.assertTrue(any(runrecord.lc.compact_update(self.opens[g["tx"]][1])["next_committee"] for g in self.golden))
 
+    def test_idl_as_the_explorer_reads_it(self):
+        """Signed integers, the 32-byte aliases, and a vector that cannot fit what is left (review round 2, L3)."""
+        idl = runrecord.lc.Idl({
+            "types": [{"name": "E", "type": {"kind": "struct", "fields": []}},
+                      {"name": "S", "type": {"kind": "struct", "fields": [{"name": "a", "type": "i16"},
+                                                                         {"name": "b", "type": "[u8; 32]"}]}}],
+            "instructions": [{"name": "x", "discriminator": [0], "args": [{"name": "v", "type": {"vec": {"defined": "E"}}}]},
+                             {"name": "y", "discriminator": [1], "args": [{"name": "s", "type": {"defined": "S"}}]}]})
+        with self.assertRaises(lez.DecodeError):
+            idl.instruction(bytes([0, 5, 0, 0, 0]))
+        self.assertEqual(idl.instruction(bytes([1]) + (65535).to_bytes(2, "little") + bytes(32))[1]["s"]["a"], -1)
+
+    def test_a_block_rehashed_but_not_linked(self):
+        """Its own hash recomputed after its previous hash was changed: it decodes, but does not follow its parent."""
+        b1, b2 = self.raw_blocks[0], bytearray(self.raw_blocks[1])
+        b2[8] ^= 1
+        d = lez.decode_block(bytes(b2))
+        b2[40:72] = d["computed_hash"]
+        self.assertTrue(lez.decode_block(bytes(b2))["hash_ok"])
+        chain = json.loads((ROOT / RR / "chain.json").read_text())
+        _, _, probs = runrecord.scan([b1, bytes(b2)], lez.b58decode(chain["program_account"]), self.idl,
+                                     first=1, instances=chain["instances"])
+        self.assertTrue(any("previous hash" in p for p in probs), probs)
+
     def test_trailing_bytes(self):
         raw = self.raw_blocks[0]
         with self.assertRaises(lez.DecodeError):
@@ -852,6 +894,113 @@ class Families(TamperCase):
             api.close()
 
 
+class GasDrop(unittest.TestCase):
+    """gasdrop-terms-online against a stand-in gateway (review round 2, M4)."""
+
+    IMAGE = "0xce3ad533d2c72b38c9779f1c692dd784e3fd754612808696e1362da49c7f8125"  # docs/image-ids.md's gas-drop row
+    RELAYER = "07" * 32
+
+    def terms(self, amount, balance=100):
+        t = {"imageId": self.IMAGE, "relayer": "0x" + self.RELAYER, "amount": amount, "covers": ["claim", "burn"]}
+        rpc = StandInRpc({}, {"/relayer/gas-drop": t}, balances={lez.b58encode(bytes.fromhex(self.RELAYER)): balance})
+        try:
+            return run("gasdrop-terms-online", ROOT, lez_url=rpc.url)
+        finally:
+            rpc.close()
+
+    def test_a_drop_the_relayer_can_pay(self):
+        self.assertEqual(self.terms(10).status, "PASS")
+        self.assertEqual(self.terms(100).status, "PASS")  # exactly one drop
+
+    def test_no_drop(self):
+        for amount in (0, -1, "ten", None):
+            with self.subTest(amount=amount):
+                self.assertEqual(self.terms(amount).status, "FAIL")
+        self.assertEqual(self.terms(101).status, "FAIL")  # more than the relayer holds
+
+
+class Dates(unittest.TestCase):
+    def test_utc_whatever_the_time_zone(self):
+        """runrecord.parse_iso in a zone with daylight saving, in July and November (review round 2, L2)."""
+        code = ("import sys; sys.path.insert(0, 'scripts'); from verifylib.runrecord import parse_iso; "
+                "print(parse_iso('2026-07-26T10:17:22.807Z'), parse_iso('2026-11-26T10:17:22.807Z'))")
+        for tz in ("America/New_York", "Europe/Prague", "UTC"):
+            p = subprocess.run([sys.executable, "-I", "-c", code], cwd=ROOT, capture_output=True, text=True,
+                               env={**os.environ, "TZ": tz}, timeout=60)
+            self.assertEqual(p.stdout.split(), ["1785061042807", "1795688242807"], (tz, p.stderr))
+
+
+class SiteManifestOutcomes(unittest.TestCase):
+    """site-manifest-online's reading of site-manifest.py's verdicts (review round 2, M1): only transport failures,
+    twice, make a skip; a definite answer such as HTTP 404 is a failure."""
+
+    PASS_OUT = (0, ["232 of 232 files equal the manifest", "VERDICT: PASS"])
+
+    def outcome(self, *outputs):
+        from verifylib import checks_online
+        real, it = checks_online._run, iter(outputs)
+        checks_online._run = lambda ctx, argv, timeout=1800, env=None: next(it)
+        try:
+            return run("site-manifest-online", ROOT, lez_url="http://127.0.0.1:9").status
+        finally:
+            checks_online._run = real
+
+    def failing(self, *lines):
+        return (1, list(lines) + ["VERDICT: FAIL (1)"])
+
+    def test_outcomes(self):
+        gone = self.failing("FAIL  /x: cannot fetch (HTTPError: 404)")
+        slow = self.failing("FAIL  /x: cannot fetch (TimeoutError: The read operation timed out)")
+        differs = self.failing("FAIL  /x: served 0123456789abcdef…, manifest fedcba9876543210…")
+        self.assertEqual(self.outcome(gone, gone), "FAIL")
+        self.assertEqual(self.outcome(slow, slow), "SKIP")
+        self.assertEqual(self.outcome(slow, self.PASS_OUT), "PASS")
+        self.assertEqual(self.outcome(slow, gone), "FAIL")
+        self.assertEqual(self.outcome(differs), "FAIL")
+        self.assertEqual(self.outcome(self.failing("FAIL  cannot read the served manifest /m.json: HTTPError: 410")),
+                         "FAIL")
+        self.assertEqual(self.outcome(self.failing("FAIL  /x: cannot fetch (HTTPError: 503)"),
+                                      self.failing("FAIL  /x: cannot fetch (HTTPError: 503)")), "SKIP")
+
+
+class Runner(unittest.TestCase):
+    """The runner's reading of a command's success, and the named tests it must never run (review round 2, M2, M6)."""
+
+    def command(self, code: str):
+        from verifylib.core import Check
+        c = Check(id="t", title="t", family="unit", mode="offline", argv=("python3", "-I", "-c", code))
+        return run_check(c, Ctx(root=ROOT))
+
+    def test_a_test_run_that_ran_nothing_is_a_skip(self):
+        skipping = ("import unittest\nclass T(unittest.TestCase):\n    @classmethod\n    def setUpClass(cls):\n"
+                    "        raise unittest.SkipTest('no artifact')\n    def test_x(self):\n        pass\n"
+                    "unittest.main()")
+        self.assertEqual(self.command(skipping).status, "SKIP")
+        running = "import unittest\nclass T(unittest.TestCase):\n    def test_x(self):\n        pass\nunittest.main()"
+        self.assertEqual(self.command(running).status, "PASS")
+        from verifylib.core import ran_nothing
+        self.assertIsNone(ran_nothing("# tests 67\n# pass 65\n# fail 0\n# skipped 2\n"))
+        self.assertTrue(ran_nothing("# tests 2\n# pass 0\n# skipped 2\n"))
+
+    def test_recipes_are_not_run(self):
+        from verifylib import tests_map
+        self.assertTrue(tests_map.manual_reason("cd lez && cargo run --bin ferrata-attest -- status --send", {"box"}))
+        self.assertTrue(tests_map.manual_reason("modules/scripts/catalog-install.sh RELEASE_DIR LOGOSCTL WORK_DIR",
+                                                {"box"}))
+        self.assertIsNone(tests_map.manual_reason("cd cli && cargo test --locked -p ferrata-cli --lib", {"box"}))
+        self.assertIsNone(tests_map.manual_reason("python3 -I scripts/test_m0.py", {"links"}))
+        hand = [c for c in REGISTRY.values() if c.tier == "tests" and c.title.endswith("[by hand]")]
+        self.assertTrue(hand)
+        for c in hand:
+            self.assertIsNone(c.shell)
+            self.assertIsNone(c.argv)
+            r = run_check(c, Ctx(root=ROOT))
+            self.assertEqual(r.status, "SKIP", c.id)
+            self.assertIn("The recipe:", r.lines[0])
+        sends = [c for c in REGISTRY.values() if c.tier == "tests" and c.shell and tests_map._SENDS.search(c.shell)]
+        self.assertEqual(sends, [], "a named test that can send is runnable")
+
+
 class LezRead(unittest.TestCase):
     """scripts/lez-read.py, the explorer's reads from a terminal, against the stand-in RPC and recorded blocks."""
 
@@ -934,6 +1083,9 @@ class Records(TamperCase):
         self.assertFails("perf-projections", t, "not what bench/perf/projections.py derives")
         t = overlay({**gen, "docs/requirements-status.md": sub("(4.12 MB and 20.58 MB)", "(4.12 MB and 20.68 MB)")})
         self.assertFails("perf-projections", t, "no longer says")
+        t = overlay({**gen, "docs/requirements-status.md": sub("one slot per release and per new depositor",
+                                                               "eight slots per release and per new depositor")})
+        self.assertFails("perf-projections", t, "no longer says")  # review round 2, M5
 
     def test_rc3_roundtrip_record(self):
         self.assertPasses("rc3-roundtrip-record")
@@ -942,6 +1094,8 @@ class Records(TamperCase):
         self.assertFails("rc3-roundtrip-record", t)
         t = overlay({f"{rt}/facts.json": sub('"0xcad2ae02"', '"0xcad2ae03"')})
         self.assertFails("rc3-roundtrip-record", t)
+        t = overlay({f"{rt}/facts.json": sub('"burnRootAccepted": true', '"burnRootAccepted": false')})
+        self.assertFails("rc3-roundtrip-record", t)  # review round 2, a surviving mutant
 
     def test_lab_roots(self):
         self.assertPasses("lab-roots")
@@ -1000,6 +1154,42 @@ class Seals(TamperCase):
         other = next(x for x in self.live if x["image"] != e["image"])
         self.assertFalse(self.g.verify_seal(s, other["image"], e["digest"])[0], "another image id")
 
+    def test_a_twist_point_outside_the_subgroup_and_an_off_curve_point(self):
+        """Each refused for its own reason, not for a later pairing failure (review round 2, surviving mutants)."""
+        g, P = self.g, self.g.P
+
+        def sqrt2(a):  # a square root in Fp2 = Fp[u]/(u^2 + 1), p = 3 mod 4 (Adj, Rodriguez-Henriquez), or None
+            a1 = g.f2_pow(a, (P - 3) // 4)
+            alpha = g.f2_mul(g.f2_mul(a1, a1), a)
+            x0 = g.f2_mul(a1, a)
+            if g.f2_mul(g.f2_pow(alpha, P), alpha) == ((P - 1) % P, 0):
+                return None
+            if alpha == ((P - 1) % P, 0):
+                return g.f2_mul((0, 1), x0)
+            return g.f2_mul(g.f2_pow(g.f2_add((1, 0), alpha), (P - 1) // 2), x0)
+        pt = None
+        for k in range(1, 200):
+            x = (k, 1)
+            y = sqrt2(g.f2_add(g.f2_mul(g.f2_mul(x, x), x), g.B_TWIST))
+            if y is not None and g.f2_mul(y, y) == g.f2_add(g.f2_mul(g.f2_mul(x, x), x), g.B_TWIST):
+                pt = (x, y)
+                break
+        self.assertIsNotNone(pt)
+        self.assertTrue(g.on_twist(pt))
+        self.assertIsNotNone(g.g2_mul(pt, g.R), "the point found is in the subgroup: pick another")
+        (xr, xi), (yr, yi) = pt
+        e = self.live[1]
+        s = e["seal"]
+        w = [int.from_bytes(s[4 + 32 * i: 36 + 32 * i], "big") for i in range(8)]
+        bad_b = s[:4] + b"".join(v.to_bytes(32, "big") for v in w[:2] + [xi, xr, yi, yr] + w[6:])
+        ok, _, why = g.verify_seal(bad_b, e["image"], e["digest"])
+        self.assertFalse(ok)
+        self.assertIn("not in the order-r subgroup", why)
+        off = s[:4] + b"".join(v.to_bytes(32, "big") for v in [w[0], (w[1] + 1) % P] + w[2:])
+        ok, _, why = g.verify_seal(off, e["image"], e["digest"])
+        self.assertFalse(ok)
+        self.assertIn("not on the curve", why)
+
     def test_the_check_fails_on_an_altered_proof(self):
         self.assertPasses("seals-v3.1")
         from verifylib.checks_seals import LIVE_PROOFS
@@ -1012,6 +1202,27 @@ class Seals(TamperCase):
 class Signatures(TamperCase):
     """verifylib/sigs.py on RFC 8032's vectors, and the release-sums check on altered evidence."""
     DL = "deploy/testnet/web/basecamp/dl"
+
+    def test_each_refusal_for_its_reason(self):
+        """SSHSIG's namespace and signer binding, canonical point decoding, minisign's global signature: each refused
+        by its own condition (review round 2, surviving mutants)."""
+        from verifylib import sigs
+        dl = ROOT / self.DL
+        key = sigs.ssh_ed25519_key((dl / "keys/ferrata-release.pub").read_text())
+        sums = (dl / "SHA256SUMS").read_bytes()
+        arm = (dl / "SHA256SUMS.sig").read_text()
+        ok, why = sigs.sshsig_verify(arm, sums, key, "git")
+        self.assertEqual((ok, why.split(" ")[0]), (False, "namespace"))
+        other = bytes([key[0] ^ 1]) + key[1:]
+        self.assertEqual(sigs.sshsig_verify(arm, sums, other, "file"), (False, "signed by another key"))
+        self.assertIsNone(sigs._decode(sigs.Q.to_bytes(32, "little")), "y = q is not canonical")
+        self.assertIsNone(sigs._decode((sigs.Q + 1).to_bytes(32, "little")), "y = q + 1 (one) is not canonical")
+        self.assertIsNone(sigs._decode((1 | 1 << 255).to_bytes(32, "little")), "x = 0 with the sign bit set")
+        ms = (dl / "SHA256SUMS.minisig").read_text().strip().splitlines()
+        tampered = "\n".join([ms[0], ms[1], ms[2] + " (edited)", ms[3]]) + "\n"
+        ok, why = sigs.minisign_verify(tampered, sums, (dl / "keys/minisign.pub").read_text())
+        self.assertFalse(ok)
+        self.assertIn("global signature", why)
 
     def test_rfc8032_vectors(self):
         from verifylib import sigs

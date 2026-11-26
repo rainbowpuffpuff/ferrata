@@ -197,21 +197,36 @@ def _network_head(ctx):
                    ok_lines=8)
 
 
+_FETCH_ERR = re.compile(r"(?:cannot fetch \(|cannot read the served manifest \S+: )(\w+): (\S+)")
+
+
+def _transient(line: str) -> bool:
+    """A failure line of site-manifest.py that says the host could not be reached, not what it served: a transport
+    error, or HTTP 408, 429 or 5xx. A definite answer (HTTP 404 and every other 4xx) is a finding."""
+    m = _FETCH_ERR.search(line)
+    if not m:
+        return False
+    kind, detail = m.group(1), m.group(2).rstrip(")")
+    if kind == "HTTPError":
+        return detail.isdigit() and (int(detail) in (408, 429) or 500 <= int(detail) < 600)
+    return kind != "ValueError"
+
+
 @check(id="site-manifest-online", family="site", mode="online", evidence=(239,),
        title="The live site serves the files the repository holds",
        what="the manifest the host serves and every file it lists, hashed here",
        against="the committed manifest (deploy/testnet/web/trust/bridge/verify/manifest.json) and the git blobs it "
                "names", needs=("python3", "git", "network"), inputs=("scripts/site-manifest.py",))
 def _site_manifest(ctx):
-    # A file the host did not serve in time is not a file that differs: read once more, and if fetching is all that
-    # failed again, the check is a skip (it could not see those files), never a pass.
+    # A file the host did not serve in time is not a file that differs: read once more, and if only transport
+    # failures remain, the check is a skip (it could not see those files), never a pass; any definite answer fails.
     argv = ["python3", "-I", "scripts/site-manifest.py", "verify", "--site", ctx.lez_url, "--no-second"]
     for attempt in (1, 2):
         rc, out = _run(ctx, argv, timeout=1800)
         if rc == 0:
             return out[-4:]
         fails = [ln for ln in out if ln.lstrip().startswith("FAIL ")]
-        if not fails or not all("cannot fetch" in ln for ln in fails):
+        if not fails or not all(_transient(ln) for ln in fails):
             raise CheckFailed("\n".join([f"exit status {rc}"] + out[-25:]))
     raise Skipped(f"{len(fails)} file(s) could not be fetched from the host, twice: " + fails[0].strip()[:160])
 
@@ -310,13 +325,19 @@ def _gasdrop_terms(ctx):
     if not rows or not any("gasdrop" in ln.lower() or "gas-drop" in ln.lower() or "gas drop" in ln.lower()
                            for ln in rows):
         raise CheckFailed(f"the published gas-drop guest {img[:16]}… is not a gas-drop row of docs/image-ids.md")
-    relayer = lez.b58encode(bytes.fromhex(str(terms.get("relayer", "")).removeprefix("0x")))
+    try:
+        amount = int(terms.get("amount"))
+        relayer = lez.b58encode(bytes.fromhex(str(terms.get("relayer", "")).removeprefix("0x")))
+    except (TypeError, ValueError) as e:
+        raise CheckFailed(f"the published terms name no usable drop or relayer: {e}") from e
+    if amount <= 0:
+        raise CheckFailed(f"the published drop is {amount} native units: not a drop")
     bal = lez.Rpc(ctx.lez_url + "/rpc", budget_s=60).call("getAccountBalance", [relayer])
-    if not isinstance(bal, int) or bal < int(terms.get("amount", 0)):
-        raise CheckFailed(f"the relayer's account {relayer} holds {bal}, less than one drop ({terms.get('amount')})")
+    if not isinstance(bal, int) or bal < amount:
+        raise CheckFailed(f"the relayer's account {relayer} holds {bal}, less than one drop ({amount})")
     return [f"terms: relayer {relayer[:10]}…, guest {img[:16]}… (docs/image-ids.md: a gas-drop row), "
-            f"{terms.get('amount')} native units a drop, covers {', '.join(terms.get('covers', []))}",
-            f"the relayer's account holds {bal:,} native units ({bal // int(terms.get('amount') or 1):,} drops)"]
+            f"{amount:,} native units a drop, covers {', '.join(terms.get('covers', []))}",
+            f"the relayer's account holds {bal:,} native units ({bal // amount:,} drops)"]
 
 
 @check(id="faucet-terms-online", family="lez-network", mode="online", evidence=(243, 248),

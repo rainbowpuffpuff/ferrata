@@ -108,7 +108,10 @@ python3 -I scripts/verify.py RFP-021:F.4 --tests
 They need their toolchains: Rust (`cargo`), Foundry (`forge`), RISC Zero 3.0.5 (`r0vm`, `scripts/ci/install-risc0.sh`),
 LEZ's sources beside the repository (`scripts/fetch-upstream.sh`), the consensus vectors (`scripts/fetch-vectors.sh`);
 a missing tool is reported as a skip with the command to run once it is there. All of them take hours on one
-machine; CI's jobs run them (`.github/workflows/`, `scripts/ci/check-row-tests.py` shows which job runs which test).
+machine. CI's jobs run most of them (`scripts/ci/check-row-tests.py` shows which job runs which test); 43 run only on a
+build machine or by hand (their titles say "not in CI"); 11 are recipes `--tests` lists but never runs, because their
+commands have placeholders to fill in or can send transactions (`ferrata-attest … --send`, the day-one kit's `go`):
+they print the recipe instead (titles marked "[by hand]").
 
 ## 4. The light client's unattended run, from chain data
 

@@ -59,8 +59,10 @@ def derive(root: Path, t: dict):
             needs.append("forge")
         if re.search(r"\bnode\b", run):
             needs.append("node")
-        note = SETUP["lez"] if ("lez" in run.split("&&")[0] or "RISC0" in run) and "cargo" in run else ""
-        return run, tuple(needs), note
+        lez_cargo = ("lez" in run.split("&&")[0] or "RISC0" in run) and "cargo" in run
+        if lez_cargo:
+            needs.append("r0vm")
+        return run, tuple(needs), SETUP["lez"] if lez_cargo else ""
     ext = path.rsplit(".", 1)[-1] if "." in path.rsplit("/", 1)[-1] else ""
     if path.startswith(".github/workflows/"):
         return None, (), ""
@@ -101,6 +103,23 @@ def derive(root: Path, t: dict):
     return None, (), ""
 
 
+MANUAL_CI = {"box", "local", "-"}  # the map's places that are not a CI job
+_PLACEHOLDER = re.compile(r"(?<![\w$/.-])(?:[A-Z][A-Z0-9]*_)*(?:URL|DIR|LOGOSCTL|FILE|PATH|NAME|OUT|HOST)(?![\w=])|\.\.\.|…")
+_SENDS = re.compile(r"--send\b|SEND=yes")
+
+
+def manual_reason(shell: str, ci: set):
+    """Why a named test is a recipe to run by hand rather than a command verify.py runs, or None: its command still
+    holds a placeholder, or it can send transactions. (A test no CI job runs, only a build machine or a person, stays
+    runnable: its title says so.)"""
+    why = []
+    if _SENDS.search(shell):
+        why.append("it can SEND transactions (to the endpoint you give it)")
+    if _PLACEHOLDER.search(shell):
+        why.append("its command has placeholders to fill in")
+    return "; ".join(why) or None
+
+
 def register_test_checks(root: Path) -> int:
     grouped: dict = {}
     for entry in row_tests(root):
@@ -121,14 +140,21 @@ def register_test_checks(root: Path) -> int:
         if len(by_path[path]) > 1:
             cid += "#" + str(sorted(by_path[path]).index(run) + 1)
         ci = ", ".join(sorted(g["ci"]))
-        common = dict(id=cid, title=f"{path} (CI job: {ci})", family="test", mode="offline", tier="tests",
+        where = f"not in CI: {ci}" if g["ci"] <= MANUAL_CI else f"CI job: {ci}"
+        common = dict(id=cid, title=f"{path} ({where})", family="test", mode="offline", tier="tests",
                       rows=tuple(dict.fromkeys(g["rows"])), what=f"the test {path}",
                       against="the behaviour its requirement rows name (scripts/ci/row-tests.toml, its note)",
                       source="scripts/ci/row-tests.toml" + (f"; setup: {note}" if note else ""), inputs=(path,))
+        manual = manual_reason(shell, g["ci"]) if shell else None
         if shell is None:
             def fn(ctx, _p=path):
                 raise Skipped(f"{_p} is a CI workflow: its evidence is its runs on GitHub, not a local command")
             register(Check(fn=fn, **common))
+        elif manual:
+            def fn(ctx, _s=shell, _why=manual, _note=note):
+                raise Skipped(f"a recipe to run by hand, not run here: {_why}. The recipe: {_s}"
+                              + (f" (setup: {_note})" if _note else ""))
+            register(Check(fn=fn, **{**common, "title": common["title"] + " [by hand]"}))
         else:
             register(Check(shell=shell, needs=needs, timeout=4 * 3600, **common))
         n += 1

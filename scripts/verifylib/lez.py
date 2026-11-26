@@ -118,8 +118,9 @@ class Reader:
 
     def vec(self, item):
         n = self.u32()
-        if n > len(self.buf):
-            raise DecodeError(f"vector of {n}")
+        # each element is at least one byte (borsh.js does the same): refuse lengths that cannot fit what is left
+        if n > len(self.buf) - self.pos:
+            raise DecodeError(f"vector of {n} at {self.pos} cannot fit")
         return [item(self) for _ in range(n)]
 
     def option(self, item):

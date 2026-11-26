@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import dataclasses
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -169,6 +170,9 @@ def run_check(c: Check, ctx: Ctx) -> Result:
                               timeout=c.timeout)
         out = (proc.stdout or "") + ("\n" + proc.stderr if proc.stderr else "")
         if proc.returncode == 0:
+            nothing = ran_nothing(out)
+            if nothing:  # exit 0 with no test run is not a pass (a suite that skips itself, say)
+                return Result(c, "SKIP", [nothing] + _tail(out, 40 if ctx.verbose else 3), time.monotonic() - t0)
             return Result(c, "PASS", _tail(proc.stdout or proc.stderr or "", 40 if ctx.verbose else 3),
                           time.monotonic() - t0)
         return Result(c, "FAIL", [f"exit status {proc.returncode}"] + _tail(out, 40 if ctx.verbose else 15),
@@ -181,6 +185,23 @@ def run_check(c: Check, ctx: Ctx) -> Result:
         return Result(c, "FAIL", [f"no result within {c.timeout} s"], time.monotonic() - t0)
     except Exception as e:  # noqa: BLE001 - a crash of a check is a failure of it, reported with its cause
         return Result(c, "FAIL", [f"{type(e).__name__}: {e}"], time.monotonic() - t0)
+
+
+_UNITTEST = re.compile(r"^Ran (\d+) tests? in [0-9.]+s\s*\n\s*\n(OK|FAILED|NO TESTS RAN)(?: \(([^)]*)\))?", re.M)
+
+
+def ran_nothing(out: str):
+    """Why a test command that exited 0 ran no test, or None: a unittest run (each one, if several) whose tests were
+    all skipped or none, or a `node --test` run that passed none."""
+    for m in _UNITTEST.finditer(out):
+        ran = int(m.group(1))
+        skipped = sum(int(x) for x in re.findall(r"skipped=(\d+)", m.group(3) or ""))
+        if ran == 0 or m.group(2) == "NO TESTS RAN" or skipped >= ran:
+            return f"ran no test: unittest ran {ran}, skipped {skipped} ({m.group(0).splitlines()[-1].strip()})"
+    passes = re.findall(r"^# pass (\d+)\s*$", out, re.M)
+    if passes and all(int(x) == 0 for x in passes):
+        return "ran no test: node --test passed 0"
+    return None
 
 
 def scratch_env(ctx: "Ctx") -> dict:

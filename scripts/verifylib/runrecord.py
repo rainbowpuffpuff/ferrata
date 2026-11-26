@@ -49,8 +49,10 @@ def iso(ms: int) -> str:
 
 
 def parse_iso(s: str) -> int:
+    """UTC milliseconds of `YYYY-MM-DDTHH:MM:SS.mmmZ`, whatever the machine's time zone."""
+    import calendar
     base, frac = s.rstrip("Z").split(".")
-    return int(time.mktime(time.strptime(base, "%Y-%m-%dT%H:%M:%S")) - time.timezone) * 1000 + int(frac)
+    return calendar.timegm(time.strptime(base, "%Y-%m-%dT%H:%M:%S")) * 1000 + int(frac)
 
 
 def _actor_ids(tx) -> list:
@@ -251,7 +253,7 @@ def summarize(rows: list, chain: dict) -> dict:
         for a, b in zip(updates, updates[1:]):
             k = str((b["finalized_slot"] - a["finalized_slot"]) // epoch)
             esteps[k] = esteps.get(k, 0) + 1
-        opened_at = {r["job"]: parse_iso(r["time_utc"]) for r in opens}
+        opened_at = {r["job"]: parse_iso(r["time_utc"]) for r in opens if r["outcome"] == "applied"}
         o2f = [(parse_iso(r["time_utc"]) - opened_at[r["job"]]) / 1000 for r in finishes if r["job"] in opened_at]
         lags = [u["lag_s"] for u in updates if "lag_s" in u]
         parts = [u["participants"] for u in updates if u["participants"] is not None]

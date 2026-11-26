@@ -660,6 +660,16 @@ jobs:
       - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1
         with:
           version: v1.3.6 # anvil and cast, for the send guards' and the deploy tool's tests
+      - name: Cache the vault's libraries
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: vault/lib
+          key: vault-lib-forge-std-1.10.0-oz-5.4.0-risc0-ethereum-3.1.0
+      - name: The vault built at its pinned libraries (unit-deploy-sepolia deploys it on anvil; without it, it runs no test)
+        run: |
+          (cd vault && { [ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0; })
+          python3 -I scripts/vault_libs.py check
+          (cd vault && forge build)
       - name: Every offline check of the quick tier
         run: python3 -I scripts/verify.py --all --offline --strict
       - name: The tamper tests of every check family

@@ -294,6 +294,8 @@ P7_FIGURES = (
     ("RFP-021 P.7", "(k − 1) × 10.09 MB a year", "(k − 1) × 10.09 MB a year"),
     ("RFP-022 P.7", "a nullifier 165 B, a burn record 273 B", "a nullifier 165 B, a burn record 273 B"),
     ("RFP-022 P.7", "a root 205 B", "205 B each"),
+    ("RFP-022 P.7", "one slot per release and per new depositor", "a release creates 1 vault slot"),
+    ("RFP-022 P.7", "one slot per release and per new depositor", "a new depositor's first deposit 1"),
     ("RFP-022 P.7", "162 B per new holder", "**162 B** with one holding"),
     ("RFP-022 P.7", "nullifiers 165 MB / 1.65 GB", "| 1,000,000 | 165.00 MB |"),
     ("RFP-022 P.7", "nullifiers 165 MB / 1.65 GB", "| 10,000,000 | 1.65 GB |"),
@@ -388,7 +390,8 @@ def coverage(root: Path, rows: list) -> dict:
             "rfp": r.rfp, "id": r.id, "status": r.status, "soft": r.soft,
             "quick_offline": sorted(c.id for c in checks if c.mode == "offline" and c.tier == "quick"),
             "online": sorted(c.id for c in checks if c.mode == "online"),
-            "tests": sorted(c.id for c in checks if c.tier == "tests"),
+            "tests": sorted(c.id for c in checks if c.tier == "tests" and not c.title.endswith("[by hand]")),
+            "by_hand": sorted(c.id for c in checks if c.tier == "tests" and c.title.endswith("[by hand]")),
         }
     return out
 
