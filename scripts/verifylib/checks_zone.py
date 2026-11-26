@@ -355,12 +355,16 @@ def zone_refusals(ctx):
             "errors: InsufficientAttestations(2/3), NotAccredited, DuplicateAttestor, NotADescendant(tip 29)"]
 
 
+# (receipt directory, statement, the client's wait for the answer in s, the prover's own wall time in s, 0.1 s): the
+# client's `seconds` runs from its own (re)start of the job to the answer (ferrata-bridge-prover: time.time() - t0),
+# so the resumed checkpoint's 249.7 s is counted from the restart, not from the spawn; `prover.wall_s` is the
+# prover's run on the GPU.
 PROOF_JOBS = {
-    "0-checkpoint": (f"{CHECKPOINT}/receipts", f"{CHECKPOINT}/zone-28-164.json", 249.7),
+    "0-checkpoint": (f"{CHECKPOINT}/receipts", f"{CHECKPOINT}/zone-28-164.json", 249.7, 92.7),
     "1-release-private-1": (f"{RUN}/releases/receipts/release-private-1",
-                            f"{RUN}/releases/release-private-1.json", 569.1),
+                            f"{RUN}/releases/release-private-1.json", 569.1, 5.8),
     "1-release-public-0": (f"{RUN}/releases/receipts/release-public-0",
-                           f"{RUN}/releases/release-public-0.json", 179.9),
+                           f"{RUN}/releases/release-public-0.json", 179.9, 8.1),
 }
 
 
@@ -372,7 +376,7 @@ PROOF_JOBS = {
        against="prover/calls.tsv, events.jsonl, done answers and summary; receipt metadata and statements; the forge "
                "fixture; RISC Zero 3.1.0 in verifylib/groth16.py; the run README",
        inputs=(README, f"{PROVER}/calls.tsv", f"{PROVER}/events.jsonl", f"{PROVER}/summary.txt", PARAMS,
-               FIXTURE, *tuple(path for job, (receipt, statement, _) in PROOF_JOBS.items()
+               FIXTURE, *tuple(path for job, (receipt, statement, _, _) in PROOF_JOBS.items()
                                for path in (f"{PROVER}/done/{job}.json", f"{PROVER}/requests/done/{job}.json",
                                             f"{receipt}/seal.hex", f"{receipt}/journal.hex", f"{receipt}/prover.json",
                                             statement)), *DOCS))
@@ -441,7 +445,7 @@ def zone_proofs(ctx):
     fixture = _json(ctx, FIXTURE)
     fixture_releases = {row["name"]: row for row in fixture["releases"]}
     verified = []
-    for job, (receipt_dir, statement_rel, seconds) in PROOF_JOBS.items():
+    for job, (receipt_dir, statement_rel, seconds, wall) in PROOF_JOBS.items():
         done_rel = f"{PROVER}/done/{job}.json"
         mirror_rel = f"{PROVER}/requests/done/{job}.json"
         done = _json(ctx, done_rel)
@@ -461,6 +465,9 @@ def zone_proofs(ctx):
         _same(problems, done_rel, "image id", done["image_id"], expected_image)
         for field in ("name", "kind", "image_id", "ok", "seconds", "call_id", "attempts", "resumed", "prover"):
             _same(problems, f"{receipt_dir}/prover.json", f"receipt/done {field}", prover[field], done[field])
+        _same(problems, done_rel, "the client's wait (s)", done["seconds"], seconds)
+        _same(problems, done_rel, "the prover's own wall time on the GPU (s, to 0.1)",
+              round(float(done["prover"]["wall_s"]), 1), wall)
         ok, release, why = groth16.verify_seal(seal, image, hashlib.sha256(journal).digest())
         _expect(problems, ok and release == "3.1.0",
                 f"{receipt_dir}/seal.hex: Groth16 verification for its image id and statement journal failed: "
@@ -490,22 +497,26 @@ def zone_proofs(ctx):
     _same(problems, FIXTURE, "two release statements", len(fixture_releases), 2)
     _readme(problems, readme, "260-byte Groth16 seal")
     _readme(problems, readme, "0xe71e6620")
-    _documents(ctx, problems, "EVIDENCE row 266", ("checkpoint 249.7 s (the client killed 8 s after it started, the same "
-                                                   "call resumed, one attempt), releases 569.1 s and 179.9 s, three jobs "
-                                                   "each written once; seals 260 B, selector `0xe71e6620`",))
+    _documents(ctx, problems, "EVIDENCE row 266", ("the prover's own wall time on the GPU 92.7 s for the checkpoint, 5.8 s "
+                                                   "and 8.1 s for the releases; the prover client's wait for each answer "
+                                                   "249.7 s for the checkpoint (from its restart: killed 8 s after it "
+                                                   "started, it resumed the same call, one attempt), 569.1 s and 179.9 s "
+                                                   "for the releases (from the spawn), three jobs each written once; "
+                                                   "seals 260 B, selector `0xe71e6620`",))
     _documents(ctx, problems, "RFP-022 R.6", ("killed (SIGKILL) 8 s after it started", "(the same call id, one attempt)",
-                                              "received the proof 249.7 s after the spawn",
+                                              "received the proof 249.7 s after it resumed",
                                               "(three jobs, each written once; row 266)"))
     fail_if(problems, "zone prover/seal/forge-fixture records differ")
     return [f"{calls_rel}, events.jsonl and summary.txt: three jobs, three answers, one attempt each, one SIGKILL, "
-            "one resume of the checkpoint's unchanged call id; durations 249.7/569.1/179.9 s",
+            "one resume of the checkpoint's unchanged call id; the client's waits 249.7 (from the restart)/569.1/"
+            "179.9 s, the prover's own wall time 92.7/5.8/8.1 s",
             "three receipt journals equal their statements; every (seal, image id, journal) verifies with Groth16 "
             f"3.1.0; seals 260 B: {', '.join(job for job, _ in verified)}",
             f"{FIXTURE}: checkpoint journal/image/seal and both release request/seal/image tuples equal this run, "
             "so forge replays these statements rather than another run",
-            "LIMIT: this README names the three proofs but does not state 249.7, 569.1 and 179.9 s; durations were "
-            "compared with calls.tsv/events/done records and with EVIDENCE row 266 and RFP-022 R.6, not with README "
-            "prose"]
+            "LIMIT: this README names the three proofs but does not state 249.7, 569.1 and 179.9 s (the client's "
+            "waits) or 92.7, 5.8 and 8.1 s (the prover's); they were compared with calls.tsv/events/done records and "
+            "with EVIDENCE row 266 and RFP-022 R.6, not with README prose"]
 
 
 @check(id="zone-rc3-multi-anvil", family="record", rows=("RFP-022 F.7", "RFP-022 Sec.6"), **COMMON,

@@ -168,6 +168,35 @@ class ZoneBridgeVerifyTamperTests(unittest.TestCase):
         self._assert_fails("zone-rc3-multi-proofs", (f"{RUN}/prover/summary.txt", "[10:08:44] client 1 killed",
                                                      "[10:08:45] client 1 killed"))
 
+    def test_08_the_prover_wall_time_is_the_records(self):
+        """The prover's own wall time (92.7 s for the checkpoint) is read from its done record, apart from the wait."""
+        check = self.checks["zone-rc3-multi-proofs"]
+        with tempfile.TemporaryDirectory(prefix="wall-", dir=SCRATCH) as temporary:
+            root = self._copy(check, Path(temporary))
+            # the done record and the receipt's copy altered together, so only the wall-time comparison can see it
+            for rel in (f"{RUN}/prover/done/0-checkpoint.json", f"{RUN}/checkpoint/receipts/prover.json"):
+                text = (root / rel).read_text(encoding="utf-8")
+                self.assertEqual(text.count("92.67559051513672"), 1, rel)
+                (root / rel).write_text(text.replace("92.67559051513672", "93.67559051513672"), encoding="utf-8")
+            result = run_check(check, Ctx(root=root))
+        self.assertEqual(result.status, "FAIL", result.lines)
+        self.assertTrue(any("wall time" in line for line in result.lines), result.lines)
+        self._assert_fails("zone-rc3-multi-proofs", ("docs/EVIDENCE.md", "92.7 s for the checkpoint",
+                                                     "249.7 s for the checkpoint, on the GPU,"))
+
+    def test_09_the_done_record_wait_is_checked(self):
+        """The done record's wait (249.7 s), altered with the receipt's copy, fails though calls.tsv is untouched."""
+        check = self.checks["zone-rc3-multi-proofs"]
+        with tempfile.TemporaryDirectory(prefix="wait-", dir=SCRATCH) as temporary:
+            root = self._copy(check, Path(temporary))
+            for rel in (f"{RUN}/prover/done/0-checkpoint.json", f"{RUN}/checkpoint/receipts/prover.json"):
+                text = (root / rel).read_text(encoding="utf-8")
+                self.assertEqual(text.count('"seconds": 249.7'), 1, rel)
+                (root / rel).write_text(text.replace('"seconds": 249.7', '"seconds": 249.8'), encoding="utf-8")
+            result = run_check(check, Ctx(root=root))
+        self.assertEqual(result.status, "FAIL", result.lines)
+        self.assertTrue(any("client's wait" in line for line in result.lines), result.lines)
+
     def test_07_a_missing_document_row_fails(self):
         """EVIDENCE row 266 renumbered away, or the P.6 status row gone: the checks that read them fail."""
         self._assert_fails("zone-rc3-multi-anvil", ("docs/EVIDENCE.md", "| 266 | ", "| 299 | "))
