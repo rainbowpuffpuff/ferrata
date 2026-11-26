@@ -1,0 +1,266 @@
+From c1b471440c40d8b68ba9502d6a35d4527609d911 Mon Sep 17 00:00:00 2001
+From: Ferrata <ferrata@localhost>
+Date: Thu, 26 Nov 2026 10:08:28 +0000
+Subject: [PATCH 1/2] feat(idl): describe tuples as positional-field structs in
+ generated IDLs
+
+A non-empty tuple is Borsh-encoded as its elements in order, exactly as a
+struct with positional fields is, so the generator now describes it as such
+a struct, named after its element types ((Root, u128) becomes
+Tuple_Root_u128). The IDL grammar needs no new form and every decoder
+already reads it. The empty tuple () and references are still refused.
+---
+ spel-framework-core/src/idl_gen.rs | 27 ++++++++++++++++++++++++++-
+ 1 file changed, 26 insertions(+), 1 deletion(-)
+
+diff --git a/spel-framework-core/src/idl_gen.rs b/spel-framework-core/src/idl_gen.rs
+index 267d331..bdff449 100644
+--- a/spel-framework-core/src/idl_gen.rs
++++ b/spel-framework-core/src/idl_gen.rs
+@@ -419,7 +419,32 @@ impl<'a> Collector<'a> {
+                     array: (Box::new(self.idl_type(&array.elem, used_by, depth)?), len),
+                 })
+             },
+-            _ => Err(unsupported("only paths and arrays are supported")),
++            // A tuple is Borsh-encoded as its elements in order, exactly as a struct with positional fields is:
++            // describe it as such a struct, named after its element types (`(Root, u128)` -> `Tuple_Root_u128`),
++            // so that the IDL's grammar needs no new form and every decoder already reads it.
++            Type::Tuple(tuple) if !tuple.elems.is_empty() => {
++                let mut fields = Vec::with_capacity(tuple.elems.len());
++                let mut parts = Vec::with_capacity(tuple.elems.len());
++                for (position, elem) in tuple.elems.iter().enumerate() {
++                    parts.push(quote_type(elem).replace(|c: char| !c.is_ascii_alphanumeric(), ""));
++                    fields.push(IdlField {
++                        name: position.to_string(),
++                        type_: self.idl_type(elem, used_by, depth)?,
++                        docs: None,
++                    });
++                }
++                let name = format!("Tuple_{}", parts.join("_"));
++                self.done.entry(name.clone()).or_insert_with(|| IdlTypeDef {
++                    name: name.clone(),
++                    kind: "struct".to_owned(),
++                    fields,
++                    variants: vec![],
++                });
++                Ok(IdlType::Defined { defined: name })
++            },
++            _ => Err(unsupported(
++                "only paths, arrays and non-empty tuples are supported",
++            )),
+         }
+     }
+ }
+-- 
+2.56.1
+
+
+From 6d4b89389b00c6040ecc1411e7c0f996b0c6d55e Mon Sep 17 00:00:00 2001
+From: Ferrata <ferrata@localhost>
+Date: Thu, 26 Nov 2026 10:21:06 +0000
+Subject: [PATCH 2/2] test(idl): cover tuple description and decoding,
+ changelog entry
+
+an_unsupported_type_fails now uses the empty tuple (), which the
+generator still refuses, and a reference is covered by its own test.
+New tests: a message with a tuple field and a Vec of tuples generates
+Tuple_<types> structs with positional fields 0, 1, ...; a tuple nested
+in a tuple; two uses of the same tuple share one definition; and a value
+Borsh-encoded as the tuple decodes through decode_named, alone and as
+part of a whole message.
+---
+ CHANGELOG.md                         |  11 ++
+ spel-framework-core/tests/idl_gen.rs | 151 ++++++++++++++++++++++++++-
+ 2 files changed, 160 insertions(+), 2 deletions(-)
+
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 067ddad..e34dda9 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,3 +1,14 @@
++## Unreleased
++
++### ✨ Features
++
++- **IDL generation describes tuples.** A non-empty tuple in a message, state, event or
++  referenced type (`Vec<(Root, u128)>` in an instruction's fields, `(bool, u8)` anywhere) is now
++  described as a struct with positional fields named `"0"`, `"1"`, …, in a definition named after
++  its element types (`Tuple_Root_u128` for `(Root, u128)`), which Borsh encodes exactly as the
++  tuple does — so the IDL grammar, and every decoder reading it, are unchanged. The empty tuple
++  `()` and references are still refused.
++
+ ## v0.7.0 (2026-09-16)
+ 
+ ### 💥 Breaking Changes
+diff --git a/spel-framework-core/tests/idl_gen.rs b/spel-framework-core/tests/idl_gen.rs
+index f13883a..f46d8e8 100644
+--- a/spel-framework-core/tests/idl_gen.rs
++++ b/spel-framework-core/tests/idl_gen.rs
+@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
+ 
+ use serde_json::json;
+ use spel_framework_core::decode::{decode_named, decode_state};
+-use spel_framework_core::idl::{event_selector, IdlType, SpelIdl};
++use spel_framework_core::idl::{event_selector, IdlEnumVariant, IdlType, IdlTypeDef, SpelIdl};
+ use spel_framework_core::idl_gen::{generate_idl, GenOptions, IdlGenError};
+ 
+ fn fixtures() -> PathBuf {
+@@ -288,7 +288,154 @@ fn an_events_module_without_events_fails() {
+ 
+ #[test]
+ fn an_unsupported_type_fails() {
+-    let dir = shape_crate("pub enum Message { Go { x: (u8, u8) } }\n", &[]);
++    let dir = shape_crate("pub enum Message { Go { x: () } }\n", &[]);
+     let err = generate(&options(dir.path(), "Message", None, None)).unwrap_err();
+     assert!(matches!(err, IdlGenError::Unsupported { .. }), "{err}");
+ }
++
++#[test]
++fn a_reference_type_fails() {
++    let dir = shape_crate("pub enum Message { Go { x: &'static u8 } }\n", &[]);
++    let err = generate(&options(dir.path(), "Message", None, None)).unwrap_err();
++    assert!(matches!(err, IdlGenError::Unsupported { .. }), "{err}");
++}
++
++// ── tuples ────────────────────────────────────────────────────────────────────
++
++const TUPLES: &str = "pub enum Message { Spend { fees: Vec<(u32, u128)>, single: (bool, u8) } }\n";
++
++/// The IDL with its messages also as an enum type, so a whole message decodes through
++/// `decode_named` (a message is its tag byte, then its fields).
++fn message_enum(idl: &SpelIdl) -> SpelIdl {
++    let mut out = idl.clone();
++    out.types.push(IdlTypeDef {
++        name: "Message".to_owned(),
++        kind: "enum".to_owned(),
++        fields: vec![],
++        variants: idl
++            .messages
++            .iter()
++            .map(|m| IdlEnumVariant {
++                name: m.name.clone(),
++                fields: m.fields.clone(),
++            })
++            .collect(),
++    });
++    out
++}
++
++#[test]
++fn tuples_are_described_as_structs_with_positional_fields() {
++    let dir = shape_crate(TUPLES, &[]);
++    let idl = generate(&options(dir.path(), "Message", None, None)).unwrap();
++
++    let spend = serde_json::to_value(&idl.message("spend").unwrap().fields).unwrap();
++    assert_eq!(
++        spend,
++        json!([
++            { "name": "fees", "type": { "vec": { "defined": "Tuple_u32_u128" } } },
++            { "name": "single", "type": { "defined": "Tuple_bool_u8" } }
++        ]),
++        "a tuple field and a Vec of tuples both name their struct"
++    );
++
++    let fees = serde_json::to_value(idl.type_def("Tuple_u32_u128").unwrap()).unwrap();
++    assert_eq!(
++        fees,
++        json!({
++            "name": "Tuple_u32_u128",
++            "kind": "struct",
++            "fields": [ { "name": "0", "type": "u32" }, { "name": "1", "type": "u128" } ]
++        })
++    );
++    let single = serde_json::to_value(idl.type_def("Tuple_bool_u8").unwrap()).unwrap();
++    assert_eq!(
++        single,
++        json!({
++            "name": "Tuple_bool_u8",
++            "kind": "struct",
++            "fields": [ { "name": "0", "type": "bool" }, { "name": "1", "type": "u8" } ]
++        })
++    );
++}
++
++#[test]
++fn a_tuple_nested_in_a_tuple_is_described_too() {
++    let dir = shape_crate(
++        "pub enum Message { Nest { pair: ((u8, u16), bool) } }\n",
++        &[],
++    );
++    let idl = generate(&options(dir.path(), "Message", None, None)).unwrap();
++
++    let nest = serde_json::to_value(&idl.message("nest").unwrap().fields).unwrap();
++    assert_eq!(
++        nest,
++        json!([{ "name": "pair", "type": { "defined": "Tuple_u8u16_bool" } }])
++    );
++
++    let outer = idl.type_def("Tuple_u8u16_bool").unwrap();
++    assert_eq!(
++        (outer.fields[0].name.as_str(), outer.fields[1].name.as_str()),
++        ("0", "1")
++    );
++    assert_eq!(
++        outer.fields[0].type_,
++        IdlType::Defined {
++            defined: "Tuple_u8_u16".into()
++        }
++    );
++    assert_eq!(outer.fields[1].type_, IdlType::Primitive("bool".into()));
++    assert_eq!(
++        idl.type_def("Tuple_u8_u16").unwrap().fields[1].type_,
++        IdlType::Primitive("u16".into())
++    );
++}
++
++#[test]
++fn the_same_tuple_is_defined_once() {
++    let dir = shape_crate(
++        "pub enum Message { Twice { a: (u32, u128), b: Vec<(u32, u128)> } }\n",
++        &[],
++    );
++    let idl = generate(&options(dir.path(), "Message", None, None)).unwrap();
++
++    let names: Vec<&str> = idl.types.iter().map(|t| t.name.as_str()).collect();
++    assert_eq!(names, ["Tuple_u32_u128"], "both uses share one definition");
++    let twice = serde_json::to_value(&idl.message("twice").unwrap().fields).unwrap();
++    assert_eq!(
++        twice,
++        json!([
++            { "name": "a", "type": { "defined": "Tuple_u32_u128" } },
++            { "name": "b", "type": { "vec": { "defined": "Tuple_u32_u128" } } }
++        ])
++    );
++}
++
++#[test]
++fn tuple_values_decode_through_the_idl() {
++    let dir = shape_crate(TUPLES, &[]);
++    let idl = message_enum(&generate(&options(dir.path(), "Message", None, None)).unwrap());
++
++    let mut fee = 7u32.to_le_bytes().to_vec();
++    fee.extend(690u128.to_le_bytes());
++    assert_eq!(
++        decode_named(&fee, "Tuple_u32_u128", &idl).unwrap(),
++        json!([7, "690"])
++    );
++
++    let mut spend = vec![0u8]; // the Spend tag
++    spend.extend(2u32.to_le_bytes()); // two fees
++    spend.extend(&fee);
++    spend.extend(8u32.to_le_bytes());
++    spend.extend(1000u128.to_le_bytes());
++    spend.extend([1u8, 9]); // single: (true, 9)
++    assert_eq!(
++        decode_named(&spend, "Message", &idl).unwrap(),
++        json!({ "Spend": { "fees": [[7, "690"], [8, "1000"]], "single": [true, 9] } })
++    );
++    assert!(
++        decode_named(&[fee.as_slice(), &[0]].concat(), "Tuple_u32_u128", &idl)
++            .unwrap_err()
++            .contains("1 bytes remaining")
++    );
++}
+-- 
+2.56.1
+
