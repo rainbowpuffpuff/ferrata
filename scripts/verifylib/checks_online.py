@@ -6,6 +6,7 @@ scripts/reproduce/deployed-programs.json."""
 from __future__ import annotations
 
 import json
+import re
 import os
 import subprocess
 import sys
@@ -223,3 +224,87 @@ def _updater_beacon(ctx):
             continue
         raise CheckFailed("\n".join([f"exit status {rc} ({b})"] + out[-20:]))
     raise Skipped(f"no beacon API answered ({', '.join(ctx.beacon)})")
+
+
+CATALOG_INDEX = "https://raw.githubusercontent.com/landclimber/ferrata-modules/refs/heads/main/index/index.json"
+
+
+def _release_rows(text: str) -> dict:
+    """(module, version) -> (rootHash, sha256) from releases/RELEASE-INTEGRITY.md's tables."""
+    out = {}
+    for ln in text.splitlines():
+        m = re.match(r"^\| `(ferrata_[a-z_]+)` \| `(\d+\.\d+\.\d+)` \| https://github\.com/landclimber/", ln)
+        if not m:
+            continue
+        hexes = re.findall(r"`([0-9a-f]{64})`", ln)
+        if len(hexes) >= 2:
+            out[(m.group(1), m.group(2))] = (hexes[-2], hexes[-1])
+    return out
+
+
+@check(id="catalog-index-online", family="signature", mode="online", evidence=(253, 262),
+       rows=("RFP-021 S.9", "RFP-021 S.10", "RFP-022 U.10", "RFP-022 S.3"),
+       title="The published module catalog's index names the packages the release record gives",
+       what="every package version of landclimber/ferrata-modules' index/index.json: its rootHash and sha256",
+       against="releases/RELEASE-INTEGRITY.md's tables (each row the release sidecar's values, recorded at "
+               "publication); every recorded release still offered", inputs=("releases/RELEASE-INTEGRITY.md",))
+def _catalog_index(ctx):
+    want = _release_rows((ctx.root / "releases/RELEASE-INTEGRITY.md").read_text())
+    if not want:
+        raise CheckFailed("releases/RELEASE-INTEGRITY.md holds no release rows")
+    try:
+        req = urllib.request.Request(CATALOG_INDEX, headers={"User-Agent": "ferrata-verify/1"})
+        idx = json.loads(urllib.request.urlopen(req, timeout=30).read())
+    except (urllib.error.URLError, TimeoutError, ValueError) as e:
+        raise Skipped(f"the catalog's index could not be read: {e}") from e
+    got = {}
+    for p in idx.get("packages", []):
+        for v in p.get("versions", []):
+            ref = v.get("publisherRef", "")
+            ver = ref.rsplit("-v", 1)[-1] if "-v" in ref else v.get("version", "")
+            got[(p["name"], ver)] = (v.get("rootHash", ""), v.get("sha256", ""))
+    problems = []
+    for key, (root, sha) in sorted(want.items()):
+        g = got.get(key)
+        if g is None:
+            problems.append(f"{key[0]} {key[1]}: in the release record, not in the published index")
+        elif g != (root, sha):
+            problems.append(f"{key[0]} {key[1]}: the index says rootHash {g[0][:12]}…, sha256 {g[1][:12]}…; the "
+                            f"record {root[:12]}…, {sha[:12]}…")
+    extra = sorted(set(got) - set(want))
+    fail_if(problems, "the published catalog")
+    return [f"{len(want)} of {len(want)} recorded releases in the published index with the same rootHash and sha256 "
+            f"({len(got)} versions published" + (f"; not in the record: {', '.join(f'{a} {b}' for a, b in extra)})"
+                                                 if extra else ")")]
+
+
+@check(id="gasdrop-terms-online", family="lez-network", mode="online", evidence=(258,),
+       rows=("RFP-022 U.5", "RFP-022 Priv.7"),
+       title="The test network publishes its gas-drop terms, and its guest is the one the repository builds",
+       what="the gateway's /relayer/gas-drop terms (the relayer's LEZ account, the gas-drop guest's image id, the "
+            "native LEZ a drop gives, its inbox)",
+       against="docs/image-ids.md's gas-drop guest row; the relayer's balance on the network (at least one drop)",
+       inputs=("docs/image-ids.md",))
+def _gasdrop_terms(ctx):
+    try:
+        req = urllib.request.Request(ctx.lez_url + "/relayer/gas-drop", headers={"User-Agent": "ferrata-verify/1",
+                                                                                "Accept": "application/json"})
+        terms = json.loads(urllib.request.urlopen(req, timeout=30).read())
+    except urllib.error.HTTPError as e:
+        raise CheckFailed(f"{ctx.lez_url}/relayer/gas-drop answered HTTP {e.code}") from e
+    except (urllib.error.URLError, TimeoutError, ValueError) as e:
+        raise Skipped(f"the gateway could not be read: {e}") from e
+    from . import lez
+    img = str(terms.get("imageId", "")).lower().removeprefix("0x")
+    rows = [ln for ln in (ctx.root / "docs/image-ids.md").read_text().splitlines()
+            if ln.startswith("|") and img and img in ln.lower()]
+    if not rows or not any("gasdrop" in ln.lower() or "gas-drop" in ln.lower() or "gas drop" in ln.lower()
+                           for ln in rows):
+        raise CheckFailed(f"the published gas-drop guest {img[:16]}… is not a gas-drop row of docs/image-ids.md")
+    relayer = lez.b58encode(bytes.fromhex(str(terms.get("relayer", "")).removeprefix("0x")))
+    bal = lez.Rpc(ctx.lez_url + "/rpc", budget_s=60).call("getAccountBalance", [relayer])
+    if not isinstance(bal, int) or bal < int(terms.get("amount", 0)):
+        raise CheckFailed(f"the relayer's account {relayer} holds {bal}, less than one drop ({terms.get('amount')})")
+    return [f"terms: relayer {relayer[:10]}…, guest {img[:16]}… (docs/image-ids.md: a gas-drop row), "
+            f"{terms.get('amount')} native units a drop, covers {', '.join(terms.get('covers', []))}",
+            f"the relayer's account holds {bal:,} native units ({bal // int(terms.get('amount') or 1):,} drops)"]
