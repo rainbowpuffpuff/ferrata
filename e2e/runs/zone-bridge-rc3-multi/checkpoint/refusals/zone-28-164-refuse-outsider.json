@@ -1,0 +1,53 @@
+{
+  "attestations": [
+    {
+      "attestation_key": "158df5b9bc8cfbf2f3e0f7027a48f5a2f191262454d06d86c67d35ee12fd6d40",
+      "channel_key": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+      "tip_id": 164
+    },
+    {
+      "attestation_key": "6499977fc43302f9152ef025962a29ea54700bd2d3cde1878929104fb45de003",
+      "channel_key": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+      "tip_id": 164
+    },
+    {
+      "attestation_key": "c3db094b136856721d1819d02e2588219086b310ca3fe7812d5421f67432dd97",
+      "channel_key": "f1564eb3869c32d1f8ae21896377cf8648d9b28acc7c49ed951c9eea527237a8",
+      "tip_id": 164
+    }
+  ],
+  "block_bytes": 632917,
+  "blocks": 136,
+  "blocks_to_t": 136,
+  "config_tip_hash": "e502602b81aa7b2ae5bca4f003303c26d00848b3d1339b56bc05fa5be654224c",
+  "deployment": {
+    "channel_id": "0101010101010101010101010101010101010101010101010101010101010101",
+    "evm_chain_id": "0000000000000000000000000000000000000000000000000000000000aa36a7",
+    "lez_config_id": "93663700f9cb9db8cb689eae71e8a0c622f23ca29666a8c62090845d8b8726ac",
+    "vault": "0x1ff833f6fbd6a92a648aee9004c088875ed54439"
+  },
+  "description": "must be refused: 2 real attestations and one by a channel key outside the live key set (certifying its own attestation key for this deployment, signing the same key set and tip): a retired key's case",
+  "expect_refusal": "Core(NotAccredited)",
+  "input_bytes": 636087,
+  "keys": [
+    "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+    "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+    "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+    "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3"
+  ],
+  "kind": "checkpoint-b",
+  "n": 4,
+  "n_min": 4,
+  "name": "zone-28-164-refuse-outsider",
+  "native": "refused: Core(NotAccredited)",
+  "parent_state": "1cff75614094ff05e5128c428a564000c62b6104fb4183eca74f17169164b9ba",
+  "parent_tip_hash": "dc5e51ee0510e9ef22a46c26bf1609eb20d98edef9cc1ae6bc3bbb97096d4190",
+  "parent_tip_id": 28,
+  "posting_timeframe": 60,
+  "segments": 0,
+  "t": 3,
+  "t_min": 3,
+  "tip": 164,
+  "tip_hash": "1b4bcf6a515c764c0cec26bdbc28359596350d130b673c640fb82a349e21d634",
+  "transactions": 287
+}

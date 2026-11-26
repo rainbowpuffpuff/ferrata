@@ -1,0 +1,35 @@
+{
+  "finalState": "0x95b8eb850c0943aad9de0df5d1371ad1fb25492c62093fa7aca484a997ee254a",
+  "burnRoot": "0xd4cf1c142071f3549cc295cebdd80979637d5f9cf0a350c20041cdd6313565c3",
+  "burnRootAccepted": true,
+  "releases": [
+    {
+      "recipient": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+      "nullifier": "0xa840ad6a83820620073e8fafa9c4cb1080fa3f01d6268f5c7cc2ade92b138ff3",
+      "paidWei": "999000000000000"
+    },
+    {
+      "recipient": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+      "nullifier": "0xb2f5f7784a0277ceff4dcd2c0dbf06ffbd77ce644c7d5d15763b881cff70fbb8",
+      "paidWei": "999000000000000"
+    }
+  ],
+  "replaysRefused": [
+    {
+      "what": "release-0",
+      "transaction": "0x4bfe17c8e6cf1143fbd8a16bdb9469ed181a059020a0baf360fd96ff5faf8941",
+      "refused": "NullifierAlreadyUsed"
+    },
+    {
+      "what": "release-1",
+      "transaction": "0x223ffd6713980cc8c26188884c2216f381a790a52308b5bd565e37e7d1c745ba",
+      "refused": "NullifierAlreadyUsed"
+    },
+    {
+      "what": "submit",
+      "transaction": "0x453e0d45299edc6382285848e1105025fa78f668cf87b17a0fdcaf2700134138",
+      "refused": "ParentNotFinal"
+    }
+  ],
+  "vaultBalanceWeiAfter": "6000000000000"
+}

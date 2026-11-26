@@ -1,0 +1,17 @@
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+  FERRATA_OK release 1 paid (wei) 999000000000000
+
+SKIPPING ON CHAIN SIMULATION.
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: vault/broadcast/Rehearsal31.s.sol/11155111/release-latest.json
+
+Sensitive values saved to: vault/cache/Rehearsal31.s.sol/11155111/release-latest.json
+

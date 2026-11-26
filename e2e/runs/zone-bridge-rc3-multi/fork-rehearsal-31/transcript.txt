@@ -1,0 +1,36 @@
+12:56:08 fork of Sepolia at block 12216620 (2026-11-26T12:55:00Z)
+12:56:09 deployer 0xF41EDea9a7D94bF27e72218070b960EdcAF2D563 (nonce 0 on Sepolia), the vault expected at 0x1FF833f6FBD6a92A648aEE9004C088875ED54439; freeze authority 0xA9bC6823b7305bAc62f025ba0C6148738cC99CB4, watcher 0x537A8BF66d46f5D2D2B280C7D4e30f22B6608A50
+FERRATA_SENT groth16Verifier 0xc082c70a6ebe53f9a5ffc51c81807f1e808e01fb3f3b54f032933e2ae38d2b43 gas limit 1474967, used 1179974
+FERRATA_SENT emergencyStop 0x160542889407e7fafbafd505cd4c77767fbb17b75683c42272d37f797f2bb60e gas limit 564695, used 451756
+FERRATA_SENT registry 0x142beb2509948782f3f91090ac89e0e7cd40613e82022ed6aafe7d4256e8b361 gas limit 3524798, used 2819839
+FERRATA_SENT vault 0x030c298a555d2523accbf2885a1515ac35d1e1f5505ee621a6bfcf96c6c9a97d gas limit 7214562, used 5771650
+FERRATA_SENT token 0x0aafadc1a6963cbc43201198488296f601b5c9c69b9381beded53626a8b3384f gas limit 635045, used 508036
+FERRATA_SENT renounceStopOwner 0x8069c5c1a83338ded1d770f04c2cf1ad2fbb36fc03f20cce89b0d1d9d4536907 gas limit 37905, used 25524
+FERRATA_SENT registerETH 0x06909e44157c13bfbd4cef0b4450dc8276397148c11fdf84a070d0bb9b806b1b gas limit 950737, used 749261
+FERRATA_SENT registerToken 0x6308171300f330f74d61a91a533913e95db2a40a593f42b74501e148359b7ac0 gas limit 951575, used 749919
+12:56:17 deployed in 8 s: record deployments/fork-31-11155111-B.json
+12:56:17 verifier 0x98133e4cE4Cee9E5F45766868Eb32782d72c8f11 VERSION 3.1.0 SELECTOR 0xe71e6620; stop 0xD3ab9dE6d4aaeBd1b616d0d6595E21Cb464cD95B, owner renounced; vault 0x1FF833f6FBD6a92A648aEE9004C088875ED54439; freeze authority set
+12:56:17 caps (capacity, refill/s, available): deposit 1030000000000 [1.03e12] 11921297 [1.192e7] 1030000000000 [1.03e12] / release 1030000000000 [1.03e12] 11921297 [1.192e7] 1030000000000 [1.03e12] / release floor 300000000 [3e8]
+12:56:17 FERRATA_OK binding: chain, vault, configuration and genesis are the journal's (0.2 s)
+12:56:18 FERRATA_OK deposits: 2 leaves (0.3 s, gas 226342,172152)
+12:56:18 the run's checkpoint was proven under RISC Zero 3.1 only: no seal of 3.0.5 to show refused (step skipped)
+12:56:18 FERRATA_OK candidate submitted with its RISC Zero 3.1 seal (0.5 s, gas 375245)
+12:56:18 fork clock +3601 s
+12:56:19 FERRATA_OK final; burn root accepted (0.3 s, gas 218361)
+12:56:19 fork clock +121 s
+12:56:19 FERRATA_OK releases frozen (0.3 s, gas 47347)
+12:56:19 FERRATA_OK release 0 refused as expected (0.2 s)
+12:56:20 FERRATA_OK releases unfrozen (0.3 s, gas 25374)
+12:56:20 FERRATA_OK release 0 paid (wei) 999000000000000 (0.4 s, gas 421342)
+12:56:21 FERRATA_OK release 1 paid (wei) 999000000000000 (0.4 s, gas 384654)
+12:56:21 FERRATA_OK release 0 refused as expected (0.2 s)
+12:56:21 recipient 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07 received 1998000000000000 wei for the two releases
+12:56:21 FERRATA_OK one more deposit (0.3 s, gas 160064)
+12:56:21 the verifier's code replaced on the fork by STOP (the forgery stood in for: every seal accepted)
+12:56:22 FERRATA_OK checkpoints paused by a watcher (0.3 s, gas 47260)
+12:56:22 FERRATA_OK the forged checkpoint refused as expected (0.2 s)
+12:56:22 FERRATA_OK releases frozen (0.3 s, gas 47347)
+12:56:23 FERRATA_OK the forged release refused as expected (0.2 s)
+12:56:23 FERRATA_OK releases unfrozen (0.3 s, gas 25374)
+12:56:24 FERRATA_OK the forged release paid (wei) 999000000000000 (0.3 s, gas 160298)
+12:56:24 FORK REHEARSAL 31 OK
