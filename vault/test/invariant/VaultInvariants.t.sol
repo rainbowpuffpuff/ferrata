@@ -100,8 +100,8 @@ contract VaultInvariants is VaultTestBase {
     }
 
     /// @notice D13 / proposal §B4 (Security #6): the wrapped supply on LEZ equals escrow less unminted deposits and
-    ///         unreleased burns. The supply is the LEZ model's: claims mint what the attested fee schedule of the leaf
-    ///         and the registered relay fee say, never what the vault says it escrowed; burns take one denomination.
+    ///         unreleased burns. Claims mint one denomination and its fixed relay fee; the deposit's schedule-dependent
+    ///         mint fee was credited on Ethereum and is not wrapped supply. Burns take one denomination.
     function invariant_supplyIsEscrowLessUnmintedDepositsAndUnreleasedBurns() public view {
         address[] memory tokens = handler.tokens();
         for (uint256 i = 0; i < tokens.length; i++) {
@@ -125,12 +125,23 @@ contract VaultInvariants is VaultTestBase {
         assertEq(handler.ghostFeeMismatches(), 0);
     }
 
-    /// @notice D13: every deposit escrowed, every release paid and credited, every refund returned exactly what the
-    ///         fee model says; every published schedule hash is the model's preimage; no claimed deposit was refunded.
+    /// @notice D13: every deposit escrowed denomination + relay and paid its whole total, every release and refund
+    ///         moved what the fee model says; every published schedule hash is its preimage; no claimed leaf was refunded.
     function invariant_feesFollowTheAnnouncedSchedules() public view {
         assertEq(handler.ghostFeeMismatches(), 0);
         assertEq(handler.ghostPublishedMismatches(), 0);
         assertEq(handler.ghostRefundsOfClaimedLeaves(), 0);
+    }
+
+    /// @notice Per token, the cumulative feeRecipient and totalOwed credit deltas at deposits equal the ghost sum of
+    ///         the mint fee in force for every successful deposit, independent of later release credits and withdrawals.
+    function invariant_depositMintFeeCreditsMatchTheInForceSchedules() public view {
+        address[] memory tokens = handler.tokens();
+        for (uint256 i = 0; i < tokens.length; i++) {
+            address t = tokens[i];
+            assertEq(handler.ghostMintFeeCredits(t), handler.ghostDepositMintFees(t));
+            assertEq(handler.ghostMintFeeTotalOwed(t), handler.ghostDepositMintFees(t));
+        }
     }
 
     /// @dev An equality, not `balance >= escrowed + totalOwed`: a one-sided bound stays green when value is

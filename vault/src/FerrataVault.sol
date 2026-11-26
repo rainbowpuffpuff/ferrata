@@ -19,8 +19,9 @@ import {IRiscZeroVerifier} from "./interfaces/IRiscZeroVerifier.sol";
 ///      its wait W = delta + (t - 1) * turnSeconds later, and a second proof that echoes the beacon. Rule (B): one
 ///      proof of t final-tier attestations, final once W = delta has passed unless a watcher cancels it. Releases
 ///      pay out against a RISC Zero proof of a burn under an accepted root.
-///      Fees (D13): a deposit escrows its denomination plus the mint and relay fees of the fee schedule in force; a
-///      release pays the denomination less the relay, burn and checkpoint fees in force. Fee schedules and the registry
+///      Fees (D13): a deposit pays its denomination plus the mint and relay fees of the fee schedule in force. The
+///      mint fee is credited to `feeRecipient` at once; the denomination and relay fee are escrowed. A release pays
+///      the denomination less the relay, burn and checkpoint fees in force. Fee schedules and the registry
 ///      entry are published at SHA-256 storage slots that the LEZ side attests.
 ///      There is no upgradeability, no settable verifier and no token rescue function. The only delegatecall is into
 ///      the linked library FerrataRegistry (registration, fees, caps, roles), whose address is fixed at link time.
@@ -71,7 +72,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         Mode mode; // the finality rule; checkpointImageId must be that rule's program (deployment check)
         address[3] watchers; // may cancel candidates and pause checkpoints for 12 h (D13); zero entries are unused
         CapParams releaseCapFloor; // value units; no release bucket can be set below it (D13); zeros: no floor
-        address feeRecipient; // credited every burn fee (D13)
+        address feeRecipient; // credited every deposit's mint fee and every release's burn fee (D13)
     }
 
     /// @notice The checkpoint-journal fields the caller supplies, in journal order. The vault adds
@@ -266,7 +267,7 @@ contract FerrataVault is ReentrancyGuardTransient {
     /// @notice Floor under every release bucket, in value units (D13): its capacity and its refill per second.
     uint256 public immutable releaseCapFloor;
     uint256 public immutable releaseRefillFloor;
-    /// @notice Credited the burn fee of every release (D13).
+    /// @notice Credited every deposit's mint fee and every release's burn fee (D13).
     address public immutable feeRecipient;
     /// @dev (tMin - 1) * turnSeconds + KEYLESS_RETIREMENT: the keyless period after `delta` (see `retireOpensAt`).
     uint256 internal immutable _keylessSpan;
@@ -337,7 +338,7 @@ contract FerrataVault is ReentrancyGuardTransient {
     /// @dev Per token, every release-delay setting with the first checkpoint index it applies to (spec §5.3).
     mapping(address token => DelayChange[]) private _releaseDelays;
     mapping(address token => uint256) public escrowed;
-    /// @notice Payments that could not be pushed (spec §5.4); only the payee can claim them.
+    /// @notice Protocol fees and payments that could not be pushed (spec §5.4); only the payee can claim them.
     mapping(address payee => mapping(address token => uint256)) public owed;
     mapping(address token => uint256) public totalOwed;
     mapping(address depositor => uint64) public depositCount;
@@ -669,32 +670,33 @@ contract FerrataVault is ReentrancyGuardTransient {
     // Deposit side
     // ------------------------------------------------------------------------------------------------------------
 
-    /// @notice Escrows `denominations(token)[denomIndex]` of an ERC-20 plus the mint and relay fees of the fee schedule
-    ///         in force (D13), and appends a leaf (which binds the denomination) to the deposit tree.
+    /// @notice Takes `denominations(token)[denomIndex]` of an ERC-20 plus the mint and relay fees of the fee schedule
+    ///         in force (D13), escrows the denomination and relay fee, credits the mint fee to `feeRecipient`, and
+    ///         appends a leaf (which binds the denomination) to the deposit tree. Caps count the whole amount taken.
     /// @param commitment Hiding commitment to the LEZ destination. Opaque to the vault, non-zero, may repeat.
     /// @param index Must equal `depositCount[msg.sender]`, so every deposit has a unique (depositor, index) pair.
     function deposit(address token, uint8 denomIndex, bytes32 commitment, uint64 index) external nonReentrant {
         if (token == ETH) revert UseDepositETH();
-        (uint256 amount, uint256 total) = _checkDeposit(token, denomIndex, commitment, index);
+        (uint256 amount, uint256 total, uint256 mintFee) = _checkDeposit(token, denomIndex, commitment, index);
 
         // Deposits pull the tokens before changing any state other than a due fee change, so the vault never
-        // books an escrow it has not received and its balance covers `escrowed` at every external call. The
-        // exact-delta check rejects fee-on-transfer tokens. SafeERC20 accepts tokens whose transferFrom returns
-        // nothing (USDT).
+        // books an escrow or fee credit it has not received and its balance covers `escrowed + totalOwed` at every
+        // external call. The exact-delta check rejects fee-on-transfer tokens. SafeERC20 accepts tokens whose
+        // transferFrom returns nothing (USDT).
         IERC20 erc20 = IERC20(token);
         uint256 balanceBefore = erc20.balanceOf(address(this));
         erc20.safeTransferFrom(msg.sender, address(this), total);
         if (erc20.balanceOf(address(this)) != balanceBefore + total) revert TransferAmountMismatch();
 
-        _recordDeposit(token, amount, total, commitment, index);
+        _recordDeposit(token, amount, total, mintFee, commitment, index);
     }
 
-    /// @notice Escrows native ETH; `msg.value` must equal `denominations(ETH)[denomIndex]` plus the mint and relay
-    ///         fees in force, exactly.
+    /// @notice Takes native ETH; `msg.value` must equal `denominations(ETH)[denomIndex]` plus the mint and relay fees
+    ///         in force, exactly. The denomination and relay fee are escrowed and the mint fee credited as above.
     function depositETH(uint8 denomIndex, bytes32 commitment, uint64 index) external payable nonReentrant {
-        (uint256 amount, uint256 total) = _checkDeposit(ETH, denomIndex, commitment, index);
+        (uint256 amount, uint256 total, uint256 mintFee) = _checkDeposit(ETH, denomIndex, commitment, index);
         if (msg.value != total) revert WrongEthAmount();
-        _recordDeposit(ETH, amount, total, commitment, index);
+        _recordDeposit(ETH, amount, total, mintFee, commitment, index);
     }
 
     /// @notice Returns a deposit that LEZ never imported, once the configuration has been sunset (spec §3.4, §4.5).
@@ -702,8 +704,8 @@ contract FerrataVault is ReentrancyGuardTransient {
     ///         no longer moves because the vault must be retired, with a Merkle path whose direction bits are the
     ///         bits of `leafIndex`. Refunds open after the last second in which the sunset checkpoint can be revoked
     ///         (v3 D5, D11), the global release freeze stops them, they draw on the release buckets, and nothing is
-    ///         refunded after the verifier stop (D13). A refund returns the leaf's whole escrow: the denomination and
-    ///         the mint and relay fees of the fee schedule of its leaf index (D13).
+    ///         refunded after the verifier stop (D13). A refund returns the leaf's escrow: the denomination and the
+    ///         token's fixed relay fee. Its mint fee was credited to `feeRecipient` at deposit and is not refunded.
     function refund(
         uint64 leafIndex,
         address depositor,
@@ -720,9 +722,8 @@ contract FerrataVault is ReentrancyGuardTransient {
         if (refunded[leafIndex]) revert AlreadyRefunded();
         // The leaf's checks (known leaf, registered token and denomination, Merkle path to `depositRoot`) and its
         // escrow, in the library.
-        uint256 amount = FerrataRegistry.refundAmount(
-            _tokens, feeState, feeSchedules, leafIndex, depositor, token, denomIndex, commitment, path
-        );
+        uint256 amount =
+            FerrataRegistry.refundAmount(_tokens, leafIndex, depositor, token, denomIndex, commitment, path);
         if (amount > escrowed[token]) revert InsufficientEscrow();
 
         _consumeReleaseCaps(token, amount);
@@ -872,8 +873,8 @@ contract FerrataVault is ReentrancyGuardTransient {
         if (r.relayFee != 0) _payOrCredit(r.token, feePayee, r.relayFee);
     }
 
-    /// @notice Withdraws what the vault owes the caller in `token` after a failed push payment. Only the payee can
-    ///         withdraw, and only to itself.
+    /// @notice Withdraws protocol fees credited to the caller and payments that could not be pushed. Only the payee
+    ///         can withdraw, and only to itself.
     function claimOwed(address token) external nonReentrant {
         FerrataRegistry.claimOwed(owed, totalOwed, token);
     }
@@ -1117,8 +1118,9 @@ contract FerrataVault is ReentrancyGuardTransient {
     }
 
     /// @notice The fees of denomination `denomIndex` under fee schedule `index` of `token` (D13). A deposit under it
-    ///         escrows the denomination + mintFee + relayFee; a release under it pays the denomination less burnFee,
-    ///         checkpointFee and the relay fee its proof names (0 or relayFee).
+    ///         pays denomination + mintFee + relayFee, escrows denomination + relayFee and credits mintFee to
+    ///         `feeRecipient`; a release under it pays the denomination less burnFee, checkpointFee and the relay fee
+    ///         its proof names (0 or relayFee).
     function fees(address token, uint256 index, uint8 denomIndex)
         external
         view
@@ -1188,11 +1190,11 @@ contract FerrataVault is ReentrancyGuardTransient {
     // Internal: deposits and the tree
     // ------------------------------------------------------------------------------------------------------------
 
-    /// @dev The deposit's checks; returns the denomination and the total to escrow under the fee schedule in force,
-    ///      which a due fee change becomes first (so every deposit from its due time on pays it).
+    /// @dev The deposit's checks; returns the denomination, the whole amount to pay and its mint fee under the fee
+    ///      schedule in force, which a due fee change becomes first (so every deposit from its due time on pays it).
     function _checkDeposit(address token, uint8 denomIndex, bytes32 commitment, uint64 index)
         internal
-        returns (uint256 amount, uint256 total)
+        returns (uint256 amount, uint256 total, uint256 mintFee)
     {
         // A finalised sunset checkpoint ends deposits like retirement: LEZ imports nothing after `Sunset` (L-3).
         if (retired || finalSunset) revert VaultRetired();
@@ -1207,14 +1209,24 @@ contract FerrataVault is ReentrancyGuardTransient {
         if (nextLeafIndex >= MAX_LEAVES) revert TreeFull();
         amount = cfg.denominations[denomIndex];
         uint256 inbound = feeSchedules[token][_feesInForce(token)].inbound[denomIndex];
-        total = amount + (inbound >> 128) + uint128(inbound);
+        mintFee = inbound >> 128;
+        total = amount + mintFee + uint128(inbound);
     }
 
-    /// @dev Escrows `total` and counts it against the deposit caps; the leaf binds the denomination `amount`.
-    function _recordDeposit(address token, uint256 amount, uint256 total, bytes32 commitment, uint64 index) internal {
+    /// @dev Counts the whole payment against the deposit caps, escrows what LEZ will mint (denomination + relay fee),
+    ///      and credits a nonzero mint fee through the pull-payment ledger. The leaf binds the denomination `amount`.
+    function _recordDeposit(
+        address token,
+        uint256 amount,
+        uint256 total,
+        uint256 mintFee,
+        bytes32 commitment,
+        uint64 index
+    ) internal {
         _consumeDepositCaps(token, total);
         depositCount[msg.sender] = index + 1;
-        escrowed[token] += total;
+        escrowed[token] += total - mintFee;
+        if (mintFee != 0) _credit(feeRecipient, token, mintFee);
 
         uint64 leafIndex = nextLeafIndex;
         _insertLeaf(leafIndex, _leafHash(leafIndex, msg.sender, token, amount, commitment));

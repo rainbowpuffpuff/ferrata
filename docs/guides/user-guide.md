@@ -92,9 +92,9 @@ Call `depositETH(denomIndex, C, j)` or `deposit(token, denomIndex, C, j)` on the
 ([`vault/README.md`](../../vault/README.md), "Deposits"; [`bridge.md`](../design/bridge.md) §5.1–§5.3):
 
 - the amount is exactly one registered denomination of the token (at most eight per token; the
-  default registers three). The vault escrows the denomination **plus** the registered mint and relay
-  fees, so your LEZ balance will be a whole denomination ([`vault/README.md`](../../vault/README.md),
-  "Fees (v5, D13)");
+  default registers three). You pay denomination + registered mint fee + relay fee; the vault escrows
+  denomination + relay and credits the mint fee on Ethereum, so your LEZ balance will be a whole
+  denomination ([`vault/README.md`](../../vault/README.md), "Fees (v5, D13)"; ADR 0046);
 - `j` must equal `depositCount[you]`: your deposits are numbered 0, 1, 2, … and that pair
   `(you, j)` is public;
 - `C = H("ferrata/C/v1" ‖ s ‖ kind ‖ dest)` with `s = HMAC(kAuth, "ferrata/s/v1" ‖ evmChainId ‖ vault
@@ -151,7 +151,7 @@ Three ways, the first preselected:
 
 | Path | How | Public | Hidden | Measured |
 |---|---|---|---|---|
-| **Private claim to a private account** (default) | `ClaimPrivately` runs as your destination account inside a privacy-preserving transaction; it reads `root(cid, n)` and credits its own private state | `N`, the configuration, the token, the denomination, which root was read (`n`), the fee schedule's range, the relayer, the time, the bridge program, a one-time fee alias | which deposit (leaf, depositor, `s`, `C`, path) and your account | 553,641 execution gas, 224,063 storage gas; the prover proves 41,736 + 110,862 user cycles (in-process harness, dev mode, this tree's program) |
+| **Private claim to a private account** (default) | `ClaimPrivately` runs as your destination account inside a privacy-preserving transaction; it reads `root(cid, n)` and credits its own private state | `N`, the configuration, the token, the denomination, which root was read (`n`), the relayer, the time, the bridge program, a one-time fee alias | which deposit (leaf, depositor, `s`, `C`, path) and your account | 553,641 execution gas, 224,063 storage gas; the prover proves 41,736 + 110,862 user cycles (in-process harness, dev mode, this tree's program; figures from the pre-ADR-0046 program) |
 | Private claim to a public account | the same proof, from a private account of yours; the mint goes publicly to the destination | the above and the destination | which deposit | 603,981 execution gas |
 | **Plaintext claim** | the witness is transaction data; one public transaction, for users who cannot prove | **everything, including which deposit**: the client must say so before allowing it | nothing | 261,671 execution gas (1 ETH), 2,053 bytes |
 
@@ -175,8 +175,10 @@ and in 463.7 s at 16 CPUs ([`lez/results/p4-minimum`](../../lez/results/p4-minim
 **Not measured:** the private claim on a user's laptop (declared minimum: 16 GB, 8 cores with 16 threads, x86-64,
 or an Apple M1 with 16 GB, [`attestation.md`](../design/attestation.md) §13).
 
-**Fees.** The claim mints your denomination to you and the escrowed fees to the fee recipient and to
-the relayer it names ([`bridge.md`](../design/bridge.md) §5.5, §13). The LEZ transaction fee of a
+**Fees.** Your Ethereum deposit pays denomination + mint fee + relay fee. The vault credits the mint fee to the fee
+recipient on Ethereum, withdrawable there with `claimOwed`. The claim names no fee schedule and mints your denomination
+to you and only the fixed relay fee to the relayer it names ([`bridge.md`](../design/bridge.md) §5.5, §13; ADR 0046).
+The LEZ transaction fee of a
 privacy-preserving transaction is paid in native LEZ from a private account of the prover, inside the
 proof; nobody else can pay it on v0.4. The **gas drop** lets a relayer fund that fee without learning which deposit
 is yours: your gas-drop receipt binds `(N, oneTimeAddress, relayer)`, the relayer sends one credit per `N` (EVIDENCE
@@ -334,8 +336,9 @@ choices: `deposit --kind public --i-accept-public-account`; `claim --plaintext
 | Root read | the newest imported root | an older root dates your deposit (it shows the deposit is at least that old) |
 
 The client shows the **anonymity set** a claim would have (`ferrata claim`'s `anonymity` line, which warns when it is
-1): the deposits of that token and denomination under the root it reads and within the fee schedule range it names,
-less those a plaintext claim has published, applied or refused on chain (a refused transaction stays in its block,
+1): the deposits of that token and denomination under the root it reads, with no split at a fee-schedule change
+because the mint fee was collected on Ethereum, less those a plaintext claim has published, applied or refused on
+chain (a refused transaction stays in its block,
 witness and all), which are public ([`cli/README.md`](../../cli/README.md), "Anonymity set";
 measured over both halves, with plaintext and with private claims:
 [`e2e/both-halves/results/randomised.md`](../../e2e/both-halves/results/randomised.md)). Timing is not counted in it.
@@ -351,7 +354,7 @@ From [`bridge.md`](../design/bridge.md) §17, with the measured dumps of
 |---|---|---|
 | Deposit (Ethereum) | depositor, token, denomination, time, `C`, the pair `(depositor, j)` | your LEZ destination |
 | Root import (LEZ) | the vault's root and leaf count at a block; the same for everyone | — |
-| Claim (LEZ) | `N`, token, denomination, time, the root read, the fee schedule's range, the relayer, the bridge program, a one-time fee alias with a fixed reserve; a public destination | which deposit; a private destination |
+| Claim (LEZ) | `N`, token, denomination, time, the root read, the relayer, the bridge program, a one-time fee alias with a fixed reserve; a public destination | which deposit; a private destination |
 | Claim, plaintext | everything, including which deposit | — |
 | Burn, private holding (LEZ) | token, denomination, time, the burn note | the holder; the recipient |
 | Checkpoint (Ethereum) | the LEZ tip, `n`, `t`, the burn root and count | — |
@@ -365,8 +368,8 @@ From [`bridge.md`](../design/bridge.md) §17, with the measured dumps of
 - **the root a claim reads**, which shows the deposit is at least that old; read the newest;
 - **a retry after a cap rejection**, which shows the first attempt's time; the client checks caps
   before proving;
-- **a fee-schedule change**, which splits sets by date: the claim's fee range shows which schedule
-  applied (the mint fee is public and differs between schedules);
+- **the root read and timing around a fee-schedule change**, but no fee-value split: the schedule-dependent mint fee
+  stayed on Ethereum, and the claim neither names a schedule range nor mints it (ADR 0046);
 - **network metadata** (your IP to an RPC or sequencer): out of scope, disclosed;
 - **an adversary's own deposits**, which it can subtract from any set;
 - **the fee payer** of a first private claim, unless a relayer's gas drop funds it (§5).
@@ -429,7 +432,7 @@ module `code`; [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §2–§4,
 | unsupported token | 251 | `NOT_REGISTERED` (also an amount that is not a denomination) |
 | invalid amount | 251; 254 | `NOT_REGISTERED`; `INSUFFICIENT_BALANCE` (a burn larger than the holding) |
 | cap exceeded | 255 | `CAPPED` (the token's or the global mint or burn bucket) |
-| verification failure | 249; 248; 252 | `CLAIM_INVALID` (path, opening, redirected destination, another configuration's vault); `LEAF_NOT_IMPORTED` (index not below the root's count, or outside the fee range named); `WRONG_DESTINATION` (a private-kind deposit by the plaintext path, or a private claim not run as its destination) |
+| verification failure | 249; 248; 252 | `CLAIM_INVALID` (path, opening, redirected destination, another configuration's vault); `LEAF_NOT_IMPORTED` (index not below the root's count); `WRONG_DESTINATION` (a private-kind deposit by the plaintext path, or a private claim not run as its destination) |
 | insufficient finality | 245 | `NOT_FOUND` (no imported root yet, or no configuration) |
 | already claimed | 250 | `ALREADY_CLAIMED` |
 | program or per-token frozen | 242 | `FROZEN` (also any import after `Sunset`) |

@@ -57,10 +57,11 @@ no deployed image id moves.
   first, the second is paid. Neither is refunded its gas either way. An operator narrows this by submitting its own
   `Land` immediately after its job's last step (the last `Adopt`, or `Miller` when there is none), without waiting for
   that step's inclusion. A sequencer that reorders transactions can still give the rebate to a copier.
-- **The funding needs a conversion.** The rebate is paid in LEZ's native token. The bridge's fee recipient receives
-  mint fees in the wrapped tokens (`lez/BRIDGE.md`), not in the native token, so a policy that funds the pool from
-  protocol fees needs a conversion step (the role holder exchanges wrapped tokens for the native token, then
-  transfers), or a variant of the pool that pays in a wrapped token. Neither is built. Whether the fee recipient funds
+- **The funding needs a conversion.** The rebate is paid in LEZ's native token. Since ADR 0046 the bridge's fee
+  recipient collects deposit mint fees on Ethereum in the deposited ETH or ERC-20 asset, withdrawable with `claimOwed`;
+  release burn fees are credited in the same asset there. Neither is LEZ's native token, so a policy that funds the
+  pool from protocol fees needs to bridge or exchange the asset for the native token, then transfer it. That funding
+  path is not built. Whether the fee recipient funds
   the pool at all, and how much, is a policy of whoever holds that role; the vault and the bridge program are not
   involved.
 

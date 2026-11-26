@@ -288,7 +288,9 @@ stop and its owner (renounced or not), tokens with their caps and fee schedules,
   deposit keeps its leaf's schedule. On LEZ, `ImportFees` appends it once in force (attested), and
   `ImportFees(j, None)` attests that schedule `j` does not exist yet at a count, extending `known_until`.
   Protocol fees start at zero under an immutable 1% ceiling ([`vault/README.md`](../../vault/README.md),
-  "Fees (v5, D13)").
+  "Fees (v5, D13)"). Under ADR 0046 the deposit's mint fee is credited to `feeRecipient` on Ethereum and only
+  denomination + relay is escrowed; pair the vault with a LEZ claim that names no schedule range and mints no mint fee.
+  Never pair it with the pre-0046 claim, which would mint an unbacked fee. Refunds return only denomination + relay.
 - **Caps.** A mint and a burn token bucket per token and one per configuration on LEZ, in value units
   (`amount / lezUnit × unitWeight`); deposit and release buckets per token and globally on the vault;
   refunds draw on the release buckets. `SetCap` never goes below the configuration's immutable floor.

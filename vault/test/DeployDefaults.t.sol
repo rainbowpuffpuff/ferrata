@@ -41,7 +41,7 @@ contract DeployVaultExposed is DeployVault {
 ///         recommended defaults"): the deployment script's default is capped. A vault built from exactly what the
 ///         script would send (its own `Deployment` and registrations, on the default params) refuses the deposit
 ///         that would pass its token's daily ceiling (100 times the largest denomination, counted on each deposit's
-///         whole escrow), refills over a day, and keeps every release cap above an immutable floor; the uncapped
+///         whole payment), refills over a day, and keeps every release cap above an immutable floor; the uncapped
 ///         deployment of the earlier testnet runs needs FERRATA_UNCAPPED=1. RFP-022 F.12: the wait Δ, the outbound
 ///         finality depth, is the design's for the rule by default (3 h 01 min under (A), 1 h under (B)); FERRATA_DELTA
 ///         sets another for a test run.
@@ -87,9 +87,11 @@ contract DeployDefaultsTest is VaultTestBase {
         assertEq(capacity, 30_000_000_000 + 1_000_000_000_000);
         // The immutable release floor: one 0.1 ETH a day in value units (ETH's largest is worth less than the token's).
         assertEq(deployed.releaseCapFloor(), 300_000_000);
-        assertEq(deployed.releaseRefillFloor(), (uint256(300_000_000) + 1 days - 1) / 1 days, "rounded up: whole in a day");
+        assertEq(
+            deployed.releaseRefillFloor(), (uint256(300_000_000) + 1 days - 1) / 1 days, "rounded up: whole in a day"
+        );
 
-        // A deposit counts its whole escrow (0.1 ETH and its 0.2 % relay fee) against the bucket: 99 of 0.1 ETH fill
+        // A deposit counts its whole payment (0.1 ETH and its 0.2 % relay fee) against the bucket: 99 of 0.1 ETH fill
         // the day; the 100th is refused; a day later the bucket is whole again.
         address depositor = address(0xD5);
         uint256 total = _depositTotal(deployed, ETH, 2);

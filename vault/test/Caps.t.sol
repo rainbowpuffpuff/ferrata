@@ -15,7 +15,7 @@ contract CapsTest is VaultTestBase {
     uint256 internal nullifierNonce;
 
     /// @dev Caps are tested on tokens without a relay fee, so the bucket arithmetic reads in whole denominations;
-    ///      that the buckets count the whole escrow movement, fees included, is tested in Fees.t.sol.
+    ///      that the buckets count the whole amount paid, fees included, is tested in Fees.t.sol.
     function setUp() public override {
         relayFeeDivisor = 0;
         super.setUp();

@@ -244,7 +244,7 @@ abstract contract VaultTestBase is Test {
         return pendingAt != 0 && block.timestamp >= pendingAt ? uint256(current) + 1 : current;
     }
 
-    /// @dev What a deposit of `denomIndex` escrows now: the denomination, its mint fee and its relay fee (D13).
+    /// @dev What a deposit of `denomIndex` pays now: denomination, its mint fee and its relay fee (D13).
     function _depositTotal(FerrataVault v, address token, uint8 denomIndex) internal view returns (uint256) {
         (uint256 mintFee, uint256 relayFee,,) = v.fees(token, _scheduleNow(v, token), denomIndex);
         return _denomsOf(v, token)[denomIndex] + mintFee + relayFee;
