@@ -687,8 +687,38 @@ stage_gpu_seals() {
 }
 
 # ---- vault: the local anvil from its saved state ------------------------------------------------------------------
+# A rerun of stage vault starts again from the zone stage's saved chain ($W/anvil-state.json), on which none of the
+# stage's own transactions exist; an earlier attempt's (its manifest stages, their journal rows and logs) are moved to
+# vault-attempt-<n>/, kept, so that the stage sends them again instead of skipping them as done or waiting for them.
+vault_attempt_aside() {
+  local stages a=1 f
+  stages="$(jq -r '.stages | keys[] | select(. == "submit" or . == "finalizeAttested" or startswith("release-"))' \
+    "$RUN/manifest.json" 2>/dev/null)"
+  [ -n "$stages" ] || return 0
+  while [ -e "$RUN/vault-attempt-$a" ]; do a=$((a + 1)); done
+  mkdir -p "$RUN/vault-attempt-$a"
+  cp "$RUN/manifest.json" "$RUN/net/journal.jsonl" "$RUN/vault-attempt-$a/"
+  for f in $stages; do [ -f "$RUN/logs/$f.log" ] && mv "$RUN/logs/$f.log" "$RUN/vault-attempt-$a/"; done
+  python3 -I - "$RUN/manifest.json" "$RUN/net/journal.jsonl" $stages <<'PY'
+import json, sys
+manifest, journal, stages = sys.argv[1], sys.argv[2], set(sys.argv[3:])
+m = json.load(open(manifest))
+for s in stages:
+    m["stages"].pop(s, None)
+json.dump(m, open(manifest, "w"), indent=2)
+rows = [json.loads(line) for line in open(journal) if line.strip()]
+gone = {r["hash"] for r in rows if r.get("event") == "signed" and r.get("stage") in stages}
+with open(journal, "w") as out:
+    for r in rows:
+        if r.get("hash") not in gone:
+            out.write(json.dumps(r, sort_keys=True) + "\n")
+PY
+  log "an earlier vault attempt's transactions ($(echo $stages)) are not on the chain this stage starts from: set aside in vault-attempt-$a/"
+}
+
 stage_vault() {
   [ -s "$W/anvil-state.json" ] || die "no saved anvil state at $W/anvil-state.json"
+  vault_attempt_aside
   local C="$RUN/checkpoint" n rel="[]" e p VAULT
   n="$(cname)"; VAULT="$(jq -r .vault "$RUN/identity.json")"
   [ "$(hexfile "$C/receipts/journal.hex")" = "$(jq -r .journal "$C/$n.json")" ] || die "checkpoint journal != native"
@@ -732,18 +762,22 @@ stage_vault() {
     log "release $k: recipient $rcpt +$(python3 -I -c "print($after - $before)") wei; nullifierUsed $used"
     paid="$(jq -c --arg r "$rcpt" --arg n "$nul" --arg w "$(python3 -I -c "print($after - $before)")" '. + [{recipient: $r, nullifier: $n, paidWei: $w}]' <<< "$paid")"
   done
-  # replays (nothing is paid twice): each release sent again, and the finalised checkpoint submitted again as a candidate
-  local replays="[]" why
-  for k in $(seq 0 $(( nrel - 1 ))); do
-    if "$S" "$RUN" release "$k" > "$W/logs/replay-release-$k.log" 2>&1; then die "release $k sent again was paid"; fi
-    why="$(grep -oE 'NullifierAlreadyUsed|[A-Z][A-Za-z]+\(\)' "$W/logs/replay-release-$k.log" | head -n 1)"
-    log "release $k sent again: refused (${why:-see logs/replay-release-$k.log})"
-    replays="$(jq -c --arg w "release $k" --arg r "$why" '. + [{what: $w, refused: $r}]' <<< "$replays")"
+  # replays (nothing is paid twice): each release's and the checkpoint's mined calldata called again from its sender
+  # (e2e/crown/sepolia.sh would skip a stage its journal holds, and Crown.s.sol one already on chain, so neither can
+  # send a replay); each must revert, and the vault's error is named from its selector
+  local replays="[]" why stage h input out
+  for stage in $(seq 0 $(( nrel - 1 )) | sed 's/^/release-/') submit; do
+    h="$(jq -r --arg s "$stage" '.stages[$s][-1].hash' "$RUN/manifest.json")"
+    input="$(cast tx "$h" input --rpc-url "$R")"
+    if out="$(cast call "$VAULT" "$input" --from "$ETH_FROM" --rpc-url "$R" 2>&1)"; then die "$stage called again was not refused"; fi
+    why=""
+    for e in NullifierAlreadyUsed ParentNotFinal CheckpointsAreFrozen ReleasesAreFrozen VerificationFailed; do
+      grep -qi "$(cast sig "$e()" | sed 's/^0x//')" <<< "$out" && { why="$e"; break; }
+    done
+    [ -n "$why" ] || { echo "$out" > "$W/logs/replay-$stage.log"; die "$stage called again: refused, by an error not named here (logs/replay-$stage.log)"; }
+    log "$stage (transaction $h) called again: refused ($why)"
+    replays="$(jq -c --arg w "$stage" --arg h "$h" --arg r "$why" '. + [{what: $w, transaction: $h, refused: $r}]' <<< "$replays")"
   done
-  if "$S" "$RUN" submit > "$W/logs/replay-submit.log" 2>&1; then die "the finalised checkpoint was taken again as a candidate"; fi
-  why="$(grep -oE '[A-Z][A-Za-z]+\(\)' "$W/logs/replay-submit.log" | head -n 1)"
-  log "the finalised checkpoint submitted again: refused (${why:-see logs/replay-submit.log})"
-  replays="$(jq -c --arg r "$why" '. + [{what: "the checkpoint again", refused: $r}]' <<< "$replays")"
   jq -n --arg f "$final" --arg root "$root" --argjson paid "$paid" --arg bal "$(cast balance "$VAULT" --rpc-url "$R")" \
     --argjson rp "$replays" '{finalState: $f, burnRoot: $root, burnRootAccepted: true, releases: $paid, replaysRefused: $rp, vaultBalanceWeiAfter: $bal}' > "$RUN/vault-checks.json"
   "$S" "$RUN" status | tee -a "$RUN/logs/zone-bridge.log"
