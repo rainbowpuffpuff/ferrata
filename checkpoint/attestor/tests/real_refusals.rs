@@ -198,7 +198,13 @@ fn real_mode_refuses_inputs_it_must_not_build() {
     let out = cli(&s, &["--real", "a1.json", "--out-dir", "o3"]);
     assert!(!out.status.success());
     assert!(String::from_utf8_lossy(&out.stderr).contains("real attestations, t(n = 3) = 2"));
-    for o in ["o1", "o2", "o3"] {
+    // No attestation named at all (an empty list, or commas only): an error, not a panic.
+    for (list, o) in [("", "o4"), (",", "o5")] {
+        let out = cli(&s, &["--real", list, "--out-dir", o]);
+        assert_eq!(out.status.code(), Some(1), "{}", String::from_utf8_lossy(&out.stderr));
+        assert!(String::from_utf8_lossy(&out.stderr).contains("names no attestation file"));
+    }
+    for o in ["o1", "o2", "o3", "o4", "o5"] {
         assert_eq!(fs::read_dir(s.d.join(o)).map(|r| r.count()).unwrap_or(0), 0, "{o}: nothing written");
     }
 }

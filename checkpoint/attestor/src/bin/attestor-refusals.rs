@@ -119,6 +119,7 @@ fn main() -> Result<()> {
     fs::create_dir_all(out)?;
     if let Ok(list) = get("real") {
         let paths: Vec<&str> = list.split(',').filter(|p| !p.is_empty()).collect();
+        anyhow::ensure!(!paths.is_empty(), "--real names no attestation file");
         let real = paths.iter().map(|p| read_att(p)).collect::<Result<Vec<_>>>()?;
         let first: serde_json::Value = serde_json::from_slice(&fs::read(paths[0])?)?;
         let ksh = ferrata_attestor::hexa::<32>(&first["key_set_hash"], "key_set_hash")?;

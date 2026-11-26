@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # A rule (B) checkpoint of this zone for the Sepolia vault (checkpoint/attestor/README.md; as zone-bridge.sh's `input`
-# stage builds it): the attestor's newest signed final tip T (or --tip T), the node's answers from slot 0 to its LIB
+# stage builds it): the newest final tip T that t(n) of the host's attestors signed (or --tip T; n is the number of keys
+# the channel accredits, t(1) = 1, three of four with four keys: MULTIKEY.md), the node's answers from slot 0 to its LIB
 # (/cryptarchia/info, /channel, /cryptarchia/blocks: the input is built from these alone), realblocks-crown over the
-# zone's blocks T0+1..=T with the attestation, n = t = 1. With --prove the input goes to the prover client (Modal GPU),
+# zone's blocks T0+1..=T with every attestation of T. With --prove the input goes to the prover client (Modal GPU),
 # whose job the relayer submits as a candidate; the monitor watches it; the relayer finalises it after the vault's
 # window.
 #
@@ -77,7 +78,7 @@ choose_parent() {
   PARENT_TIP="$(j "$PARENT_STATE" '["tip_id"]')"
 }
 
-# crown DIR NAME TIP: realblocks-crown over DIR's saved node answers and DIR/attestation.json.
+# crown DIR NAME TIP: realblocks-crown over DIR's saved node answers and every DIR/attestation*.json (the tip's).
 crown() {
   local W="$1" name="$2" tip="$3" parent_args=()
   if [ -n "${PARENT_STATE:-}" ]; then parent_args=(--parent-state "$PARENT_STATE" --genesis-state "$FINAL"); else parent_args=(--genesis-state "$GENESIS"); fi
