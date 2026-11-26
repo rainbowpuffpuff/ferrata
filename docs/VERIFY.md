@@ -17,9 +17,10 @@ without them those checks are skipped, and say so. Nothing else is built or inst
 ```sh
 git clone https://github.com/rainbowpuffpuff/ferrata && cd ferrata
 python3 -I scripts/verify.py --list            # every check: its family, mode, requirement rows and EVIDENCE rows
-python3 -I scripts/verify.py --all             # the 79 quick offline checks: about 6 minutes
+python3 -I scripts/verify.py --all             # the 91 quick offline checks: about 6 minutes
 python3 -I scripts/test_verify.py              # the tamper tests: about 30 seconds
 python3 -I scripts/test_verify_lc.py           # the light-client records' tamper tests: seconds
+python3 -I scripts/test_verify_bridge.py       # the bridge records' tamper tests: seconds
 ```
 
 Each check prints one block, for example:
@@ -35,9 +36,11 @@ PASS  run-record  [run-record, offline]  0.4 s
 ```
 
 and the run ends with `N checks in T s: N PASS, 0 FAIL, 0 SKIP`. The exit status is 1 if a check failed, 0
-otherwise; `--strict` makes a skip a failure too (CI's `verify` job runs `--all --offline --strict`). One check fails
-on purpose until a row's wording is corrected: `lc-stage4-attest-costs` holds RFP-021 P.1's "at most 32% of LEZ's 5M
-target" to the largest recorded case, 1,619,960 cycles, which is 32.3992%.
+otherwise; `--strict` makes a skip a failure too (CI's `verify` job runs `--all --offline --strict`). Two checks fail
+on purpose until their rows' wording is corrected: `lc-stage4-attest-costs` holds RFP-021 P.1's "at most 32% of LEZ's 5M
+target" to the largest recorded case, 1,619,960 cycles, which is 32.3992%; `bridge-import-claim-costs` holds RFP-022
+P.2's stated B1 harness range "231,635–237,140" to the B1 record's four applied `ImportRoot` cases, whose vault-B
+import costs 237,169.
 
 What the offline checks re-check, by family (`--list` gives each check):
 
