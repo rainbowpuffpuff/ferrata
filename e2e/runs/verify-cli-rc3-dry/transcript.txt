@@ -1,0 +1,186 @@
+(cargo's progress lines and warnings, 791 lines, left out of this record)
+
+== tree: be473f9d12a8 ; box: 2 CPUs; 2026-11-26T09:51:51Z
+
+== build: deploy/testnet/cli-rc3/build.sh (cargo --release --locked --features lez-rc3)
+lez-select: v0.4.0-rc1 -> v0.4.0-rc3 (bafd07be0701398f9bc435f73ab05e9a7936c301)
+patching file cli/src/lez.rs
+Hunk #1 succeeded at 787 (offset 39 lines).
+patching file cli/src/eth.rs
+patching file cli/src/flow.rs
+Hunk #1 succeeded at 1241 (offset 261 lines).
+    Finished `release` profile [optimized] target(s) in 2m 27s
+    Finished `release` profile [optimized] target(s) in 19.76s
+1abb937e0a81ccf5609e2feb0a33092f61b7f9d0f06915e69916dd89f9312c4c  $T/src/cli/target/release/ferrata
+2c0545a86004403cf49a7301966ca191cf411295d7e43e888b7cb08e639444c1  $T/src/cli/target/release/ferrata-relayer
+ffe6f8d2f1d8076653ef69c72ba94572cc4cd2a2cdf9721e86ff08dc19fbf1cc  $T/src/cli/target/release/ferrata-gasdrop
+4341f351c620c82fda13040f1e3a49b87654db8e66e09c5c08a0da9c9ad1dc08  $T/src/cli/target/release/seqnet-fund
+
+real	2m47.646s
+user	39m6.680s
+sys	11m43.230s
+1abb937e0a81ccf5609e2feb0a33092f61b7f9d0f06915e69916dd89f9312c4c  $T/src/cli/target/release/ferrata
+
+== $ ferrata --help
+The Ferrata bridge between Ethereum and a LEZ zone (prototype, unaudited)
+
+Usage: ferrata [OPTIONS] <COMMAND>
+
+Commands:
+  keys     Derive from the seed: LEZ public and private accounts, kAuth, kView (secrets only with --show-secrets)
+  deposit  Deposit one denomination to a LEZ account of the seed (private by default); a dry run without --send
+  scan     Download the vault's deposit list (checked against depositRoot) and list this seed's deposits
+  recover  Recover everything from the seed alone: deposits and their state, burns and whether released, holdings
+  claim    Claim a deposit on LEZ: private and after the deposit's claim delay by default
+  burn     Burn one denomination on LEZ, releasable to an Ethereum recipient: from a private account by default
+  release  Release a burn of this seed on Ethereum, against the newest accepted root whose release delay has passed
+  attest   The attestation side against a running LEZ sequencer: an instance's configuration and state, `init`, `advance` (a consensus-state update), `attest` (a storage slot, an account or a log under a record), each a dry run with the program's codes unless --send --yes (`src/attest.rs`, `lez/ATTEST-CLI.md`)
+  status   The vault's registry, fees, caps and freezes, and the zone's configuration and newest root
+  help     Print this message or the help of the given subcommand(s)
+
+Options:
+      --seed <SEED>
+          The seed file: the BIP-39 mnemonic of the LEZ wallet (chmod 600) [env: FERRATA_SEED=$T/home/seed]
+      --eth-rpc <ETH_RPC>
+          Any Ethereum JSON-RPC endpoint (reads are checked against the vault's own roots) [env: FERRATA_ETH_RPC=https://ethereum-sepolia-rpc.publicnode.com]
+      --vault <VAULT>
+          The vault's address [env: FERRATA_VAULT=0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787]
+      --chain-id <CHAIN_ID>
+          Refuse to run unless the Ethereum RPC serves this chain id (1 mainnet, 11155111 Sepolia) [env: FERRATA_CHAIN_ID=11155111]
+      --from-block <FROM_BLOCK>
+          First block of the vault's events (its deployment block) [env: FERRATA_FROM_BLOCK=12196188] [default: 0]
+      --chunk <CHUNK>
+          Blocks per eth_getLogs request [default: 10000]
+      --sequencer <SEQUENCER>
+          The LEZ sequencer's RPC endpoint [env: FERRATA_SEQUENCER=https://54-156-116-24.sslip.io/rpc]
+      --lez-wallet <LEZ_WALLET>
+          The LEZ wallet's home (its config and its storage, encrypted under the password): the LEZ keystore [env: FERRATA_LEZ_WALLET=$T/home/lez-wallet]
+      --lez-password-file <LEZ_PASSWORD_FILE>
+          A file holding the LEZ wallet's password [env: FERRATA_LEZ_PASSWORD_FILE=$T/home/lez-pass]
+      --bridge-account <BRIDGE_ACCOUNT>
+          The bridge program's account id on LEZ (32-byte hex) [env: FERRATA_BRIDGE_ACCOUNT=1f2e94ffdf25a3feca4e0750be66700be3812434c8cf53e0eb301bc493336195]
+      --gap <GAP>
+          Accounts of each kind searched for deposit destinations [default: 8]
+      --json
+          Print one JSON object instead of the report: {"command", "report" (its lines), "result"}; on an error, {"error"}. For scripts and integrations
+  -h, --help
+          Print help
+  -V, --version
+          Print version
+exit 0
+
+== $ ferrata keys
+LEZ public accounts (wallet key tree, /a):
+  /0  0x8a7162a5acc0f2c0beab5a9d07dfab129e7dc9b18cd9c14b3090fe2cc40154b0
+  /1  0xc0fe2bd986326ba82ec6cafdde255e0a7ea70054f7def10080914cb173acc9bc
+  /2  0xa9d6461017d06c3c00b6b2ac3bbcd29e49be60cc883a107cf94d460018892756
+LEZ private accounts (wallet key tree, /a):
+  /0  0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85
+  /1  0x57f5ae1946491d89030fd11f7bba203811fff0018b8b081b4473ca81a99552f2
+  /2  0xc6438f65da27887d8f52f0bde160a569402a0e7c8530325a7f1d29a566198dea
+kAuth  fingerprint 0x2837b820ce651723  (sha256 of the key; --show-secrets prints it)
+kView  fingerprint 0x2e0b7663cf8942fd
+exit 0
+
+== $ ferrata status
+vault 0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787: 2 deposits, root 0x09b3b7293c83bc0a810db542c9b91af758a014a5e3778758d4857a9254bc71e7, configId 0x3773b58836d2fa242e16b3eb580a15630de2a437218a432f52e5b01152ae67cd
+  retired false; deposits frozen until 0; releases frozen until 0
+  checkpoints 1; final imported leaf count 1
+  global deposit cap: capacity 1030000000000 value units, refill 11921297 value units/s, available 1030000000000 value units
+  global release cap: capacity 1030000000000 value units, refill 11921297 value units/s, available 1030000000000 value units
+token 0x0000000000000000000000000000000000000000 (ETH): registered true, deposits enabled true, lezUnit 1000000000000
+  [0] 0.001 ETH (1000000000000000 base units, 18 decimals)  mint fee 0 ETH (0 base units, 18 decimals)  relay fee 0.000002 ETH (2000000000000 base units, 18 decimals)  burn fee 0 ETH (0 base units, 18 decimals)  checkpoint fee 0.000001 ETH (1000000000000 base units, 18 decimals)
+  [1] 0.01 ETH (10000000000000000 base units, 18 decimals)  mint fee 0 ETH (0 base units, 18 decimals)  relay fee 0.00002 ETH (20000000000000 base units, 18 decimals)  burn fee 0 ETH (0 base units, 18 decimals)  checkpoint fee 0.00001 ETH (10000000000000 base units, 18 decimals)
+  [2] 0.1 ETH (100000000000000000 base units, 18 decimals)  mint fee 0 ETH (0 base units, 18 decimals)  relay fee 0.0002 ETH (200000000000000 base units, 18 decimals)  burn fee 0 ETH (0 base units, 18 decimals)  checkpoint fee 0.0001 ETH (100000000000000 base units, 18 decimals)
+  deposits frozen until 0; releases frozen until 0; release delay 120 s after a checkpoint
+  deposit cap: capacity 10 ETH (10000000000000000000 base units, 18 decimals), refill 0.000115740740740741 ETH (115740740740741 base units, 18 decimals)/s, available 10 ETH (10000000000000000000 base units, 18 decimals)
+  release cap: capacity 10 ETH (10000000000000000000 base units, 18 decimals), refill 0.000115740740740741 ETH (115740740740741 base units, 18 decimals)/s, available 10 ETH (10000000000000000000 base units, 18 decimals)
+zone: configuration ready, sunset false; attestation program 0x5410ae09971279bdf7e075c7dd58c84d80f91e973f85ebd9ead935a86dceb9c5, instance 0xc741a1f16012516529529814da7a7ebc2d18a8cdcba2a3e7f58710f52630782e
+  freezes of the whole configuration: mints not frozen; burns not frozen; clock 0 (1970-01-01 00:00:00 UTC)
+  freezes of ETH: mints not frozen; burns not frozen; clock 0 (1970-01-01 00:00:00 UTC)
+  gate Gate { now_ms: 0, mints_until: 0, burns_until: 0, mint: Bucket { capacity: 30000000000, refill_per_second: 347223, level: 29996994000, last_ms: 0 }, burn: Bucket { capacity: 30000000000, refill_per_second: 347223, level: 29997000000, last_ms: 0 } }
+  instance: active true, 670 jobs applied, finalized slot 11662688
+  newest record: header(id, 11662688): Gloas record, bound block hash 0xddcb4b8321325acccf28835b289eb0e82cfd16747a60794fc3a1172dabd6b6c0
+  newest imported root: root(cid, 2) (2 imports), from header(id, 11655904): Gloas record, bound block hash 0x6dbc1aae90c0baeabd21757197020a468870e566f01feba5b3c907e8cffa9c05
+  burns published: 1
+exit 0
+
+== $ ferrata scan
+error: eth_getLogs 12196188..12206187: server returned an error response: error code 4444: pruned history unavailable
+exit 1
+
+== $ ferrata claim --help
+Claim a deposit on LEZ: private and after the deposit's claim delay by default
+
+Usage: ferrata claim [OPTIONS]
+
+Options:
+      --leaf <LEAF>
+          Leaf index of the deposit (default: the oldest claimable one whose delay has passed)
+      --seed <SEED>
+          The seed file: the BIP-39 mnemonic of the LEZ wallet (chmod 600) [env: FERRATA_SEED=$T/home/seed]
+      --eth-rpc <ETH_RPC>
+          Any Ethereum JSON-RPC endpoint (reads are checked against the vault's own roots) [env: FERRATA_ETH_RPC=https://ethereum-sepolia-rpc.publicnode.com]
+      --no-delay
+          Claim before the deposit's claim delay ends (less private: the claim's time points at the deposit)
+      --plaintext
+          The plaintext path: links this mint to its deposit publicly
+      --vault <VAULT>
+          The vault's address [env: FERRATA_VAULT=0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787]
+      --chain-id <CHAIN_ID>
+          Refuse to run unless the Ethereum RPC serves this chain id (1 mainnet, 11155111 Sepolia) [env: FERRATA_CHAIN_ID=11155111]
+      --i-accept-plaintext-links-deposit
+          Confirms the plaintext path after reading what it makes public
+      --from-block <FROM_BLOCK>
+          First block of the vault's events (its deployment block) [env: FERRATA_FROM_BLOCK=12196188] [default: 0]
+      --relayer <RELAYER>
+          A LEZ relayer account (32-byte hex) paid the registered relay fee in wrapped tokens
+      --chunk <CHUNK>
+          Blocks per eth_getLogs request [default: 10000]
+      --payer <PAYER>
+          The LEZ account in the wallet that pays the fee (plaintext claims; a private claim pays inside its proof)
+      --bridge-program <BRIDGE_PROGRAM>
+          The bridge program's binary (a private claim proves its execution locally) [env: FERRATA_BRIDGE_PROGRAM=]
+      --sequencer <SEQUENCER>
+          The LEZ sequencer's RPC endpoint [env: FERRATA_SEQUENCER=https://54-156-116-24.sslip.io/rpc]
+      --gas-drop-inbox <GAS_DROP_INBOX>
+          A relayer's inbox (a directory, or a URL the job is posted to), with --relayer naming that relayer: a private claim's LEZ fee is then paid from its gas drop, a credit sealed to a fresh one-time private account. Without it, the relayer the network publishes (`<the sequencer's origin>/relayer/gas-drop`) is used by default; the dry run's `fee payer:` line names it [env: FERRATA_GAS_DROP_INBOX=]
+      --lez-wallet <LEZ_WALLET>
+          The LEZ wallet's home (its config and its storage, encrypted under the password): the LEZ keystore [env: FERRATA_LEZ_WALLET=$T/home/lez-wallet]
+      --gas-drop-elf <GAS_DROP_ELF>
+          The gas-drop guest (ELF) the receipt is proven with (default with the network's relayer: the guest it serves, if this tool pins its image id) [env: FERRATA_GASDROP_ELF=]
+      --lez-password-file <LEZ_PASSWORD_FILE>
+          A file holding the LEZ wallet's password [env: FERRATA_LEZ_PASSWORD_FILE=$T/home/lez-pass]
+      --bridge-account <BRIDGE_ACCOUNT>
+          The bridge program's account id on LEZ (32-byte hex) [env: FERRATA_BRIDGE_ACCOUNT=1f2e94ffdf25a3feca4e0750be66700be3812434c8cf53e0eb301bc493336195]
+      --gas-drop-wait <GAS_DROP_WAIT>
+          Seconds to wait for the relayer's credit [default: 600]
+      --gap <GAP>
+          Accounts of each kind searched for deposit destinations [default: 8]
+      --no-gas-drop
+          Pay a private claim's LEZ fee from your own private account: no gas drop, not even the network's relayer [env: FERRATA_NO_GAS_DROP=]
+      --json
+          Print one JSON object instead of the report: {"command", "report" (its lines), "result"}; on an error, {"error"}. For scripts and integrations
+      --send
+          Sign and submit to the sequencer (without it the command is a dry run)
+      --yes
+          Confirm submitting after reading what becomes public
+  -h, --help
+          Print help
+exit 0
+
+== $ ferrata claim
+error: eth_getLogs 12196188..12206187: server returned an error response: error code 4444: pruned history unavailable
+exit 1
+
+== $ ferrata burn --amount 0.001 --recipient 0x000000000000000000000000000000000000dEaD
+Latest block is 25674
+Syncing to block 25674. Blocks to sync: 25674
+error: syncing the LEZ wallet with the zone: Request rejected `400`
+exit 1
+
+== $ ferrata release --burn 0
+error: eth_getLogs 12196188..12206187: server returned an error response: error code 4444: pruned history unavailable
+exit 1
+
+== done 2026-11-26T10:06:00Z

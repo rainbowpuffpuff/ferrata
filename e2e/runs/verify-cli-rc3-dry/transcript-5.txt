@@ -1,0 +1,27 @@
+== keystore: 336dd64d-7ba8-4777-b02b-6825e37dc595 (made by cast wallet new for this run; no funds)
+
+== $ FERRATA_ETH_RPC=https://ethereum-sepolia-rpc.publicnode.com ferrata deposit --denomination 0 --keystore KEYSTORE --password-file PASS
+deposit to the vault 0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787 on chain 11155111
+  denomination  0.001 ETH (1000000000000000 base units, 18 decimals)
+  mint fee      0 ETH (0 base units, 18 decimals)  (schedule 0)
+  relay fee     0.000002 ETH (2000000000000 base units, 18 decimals)  (paid to the relayer that submits your claim)
+  total         0.001002 ETH (1002000000000000 base units, 18 decimals)
+  depositor     0x047E40d9d06c3A3E2c58744B04d6C264647C523D   j = 0
+  destination   your private LEZ account /0 (hidden: C commits to it)
+  commitment C  0xa435673042aedb08ef61d21f96e3bdfc5749be6b8652fe03b895704e3bfadd85
+  claim delay   10 h after the deposit (from your seed; `ferrata claim` waits for it)
+would send: to 0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787  value 1002000000000000  data 0xf7edb8570000000000000000000000000000000000000000000000000000000000000000a435673042aedb08ef61d21f96e3bdfc5749be6b8652fe03b895704e3bfadd850000000000000000000000000000000000000000000000000000000000000000
+cost: 0.001002 ETH (1002000000000000 base units, 18 decimals) to the vault; the call does not pass eth_call now: the vault would revert: server returned an error response: error code -32003: EVM error: OutOfFunds
+what becomes public (Deposit (Ethereum)):
+  public on Ethereum: your depositor address; the token; the denomination and its fees; the time; the commitment C (random-looking)
+  public on LEZ:      nothing
+  stays private:      the LEZ account that will receive the tokens (C commits to it); which later claim spends it
+privacy of these choices: Minimal: only the residual correlations (token, denomination, time)
+  ok Fixed denomination: your deposit looks like every other deposit of 0.001 ETH (1000000000000000 base units, 18 decimals).
+  ok Private destination: the receiving account and its balance stay private on LEZ.
+  ok Delayed claim: held for 10 h, so the claim's time does not point at your deposit.
+  ok Private fee path: the claim's LEZ fee is paid inside its proof (or by a relayer); no fee payment ties the claim to you.
+not sent: a dry run (add --send --yes to sign and send)
+exit 0
+
+== done 2026-11-26T10:15:49Z

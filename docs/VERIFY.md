@@ -119,19 +119,30 @@ python3 -I scripts/verify.py run-record-beacon      # every applied header again
 
 What you need: an x86-64 Linux machine with 16 threads and 16 GB for the two private proofs (about 10 minutes each at
 16 threads; an hour or more at 8, EVIDENCE row 264), a little Sepolia ETH (0.001 ETH a deposit plus gas), Rust and
-LEZ v0.4.0-rc3's sources (`scripts/fetch-upstream.sh`), `r0vm` 3.0.5. The deployment you use is our test network's
-(EVIDENCE rows 232, 248): the vault `0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787` on Sepolia (deployed in block
-12,196,188), the bridge program at account `36iqVMFpfgHrwoeuVvZhXX3caM1JPBJh56PBw5A4H1rk` (image `0x847a4336…7515`),
-the network's sequencer behind its gateway at `<network>/rpc` (`scripts/reproduce/deployed-programs.json`).
+LEZ v0.4.0-rc3's sources (`scripts/fetch-upstream.sh`), `r0vm` 3.0.5, and a Sepolia JSON-RPC that serves the vault's
+logs from its first block: publicnode's free endpoint answers `pruned history unavailable` for logs older than about a
+day; `https://rpc.sepolia.ethpandaops.io` serves them (it rate-limits: the tool stops on its 429s, so run again, or use
+your own endpoint). The deployment you use is our test network's (EVIDENCE rows 232, 248): the vault
+`0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787` on Sepolia (deployed in block 12,196,188), the bridge program at account
+`36iqVMFpfgHrwoeuVvZhXX3caM1JPBJh56PBw5A4H1rk` (image `0x847a4336…7515`), the network's sequencer behind its gateway at
+`<network>/rpc` (`scripts/reproduce/deployed-programs.json`).
+
+**The gateway and LEZ's wallet.** The gateway serves at most 50 blocks per `getBlockRange` and meters each client (HTTP
+429 with Retry-After). The tool's own reads of the zone page themselves, but LEZ's wallet, which the tool runs to read
+your private holdings and to prove a private claim or burn, syncs in ranges of 100 blocks and stops at the first
+refusal: against the gateway directly it stops with `syncing the LEZ wallet with the zone: Request rejected 400`.
+Run those commands through a local pager that splits each call into pages of 50 and waits out 429: the private-claim
+kit's (`deploy/testnet/cli-rc3/kit_helper.py serve`, which `deploy/testnet/cli-rc3/private-claim.sh` starts; reviewed,
+on branch `private-kit`, not yet merged), as the rehearsal below did.
 
 ```sh
 scripts/fetch-upstream.sh                                   # LEZ's sources beside the repository, at ../upstream/
 mkdir -p ../ferrata-src && git archive HEAD | tar -x -C ../ferrata-src
 deploy/testnet/cli-rc3/build.sh ../ferrata-src              # `ferrata` against LEZ v0.4.0-rc3: ../ferrata-src/cli/target/release/
 export PATH=$PWD/../ferrata-src/cli/target/release:$PATH
-export FERRATA_ETH_RPC=<a Sepolia RPC> FERRATA_CHAIN_ID=11155111
+export FERRATA_ETH_RPC=<a Sepolia RPC with the vault's logs> FERRATA_CHAIN_ID=11155111
 export FERRATA_VAULT=0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787 FERRATA_FROM_BLOCK=12196188
-export FERRATA_SEQUENCER=<network>/rpc                      # <network>: scripts/reproduce/deployed-programs.json
+export FERRATA_SEQUENCER=<network>/rpc                      # or the pager's local URL; <network>: scripts/reproduce/deployed-programs.json
 export FERRATA_BRIDGE_ACCOUNT=1f2e94ffdf25a3feca4e0750be66700be3812434c8cf53e0eb301bc493336195   # 36iqVMFp…, in hex
 export FERRATA_SEED=$HOME/ferrata.seed FERRATA_LEZ_WALLET=$HOME/ferrata-lez FERRATA_LEZ_PASSWORD_FILE=$HOME/ferrata-lez.pass
 ```
@@ -140,15 +151,18 @@ The bridge program's binary (`ferrata_bridge_b1.bin`, the image `0x847a4336…75
 reproducible build (`scripts/reproduce-image-ids.sh build`, or `scripts/reproduce/deployed.sh build`); check its image id
 with `r0vm --id` before using it.
 
-| Step | Command | What you should see |
+| Step | Command | What it printed in the rehearsal of 26 November 2026 (a throwaway seed and keystore, no funds, nothing sent) |
 |---|---|---|
-| keys | `ferrata keys` | your LEZ accounts and the bridge keys, derived from the seed |
-| deposit | `ferrata deposit --denomination 0.001 --keystore me.json --password-file me.pass` (a dry run), then again with `--send --yes` | the call, what becomes public (the deposit, not its destination), the cost; then the transaction and its leaf index |
-| wait for the root | `ferrata scan` | the deposit `not yet imported`, then `claimable under root(n)` once the network's import timer (every 10 minutes; anyone may import) has imported the vault's root |
-| claim, privately | `ferrata claim --bridge-program ferrata_bridge_b1.bin`, then with `--send --yes` | held for its claim delay (1-12 h from the seed; `--no-delay` shortens it and says what that costs); proven locally, the fee paid from the network relayer's gas drop (no LEZ of your own needed) |
-| burn | `ferrata burn --amount 0.001 --recipient 0xFresh --bridge-program ferrata_bridge_b1.bin`, then `--send --yes` | proven locally; the burn note public, the holder not |
+| keys | `ferrata keys` | the seed's LEZ public and private accounts `/0`-`/2` and the fingerprints of `kAuth` and `kView` |
+| status | `ferrata status` | the vault: its deposits and root, `checkpoints 1`, its caps (10 ETH a day each way), the denominations `[0] 0.001 ETH`, `[1] 0.01 ETH`, `[2] 0.1 ETH` with their fees; the zone: `configuration ready`, the instance `active true, 670 jobs applied`, its newest record, the newest imported root, `burns published: 1` |
+| deposit | `ferrata deposit --denomination 0 --keystore me.json --password-file me.pass` (a dry run), then again with `--send --yes` | `--denomination` is the index `ferrata status` lists (`0` is 0.001 ETH here). The dry run: `deposit to the vault 0x1949…2787 on chain 11155111`, the denomination 0.001 ETH plus the 0.000002 ETH relay fee (`total 0.001002 ETH`), the destination `your private LEZ account /0 (hidden: C commits to it)` and the commitment C, `claim delay 10 h after the deposit (from your seed)`, the exact call (`would send: to … value 1002000000000000 data 0xf7edb857…`), what becomes public and what stays private, and `not sent: a dry run` (from the unfunded keystore it also said the call would revert, `OutOfFunds`); a deposit needs no archive endpoint |
+| wait for the root | `ferrata scan` | `vault 0x1949…2787: 2 deposits at block 12215803, root 0x09b3…71e7 (equal to depositRoot: checked)` and `deposits of this seed: 0`; with a deposit, `not yet imported` until the network's import timer (every 10 minutes; anyone may import) has imported the vault's root, then `claimable under root(n)` |
+| claim, privately | `ferrata claim --bridge-program ferrata_bridge_b1.bin`, then with `--send --yes` (through the pager) | with nothing to claim: `nothing to claim: every deposit of this seed is claimed or refunded`; with a deposit, held for its claim delay (1-12 h from the seed; `--no-delay` shortens it and says what that costs), then proven locally, the fee paid from the network relayer's gas drop (no LEZ of your own needed) |
+| burn | `ferrata burn --amount 0.001 --recipient 0xFresh --bridge-program ferrata_bridge_b1.bin`, then `--send --yes` (through the pager) | the wallet synced 25,747 blocks in 20 s through the pager, then, with nothing held, `refused: LEZ bridge program exit code 254 INSUFFICIENT_BALANCE (checked before sending: the holding is 0 base units)`; with a holding, proven locally: the burn note public, the holder not |
 | checkpoint | `ferrata status` | the network's relayer proves a rule (B) checkpoint once the zone holds a burn and finalizes it after the vault's window (Δ = 3,600 s): the vault's `checkpoints` count rises |
-| release | `ferrata release --burn 0` (a dry run), then `--input-out release.input` | the burn root that covers the burn and the recipient's amount; before the checkpoint is final, `BurnRootNotAccepted` or `ReleaseDelayNotElapsed` with the time it opens |
+| release | `ferrata release --burn 0` (a dry run), then `--input-out release.input` | with no burn: `no burn with counter 0 of this seed`; with one, the burn root that covers it and the recipient's amount, or before the checkpoint is final `BurnRootNotAccepted` or `ReleaseDelayNotElapsed` with the time it opens |
+
+The transcripts are in `e2e/runs/verify-cli-rc3-dry/`.
 
 The release is the one step that is not yet yours alone on this network. The vault releases against a Groth16 proof of
 the release statement; `ferrata release --prove` makes the succinct proof on your machine, but its wrap to Groth16
@@ -157,9 +171,11 @@ to the host, proven on its GPU prover and sent by its relayer (`ferrata-bridge-r
 which also shows the operator which burn is being released. Either way, the release can be checked from Sepolia like
 the earlier round trips (`scripts/verify-sepolia.py`, `scripts/verify-live-roundtrip.py`).
 
-What has been run of this path, and where: the first full round trip on this network ran with a deposit through the
-served wallet, a plaintext claim and burn signed in the page, and the host's relayer's checkpoint and release (EVIDENCE
-row 250; `sepolia-live-roundtrip` re-reads it); the `ferrata` tool's private claim and burn ran on LEZ sequencers we
-started (EVIDENCE rows 102, 258) and in CI's round trip on LEZ v0.4.0-rc1 (job `sequencer-roundtrip`, the public
-variant, with stand-ins it names). The commands of this table, end to end with your own keys against this network,
-have not been run by anyone outside the project yet.
+What has been run of this path, and where: every command of the table above, built from this tree against LEZ
+v0.4.0-rc3 and run read-only against this network and Sepolia on 26 November 2026, nothing sent (the transcripts
+above); the first full round trip on this network, with a deposit through the served wallet, a plaintext claim and burn
+signed in the page, and the host's relayer's checkpoint and release (EVIDENCE row 250; `sepolia-live-roundtrip`
+re-reads it); the `ferrata` tool's private claim and burn on LEZ sequencers we started (EVIDENCE rows 102, 258) and in
+CI's round trip on LEZ v0.4.0-rc1 (job `sequencer-roundtrip`, the public variant, with stand-ins it names); the same
+round trip on LEZ v0.4.0-rc3: RC3_ROUNDTRIP. The commands of this table, sending, end to end with your own keys
+against this network, have not been run by anyone outside the project yet.

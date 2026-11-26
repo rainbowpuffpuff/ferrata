@@ -1,0 +1,9 @@
+== keystore: 336dd64d-7ba8-4777-b02b-6825e37dc595 (made by cast wallet new for this run; no funds)
+
+== $ ferrata deposit --denomination 0.001 --keystore KEYSTORE --password-file PASS
+error: invalid value '0.001' for '--denomination <DENOMINATION>': invalid digit found in string
+
+For more information, try '--help'.
+exit 2
+
+== done 2026-11-26T10:14:19Z
