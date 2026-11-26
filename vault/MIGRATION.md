@@ -169,14 +169,16 @@ All in `test_migration_step6_v2RunsProofSystemBNeitherVaultAcceptsTheOther` and
   and checkpoints at once and renews the freezes before `maxFreeze` lapses (a lapse reopens the forged path), the admin
   sets the deposit cap to zero and the release cap to its floor, and the vault is retired and replaced; what forged
   releases pay before that is bounded by the release buckets and the token's escrow. How the remaining escrow leaves
-  such a vault is open: every exit (a release, or a refund after a sunset checkpoint) rests on a proof the broken
-  verifier would accept forged as well. This case is not rehearsed here.
+  such a vault is decided by [ADR 0033](../docs/decisions/0033-broken-verifier-without-proof-of-exploit.md): the
+  containment runbook above, and no escrow-moving exit, since every exit (a release, or a refund after a sunset
+  checkpoint) rests on a proof the broken verifier would accept forged as well. Rehearsed, with the stop held
+  untripped, in [`test/FailsafeBrokenVerifier.t.sol`](test/FailsafeBrokenVerifier.t.sol).
 
 ## 5. Security #9: why there is no fund-recovery failsafe, and what happens to affected funds
 
 This section is the proof-system case once the stop has tripped, which takes RISC Zero's proof of exploit (without
 one, as under the advisory of 11 November 2026, the stop does not trip and the freeze authority and the caps answer:
-§4); a bug in one of Ferrata's own guests is answered by the freezes and `revokeFrom`, and what it does to each
+§4 and ADR 0033 below); a bug in one of Ferrata's own guests is answered by the freezes and `revokeFrom`, and what it does to each
 in-flight position is in §4.
 
 **Why none exists.** There is no escrow-moving recovery path, deliberately. A recovery would need some party to
@@ -218,6 +220,15 @@ verifier or the image ids (§3). A wallet must simply check `verifier.paused()`.
 `test_failsafe_theVerifierBugCase_theEmergencyStopAppliesAndB1Strands` for the verifier-bug variant of the
 rehearsal's step 3: the emergency stop replaces the freeze there, and b1 - which the sound-verifier path honours in
 step 4 - strands on v1.
+
+**Without a proof of exploit the stop does not trip, and no exit opens either.** The fourth case of §4 (RISC Zero's
+advisory of 11 November 2026, GHSA-mm6c-35cm-g4x2) is decided by
+[ADR 0033](../docs/decisions/0033-broken-verifier-without-proof-of-exploit.md): the containment runbook (freezes
+renewed — releases globally, which holds refunds too — the admin's caps, retirement), and no escrow-moving failsafe,
+because every exit rests on a proof the broken verifier would accept forged: a refund's sunset boundary is set by a
+checkpoint, so a forged sunset with a stale imported count makes a leaf LEZ imported refundable — a double spend on
+LEZ-side holders — and a reopened release pays whoever forges first. Every position strands except `owed` balances,
+claimable by their own payee. Rehearsed, stop held untripped, in [`test/FailsafeBrokenVerifier.t.sol`](test/FailsafeBrokenVerifier.t.sol).
 
 `../docs/trust.md` §6 tabulates the same failure classes for the whole bridge.
 
