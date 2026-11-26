@@ -25,7 +25,9 @@ This PR describes a non-empty tuple as that struct. `(Root, u128)` becomes a def
 
 and every use of the tuple becomes `{ "defined": "Tuple_Root_u128" }`. The definition is named
 after its element types (non-alphanumeric characters stripped, joined with `_`), so two uses of
-the same tuple share one definition (see the known limitation below for names that coincide).
+the same tuple share one definition. A derived name never stands for two types: if the crate defines a type of
+that name, or another tuple whose element types differ only in the stripped characters (`(Vec<u8>, u8)` and
+`(Vecu8, u8)`) took it first, generation fails with `Unsupported` instead of sharing a wrong definition.
 
 **The encoding argument.** Borsh serializes a tuple as its elements in order, with no prefix, tag
 or length of its own; a struct with positional fields serializes as its fields in order, likewise
@@ -45,20 +47,17 @@ supported shapes grows only by tuples with at least one element.
 - `spel-framework-core/src/idl_gen.rs`: `idl_type` describes `Type::Tuple` with non-empty
   elements as a struct definition with positional fields, named after the element types, and
   returns `IdlType::Defined` for it. Nested tuples describe their inner tuple first, so
-  `((u8, u16), bool)` is `Tuple_u8u16_bool` with field `"0"` of type `Tuple_u8_u16`. The error
-  for what is still refused now reads "only paths, arrays and non-empty tuples are supported".
+  `((u8, u16), bool)` is `Tuple_u8u16_bool` with field `"0"` of type `Tuple_u8_u16`. A derived
+  name that a crate type or a different tuple already holds is refused. The error for what is
+  still refused now reads "only paths, arrays and non-empty tuples are supported".
 - `spel-framework-core/tests/idl_gen.rs`: `an_unsupported_type_fails` now uses the empty tuple,
   which is still refused (a reference is covered by a new test of its own), and new tests cover
   a message with a tuple field and a `Vec` of tuples, a tuple nested in a tuple, two uses of the
-  same tuple sharing one definition, and a value Borsh-encoded as the tuple decoding through
-  `decode_named` — alone and inside a whole message — to the positional fields.
+  same tuple sharing one definition, a value Borsh-encoded as the tuple decoding through
+  `decode_named` — alone and inside a whole message — to the positional fields, and the two
+  collisions refused.
 - `CHANGELOG.md`: entry under Unreleased.
 
-Known limitation, kept out of this PR: the derived name could coincide with a program's own type
-of the same name (`struct Tuple_Root_u128` in a crate that also uses `(Root, u128)`), or with the
-name of another tuple whose element types differ only in the stripped characters (`(a::B, u8)`
-and `(aB, u8)`); the first definition in `done` wins, as it already does between queued types.
-No test covers either case.
 
 ## Test plan
 
@@ -67,15 +66,17 @@ cargo test --locked -p spel-framework-core --features idl-gen,decode --test idl_
 ```
 
 ```
-test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 ```
 
-14 of those are the suite as it is on the target branch; the 5 new ones are
+14 of those are the suite as it is on the target branch; the 7 new ones are
 `tuples_are_described_as_structs_with_positional_fields`, `a_tuple_nested_in_a_tuple_is_described_too`,
-`the_same_tuple_is_defined_once`, `tuple_values_decode_through_the_idl` and
+`the_same_tuple_is_defined_once`, `a_tuple_whose_name_a_crate_type_holds_fails`,
+`two_tuples_whose_names_coincide_fail`, `tuple_values_decode_through_the_idl` and
 `a_reference_type_fails`. Mutants of the change were each caught: numbering the fields from `1`
-fails the two description tests, and giving each occurrence of a tuple its own definition (no
-sharing) fails all four tuple tests, `the_same_tuple_is_defined_once` first.
+fails the two description tests; giving each occurrence of a tuple its own definition (no sharing)
+fails all four tuple tests, `the_same_tuple_is_defined_once` first; dropping either collision check
+fails its own test.
 
 `cargo clippy --locked -p spel-framework-core --all-targets --features idl-gen,decode` and
 `cargo fmt --all --check` report for this change exactly what they report for the branch without

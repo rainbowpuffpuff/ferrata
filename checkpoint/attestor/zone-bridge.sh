@@ -764,17 +764,16 @@ stage_vault() {
   done
   # replays (nothing is paid twice): each release's and the checkpoint's mined calldata called again from its sender
   # (e2e/crown/sepolia.sh would skip a stage its journal holds, and Crown.s.sol one already on chain, so neither can
-  # send a replay); each must revert, and the vault's error is named from its selector
+  # send a replay); each must revert with the vault's error for it (a spent nullifier; a parent no longer final), so
+  # that an RPC failure or another refusal cannot pass for the replay's
   local replays="[]" why stage h input out
   for stage in $(seq 0 $(( nrel - 1 )) | sed 's/^/release-/') submit; do
     h="$(jq -r --arg s "$stage" '.stages[$s][-1].hash' "$RUN/manifest.json")"
     input="$(cast tx "$h" input --rpc-url "$R")"
     if out="$(cast call "$VAULT" "$input" --from "$ETH_FROM" --rpc-url "$R" 2>&1)"; then die "$stage called again was not refused"; fi
-    why=""
-    for e in NullifierAlreadyUsed ParentNotFinal CheckpointsAreFrozen ReleasesAreFrozen VerificationFailed; do
-      grep -qi "$(cast sig "$e()" | sed 's/^0x//')" <<< "$out" && { why="$e"; break; }
-    done
-    [ -n "$why" ] || { echo "$out" > "$W/logs/replay-$stage.log"; die "$stage called again: refused, by an error not named here (logs/replay-$stage.log)"; }
+    why=NullifierAlreadyUsed; [ "$stage" = submit ] && why=ParentNotFinal
+    grep -qi "$(cast sig "$why()" | sed 's/^0x//')" <<< "$out" || {
+      echo "$out" > "$W/logs/replay-$stage.log"; die "$stage called again: refused, but not with $why (logs/replay-$stage.log)"; }
     log "$stage (transaction $h) called again: refused ($why)"
     replays="$(jq -c --arg w "$stage" --arg h "$h" --arg r "$why" '. + [{what: $w, transaction: $h, refused: $r}]' <<< "$replays")"
   done
