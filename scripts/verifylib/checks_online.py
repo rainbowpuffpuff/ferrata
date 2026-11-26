@@ -373,3 +373,67 @@ def _sepolia_verifiers(ctx):
         (lines if rc == 0 else problems).append(f"{name} {addr[:10]}…: " + (out[-1] if out else f"exit {rc}"))
     fail_if(problems, "the vaults' verifiers")
     return lines
+
+
+# The runs the requirement rows and the release record cite, with the conclusion they record (two are recorded as
+# failures, and say why: docs/requirements-status.md RFP-022 S.2; releases/RELEASE-INTEGRITY.md "Partial releases").
+GITHUB_RUNS = (
+    # (repository, run id, workflow file, conclusion, head commit prefix or "", what the documents say)
+    ("rainbowpuffpuff/ferrata", 43730879603, "ci.yml", "success", "", "R.12: ci passed on main"),
+    ("rainbowpuffpuff/ferrata", 44172503761, "ci.yml", "success", "", "R.12: ci passed on main"),
+    ("rainbowpuffpuff/ferrata", 45075900693, "ci.yml", "success", "8c38d723", "R.12: all 13 jobs, second attempt"),
+    ("rainbowpuffpuff/ferrata", 45110242188, "ci.yml", "success", "907736e8", "R.12: the sharded workflow"),
+    ("rainbowpuffpuff/ferrata", 45113163918, "lez-full.yml", "success", "907736e8", "R.12: the unsharded backstop"),
+    ("rainbowpuffpuff/ferrata", 45154960642, "ci.yml", "success", "0f4232d7", "R.12: ci at main's head"),
+    ("rainbowpuffpuff/ferrata", 45154960663, "macos.yml", "success", "0f4232d7", "R.12, RFP-022 S.2: macos"),
+    ("rainbowpuffpuff/ferrata", 45110242235, "macos.yml", "failure", "907736e8", "RFP-022 S.2: macos's first run failed"),
+    ("rainbowpuffpuff/ferrata", 45149028056, "macos.yml", "success", "", "RFP-022 S.2: macos green after the fix"),
+    ("rainbowpuffpuff/ferrata", 45333224944, "sequencer.yml", "success", "", "S.2, RFP-022 R.10: sequencer jobs"),
+    ("rainbowpuffpuff/ferrata", 45355193681, "sequencer.yml", "success", "", "S.2, RFP-022 R.10: sequencer jobs"),
+    ("rainbowpuffpuff/ferrata", 45426641262, "sequencer.yml", "success", "", "S.2, RFP-022 R.10: sequencer jobs"),
+    ("landclimber/ferrata-modules", 45438763159, "release-all.yml", "failure", "",
+     "S.9/S.10: release-all, six releases published, two legs failed or never ran"),
+    ("landclimber/ferrata-modules", 45454593821, "rebuild-index.yml", "success", "", "S.9/S.10: the index"),
+    ("landclimber/ferrata-modules", 45543214624, "release-ferrata_bridge_module.yml", "success", "",
+     "RFP-022 U.10, S.3: the update"),
+    ("landclimber/ferrata-modules", 45543219299, "release-ferrata_bridge_ui.yml", "success", "",
+     "RFP-022 U.10, S.3: the mini-app"),
+)
+
+
+@check(id="github-ci-runs", family="github", mode="online", evidence=(165, 207, 230, 251, 252, 253, 262),
+       rows=("RFP-021 R.12", "RFP-021 S.2", "RFP-022 R.10", "RFP-022 S.2", "RFP-021 S.9", "RFP-021 S.10",
+             "RFP-022 U.10", "RFP-022 S.3"),
+       title="The GitHub Actions runs the documents cite concluded as they say",
+       what="each run id the requirement rows and the release record cite: its workflow, its head commit where the "
+            "row names one, its conclusion (two are recorded as failures, with their causes)",
+       against="GitHub's public API (api.github.com/repos/…/actions/runs/ID), read-only, no token",
+       inputs=(".github/workflows/ci.yml", ".github/workflows/macos.yml", "releases/RELEASE-INTEGRITY.md"))
+def _github_runs(ctx):
+    status = (ctx.root / "docs/requirements-status.md").read_text()
+    record = (ctx.root / "releases/RELEASE-INTEGRITY.md").read_text() + (ctx.root / "docs/EVIDENCE.md").read_text()
+    problems, lines = [], []
+    for repo, run, wf, want, sha, note in GITHUB_RUNS:
+        if str(run) not in status and str(run) not in record:
+            problems.append(f"{run}: no longer cited by docs/requirements-status.md, docs/EVIDENCE.md or the release record")
+            continue
+        try:
+            req = urllib.request.Request(f"https://api.github.com/repos/{repo}/actions/runs/{run}",
+                                         headers={"Accept": "application/vnd.github+json",
+                                                  "User-Agent": "ferrata-verify/1"})
+            d = json.loads(urllib.request.urlopen(req, timeout=30).read())
+        except urllib.error.HTTPError as e:
+            if e.code in (403, 429):
+                raise Skipped(f"GitHub's API refused (HTTP {e.code}: its unauthenticated rate limit)") from e
+            problems.append(f"{repo} run {run}: HTTP {e.code}")
+            continue
+        except (urllib.error.URLError, TimeoutError, ValueError) as e:
+            raise Skipped(f"GitHub's API could not be read: {e}") from e
+        got = (str(d.get("path", "")).rsplit("/", 1)[-1], d.get("conclusion"), str(d.get("head_sha", "")))
+        if got[0] != wf or got[1] != want or (sha and not got[2].startswith(sha)):
+            problems.append(f"{repo} run {run} ({note}): {got[0]}, {got[1]}, {got[2][:8]}; the documents say {wf}, "
+                            f"{want}" + (f", {sha}" if sha else ""))
+        else:
+            lines.append(f"{repo} {run}: {wf} {want} at {got[2][:8]} ({note})")
+    fail_if(problems, "the cited GitHub runs")
+    return [f"{len(lines)} of {len(GITHUB_RUNS)} cited runs concluded as the documents say"] + lines

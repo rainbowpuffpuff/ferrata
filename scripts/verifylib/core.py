@@ -31,6 +31,7 @@ FAMILIES = {
     "lez-network": "our public LEZ v0.4.0-rc3 test network, read-only: blocks, transactions, accounts",
     "site": "the live site's manifest and files against the repository",
     "beacon": "public beacon APIs, read-only",
+    "github": "the GitHub Actions runs the documents cite, read from GitHub's public API",
 }
 TIERS = ("quick", "tests")
 TOOLS = {"python3": "python3", "node": "node", "cargo": "cargo", "forge": "forge", "git": "git", "bash": "bash",
