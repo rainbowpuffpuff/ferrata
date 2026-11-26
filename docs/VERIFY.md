@@ -9,13 +9,15 @@ Nothing here is audited. The test network is ours, not a network Logos runs (LEZ
 
 ## 1. Ten minutes: clone, then every offline check
 
-You need git and Python 3.11 or later; Node 20 or later for six of the checks (they are skipped, and say so,
-without it). Nothing is built and nothing is installed.
+You need git and Python 3.11 or later; Node 20 or later for six of the checks, Foundry (anvil, cast, forge) for four,
+and for one of those, the deploy tool's, the vault built first (`cd vault && forge install --no-git
+foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0 && forge build`):
+without them those checks are skipped, and say so. Nothing else is built or installed.
 
 ```sh
 git clone https://github.com/rainbowpuffpuff/ferrata && cd ferrata
 python3 -I scripts/verify.py --list            # every check: its family, mode, requirement rows and EVIDENCE rows
-python3 -I scripts/verify.py --all             # the 79 quick offline checks: about 4 minutes
+python3 -I scripts/verify.py --all             # the 79 quick offline checks: about 6 minutes
 python3 -I scripts/test_verify.py              # the tamper tests: about 30 seconds
 python3 -I scripts/test_verify_lc.py           # the light-client records' tamper tests: seconds
 ```
