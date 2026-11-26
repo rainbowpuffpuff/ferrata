@@ -101,6 +101,11 @@ jobs:
       - name: The bridge core's tests
         working-directory: bridge
         run: cargo test -p ferrata-bridge-core --locked
+      # RFP-022 Soft.2: voluntary disclosure, the library and its command (make, verify), and the replay of a recorded
+      # run's public data (docs/privacy/disclosure-replay/): verified, and a one-byte change to a claim refused.
+      - name: The disclosure library, its command and the recorded replay (bridge/crates/ferrata-disclose)
+        working-directory: bridge
+        run: cargo test -p ferrata-disclose --locked
 
   # One round trip, every step asserted (e2e/ci/README.md): the v5 vault under rule (B) on anvil with
   # the vault tests' mock verifier; LEZ v0.4.0-rc1's state transition in the harness (dev mode);

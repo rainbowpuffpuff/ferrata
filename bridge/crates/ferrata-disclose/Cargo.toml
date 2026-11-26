@@ -11,6 +11,4 @@ publish = false
 ferrata-bridge-core = { path = "../ferrata-bridge-core" }
 hex = "0.4"
 serde = { version = "1", features = ["derive"] }
-
-[dev-dependencies]
 serde_json = "1"
