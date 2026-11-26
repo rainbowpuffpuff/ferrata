@@ -186,6 +186,9 @@ check "L5 then the module's next request ($held) was held behind the gap, and th
   '[ "$held" = $((nonce0 + 5)) ] && [ "$(submitted_at "$n5")" = 0 ] && [ "$txn" = "$burnt" ] && [ "$(jq -r .via.gapFill <<< "$a")" = true ] && [ "$(jq -r .via.nonce <<< "$a")" = "$burnt" ]'
 path=$(jq -r 'if .via.gapFill then "plain (gap fill)" elif .via.fallback then "plain (fallback)" else .via.path end // "none"' <<< "$a")
 rows+=("| L5 | \`fail send_status\`, the account empty for one poll; then \`pass\` | $(jq length <<< "$req") | $burnt, $held | $path | $txn | $(failed_alerts "$n5") |")
+# The module's held request became ready when the gap fill was mined; anvil 1.3.6 (CI's) mines on a submission, not on
+# such a promotion, so it waits for the next block as on a real chain: mine one (1.5.1 had already included it).
+cast rpc --rpc-url "$rpc" evm_mine > /dev/null
 latest=$(cast nonce --rpc-url "$rpc" "$watcher" --block latest)
 pending=$(cast nonce --rpc-url "$rpc" "$watcher" --block pending)
 # anvil's pending nonce does not count transactions queued behind a gap: ask its pool too (review-integ9d L6).

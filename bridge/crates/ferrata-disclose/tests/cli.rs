@@ -82,8 +82,18 @@ fn view_json(world: &World) -> Value {
     })
 }
 
+/// The command, built beside this test (cargo builds a package's binaries for its integration tests). Some builds have
+/// not had `CARGO_BIN_EXE_*` at compile time (seen on the build box); the variable at run time, then the binary beside
+/// this test's own, stand in for it.
 fn cli() -> Command {
-    Command::new(env!("CARGO_BIN_EXE_ferrata-disclose"))
+    let bin = option_env!("CARGO_BIN_EXE_ferrata-disclose")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("CARGO_BIN_EXE_ferrata-disclose").map(PathBuf::from))
+        .unwrap_or_else(|| {
+            let exe = std::env::current_exe().unwrap();
+            exe.parent().and_then(Path::parent).unwrap().join("ferrata-disclose")
+        });
+    Command::new(bin)
 }
 
 /// `make` with the seed in a file beside the view (never an argument) and the wallet's destinations.
