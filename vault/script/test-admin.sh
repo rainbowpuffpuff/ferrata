@@ -254,7 +254,8 @@ else
   bad "the scenario script failed (exit $SCENARIO_RC; its log: $OUT_DIR/scenario.log)"
 fi
 # What the scenario itself checked, spelled out (it fails on any of these; this makes each visible).
-for line in "an altered deposit root fails the report comparison" "an altered admin role fails the report comparison"; do
+for line in "an altered deposit root fails the report comparison" "an altered admin role fails the report comparison" \
+    "a relative time label alone does not fail the report comparison"; do
   if grep -q "^PASS  $line$" "$OUT_DIR/scenario.log"; then
     ok "$line"
   else

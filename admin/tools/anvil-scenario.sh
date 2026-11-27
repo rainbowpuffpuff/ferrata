@@ -118,6 +118,8 @@ echo "$PROG: dump exit code $DUMP_RC (0 complete, 3 with the two optional reads 
 # explicitly named freeze key, so each side substitutes only its own expected freeze-authority address.
 # Roots, configuration ids, commitments, registry hashes, all other roles and every state value stay literal.
 # The two optional-read errors are sorted because their asynchronous completion order races.
+# The view's relative labels after an epoch (`now`, `1s ago`, `in 7d`, `in 6d 23h`) move with the second the scenario's
+# broadcast ends in, and the tables' column widths with them: both are normalised (review of 27 November, M1).
 mask() { # mask REPORT EXPECTED_FREEZE_AUTHORITY
   local expected_freeze=$2
   sed -E \
@@ -133,10 +135,13 @@ mask() { # mask REPORT EXPECTED_FREEZE_AUTHORITY
     -e '/vault runtime code|linked library|stop \(the vault.s verifier\)|wrapped verifier/s/[0-9]+ bytes( of code)?/N bytes\1/g' \
     -e 's/[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z/TIME/g' \
     -e '/TIME|FROZEN until|until=|effectiveAt=|announcedAt=/s/\b1[789][0-9]{8}\b/EPOCH/g' \
+    -e 's/\(EPOCH, [^)]*\)/(EPOCH, REL)/g' \
     -e 's#http://127\.0\.0\.1:[0-9]+#http://127.0.0.1:PORT#g' \
     -e 's/blocks 0-[0-9]+/blocks 0-N/g' \
     -e 's/block [0-9]+/block N/g' \
     -e 's/in [0-9]+(\.[0-9]+)? s/in N s/g' \
+    -e 's/-{3,}/---/g' \
+    -e 's/ {2,}/  /g' \
     "$1" \
   | awk '
     function dump() {
@@ -178,6 +183,13 @@ if compare_reports "$OUT_DIR/corrupt-role.txt" admin/results/local-anvil-scenari
   die "MASK TEST FAILED: an altered admin role was accepted"
 else
   echo "PASS  an altered admin role fails the report comparison"
+fi
+# ... and a run whose broadcast straddled a second (a relative label shifted, its table wider) still matches.
+sed -E '0,/, now\)/s//, 1s ago)/' "$OUT_DIR/local-anvil-scenario.txt" > "$OUT_DIR/shifted-label.txt"
+if compare_reports "$OUT_DIR/shifted-label.txt" admin/results/local-anvil-scenario.txt "$OUT_DIR/shifted-label.diff"; then
+  echo "PASS  a relative time label alone does not fail the report comparison"
+else
+  die "MASK TEST FAILED: a shifted relative time label failed the comparison"
 fi
 
 # ------------------------------------------------------------------------------------------------------------
