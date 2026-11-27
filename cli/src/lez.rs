@@ -562,14 +562,15 @@ pub async fn plan_claim<L: Ledger>(
     if let Some(r) = gate_refusal(ledger, ctx, &token, true).await? {
         bail!(r);
     }
+    // The program the zone runs decides the claim's layout: the test network's B1 reads a fee-schedule range that this
+    // tree's program (ADR 0046) dropped; any other program is refused here, before the claim is built.
+    let program = bridge_program(ledger, ctx).await?;
     // Spent or not from the downloaded history alone (review M-2): asking the sequencer for `nullifier(cid, chain,
     // vault, N)` would name this deposit to it before the claim, in a dry run or while the claim delay holds it.
     let spent = is_claimed(ctx, history, &owned.nullifier);
     let inputs = claim::ClaimInputs { leaves, leaf_count: n, root: &root_state, token: &token, spent };
     let plan = claim::build_claim(ctx, owned, &inputs, private, relayer, prover).map_err(refused)?;
-    // The program the zone runs decides the claim's layout: the test network's B1 reads a fee-schedule range that this
-    // tree's program (ADR 0046) dropped; B1's checks of it run here, before anything is signed.
-    let program = bridge_program(ledger, ctx).await?;
+    // B1's checks of the range its claim names run here, before anything is signed.
     let b1 = match program {
         BridgeProgram::B1 => Some(deployed::b1_claim(&plan.message, &token).map_err(refused)?),
         BridgeProgram::F13 => None,

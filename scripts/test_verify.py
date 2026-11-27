@@ -246,6 +246,12 @@ class EvidenceRowsFinal(TamperCase):
             ("docs/requirements-status.md", "each released once for 99,900,000 base units",
              "each released once for 99,000,000 base units", "RFP-022 F.7"),
             ("docs/EVIDENCE.md", "(n = 5, t = 4)", "(n = 5, t = 3)", "EVIDENCE row 280"),
+            # Review r1 (Kimi) M2: the proving times and the replays the rows state are held too.
+            ("docs/EVIDENCE.md", "the prover's own wall time 92.2 s for the checkpoint", "the prover's own wall time 1.0 s for the checkpoint",
+             "EVIDENCE row 279"),
+            ("docs/EVIDENCE.md", "the client's waits 193.8 s, 14.4 s, 18.9 s", "the client's waits 1 s, 2 s, 3 s", "EVIDENCE row 280"),
+            ("docs/EVIDENCE.md", "each replay refused (`NullifierAlreadyUsed`, `ParentNotFinal`)", "each replay refused",
+             "EVIDENCE row 279"),
         )
         for path, old, new, where in cases:
             with self.subTest(old):
@@ -257,6 +263,10 @@ class EvidenceRowsFinal(TamperCase):
         self.assertFails("evidence-rows-final", t, "RFP-021 R.9")
         t = overlay({"e2e/runs/zone-bridge-rc3-erc20/vault-checks.json": sub('"paidWei": "99900000"', '"paidWei": "99800000"', 2)})
         self.assertFails("evidence-rows-final", t, "RFP-022 F.7")
+        t = overlay({"e2e/runs/zone-bridge-rc3-erc20/vault-checks.json": sub('"refused": "ParentNotFinal"', '"refused": "none"')})
+        self.assertFails("evidence-rows-final", t, "the replays refused")
+        t = overlay({"e2e/runs/zone-bridge-rc3-rotation/prover/done/0-checkpoint.json": sub('"seconds": 193.8', '"seconds": 93.8')})
+        self.assertFails("evidence-rows-final", t, "EVIDENCE row 280")
         t = overlay({"lez/results/f13/prove-bridge.md": sub("execute_and_prove 301.9 s", "execute_and_prove 310.9 s")})
         self.assertFails("evidence-rows-final", t, "RFP-022 F.13")
         t = overlay({"cli/src/lez.rs": sub("fn the_claim_takes_the_layout_of_the_program_the_zone_runs",

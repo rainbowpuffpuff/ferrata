@@ -243,17 +243,19 @@ def _span(values: list, unit: str = "") -> str:
 
 @check(id="evidence-rows-final", family="docs", mode="offline", evidence=(275, 276, 277, 278, 279, 280, 281),
        rows=("RFP-021 R.9", "RFP-021 R.10", "RFP-022 F.7", "RFP-022 F.13"),
-       title="EVIDENCE rows 275-281 and RFP-021 R.9, R.10, RFP-022 F.7, F.13: every figure as the records give it",
+       title="EVIDENCE rows 275-281 and RFP-021 R.9, R.10, RFP-022 F.7, F.13: their figures as the records give them",
        what="the gate runs' A3 ratios, fee shares, abandoned jobs, gas over the completed jobs' and latency medians "
             "(rows 275, 276; R.9, R.10), the in-process overlap gates (row 276, R.9), F.13's anonymity sets, round "
-            "trip steps and proving times (rows 277, 278; F.13), F.7's ERC-20 payments and rotation threshold (rows "
-            "279, 280; F.7), and the tests row 281 names",
+            "trip steps and proving times (rows 277, 278; F.13), F.7's ERC-20 payments, rotation threshold, replays "
+            "refused and proving times (rows 279, 280; F.7), and the tests row 281 names (the runs' other figures are "
+            "the f7-*, f13-* and perf-records checks')",
        against="the gate records' generated sections (test_perf_records.py holds them to the runs' journals), "
                "gate-overlap.txt (CI's recorded.rs), the F.13 both-halves tables and round trip steps, the real-proof "
                "record, the F.7 runs' vault checks and checkpoint attestor records (f7-* re-derive them), and the test "
                "sources",
        inputs=(EVIDENCE_DOC, STATUS_DOC, GATE_100, GATE_JOIN, GATE_OVERLAP, F13_FEES, F13_FEES_B1, F13_RT_STEPS,
                F13_PROOFS, f"{F7_ERC20}/vault-checks.json", f"{F7_ROTATION}/checkpoint/attestor.json",
+               f"{F7_ROTATION}/vault-checks.json", f"{F7_ERC20}/prover/done", f"{F7_ROTATION}/prover/done",
                "cli/wallet/src/deployed.rs", "cli/src/lez.rs",
                "modules/ferrata_bridge_module/rust-lib/calls/tests/network_session.rs"))
 def evidence_rows_final(ctx):
@@ -350,6 +352,26 @@ def evidence_rows_final(ctx):
         _states(problems, "EVIDENCE row 279", _evidence_row(evidence, 279), (f"{paid[0]:,} base units each",))
         _states(problems, "EVIDENCE row 280", _evidence_row(evidence, 280), (f"(n = {n}, t = {t})",))
         lines.append(f"rows 279-280, RFP-022 F.7: two ERC-20 releases of {paid[0]:,} base units; rotation n = {n}, t = {t}")
+    # Both runs: each replay refused as the rows say, and the proving times (the prover's own wall time and the client's
+    # wait for each answer, the run's prover/done records) as the rows give them
+    for run, row in ((F7_ERC20, 279), (F7_ROTATION, 280)):
+        refused = sorted(r["refused"] for r in json.loads(read(f"{run}/vault-checks.json"))["replaysRefused"])
+        if refused != ["NullifierAlreadyUsed", "NullifierAlreadyUsed", "ParentNotFinal"]:
+            problems.append(f"{run}/vault-checks.json: the replays refused are {refused}, not the two releases' "
+                            "NullifierAlreadyUsed and the checkpoint's ParentNotFinal the rows state")
+        done = {name: json.loads(read(f"{run}/prover/done/{name}.json"))
+                for name in ("0-checkpoint", "1-release-private-1", "1-release-public-0")}
+        gpu = {k: f"{v['prover']['wall_s']:.1f}" for k, v in done.items()}
+        wait = {k: f"{v['seconds']:.1f}" for k, v in done.items()}
+        cp, private, public = "0-checkpoint", "1-release-private-1", "1-release-public-0"
+        _states(problems, f"EVIDENCE row {row}", _evidence_row(evidence, row), (
+            f"the prover's own wall time {gpu[cp]} s for the checkpoint, {gpu[private]} s and {gpu[public]} s for the releases",
+            *((f"the client's wait for each answer {wait[cp]} s (the checkpoint's, from its restart), {wait[private]} s and "
+               f"{wait[public]} s",) if row == 279 else (f"the client's waits {wait[cp]} s, {wait[private]} s, {wait[public]} s",))))
+        lines.append(f"row {row}: replays refused {refused}; GPU {gpu[cp]}/{gpu[private]}/{gpu[public]} s, client waits "
+                     f"{wait[cp]}/{wait[private]}/{wait[public]} s ({run}/prover/done)")
+    _states(problems, "EVIDENCE row 279", _evidence_row(evidence, 279),
+            ("each replay refused (`NullifierAlreadyUsed`, `ParentNotFinal`)",))
 
     # Row 281: the tests it names exist where it says
     for rel, name in (("cli/wallet/src/deployed.rs", "fn b1s_frozen_claim_vectors_are_this_trees_claims_with_the_range"),
