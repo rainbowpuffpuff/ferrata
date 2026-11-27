@@ -635,8 +635,8 @@ built, and the test or recorded run that shows the mitigation.
   build box, [`guides/verify.md`](guides/verify.md)); the final programs are the ones a production deployment uses, and
   the ones the live run `crown-live-3` deployed: its vault's image ids equal this tree's rebuilt ones (6 of 6 at
   `f13faee2`, [`guides/verify.md`](guides/verify.md) §2; since milestone B1 the bridge program was B1's
-  (`847a4336…`, the one our test network runs), and since ADR 0046 this tree's is `ferrata_bridge_f13` (`ffb47f6e…`),
-  which no deployed vault pins; crown-live-3's rebuilds from `f13faee2`: [`image-ids.md`](image-ids.md)).
+  (`847a4336…`, the one our test network runs), ADR 0046's was `ferrata_bridge_f13` (`ffb47f6e…`, never deployed), and
+  since ADR 0048 this tree's is `ferrata_bridge_lezfee` (`2ba8dc18…`), which no deployed vault pins; crown-live-3's rebuilds from `f13faee2`: [`image-ids.md`](image-ids.md)).
 
 ## 6. Failure classes, what is lost, what bounds it (Security #9)
 
@@ -723,7 +723,7 @@ transaction dumps of [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §3 and
 | timing | deposit-to-claim and burn-to-release intervals | the client proposes a delay (the `ferrata` tool and the mini-app: a claim delay of 1–12 h from the seed, a random release delay; EVIDENCE rows 84, 86) |
 | the root a claim reads | the deposit is at least that old | read the newest root |
 | a retry after a cap rejection | the first attempt's time | the client checks caps before proving |
-| a fee-schedule change | before ADR 0046 it split sets by date through the claim's public fee range, and on our test network, which still runs that program (B1), it still does; under ADR 0046 the paired claim has no schedule range or mint-fee amount, though timing/root correlations remain | mint fee credited on Ethereum at deposit; schedules change rarely, with 7 days' notice |
+| a fee-schedule change | before ADR 0046 it split sets by date through the claim's public fee range, and on our test network, which still runs that program (B1), it still does; since ADR 0046 the paired claim has no schedule range or mint-fee amount, and since ADR 0048 a burn has no fee either (it burns one denomination), though timing/root correlations remain; a deposit's payment and a release's payout depend on the schedule in force at their own (public) block | the vault escrows the mint and burn fees and `CollectFees` mints them on LEZ in totals over many deposits and releases (ADR 0048); schedules change rarely, with 7 days' notice |
 | the fee payer of a private transaction | the payer appears as a fresh alias with its reserve in plaintext; a first claim funded from a faucet or a purchase links to that source until the gas drop exists | fixed reserve per operation type; the gas drop: its receipt and the relayer's one credit per `N` (EVIDENCE rows 47, 48), and the credit sealed to a one-time private account and swept by the claim, with LEZ's wallet on v0.4.0-rc3 (row 124; in the relayer daemon and the `ferrata` tool on LEZ v0.4.0-rc1's sequencer with dev-mode proofs, row 205) |
 | a private read of a record | which record and which consumer program | read the newest record; hop inside the proof |
 | the plaintext claim | which deposit paid which mint | private by default; the client warns before allowing it |

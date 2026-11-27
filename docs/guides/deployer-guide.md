@@ -288,9 +288,13 @@ stop and its owner (renounced or not), tokens with their caps and fee schedules,
   deposit keeps its leaf's schedule. On LEZ, `ImportFees` appends it once in force (attested), and
   `ImportFees(j, None)` attests that schedule `j` does not exist yet at a count, extending `known_until`.
   Protocol fees start at zero under an immutable 1% ceiling ([`vault/README.md`](../../vault/README.md),
-  "Fees (v5, D13)"). Under ADR 0046 the deposit's mint fee is credited to `feeRecipient` on Ethereum and only
-  denomination + relay is escrowed; pair the vault with a LEZ claim that names no schedule range and mints no mint fee.
-  Never pair it with the pre-0046 claim, which would mint an unbacked fee. Refunds return only denomination + relay.
+  "Fees (v5, D13; ADR 0048)"); either fee may be set to zero by a later announcement. Under ADR 0048 the vault escrows
+  each deposit's mint fee and each release's burn fee and counts them in `lezFees(token)`; anyone collects them on LEZ
+  (`ferrata-relayer ... collect-fees --token <token>`: the bridge program's `CollectFees`), which mints them, in the
+  wrapped token, to the configuration's fee recipient (`Controls::fee_recipient`, set at `Init`). The vault's
+  `FERRATA_FEE_RECIPIENT` is still a required parameter but is credited nothing. Pair the vault only with this tree's
+  program (`ferrata_bridge_lezfee`); B1's would mint the mint fee per claim and never collect the burn fees. Refunds
+  return only denomination + relay (the mint fee stays escrowed for the fee recipient on LEZ).
 - **Caps.** A mint and a burn token bucket per token and one per configuration on LEZ, in value units
   (`amount / lezUnit × unitWeight`); deposit and release buckets per token and globally on the vault;
   refunds draw on the release buckets. `SetCap` never goes below the configuration's immutable floor.

@@ -275,7 +275,11 @@ denominations. Default cap per token and day: the smaller of 10% of escrow and a
 deployer-set ceiling. **Amended for F.13 by ADR 0046 (26 November 2026):** the depositor
 still pays denomination + mint + relay and caps count that whole payment, but the vault credits
 the mint fee on Ethereum and escrows only denomination + relay. The claim names no schedule
-range and mints only those two amounts; refunds exclude the collected mint fee.
+range and mints only those two amounts; refunds exclude the collected mint fee. **Amended again by ADR 0048 (27
+November 2026):** the vault escrows the whole deposit payment and keeps each release's burn fee in escrow, counting
+both protocol fees in one cumulative total per token (`lezFees`, a SHA-256 slot); the bridge program's `CollectFees`
+attests that total and mints what it has not minted yet, in the wrapped token, to the configuration's fee recipient on
+LEZ. Claims still name no schedule range; a burn burns one denomination; refunds still exclude the mint fee.
 
 ## D14. Changes of 22 November 2026 (the security reviews H-1 and H1; ADR 0032)
 
