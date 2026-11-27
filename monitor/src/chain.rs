@@ -151,11 +151,27 @@ fn h(b: B256) -> H32 {
     H32(b.0)
 }
 
+/// The provider the monitor sends with: gas estimation, the chain id and, at every send, the node's pending nonce
+/// (internal review of 27 November 2026, C-1). alloy's recommended fillers cache the nonce and count it up at every
+/// fill, failed sends included, without asking the node again: after one send that failed once its nonce was filled,
+/// every later cancel, pause or revoke went out one number too high and waited behind a gap for good; and a
+/// transaction the same key sent elsewhere (the Logos module, an operator) made the next one reuse a number.
+pub fn signing_provider(url: &str, signer: PrivateKeySigner) -> Result<DynProvider> {
+    Ok(ProviderBuilder::new()
+        .disable_recommended_fillers()
+        .with_gas_estimation()
+        .with_simple_nonce_management()
+        .fetch_chain_id()
+        .wallet(EthereumWallet::from(signer))
+        .connect_http(url.parse()?)
+        .erased())
+}
+
 impl Chain {
     pub fn connect(url: &str, vault: Address, signer: Option<PrivateKeySigner>) -> Result<Self> {
         let me = signer.as_ref().map(PrivateKeySigner::address);
         let p = match signer {
-            Some(s) => ProviderBuilder::new().wallet(EthereumWallet::from(s)).connect_http(url.parse()?).erased(),
+            Some(s) => signing_provider(url, s)?,
             None => ProviderBuilder::new().connect_http(url.parse()?).erased(),
         };
         Ok(Self { p, vault, me, tx_timeout: std::time::Duration::from_secs(180), logos: None })
