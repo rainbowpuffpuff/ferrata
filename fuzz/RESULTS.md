@@ -3,7 +3,10 @@
 Coverage-guided fuzzing (cargo-fuzz, libFuzzer) of `ferrata-core`: everything a relayer or a
 prover hands the light client and the inclusion code is attacker-chosen bytes. Seven targets,
 three of them differential against the reference implementations the tests already compare
-with (alloy-rlp 0.3.17, alloy-trie 0.9.9, the consensus specs' Merkle-branch definitions).
+with (alloy-rlp 0.3.17, alloy-trie 0.9.9, the consensus specs' Merkle-branch definitions). An
+eighth, `bls` (27 November 2026), compares the two BLS libraries behind `ferrata_core::bls`, blst and
+zkcrypto/bls12_381, on every verification path: its own section,
+[The BLS differential](#the-bls-differential-bls), after this one.
 
 Run on 11 November 2026 on the Modal build box of branch `fuzz-core` (workspace `ws-8`):
 a container with 32 vCPUs visible (`nproc --all`), 64 GiB at most; Rust 1.93.0, cargo-fuzz
@@ -23,6 +26,7 @@ the stable toolchain has no `-Zsanitizer`.
 | `witness` | fork, committee size, bytes | `CompactStore`, `CompactBootstrap`, `CompactUpdate`, `SignerWitness`, `AdoptionProgress`, `CommitteeSummary`, `witness::HeaderRecord`, `attest::HeaderRecord`: no panic; every accepted value encodes back to exactly the input | compact forms built from the spec vectors |
 | `merkle` | leaf, depth, index, generalized index, branch | `compute_merkle_branch_root`, `is_valid_merkle_branch`, `is_valid_normalized_merkle_branch`, `normalize_merkle_branch` against the consensus specs' definitions transcribed in the harness; a flipped root is refused | none needed |
 | `lc` | chain spec (preset, nine fork versions and epochs), bootstrap, store and update forks, current slot, genesis validators root, bootstrap, update | the spec store (`initialize`, `process_update`, `process_force_update`, `upgrade`) and the policy store (`FinalizedStore`) with the blst backend: no panic; neither store applies an update the spec's validation refuses; an applied update never moves the finalized slot back | every update of the spec sync cases with its bootstrap, spec and slot (signatures valid) |
+| `bls` | committee, participation, signing root, signature, structured edits (27 November 2026: [The BLS differential](#the-bls-differential-bls)) | blst and zkcrypto give the same verdict on every path of `ferrata_core::bls` | the official BLS vectors, the spec sync updates, the mainnet and Sepolia fixtures |
 
 Seeds are written by `examples/seeds.rs` from the committed vectors (`fuzz/seeds/`).
 
@@ -89,7 +93,7 @@ cargo install cargo-fuzz --locked                    # 0.13.2
 cd fuzz
 RUSTFLAGS=-Coverflow-checks=on cargo fuzz build -a -s none
 FERRATA_VECTORS=<consensus-spec-tests>/tests/minimal cargo run --release --example seeds -- seeds   # optional: seeds are committed
-./run.sh <seconds> <workers per target> <output dir>  # every target in parallel, then minimizes into fuzz/corpus
+./run.sh <seconds> <workers per target> <output dir> [targets]  # in parallel, then minimizes into fuzz/corpus (FUZZ_ARGS: extra flags)
 ./target/x86_64-unknown-linux-gnu/release/<target> <file>   # replay one input
 ```
 
@@ -98,11 +102,94 @@ and then merges (`-merge=1`) its working corpus and seeds into `fuzz/corpus/<tar
 
 ## What this does not cover
 
-BLS arithmetic itself (blst and the zkcrypto backend are dependencies; `lc` reaches them only
-with signatures of the seeds or mutations of them); a differential of the SSZ containers
+BLS arithmetic itself in these seven targets (blst and the zkcrypto backend are dependencies; `lc`
+reaches them only with signatures of the seeds or mutations of them; the `bls` target, next section,
+compares the two libraries); a differential of the SSZ containers
 against Helios's types (the light-client tests already replay 33 cases against Helios); the
-checkpoint, bridge and LEZ crates (fuzzed since by `fuzz/programs/`, next section); sanitizers. The runs are minutes, not days: a clean run is
+checkpoint, bridge and LEZ crates (fuzzed since by `fuzz/programs/`, below); sanitizers. The runs are minutes, not days: a clean run is
 evidence of absence for shallow and medium-depth faults only.
+
+## The BLS differential: `bls`
+
+An eighth target, added and run on 27 November 2026: the BLS layer `ferrata_core::bls` with blst
+0.3.17, the library the programs use (RISC Zero publishes an accelerated fork of it), against
+zkcrypto/bls12_381 0.8.0, an independent pure-Rust implementation, on attacker-chosen committees,
+participation bits, signing roots and signatures. The light client's BLS code (`bls/`) is Ferrata's; the
+arithmetic under it (decoding, subgroup checks, hash-to-curve, sums, pairings) is the libraries'. The
+seven targets above reach that arithmetic only with the signatures of their seeds or mutations of
+them; this one puts the two libraries side by side at every verdict the light client takes, so that a
+fault of either on an input the fuzzer reaches shows as a disagreement.
+
+### Target
+
+| Target | Input | Properties checked | Seeds |
+|---|---|---|---|
+| `bls` | a committee (1 to 512 compressed keys and the aggregate key), one participation bit per member, a signing root, a compressed signature; then up to 32 edits: a member's key replaced by the key of a secret the harness knows, copied from another member, or negated; a key, the aggregate or the signature plus a point outside the subgroup (on E(Fp): of order 3, 11^k, 10177^k, 859267^k or 52437899^k, of the cofactor's whole order, or with a component in G1 and in each; on E'(Fp2): of order 13^k, 23^k, 2713, 11953, 262069 or the cofactor's 403-bit prime, of the whole order, or mixed); a special encoding of a key, the aggregate or the signature (the identity, and the identity with the sign flag, with x != 0, without the compression flag; x = 0; x = p and x = p - 1; a coordinate plus p, the same point unreduced; the compression flag cleared; the identity flag set; the halves of x swapped; every bit set); the aggregate recomputed from the keys; the root signed with the signers' known secrets; the committee cut short. The known secrets are the edits' and those of the consensus-spec test keys (`privkeys` 1 to 8192, which make up every committee of the spec's light-client vectors: 4,480 of the 4,480 members in the seeds), so a valid signature is reachable for any root, participation and committee the fuzzer builds, and a wrong hash-to-curve, sum or pairing in one library would refuse what the other accepts | with blst and with zkcrypto, the same verdict (`Ok` or the same error code) from `fast_aggregate_verify`, `check_committee`, `check_committee_onchain` and, wherever either library's `check_committee_onchain` accepts the committee (the program calls it on no other), `verify_checked` with `Additive`, `Subtractive` and `Auto`; for each key or aggregate an edit wrote, alone, the same `KeyValidate` verdict and the same on-curve verdict; the signature alone under a valid key, wherever the keys stopped the spec path before the signature. Within each library: on a committee that passed `check_committee`, each aggregation returns what `fast_aggregate_verify` returns; `Auto` returns what the composition it picks returns; blst's split (`miller_half` then `final_half`, as the program runs it across transactions) returns what its `verify_checked` returns. One difference is required instead of compared (B1): where one of the two on-curve paths decodes a key with x = 0, blst must refuse | the official BLS vectors (`ethereum/bls12-381-tests` v0.1.2 `fast_aggregate_verify`, `verify`, `deserialization_G1`, `deserialization_G2`; consensus-specs v1.7.0-beta.4 `eth_fast_aggregate_verify`, `eth_aggregate_pubkeys`); every update of the spec sync cases that verifies, with the committee of its signature period (duplicates written once); every update of the mainnet and Sepolia fixtures that verifies under a committee of its set: each 512-member committee written condensed to at most 33 members (16 signers' keys, the other signers summed in 16 groups, the non-signers in one), under which the recorded signature still verifies on every path, and, once per network, whole; each edit on a spec committee. 269 in all |
+
+Seeds are written by `examples/seeds.rs`, as for the other targets (the vectors from `scripts/fetch-vectors.sh`).
+
+### Runs
+
+Measured on the box of branch `t-021-r6` (Modal, a container with 32 vCPUs visible, 64 GiB at most);
+Rust 1.93.0, cargo-fuzz 0.13.2, libfuzzer-sys 0.4.13; built with `cargo fuzz build -a -s none bls` and
+`RUSTFLAGS=-Coverflow-checks=on`, as above. Executions, edges and features are the fork-mode parent's
+last report, the corpus the minimized result of `-merge=1`.
+
+**The seeds**, each run once (`-runs=0`): 270 executions in 8 s, 633 edges, 1,446 features, no
+disagreement.
+
+**Smoke run** (`./run.sh 240 24 <dir> bls`: 4 minutes on 24 workers, at libFuzzer's default length
+limit, the longest seed, 24,818 bytes: the whole 512-member committees): 733,835 executions, 841 edges,
+2,982 features, no crash, timeout or out-of-memory.
+
+**Long run** (`FUZZ_ARGS=-max_len=4096 ./run.sh 600 24 <dir> bls`: 10 minutes on 24 workers, from the smoke run's
+corpus and the seeds; inputs up to 4,096 bytes, committees of up to 80 members, so that the corpus stays small: the two
+whole committees are cut to their first 4,096 bytes there, and their condensed forms carry their signatures):
+
+| Target | Seeds | Executions | Edges | Features | Minimized corpus | Crashes |
+|---|---|---|---|---|---|---|
+| `bls` | 269 | 2,619,228 (606 s) | 865 | 3,113 | 515 files, 843 KB | 0 (no timeout, no out-of-memory) |
+
+In all, 3,353,063 executions with the smoke run, and no disagreement. The long run's minimized corpus stayed on the
+build box: the laptop that would have copied it back shut down first. The committed corpus (`fuzz/corpus/bls`) is the
+smoke run's minimized corpus merged again with the seeds (`-merge=1 -max_len=4096`): 373 files, 550,908 bytes, 841
+edges, 2,887 features. CI replays it: `crates/ferrata-spectests/tests/fuzz_bls_corpus.rs` includes the target's check
+(`src/bls.rs`) and runs every input through it, deterministically, with the workspace's tests.
+
+### Findings
+
+No disagreement between the libraries in any run. The one difference the target knows of is required, not reported:
+
+| # | What | Status |
+|---|---|---|
+| B1 | A difference between the libraries, known from the code before the target was written: the two points with x = 0, (0, 2) and (0, -2), are on the curve and of order 3. blst's decoder refuses them even where only the on-curve check is asked (`blst_p1_uncompress` returns `BLST_POINT_NOT_IN_GROUP`; the comment on `uncompress` in `bls/blst_backend.rs` says so); zkcrypto's on-curve decoding takes them. On the two paths that decode keys that way, `check_committee_onchain` and `verify_checked`, a committee holding one is refused by blst and may be accepted by zkcrypto (a committee `[k, (0, 2)]` with their sum as aggregate, `k` signing, verifies under zkcrypto's subtractive composition and not under blst's). `KeyValidate` (`check_committee`, `fast_aggregate_verify`) refuses them in both, as the IETF draft and the consensus specs require | intended: blst, which the programs use, is the stricter side, and no Ethereum committee holds such a key (each passed `KeyValidate` at its deposit). The target requires blst's refusal exactly wherever such a key is decoded on those paths; pinned by `order_three_keys_on_the_on_curve_paths` in `crates/ferrata-spectests/tests/fuzz_regressions.rs` |
+
+### Reproduce
+
+```sh
+cd fuzz
+RUSTFLAGS=-Coverflow-checks=on cargo fuzz build -a -s none bls
+cargo run --release --example seeds -- seeds            # seeds/bls (and the other targets'), from the vectors and fixtures
+FUZZ_ARGS=-max_len=4096 ./run.sh <seconds> <workers> <output dir> bls   # fuzz, then minimize into corpus/bls
+./target/x86_64-unknown-linux-gnu/release/bls <file>    # replay one input
+cd .. && cargo test -p ferrata-spectests --test fuzz_bls_corpus -- --nocapture   # the committed corpus, as CI runs it
+cargo test -p ferrata-spectests --test fuzz_regressions order_three              # B1
+```
+
+### What this does not cover
+
+The accelerated blst of the RISC Zero guest (RISC Zero's `v0.3.16-risczero.0` fork, built for `rv32im`
+with its field arithmetic on the zkVM's accelerators): the target runs blst 0.3.17 natively (x86-64
+assembly), so a fault of the guest build alone would not show here. blst's own code is C and assembly
+and is not instrumented: the coverage that steers the fuzzer is zkcrypto's, `ferrata-core`'s and the
+harness's, and blst's branches are reached only as far as the inputs that coverage selects reach them.
+A fault the two libraries share (the same wrong reading of the standard) gives no disagreement;
+conformance rests on the official vectors (`bls_vectors.rs`), which both pass. The messages are 32-byte
+signing roots under Ethereum's tag, the only ones the light client hashes. `verify_checked` is compared
+only on committees that pass `check_committee_onchain` in at least one library; `final_half` runs only on
+products `miller_half` made (a program reads back only the product it stored). Timing and other side
+channels. The run is minutes, not days: a clean run is evidence of absence for shallow and medium-depth
+faults only.
 
 ## The programs: `fuzz/programs/` (bridge, checkpoint, release)
 

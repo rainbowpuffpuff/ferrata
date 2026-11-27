@@ -1,5 +1,6 @@
 //! Differences from the reference implementations that the coverage-guided fuzzers of `fuzz/`
-//! found and that are intended (fuzz/RESULTS.md); the regressions of fixed findings are in
+//! found and that are intended, and the one difference between the two BLS libraries that the `bls`
+//! target requires (fuzz/RESULTS.md); the regressions of fixed findings are in
 //! crates/ferrata-core/tests/fuzz_regressions.rs.
 
 use std::collections::BTreeMap;
@@ -73,18 +74,20 @@ fn exclusion_proof_padded_below_a_diverging_extension() {
     assert!(alloy_accepts(&root, &absent, None, &padded), "alloy-trie 0.9.9 accepts the padded proof");
 }
 
-/// Difference B1 (fuzz target `bls`, between the two BLS libraries, documented and intended): the
-/// two points with x = 0, (0, 2) and (0, -2), are on the curve and of order 3. blst's decoder
-/// refuses them even where only the on-curve check is asked (`blst_p1_uncompress` returns
+/// Difference B1 (fuzz target `bls`, between the two BLS libraries; known from the code before the
+/// target was written, so the target requires it instead of reporting it; intended): the two points
+/// with x = 0, (0, 2) and (0, -2), are on the curve and of order 3. blst's decoder refuses them
+/// even where only the on-curve check is asked (`blst_p1_uncompress` returns
 /// `BLST_POINT_NOT_IN_GROUP`, `bls/blst_backend.rs`, `uncompress`); zkcrypto's on-curve decoding
-/// (`G1Affine::from_compressed_unchecked`) takes them. So on the two paths that decode keys with the
-/// on-curve check only, `check_committee_onchain` and `verify_checked`, a committee holding one is
-/// refused by blst and may be accepted by zkcrypto: here a committee `[k, (0, 2)]` whose aggregate is
-/// their sum, `k` signing, verifies under zkcrypto's subtractive composition (aggregate minus the
-/// non-signer is `k`) and is refused by blst. `KeyValidate` (`check_committee`,
-/// `fast_aggregate_verify`) refuses the point in both. blst, which the programs use, is the stricter
-/// side, and no Ethereum committee holds such a key (each passed `KeyValidate` at its deposit). The
-/// `bls` target requires exactly this: blst's refusal wherever such a key is decoded on those paths.
+/// (`G1Affine::from_compressed_unchecked`) takes them. So on the two paths that decode keys with
+/// the on-curve check only, `check_committee_onchain` and `verify_checked`, a committee holding one
+/// is refused by blst and may be accepted by zkcrypto: here a committee `[k, (0, 2)]` whose
+/// aggregate is their sum, `k` signing, verifies under zkcrypto's subtractive composition
+/// (aggregate minus the non-signer is `k`) and is refused by blst. `KeyValidate`
+/// (`check_committee`, `fast_aggregate_verify`) refuses the point in both. blst, which the programs
+/// use, is the stricter side, and no Ethereum committee holds such a key (each passed `KeyValidate`
+/// at its deposit). The `bls` target requires exactly this: blst's refusal wherever such a key is
+/// decoded on those paths.
 #[test]
 fn order_three_keys_on_the_on_curve_paths() {
     let mut order_three: BlsPubkey = [0u8; 48];
