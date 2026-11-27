@@ -107,7 +107,7 @@ Message entry points are the complete `Message` enum at `lez/wire/src/lib.rs:181
 | crates/ferrata-core/src/validate.rs | Rust | 306 | 45 | 25 | 376 | consensus, SSZ/RLP/MPT/execution proofs and stores; linked into ferrata_lez / ferrata_bridge_lezfee; library calls from the guests; no independent entry point |
 | crates/ferrata-core/src/witness.rs | Rust | 747 | 160 | 87 | 994 | consensus, SSZ/RLP/MPT/execution proofs and stores; linked into ferrata_lez / ferrata_bridge_lezfee; library calls from the guests; no independent entry point |
 | crates/ferrata-core/src/ws.rs | Rust | 97 | 63 | 14 | 174 | consensus, SSZ/RLP/MPT/execution proofs and stores; linked into ferrata_lez / ferrata_bridge_lezfee; library calls from the guests; no independent entry point |
-| lez/bridge-wire/src/lib.rs | Rust | 1361 | 555 | 163 | 2079 | bridge actors, messages, state and vault-proof bindings; linked into ferrata_bridge_lezfee; defines BridgeMessage for the bridge guest |
+| lez/bridge-wire/src/lib.rs | Rust | 1361 | 556 | 163 | 2080 | bridge actors, messages, state and vault-proof bindings; linked into ferrata_bridge_lezfee; defines BridgeMessage for the bridge guest |
 | lez/guests/bridge/src/main.rs | Rust | 1200 | 193 | 53 | 1446 | LEZ deposit, burn, balances, clocks, roles and fees; LEZ R0BF ferrata_bridge_lezfee (docs/image-ids.md:47); main dispatches BridgeMessage |
 | lez/guests/program/src/main.rs | Rust | 458 | 98 | 37 | 593 | LEZ light-client actor shell and inclusion attestations; LEZ R0BF ferrata_lez (docs/image-ids.md:46); main dispatches Message |
 | lez/wire/src/lib.rs | Rust | 852 | 412 | 105 | 1369 | attestation actors, messages, state and attestation requests; linked into ferrata_lez and ferrata_bridge_lezfee; defines Message for ferrata_lez |
@@ -115,7 +115,7 @@ Message entry points are the complete `Message` enum at `lez/wire/src/lib.rs:181
 | vault/src/FerrataVault.sol | Solidity | 1048 | 344 | 156 | 1548 | escrow, deposits, checkpoints, releases, roles and failsafes; FerrataVault EVM bytecode; constructor, receive, fallback and public/external functions |
 | vault/src/interfaces/IEmergencyStop.sol | Solidity | 4 | 3 | 1 | 8 | interfaces to the externally deployed verifier and emergency stop; interface only; no independent deployed bytecode; verify and paused interface declarations |
 | vault/src/interfaces/IRiscZeroVerifier.sol | Solidity | 4 | 4 | 1 | 9 | interfaces to the externally deployed verifier and emergency stop; interface only; no independent deployed bytecode; verify and paused interface declarations |
-| **TOTAL (61 files)** | | **13796** | **4122** | **1519** | **19437** | |
+| **TOTAL (61 files)** | | **13796** | **4123** | **1519** | **19438** | |
 
 The entry surfaces to trace end to end are:
 
