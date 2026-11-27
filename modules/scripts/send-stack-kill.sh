@@ -124,8 +124,21 @@ host_pids() { # MODULE...: the hosts of these modules in this session
     for m in "$@"; do case "$a" in *"--name $m "*) echo "$p" ;; esac; done
   done
 }
-kill_pids() { local p; for p in "$@"; do kill -9 "$p" 2>/dev/null; done; for p in "$@"; do for _ in $(seq 50); do kill -0 "$p" 2>/dev/null || break; sleep 0.1; done; done; }
+# kill_pids PID...: SIGKILL, each process's command line first written to run/kills.log (what was killed, by step).
+kill_pids() {
+  local p
+  for p in "$@"; do printf '%s\t%s\t%s\n' "${STEP:-?}" "$p" "$(tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null | cut -c1-300)" >> "$R/kills.log"; done
+  for p in "$@"; do kill -9 "$p" 2>/dev/null; done
+  for p in "$@"; do for _ in $(seq 50); do kill -0 "$p" 2>/dev/null || break; sleep 0.1; done; done
+}
 kill_core() { kill_pids $(session_pids); }
+# What was killed in STEP: "daemon N hosts M (names)" (N: the processes that are not module hosts: the daemon).
+killed() {
+  awk -F'\t' -v s="$1" '$1 == s {
+      if ($3 ~ /logos_host/) { n++; if (match($3, /--name [a-z_]+/)) names = names substr($3, RSTART + 7, RLENGTH - 7) " " }
+      else d++ }
+    END { printf "daemon %d hosts %d (%s)", d, n, names }' "$R/kills.log" 2>/dev/null
+}
 core_up() { # FIRST: install the packages too
   if [ -z "$(session_pids | head -n 1)" ]; then
     ctl daemon start --detach >> "$R/daemon.txt" 2>&1 || { ctl daemon stop >> "$R/daemon.txt" 2>&1; ctl daemon start --detach >> "$R/daemon.txt" 2>&1; }
@@ -223,7 +236,8 @@ rm -f "$CTL.hit"; echo "trap eth_sendRawTransaction" > "$CTL"
 start_round K1a > "$R/K1.log" 2>&1
 if wait_hit 120; then
   sleep 1; f1=$(inflight)
-  kill_pids $(host_pids $MODS_ALL)
+  STEP=K1 kill_pids $(host_pids $MODS_ALL)
+  note "K1 killed: $(killed K1)"
   note "K1: the broadcast trapped at the proxy; in flight: $f1; every module host SIGKILLed"
   check K1-nothing-left-before-restart 0 "$(count finalizeAttested)"
   echo pass > "$CTL"
@@ -246,7 +260,8 @@ rm -f "$CTL.hit"; echo "hold eth_sendRawTransaction 25" > "$CTL"
 start_round K2a > "$R/K2.log" 2>&1
 if wait_hit 120; then
   sleep 1; f2=$(inflight)
-  kill_pids $(host_pids ferrata_relayer_module)
+  STEP=K2 kill_pids $(host_pids ferrata_relayer_module)
+  note "K2 killed: $(killed K2)"
   note "K2: the release's broadcast reached the node, its answer held; in flight: $f2; the relayer module's host SIGKILLed"
   check K2-mined-while-held 1 "$(count release)"
   reload_hosts ferrata_relayer_module >> "$R/K2.log" 2>&1
@@ -270,7 +285,10 @@ for _ in $(seq 600); do
   [ "$(jq -r '.hash // empty' "$STATE/inflight.json" 2>/dev/null)" != "" ] && break; sleep 0.1
 done
 sleep 1; f3=$(inflight); pend=$(cast rpc --rpc-url "$up" txpool_status | jq -r '.pending')
-kill_core
+STEP=K3 kill_core
+note "K3 killed: $(killed K3)"
+check K3-daemon-and-every-host-killed "daemon 1" "$(killed K3 | cut -d' ' -f1-2)"
+check K3-nothing-of-the-session-left "" "$(session_pids | paste -sd, -)"
 note "K3: broadcast and pending (txpool $pend); in flight: $f3; Logos Core SIGKILLed (daemon and hosts)"
 check K3-pending-not-mined 1 "$(count submitCandidate)"
 cast rpc --rpc-url "$up" evm_mine > /dev/null; cast rpc --rpc-url "$up" evm_setAutomine true > /dev/null
@@ -323,8 +341,8 @@ rm -f "$CTL.hit"; echo "trap eth_sendRawTransaction" > "$CTL"
 mon_start M1a > "$R/M1.log" 2>&1
 if wait_hit 120; then
   sleep 1
-  kill_pids $(host_pids $MODS_ALL)
-  note "M1: the monitor's cancel trapped at the proxy; every module host SIGKILLed"
+  STEP=M1 kill_pids $(host_pids $MODS_ALL)
+  note "M1: the monitor's cancel trapped at the proxy; killed: $(killed M1)"
   check M1-nothing-left-before-restart 0 "$(cancels 1)"
   echo pass > "$CTL"
   reload_hosts $MODS_ALL >> "$R/M1.log" 2>&1
