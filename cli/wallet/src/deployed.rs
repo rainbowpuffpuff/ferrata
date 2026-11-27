@@ -95,7 +95,10 @@ impl BridgeProgram {
 
 /// The image id a zone's program loader names in its header for a program's account, from the loader's actor state
 /// there: LEZ v0.4.0-rc3's `LoaderEntry::Header` (a 0 tag, then the header) or rc1's bare `ProgramHeader` (the image
-/// id, the first segment's account, the immutable flag; 65 bytes). `None` for anything else (no state, a segment).
+/// id, the first segment's account, the immutable flag; 65 bytes). `None` for anything else (no state, an rc3
+/// segment). rc1's header is told by its length alone, so read this from the program's own account only (where the
+/// loader keeps the header): 65 bytes of another account would parse, and the id they give, matching no program this
+/// crate knows, is refused by the caller, never sent to.
 pub fn loader_header_image_id(state: &[u8]) -> Option<[u8; 32]> {
     let header = match state.len() {
         66 if state[0] == 0 => &state[1..],

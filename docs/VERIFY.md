@@ -186,9 +186,11 @@ anonymity set within it, as B1's claims always did); any other image id is refus
 `ferrata status` names the program (`zone: bridge program ferrata_bridge_b1 …`). A private claim or burn is proven with
 the binary of the program the network runs: the tool compares `--bridge-program`'s image id with the network's before
 proving and refuses another. That binary, `ferrata_bridge_b1.bin` (the image `0x847a4336…7515` under "Superseded" in
-`docs/image-ids.md`), comes from `scripts/reproduce/deployed.sh build`, which rebuilds every program the network runs
-from its recorded source commit; `scripts/reproduce-image-ids.sh build` builds this tree's programs, `ferrata_bridge_f13`
-among them, which this network would refuse. Check its image id with `r0vm --id` before using it. What has run of this:
+`docs/image-ids.md`), comes from `scripts/reproduce/deployed.sh build --out DIR`, which rebuilds every program the
+network runs from its recorded source commit (B1 is the guest `ferrata_bridge` of the source `main`, built under
+`DIR/work/`; `DIR/main.tsv` gives its image id and sha256); `scripts/reproduce-image-ids.sh build` builds this tree's
+programs, `ferrata_bridge_f13` among them, which this network would refuse. Check its image id with `r0vm --id` before
+using it. What has run of this:
 the tests of both layouts (B1's frozen encoding vectors, the loader header of LEZ rc1 and rc3, the claim plans and the
 module's session against stand-ins), and CI's round trip on a LEZ v0.4.0-rc3 sequencer of our own with the deployed
 B1 binary in place of this tree's program: this tree's `ferrata` sent its plaintext claim in B1's layout, B1 applied it,
