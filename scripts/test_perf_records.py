@@ -1042,10 +1042,20 @@ class TestGateR910(unittest.TestCase):
                 self.assertEqual(self.metric(name, d, "turn_clock_is_height"), 1, f"{name} {d}")
                 self.assertGreater(self.metric(name, d, "turn_clock"), 100, f"{name} {d}")
 
+    def learned_from(self, name, d):
+        """(updates the daemon's log says it learned from an `Open` on chain, of them `Open`s it had not applied itself:
+        the metric `updates_from_chain_total` counts both)."""
+        own = {r["job"][:16] for r in self.journals[name] if r["daemon"] == d and r["step"] == "open" and r["status"] == "applied"}
+        ids = re.findall(r"learned from another party's Open on chain.*job 0x([0-9a-f]{16})",
+                         rd(f"bench/perf/results/{name}/daemon-{d}.log"))
+        return len(ids), sum(1 for j in ids if j not in own)
+
     def test_the_copies_were_learned_from_the_chain(self):
         learned = {d: self.metric("gate-g23", d, "updates_from_chain_total") for d in ("honest-1", "honest-2")}
-        self.assertGreater(learned["honest-1"], 0)
-        self.assertGreater(learned["honest-2"], 0)
+        for d in ("honest-1", "honest-2"):
+            n, other = self.learned_from("gate-g23", d)
+            self.assertEqual(n, learned[d], f"{d}: the log's lines against the metric")
+            self.assertGreater(other, 0, d)
         for name in ("gate-g22", "gate-g24", "gate-g25", "gate-g26"):
             for d in ("honest-1", "honest-2"):
                 self.assertEqual(self.metric(name, d, "updates_from_chain_total"), 0, f"{name} {d}: one replay, one copy")
@@ -1070,9 +1080,9 @@ class TestGateR910(unittest.TestCase):
             opens = [sum(1 for r in self.journals[name] if r["daemon"] == d and r["step"] == "open" and r["status"] == "applied")
                      for d in ("honest-1", "honest-2")]
             self.has(f"`{name}` {opens[0]} / {opens[1]}")
-        self.has(f"in `gate-g23` honest-1 learned {self.metric('gate-g23', 'honest-1', 'updates_from_chain_total')} updates "
-                 f"from honest-2's `Open`s and honest-2 {self.metric('gate-g23', 'honest-2', 'updates_from_chain_total')} "
-                 f"from honest-1's")
+        (l1, o1), (l2, o2) = self.learned_from("gate-g23", "honest-1"), self.learned_from("gate-g23", "honest-2")
+        self.has(f"in `gate-g23` honest-1 read {l1} updates from `Open`s on chain, {o1} of them honest-2's, and honest-2 "
+                 f"{l2}, {o2} of them honest-1's (the others its own `Open`s of jobs it had left, forgotten and read back)")
 
     def test_the_operator_guides_rows(self):
         guide = rd("docs/guides/operator-guide.md")

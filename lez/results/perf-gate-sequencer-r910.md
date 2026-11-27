@@ -22,7 +22,10 @@ written `<repo>`.
   (`GATE_COPIES=1`, `bench/perf/beacon_replay.py --copies`), so the two daemons are never served the same bytes and a
   job one opens is found by the other only from its `Open` on chain: RFP-021 R.9's several instances.
 - `gate-g24`: A3's adversarial daemon beside the two honest ones: it never defers (window 1), waits for no other job
-  (`join_wait_rounds = 0`) and polls every 2 s (`GATE_ADVERSARY=1`).
+  (`join_wait_rounds = 0`) and polls every 2 s (`GATE_ADVERSARY=1`). The design's A3 gate names "one adversarial
+  daemon" without fixing how it acts (`docs/design/attestation.md` §9); the in-process gate's adversary races a due
+  step a third of the time (`lez/updater/tests/recorded.rs`), this one every step it finds due, so G24 is a harsher
+  adversary than the in-process gate's, not that gate at size.
 - `gate-g25` and `gate-g26`: the default (both honest daemons polling every 4 s), so the window-8 figures are not one run
   (`gate-g10`, the earlier updater, the third).
 
@@ -39,9 +42,10 @@ run. Latency at window 8 grew with the turns in blocks: medians 145–165 s and 
 (G10, rounds of about 6 s: 105 / 157 s).
 
 **R.9.** No step was applied twice in any run (the program refuses a step already applied, so that checks the program),
-and every honest refused step shared its block with the same step of the same job, applied (or is a `Finish` beside
-another job's, exit 82): no honest daemon sent a step another had applied in an earlier block. In `gate-g23` the two daemons were never served the
-same bytes: each learned the other's copies from their `Open`s on chain and joined their jobs; the 10 jobs abandoned
+and every honest refused step shared its block with the same step of the same job, applied (none was a
+`Finish` beside another job's, exit 82, in these runs): no honest daemon sent a step another had applied in an earlier
+block. In `gate-g23` the two daemons were never served the same bytes: each learned the other's copies from their `Open`s on chain and joined their jobs (honest-2 also read back 2 of its own
+`Open`s of jobs it had left and forgotten, which its log calls another party's); the 10 jobs abandoned
 there were each left at its `Open` alone, opened before the other's `Open` was in a final block (5 in the same block, 4
 in a block published but not yet final, 1 within a second of it: a copy is learned only from a final block), so all gas
 was 1.042 times the completed jobs', as in the default runs (1.059, 1.048). `gate_abandoned.py` classes the 4 sent
@@ -61,18 +65,19 @@ honest fees 0.35–0.65): `gate-g22` (honest-1 polling every 2 s, honest-2 every
 fresh, median / p90: `gate-g22` 156 / 265 s (96 of 96 covered); `gate-g23` 161 / 286 s (96 of 96 covered); `gate-g24` 35 / 45 s (96 of 96 covered); `gate-g25` 165 / 285 s (96 of 96 covered); `gate-g26` 145 / 255 s (96 of 96 covered).
 
 **All gas / the completed jobs' gas**: `gate-g22` 1.037 (1 job(s) abandoned); `gate-g23` 1.042 (10 job(s) abandoned); `gate-g24` 1.107 (0 job(s) abandoned); `gate-g25` 1.059 (1 job(s) abandoned); `gate-g26` 1.048 (0 job(s) abandoned). **Applied `Open`s, honest-1 / honest-2**: `gate-g22` 33 / 20; `gate-g23` 28 / 32; `gate-g24` 0 / 1; `gate-g25` 28 / 23; `gate-g26` 36 / 17. **Copies**:
-in `gate-g23` honest-1 learned 32 updates from honest-2's `Open`s and honest-2 29 from honest-1's (`ferrata_updater_updates_from_chain_total`, each daemon's last `/metrics`). **The turn clock**: every daemon's
+in `gate-g23` honest-1 read 32 updates from `Open`s on chain, 32 of them honest-2's, and honest-2 29, 27 of them honest-1's (the others its own `Open`s of jobs it had left, forgotten and read back) (`ferrata_updater_updates_from_chain_total`, each daemon's last `/metrics`). **The turn clock**: every daemon's
 last `/metrics` reports `ferrata_updater_turn_clock_is_height` 1.
 
 Re-check: `python3 -I scripts/test_perf_records.py` (`TestGateR910` checks this record byte for byte against the
 generators, the runs' settings, the one build, the reveals and the copies against the recorded updates, A3's figures,
-the steps applied twice and every honest refused step's twin from the journals, the turn clock and the updates learned
-from each daemon's last `/metrics`, and the operator guide's rows); the tables: `python3 -I bench/perf/summarize_gate.py
+the steps applied twice and every honest refused step's twin from the journals, the turn clock, the updates learned
+(each daemon's log lines against its last `/metrics`, and which of them were its own `Open`s, from its journal), and the
+operator guide's rows; "each honest daemon's share of the honest fees" counts the fees of applied and refused steps); the tables: `python3 -I bench/perf/summarize_gate.py
 bench/perf/results/gate-g22 bench/perf/results/gate-g23 bench/perf/results/gate-g24 bench/perf/results/gate-g25
 bench/perf/results/gate-g26` and `python3 -I bench/perf/gate_abandoned.py` on the same five. `gate_abandoned.py` classes a
 later `Open` sent once the other job's block was published, before it was final, as one a read would have stopped: for
-`gate-g23` that holds only for a daemon that knows the other's copy, which it learns from that `Open` once its block is
-final, so there the class `served` is contention too.
+`gate-g23` a daemon learns the other's copy from that `Open` only once its block is final, so it holds only for an
+updater that would read the newest block, not yet final, which this one does not (the header counts those 4 apart).
 
 ## Run `gate-g22`
 
