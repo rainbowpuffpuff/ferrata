@@ -85,10 +85,11 @@ contract DeployDefaultsTest is VaultTestBase {
         assertEq(capacity, 30_000_000_000 + 1_000_000_000_000);
         (capacity,,) = deployed.globalCap(FerrataVault.Direction.Release);
         assertEq(capacity, 30_000_000_000 + 1_000_000_000_000);
-        // The immutable release floor: one 0.1 ETH a day in value units (ETH's largest is worth less than the token's).
-        assertEq(deployed.releaseCapFloor(), 300_000_000);
+        // The immutable release floor: the largest single exit a day in value units, a refund of a 10,000-token leaf
+        // (10,000 and its 25-token relay fee; ETH's, 0.1 ETH and 0.0002 ETH, is worth 300,600,000).
+        assertEq(deployed.releaseCapFloor(), 10_025_000_000);
         assertEq(
-            deployed.releaseRefillFloor(), (uint256(300_000_000) + 1 days - 1) / 1 days, "rounded up: whole in a day"
+            deployed.releaseRefillFloor(), (uint256(10_025_000_000) + 1 days - 1) / 1 days, "rounded up: whole in a day"
         );
 
         // A deposit counts its whole payment (0.1 ETH and its 0.2 % relay fee) against the bucket: 99 of 0.1 ETH fill
@@ -114,8 +115,71 @@ contract DeployDefaultsTest is VaultTestBase {
         vm.expectRevert(FerrataVault.CapBelowFloor.selector);
         deployed.setTokenCap(ETH, FerrataVault.Direction.Release, 0, 0);
         vm.expectRevert(FerrataVault.CapBelowFloor.selector);
-        deployed.setGlobalCap(FerrataVault.Direction.Release, 299_999_999, 1 ether);
+        deployed.setGlobalCap(FerrataVault.Direction.Release, 10_024_999_999, 1 ether);
+        vm.expectRevert(FerrataVault.CapBelowFloor.selector);
         deployed.setTokenCap(ETH, FerrataVault.Direction.Release, 0.1 ether, uint256(10 ether) / 1 days);
+        deployed.setTokenCap(ETH, FerrataVault.Direction.Release, 4 ether, uint256(4 ether) / 1 days);
+    }
+
+    /// @notice Internal review of 27 November 2026, S-2: at the lowest release caps the floor allows, every exit still
+    ///         passes. The floor exists so that no admin can throttle releases below it (the script's header); it must
+    ///         therefore admit the largest single exit, a refund of the largest leaf (its denomination and relay fee)
+    ///         being the largest. The default was one largest denomination of the token whose largest is worth least
+    ///         (0.1 ETH, 300,000,000 value units): caps the floor allowed then left a 10,000-token release
+    ///         (10,000,000,000 value units) and a 0.1 ETH refund (300,600,000) refused for good.
+    function test_S2_atTheLowestCapsTheFloorAllowsEveryExitStillPasses() public {
+        _deploy(false);
+        uint256 floor = deployed.releaseCapFloor();
+        uint256 refillFloor = deployed.releaseRefillFloor();
+        // The admin sets the global and both tokens' release buckets as low as the floor allows.
+        deployed.setGlobalCap(FerrataVault.Direction.Release, floor, refillFloor);
+        address[2] memory tokens = [ETH, address(testToken)];
+        for (uint256 i = 0; i < 2; i++) {
+            (,, uint256 lezUnit, uint256 weight, uint256[] memory denoms) = deployed.tokenConfig(tokens[i]);
+            uint256 capacity = (floor * lezUnit + weight - 1) / weight;
+            uint256 refill = (refillFloor * lezUnit + weight - 1) / weight;
+            deployed.setTokenCap(tokens[i], FerrataVault.Direction.Release, capacity, refill);
+            // The largest exit of the token: a refund of its largest leaf, denomination and relay fee.
+            uint256 largest = denoms[denoms.length - 1] + _relayFeesOf(deployed, tokens[i])[denoms.length - 1];
+            (,, uint256 tokenAvailable) = deployed.tokenCap(tokens[i], FerrataVault.Direction.Release);
+            assertLe(largest, tokenAvailable, "the token's lowest release bucket admits its largest exit");
+            assertLe(largest * weight / lezUnit, floor, "the global floor admits the token's largest exit");
+        }
+
+        // And as transactions: the largest test-token denomination, deposited, burned and released under those caps.
+        _depositInto(deployed, alice, address(testToken), 2, keccak256("the largest leaf"));
+        bytes32 root = keccak256("a burn root with one 10,000-token burn");
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(deployed, root, 1, false);
+        verifier.accept(
+            deployed.checkpointImageId(),
+            sha256(_checkpointJournalBytes(_checkpointJournal(deployed, deployed.lezConfigId(), c)))
+        );
+        deployed.submitCandidate(c, SEAL);
+        vm.warp(block.timestamp + deployed.delta());
+        deployed.finalizeAttested(c);
+        vm.warp(block.timestamp + 121);
+        FerrataVault.ReleaseRequest memory r = _request(address(testToken), 2, bob, root, keccak256("the burn's NOut"));
+        verifier.accept(
+            deployed.releaseImageId(),
+            sha256(
+                _releaseJournalBytes(
+                    ReleaseJournal({
+                        chainId: block.chainid,
+                        vault: address(deployed),
+                        lezConfigId: deployed.lezConfigId(),
+                        burnRoot: root,
+                        nullifier: r.nullifier,
+                        token: r.token,
+                        amount: 10_000e6,
+                        recipient: bob,
+                        relayer: address(0),
+                        relayFee: 0
+                    })
+                )
+            )
+        );
+        deployed.release(r, SEAL);
+        assertTrue(deployed.nullifierUsed(r.nullifier), "released under the lowest caps the floor allows");
     }
 
     /// @notice F.12: by default the vault waits the design's Δ for its rule, as floor and initial value.

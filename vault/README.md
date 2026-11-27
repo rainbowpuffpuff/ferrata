@@ -556,11 +556,15 @@ New in v4:
   it is escrow that no path returns. Until a later vault refuses such deposits, a deployment's runbook retires the
   vault (or freezes deposits) when the stop trips, and a wallet must not deposit while `verifier.paused()`; the
   `ferrata` tool and the monitor do not check this yet (review of 16 November 2026, F-9).
-- **The release-cap floor protects nothing unless the deployment sets it.** A floor of (0, 0) is accepted, and every
-  script here deploys with it: the admin can then set a release bucket to zero in one call, which stops releases and
-  refunds with no timelock and no lapse. Neither the floor nor a cap is checked against the denominations. A
-  deployment must set the floor above the value of its largest denomination, with a non-zero refill (review of
-  16 November 2026, F-1).
+- **The release-cap floor protects nothing unless the deployment sets it.** A floor of (0, 0) is accepted (the
+  uncapped deployments of November 2026 used it): the admin can then set a release bucket to zero in one call, which
+  stops releases and refunds with no timelock and no lapse. Neither the floor nor a cap is checked against the
+  denominations. A deployment must set the floor at or above the value of its largest single exit, a refund of its
+  largest leaf (denomination and relay fee), with a non-zero refill (review of 16 November 2026, F-1); the deployment
+  script's default does since the internal review of 27 November 2026 (S-2). The floor is one number in value units for
+  every bucket, so it also binds each token's release bucket to at least that value, and it holds against the admin's
+  caps, not against the admin's registrations: a token the admin registers with a large `unitWeight` and releases itself
+  can use the shared global bucket up (internal review B-1).
 - **The freeze key is powerful until replaced.** A compromised freeze authority can keep renewing freezes, cancel
   every candidate, revoke honest checkpoints within the window, or retire the vault: a denial of service, not theft.
   The admin replaces it after 14 days (D13). A compromised admin can, after the same 14 days, install its own freeze
@@ -656,7 +660,9 @@ warns below it), `FERRATA_REVOKE_WINDOW` 1 day, `FERRATA_MAX_FREEZE` 30 days,
 (`FERRATA_WATCHERS`). Caps since milestone B1 (RFP-022 Sec.4): per token and day, deposits and releases each at most
 100 times the token's largest denomination (the params' `ethDailyCap`, `tokenDailyCap` override it), refilled over a
 day; globally, the sum of the two tokens' ceilings in value units (`globalDailyValue`); an immutable release floor of
-one largest denomination of the cheaper token a day (`releaseFloorDailyValue`). A deposit counts its whole payment
+the largest single exit a day, a refund of a largest leaf (its denomination and relay fee) over both tokens
+(`releaseFloorDailyValue`; until the internal review of 27 November 2026, S-2, one largest denomination of the cheaper
+token, which let caps above it refuse a 10,000-token release and a 0.1 ETH refund for good). A deposit counts its whole payment
 against its bucket, so 99 deposits of 0.1 ETH fill ETH's day (`test/DeployDefaults.t.sol`, which builds a vault from
 exactly what the script sends). `FERRATA_UNCAPPED=1` deploys with the caps UNLIMITED and no floor, as the testnet runs
 of November 2026 did; the record says which (`uncapped`). `script/params/sepolia.json` gives both rules' image ids, the release image id,

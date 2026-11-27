@@ -44,9 +44,9 @@ import {TestToken} from "./TestToken.sol";
 ///         deposits and releases each at most a ceiling (the params' `ethDailyCap` and `tokenDailyCap`, in base units;
 ///         by default 100 times the token's largest denomination: 10 ETH and 1,000,000 test-token units a day);
 ///         globally, deposits and releases each at most the params' `globalDailyValue` in value units (by default the
-///         sum of the two ceilings' values); and an immutable release floor (`releaseFloorDailyValue`, by default one
-///         largest denomination of the token whose largest is worth least, a day), so that no admin can throttle
-///         releases below it. Each bucket refills its capacity over a day. FERRATA_UNCAPPED=1 deploys without caps, as
+///         sum of the two ceilings' values); and an immutable release floor (`releaseFloorDailyValue`, by default the
+///         largest single exit, a largest leaf's denomination and relay fee, over both tokens, a day), so that no admin
+///         can throttle releases below it. Each bucket refills its capacity over a day. FERRATA_UNCAPPED=1 deploys without caps, as
 ///         the live testnet runs of November 2026 did; the record says which (`uncapped`).
 ///
 ///         Wait Δ, the outbound finality depth (RFP-022 F.12; docs/guides/deployer-guide.md §2, docs/design/bridge.md
@@ -274,14 +274,22 @@ contract DeployVault is Script {
         );
     }
 
-    /// @dev The immutable release floor in value units a day: the params' `releaseFloorDailyValue`, else one largest
-    ///      denomination of the token whose largest is worth least.
+    /// @dev The immutable release floor in value units a day: the params' `releaseFloorDailyValue`, else the largest
+    ///      single exit over both tokens, a refund of a largest leaf (its denomination and relay fee), so that the
+    ///      lowest caps the floor allows still pass every exit (internal review of 27 November 2026, S-2: the earlier
+    ///      default, one largest denomination of the token whose largest is worth least, let caps above it refuse a
+    ///      10,000-token release and a 0.1 ETH refund for good).
     function _releaseFloorDaily() internal view returns (uint256) {
-        FerrataVault.TokenParams memory e = _ethParams();
-        FerrataVault.TokenParams memory t = _tokenParams();
-        uint256 ethLargest = _value(e.denominations[e.denominations.length - 1], e.lezUnit, e.unitWeight);
-        uint256 tokenLargest = _value(t.denominations[t.denominations.length - 1], t.lezUnit, t.unitWeight);
-        return _paramOr(".releaseFloorDailyValue", ethLargest < tokenLargest ? ethLargest : tokenLargest);
+        uint256 eth = _largestExit(_ethParams());
+        uint256 token = _largestExit(_tokenParams());
+        return _paramOr(".releaseFloorDailyValue", eth > token ? eth : token);
+    }
+
+    /// @dev A token's largest exit in value units: its largest denomination and that denomination's relay fee, which a
+    ///      refund returns together.
+    function _largestExit(FerrataVault.TokenParams memory p) internal pure returns (uint256) {
+        uint256 k = p.denominations.length - 1;
+        return _value(p.denominations[k] + p.relayFees[k], p.lezUnit, p.unitWeight);
     }
 
     /// @dev The design's wait Δ for the rule.
