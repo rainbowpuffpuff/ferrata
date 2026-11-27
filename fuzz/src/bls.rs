@@ -18,8 +18,8 @@
 //!
 //! [`check`] runs, with both libraries, every path: `fast_aggregate_verify`, `check_committee`,
 //! `check_committee_onchain` and `verify_checked` under each [`Aggregation`], and blst's split
-//! (`miller_half` then `final_half`); each key an edit wrote alone (`KeyValidate`, and the
-//! on-curve decoding); and the signature alone when the keys stopped the spec path before it.
+//! (`miller_half` then `final_half`); the first eight distinct keys the edits wrote, each alone
+//! (`KeyValidate`, and the on-curve decoding); and the signature alone when the keys stopped the spec path before it.
 //! It panics, naming the path and both verdicts, where they differ, with one documented
 //! exception: blst's decoder refuses the two points with `x = 0` (order 3, outside G1) even where
 //! only an on-curve check is asked, and zkcrypto's on-curve decoding takes them; on the paths
@@ -759,7 +759,7 @@ pub fn check(case: &Case) -> Verdicts {
         checked = Some(out);
     }
 
-    // Each key an edit wrote, alone: KeyValidate, then the on-curve decoding.
+    // The first eight distinct keys the edits wrote, each alone: KeyValidate, then the on-curve decoding.
     let mut seen: Vec<&BlsPubkey> = Vec::new();
     for key in &case.written {
         if seen.contains(&key) || seen.len() == 8 {

@@ -37,6 +37,8 @@ fn bls_fuzz_corpus_replays_without_a_disagreement() {
         "bls corpus: {} inputs; fast_aggregate_verify verdicts {spec_path:?}; {checked_ok} accepted by every aggregation",
         files.len()
     );
+    // The corpus reaches verify_checked's acceptance under every aggregation (and so the split and Auto checks).
+    assert!(checked_ok > 0, "no input accepted by every aggregation of verify_checked");
     // The corpus reaches acceptance and the refusals on the spec path.
     for verdict in ["Ok(())", "Err(PubkeyInvalid)", "Err(SignatureInvalid)", "Err(SignatureMalformed)"] {
         assert!(spec_path.contains_key(verdict), "no input with {verdict}: {spec_path:?}");
