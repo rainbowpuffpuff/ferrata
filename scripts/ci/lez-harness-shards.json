@@ -76,6 +76,7 @@
       ]
     },
     "updater-gate": {
+      "updater_demo": true,
       "updater_splits": [
         {
           "test": "recorded",
