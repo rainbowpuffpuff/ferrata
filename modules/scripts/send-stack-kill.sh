@@ -18,6 +18,9 @@
 #       broadcast trapped before the node, every module host SIGKILLed, the modules loaded again, the monitor started
 #       again: the candidate cancelled once (a second cancel, if the module sent one, reverts: it changes nothing)
 #
+# After a restart nothing stays unlocked (Logos's signer manager): the person at the Signer app unlocks each locked
+# wallet again, played here by Logos's headless approver evm_signer_cli (`wallets`, `unlock_wallet` with the run's
+# password, from a 0600 file), then each daemon module's `custody` unlocks its account for tx_sender_module again.
 # After each, from the chain: every transaction of the relayer's account (nonce, call, status), each effect counted
 # (one each), and at the end the account's nonces 0..n-1 without a gap, every receipt status 1, no in-flight record
 # left and every job in done/. checks.tsv (PASS/FAIL), calls.jsonl (every Logos Core call), run/ (the relayer's lines
@@ -139,24 +142,63 @@ killed() {
       else d++ }
     END { printf "daemon %d hosts %d (%s)", d, n, names }' "$R/kills.log" 2>/dev/null
 }
-core_up() { # FIRST: install the packages too
+core_up() { # [first | first-again]: install the packages too; first-again (and no argument): the approver unlocks first
   if [ -z "$(session_pids | head -n 1)" ]; then
     ctl daemon start --detach >> "$R/daemon.txt" 2>&1 || { ctl daemon stop >> "$R/daemon.txt" 2>&1; ctl daemon start --detach >> "$R/daemon.txt" 2>&1; }
   fi
   local d m
-  if [ "${1:-}" = first ]; then
-    for m in eth_rpc_module fee_module keystore_module signer_manager_module tx_sender_module; do ctl install "$STACK/lgx-$m"/*.lgx -y 2>&1 | tail -n 1; done
+  if [ "${1:-}" = first ] || [ "${1:-}" = first-again ]; then   # first-again: after the whole Logos Core was killed
+    for m in eth_rpc_module fee_module keystore_module signer_manager_module tx_sender_module evm_signer_cli; do ctl install "$STACK/lgx-$m"/*.lgx -y 2>&1 | tail -n 1; done
     for m in ferrata_relayer_module ferrata_monitor_module; do ctl install "$FERRATA_LGX/lgx-$m"/*.lgx -y 2>&1 | tail -n 1; done
   fi
-  for m in tx_sender_module ferrata_relayer_module ferrata_monitor_module; do ctl module load "$m" 2>&1 | tail -n 1; done
+  for m in tx_sender_module evm_signer_cli ferrata_relayer_module ferrata_monitor_module; do ctl module load "$m" 2>&1 | tail -n 1; done
   ctl module list --json > "$R/modules-$(date +%s%N).json" 2>&1
   c eth_rpc_module set_chain_config 31337 "{\"endpoint\":\"$rpc\",\"name\":\"anvil-behind-proxy\",\"testnet\":true}"
-  c keystore_module configure '{"approvers":["evm_signer_ui"],"custodians":["evm_keystore_ui","ferrata_relayer_module","ferrata_monitor_module"],"managers":["signer_manager_module"]}'
-  c signer_manager_module configure '{"approvers":["evm_signer_ui"],"custodians":["evm_keystore_ui","ferrata_relayer_module","ferrata_monitor_module"],"signers":["keystore_module"]}'
+  c keystore_module configure '{"approvers":["evm_signer_ui","evm_signer_cli"],"custodians":["evm_keystore_ui","ferrata_relayer_module","ferrata_monitor_module"],"managers":["signer_manager_module"]}'
+  c signer_manager_module configure '{"approvers":["evm_signer_ui","evm_signer_cli"],"custodians":["evm_keystore_ui","ferrata_relayer_module","ferrata_monitor_module"],"signers":["keystore_module"]}'
+  [ "${1:-}" = first ] || unlock_wallets
   c ferrata_relayer_module custody "{\"key_file\":\"$R/keys/relayer.key\",\"password_file\":\"$pw\",\"ttl_ms\":7200000}"
   CUSTODY=$(jq -r '.verdict // "?"' <<< "$LAST" 2>/dev/null)
   c ferrata_monitor_module custody "{\"key_file\":\"$R/keys/watcher.key\",\"password_file\":\"$pw\",\"ttl_ms\":7200000}"
   CUSTODY_M=$(jq -r '.verdict // "?"' <<< "$LAST" 2>/dev/null)
+}
+# The person at the Signer app after a restart (evm_signer_cli): every locked wallet unlocked by its first way in, each
+# password factor given the run's password (a 0600 file per wallet in run/unlock/, never in calls.jsonl); a step that
+# asks for a password again is answered once. UNLOCKED: how many wallets were locked, and how many now are not.
+unlock_wallets() {
+  local f r h n0
+  c evm_signer_cli wallets > /dev/null
+  printf '%s\n' "$LAST" > "$R/wallets-${STEP:-start}.json"
+  n0=$(jq '[.wallets[]? | select(.locked == true)] | length' <<< "$LAST" 2>/dev/null || echo "?")
+  mkdir -p "$R/unlock"; chmod 700 "$R/unlock"
+  python3 -I - "$R/wallets-${STEP:-start}.json" "$pw" "$R/unlock" <<'PY' > "$R/unlock/files.txt"
+import json, os, sys
+w = json.load(open(sys.argv[1])); pw = open(sys.argv[2]).read().rstrip("\n"); out = sys.argv[3]
+for x in w.get("wallets", []):
+    if not x.get("locked") or not x.get("ways"):
+        continue
+    way = x["ways"][0]
+    req = {"seed": x["seed"], "way": way["id"],
+           "passwords": {f["id"]: pw for f in way.get("factors", []) if f.get("kind") == "password" and f.get("id")}}
+    if any(f.get("kind") == "device" for f in way.get("factors", [])):
+        req["secret"] = pw
+    p = os.path.join(out, x["seed"] + ".json")
+    fd = os.open(p, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as fh:
+        json.dump(req, fh)
+    print(p)
+PY
+  while read -r f; do
+    [ -n "$f" ] || continue
+    c evm_signer_cli unlock_wallet "@$f" > /dev/null
+    if [ "$(jq -r '.state // empty' <<< "$LAST" 2>/dev/null)" = needs_password ]; then
+      h=$(jq -r '.handle' <<< "$LAST")
+      jq -c --arg h "$h" '{handle: $h, passwords: .passwords}' "$f" > "$f.again"; chmod 600 "$f.again"
+      c evm_signer_cli unlock_wallet "@$f.again" > /dev/null
+    fi
+  done < "$R/unlock/files.txt"
+  c evm_signer_cli wallets > /dev/null
+  UNLOCKED="$n0 $(jq '[.wallets[]? | select(.locked == true)] | length' <<< "$LAST" 2>/dev/null || echo "?")"
 }
 # Modules a kill left dead, loaded again (the daemon still runs).
 reload_hosts() {
@@ -241,7 +283,9 @@ if wait_hit 120; then
   note "K1: the broadcast trapped at the proxy; in flight: $f1; every module host SIGKILLed"
   check K1-nothing-left-before-restart 0 "$(count finalizeAttested)"
   echo pass > "$CTL"
-  reload_hosts $MODS_ALL >> "$R/K1.log" 2>&1
+  STEP=K1 reload_hosts $MODS_ALL >> "$R/K1.log" 2>&1
+  note "K1: after the restart the approver found locked wallets / still locked after its unlock: $UNLOCKED"
+  check K1-custody-after-restart ok "$CUSTODY"
   round K1b >> "$R/K1.log" 2>&1
   note "K1: after the restart: $(events K1b)"
 else
@@ -264,7 +308,8 @@ if wait_hit 120; then
   note "K2 killed: $(killed K2)"
   note "K2: the release's broadcast reached the node, its answer held; in flight: $f2; the relayer module's host SIGKILLed"
   check K2-mined-while-held 1 "$(count release)"
-  reload_hosts ferrata_relayer_module >> "$R/K2.log" 2>&1
+  STEP=K2 reload_hosts ferrata_relayer_module >> "$R/K2.log" 2>&1
+  check K2-custody-after-restart ok "$CUSTODY"
   round K2b >> "$R/K2.log" 2>&1
   note "K2: after the restart: $(events K2b)"
 else
@@ -292,7 +337,8 @@ check K3-nothing-of-the-session-left "" "$(session_pids | paste -sd, -)"
 note "K3: broadcast and pending (txpool $pend); in flight: $f3; Logos Core SIGKILLed (daemon and hosts)"
 check K3-pending-not-mined 1 "$(count submitCandidate)"
 cast rpc --rpc-url "$up" evm_mine > /dev/null; cast rpc --rpc-url "$up" evm_setAutomine true > /dev/null
-core_up first >> "$R/K3.log" 2>&1
+STEP=K3 core_up first-again >> "$R/K3.log" 2>&1
+note "K3: after the restart the approver found locked wallets / still locked after its unlock: $UNLOCKED"
 check K3-custody-after-restart ok "$CUSTODY"
 round K3b >> "$R/K3.log" 2>&1
 note "K3: after the restart: $(events K3b)"
@@ -345,7 +391,8 @@ if wait_hit 120; then
   note "M1: the monitor's cancel trapped at the proxy; killed: $(killed M1)"
   check M1-nothing-left-before-restart 0 "$(cancels 1)"
   echo pass > "$CTL"
-  reload_hosts $MODS_ALL >> "$R/M1.log" 2>&1
+  STEP=M1 reload_hosts $MODS_ALL >> "$R/M1.log" 2>&1
+  check M1-custody-after-restart "ok ok" "$CUSTODY $CUSTODY_M"
   mon_start M1b >> "$R/M1.log" 2>&1; mon_wait M1b >> "$R/M1.log" 2>&1
   note "M1: after the restart, the alerts: $(jq -s -c 'map({kind, via}) | .[0:6]' "$R/M1b-alerts.jsonl" 2>/dev/null)"
 else

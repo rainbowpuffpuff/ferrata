@@ -337,7 +337,12 @@ impl CustodyRequest {
 /// `keystore_module` and `signer_manager_module`: their `configure`): `keystore_module.import_private_key`
 /// (tier D; the keystore enrols the new wallet with the signer manager itself), then, once the signer manager
 /// lists the account, `signer_manager_module.unlock` for `apps` with `confirm: false`, so that `tx_sender_module`'s
-/// approvals for it are signed as they arrive. An account the keystore holds already is unlocked as it is.
+/// approvals for it are signed as they arrive. An account the keystore holds already is unlocked as it is. After a
+/// restart of Logos Core the keystore holds it in a locked wallet ("this key is here already, in a locked wallet (…):
+/// unlock it in the Signer app first", logos-evm-keystore-module e83a899): nothing stays unlocked past a restart
+/// (signer manager bd5c84d, `on_context_ready`), and only an approver unlocks a wallet (`unlock_wallet`: the Signer
+/// app, a person; `evm_signer_cli` headless), never a custodian. Until then this answers `"verdict": "locked"` with
+/// that step, and is called again after it.
 pub fn custody(call: ModuleCall, req: &CustodyRequest) -> Value {
     let read = |p: &std::path::Path| std::fs::read_to_string(p).map(|s| s.trim_end_matches(['\n', '\r']).to_string());
     let key = match read(&req.key_file) {
@@ -357,15 +362,17 @@ pub fn custody(call: ModuleCall, req: &CustodyRequest) -> Value {
         Ok(r) => parse(&r),
         Err(e) => return json!({ "verdict": "error", "error": format!("{KEYSTORE}.import_private_key: {e}") }),
     };
-    let held_already =
-        imported.get("ok") != Some(&Value::Bool(true)) && why(&imported).to_lowercase().contains("exist");
+    let said = why(&imported).to_lowercase();
+    let held_already = imported.get("ok") != Some(&Value::Bool(true)) && (said.contains("exist") || said.contains("already"));
+    // In a wallet the keystore names as locked: the manager lists the account only once an approver unlocked it.
+    let locked_wallet = held_already && said.contains("locked");
     if imported.get("ok") != Some(&Value::Bool(true)) && !held_already {
         return json!({ "verdict": "refused", "step": "import_private_key", "address": address.to_checksum(None),
                        "reply": imported });
     }
     // The keystore enrols the wallet with the signer manager in its own thread: wait until the manager lists it.
     let mut listed = Value::Null;
-    for _ in 0..100 {
+    for _ in 0..(if locked_wallet { 5 } else { 100 }) {
         if let Ok(r) = call(SIGNER_MANAGER, "accounts", &json!([]), CALL_TIMEOUT) {
             let v = parse(&r);
             let hit = v.get("accounts").and_then(Value::as_array).into_iter().flatten().find(|a| {
@@ -377,6 +384,12 @@ pub fn custody(call: ModuleCall, req: &CustodyRequest) -> Value {
             }
         }
         std::thread::sleep(Duration::from_millis(200));
+    }
+    if listed.is_null() && locked_wallet {
+        return json!({ "verdict": "locked", "step": "accounts", "address": address.to_checksum(None), "reply": imported,
+                       "action": format!("the key's wallet is locked, as every wallet is after a restart of Logos Core: \
+                                          an approver unlocks it (the Signer app; headless, evm_signer_cli unlock_wallet \
+                                          {{seed, way, passwords}}), then call custody again; nothing was unlocked or sent") });
     }
     if listed.is_null() {
         return json!({ "verdict": "refused", "step": "accounts", "address": address.to_checksum(None),
@@ -656,5 +669,38 @@ mod tests {
         assert_eq!(unlock["account"], a.to_lowercase());
         assert_eq!(r["historyOpen"], true);
         assert_eq!(seen.last().unwrap().1, "history");
+    }
+
+    // After a restart of Logos Core the keystore holds the key in a locked wallet and the manager lists no account of it
+    // until an approver unlocks it: custody says so ("locked", the approver's step) and unlocks nothing; once the wallet
+    // is unlocked, the same call goes on as for a key held already.
+    #[test]
+    fn custody_after_a_restart_names_the_approvers_unlock_then_goes_on_once_it_is_done() {
+        let _g = lock(&SERIAL);
+        let dir = std::env::temp_dir().join(format!("ferrata-logos-send-custody-locked-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let (k, p) = (dir.join("k"), dir.join("p"));
+        std::fs::write(&k, "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d\n").unwrap();
+        std::fs::write(&p, "pw\n").unwrap();
+        let a = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
+        let req = CustodyRequest { key_file: k, password_file: p, ttl_ms: 3_600_000, count: None, apps: CustodyRequest::apps() };
+        let here = json!({ "ok": false, "error": "this key is here already, in a locked wallet (k_f5b0180a8ebeb6ac333788ab4c53b4ae): unlock it in the Signer app first" });
+        script(&[("import_private_key", here.clone())]);
+        let r = custody(fake, &req);
+        assert_eq!(r["verdict"], "locked", "{r}");
+        assert!(r["action"].as_str().unwrap().contains("unlock_wallet"), "{r}");
+        assert!(!lock(&SEEN).iter().any(|(_, m, _)| m == "unlock"), "nothing unlocked while the wallet is locked");
+        // The approver unlocked the wallet: the manager lists the account, and custody unlocks it for tx_sender_module.
+        script(&[
+            ("import_private_key", json!({ "ok": false, "error": "this key is here already (k_f5b0180a8ebeb6ac333788ab4c53b4ae)" })),
+            ("accounts", json!({ "ok": true, "accounts": [{ "id": a.to_lowercase(), "address": a, "family": "evm", "signer": "keystore_module" }] })),
+            ("unlock", json!({ "ok": true, "account": a, "expiresInMs": 3600000, "countLeft": null })),
+            ("history", json!({ "ok": true, "address": a, "transactions": [] })),
+        ]);
+        let r = custody(fake, &req);
+        std::fs::remove_dir_all(&dir).ok();
+        assert_eq!(r["verdict"], "ok", "{r}");
+        assert_eq!(r["imported"], "held already", "{r}");
+        assert_eq!(r["historyOpen"], true);
     }
 }
