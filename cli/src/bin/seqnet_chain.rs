@@ -57,6 +57,7 @@ use ferrata_cli::{
     seed::{Seed, DEFAULT_GAP},
 };
 use ferrata_lez_bridge_wire::{self as bw, config_actor, token_actor, BridgeMessage};
+use ferrata_wallet::deployed::{self, BridgeProgram};
 use lee::AccountId;
 use lee_core::{account::Actor, program::PdaSeed};
 use sequencer_service_rpc::{SequencerClient, SequencerClientBuilder};
@@ -421,6 +422,30 @@ fn proof_mode() -> &'static str {
     }
 }
 
+/// A module message: this tree's `BridgeMessage`, or a claim in B1's layout (`ferrata_wallet::deployed`), which is sent
+/// as its own bytes (`LezCall::wire`) with this tree's message beside it for the descriptions.
+fn message_of(bytes: &[u8]) -> Result<(BridgeMessage, Option<Vec<u8>>)> {
+    if let Ok(message) = BridgeMessage::try_from_slice(bytes) {
+        return Ok((message, None));
+    }
+    match deployed::decode_claim(bytes).filter(|c| c.range.is_some()) {
+        Some(c) => {
+            let message = if c.private {
+                BridgeMessage::ClaimPrivately {
+                    config_id: c.config_id,
+                    leaf_count: c.leaf_count,
+                    witness: c.witness,
+                    relayer: c.relayer,
+                }
+            } else {
+                BridgeMessage::Claim { config_id: c.config_id, leaf_count: c.leaf_count, witness: c.witness, relayer: c.relayer }
+            };
+            Ok((message, Some(bytes.to_vec())))
+        }
+        None => bail!("message: not a BridgeMessage (this tree's, or a claim in the layout of ferrata_bridge_b1)"),
+    }
+}
+
 fn hex_bytes(v: &Value, what: &str) -> Result<Vec<u8>> {
     hex::decode(v.as_str().with_context(|| format!("{what}: a hex string"))?.trim_start_matches("0x"))
         .with_context(|| format!("{what}: hex"))
@@ -455,7 +480,7 @@ impl Chain {
 
     async fn call(&mut self, method: &str, params: &Value) -> Result<Value> {
         match method {
-            "module.session" => self.session(),
+            "module.session" => self.session().await,
             "module.info" => self.info(params).await,
             "module.registry" => self.registry(params).await,
             "module.price" => self.price(params).await,
@@ -488,8 +513,12 @@ impl Chain {
 
     /// What the wallet hands the module: its bridge seed (kAuth and kView are derived from it in the module),
     /// its accounts, and the configuration (the vault's `lezConfigId`, the bridge program's account).
-    fn session(&self) -> Result<Value> {
+    async fn session(&self) -> Result<Value> {
+        // The image id the zone's loader names for the bridge account: the module builds its claims in that program's
+        // layout (`ferrata_wallet::deployed`: our test network's B1 names a fee-schedule range).
+        let bridge_image = self.seq.bridge_image(self.ctx.program).await?;
         Ok(json!({
+            "bridge_image_id": bridge_image.map(|id| hx(&id)),
             "bridge_seed": hx(&self.seed.bridge_seed()),
             "chain_id": self.eth.chain_id,
             "vault": hx(&self.ctx.vault),
@@ -936,7 +965,18 @@ impl Chain {
     /// Signs and sends a module message (after the gate, for a role key's).
     async fn submit_now(&mut self, params: &Value) -> Result<Value> {
         let bytes = hex_bytes(&params["message"], "message")?;
-        let message = BridgeMessage::try_from_slice(&bytes).context("message: not a BridgeMessage")?;
+        let (message, wire) = message_of(&bytes)?;
+        // A claim goes in the layout of the program the zone runs (our test network's B1 names a fee-schedule range):
+        // the other layout is refused here, before anything is signed or proven.
+        if let Some(c) = deployed::decode_claim(&bytes) {
+            let program = lez::bridge_program(&self.seq, &self.ctx).await?;
+            ensure!(
+                c.range.is_some() == (program == BridgeProgram::B1),
+                "refused before anything was signed: the module's claim is in {}'s layout, but the zone runs {}",
+                if c.range.is_some() { BridgeProgram::B1.name() } else { BridgeProgram::F13.name() },
+                program.name()
+            );
+        }
         let accounts = params["accounts"].as_array().context("accounts")?;
         let root_index = params["root_index"].as_u64().unwrap_or(0) as usize;
         let mut mentions = Vec::new();
@@ -954,7 +994,7 @@ impl Chain {
         let private = matches!(mentions.first(), Some(Mention::PrivateSelf(_)));
         let since =
             self.seq.wallet.client().get_last_block_id().await.map_err(|e| anyhow!("get_last_block_id: {e}"))?;
-        let call = LezCall { what: what.clone(), mentions, root_index, message, wire: None };
+        let call = LezCall { what: what.clone(), mentions, root_index, message, wire };
         if private {
             // The wallet proves from its own view of the private account: brought up to the zone's head first
             // (another process of the wallet, the gas drop's stand-in, may have changed it).
@@ -1258,6 +1298,29 @@ fn main() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A module message in this tree's layout is sent as encoded; a claim in B1's layout keeps its own bytes; anything
+    /// else is refused.
+    #[test]
+    fn module_messages_of_either_claim_layout() {
+        let witness = bw::ClaimWitness {
+            depositor: [1; 20],
+            token: [0; 20],
+            amount: [2; 32],
+            leaf_index: 3,
+            path: vec![[4; 32]; 32],
+            s: [5; 32],
+            kind: 2,
+            dest: [6; 32],
+        };
+        let claim = BridgeMessage::Claim { config_id: [7; 32], leaf_count: 4, witness, relayer: None };
+        let f13 = borsh::to_vec(&claim).unwrap();
+        assert_eq!(message_of(&f13).unwrap(), (claim.clone(), None));
+        let range = deployed::ScheduleRange { index: 0, from_leaf: 0, until_leaf: 4 };
+        let b1 = deployed::encode_b1(&claim, &range).unwrap();
+        assert_eq!(message_of(&b1).unwrap(), (claim, Some(b1.clone())));
+        assert!(message_of(&b1[..b1.len() - 1]).is_err());
+    }
 
     fn config(vault: [u8; 20], chain: u64) -> bw::BridgeConfig {
         let cap = bw::CapParams { capacity: 10, refill_per_second: 1 };

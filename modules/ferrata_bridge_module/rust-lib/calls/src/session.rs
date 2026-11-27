@@ -1417,6 +1417,11 @@ impl Chain {
         if self.network() {
             // The claim's layout is the deployment's program's: the test network's B1 names a fee-schedule range.
             req["bridge_image_id"] = json!(hex(&crate::net::bridge_program()?.image_id()));
+        } else if !self.s["bridge_image_id"].is_null() {
+            // The chain service names the image its zone's loader holds for the bridge account (seqnet-chain's
+            // `module.session`): a devnet of the test network's program gets B1's claims, which the service sends as
+            // they are and refuses in the other layout.
+            req["bridge_image_id"] = self.s["bridge_image_id"].clone();
         }
         let c = w::claim_with_state(&req)?;
         if c["verdict"] != "claimable" {
