@@ -695,7 +695,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         if (erc20.balanceOf(address(this)) != balanceBefore + total) revert TransferAmountMismatch();
         // A token hook (ERC-777's tokensToSend) runs inside the pull and can call the permissionless `retire()` or
         // finalise a sunset checkpoint: checked again after it (internal review 2026-11-27, S-1).
-        if (retired || finalSunset) revert VaultRetired();
+        _checkOpen();
 
         _recordDeposit(token, amount, total, mintFee, commitment, index);
     }
@@ -1204,6 +1204,12 @@ contract FerrataVault is ReentrancyGuardTransient {
     // Internal: deposits and the tree
     // ------------------------------------------------------------------------------------------------------------
 
+    /// @dev Deposits end at retirement and at a finalised sunset checkpoint (L-3): checked before a deposit and again
+    ///      after an ERC-20 pull (S-1). One function for both, so the vault stays under EIP-170 (24,576 bytes).
+    function _checkOpen() internal view {
+        if (retired || finalSunset) revert VaultRetired();
+    }
+
     /// @dev The deposit's checks; returns the denomination, the whole amount to pay and its mint fee under the fee
     ///      schedule in force, which a due fee change becomes first (so every deposit from its due time on pays it).
     function _checkDeposit(address token, uint8 denomIndex, bytes32 commitment, uint64 index)
@@ -1211,7 +1217,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         returns (uint256 amount, uint256 total, uint256 mintFee)
     {
         // A finalised sunset checkpoint ends deposits like retirement: LEZ imports nothing after `Sunset` (L-3).
-        if (retired || finalSunset) revert VaultRetired();
+        _checkOpen();
         if (_frozen(depositsFrozenUntil)) revert DepositsAreFrozen();
         TokenConfig storage cfg = _tokens[token];
         if (!cfg.registered) revert TokenNotRegistered();
