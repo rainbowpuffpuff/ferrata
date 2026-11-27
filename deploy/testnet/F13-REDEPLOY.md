@@ -23,7 +23,7 @@ What is new and what stays:
 
 | Piece | Before (deployed) | After (this tree) |
 |---|---|---|
-| bridge program | `ferrata_bridge_b1` `0x847a4336…7515`, binary sha256 `537cbe7a…` | `ferrata_bridge_lezfee` `0x62199ab6…9a3e`, binary sha256 `57b0c84b…` ([`docs/image-ids.md`](../../docs/image-ids.md)) |
+| bridge program | `ferrata_bridge_b1` `0x847a4336…7515`, binary sha256 `537cbe7a…` | `ferrata_bridge_lezfee` `0x9d02d54d…a321`, binary sha256 `a17854cc…` ([`docs/image-ids.md`](../../docs/image-ids.md)) |
 | attestation program, release and checkpoint guests | unchanged | unchanged (19 of 20 guests rebuild to their recorded ids) |
 | vault | v5, mint fee escrowed and minted on LEZ by each claim, burn fee credited on Ethereum | v5 with ADR 0048's deposit, release and refund: both protocol fees escrowed and counted in `lezFees` |
 | clients (`ferrata`, the module, crown-driver, relayer) | claims with a range | this tree's `ferrata` builds either layout by the image id the zone's loader names, the module by its deployment's recorded id (B1's today); the relayer collects fees (`collect-fees`) on a zone of `ferrata_bridge_lezfee` only; crown-driver builds no claim for this network |
@@ -35,7 +35,7 @@ What is new and what stays:
 scripts/fetch-upstream.sh
 scripts/reproduce-image-ids.sh build --out ../ids-lezfee         # every guest of this tree
 scripts/reproduce-image-ids.sh compare --out ../ids-lezfee       # 20 of 20 MATCH, ferrata_bridge as ferrata_bridge_lezfee
-sha256sum ../ids-lezfee/programs/ferrata_bridge.bin              # 57b0c84b9775021b39fcfd92649fe68684d9e5d6bf2c65518699a4efb649c118
+sha256sum ../ids-lezfee/programs/ferrata_bridge.bin              # a17854ccdf405ab76b941196b9e977e79bb66dcafe2a84fcca34944f6f94dd5a
 cd vault && forge test --no-match-contract PrivacySuite          # the vault of ADR 0048
 ```
 
@@ -52,10 +52,10 @@ The day-one kit in this tree pins this tree's bridge program (`lez/testnet04/day
 it, then run only the kit's bridge stage on the existing network:
 
 ```sh
-install -m 644 ferrata_bridge.bin /opt/ferrata/programs/ferrata_bridge_lezfee.bin   # sha256 57b0c84b…
+install -m 644 ferrata_bridge.bin /opt/ferrata/programs/ferrata_bridge_lezfee.bin   # sha256 a17854cc…
 sed -i 's#/opt/ferrata/programs/ferrata_bridge_b1.bin#/opt/ferrata/programs/ferrata_bridge_lezfee.bin#' \
   /opt/ferrata/src/ferrata/deploy/testnet/deploy-programs.sh
-deploy/testnet/deploy-programs.sh plan      # the plan names the bridge program 0x62199ab6…; check before sending
+deploy/testnet/deploy-programs.sh plan      # the plan names the bridge program 0x9d02d54d…; check before sending
 deploy/testnet/deploy-programs.sh run       # (e) deploys it if it is not on chain
 ```
 
@@ -71,7 +71,7 @@ the program account (e) prints (`bridge-owner-step.md` in the kit's state).
 
 `bridge-owner-step.md` (written by the kit) gives the configuration's fields; fill a params file from
 `vault/script/params/sepolia-31.template.json` with them (the new program's `bridgeHeader` and `bridgeImageId`
-`0x62199ab6…9a3e`, the vault address `--expect-vault` predicts) and deploy with the existing tool, dry first:
+`0x9d02d54d…a321`, the vault address `--expect-vault` predicts) and deploy with the existing tool, dry first:
 
 ```sh
 MODAL_PROFILE=<workspace with the deployer key> modal run vault/script/deploy_sepolia.py --params P.json \

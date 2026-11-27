@@ -499,11 +499,11 @@ def lez_session(run: str, step: str, chain: str, bundle_sha256: str, script: byt
 UPDATER_ENV = ("CROWN_UPDATER_MIN", "CROWN_UPDATER_RESTART_MIN", "CROWN_UPDATER_PROBE_S", "CROWN_UPDATER_POLL_S",
                "CROWN_SAMPLE", "CROWN_MAX_STARTS")
 # The final programs (docs/image-ids.md): session A's deployment must have computed these, or session U does not run.
-# This tree's bridge program since ADR 0048 (a claim names no fee schedule, protocol fees minted on LEZ by CollectFees: 0x62199ab6…; ADR 0046's was 0xffb47f6e…; B1's, config-keyed accounts
+# This tree's bridge program since ADR 0048 (a claim names no fee schedule, protocol fees minted on LEZ by CollectFees: 0x9d02d54d…; ADR 0046's was 0xffb47f6e…; B1's, config-keyed accounts
 # and one burn note per tag, was 0x847a4336…, its first build 0xac1fb59b…); the live runs of November 2026 deployed
 # 0xccde6171…71dd.
 FINAL_IMAGE_IDS = {"attestation": "0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df",
-                   "bridge": "0x62199ab6ea60ef8587dd6b6b768daba4933d0315ab8b3f0da929cd3cf4d39a3e"}
+                   "bridge": "0x9d02d54d56b026079e94c8d9b12db69f3a96b7acccd11283f68e5bc343bfa321"}
 control = modal.Dict.from_name("ferrata-crown-control", create_if_missing=True)
 
 

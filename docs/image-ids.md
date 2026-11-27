@@ -8,7 +8,7 @@
 
 > **ADR 0048 (RFP-022 F.13, 27 November 2026).** In this tree `lez/guests/bridge` builds the bridge program of
 > [its section](#the-bridge-program-since-adr-0048-the-protocol-fees-minted-on-lez) below, listed in the first table as
-> `ferrata_bridge_lezfee` (`0x62199ab6…9a3e`): a claim names no fee schedule (as since ADR 0046), and `CollectFees` mints
+> `ferrata_bridge_lezfee` (`0x9d02d54d…a321`): a claim names no fee schedule (as since ADR 0046), and `CollectFees` mints
 > the protocol fees the vault escrowed to the fee recipient on LEZ. ADR 0046's program (`ferrata_bridge_f13`,
 > `0xffb47f6e…7675`, never deployed) and milestone B1's
 > (`ferrata_bridge_b1`, `0x847a4336…7515` since 22 November 2026, ADR 0032: a burn's tag used once; B1's first build was
@@ -47,7 +47,7 @@ live run, `crown-live-1`, ran programs built at the maintainer's checkout path (
 | Program | Image id | sha256 of the binary | Bytes | sha256 of the user ELF |
 |---|---|---|---:|---|
 | attestation program (`lez/guests/program`): `ferrata_lez` | `0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df` | `ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9` | 627,064 | `468754dd15a24c73eaa256aecd1c683531b17286f5db2592590b804fb086bedc` |
-| bridge program since ADR 0048 (`lez/guests/bridge`): `ferrata_bridge_lezfee` | `0x62199ab6ea60ef8587dd6b6b768daba4933d0315ab8b3f0da929cd3cf4d39a3e` | `57b0c84b9775021b39fcfd92649fe68684d9e5d6bf2c65518699a4efb649c118` | 621,088 | `7d68aeeb598559f1f50e84a1f91f32abdcf5d929ac977e29e8ec7c15e837d183` |
+| bridge program since ADR 0048 (`lez/guests/bridge`): `ferrata_bridge_lezfee` | `0x9d02d54d56b026079e94c8d9b12db69f3a96b7acccd11283f68e5bc343bfa321` | `a17854ccdf405ab76b941196b9e977e79bb66dcafe2a84fcca34944f6f94dd5a` | 624,204 | `1cf3825c8620ab535ac006367be9884d8d9a0b3bb0a1a70414efcdb0a7199b8b` |
 | reference consumer (`lez/guests/consumer`): `ferrata_consumer` | `0x8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96` | `d02e4aa394f73702fec3e9983f32e8c9743dbaa1a41d2d705fc06f1b63e94ca5` | 471,408 | `a403d4b2eca1ae9c205cbb87222a57f381ec512810403cf899d9036560eed754` |
 | second consumer (`lez/guests/holdings`): `ferrata_holdings` | `0xa79e3f5c4496f2707ab6f55a980efb00dd80aaf562b51f5a504349e9a97c5591` | `504a67c071a103b5d99de10163ae97f925151b09b59c49048e50f3d315b710c5` | 307,504 | `74f7215ac2641e2772f78ac994b62bd52c9807970df947514a272e03505e4deb` |
 | attestation program, software Keccak (cycle comparison): `ferrata_lez_keccak_soft` | `0xefe9c58caa0eacd4c837815d7dbb3c003011b478f9cc5b85fca083b6f0a5cb3e` | `727c5cda08f88274128e873badafd441b9112a5885a407ca6e829f9b53bc1995` | 630,292 | `025acb90bc29fd32472a59a3aeb3eb1330d1e9b446b40e2e695f3e1db3cb6004` |

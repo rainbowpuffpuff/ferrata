@@ -24,7 +24,7 @@ use crate::Refusal;
 
 /// `ferrata_bridge_lezfee`'s image id: this tree's bridge program (`docs/image-ids.md`, ADR 0048). The name of the
 /// constant is the claim layout it builds (since ADR 0046: no fee schedule in a claim).
-pub const F13_IMAGE_ID: [u8; 32] = hex32("62199ab6ea60ef8587dd6b6b768daba4933d0315ab8b3f0da929cd3cf4d39a3e");
+pub const F13_IMAGE_ID: [u8; 32] = hex32("9d02d54d56b026079e94c8d9b12db69f3a96b7acccd11283f68e5bc343bfa321");
 /// `ferrata_bridge_b1`'s image id: the program the test network runs (`docs/image-ids.md`, "Superseded";
 /// `scripts/reproduce/deployed-programs.json`).
 pub const B1_IMAGE_ID: [u8; 32] = hex32("847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515");

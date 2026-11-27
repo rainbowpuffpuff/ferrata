@@ -63,7 +63,7 @@ On a 16-core machine: about 7 minutes of build, then 56 tests in 30 binaries in 
 thread; `vault_consumer` alone runs six minutes without printing; about 13 minutes with `--test-threads 8`). The
 tests rewrite the 21 files they write in `lez/results/`; the committed ones were recorded on 12 November 2026 from the
 programs the live runs deployed ([`docs/image-ids.md`](../image-ids.md); bridge image `ccde6171…`, at `f13faee2`);
-since milestone B1 the bridge program was `847a4336…` (ADR 0032; B1's first build `ac1fb59b…`; our test network runs it), since ADR 0046 `ffb47f6e…` (`ferrata_bridge_f13`, never deployed), and since ADR 0048 this tree's is `62199ab6…` (`ferrata_bridge_lezfee`, not deployed), so its suites' records differ there: run them with
+since milestone B1 the bridge program was `847a4336…` (ADR 0032; B1's first build `ac1fb59b…`; our test network runs it), since ADR 0046 `ffb47f6e…` (`ferrata_bridge_f13`, never deployed), and since ADR 0048 this tree's is `9d02d54d…` (`ferrata_bridge_lezfee`, not deployed), so its suites' records differ there: run them with
 `FERRATA_LEZ_RESULTS_DIR=$PWD/results/b1` to compare with `lez/results/b1/`, where git shows them unchanged, as it does
 the other suites' files in `lez/results/`
 (the Stage 1, 4 and 5 tables that the `tables` binary of `lez/RESULTS.md` §8 writes are of the earlier images that

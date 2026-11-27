@@ -36,7 +36,7 @@ CHECKPOINT_A_ID=0xb9c1e6a834879f6be79d09d728523565846018629b82f66986eb58fab4f52c
 CHECKPOINT_B_ID=0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e
 RELEASE_ID=0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9
 ATTEST_ID=0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df
-BRIDGE_ID=0x62199ab6ea60ef8587dd6b6b768daba4933d0315ab8b3f0da929cd3cf4d39a3e   # since ADR 0048 (docs/image-ids.md ferrata_bridge_lezfee); ADR 0046's 0xffb47f6e…, B1's 0x847a4336…, the live runs' 0xccde6171…
+BRIDGE_ID=0x9d02d54d56b026079e94c8d9b12db69f3a96b7acccd11283f68e5bc343bfa321   # since ADR 0048 (docs/image-ids.md ferrata_bridge_lezfee); ADR 0046's 0xffb47f6e…, B1's 0x847a4336…, the live runs' 0xccde6171…
 Z=0x0000000000000000000000000000000000000000000000000000000000000000
 export PATH="$HOME/.foundry/bin:$PATH" FOUNDRY_DISABLE_NIGHTLY_WARNING=1
 # This machine's paths, as the records write them (the same rewrite as at the end, for what is printed meanwhile), in

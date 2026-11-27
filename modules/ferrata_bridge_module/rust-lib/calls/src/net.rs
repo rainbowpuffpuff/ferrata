@@ -71,7 +71,7 @@ const B1_IMAGE_ID: &str = "847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425
 /// `ferrata_bridge_lezfee`, this tree's program (`ferrata_wallet::deployed::F13_IMAGE_ID`, `docs/image-ids.md`):
 /// claims without a range (ADR 0046's layout), protocol fees minted on LEZ by `CollectFees` (ADR 0048).
 #[cfg(test)]
-const F13_IMAGE_ID: &str = "62199ab6ea60ef8587dd6b6b768daba4933d0315ab8b3f0da929cd3cf4d39a3e";
+const F13_IMAGE_ID: &str = "9d02d54d56b026079e94c8d9b12db69f3a96b7acccd11283f68e5bc343bfa321";
 
 /// The deployments this module knows: the network's configuration as recorded on 23 November 2026
 /// (`deploy/testnet/web/basecamp/tests/install-test/live-wallet-config.json` and `live-programs.json`). A network that

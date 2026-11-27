@@ -189,8 +189,8 @@ fn h(bytes: &[u8]) -> String {
 /// milestone B1"); the live runs' program needs the driver of `f13faee2`. Since 22 November 2026 (ADR 0032: a burn's
 /// tag is used once, `burn(cid, r)`) B1's program was `0x847a4336…` (B1's first build `0xac1fb59b…`); ADR 0046's (a claim
 /// names no fee schedule) was `0xffb47f6e…`, never deployed; since ADR 0048 (protocol fees minted on LEZ by
-/// `CollectFees`) the program of this tree is `0x62199ab6…`, docs/image-ids.md `ferrata_bridge_lezfee`.
-pub const BRIDGE_IMAGE_ID: &str = "62199ab6ea60ef8587dd6b6b768daba4933d0315ab8b3f0da929cd3cf4d39a3e";
+/// `CollectFees`) the program of this tree is `0x9d02d54d…`, docs/image-ids.md `ferrata_bridge_lezfee`.
+pub const BRIDGE_IMAGE_ID: &str = "9d02d54d56b026079e94c8d9b12db69f3a96b7acccd11283f68e5bc343bfa321";
 
 /// Refuses a bridge program other than [`BRIDGE_IMAGE_ID`].
 pub fn check_bridge_image(image_id: [u8; 32]) -> Result<()> {
