@@ -14,7 +14,9 @@ working log is a private file and is not copied here ([`how-it-was-built.md`](..
 log"). From now on a decision is recorded here when it is taken: a new record with the next number, and a record
 that a later one replaces keeps its text and says "superseded by ADR n" in its status. Records 0034–0045 did not
 follow that rule: they were written on 26 November 2026 from the commits and documents of decisions taken on 21–25
-November and not recorded then; each names the commit that took it, and its date is the decision's. At each milestone delivery
+November and not recorded then; each names the commit that took it, and its date is the decision's. Nor did records
+0048–0053: they were written on 27 November 2026 from the commits of decisions taken on 23–27 November, found by
+reading the whole history for decisions no record covered, each naming the commits that took it. At each milestone delivery
 the log is checked against the design notes and brought up to date in the same tagged commit.
 
 **Options.** The chosen option is the last; the decision it records is in the record's sources. Every other option
@@ -77,3 +79,9 @@ a later record, its text kept. A record describes only work in this tree.
 | [0045](0045-prover-client-resume-recorded-call.md) | Resume a prover call from its recorded id, retry a failed prover and deliver the resulting job once | 24–25 November 2026 | accepted; built, exercised against the recorded call-model stand-in | RFP-022 R.6 |
 | [0046](0046-mint-fee-at-deposit.md) | Take the mint fee on Ethereum at deposit; a claim on LEZ mints the denomination and the fixed relay fee only | 26–27 November 2026 | accepted; built (the vault, the bridge program and its clients); not deployed | RFP-022 F.13 |
 | [0047](0047-updater-join-or-wait.md) | Updaters join or wait for a job open on the instance's store instead of opening another | 27 November 2026 | accepted; built | RFP-021 R.9, R.10, F.12 |
+| [0048](0048-deployed-b1-interface-and-image-selected-claims.md) | Keep the deployed B1 interface frozen; select B1 or the current claim layout by the zone's program image id | 27 November 2026 | accepted; built and run against B1 on a standalone rc3 sequencer; the test network still runs B1 | RFP-022 F.13, Sec.8, Priv.1, R.10 |
+| [0049](0049-multikey-zone-threshold-return-leg.md) | Grow the test zone to several sequencer keys and require t-of-n attestations, without claiming independent operators | 26 November 2026 | accepted; built and run on local four-sequencer zones; the test-network key-growth runbook not executed | RFP-022 F.7, R.10 |
+| [0050](0050-offline-evidence-recheck-registry.md) | Re-derive committed evidence offline through one registry, with independent seal checks and tamper tests | 26 November 2026 | accepted; built and run in CI | RFP-021 R.1; RFP-022 R.11 |
+| [0051](0051-lez-harness-shards-and-full-backstop.md) | Shard the LEZ harness on every change and keep an unsharded daily backstop guarded by exact target coverage | 23 November 2026 | accepted; run in CI | RFP-021 R.12; RFP-022 R.11 |
+| [0052](0052-daily-read-only-online-verification.md) | Run public-state evidence checks daily in a separate read-only workflow, not in the offline gate | 26 November 2026 | accepted; built; scheduled daily and by hand | RFP-021 S.1; RFP-022 S.1 |
+| [0053](0053-generated-audit-scope.md) | Generate the audit inventory from an explicit production allowlist, tracked files and lockfiles | 26 November 2026 | accepted; built and checked in CI; no independent audit claimed | RFP-021 S.8, R.6; RFP-022 Sec.1 |
