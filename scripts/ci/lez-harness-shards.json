@@ -71,6 +71,7 @@
         "security_lc",
         "security_privacy",
         "validity_after_rotations",
+        "vault_claim_hops",
         "vault_consumer",
         "wallet_padding"
       ]

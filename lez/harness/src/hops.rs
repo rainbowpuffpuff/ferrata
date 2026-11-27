@@ -28,8 +28,28 @@ pub const WINDOW: u64 = 8191;
 pub const SEPOLIA_HOPS: &str = "sepolia-hops-2026-11-18";
 /// The mainnet chain's directory under `crates/ferrata-spectests/fixtures`.
 pub const MAINNET_HOPS: &str = "mainnet-hops-2026-11-18";
+/// Chains of 3, 4 and 5 hops from the vault fixture's record (block 12,112,773) to the block of
+/// its deposit 0 (12,111,477), fetched on 27 November 2026 by `lez/scripts/fetch-hop-chain.py`
+/// (every request in its SOURCE.md): the private claim's hops inside the user's proof (RFP-021
+/// P.4, `prove_vault_claim --hops K`). Short hops cost what full-window hops cost: a hop's proofs
+/// are the history contract's account and one of its 8,191 slots, whatever the distance.
+pub const SEPOLIA_CLAIM_HOPS: &str = "sepolia-hops-2026-11-27";
 const SEPOLIA_SUMS: &str = include_str!("../../../crates/ferrata-spectests/fixtures/sepolia-hops-2026-11-18/SHA256SUMS");
 const MAINNET_SUMS: &str = include_str!("../../../crates/ferrata-spectests/fixtures/mainnet-hops-2026-11-18/SHA256SUMS");
+const SEPOLIA_CLAIM_SUMS: &str =
+    include_str!("../../../crates/ferrata-spectests/fixtures/sepolia-hops-2026-11-27/SHA256SUMS");
+
+/// The most hops a private claim of the vault fixture's deposit 0 is built with here
+/// ([`claim_hops`]): the user-side limit RFP-021 P.4 states (`docs/performance.md`).
+pub const MAX_USER_HOPS: usize = 5;
+
+/// `FERRATA_HOPS_FIXTURES_DIR` if set (a directory holding the hop fixtures by name, to run a built
+/// binary elsewhere), else this checkout's `crates/ferrata-spectests/fixtures`.
+fn fixtures_dir() -> PathBuf {
+    std::env::var_os("FERRATA_HOPS_FIXTURES_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../crates/ferrata-spectests/fixtures"))
+}
 
 /// A hop-chain fixture.
 pub struct HopFixture {
@@ -43,7 +63,7 @@ pub struct HopFixture {
 
 impl HopFixture {
     fn load(name: &str, sums: &'static str) -> Self {
-        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../crates/ferrata-spectests/fixtures").join(name);
+        let dir = fixtures_dir().join(name);
         let m: Value = serde_json::from_slice(&pinned(dir.clone(), sums, "fixture.json")).unwrap();
         let record = m["record"].as_u64().unwrap();
         assert_eq!(m["window"].as_u64(), Some(WINDOW));
@@ -56,6 +76,11 @@ impl HopFixture {
 
     pub fn mainnet() -> Self {
         Self::load(MAINNET_HOPS, MAINNET_SUMS)
+    }
+
+    /// [`SEPOLIA_CLAIM_HOPS`].
+    pub fn sepolia_claim() -> Self {
+        Self::load(SEPOLIA_CLAIM_HOPS, SEPOLIA_CLAIM_SUMS)
     }
 
     /// A file of the fixture, checked against its SHA-256 sum compiled into the harness.
@@ -155,4 +180,21 @@ impl HopFixture {
     pub fn block_hash(&self, n: u64) -> [u8; 32] {
         hexb(self.m["headers"][n.to_string()].as_str().unwrap()).try_into().unwrap()
     }
+}
+
+/// The hops, newest first, of a chain of `k` hops (1 to [`MAX_USER_HOPS`]) from the record of block
+/// `record` to block `to`, both the vault fixture's (`vault::RealVault`): `k = 1` is `one` (the vault
+/// fixture's own hop), `k = 2` the 18 November fixture's first chain, `k = 3, 4, 5` the chains of
+/// [`SEPOLIA_CLAIM_HOPS`]. Each chain is checked to start at `record` and end at `to`.
+pub fn claim_hops(k: usize, record: u64, to: u64, one: Hop) -> Vec<Hop> {
+    let (fixture, chain) = match k {
+        1 => return vec![one],
+        2 => (HopFixture::sepolia(), 0),
+        3..=MAX_USER_HOPS => (HopFixture::sepolia_claim(), k - 3),
+        _ => panic!("hops inside the user's proof: 1 to {MAX_USER_HOPS}, not {k}"),
+    };
+    assert_eq!(fixture.record, record, "the chain starts at the record's block");
+    let blocks = fixture.chain(chain);
+    assert_eq!((blocks.len(), blocks.last().copied()), (k, Some(to)), "a chain of {k} hops to block {to}");
+    fixture.hops(&blocks)
 }
