@@ -272,12 +272,55 @@ def main():
         n = mob.locator("#req-table tbody tr:visible").count()
         check(n == 5, f"on a phone ?status=waits shows {n} rows of the table, not 5")
 
+        # A reviewer's four links, at the top of the hero at every width: in order, each one click to its target (the
+        # requirements with their counts, docs/VERIFY.md on GitHub, the testers' page, the run records); without
+        # JavaScript too
+        paths = (("requirements", "#requirements"), ("verify", "/docs/VERIFY.md"), ("testers", "testers/"), ("runs", "#runs"))
+        for width, js in [(w, True) for w in WIDTHS] + [(390, False), (1450, False)]:
+            rp = page(width=width, height=900, js=js)
+            # The pinned docs/VERIFY.md on GitHub, answered here so the click is followed offline
+            rp.route("https://github.com/rainbowpuffpuff/ferrata/blob/**",
+                     lambda r: r.fulfill(status=200, content_type="text/html", body="<title>docs/VERIFY.md</title>"))
+            rp.goto(base, wait_until="load")
+            links = rp.locator(".hero .paths a.path")
+            keys = [links.nth(i).get_attribute("data-path") for i in range(links.count())]
+            check(keys == [k for k, _ in paths], f"{width} px js={js}: the hero's reviewer links are {keys}")
+            top = rp.locator(".hero .paths").bounding_box()
+            sums = rp.locator(".hero .sums").bounding_box()
+            check(top and sums and top["y"] < sums["y"], f"{width} px js={js}: the reviewer links are not above the counts")
+            for i, (key, want) in enumerate(paths):
+                link = links.nth(i)
+                href = link.get_attribute("href") or ""
+                check(link.is_visible() and (href.endswith(want) if want.startswith("/") else href == want),
+                      f"{width} px js={js}: reviewer link {key} is {href!r}, not {want!r}")
+                if want.startswith("#"):
+                    link.click()
+                    try:  # the page scrolls smoothly (site.css): wait until the section's top is on the screen
+                        rp.wait_for_function("(s) => { const t = document.querySelector(s).getBoundingClientRect().top; "
+                                             "return t >= -2 && t < innerHeight; }", arg=want, timeout=4000)
+                    except Exception:  # noqa: BLE001  the check below names what was seen
+                        pass
+                    box = rp.locator(want).bounding_box()
+                    check(rp.url.endswith(want) and box and -2 <= box["y"] < 900,
+                          f"{width} px js={js}: reviewer link {key} does not bring {want} into view")
+                    rp.goto(base, wait_until="load")
+                elif key == "verify":
+                    link.click()
+                    rp.wait_for_load_state("load")
+                    check(rp.url == href and rp.title() == "docs/VERIFY.md",
+                          f"{width} px js={js}: the reviewer link to docs/VERIFY.md leads to {rp.url}")
+                    rp.goto(base, wait_until="load")
+            rp.locator(".hero .paths a[data-path=testers]").click()
+            rp.wait_for_load_state("load")
+            check(rp.url == base + "testers/", f"{width} px js={js}: the reviewer link to the testers' page leads to {rp.url}")
+            rp.context.close()
+
         # The testers' page: its links from the build page, its steps, no script; the layout at every width
         report = "https://github.com/rainbowpuffpuff/ferrata/issues/new?template=tester-report.yml"
         for width, scheme in [(w, s) for w in WIDTHS for s in ("light", "dark")]:
             tp = page(width=width, height=900, scheme=scheme)
             tp.goto(base, wait_until="load")
-            for sel, where in ((".top .top-cta", "header"), (".hero .testers-cta a", "hero")):
+            for sel, where in ((".top .top-cta", "header"), (".hero .paths a[data-path=testers]", "hero")):
                 link = tp.locator(sel)
                 check(link.count() == 1 and link.is_visible() and link.get_attribute("href") == "testers/",
                       f"{width} px {scheme}: the build page's {where} shows no link to testers/")
@@ -294,7 +337,9 @@ def main():
         tp.goto(base + "testers/", wait_until="load")
         check(tp.locator("script").count() == 0, "testers/ loads a script")
         check(tp.locator("ol.t-steps > li").count() == 7, f"testers/: {tp.locator('ol.t-steps > li').count()} steps, not 7")
-        check(tp.locator("#step-bridge ol.t-sub > li").count() == 4, "testers/: the bridge has not four steps")
+        check(tp.locator("#step-bridge ol.t-sub > li").count() == 5, "testers/: the bridge has not five steps")
+        check(tp.locator("#step-bridge #step-private a[href*='/docs/VERIFY.md#5-']").count() == 1,
+              "testers/: the private claim does not link docs/VERIFY.md's section 5")
         check(tp.locator("#report a.btn").get_attribute("href") == report, "testers/: the report link is not the tester-report form")
         check(tp.locator("#safety").is_visible() and tp.locator(".t-alert").is_visible(), "testers/: the safety notes do not show")
         for where in ("#agents", "#report"):

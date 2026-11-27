@@ -556,6 +556,23 @@ def load_security(site):
     return {"path": path, "title": title, "quote": quote, "paras": paras[:2], "correction": corr[:2]}
 
 
+VERIFY_DOC = "docs/VERIFY.md"
+VERIFY_COUNTS = {"quick": r"the (\d+) quick offline checks", "online": r"the (\d+) online checks"}
+
+
+def load_verify(site):
+    """The check counts docs/VERIFY.md states (scripts/test_verify.py holds them to the checks' registry), for the
+    hero's second link: {"quick": n, "online": n}."""
+    text = site.repo.text(VERIFY_DOC)
+    out = {}
+    for key, pattern in VERIFY_COUNTS.items():
+        found = {int(n) for n in re.findall(pattern, text)}
+        if len(found) != 1:
+            raise SystemExit(f"build.py: {VERIFY_DOC} states {sorted(found) or 'no'} counts for {pattern!r}; expected one")
+        out[key] = found.pop()
+    return out
+
+
 def load_not_built(site):
     text = site.repo.text("README.md")
     sec = text.split("## Specified but not built", 1)[1].split("\n## ", 1)[0].strip()
@@ -762,6 +779,7 @@ def render_index(site, model):
     parts.append('<section class="hero wrap" aria-labelledby="h-top">')
     parts.append(f'<p class="eyebrow">{h(c["site"]["bid"])}</p>')
     parts.append(f'<h1 id="h-top">Ferrata <span class="sub">{h(c["site"]["tagline"])}</span></h1>')
+    parts.append(render_paths(site, model, hard))
     parts.append('<ul class="chips" aria-label="Status at a glance">')
     parts.append(f'<li><a class="chip" id="chip-proposal" href="{h(p["url"])}"><span class="dot dot-open" aria-hidden="true"></span>'
                  f'Proposal <b data-live="issue-state">{h(p["state"].lower())}</b> · logos-co/rfp #257</a></li>')
@@ -772,8 +790,6 @@ def render_index(site, model):
                  'CI on main <b data-live="ci-chip">see below</b></a></li>')
     parts.append('<li><a class="chip chip-warn" href="#security"><span class="dot dot-warn" aria-hidden="true"></span>Not audited</a></li>')
     parts.append("</ul>")
-    parts.append(f'<p class="testers-cta"><a href="{TESTERS_DIR}/">Testers: start here</a> <span>What to try on the test '
-                 'network, in order, what each step should show, and how to report what you find.</span></p>')
 
     # One card per RFP: its name, the count shown, the bar of its four statuses and their counts (rows aligned
     # across the two cards)
@@ -869,7 +885,9 @@ def render_index(site, model):
 
     # Try it
     parts.append('<section class="wrap band" id="try" aria-labelledby="h-try"><h2 id="h-try">Try it</h2>'
-                 '<p class="lede">Commands as the guides give them. Building from source needs Rust and, for the LEZ side, '
+                 f'<p class="lede">In a browser, on our test network: <a href="{TESTERS_DIR}/">the testers’ page</a> (the faucet, '
+                 'the wallet, a deposit on Sepolia, a private claim, step by step). From a terminal: the commands below, as the '
+                 'guides give them. Building from source needs Rust and, for the LEZ side, '
                  'RISC Zero’s toolchain (<a href="' + h(site.src("docs/guides/quickstart.md")) + '">quickstart</a>).</p><div class="try-grid">')
     for tr in c.get("try", []):
         lines = "\n".join(tr["lines"])
@@ -925,6 +943,39 @@ def render_index(site, model):
     return page(site, title, "\n".join(parts), desc,
                 f'<script type="application/json" id="site-config">{cfg_json}</script>\n'
                 '<noscript><link rel="stylesheet" href="assets/nojs.css"></noscript>\n')
+
+
+REVIEWER_PATHS = ("requirements", "verify", "testers", "runs")   # the hero's four links, in order (test_site.py reads them)
+
+
+def render_paths(site, model, hard):
+    """The hero's four links for a reviewer, one click each: the requirements with their counts (from
+    docs/requirements-status.md's rows), the ten-minute check of docs/VERIFY.md (its own counts), the test network's
+    steps (the testers' page), the run records (the page's runs)."""
+    v = model["verify"]
+    cnt = {rfp: count_rows(hard[rfp]) for rfp in RFPS}
+    a, b = RFPS
+    items = {
+        "requirements": ("#requirements", "The status, with counts",
+                         f'{a}: <b>{cnt[a]["shown"]}</b> of {len(hard[a])} hard requirements shown; {b}: <b>{cnt[b]["shown"]}</b> '
+                         f'of {len(hard[b])}. Each requirement with its reason, tests and evidence, under a strict rule.'),
+        "verify": (site.src(VERIFY_DOC), "Verify it in ten minutes",
+                   f'<code>docs/VERIFY.md</code>: clone, then <code>scripts/verify.py --all</code> runs '
+                   f'<b>{v["quick"]}</b> offline checks in minutes (Python; a few also need Node or Foundry); '
+                   f'<code>--online</code> adds <b>{v["online"]}</b> read-only ones.'),
+        "testers": (f"{TESTERS_DIR}/", "Try it on our test network",
+                    "The faucet, the wallet, a deposit on Sepolia and its claim: every step, and what it should show; a "
+                    "private claim from the command line too."),
+        "runs": ("#runs", "The run records",
+                 "What ran where, its transactions, whether its proofs were real, and the command that re-checks it."),
+    }
+    out = ['<nav class="paths" aria-labelledby="h-paths"><h2 id="h-paths">For a reviewer: four links</h2><ol>']
+    for key in REVIEWER_PATHS:
+        href, title, desc = items[key]
+        out.append(f'<li><a class="path" data-path="{key}" href="{h(href)}"><b class="path-t">{h(title)}</b>'
+                   f'<span class="path-d">{desc}</span></a></li>')
+    out.append("</ol></nav>")
+    return "".join(out)
 
 
 def render_overview(site, model):
@@ -1514,6 +1565,7 @@ def build():
     rb = hb.split("## Reviews by agents", 1)[1].strip().split("\n\n")[0]
     review_says = re.sub(r"\s+", " ", rb)
     model = {
+        "verify": load_verify(site),
         "risc0_html": risc0_html, "r12_html": r12_html, "security_says": security_says, "review_says": review_says,
         "rows": rows, "counts": counts_doc, "rfp_words": rfp_words, "stamp": stamp(),
         "proposal": load_proposal(site), "security": load_security(site), "not_built": load_not_built(site),

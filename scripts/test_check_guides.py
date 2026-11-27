@@ -1,6 +1,7 @@
 """Tests of scripts/check-guides.py's checks 2 (the mini-app's privacy table), 4 (no guide, and no index pointing at
-the guides, still calls a guide a first draft), 5 (keyless retirement as the vault counts it) and 6 (the counts a
-terminal user relies on): `python3 -I scripts/test_check_guides.py`.
+the guides, still calls a guide a first draft), 5 (keyless retirement as the vault counts it), 6 (the counts a
+terminal user relies on) and 7 (README.md's four links for reviewers, their targets and numbers):
+`python3 -I scripts/test_check_guides.py`.
 
 Standard library only; nothing is written to disk. The texts are built here; the last test of each class reads the
 repository.
@@ -285,6 +286,70 @@ class TestCounts(unittest.TestCase):
         with open(os.path.join(self.ROOT, cg.UI_RESULTS), encoding="utf-8") as f:
             results = f.read()
         self.assertEqual(cg.ui_count_findings(ui, results), [])
+
+
+class ReviewerLinks(unittest.TestCase):
+    """Check 7: README.md's four links for reviewers, against the documents that hold their numbers and targets."""
+
+    ROOT = os.path.dirname(HERE)
+    NET = "https://1-2-3-4.sslip.io"
+    STATUS = ("| RFP | shown | in part | not yet | waits on Logos | total |\n|---|---:|---:|---:|---:|---:|\n"
+              "| RFP-021 | 49 | 6 | 1 | 3 | **59** |\n| RFP-022 | 47 | 18 | 1 | 2 | **68** |\n")
+    VERIFY = ("python3 -I scripts/verify.py --all   # the 119 quick offline checks: about 6 minutes\n"
+              "python3 -I scripts/verify.py --all --online   # the 22 online checks: about 20 minutes\n")
+    README = ("# X\n\n## For reviewers: four links\n\n"
+              "1. **The status, with counts:** [docs/requirements-status.md](docs/requirements-status.md). Of the 59 hard\n"
+              "   requirements of RFP-021 and the 68 of RFP-022, **49 and 47 are shown** under our strict rule; 6 and 18 in part,\n"
+              "   1 and 1 not yet, 3 and 2 wait on Logos (27 November 2026).\n"
+              "2. **Verify it in ten minutes:** [docs/VERIFY.md](docs/VERIFY.md). Clone, then `verify.py --all`\n"
+              "   runs the 119 quick offline checks; then `--online` runs the 22 online checks, read-only.\n"
+              "3. **Try it on our test network:** [the testers' page](https://1-2-3-4.sslip.io/testers/): the faucet.\n"
+              "4. **The run records:** [docs/EVIDENCE.md](docs/EVIDENCE.md): every run.\n\n## What it is\n")
+
+    def run_on(self, readme=None, status=None, verify=None, net=None):
+        return cg.reviewer_findings(self.README if readme is None else readme, status or self.STATUS,
+                                    verify or self.VERIFY, net or self.NET)
+
+    def test_the_example_passes(self):
+        self.assertEqual(self.run_on(), [])
+
+    def test_a_count_the_status_document_changed_is_caught(self):
+        out = self.run_on(status=self.STATUS.replace("| 49 | 6 |", "| 50 | 5 |"))
+        self.assertEqual(len(out), 1, out)
+        self.assertIn("docs/requirements-status.md (59, 68, 50, 47, 5, 18", out[0])
+
+    def test_a_count_changed_in_the_readme_is_caught(self):
+        self.assertEqual(len(self.run_on(readme=self.README.replace("3 and 2 wait", "3 and 3 wait"))), 1)
+
+    def test_counts_reworded_away_are_caught(self):
+        out = self.run_on(readme=self.README.replace("**49 and 47 are shown**", "49 and 47 are shown"))
+        self.assertIn("no longer states the counts", out[0])
+
+    def test_a_check_count_is_held_to_verify_md(self):
+        out = self.run_on(verify=self.VERIFY.replace("the 119 quick", "the 120 quick"))
+        self.assertEqual(out, ["README.md: the reviewer block says ['119'] quick offline checks, docs/VERIFY.md ['120']"])
+        out = self.run_on(verify=self.VERIFY.replace("the 22 online", "the 23 online"))
+        self.assertEqual(out, ["README.md: the reviewer block says ['22'] online checks, docs/VERIFY.md ['23']"])
+
+    def test_the_testers_page_on_another_host_is_caught(self):
+        self.assertEqual(len(self.run_on(net="https://5-6-7-8.sslip.io")), 1)
+
+    def test_links_out_of_order_are_caught(self):
+        readme = self.README.replace("1. **The status", "0. **The status")
+        self.assertIn("the reviewer links are", self.run_on(readme=readme)[0])
+
+    def test_a_missing_section_is_caught(self):
+        self.assertEqual(self.run_on(readme="# X\n\n## Start here\n"), ["README.md: no `## For reviewers: four links` section"])
+
+    def test_the_repository_agrees(self):
+        import json
+        texts = {}
+        for p in ("README.md", cg.STATUS_DOC, cg.VERIFY_DOC, cg.NETWORK_DOC):
+            with open(os.path.join(self.ROOT, p), encoding="utf-8") as f:
+                texts[p] = f.read()
+        out = cg.reviewer_findings(texts["README.md"], texts[cg.STATUS_DOC], texts[cg.VERIFY_DOC],
+                                   json.loads(texts[cg.NETWORK_DOC])["network"])
+        self.assertEqual(out, [])
 
 
 if __name__ == "__main__":

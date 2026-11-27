@@ -4,12 +4,12 @@
 // copy only when offline). It never sees the wallet's keys and never touches the network calls: the RPC and the faucet
 // are POSTs and pass straight through. A new build waits until the page asks for it (the "Reload" banner).
 // BEGIN FILES (written by test/pwa-files.mjs; do not edit by hand)
-const BUILD = '1784c8bf927c372d';
+const BUILD = '9d34c7678beb31f7';
 const FILES = {
   'app.js': '9eec8abbe2d76731a005ae72c06bc694b4ba38d6cf4839af06d07414e6b05484',
   'applock.js': 'a59bb7c8aa6978c1f9581599dc8c05f7df4598bc69ec62d9a66d406dce47eae4',
   'attest.js': '5fd1ee5d0f85bbf101ea0e4df618280e67d013ec609e50e3fdc92d966941b007',
-  'bridge.js': 'a467a4f00803852067ede86cbd428d9437f6efa9ab90fc479707053861300312',
+  'bridge.js': '8104b9f7ee2eccd101f9453a1fc5dae9501d6f5a09ce87d5a73a3e8de51fe67c',
   'claim.js': '32c3a495de7bfcef2deb60fb835ee6432b9bd6e7c81f52d5f4cb5d270609cb9e',
   'eth.js': 'd3b8f296199680b6562c6ccb1df6109658802f8fbfe0e34e33716e7275f67cb2',
   'history.js': '2a469a3b8b3db2e701e77c035c8e99577e23cf166f3a8fd7e726a0defb4cd9f4',

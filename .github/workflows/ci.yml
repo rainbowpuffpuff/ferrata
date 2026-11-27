@@ -372,6 +372,8 @@ jobs:
         run: node --test deploy/testnet/web/wallet/test/gasdrop.test.mjs
       - name: The mini-app's leak indicator names who pays a claim's LEZ fee (no relayer in the mini-app yet; RFP-022 U.5, Priv.7)
         run: node modules/ferrata_bridge_ui/tests/privacy-test.mjs
+      - name: The web wallet's bridge tab in plain words (refusals by name, the cost before the signature)
+        run: node --test deploy/testnet/web/wallet/test/ux.test.mjs
       - name: The IDLs are what idl/tools/msg_idl.py writes
         run: python3 -I idl/tools/msg_idl.py --check
       - name: Free disk space
@@ -672,6 +674,10 @@ jobs:
       # nullifier in its log (deploy/testnet/host/bin/ferrata-gateway, standard library only).
       - name: The gateway's gas-drop routes (deploy/testnet/tests/test_gateway_gasdrop.py)
         run: python3 -I deploy/testnet/tests/test_gateway_gasdrop.py
+      - name: A site deploy's plan and its all-or-nothing install (deploy/testnet/tests/test_site_delta.py)
+        run: python3 -I deploy/testnet/tests/test_site_delta.py
+      - name: The local server's host layout serves nothing outside its bundle (deploy/testnet/web/wallet/test/test_serve_site.py)
+        run: python3 -I deploy/testnet/web/wallet/test/test_serve_site.py
       # RFP-022 F.7 on the test network (deploy/testnet/MULTIKEY.md): the zone's configurations for 1 + N sequencers on one
       # host, and the checkpoint builder taking t(n) attestations of one tip from the host's attestors (one key: as before).
       - name: The test network's further sequencer keys and t-of-n checkpoints (deploy/testnet/tests/test_zone_keys.py, test_checkpoint_attestors.py)

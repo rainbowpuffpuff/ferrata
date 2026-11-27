@@ -3,6 +3,11 @@
 stand-in faucet at /faucet, all on one origin (as the public deployment does: /wallet, /rpc, /faucet).
 
     python3 -I serve.py --port 18650 --rpc http://127.0.0.1:3040 [--faucet-wallet BIN --faucet-from ACCOUNT_ID]
+                        [--site BUILD_DIR]
+
+With --site, the host's layout: the build page's bundle (site/build.py's output: /, /testers/, /evidence.html, assets)
+at the root, the wallet under /wallet/ (as Caddy serves it), /rpc and /faucet beside them; the bundle's pages carry
+their own Content-Security-Policy in a meta element, the wallet's files keep the header below.
 
 The faucet stand-in sends with LEZ's own wallet CLI (BIN, its home and password from the environment:
 LEE_WALLET_HOME_DIR, LEE_WALLET_PASSWORD) from a funded account of a local network. It checks that the public key the
@@ -44,6 +49,7 @@ for name in served_files() + ["config.json", "sw.js"]:
     SERVED["/" + name] = name
 TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
          ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml"}
+SITE_TYPES = dict(TYPES, **{".txt": "text/plain; charset=utf-8", ".webp": "image/webp", ".jpg": "image/jpeg"})
 CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; "
        "manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
 B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
@@ -85,6 +91,17 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split("?", 1)[0]
+        site = self.server.args.site
+        if site:
+            if path == "/wallet":
+                self.send_response(308)
+                self.send_header("Location", "/wallet/")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            if not path.startswith("/wallet/"):
+                return self.site_file(site, path)
+            path = path[len("/wallet"):]
         name = SERVED.get(path)
         if not name:
             return self.send(404, b'{"error":"not found"}')
@@ -94,6 +111,26 @@ class Handler(BaseHTTPRequestHandler):
             with open(self.server.args.config, "rb") as f:
                 body = f.read()
         self.send(200, body, TYPES[os.path.splitext(name)[1]])
+
+    def site_file(self, site, path):
+        """A file of the build page's bundle, by its path under the bundle (a directory's index.html), never outside it."""
+        rel = path.lstrip("/")
+        if rel == "" or rel.endswith("/"):
+            rel += "index.html"
+        full = os.path.realpath(os.path.join(site, rel))
+        root = os.path.realpath(site)
+        ext = os.path.splitext(full)[1]
+        if not full.startswith(root + os.sep) or not os.path.isfile(full) or ext not in SITE_TYPES:
+            return self.send(404, b'{"error":"not found"}')
+        with open(full, "rb") as f:
+            body = f.read()
+        self.send_response(200)
+        self.send_header("Content-Type", SITE_TYPES[ext])
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length") or 0)
@@ -163,6 +200,7 @@ def main():
     ap.add_argument("--faucet-interval", type=int, default=20)
     ap.add_argument("--faucet-log", help="write the faucet's sends here (JSON) at exit")
     ap.add_argument("--rpc-delay-ms", type=int, default=0, help="delay each /rpc answer (a remote network's latency)")
+    ap.add_argument("--site", help="the build page's bundle: serve the host's layout (the bundle at /, the wallet at /wallet/)")
     ap.add_argument("--verbose", action="store_true")
     ap.add_argument("--list", action="store_true", help="print the served files and exit")
     args = ap.parse_args()

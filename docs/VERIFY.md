@@ -1,9 +1,10 @@
 # Verify Ferrata from a terminal
 
 A reviewer's path from `git clone` to every check this repository can make of its own evidence, without trusting
-the prose: first the offline checks (minutes, Python only), then the online ones (read-only requests to public
-endpoints), then the named tests with their toolchains, then a round trip of your own between Sepolia and our public
-LEZ test network. Every check prints what it re-checked and against what, and exits non-zero on a failure.
+the prose: first the offline checks (minutes; Python, and Node or Foundry for a few), then the online ones
+(read-only requests to public endpoints), then the named tests with their toolchains, then a round trip of your own
+between Sepolia and our public LEZ test network. Every check prints what it re-checked and against what, and exits
+non-zero on a failure.
 
 Nothing here is audited. The test network is ours, not a network Logos runs (LEZ testnet 0.4 does not exist).
 

@@ -254,7 +254,7 @@ def steps():
         status = page.locator("[data-testid=bridge-status]").inner_text()
         check("MetaMask connected the page and switched to the vault's chain (added by the page's request)",
               ok and "Connected" in status and "chain 31337" in status, status + " " + page.locator("[data-testid=bridge-out]").inner_text())
-        depositor = re.search(r"Connected (0x[0-9a-f]{40})", status).group(1)
+        depositor = re.search(r"Connected (0x[0-9a-fA-F]{40})", status).group(1).lower()   # shown EIP-55 checksummed
         page.select_option("[data-testid=bridge-kind]", "public")
         page.click("[data-testid=bridge-review]")
         page.wait_for_function("() => /Commitment C/.test(document.querySelector('[data-testid=bridge-summary]').textContent) || /rror|No |chain/.test(document.querySelector('[data-testid=bridge-out]').textContent)", timeout=60000)

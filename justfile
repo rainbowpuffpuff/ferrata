@@ -132,6 +132,8 @@ links:
     python3 -I checkpoint/attestor/test_resources.py
     python3 -I scripts/test_audit_scope.py
     python3 -I deploy/testnet/tests/test_gateway_gasdrop.py
+    python3 -I deploy/testnet/tests/test_site_delta.py
+    python3 -I deploy/testnet/web/wallet/test/test_serve_site.py
     python3 -I deploy/testnet/tests/test_zone_keys.py && python3 -I deploy/testnet/tests/test_checkpoint_attestors.py
     python3 -I site/test_site.py --skip-freshness
     python3 -I scripts/ci/check-row-tests.py

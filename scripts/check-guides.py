@@ -28,6 +28,10 @@ Checks:
      no removed method left in it); the web wallet's README against the `test(` declarations of its Node test files,
      and against the arguments `test/fork_bridge.py` requires; the mini-app's README against the run its RESULTS.md
      records.
+  7. README.md's four links for reviewers: in order, to docs/requirements-status.md, docs/VERIFY.md, the testers'
+     page on the test network's address (scripts/reproduce/deployed-programs.json's `network`) and docs/EVIDENCE.md;
+     the counts the block states equal the status document's Counts table, and its check counts what docs/VERIFY.md
+     states (scripts/test_verify.py holds those to the checks' registry).
 """
 import json
 import re
@@ -419,6 +423,57 @@ def ui_count_findings(readme, results):
 
 # ---- generated blocks ----------------------------------------------------------------------------------------------
 
+# ---- 7. the README's links for reviewers -----------------------------------------------------------------------------
+
+STATUS_DOC = "docs/requirements-status.md"
+VERIFY_DOC = "docs/VERIFY.md"
+NETWORK_DOC = "scripts/reproduce/deployed-programs.json"
+REVIEWER_HEADING = "## For reviewers: four links"
+# The four links, in order: (bold title, target); "{network}" is the test network's address NETWORK_DOC names.
+REVIEWER_TARGETS = (("The status, with counts:", STATUS_DOC), ("Verify it in ten minutes:", VERIFY_DOC),
+                    ("Try it on our test network:", "{network}/testers/"), ("The run records:", "docs/EVIDENCE.md"))
+
+
+def status_counts(text):
+    """docs/requirements-status.md's Counts table: {rfp: (shown, in part, not yet, waits on Logos, total)}."""
+    return {m.group(1): tuple(int(g) for g in m.groups()[1:])
+            for m in re.finditer(r"^\| (RFP-02[12]) \| (\d+) \| (\d+) \| (\d+) \| (\d+) \| \*\*(\d+)\*\* \|$", text, re.M)}
+
+
+def reviewer_findings(readme, status, verify, network):
+    """README.md's block for reviewers: the four links in order and to their targets, the testers' page on the test
+    network's address; the counts it states equal the status document's Counts table; the check counts equal what
+    docs/VERIFY.md states (which scripts/test_verify.py holds to the checks' registry)."""
+    out = []
+    m = re.search(rf"^{re.escape(REVIEWER_HEADING)}\n(.*?)(?=^## )", readme, re.S | re.M)
+    if m is None:
+        return [f"README.md: no `{REVIEWER_HEADING}` section"]
+    block = m.group(1)
+    items = re.findall(r"^(\d)\. \*\*([^*]+)\*\* \[[^\]]+\]\(([^)\s]+)\)", block, re.M)
+    want = [(str(i + 1), t, u.format(network=network.rstrip("/"))) for i, (t, u) in enumerate(REVIEWER_TARGETS)]
+    if items != want:
+        out.append(f"README.md: the reviewer links are {items}, expected {want}")
+    counts = status_counts(status)
+    if sorted(counts) != ["RFP-021", "RFP-022"]:
+        return out + [f"{STATUS_DOC}: no Counts table for both RFPs"]
+    a, b = counts["RFP-021"], counts["RFP-022"]
+    flat = re.sub(r"\s+", " ", block)
+    said = re.search(r"Of the (\d+) hard requirements of RFP-021 and the (\d+) of RFP-022, \*\*(\d+) and (\d+) are shown\*\* "
+                     r"under our strict rule; (\d+) and (\d+) in part, (\d+) and (\d+) not yet, (\d+) and (\d+) wait on Logos", flat)
+    expect = (a[4], b[4], a[0], b[0], a[1], b[1], a[2], b[2], a[3], b[3])
+    if said is None:
+        out.append("README.md: the reviewer block no longer states the counts in the form this check reads")
+    elif tuple(int(g) for g in said.groups()) != expect:
+        out.append(f"README.md: the reviewer block says {tuple(int(g) for g in said.groups())} "
+                   f"(totals, shown, in part, not yet, waits), {STATUS_DOC} {expect}")
+    for what in ("quick offline", "online"):
+        doc = set(re.findall(rf"the (\d+) {what} checks", verify))
+        got = set(re.findall(rf"the (\d+) {what} checks", flat))
+        if len(doc) != 1 or got != doc:
+            out.append(f"README.md: the reviewer block says {sorted(got) or 'no'} {what} checks, {VERIFY_DOC} {sorted(doc)}")
+    return out
+
+
 def sync_block(path, tag, block, write):
     p = ROOT / path
     text = p.read_text()
@@ -479,6 +534,12 @@ def main():
                                         {str(t.relative_to(ROOT)): t.read_text() for t in tests}):
         finding(f)
     for f in ui_count_findings((ROOT / UI_README).read_text(), (ROOT / UI_RESULTS).read_text()):
+        finding(f)
+
+    # 7. the README's links for reviewers
+    network = json.loads((ROOT / NETWORK_DOC).read_text())["network"]
+    for f in reviewer_findings((ROOT / "README.md").read_text(), (ROOT / STATUS_DOC).read_text(),
+                               (ROOT / VERIFY_DOC).read_text(), network):
         finding(f)
 
     for f in FINDINGS:

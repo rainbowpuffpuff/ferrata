@@ -219,6 +219,11 @@ the claim's own `sendTransaction` through `/rpc` is in the access log with its a
   file's values first, the copy served after the last good run filling only what it lacks or leaves null, also after
   a run stopped half way), the module's rpc the site's own, files written whole (`/AGENTS.md` included), each AGENTS
   section once.
+- `python3 -I deploy/testnet/tests/test_site_delta.py`: `site-delta.py`, a site deploy smaller than `install-web.sh`
+  ([`SITE-DEPLOY-1127.md`](SITE-DEPLOY-1127.md)): its plan against a host's manifest (a host equal to the tree needs
+  nothing; an older file, a file not served yet and one the tree no longer has, each found, by part); its package's
+  `install.sh` run on a scratch web root: everything installed with the old files kept, nothing when one target
+  differs from the manifest, when a file the manifest says is absent is there, or when the package is damaged.
 - `python3 -I deploy/testnet/tests/test_install_web.py`: `install-web.sh` itself, its shell steps run on a scratch
   copy (its paths moved into a temporary tree, curl, caddy and systemctl stubbed): deposits closed by hand
   (`lezReady` false, a later `fromBlock`) stay closed at the next install, and after a run stopped after step 3 the next

@@ -12,7 +12,10 @@
    the extracted commit and its files; Etherscan links name transactions and addresses of the recorded runs; the test
    network's paths are the ones its server serves; the report form is a tracked issue form; any other external URL is
    one the repository's own documents give. No http:// link, no inline script or style, no event-handler attribute.
-   The build page links to the testers' page from its header and its hero; the testers' page loads no script.
+   The build page links to the testers' page from its header and its hero; the testers' page loads no script. The hero
+   opens with a reviewer's four links, in order: the requirements (#requirements, with the Counts table's shown and
+   total for each RFP), docs/VERIFY.md (pinned, with the quick offline and online check counts that document states),
+   the testers' page, the run records (#runs); a self-check changes a count, a target and a check count, which must fail.
    llms.txt is a title, a one-line summary and lists of links: AGENTS.md, the agents' page, the testers' page,
    /programs.json, the RPC and the repository, nothing else.
 3. Freshness. A build in memory equals the bundle on disk (deploy/testnet/web/build/).
@@ -129,6 +132,43 @@ def doc_counts():
     return counts
 
 
+def verify_counts():
+    """The check counts docs/VERIFY.md states (scripts/test_verify.py holds them to the checks' registry)."""
+    text = (ROOT / "docs" / "VERIFY.md").read_text(encoding="utf-8")
+    return {k: {int(n) for n in re.findall(p, text)} for k, p in (("quick", r"the (\d+) quick offline checks"),
+                                                                    ("online", r"the (\d+) online checks"))}
+
+
+REVIEWER_LINKS = (("requirements", r'href="#requirements"'),
+                  ("verify", r'href="https://github\.com/rainbowpuffpuff/ferrata/blob/[0-9a-f]{40}/docs/VERIFY\.md"'),
+                  ("testers", r'href="testers/"'), ("runs", r'href="#runs"'))
+
+
+def reviewer_links(hero, counts, vcounts):
+    """The hero opens with a reviewer's four links, in order, each one click to its target; the counts and check counts
+    they state are the documents' (read here, not from site/build.py). Returns the problems."""
+    out = []
+    m = re.search(r'<nav class="paths"[^>]*>(.*?)</nav>', hero, re.S)
+    if not m or hero.find('<nav class="paths"') > hero.find('class="sums"'):
+        return ["index.html: the hero does not open with the reviewer links (nav.paths before the counts)"]
+    links = re.findall(r'<a class="path" data-path="(\w+)" ([^>]*)>(.*?)</a>', m.group(1), re.S)
+    if [k for k, _, _ in links] != [k for k, _ in REVIEWER_LINKS]:
+        return [f"index.html: the reviewer links are {[k for k, _, _ in links]}, not {[k for k, _ in REVIEWER_LINKS]}"]
+    for (key, attrs, body), (_, want) in zip(links, REVIEWER_LINKS):
+        if not re.fullmatch(want, attrs.strip()):
+            out.append(f"index.html: reviewer link {key}: {attrs.strip()!r} is not {want!r}")
+    text = {k: re.sub(r"<[^>]+>", "", body) for k, _, body in links}
+    got = re.findall(r"(RFP-02[12]): (\d+) of (\d+)", text["requirements"].replace(" hard requirements shown", ""))
+    want = [(rfp, str(c["shown"]), str(c["total"])) for rfp, c in sorted(counts.items())]
+    if got != want:
+        out.append(f"index.html: the reviewer link to the status says {got}, docs/requirements-status.md {want}")
+    m2 = re.search(r"runs (\d+) offline checks .*? adds (\d+) read-only ones", text["verify"])
+    if not m2 or {int(m2.group(1))} != vcounts["quick"] or {int(m2.group(2))} != vcounts["online"]:
+        out.append(f"index.html: the reviewer link to docs/VERIFY.md says {m2 and m2.groups()}, the document "
+                   f"{sorted(vcounts['quick'])} offline and {sorted(vcounts['online'])} online checks")
+    return out
+
+
 def traceability_ids():
     ids, rfp = [], None
     for line in (ROOT / "docs" / "traceability.md").read_text(encoding="utf-8").splitlines():
@@ -201,6 +241,15 @@ def main(argv):
         got = build.source_notes(site, fake)
         if not got or not got[0][2] or why not in got[0][2]:
             problems.append(f"self-check: the source note {fake!r} gave {got!r}, expected a refusal naming {why!r}")
+
+    # A reviewer's four links, first in the hero: their targets, and their numbers against the documents that state them
+    counts, vcounts = doc_counts(), verify_counts()
+    problems += reviewer_links(hero, counts, vcounts)
+    c21, quick = counts.get("RFP-021", {}), min(vcounts["quick"] or {0})
+    for old, new, why in ((f'<b>{c21.get("shown")}</b> of {c21.get("total")}', f'<b>{c21.get("shown", 0) - 1}</b> of {c21.get("total")}', "a count"),
+                          ('href="#runs"', 'href="#run"', "a target"), (f"<b>{quick}</b> offline", f"<b>{quick + 1}</b> offline", "a check count")):
+        if old not in hero or not reviewer_links(hero.replace(old, new, 1), counts, vcounts):
+            problems.append(f"self-check: the reviewer links do not fail with {why} changed ({old!r} -> {new!r})")
 
     # /llms.txt: the llms.txt convention, its links the six it is for
     llms = files["llms.txt"].decode("utf-8").splitlines()

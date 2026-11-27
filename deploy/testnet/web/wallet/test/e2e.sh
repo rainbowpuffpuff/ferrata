@@ -1,4 +1,5 @@
-# Sourced by box.sh (`box.sh e2e [NAME]`): the wallet end to end on a local LEZ v0.4.0-rc3 sequencer.
+# Sourced by box.sh (`box.sh e2e [NAME]`, and `box.sh testers [NAME]` with WALLET_TEST_SCRIPT and WALLET_SITE set): the
+# wallet end to end on a local LEZ v0.4.0-rc3 sequencer.
 #  1. LEZ's standalone sequencer (2 s blocks), its RPC on loopback;
 #  2. LEZ's wallet CLI holding LEZ's published local test account A (lez/testnet_initial_state: a key anyone can read,
 #     funded at genesis on a local network only): the faucet stand-in;
@@ -57,6 +58,7 @@ PY
 fi
 
 python3 -I "$HERE/serve.py" --port "$PORT" --config "$CONFIG" --rpc-delay-ms "${WALLET_RPC_DELAY_MS:-250}" --rpc "http://127.0.0.1:$RPC_PORT" --faucet-wallet "$BIN/wallet" \
+  ${WALLET_SITE:+--site "$WALLET_SITE"} \
   --faucet-from "$ID_A" --faucet-amount 5000000000 --faucet-interval 5 --faucet-log "$RUN/logs/faucet.json" \
   > "$RUN/logs/serve.log" 2>&1 &
 SERVE_PID=$!
@@ -66,7 +68,7 @@ set +e
 WALLET_ANVIL="$ANVIL_URL" WALLET_VAULT="$VAULT" WALLET_DEPOSITOR="$DEPOSITOR" \
 WALLET_URL="http://127.0.0.1:$PORT/" WALLET_RPC="http://127.0.0.1:$RPC_PORT" WALLET_KEY_B="$KEY_B" \
   WALLET_FAUCET_ID="$ID_A" WALLET_OUT="$OUT" WALLET_SHOTS="$SHOTS" WALLET_ROOT="$WALLET" \
-  python3 -I "$HERE/e2e_test.py" 2>&1 | tee "$RUN/logs/e2e.log"
+  python3 -I "$HERE/${WALLET_TEST_SCRIPT:-e2e_test.py}" 2>&1 | tee "$RUN/logs/e2e.log"
 rc=${PIPESTATUS[0]}
 set -e
 kill "$SERVE_PID" 2>/dev/null || true; sleep 0.5

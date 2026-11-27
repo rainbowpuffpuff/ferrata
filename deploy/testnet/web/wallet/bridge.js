@@ -83,14 +83,114 @@ export const fmtUnits = (v, decimals = 18, symbol = 'ETH') => {
   return `${w / u}${s ? '.' + s : ''} ${symbol}`;
 };
 
+// ------------------------------------------------------------------ refusals and costs in plain words
+const selOf = (sig) => '0x' + hex(keccak(utf8(sig)).subarray(0, 4));
+/** What each refusal a deposit can meet means to the depositor: the vault's own errors on the deposit path
+ *  (vault/src/FerrataVault.sol, `_checkDeposit`, `deposit`, `depositETH` and the daily caps) and the two of
+ *  OpenZeppelin's ERC-20 that a token deposit can raise. test/ux.test.mjs holds each to its declaration. */
+export const DEPOSIT_REFUSALS = {
+  'VaultRetired()': 'the vault is retired and takes no more deposits',
+  'DepositsAreFrozen()': 'deposits are frozen for now',
+  'TokenDepositsAreFrozen()': 'deposits of this asset are frozen for now',
+  'TokenNotRegistered()': 'the vault does not know this asset',
+  'DepositsDisabled()': 'deposits of this asset are switched off',
+  'InvalidDenominationIndex()': 'that amount is not one of the vault\'s denominations',
+  'ZeroCommitment()': 'the deposit\'s commitment C is zero',
+  'WrongDepositIndex()': 'your deposit index j has moved (another deposit from this address?): review again',
+  'WrongEthAmount()': 'the ETH sent is not the amount plus its fees exactly (the fees may have changed): review again',
+  'TransferAmountMismatch()': 'the token moved a different amount than the vault asked for',
+  'TreeFull()': 'the vault\'s deposit tree is full',
+  'TokenDepositCapExceeded()': 'this asset\'s daily deposit cap is reached: try again later, or a smaller amount',
+  'GlobalDepositCapExceeded()': 'the vault\'s daily deposit cap is reached: try again later',
+  'ERC20InsufficientBalance(address,uint256,uint256)': 'your token balance is less than the amount plus its fees',
+  'ERC20InsufficientAllowance(address,uint256,uint256)': 'the vault may not take that much of your token yet: it needs the approval first',
+};
+const REFUSAL_BY_SELECTOR = Object.fromEntries(Object.entries(DEPOSIT_REFUSALS)
+  .map(([sig, why]) => [selOf(sig), { name: sig.slice(0, sig.indexOf('(')), why }]));
+
+/** The revert data an EIP-1193 error carries wherever the wallet put it (MetaMask nests it under data.originalError),
+ *  or the custom error's selector its message names ("execution reverted: custom error 0x…"); null if none. */
+export function revertDataOf(e, depth = 0) {
+  if (!e || typeof e !== 'object' || depth > 4) return null;
+  if (typeof e.data === 'string' && /^0x[0-9a-fA-F]{8}/.test(e.data)) return e.data.toLowerCase();
+  for (const k of ['data', 'error', 'originalError', 'cause']) {
+    const r = revertDataOf(e[k], depth + 1);
+    if (r) return r;
+  }
+  const m = /revert.*?\b(0x[0-9a-fA-F]{8})\b/i.exec(String(e.message ?? ''));
+  return m ? m[1].toLowerCase() : null;
+}
+
+/** A browser wallet's (EIP-1193) error, or a contract's refusal, in plain words: what happened and what to do. The
+ *  refusing contract is the vault unless the error names another (`e.subject`: the token for an approval, the test
+ *  token for its mint). Anything it does not recognise keeps its own message. For the browser wallet's requests only:
+ *  LEZ's errors are shown as they are. */
+export function walletError(e) {
+  const who = (e && typeof e === 'object' && e.subject) || 'The vault';
+  const msg = String(e?.message ?? e ?? 'unknown error');
+  const code = e?.code;
+  if (code === 4001 || /user (rejected|denied)|rejected the request/i.test(msg)) return 'You declined it in your browser wallet, so it was not sent.';
+  if (code === -32002) return 'Your browser wallet already has a request waiting: open the wallet, finish or reject that request, then try again.';
+  if (code === 4100) return 'Your browser wallet has not allowed this page to use the account: connect again and allow it.';
+  if (code === 4900 || code === 4901) return 'Your browser wallet is not connected to the network: check it, then try again.';
+  if (/insufficient funds/i.test(msg)) {
+    return 'Your browser wallet\'s Sepolia ETH does not cover the amount, its fees and the gas, so it was not sent: get some Sepolia ETH first (the testers\' page, Limits, names public faucets).';
+  }
+  const data = revertDataOf(e);
+  const r = data && REFUSAL_BY_SELECTOR[data.slice(0, 10)];
+  if (r) return `${who} refuses it (${r.name}): ${r.why}. It was not sent.`;
+  if (/revert/i.test(msg)) return `${who} refuses it (${msg}). It was not sent.`;
+  return msg;
+}
+
+/** The review's gas line, priced now from the wallet's endpoint (never a remembered price), rounded up to the gwei;
+ *  and whether `balance` (wei) covers `value` plus the gas. */
+export function costOf({ gas, gasPrice, balance, value = 0n }) {
+  const g = BigInt(gas), p = BigInt(gasPrice), giga = 10n ** 9n;
+  const fee = ((g * p + giga - 1n) / giga) * giga;
+  const gwei = Number(p) / 1e9;
+  const at = gwei >= 0.01 ? gwei.toFixed(2) : gwei.toPrecision(2);
+  return { fee, need: BigInt(value) + fee, enough: BigInt(balance) >= BigInt(value) + fee,
+    text: `about ${fmtUnits(fee)} (${Number(g).toLocaleString('en-US')} gas at ${at} gwei, read now; your wallet shows the final figure)` };
+}
+
+/** An error tagged with the contract that refused (`walletError` reads `subject`): the error itself when it can take
+ *  the tag, otherwise a new Error carrying its message, code and data (a frozen or primitive rejection). */
+export function refusedBy(err, subject) {
+  if (err && typeof err === 'object' && Object.isExtensible(err)) return Object.assign(err, { subject });
+  const e = new Error(String(err?.message ?? err ?? 'unknown error'));
+  return Object.assign(e, { code: err?.code, data: err?.data, subject, cause: err });
+}
+
+/** One operation at a time over a group of controls (the browser wallet's requests and the deposit's plan are shared
+ *  by connect, mint, review and the deposit): while one runs, every control of the group is disabled and a second
+ *  start returns at once; after it, each control's own state is put back, whatever the operation did elsewhere. */
+export function lockGroup(controls) {
+  let held = false;
+  return (fn) => async (...args) => {
+    if (held) return undefined;
+    held = true;
+    const before = controls.map((x) => x.disabled);
+    for (const x of controls) x.disabled = true;
+    try { return await fn(...args); } finally {
+      controls.forEach((x, i) => { x.disabled = before[i]; });
+      held = false;
+    }
+  };
+}
+
 /**
  * The burn's Ethereum recipient and the words the review uses for where it came from: an address typed in the field
  * (mixed case must pass EIP-55; all one case has no checksum to check) or, when the field is empty, the browser
- * wallet's connected address. The zero address is refused: nobody could spend what is released to it.
+ * wallet's connected address. The zero address is refused: nobody could spend what is released to it. A name (ENS or
+ * any other) is refused with the reason: the page resolves no names, and the recipient is final once burned.
  */
 export function burnRecipient(typed, connected) {
   const t = String(typed ?? '').trim(), to = t || String(connected ?? '').trim();
   if (!to) throw new Error('Type the Ethereum recipient, or connect your browser wallet to use its address.');
+  if (!/^0x/i.test(to) && /^[^\s/]+\.[a-z]{2,}$/i.test(to)) {
+    throw new Error(`${to} looks like a name: this page resolves no names (ENS or other). Paste the recipient's 0x address; it is final once burned.`);
+  }
   const bytes = addrBytes(to); // refuses a malformed address and a mixed-case one whose EIP-55 checksum fails
   if (bytes.every((b) => b === 0)) throw new Error(`${ETH} cannot be the recipient: nobody can spend what is released to it.`);
   const how = !t ? 'from your browser wallet: its connected address, the field was empty'
@@ -169,6 +269,11 @@ export function mountBridge(root, c) {
   const kind = el('select', { 'data-testid': 'bridge-kind' },
     el('option', { value: 'public', text: 'this wallet\'s selected public account (claim is public)' }),
     el('option', { value: 'private', text: 'this wallet\'s private account /0 (claim is private, proven by the ferrata tool)' }));
+  // A private destination is claimed from a terminal, not in this page: say what that needs before anything is signed.
+  const kindNote = el('p', { class: 'fine', 'data-testid': 'bridge-kind-note', hidden: '' },
+    'A deposit to your private account is claimed with the ferrata tool, from this phrase, on an x86-64 Linux computer '
+    + '(16 threads and 16 GB for the proof); the claim waits a delay of 1 to 12 hours for privacy. ',
+    el('a', { href: '/testers/#step-private' }, 'The steps'), '.');
   const mint = el('button', { 'data-testid': 'bridge-mint', text: 'Get test tokens (mint to my Ethereum address)' });
   const review = el('button', { class: 'primary', 'data-testid': 'bridge-review', text: 'Review the deposit' });
   const go = el('button', { 'data-testid': 'bridge-go', text: 'Deposit with my browser wallet' }); go.disabled = true;
@@ -189,7 +294,7 @@ export function mountBridge(root, c) {
   const gasDrop = el('p', { class: 'privacy', 'data-testid': 'bridge-gas-drop', text: 'Fee payer: reading this network\'s gas-drop relayer…' });
   showGasDrop(gasDrop, c.cfg.rpc, location.href);
   root.append(status, el('div', { class: 'row' }, connect), el('label', {}, 'Asset', assetSel), el('div', { class: 'row' }, mint),
-    el('label', {}, 'Amount', denom), el('label', {}, 'Destination on LEZ', kind),
+    el('label', {}, 'Amount', denom), el('label', {}, 'Destination on LEZ', kind), kindNote,
     el('div', { class: 'row' }, review, go), out, sum,
     el('div', { class: 'privacy' }, el('b', { text: 'Public on Ethereum: ' }), 'your Ethereum address, the asset, the amount, the commitment C and the time. ',
       el('b', { text: 'Private: ' }), 'your LEZ destination (inside C, which only this wallet\'s phrase opens). A private claim on LEZ shows no link to this deposit; a public claim shows the destination account.'),
@@ -211,13 +316,25 @@ export function mountBridge(root, c) {
   syncMint();
 
   let P = null, depositor = null, vault = null, plan = null;
+  // Connect, mint, review, the deposit, "Find my deposits" and the burn's review share the browser wallet (and the
+  // deposit its plan): one of them at a time, the asset, amount and destination fixed meanwhile (a review started
+  // during a deposit would replace the plan it sends; two wallet requests at once are refused by the wallet).
+  const exclusive = lockGroup([connect, mint, review, assetSel, denom, kind, findBtn, burnBtn, burnAsset, burnDenom, burnTo]);
+  // The other buttons: one request at a time each, held from the click until the answer, released in finally.
+  const busy = (btn, fn) => async (...args) => {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    try { return await fn(...args); } finally { btn.disabled = false; }
+  };
   const provider = () => (typeof window !== 'undefined' ? window.ethereum : null);
   const totalOf = (i) => vault.denominations[i] + vault.fees[i].mint + vault.fees[i].relay;
   async function connectWallet() {
     P = provider();
     if (!P) throw new Error('No browser wallet (EIP-1193) in this page: install MetaMask or another, then reload.');
     const accts = await P.request({ method: 'eth_requestAccounts' });
+    const before = depositor;
     depositor = String(accts[0]).toLowerCase();
+    if (before && before !== depositor && plan) clearDeposit();   // a review made for another account is void
     let chain = Number(BigInt(await P.request({ method: 'eth_chainId' })));
     if (chain !== Number(B.evmChainId)) {
       // Ask the wallet to switch (EIP-3326), adding the network first if it does not know it (EIP-3085).
@@ -247,18 +364,18 @@ export function mountBridge(root, c) {
     denom.textContent = '';
     vault.denominations.forEach((d, i) => denom.append(el('option', { value: i, text: `${fmt(d)} (+ fees ${fmt(vault.fees[i].mint + vault.fees[i].relay)})` })));
     if (keep && Number(keep) < vault.denominations.length) denom.value = keep;
-    status.textContent = `Connected ${depositor} on chain ${chain}; your next deposit index j = ${vault.j}.`
+    status.textContent = `Connected ${toChecksumAddress(depositor)} on chain ${chain}; your next deposit index j = ${vault.j}.`
       + (isEth() ? '' : ` Your ${asset().symbol} balance: ${fmt(vault.balance)}.`);
   }
-  const fail = (e) => { out.textContent = e.message ?? String(e); out.className = 'msg bad'; };
+  const fail = (e) => { out.textContent = walletError(e); out.className = 'msg bad'; };
   const clearDeposit = () => { plan = null; go.disabled = true; sum.textContent = ''; };
   denom.onchange = clearDeposit;
-  kind.onchange = clearDeposit;
-  connect.onclick = async () => { out.textContent = ''; try { await connectWallet(); } catch (e) { fail(e); } };
-  assetSel.onchange = async () => {
+  kind.onchange = () => { clearDeposit(); kindNote.hidden = kind.value !== 'private'; };
+  connect.onclick = exclusive(async () => { out.textContent = ''; try { await connectWallet(); } catch (e) { fail(e); } });
+  assetSel.onchange = exclusive(async () => {
     syncMint(); sum.textContent = ''; go.disabled = true; plan = null; out.textContent = ''; denom.textContent = '';
     if (P) { try { await connectWallet(); } catch (e) { fail(e); } }
-  };
+  });
 
   async function sendAndWait(tx, what) {
     const hash = await P.request({ method: 'eth_sendTransaction', params: [tx] });
@@ -268,21 +385,21 @@ export function mountBridge(root, c) {
     return { hash, receipt };
   }
 
-  mint.onclick = async () => {
+  mint.onclick = exclusive(async () => {
     out.textContent = ''; out.className = 'msg';
     try {
       await connectWallet();
       const amount = totalOf(Number(denom.value || 0));
       out.textContent = `Waiting for your wallet's signature: mint ${fmt(amount)} to ${depositor}…`;
       const { hash, receipt } = await sendAndWait({ from: depositor, to: asset().address, value: '0x0', data: mintData(depositor, amount),
-        chainId: '0x' + Number(B.evmChainId).toString(16) }, 'Mint');
+        chainId: '0x' + Number(B.evmChainId).toString(16) }, 'Mint').catch((err) => { throw refusedBy(err, 'The test token'); });
       if (!receipt || receipt.status !== '0x1') throw new Error(`The mint ${hash} ${receipt ? 'failed' : 'is not mined yet'}.`);
       await connectWallet();
       out.textContent = `Minted ${fmt(amount)} (${hash}). Now review the deposit.`; out.className = 'msg ok';
     } catch (e) { fail(e); }
-  };
+  });
 
-  review.onclick = async () => {
+  review.onclick = exclusive(async () => {
     out.textContent = ''; out.className = 'msg'; sum.textContent = ''; go.disabled = true; plan = null;
     try {
       if (B.lezReady === false) throw new Error('Deposits are not open yet: the LEZ side of this bridge is still being set up.');
@@ -308,43 +425,63 @@ export function mountBridge(root, c) {
         record: { chainId: Number(B.evmChainId), vault: B.vault.toLowerCase(), token: A.address, symbol: A.symbol, decimals: A.decimals,
           depositor, j: vault.j.toString(), denomIndex: i, kind: kind.value,
           dest: c.lez.idToString(d), C: '0x' + hex(C), amount: vault.denominations[i].toString(), total: total.toString(), schedule: vault.schedule.toString() } };
+      // The cost, priced now, before anything is signed: the first transaction's gas and whether this address's
+      // Sepolia ETH covers it. For ETH, or a token already approved, that is the deposit itself, so an estimate that
+      // fails is the vault's refusal, said here and not after a signature. A token that needs an approval first: the
+      // approval is priced here (a refusal is the token's); the deposit, and the vault's checks, come after it.
+      const first = plan.approve ?? plan.tx;
+      const value = isEth() ? total : 0n;
+      const short = (need, what) => new Error(`Your Sepolia ETH, ${fmtUnits(balance)}, does not cover ${fmtUnits(need)} (${what}): `
+        + 'get some Sepolia ETH first (the testers\' page, Limits, names public faucets). Nothing was signed.');
+      // The balance first, so that one too small for the deposit itself is said the same way whatever the estimate does.
+      const balance = BigInt(await P.request({ method: 'eth_getBalance', params: [depositor, 'latest'] }));
+      if (balance < value) throw short(value, 'the deposit and its fees, before the gas');
+      const [gas, gasPrice] = await Promise.all([
+        P.request({ method: 'eth_estimateGas', params: [{ from: first.from, to: first.to, value: first.value, data: first.data }] }),
+        P.request({ method: 'eth_gasPrice' })]).catch((err) => { throw plan.approve ? refusedBy(err, 'The token') : err; });
+      const cost = costOf({ gas, gasPrice, balance, value });
+      if (!cost.enough) throw short(cost.need, isEth() ? 'the deposit, its fees and the gas' : 'the gas');
       const add = (x, y) => sum.append(el('dt', { text: x }), el('dd', { text: y }));
-      add('From', depositor); add('Vault', B.vault); add('Asset', isEth() ? 'ETH' : `${A.symbol} ${A.address}`); add('Amount', fmt(vault.denominations[i]));
+      add('From', toChecksumAddress(depositor)); add('Vault', toChecksumAddress(B.vault)); add('Asset', isEth() ? 'ETH' : `${A.symbol} ${toChecksumAddress(A.address)}`); add('Amount', fmt(vault.denominations[i]));
       add('Fees', `mint ${fmt(vault.fees[i].mint)}, relay ${fmt(vault.fees[i].relay)} (schedule ${vault.schedule})`); add('Total', fmt(total));
       if (!isEth()) {
         add('Approval', plan.approve ? `first a separate transaction approving the vault for exactly ${fmt(total)}, then the deposit`
           : `none needed (the vault may already take ${fmt(vault.allowance)})`);
       }
+      add(plan.approve ? 'Gas, the approval' : 'Gas', cost.text);
+      if (plan.approve) add('Gas, the deposit', 'priced by your wallet after the approval; the vault checks the deposit then');
+      add('Your Sepolia ETH', fmtUnits(balance));
       add('Index j', vault.j.toString()); add('Commitment C', '0x' + hex(C));
       add('Destination', `${kind.value} LEZ account ${c.lez.idToString(d)} (inside C, not public)`);
       add('Calldata', data);
       out.textContent = 'Check C and the vault address again in your wallet\'s confirmation screen before you sign.'; out.className = 'msg';
       go.disabled = false;
-    } catch (e) { fail(e); }
-  };
+    } catch (e) { plan = null; go.disabled = true; fail(e); }
+  });
 
-  go.onclick = async () => {
-    if (!plan) return;
+  go.onclick = exclusive(async () => {
+    const p = plan;   // the reviewed plan, whatever happens to `plan` meanwhile
+    if (!p) return;
     go.disabled = true;
     try {
       const chain = Number(BigInt(await P.request({ method: 'eth_chainId' })));
       const acct = String((await P.request({ method: 'eth_accounts' }))[0] ?? '').toLowerCase();
-      if (chain !== Number(B.evmChainId) || acct !== depositor) throw new Error('Your wallet changed network or account since the review; nothing was sent. Review again.');
-      if (plan.record.kind === 'public' && plan.record.dest !== c.acct().id) { clearDeposit(); throw new Error('The selected LEZ account changed since the review; nothing was sent. Review again.'); }
-      const token = plan.record.token ?? ETH;
-      let fresh = await readVault(P, B.vault, depositor, token);
-      if (fresh.j.toString() !== plan.record.j) throw new Error('Your deposit index changed since the review (another deposit?); nothing was sent. Review again.');
-      if (plan.approve && fresh.allowance < BigInt(plan.record.total)) {
-        out.textContent = `Waiting for your wallet's signature: approve the vault for ${fmtUnits(plan.record.total, plan.record.decimals, plan.record.symbol)} (1 of 2)…`; out.className = 'msg';
-        const ap = await sendAndWait(plan.approve, 'Approval (1 of 2)');
+      if (chain !== p.record.chainId || acct !== p.record.depositor) throw new Error('Your wallet changed network or account since the review; nothing was sent. Review again.');
+      if (p.record.kind === 'public' && p.record.dest !== c.acct().id) { clearDeposit(); throw new Error('The selected LEZ account changed since the review; nothing was sent. Review again.'); }
+      const token = p.record.token ?? ETH;
+      let fresh = await readVault(P, B.vault, p.record.depositor, token);
+      if (fresh.j.toString() !== p.record.j) throw new Error('Your deposit index changed since the review (another deposit?); nothing was sent. Review again.');
+      if (p.approve && fresh.allowance < BigInt(p.record.total)) {
+        out.textContent = `Waiting for your wallet's signature: approve the vault for ${fmtUnits(p.record.total, p.record.decimals, p.record.symbol)} (1 of 2)…`; out.className = 'msg';
+        const ap = await sendAndWait(p.approve, 'Approval (1 of 2)').catch((err) => { throw refusedBy(err, 'The token'); });
         if (!ap.receipt || ap.receipt.status !== '0x1') throw new Error(`The approval ${ap.hash} ${ap.receipt ? 'failed' : 'is not mined yet'}; nothing was deposited.`);
-        fresh = await readVault(P, B.vault, depositor, token);
-        if (fresh.allowance < BigInt(plan.record.total)) throw new Error('The approval is mined but the vault\'s allowance is still short; nothing was deposited.');
-        if (fresh.j.toString() !== plan.record.j) throw new Error('Your deposit index changed during the approval; nothing was deposited. Review again.');
+        fresh = await readVault(P, B.vault, p.record.depositor, token);
+        if (fresh.allowance < BigInt(p.record.total)) throw new Error('The approval is mined but the vault\'s allowance is still short; nothing was deposited.');
+        if (fresh.j.toString() !== p.record.j) throw new Error('Your deposit index changed during the approval; nothing was deposited. Review again.');
       }
-      out.textContent = `Waiting for your wallet's signature${plan.approve ? ' (2 of 2)' : ''}…`; out.className = 'msg';
-      const hash = await P.request({ method: 'eth_sendTransaction', params: [plan.tx] });
-      const rec = { ...plan.record, ethTx: hash, sent: Date.now() };
+      out.textContent = `Waiting for your wallet's signature${p.approve ? ' (2 of 2)' : ''}…`; out.className = 'msg';
+      const hash = await P.request({ method: 'eth_sendTransaction', params: [p.tx] });
+      const rec = { ...p.record, ethTx: hash, sent: Date.now() };
       (c.S.secret.deposits ??= []).push(rec); await c.persist();
       out.textContent = `Sent ${hash}; waiting for it to be mined…`;
       let receipt = null;
@@ -352,15 +489,15 @@ export function mountBridge(root, c) {
       if (!receipt) { out.textContent = `Sent ${hash}; not mined yet. Your deposits list keeps it.`; out.className = 'msg warn'; return; }
       if (receipt.status !== '0x1') { rec.status = 'failed'; await c.persist(); throw new Error(`The deposit transaction ${hash} failed on Ethereum (status ${receipt.status}).`); }
       const log = depositLogOf(receipt, B.vault);
-      if (!log || log.commitment !== rec.C || log.depositor !== depositor || log.index.toString() !== rec.j || log.token !== token) {
+      if (!log || log.commitment !== rec.C || log.depositor !== p.record.depositor || log.index.toString() !== rec.j || log.token !== token) {
         throw new Error('Mined, but the vault\'s Deposit event does not carry this deposit\'s C, depositor, index and asset.');
       }
       rec.leafIndex = log.leafIndex.toString(); rec.block = Number(BigInt(receipt.blockNumber)); rec.status = 'deposited';
       await c.persist();
       out.textContent = `Deposited: leaf ${rec.leafIndex} in block ${rec.block} (${hash}). Next: the claim on LEZ, once the zone imports the vault's deposits.`; out.className = 'msg ok';
       plan = null; renderList();
-    } catch (e) { fail(e); go.disabled = !plan; }
-  };
+    } catch (e) { fail(e); go.disabled = plan !== p; }
+  });
 
   // The deposits this phrase opens, read from the vault's Deposit events: for each, s from (depositor, j) and C tried
   // against this wallet's public accounts (and its private account /0), so deposits made anywhere with this phrase show.
@@ -395,11 +532,11 @@ export function mountBridge(root, c) {
     await c.persist();
     return { found, total: logs.length };
   }
-  findBtn.onclick = async () => {
+  findBtn.onclick = exclusive(async () => {
     claimOut.className = 'msg'; claimOut.textContent = 'Reading the vault\'s deposits…';
     try { const r = await findMine(); claimOut.textContent = `${r.found} of the vault's ${r.total} deposits are this wallet's.`; claimOut.className = 'msg ok'; renderList(); }
-    catch (e) { claimOut.textContent = e.message; claimOut.className = 'msg bad'; }
-  };
+    catch (e) { claimOut.textContent = walletError(e); claimOut.className = 'msg bad'; }
+  });
   async function claimOne(d, btn) {
     btn.disabled = true; claimOut.className = 'msg'; claimOut.textContent = 'Preparing the claim…';
     try {
@@ -419,7 +556,7 @@ export function mountBridge(root, c) {
       claimOut.textContent = `Claimed in LEZ block ${r.block}: ${fmtUnits(r.holding, d.decimals ?? 18, d.symbol ?? 'ETH')} now held by your account on LEZ (the bridge's holder account for it). Transaction ${r.hash}.`;
       claimOut.className = 'msg ok';
       renderList();
-    } catch (e) { claimOut.textContent = e.message; claimOut.className = 'msg bad'; btn.disabled = false; }
+    } catch (e) { claimOut.textContent = e?.message ?? String(e); claimOut.className = 'msg bad'; btn.disabled = false; }
   }
 
   // The public burn: one denomination from the selected public account's holding at holder(cid, account).
@@ -429,6 +566,7 @@ export function mountBridge(root, c) {
     if (!B.program || !B.configId) throw new Error('The LEZ side of the bridge is not configured on this network.');
     const a = c.acct(), A = burnAssetOf(), token = addrBytes(A.address);
     const [held, tok] = await Promise.all([holdingOf(c, a.node.accountId, token), tokenOf(c, token)]);
+    if (burnAssetOf() !== A) return null;   // the asset changed meanwhile: a later read fills the list
     burnDenom.textContent = '';
     for (const d of tok?.entry?.denominations ?? []) {
       burnDenom.append(el('option', { value: d.toString(), text: `${fmtUnits(d, A.decimals, A.symbol)}${d > held ? ' (more than you hold)' : ''}` }));
@@ -437,23 +575,27 @@ export function mountBridge(root, c) {
     if (firstOk !== undefined) burnDenom.value = firstOk.toString();
     return { held, A, label: a.label };
   }
-  holdBtn.onclick = async () => {
+  const refreshHoldings = async () => {
+    const asset = burnAsset.value;
     holdOut.className = 'msg'; holdOut.textContent = 'Reading the bridge program\'s holder account…';
-    try { const r = await showHoldings(); holdOut.textContent = `${r.label} holds ${fmtUnits(r.held, r.A.decimals, r.A.symbol)} on the bridge.`; holdOut.className = 'msg ok'; }
-    catch (e) { holdOut.textContent = e.message; holdOut.className = 'msg bad'; }
+    try {
+      const r = await showHoldings();
+      if (r) { holdOut.textContent = `${r.label} holds ${fmtUnits(r.held, r.A.decimals, r.A.symbol)} on the bridge.`; holdOut.className = 'msg ok'; }
+    } catch (e) { if (burnAsset.value === asset) { holdOut.textContent = e?.message ?? String(e); holdOut.className = 'msg bad'; } }
   };
+  holdBtn.onclick = busy(holdBtn, refreshHoldings);
   // The burn: "Review the burn" plans it (nothing signed) and shows everything it binds; "Sign and burn" sends exactly
   // that plan. The recipient is final once burned (it is inside the note), so a mixed-case address must pass EIP-55.
   let burnPlan = null;
   const clearBurn = () => { burnPlan = null; burnGo.disabled = true; burnSum.textContent = ''; };
-  burnAsset.onchange = () => { clearBurn(); holdBtn.onclick(); };
+  burnAsset.onchange = () => { clearBurn(); refreshHoldings(); };   // every change reads; a stale answer is dropped
   burnDenom.onchange = clearBurn;
   burnTo.addEventListener('input', clearBurn);
-  burnBtn.onclick = async () => {
+  burnBtn.onclick = exclusive(async () => {
     clearBurn(); burnBtn.disabled = true; burnOut.className = 'msg'; burnOut.textContent = 'Preparing the review…';
     try {
       if (!c.S.seed) throw new Error('Burning needs a wallet made from a recovery phrase (the note is derived from it).');
-      if (!burnDenom.value) await showHoldings();
+      if (!burnDenom.value && !(await showHoldings())) throw new Error('The asset changed while its holdings were read: review again.');
       if (!burnTo.value.trim()) await connectWallet();
       const { to, bytes: recipient, how } = burnRecipient(burnTo.value, depositor);
       const A = burnAssetOf(), amount = BigInt(burnDenom.value), bs = bridgeSeedOf(c.S.seed);
@@ -470,7 +612,7 @@ export function mountBridge(root, c) {
       burnOut.textContent = 'Check the recipient character by character, then sign.'; burnOut.className = 'msg';
       burnGo.disabled = false;
     } catch (e) { burnOut.textContent = e.message; burnOut.className = 'msg bad'; } finally { burnBtn.disabled = false; }
-  };
+  });
   burnGo.onclick = async () => {
     if (!burnPlan) return;
     const { plan, A, to, amount } = burnPlan; clearBurn();
@@ -500,6 +642,7 @@ export function mountBridge(root, c) {
       li.append(el('span', { text: `${fmtUnits(d.amount, d.decimals ?? 18, d.symbol ?? 'ETH')} → ${d.kind} LEZ account ${d.dest.slice(0, 8)}… · ${d.status ?? 'sent'}${d.leafIndex !== undefined ? ' · leaf ' + d.leafIndex : ''}` }),
         el('span', { class: 'amt', text: `j = ${d.j}` }),
         el('span', { class: 'sub', text: `C ${d.C} · ${d.ethTx ?? ''} · ${d.kind === 'private' ? 'claim privately with the ferrata tool (same phrase): a private claim needs a proof made with your keys' : d.status === 'claimed' ? 'claimed on LEZ' + (d.claimTx ? ' (' + d.claimTx + ')' : '') : 'claim here (public: shows the deposit and its LEZ account), or with the ferrata tool'}` }));
+      if (d.kind === 'private' && d.status !== 'claimed') li.append(el('span', { class: 'sub' }, el('a', { href: '/testers/#step-private' }, 'The steps of a private claim')));
       if (btn) li.append(el('span', { class: 'sub' }, btn));
       list.append(li);
     }
