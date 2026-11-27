@@ -358,6 +358,7 @@ with tempfile.TemporaryDirectory() as td:
         '"argv": ["python3", "-I", sys.argv[0], *sys.argv[1:]]}) + "\\n")\n',
         encoding="utf-8",
     )
+    shutil.copy2(gate_stub, stub_repo / "scripts" / "privacy" / "controls.py")
 
     def run_stub_shard(extra_args, extra_env=None):
         log_file = base / "calls.jsonl"

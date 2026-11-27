@@ -36,7 +36,8 @@ FAMILIES = {
 }
 TIERS = ("quick", "tests")
 TOOLS = {"python3": "python3", "node": "node", "cargo": "cargo", "forge": "forge", "git": "git", "bash": "bash",
-         "r0vm": "r0vm", "docker": "docker", "cast": "cast", "anvil": "anvil", "jq": "jq", "curl": "curl"}
+         "r0vm": "r0vm", "docker": "docker", "cast": "cast", "anvil": "anvil", "jq": "jq", "curl": "curl",
+         "ssh-keygen": "ssh-keygen", "sha256sum": "sha256sum"}
 
 
 class CheckFailed(Exception):
