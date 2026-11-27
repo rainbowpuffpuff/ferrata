@@ -25,9 +25,11 @@ fail() { echo "FAIL  $*"; exit 1; }
 case "$sel" in
   0xe71e6620)
     # keccak256 of eth_getCode, not `cast codehash` (which asks for eth_getProof, which not every endpoint serves).
-    [ "$(cast keccak "$(cast code "$groth16" --rpc-url "$rpc")")" = "$(pin groth16CodeHash)" ] ||
+    gcode="$(cast code "$groth16" --rpc-url "$rpc")" || fail "Groth16 verifier $groth16: its code could not be read"
+    [ "$(cast keccak "$gcode")" = "$(pin groth16CodeHash)" ] ||
       fail "Groth16 verifier $groth16: selector 0xe71e6620 but not RISC Zero 3.1.0's code"
-    code="$(cast code "$stop" --rpc-url "$rpc" | tr 'A-F' 'a-f')"
+    code="$(cast code "$stop" --rpc-url "$rpc")" || fail "emergency stop $stop: its code could not be read"
+    code="$(printf '%s' "$code" | tr 'A-F' 'a-f')"
     wrapped="$(printf '%s' "${groth16#0x}" | tr 'A-F' 'a-f')"
     case "$code" in *"$wrapped"*) ;; *) fail "emergency stop $stop: its code does not hold the verifier it names" ;; esac
     [ "$(cast keccak "${code//$wrapped/0000000000000000000000000000000000000000}")" = "$(pin stopMaskedCodeHash)" ] ||
