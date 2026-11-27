@@ -1,5 +1,11 @@
 # Redeploying the bridge under ADR 0048 (RFP-022 F.13): a new vault and a new LEZ configuration
 
+**Which network runs what today** (27 November 2026): the test network (LEZ v0.4.0-rc3) and its Sepolia vault run
+`ferrata_bridge_b1` (B1, `0x847a4336…7515`). ADR 0046's `ferrata_bridge_f13` and ADR 0048's `ferrata_bridge_lezfee`
+(`0x9d02d54d…a321`, this tree's) are deployed on no network: each ran only on a sequencer we started for one run
+(EVIDENCE rows 278 and 283). `ferrata`, the bridge module and the chain service build B1's claims for B1 and refuse a
+program they do not know before anything is signed or sent; ADR 0046's is one of those.
+
 ADR 0048 ([`docs/decisions/0048-protocol-fees-minted-on-lez.md`](../../docs/decisions/0048-protocol-fees-minted-on-lez.md))
 changes both halves together: the vault escrows each deposit's mint fee and each release's burn fee and counts them in
 `lezFees(token)` (a SHA-256 slot); the bridge program's claim names no fee schedule and mints the denomination and the

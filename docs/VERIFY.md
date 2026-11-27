@@ -174,7 +174,9 @@ export FERRATA_BRIDGE_ACCOUNT=1f2e94ffdf25a3feca4e0750be66700be3812434c8cf53e0eb
 export FERRATA_SEED=$HOME/ferrata.seed FERRATA_LEZ_WALLET=$HOME/ferrata-lez FERRATA_LEZ_PASSWORD_FILE=$HOME/ferrata-lez.pass
 ```
 
-**Which bridge program the network runs.** Our test network runs `ferrata_bridge_b1` (`0x847a4336…7515`), the bridge
+**Which network runs what** (27 November 2026): our test network (LEZ v0.4.0-rc3) and its Sepolia vault run
+`ferrata_bridge_b1` (B1); ADR 0046's `ferrata_bridge_f13` and this tree's `ferrata_bridge_lezfee` (ADR 0048) run on
+no network, only on sequencers we started for one run each (EVIDENCE rows 278 and 283). **Which bridge program the network runs.** Our test network runs `ferrata_bridge_b1` (`0x847a4336…7515`), the bridge
 program from before [ADR 0046](decisions/0046-mint-fee-at-deposit.md); this tree builds the program of
 [ADR 0048](decisions/0048-protocol-fees-minted-on-lez.md) (`ferrata_bridge_lezfee`, `0x9d02d54d…a321`), whose claims
 name no fee schedule (as since ADR 0046) and whose `CollectFees` mints the protocol fees on LEZ, and the network is not
