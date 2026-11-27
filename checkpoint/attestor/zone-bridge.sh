@@ -912,7 +912,7 @@ stage_verify() {
       echo "$p: proven on the GPU (prover.json); its journal is the statement's; its seal is checked by the vault stage"
     fi
   done
-  [ "$(jq -r .candidate.seal "$RUN/crown.json")" = "0x$(hexfile "$C/receipts/seal.hex")" ] && echo "crown.json: the candidate's seal = the verified receipt's"
+  [ "$(jq -r .candidate.seal "$RUN/crown.json")" = "0x$(hexfile "$C/receipts/seal.hex")" ] && echo "crown.json: candidate seal = recorded GPU seal (byte comparison only; inputs/journals/burns re-derived above; RISC Zero checks seals in stage vault and the forge tests)"
 }
 
 # A stage runs in a subshell, so that its EXIT traps (zone_cleanup writes zone/logs/) have run before its records

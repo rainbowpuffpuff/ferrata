@@ -7,8 +7,8 @@ pragma solidity ^0.8.26;
 
 import {VerificationFailed} from "risc0/IRiscZeroVerifier.sol";
 
-import {FerrataVault} from "../../src/FerrataVault.sol";
 import {TestToken} from "../../script/TestToken.sol";
+import {FerrataVault} from "../../src/FerrataVault.sol";
 import {RuleBMultiFixture} from "./RuleBMulti.t.sol";
 
 contract ZoneBridgeRc3Erc20Test is RuleBMultiFixture {
@@ -68,9 +68,45 @@ contract ZoneBridgeRc3Erc20Test is RuleBMultiFixture {
         p.releaseCap = FerrataVault.CapParams({capacity: type(uint256).max, refillPerSecond: 0});
     }
 
+    /// @dev The vault publication rule reconstructed from literals, independently of `_params`, exactly as
+    ///      crown-driver's `test_token_entry_and_schedule_zero_match_the_vault_publication_rule` does.
+    function _publicationEntryHash(address t) internal pure returns (bytes32) {
+        return sha256(
+            abi.encodePacked(
+                "ferrata/registry/v1",
+                t,
+                bytes32(0), // lezDefinition
+                uint8(6), // decimals
+                uint256(1), // lezUnit
+                uint256(1), // unitWeight
+                uint8(3), // denomination count
+                uint256(100e6),
+                uint256(1000e6),
+                uint256(10_000e6),
+                uint256(250_000),
+                uint256(2_500_000),
+                uint256(25_000_000)
+            )
+        );
+    }
+
     function _register(TestToken t) internal {
+        bytes32 entryHash = _publicationEntryHash(address(t));
+        if (t == token) {
+            string memory session = vm.readFile("../e2e/runs/zone-bridge-rc3-erc20/lez/session-a/session-a.json");
+            assertEq(entryHash, vm.parseJsonBytes32(session, ".token.entryHash"), "not the entry imported by the run");
+        }
+        // Bind the registry-only metadata as well as the release fields: neither decimals nor the entry hash is in a
+        // release journal, so the releases can pass even when this replay publishes a different registry entry.
+        vm.expectEmit(true, true, true, true, address(vault));
+        emit FerrataVault.RegistryEntryPublished(address(t), bytes32(0), 6, entryHash);
         vm.prank(admin);
         vault.registerToken(address(t), _params());
+        assertEq(
+            vm.load(address(vault), sha256(abi.encodePacked("ferrata/vault/registry/v1", address(t)))),
+            entryHash,
+            "the vault stored a different registry entry"
+        );
     }
 
     function _twoDeposits(TestToken t) internal {
