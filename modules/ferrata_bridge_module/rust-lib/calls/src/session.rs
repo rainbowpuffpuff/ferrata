@@ -1304,6 +1304,8 @@ impl Chain {
                 "state": state,
                 "nullifier": d["nullifier"],
                 "dest": d["dest"],
+                // The address the vault records for the deposit: its claim's witness names it.
+                "depositor": d["depositor"],
             }));
         }
         let mut burns = Vec::new();
@@ -1395,6 +1397,11 @@ impl Chain {
             req[k] = inputs[k].clone();
         }
         req["j"] = d["j"].clone();
+        // The deposit's own depositor (the vault's record), not the session's: a session opened without one, or a
+        // deposit made from another address of the same phrase, still claims what recovery found.
+        if !d["depositor"].is_null() {
+            req["depositor"] = d["depositor"].clone();
+        }
         req["leaf_index"] = json!(leaf);
         req["token"] = json!(ETH);
         req["amount"] = d["amount"].clone();
