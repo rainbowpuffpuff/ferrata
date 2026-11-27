@@ -117,6 +117,15 @@ if [ -n "${FERRATA_RC3_RT_BRIDGE_BIN:-}" ]; then
 elif [ -f "$TOOLS/ferrata_bridge.built.bin" ]; then
   cp "$TOOLS/ferrata_bridge.built.bin" "$TOOLS/ferrata_bridge.bin"
 fi
+# FERRATA_RC3_RT_DRIVER_BIN: an operator's crown-driver that speaks that program (this tree's speaks only this tree's
+# bridge program; B1's is the driver of a tree before ADR 0046, built against rc3), the same way.
+if [ -n "${FERRATA_RC3_RT_DRIVER_BIN:-}" ]; then
+  [ -f "$FERRATA_RC3_RT_DRIVER_BIN" ] || die "no crown-driver $FERRATA_RC3_RT_DRIVER_BIN"
+  [ -f "$TOOLS/crown-driver.built" ] || cp "$TOOLS/crown-driver" "$TOOLS/crown-driver.built"
+  cp "$FERRATA_RC3_RT_DRIVER_BIN" "$TOOLS/crown-driver"
+elif [ -f "$TOOLS/crown-driver.built" ]; then
+  cp "$TOOLS/crown-driver.built" "$TOOLS/crown-driver"
+fi
 ( cd "$TOOLS" && sha256sum ./* ) > "$T/tools.sha256"
 
 # ---- the round trip -----------------------------------------------------------------------------------------------
