@@ -762,7 +762,9 @@ fn spend(
 // ---------------------------------------------------------------------------------------------
 
 /// Anyone, at `config(cid)`: ask the vault's cumulative total of the protocol fees it escrowed for `token`
-/// ([`lez_fees_slot`]) under the record at `record_slot`; the reply sends `AccrueFees` to `fees(cid, token)`.
+/// ([`lez_fees_slot`]) under the record at `record_slot`; the reply sends `AccrueFees` to `fees(cid, token)`. Allowed
+/// after `Sunset` (it imports no root: the fees it mints are escrowed, refunds never return them), refused under a
+/// record shallower than the admin's inbound depth (`FROZEN`, as `ImportRoot`).
 #[allow(clippy::too_many_arguments)]
 fn collect_fees(
     input: &ReceiveInput,
@@ -781,6 +783,9 @@ fn collect_fees(
         return Err(code::BAD_MESSAGE);
     }
     let (config, gate, sunset, roles) = ready_config(state)?;
+    // F.12, as for a root import: the record lies at least the admin's inbound depth behind the newest record the clock
+    // read, so a fee total is minted from no fresher Ethereum state than a deposit root is imported from.
+    roles.deep_enough(record_slot)?;
     let header = header_actor(config.attestation, &config.instance_id, record_slot);
     let request = vault_request(&config, &[lez_fees_slot(&token)], proof)?;
     Ok(set(ready(config, Some(Pending::Collect { token, record_slot, limit }), gate, sunset, roles))

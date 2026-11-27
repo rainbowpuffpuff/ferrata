@@ -1709,7 +1709,8 @@ pub mod code {
         BAD_STATE = 241;
         /// Mints or burns frozen (of the token, or of the whole configuration), or an import
         /// after `Sunset`, or a role proposal applied before its 14 days of attested time, or an
-        /// import under a record less than the configuration's inbound depth behind its clock's.
+        /// import or a fee collection under a record less than the configuration's inbound depth
+        /// behind its clock's.
         FROZEN = 242;
         /// An internal message from an actor other than the expected one, a read with nobody to
         /// reply to, or a receiver that is not the actor the message names.
