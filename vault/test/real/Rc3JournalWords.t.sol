@@ -178,11 +178,13 @@ abstract contract Rc3JournalWordsCases is RuleBMultiFixture {
     // ------------------------------------------------------------------------------------------------------------
 
     /// @notice Through `submitCandidate`: the fields the vault checks itself are refused by those checks (parent,
-    ///         floors, a key set below them, a nonzero echo nonce under rule (B)); every other field changed alone
+    ///         both floors, a key set below them, a nonzero echo nonce under rule (B)); every other field changed alone
     ///         (new state, burn root and count, imported count, sunset, tip id and hash, n and t above the floors)
     ///         is refused by the verifier. The unaltered checkpoint is then taken.
     function test_rc3Words_everyCheckpointFieldChangedAloneIsRefused() public {
-        bytes4[13] memory want = [
+        assertEq(_checkpoint().n, _n(), "the run's key set");
+        assertEq(_checkpoint().t, _t(), "the run's threshold");
+        bytes4[14] memory want = [
             VerificationFailed.selector, // 0 newState
             VerificationFailed.selector, // 1 burnRoot
             VerificationFailed.selector, // 2 burnCount
@@ -195,7 +197,8 @@ abstract contract Rc3JournalWordsCases is RuleBMultiFixture {
             FerrataVault.ParentNotFinal.selector, // 9 parentState
             FerrataVault.WrongCommitteeFloor.selector, // 10 nMin
             FerrataVault.KeySetBelowFloor.selector, // 11 t below the floor
-            FerrataVault.EchoNonceNotZero.selector // 12 echoNonce under rule (B)
+            FerrataVault.EchoNonceNotZero.selector, // 12 echoNonce under rule (B)
+            FerrataVault.WrongCommitteeFloor.selector // 13 tMin
         ];
         for (uint256 k = 0; k < want.length; k++) {
             FerrataVault.Checkpoint memory x = _checkpoint();
@@ -212,6 +215,7 @@ abstract contract Rc3JournalWordsCases is RuleBMultiFixture {
             if (k == 10) x.nMin += 1;
             if (k == 11) x.t = 2;
             if (k == 12) x.echoNonce = bytes32(uint256(1));
+            if (k == 13) x.tMin += 1;
             vm.expectRevert(want[k]);
             vault.submitCandidate{gas: TAMPERED_CALL_GAS}(x, seal);
         }

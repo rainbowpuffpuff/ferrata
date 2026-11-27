@@ -303,6 +303,42 @@ contract LezReceiptUnsoundTest is VaultTestBase {
         assertEq(vB.finalImportedLeafCount(), 3, "accepted once the tree holds three leaves");
     }
 
+    /// @notice After retirement nothing catches a forged count up (review round 1): a LEZ state whose imported count is
+    ///         above the retired vault's tree is never finalised, the sunset checkpoint included, so the refund boundary
+    ///         is never set and no deposit is ever refunded; every burn not yet in a final checkpoint waits for good. (A
+    ///         count above 2**32, the tree's size, could never be caught up even without retirement.)
+    function test_lezUnsound_afterRetirementAForgedCountAboveTheTreeEndsCheckpointsAndRefunds() public {
+        Dep memory unimported = _dep(vault, bob, 0);
+        vm.prank(freezer);
+        vault.retire();
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(vault, keccak256("root at sunset"), 2, true);
+        _submit(c);
+        (uint256 submittedAt, uint256 wait) = _waitOf(vault, c.newState);
+        vm.warp(submittedAt + wait);
+        vm.roll(block.number + 1);
+        uint256 beaconIndex = vault.recordBeacon();
+        (, bytes32 nonce) = vault.beacons(beaconIndex);
+        c.echoNonce = nonce;
+        _proveCheckpoint(_checkpointJournal(vault, LEZ_CONFIG_ID, c));
+        vm.expectRevert(FerrataVault.ImportedLeafCountTooHigh.selector);
+        vault.finalize(beaconIndex, c, SEAL);
+
+        // No deposit can raise the tree to the count: the vault is retired.
+        uint256 total = _depositTotal(vault, ETH, ONE);
+        uint64 index = vault.depositCount(alice);
+        vm.deal(alice, total);
+        vm.prank(alice);
+        vm.expectRevert(FerrataVault.VaultRetired.selector);
+        vault.depositETH{value: total}(ONE, keccak256("a deposit to catch the count up"), index);
+
+        // A year later the same: no boundary, no refund.
+        vm.warp(block.timestamp + 365 days);
+        vm.expectRevert(FerrataVault.ImportedLeafCountTooHigh.selector);
+        vault.finalize(beaconIndex, c, SEAL);
+        assertFalse(vault.sunsetLeafCountSet(), "the refund boundary is never set");
+        _refundExpecting(unimported, abi.encodeWithSelector(FerrataVault.NotRefundable.selector));
+    }
+
     /// @notice A forged count at or below the tree is accepted, and at a sunset it sets the refund boundary: a deposit
     ///         LEZ never really imported, below the forged count, is not refundable on Ethereum. Whether it can still
     ///         be claimed on LEZ depends on an honest import covering it before `Sunset` (LEZ side; not tested here).

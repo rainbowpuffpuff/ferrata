@@ -2,7 +2,7 @@
 
 RFP-022 Security #9, the case of a vulnerability below Ferrata's own verification: LEZ accepts a forged receipt of a
 private transaction. Written 27 November 2026. The Ethereum side of every outcome below is shown by
-`vault/test/LezReceiptUnsound.t.sol` (8 tests); the LEZ side is from reading the bridge program and the checkpoint
+`vault/test/LezReceiptUnsound.t.sol` (9 tests); the LEZ side is from reading the bridge program and the checkpoint
 program at this commit (cited lines), not tested. Whether LEZ accepts a forged receipt at all has not been
 established: we built none, and it is for Logos to confirm ([`docs/trust.md`](../trust.md) §5).
 
@@ -70,10 +70,10 @@ a freeze renewed on day 29 still holds on day 31.
 
 | Position | Under the runbook, while renewed | If a freeze lapses, or before detection | Shown by |
 |---|---|---|---|
-| Deposit LEZ never imported | refunded whole (denomination and relay fee) to the depositor its leaf names, once the sunset checkpoint is past its revocation window; per-token release freezes do not stop refunds | refunds draw on the token's escrow: forged releases made before detection can leave it short, and the refund is refused (`InsufficientEscrow`); a forged import count at the sunset moves the refund boundary up, and a deposit below it is not refundable | `…theRunbookHoldsEveryPositionWhileRenewed`; `…forgedReleasesBeforeDetectionCanLeaveAnUnimportedDepositUnrefundable`; `…aForgedImportCountAtSunsetLeavesADepositBelowItUnrefundable` |
+| Deposit LEZ never imported | refunded whole (denomination and relay fee) to the depositor its leaf names, once the sunset checkpoint is past its revocation window; per-token release freezes do not stop refunds | refunds draw on the token's escrow: forged releases made before detection can leave it short, and the refund is refused (`InsufficientEscrow`); a forged import count at the sunset moves the refund boundary up, and a deposit below it is not refundable; **a forged import count above the vault's tree, if it lands before LEZ's `Sunset`, means no checkpoint is ever finalised again, the sunset checkpoint included: the boundary is never set and nothing is refunded** (after retirement no deposit can catch the count up; a count above 2^32 never can) | `…theRunbookHoldsEveryPositionWhileRenewed`; `…forgedReleasesBeforeDetectionCanLeaveAnUnimportedDepositUnrefundable`; `…aForgedImportCountAtSunsetLeavesADepositBelowItUnrefundable`; `…afterRetirementAForgedCountAboveTheTreeEndsCheckpointsAndRefunds` |
 | Deposit imported on LEZ, not yet claimed | claimable on LEZ (claims of imported roots go on after `Sunset`); the wrapped token it mints is diluted by forged mints, and its way back is a burn, which waits (below) | the same | LEZ side, by reading (`main.rs:154-160`, `:301-303`) |
 | Wrapped tokens held on LEZ | diluted: the vault's escrow backs them and the forged mints alike; redeemable only through a burn, which waits | a race with forged burns for the token's escrow | by reading; the race: `…withoutTheFreezeTheShortfallFallsOnTheLastRedeemer` |
-| Burn not yet in a finalised checkpoint | waits: no candidate can be submitted while checkpoints are frozen | released in the race once a checkpoint carries it; a forged import count above the vault's tree halts every checkpoint until real deposits catch up (`ImportedLeafCountTooHigh`) | `…theRunbookHoldsEveryPositionWhileRenewed`; `…aForgedImportCountAboveTheTreeHaltsCheckpointsUntilDepositsCatchUp` |
+| Burn not yet in a finalised checkpoint | waits: no candidate can be submitted while checkpoints are frozen | released in the race once a checkpoint carries it; a forged import count above the vault's tree halts every checkpoint (`ImportedLeafCountTooHigh`) until real deposits catch up, which they cannot once the vault is retired, nor ever above 2^32 leaves: then the burn waits for good | `…theRunbookHoldsEveryPositionWhileRenewed`; `…aForgedImportCountAboveTheTreeHaltsCheckpointsUntilDepositsCatchUp`; `…afterRetirementAForgedCountAboveTheTreeEndsCheckpointsAndRefunds` |
 | Burn under an accepted root, not released | held, its nullifier unused (`TokenReleasesAreFrozen`), and so is every forged one | paid in arrival order with the forged burns; when the escrow runs out the last are refused (`InsufficientEscrow`): the shortfall falls on the late redeemers | `…theRunbookHoldsEveryPositionWhileRenewed`; `…withoutTheFreezeTheShortfallFallsOnTheLastRedeemer` |
 | `owed` balance (a failed payout, a relay or checkpoint fee) | claimable by its payee at any time; no freeze stops `claimOwed` | the same | `…theRunbookHoldsEveryPositionWhileRenewed` |
 | The escrow of each token | stays in the vault; only refunds and `owed` claims move it | leaves at the rate of the release caps, to forged and paid burns alike | `…releaseCapsBoundTheLossPerWindowNotInTotal` |
@@ -99,13 +99,16 @@ The three constraints, against this case:
    measures what a forged LEZ receipt put at risk: the forged mints are invisible to the vault, and the forged burns
    look like paid ones.
 
-One exit does meet all three, and the runbook keeps it open: a depositor's refund, proven against Ethereum's own
-deposit tree and paid only to the depositor its leaf names, after a sunset checkpoint. That is why the runbook
-freezes releases per token rather than globally. Its limits are in the table: it pays only out of what the escrow
-still holds, and only above the refund boundary the sunset checkpoint sets, which a forged import can move.
+One exit does meet all three, and the runbook keeps it open as far as the vault can: a depositor's refund, proven
+against Ethereum's own deposit tree and paid only to the depositor its leaf names, after a sunset checkpoint. That is
+why the runbook freezes releases per token rather than globally. Its limits are in the table: it pays only out of what
+the escrow still holds, only above the refund boundary the sunset checkpoint sets, which a forged import can move, and
+only if a sunset checkpoint can be finalised at all, which a forged import count above the vault's tree, landed before
+LEZ's `Sunset`, prevents for good.
 
-So the affected funds stay in the vault while the freezes are renewed; unimported deposits are refunded; `owed`
-balances are paid to their payees; holders of wrapped tokens and burners in flight wait, and lose what the forged
+So the affected funds stay in the vault while the freezes are renewed; unimported deposits are refunded, unless the
+forger raised LEZ's imported count above the vault's tree first, in which case they stay in the vault with everything
+else; `owed` balances are paid to their payees; holders of wrapped tokens and burners in flight wait, and lose what the forged
 burns take if releases ever resume, or everything held in the old vault if it is replaced. The remedy is upstream:
 a LEZ whose receipt check is sound (a LEZ tag on RISC Zero 3.1, the migration's phase 2,
 [`docs/design/risc0-3.1-migration.md`](../design/risc0-3.1-migration.md)).
@@ -113,6 +116,6 @@ a LEZ whose receipt check is sound (a LEZ tag on RISC Zero 3.1, the migration's 
 ## 6. Running it
 
 ```bash
-cd vault && forge test --match-path test/LezReceiptUnsound.t.sol   # 8 passed
+cd vault && forge test --match-path test/LezReceiptUnsound.t.sol   # 9 passed
 just security-review                                               # these, the review's fixes and the R.8 checks
 ```

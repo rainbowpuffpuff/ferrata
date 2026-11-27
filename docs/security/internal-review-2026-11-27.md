@@ -105,6 +105,11 @@ register a token of a given kind, or a deployer to misconfigure, is ranked by wh
   default; its floor is immutable.
 - **Fix.** The default is the largest single exit over both tokens, a largest leaf's denomination plus its relay fee
   (10,025,000,000). `releaseFloorDailyValue` still overrides it.
+- **Trade-off (review round 1).** The vault has one floor, in value units, for every release bucket, so the floor that
+  admits the 10,000-token exit also binds ETH's release bucket to at least that value: by default about 3.34 ETH a day
+  (before, 0.1 ETH). Under a forged proof, caps can then slow ETH releases no further than that; the release freezes
+  stop them outright (ADR 0033's runbook, which rests on the freezes, not the caps). A floor per token, in a later
+  vault, would remove the coupling; until then the deployer chooses with `releaseFloorDailyValue`.
 - **Test.** `vault/test/DeployDefaults.t.sol` `test_S2_atTheLowestCapsTheFloorAllowsEveryExitStillPasses`: the admin
   sets every release bucket as low as the floor allows, each token's largest exit must fit, and a 10,000-token
   release goes through (on `50b396a8`: 0.1002 ETH > 0.1 ETH).
@@ -125,6 +130,10 @@ register a token of a given kind, or a deployer to misconfigure, is ranked by wh
   have no owner and not be tripped. `vault/test/VerifierCode.t.sol` holds both pins to vault/lib.lock's build (the
   Groth16 hash equals the one the recorded DeployVault runs report). `DeployVault._checkStop` compares the stop's
   code with RISC Zero's built in simulation. The 3.0.0 branch (the four November vaults, capped at zero) is unchanged.
+- **On Sepolia, read-only** (block 12,224,884): the 3.1 vault `0x1949…2787` passes the new check (verifier
+  `0x43C8…dc96` and stop `0xC159…b314` as pinned, the stop renounced and not tripped), and the November vault
+  `0x04eE…e44c` the unchanged 3.0.0 rule. The code hash is taken from `eth_getCode` (round 1: `cast codehash` asks
+  for `eth_getProof`, which not every endpoint serves).
 - **Test.** `vault/script/test-check-verifier-local.sh` (anvil; CI `vault`) deploys `script/CheckVerifierFixture.s.sol`:
   the honest wiring passes; a fake verifier, a fake stop, an owned stop and a tripped stop fail, each for its own
   reason. The checker of `50b396a8` passed all five. `DeployVaultChecks.t.sol` `test_S3_theStopIsCheckedByItsCode`.
@@ -210,7 +219,7 @@ candidate recorded (`FerrataRegistry.releaseFeesAndPayouts`).
 
 Not a finding of this review but its third task: [`lez-receipt-unsound.md`](lez-receipt-unsound.md) writes, position
 by position, what happens if LEZ's check of private-transaction receipts is unsound, and why no failsafe meets
-Security #9 there; `vault/test/LezReceiptUnsound.t.sol` (8 tests) shows the Ethereum side. Reading the LEZ bridge
+Security #9 there; `vault/test/LezReceiptUnsound.t.sol` (9 tests) shows the Ethereum side. Reading the LEZ bridge
 program for it found one more reach of that premise, now in [`../trust.md`](../trust.md) §5: `config(cid)` authorizes
 the role messages (`Sunset`, `Freeze`, `SetCap`, …) by the sender actor, which a replayed call can name.
 
@@ -244,9 +253,10 @@ the role messages (`Sunset`, `Freeze`, `SetCap`, …) by the sender actor, which
   `Admin.t.sol`, `Roles.t.sol`, `Merkle.t.sol`, `bound()` throughout).
 - **Invariant** tying accounting to custody: `VaultInvariants` (256 × 100, both rules), `BrokenVerifierInvariants`, and
   since this review `EntitlementInvariants` (later activity only delays an outstanding release, owed balance or refund:
-  4 invariants, 128 × 64, 0 reverts; mutations of `_checkRelease` make it fail: two run by its author, refusing a
-  delisted token and accepting only the newest root, and one by this review, refusing releases once the tree holds
-  more than ten leaves, which no unit test reaches).
+  4 invariants, 128 × 64; the handler's calls do not revert, and the checks count failures in ghost counters, so a
+  revert-free run is not coverage by itself; mutations of `_checkRelease` make it fail: two run by its author,
+  refusing a delisted token and accepting only the newest root, and one by this review, refusing releases once the
+  tree holds more than ten leaves, which made the release invariant fail on its own).
 - **Fork** against the real deployment: the Sepolia-fork suites of row 231 (RISC Zero's real verifier and stop) and the
   real-seal suites. Not run tonight: a fork against real USDC and USDT (pause, blocklist), and Slither or Aderyn (not
   installed on this machine; their last runs are EVIDENCE rows 35 and 54).
