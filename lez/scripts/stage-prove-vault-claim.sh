@@ -30,8 +30,9 @@ done
 ids=$("$out/prove_vault_claim" --image-ids | sed -n 1p)  # sed reads it all: the binary prints a table after the first line
 head="${FERRATA_HEAD:-$(git -C "$repo" rev-parse HEAD 2>/dev/null || echo unknown)}"
 dirty="${FERRATA_DIRTY:-$(git -C "$repo" status --porcelain 2>/dev/null | wc -l)}"
-python3 -I - "$out" "$head" "$dirty" "$ids" $fixtures <<'PY'
-import hashlib, json, pathlib, re, sys
+case "$bin" in "$lez"/*) binary_from="lez/${bin#"$lez/"}" ;; *) binary_from="$bin" ;; esac
+BINARY_FROM="$binary_from" python3 -I - "$out" "$head" "$dirty" "$ids" $fixtures <<'PY'
+import hashlib, json, os, pathlib, re, sys
 root, head, dirty, ids, fixtures = pathlib.Path(sys.argv[1]), sys.argv[2], int(sys.argv[3]), sys.argv[4], sys.argv[5:]
 consumer = re.search(r"consumer image ([0-9a-f]{64})", ids)
 program = re.search(r"program image ([0-9a-f]{64})", ids)
@@ -40,7 +41,7 @@ if not consumer or not program:
 files = {str(p.relative_to(root)): {"bytes": p.stat().st_size, "sha256": hashlib.sha256(p.read_bytes()).hexdigest()}
          for p in sorted(root.rglob("*")) if p.is_file() and p.name != "MANIFEST.json"}
 manifest = {
-    "binary_from": "lez/target/debug/prove_vault_claim",
+    "binary_from": os.environ["BINARY_FROM"],
     "ferrata_commit": head,
     "ferrata_uncommitted_changes": dirty,
     "fixtures_from": [f"crates/ferrata-spectests/fixtures/{f}" for f in fixtures],
