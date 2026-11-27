@@ -1,0 +1,48 @@
+{
+  "attestations": [
+    {
+      "attestation_key": "95d5cf37a227108c4ef90d4b48165c0065434f16321850ebe89cf095d8258fa6",
+      "channel_key": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+      "tip_id": 143
+    },
+    {
+      "attestation_key": "4387b3c80fb8ea0ce8e1a6f6a43ddfe403090e60d1b56f383bc4312a451f0960",
+      "channel_key": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+      "tip_id": 143
+    }
+  ],
+  "block_bytes": 620356,
+  "blocks": 118,
+  "blocks_to_t": 118,
+  "config_tip_hash": "e502602b81aa7b2ae5bca4f003303c26d00848b3d1339b56bc05fa5be654224c",
+  "deployment": {
+    "channel_id": "0101010101010101010101010101010101010101010101010101010101010101",
+    "evm_chain_id": "0000000000000000000000000000000000000000000000000000000000aa36a7",
+    "lez_config_id": "7175c8485e6fb05d72df5718dfd6d1c379dfa843be6ba261821c3c31c045b72e",
+    "vault": "0xcca3a68498f6b37176d67d530b917428c6ffb420"
+  },
+  "description": "must be refused: 2 real attestations of the t = 3 that n = 4 needs",
+  "expect_refusal": "Core(InsufficientAttestations { have: 2, need: 3 })",
+  "input_bytes": 623190,
+  "keys": [
+    "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+    "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+    "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+    "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3"
+  ],
+  "kind": "checkpoint-b",
+  "n": 4,
+  "n_min": 4,
+  "name": "zone-25-143-refuse-below-t",
+  "native": "refused: Core(InsufficientAttestations { have: 2, need: 3 })",
+  "parent_state": "9613f278894d3318e458cfb66e8d6f87c063a269e83255facb3059b66332aede",
+  "parent_tip_hash": "a23f445cd000ac76855bcf6ffdd66156f851084e212b54f09e3f9f5700f9b330",
+  "parent_tip_id": 25,
+  "posting_timeframe": 60,
+  "segments": 0,
+  "t": 3,
+  "t_min": 3,
+  "tip": 143,
+  "tip_hash": "a0dc2cfe0ed3212143053593705668f9c8c860e25d6ccdd63989e91a8f2e8a12",
+  "transactions": 251
+}
