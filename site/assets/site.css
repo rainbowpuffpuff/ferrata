@@ -531,7 +531,7 @@ dialog.sheet[open] { display: flex; }
 .path-t { color: var(--link); font-size: 1.02rem; font-weight: 650; }
 .path-t::before { content: counter(path) ". "; color: var(--accent); }
 .path-d b { color: var(--ink); font-weight: 650; }
-.path-d code { font-size: .86em; overflow-wrap: anywhere; }
+.path-d code { font-size: .86em; white-space: nowrap; }
 .t-alert { max-width: 76ch; margin: .9rem 0 0; padding: .6rem .9rem; background: var(--surface); border-radius: var(--r);
   border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--hair)); border-left: 4px solid var(--warn); }
 .t-agent { max-width: 76ch; margin: .6rem 0 0; padding: .5rem .9rem; background: var(--surface); border: 1px solid var(--hair);
