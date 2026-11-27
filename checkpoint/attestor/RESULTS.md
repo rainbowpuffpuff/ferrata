@@ -391,7 +391,9 @@ seals of RISC Zero 3.1. Vault (floors 4, 3) behind verifier 3.1.0 on anvil: fina
 release's and the checkpoint's mined calldata called again refused (`NullifierAlreadyUsed`, `ParentNotFinal`);
 `ZoneBridgeRc3MultiTest` 7 of 7 on the run's seals; on a fork of Sepolia at block 12,216,620: FORK REHEARSAL 31 OK.
 A rotation to five keys on rc3 under the same programs worked at the zone (five keys accredited 30 s after the stake)
-but its run was lost twice with its box (the box's client went away), so key-set changes stay shown on rc1 (§9).
+but its run was lost twice with its box (the box's client went away); a later run kept it
+([`e2e/runs/zone-bridge-rc3-rotation/`](../../e2e/runs/zone-bridge-rc3-rotation/README.md), EVIDENCE row 280): four of
+five keys over the parent's four, proven on a GPU and accepted by verifier 3.1.0, both releases paid once.
 
 ## What failed on the way
 
