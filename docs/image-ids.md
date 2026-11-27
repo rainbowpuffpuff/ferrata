@@ -20,7 +20,8 @@
 
 
 The first table: the 14 guests this tree builds. The LEZ programs' rows are the build of 12 November 2026 described
-below (RISC Zero 3.0.5, LEZ's); the bridge program's is B1's ([its section](#the-bridge-program-since-milestone-b1-every-account-keyed-by-the-configuration));
+below (RISC Zero 3.0.5, LEZ's); the bridge program's is ADR 0046's ([its section](#the-bridge-program-since-adr-0046-a-claim-names-no-fee-schedule);
+B1's, which the test network runs, is in [its own section](#the-bridge-program-since-milestone-b1-every-account-keyed-by-the-configuration));
 the Ethereum-side guests' are the RISC Zero 3.1 build ([its section](#risc-zero-31-the-ethereum-side-guests-migration-phase-1)).
 The 12 November build's other rows, superseded, are in [Superseded](#superseded-the-ids-the-november-vaults-and-the-recorded-runs-pin).
 

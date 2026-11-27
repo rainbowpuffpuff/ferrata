@@ -19,7 +19,7 @@ without them those checks are skipped, and say so. Nothing else is built or inst
 git clone https://github.com/rainbowpuffpuff/ferrata && cd ferrata
 python3 -I scripts/verify.py --list            # every check: its family, mode, requirement rows and EVIDENCE rows
 python3 -I scripts/verify.py --all             # the 119 quick offline checks: about 6 minutes
-python3 -I scripts/test_verify.py              # the tamper tests: about 30 seconds
+python3 -I scripts/test_verify.py              # the tamper tests: a few minutes (201 s on a laptop)
 python3 -I scripts/test_verify_lc.py           # the light-client records' tamper tests: seconds
 python3 -I scripts/test_verify_zone.py         # the four-key rc3 run's tamper tests: seconds
 python3 -I scripts/test_verify_f13.py          # the ADR-0046 fee records' tamper tests: seconds
@@ -182,7 +182,7 @@ ADR 0046 dropped, and everything else the tool sends or reads (deposits, burns, 
 same. `ferrata` built from this tree reads the image id the network's program loader names for `FERRATA_BRIDGE_ACCOUNT`
 and builds each claim in that program's layout (`cli/wallet/src/deployed.rs`; EVIDENCE row 281): on this network, B1's,
 with the fee-schedule range its token state gives (the claim then shows that range, and `ferrata claim` counts the
-anonymity set within it, as B1's claims always did); any other image id is refused before anything is built, and
+anonymity set within it, as B1's claims always did); any other image id is refused before a claim or a burn is built, and
 `ferrata status` names the program (`zone: bridge program ferrata_bridge_b1 …`). A private claim or burn is proven with
 the binary of the program the network runs: the tool compares `--bridge-program`'s image id with the network's before
 proving and refuses another. That binary, `ferrata_bridge_b1.bin` (the image `0x847a4336…7515` under "Superseded" in

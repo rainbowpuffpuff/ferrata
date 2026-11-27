@@ -187,7 +187,8 @@ for it, with the range its token state gives (`ferrata_wallet::deployed`), and s
 approval shows the program and the range. Run from Basecamp on this network so far: the session, the reads, the
 positions and the faucet; no claim or burn has been sent there yet. Offline, the session's replay
 (`calls/tests/network_session.rs`) approves, confirms and decodes the claim in B1's layout against a B1 stand-in, with
-the burn unchanged, and an F13 deployment stand-in decodes the signed claim with this tree's wire; each refuses the
+the burn unchanged, and in the unit test `m1_f13_claim_is_approved_signed_and_decoded_with_the_current_wire`
+(`calls/src/net.rs`) an F13 deployment stand-in decodes the signed claim with this tree's wire; each refuses the
 other layout at approval, unsigned (EVIDENCE row 281).
 Deposits are made in the network's web wallet with the same phrase: Basecamp 0.4.0-rc.2 has no
 Logos signer for Sepolia (`tx_sender_module`, `keystore_module`), so the deposit button is off in the session. A private

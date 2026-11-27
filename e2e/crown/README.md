@@ -52,8 +52,9 @@ script that re-checks every step from public data and the recorded blocks.
   `nullifier(cid, chain, vault, N)`, and its claims without a schedule range) and, like
   `vault/script/DeployVault.s.sol`, deploys a capped configuration (`FERRATA_UNCAPPED=1` for the unlimited one of the
   live runs). B1's program (`ferrata_bridge_b1`, `0x847a4336…7515` since ADR 0032 of 22 November 2026, binary sha256
-  `537cbe7a…a036`; B1's first build was `0xac1fb59b…442e`) is the test network's and needs the crown-driver of
-  `40e8d799`. The input sets `rc1` and `rc3` on the Volume carry the earlier bridge program and a crown-driver built
+  `537cbe7a…a036`; B1's first build was `0xac1fb59b…442e`) is the test network's and needs a crown-driver from a
+  tree before ADR 0046: `40e8d799`'s, or `65acaa4a`'s, which the B1 round trip built against LEZ v0.4.0-rc3
+  (`e2e/runs/rc3-roundtrip-b1/REHEARSAL.md`). The input sets `rc1` and `rc3` on the Volume carry the earlier bridge program and a crown-driver built
   before B1, so this tree refuses them before anything runs or is sent: `start`'s first step (`drive.py`,
   `prepare_inputs`) requires the bundle's `program/ferrata_lez.bin` and `program/ferrata_bridge.bin` to have
   `docs/image-ids.md`'s `ferrata_lez` and `ferrata_bridge_f13` ids; the crown-driver refuses any other bridge program

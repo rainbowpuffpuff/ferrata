@@ -453,7 +453,7 @@ over 64 witnesses ([`bridge.md`](design/bridge.md) §18.3). Sources: [`lez/BRIDG
 ### P.2 Additional LEZ verification and its amortised cost per deposit
 
 The root import is the only additional verification (the claim needs no Ethereum proof of its own). **Its cost does
-not depend on how many deposits it covers**, measured on the deployed bridge program (`0xccde6171…`, before milestone B1; in-process harness,
+not depend on how many deposits it covers**, measured on the bridge program of the live runs before milestone B1 (`0xccde6171…`; in-process harness,
 [`perf-state.md`](../lez/results/perf-state.md) §4a, `bash bench/perf/state.sh`):
 
 | import | leaves it covers | newly covered | execution gas | storage gas | execution gas per newly covered deposit |

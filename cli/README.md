@@ -432,8 +432,8 @@ id the zone's program loader names for it (`ferrata_wallet::deployed`): this tre
 or `ferrata_bridge_b1`, which our test network runs and whose claim names the fee schedule range the token state gives
 (so there a private claim also shows that range, the anonymity line counts the deposits within it, and B1 mints the
 schedule's mint fee to the fee recipient: the output says `program ferrata_bridge_b1 …` and `mint fee …`). Any other
-image id is refused before anything is built, and a private claim or burn refuses a `--bridge-program` binary whose
-image id is not the zone's, before proving. `ferrata status` names the program.
+image id is refused before a claim or a burn is built, and a private claim or burn refuses a `--bridge-program` binary
+whose image id is not the zone's, before proving. `ferrata status` names the program.
 
 ### `ferrata burn`
 
