@@ -51,7 +51,10 @@ change, so the bridge program's image id moves, a new vault and a new LEZ instan
 end-to-end runs are made again; the fee recipient is paid in the deposited token on Ethereum instead of in wrapped units
 on LEZ; a refunded deposit no longer gets its mint fee back (the fee is earned at the deposit, which the vault cannot
 undo once the recipient has withdrawn it). Keeping the schedule mirror on LEZ keeps every other message's encoding
-unchanged; removing it is a later clean-up.
+unchanged; removing it is a later clean-up. The RFP words F.13 as a protocol fee on minting and burning of the wrapped token on LEZ, charged
+in the wrapped token, native LEZ tokens or a mix, and leaves an Ethereum-side fee to the proposal as an addition: this
+option meets the clause that the fee value must not distinguish a user's transaction at the cost of that wording (both
+protocol fees are now taken on Ethereum), so docs/requirements-status.md keeps F.13 in part.
 
 ## Pairing and what does not change
 
