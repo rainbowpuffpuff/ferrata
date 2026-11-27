@@ -396,17 +396,14 @@ export function mountBridge(root, c) {
       // that fails is the vault's refusal, said here and not after a signature.
       const first = plan.approve ?? plan.tx;
       const value = isEth() ? total : 0n;
-      const short = (need, what) => { plan = null; return new Error(`Your Sepolia ETH, ${fmtUnits(balance)}, does not cover ${fmtUnits(need)} (${what}): `
-        + 'get some Sepolia ETH first (the testers\' page, Limits, names public faucets). Nothing was signed.'); };
+      const short = (need, what) => new Error(`Your Sepolia ETH, ${fmtUnits(balance)}, does not cover ${fmtUnits(need)} (${what}): `
+        + 'get some Sepolia ETH first (the testers\' page, Limits, names public faucets). Nothing was signed.');
       // The balance first, so that one too small for the deposit itself is said the same way whatever the estimate does.
       const balance = BigInt(await P.request({ method: 'eth_getBalance', params: [depositor, 'latest'] }));
       if (balance < value) throw short(value, 'the deposit and its fees, before the gas');
-      let gas, gasPrice;
-      try {
-        [gas, gasPrice] = await Promise.all([
-          P.request({ method: 'eth_estimateGas', params: [{ from: first.from, to: first.to, value: first.value, data: first.data }] }),
-          P.request({ method: 'eth_gasPrice' })]);
-      } catch (e) { plan = null; throw e; }
+      const [gas, gasPrice] = await Promise.all([
+        P.request({ method: 'eth_estimateGas', params: [{ from: first.from, to: first.to, value: first.value, data: first.data }] }),
+        P.request({ method: 'eth_gasPrice' })]);
       const cost = costOf({ gas, gasPrice, balance, value });
       if (!cost.enough) throw short(cost.need, isEth() ? 'the deposit, its fees and the gas' : 'the gas');
       const add = (x, y) => sum.append(el('dt', { text: x }), el('dd', { text: y }));
@@ -423,7 +420,7 @@ export function mountBridge(root, c) {
       add('Calldata', data);
       out.textContent = 'Check C and the vault address again in your wallet\'s confirmation screen before you sign.'; out.className = 'msg';
       go.disabled = false;
-    } catch (e) { fail(e); }
+    } catch (e) { plan = null; go.disabled = true; fail(e); }
   });
 
   go.onclick = async () => {
