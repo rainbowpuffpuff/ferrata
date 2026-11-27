@@ -70,7 +70,7 @@ register a token of a given kind, or a deployer to misconfigure, is ranked by wh
 - **Test.** `monitor/tests/nonce.rs` (anvil): a send from an unfunded key fails, the key is funded, the next send must
   take nonce 0 and be mined; then the same key sends through another provider and the monitor's next send must follow
   it. On `50b396a8` the second send times out behind the gap (`TxWatcher(Timeout)`); now it passes, and the monitor's
-  own suite (27 tests) still does.
+  own suite (28 tests with C-4's) still does.
 
 ### S-1 (Low) — a token hook lands a deposit in a retired vault
 
@@ -191,8 +191,7 @@ candidate recorded (`FerrataRegistry.releaseFeesAndPayouts`).
   `--send` reported success. Fixed: `run_action` refuses an address without code before the dry run; the anvil
   scenario's new case (run by `vault/script/test-admin.sh`, CI `vault`) exits 0 on `50b396a8` and 1 now. Open: no
   chain id is pinned; `--password` is passed on cast's command line; global caps are parsed and shown as
-  18-decimal ETH although they are value units. Fix: require code at `--vault`, a chain id, a password file, raw value
-  units.
+  18-decimal ETH although they are value units. Fix for the rest: a chain id, a password file, raw value units.
 - **C-7 (Low), relayer.** A stuck transaction stalls every duty (no replacement by fee); a job is booked at its first
   receipt, so a reorg can leave a nonce gap; a mined revert is final even when transient. **C-8 (Low).** The monitor
   and `admin.sh` take no chain id, the CLI and relayer optionally; state directories are not tied to a chain.
@@ -228,8 +227,8 @@ the role messages (`Sunset`, `Freeze`, `SetCap`, …) by the sender actor, which
 
 - **Journals and verifier.** The 17-word checkpoint journal and the 11-word release journal bind the domain, the chain
   id read at call time, the vault and the configuration; every word of both, flipped alone, is refused by RISC Zero's
-  verifier 3.1.0 on the real seals of two LEZ v0.4.0-rc3 runs (`vault/test/real/Rc3JournalWords.t.sol`, four tests on each). Image ids
-  immutable and distinct; rules kept apart by image and entry point; Groth16 malleability irrelevant (nothing is keyed
+  verifier 3.1.0 on the real seals of two LEZ v0.4.0-rc3 runs (`vault/test/real/Rc3JournalWords.t.sol`, four tests on
+  each). Image ids immutable and distinct; rules kept apart by image and entry point; Groth16 malleability irrelevant (nothing is keyed
   on a seal); the selectors 0x73c457ba and 0xe71e6620 re-derived from the verifying keys (`verify r8-risc0-selectors`).
 - **Replay and roots.** Nullifiers global, set before any external call, never cleared; burn roots accepted only by a
   finalisation, re-pointed after a revocation; a candidate live only in its epoch (review L-1 holds: the epoch strictly
@@ -257,7 +256,7 @@ the role messages (`Sunset`, `Freeze`, `SetCap`, …) by the sender actor, which
   4 invariants, 128 × 64; the handler's calls do not revert, and the checks count failures in ghost counters, so a
   revert-free run is not coverage by itself; mutations of `_checkRelease` make it fail: two run by its author,
   refusing a delisted token and accepting only the newest root, and one by this review, refusing releases once the
-  tree holds more than ten leaves, which made the release invariant fail on its own).
+  tree holds more than ten leaves, under which the release invariant failed while the file's unit tests passed).
 - **Fork** against the real deployment: the Sepolia-fork suites of row 231 (RISC Zero's real verifier and stop) and the
   real-seal suites. Not run tonight: a fork against real USDC and USDT (pause, blocklist), and Slither or Aderyn (not
   installed on this machine; their last runs are EVIDENCE rows 35 and 54).
@@ -265,12 +264,11 @@ the role messages (`Sunset`, `Freeze`, `SetCap`, …) by the sender actor, which
 ## 8. Reproducing
 
 ```bash
+just security-review       # every vault suite below, the verifier check on anvil, the R.8 checks and their tamper tests
 cd vault && forge test --match-path 'test/{InternalReview,LezReceiptUnsound,DeployDefaults,DeployVaultChecks,VerifierCode}.t.sol'
-cd vault && forge test --match-path test/invariant/EntitlementInvariants.t.sol
-cd vault && forge test --match-path test/real/Rc3JournalWords.t.sol
-bash vault/script/test-check-verifier-local.sh          # anvil
-bash vault/script/test-admin.sh                          # anvil; C-6
+cd vault && forge test --match-path 'test/{real/Rc3JournalWords,invariant/EntitlementInvariants}.t.sol'
+bash vault/script/test-check-verifier-local.sh                    # anvil
+bash vault/script/test-admin.sh                                   # anvil; C-6
 cd monitor && cargo test --locked --test nonce --test child_env   # nonce: anvil
 python3 -I scripts/verify.py r8-risc0-selectors r8-phase-split && python3 -I scripts/test_verify_sec.py
-just security-review                                     # the first, the selectors and their tamper tests
 ```
