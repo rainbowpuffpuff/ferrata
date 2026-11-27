@@ -15,7 +15,7 @@ issue = "https://github.com/logos-co/rfp/issues/257"
 issue_api = "https://api.github.com/repos/logos-co/rfp/issues/257"
 api_repo = "https://api.github.com/repos/rainbowpuffpuff/ferrata"
 workflows = ["ci.yml", "macos.yml", "lez-full.yml", "sequencer.yml"]
-platform = "LEZ v0.4.0-rc1 to rc3 on zones we run; LEZ testnet 0.4 is not released"
+platform = "LEZ v0.4.0-rc1 to rc3 on zones we run (LEZ v0.4.0, released 27 November 2026, not yet ported to); no LEZ testnet 0.4 is announced"
 
 # The test network served beside this page (same host). Paths are relative so the page works on any host name.
 [testnet]

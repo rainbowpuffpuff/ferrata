@@ -22,7 +22,7 @@ crates.io (versions and yank flags), read on 21 November 2026.
 - **Every proof is made again**: no 3.0.5 receipt or seal survives, on Ethereum or on LEZ.
 - **One process, one version.** A process that proves for both sides uses one risc0-zkvm. The vault will accept only
   3.1 seals; a LEZ network accepts the version it was built with (v0.4.0-rc1 and rc3, and v0.3.1 on the public
-  testnet: 3.0.5; LEZ `dev`: 3.1.0 since `6aaabe5`, untagged). LEZ pins `risc0-zkvm = "3.0.5"` (caret), our 40
+  testnet: 3.0.5; LEZ `dev`: 3.1.0 since `6aaabe5`, released as LEZ v0.4.0 on 27 November 2026). LEZ pins `risc0-zkvm = "3.0.5"` (caret), our 40
   manifests `"=3.0.5"` to stay on the network's version. The CLI proves releases in process
   (`cli/src/release.rs`, `ferrata_wallet::release::prove`, shared with `ferrata_bridge_module`) and links LEZ's wallet
   crates, so until LEZ moves it cannot make a 3.1 release seal and a rc3-valid private LEZ transaction at once.
@@ -81,7 +81,7 @@ the 51 lockfiles lock risc0-zkvm 3.0.5; 18 guests in `docs/image-ids.md` plus th
 5. **Live, the owner**: new vaults on Sepolia with the new ids and the D1 wiring, a round trip, `verify-sepolia.py`,
    Sourcify; then the README and EVIDENCE rows of the live runs replaced.
 
-What waits on Logos: a LEZ tag on risc0 3.1 (phase 2 and everything LEZ-side after it); Logos's own answer for LEZ's
+What waited on Logos, a LEZ tag on risc0 3.1, came on 27 November 2026 (LEZ v0.4.0; also new image ids and transaction and fee formats): phase 2, our port to it, is now ours and has not started. Still waiting on Logos: Logos's own answer for LEZ's
 privacy-preserving transactions on rc1, rc3 and the public testnet (v0.3.1); testnet 0.4, which, built from `dev`,
 would refuse our current 3.0.5 receipts, so the day-one kit must be rebuilt in phase 2 before it is used there; the
 module SDK and `lez_core` versions the modules link.

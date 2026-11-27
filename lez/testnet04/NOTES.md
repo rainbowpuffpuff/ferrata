@@ -1,6 +1,6 @@
 # How a program is deployed and paid for on a LEZ v0.4 network, read from source
 
-Read on 18 November 2026 from LEZ **v0.4.0-rc3** (`bafd07be`, the newest tag; `spike/upstream/lez-v0.4.0-rc3` beside the
+Read on 18 November 2026 from LEZ **v0.4.0-rc3** (`bafd07be`, then the newest tag; `spike/upstream/lez-v0.4.0-rc3` beside the
 repository) and, for what changed since, from the comparison of `v0.4.0-rc3...dev` on GitHub (`dev` is LEZ's default
 branch; `main` is still v0.3.1 at `1a003bf`). Paths are LEZ's. Line numbers are rc3's. What [`day1.sh`](day1.sh) does
 with each fact is said beside it.

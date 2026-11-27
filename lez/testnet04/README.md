@@ -1,8 +1,10 @@
 # Day one on LEZ testnet 0.4
 
 **Prototype, unaudited.** Both RFPs ask for deployment on LEZ testnet 0.4 (RFP-021 S.1, RFP-022 S.1). It does not exist
-yet: logos-docs' "Testnet endpoints" page has a "0.4 (actor model)" row of TBDs, and LEZ's newest tag is v0.4.0-rc3
-([`watch.sh`](watch.sh) checks both). This directory is the deployment for the day it opens, once the two accounts are
+yet: logos-docs' "Testnet endpoints" page has a "0.4 (actor model)" row of TBDs ([`watch.sh`](watch.sh) checks it and
+LEZ's tags). LEZ v0.4.0 was released on 27 November 2026 (RISC Zero 3.1.0: new image ids, transaction and fee
+formats); this kit is built for and rehearsed on v0.4.0-rc3, and its port to v0.4.0 has not started, so a testnet 0.4
+built from v0.4.0 would refuse it as it stands. This directory is the deployment for the day it opens, once the two accounts are
 funded (a deposit is credited about an hour after its block): one command, built and rehearsed on our own LEZ
 v0.4.0-rc3 zone ([`results/rehearsal-1/`](results/rehearsal-1/README.md); its `run` took 4,128 s, three 20-minute node
 stalls inside). Nothing here has been sent to any public network.

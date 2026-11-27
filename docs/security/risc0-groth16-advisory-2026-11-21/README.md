@@ -159,8 +159,8 @@ examined.
 
 **Corrected again, 23 November 2026.** The paragraph above stopped holding later the same day: since 23 November 2026
 the project's own public test network (LEZ v0.4.0-rc3 on RISC Zero 3.0.5, its one sequencer ours, test value only) runs
-the v0.4 programs, the attestation and bridge programs among them. Until LEZ moves to RISC Zero 3.1, that network's
-program state is exposed as this section describes, if LEZ accepts a forged receipt, which has not been tested. The
+the v0.4 programs, the attestation and bridge programs among them. Until that network and our programs move to LEZ v0.4.0 (released 27 November 2026 on RISC Zero 3.1; the port has not
+started), that network's program state is exposed as this section describes, if LEZ accepts a forged receipt, which has not been tested. The
 vault paired with it verifies with RISC Zero's verifier 3.1.0 (`vault/deployments/sepolia-31-B.verification.txt`), but a
 release rests on burns the LEZ side recorded.
 
@@ -192,7 +192,7 @@ somewhere, and no flag of ours separates them: an instance refusing `ApplyVerifi
    advisory (the paragraph "The emergency stop did not trip" above).
 4. The move to risc0 3.1.0 and verifier 3.1.0, with new vaults: [risc0-3.1-migration.md](../../design/risc0-3.1-migration.md).
    Phase 1 (the Ethereum side) done on 23 November 2026: the 3.1 vault on Sepolia (EVIDENCE rows 231, 232).
-5. LEZ: wait for a LEZ tag on risc0 3.1.0 (Logos).
+5. LEZ: a LEZ tag on risc0 3.1.0 came with LEZ v0.4.0 (27 November 2026); our port to it (phase 2) has not started.
 
 ```sh
 # The owner sent these calls with the deployer key (0x79A9…5C07) on 21 November 2026, in this order: the table below.

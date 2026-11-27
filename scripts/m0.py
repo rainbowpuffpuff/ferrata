@@ -28,7 +28,8 @@ TOKEN_REPO = "https://github.com/logos-blockchain/lez-programs.git"
 
 # Facts that are not measurements. Each has its source; --online re-checks the upstream ones.
 FACTS = {
-    "lez_newest_tag": ("v0.4.0-rc3", "lez/results/v0.4.0-rc3/README.md (tagged 11 Nov 2026, commit bafd07b)"),
+    "lez_newest_tag": ("v0.4.0-rc3", "lez/results/v0.4.0-rc3/README.md (tagged 11 Nov 2026, commit bafd07b; the newest tag when M0 ran; LEZ v0.4.0, "
+                       "released 27 Nov 2026, not run)"),
     "token_program_v04": (
         "released for v0.2.4; the v0.4 port is an unmerged branch",
         "proposal §B9 and README.md (state of 11 Nov 2026, spike/upstream/lez-programs at 6674d78)",

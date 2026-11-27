@@ -10,7 +10,7 @@ of its ControlID.sol and Groth16Verifier.sol are compared with the copied ones t
 
 `r8-phase-split` reads the committed Cargo lockfiles: every workspace that makes a proof the vault takes (phase 1 of
 docs/design/risc0-3.1-migration.md) locks risc0-zkvm 3.1.0, risc0-groth16 3.0.6 and risc0-circuit-recursion 4.1.0;
-the LEZ-linked workspaces (phase 2, which waits on a LEZ tag on risc0 3.1) are listed with what they lock, and RFP-022
+the LEZ-linked workspaces (phase 2, our port to LEZ v0.4.0 on risc0 3.1, not started) are listed with what they lock, and RFP-022
 R.8's row must say what they lock, in its phrase "LEZ verifies private transactions with risc0-zkvm X" (a row that
 still says 3.0.5 after LEZ moved, or the reverse, fails).
 """
@@ -34,7 +34,7 @@ PHASE1 = ("bridge/Cargo.lock", "bridge/guests/Cargo.lock", "checkpoint/Cargo.loc
           "checkpoint/guests-plain/Cargo.lock", "checkpoint/guests-0-3-5/Cargo.lock", "gpu-prover/prover/Cargo.lock")
 PHASE1_VERSIONS = {"risc0-zkvm": "3.1.0", "risc0-groth16": "3.0.6", "risc0-circuit-recursion": "4.1.0"}
 # Phase 2 (LEZ-linked: LEZ's own state machine, our LEZ programs, the CLI and the Logos modules, which link LEZ's
-# wallet): they lock LEZ's risc0 until a LEZ tag on risc0 3.1. The first one decides what R.8's row must say.
+# wallet): they lock LEZ's risc0 until our port to LEZ v0.4.0 (risc0 3.1). The first one decides what R.8's row must say.
 PHASE2 = ("lez/Cargo.lock", "cli/Cargo.lock", "lez/guests/bridge/Cargo.lock", "lez/guests/program/Cargo.lock",
           "modules/ferrata_bridge_module/rust-lib/Cargo.lock", "modules/ferrata_relayer_module/rust-lib/Cargo.lock")
 
@@ -199,7 +199,7 @@ def r8_phase_split(ctx):
         v = _locked(ctx.path(rel).read_text(), "risc0-zkvm")
         lez[rel] = v[0] if len(v) == 1 else ",".join(v) or "absent"
     versions = sorted(set(lez.values()))
-    lines.append("phase 2 (LEZ-linked, waits on a LEZ tag on risc0 3.1): " +
+    lines.append("phase 2 (LEZ-linked, waits on our port to LEZ v0.4.0 on risc0 3.1): " +
                  "; ".join(f"{rel} risc0-zkvm {v}" for rel, v in lez.items()))
     reason = _row_text(ctx.path(STATUS).read_text(), "RFP-022", "R.8")
     # The row's LEZ sentence names the zkVM LEZ verifies private transactions with; the row also names 3.1.0 for the
