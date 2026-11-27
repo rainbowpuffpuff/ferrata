@@ -3,6 +3,7 @@ pragma solidity ^0.8.26;
 
 import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
+import {IRiscZeroVerifier as IRiscZeroVerifierFull} from "risc0/IRiscZeroVerifier.sol";
 import {RiscZeroVerifierEmergencyStop} from "risc0/RiscZeroVerifierEmergencyStop.sol";
 import {ControlID} from "risc0/groth16/ControlID.sol";
 import {RiscZeroGroth16Verifier} from "risc0/groth16/RiscZeroGroth16Verifier.sol";
@@ -44,10 +45,10 @@ import {TestToken} from "./TestToken.sol";
 ///         deposits and releases each at most a ceiling (the params' `ethDailyCap` and `tokenDailyCap`, in base units;
 ///         by default 100 times the token's largest denomination: 10 ETH and 1,000,000 test-token units a day);
 ///         globally, deposits and releases each at most the params' `globalDailyValue` in value units (by default the
-///         sum of the two ceilings' values); and an immutable release floor (`releaseFloorDailyValue`, by default one
-///         largest denomination of the token whose largest is worth least, a day), so that no admin can throttle
-///         releases below it. Each bucket refills its capacity over a day. FERRATA_UNCAPPED=1 deploys without caps, as
-///         the live testnet runs of November 2026 did; the record says which (`uncapped`).
+///         sum of the two ceilings' values); and an immutable release floor (`releaseFloorDailyValue`, by default the
+///         largest single exit, a largest leaf's denomination and relay fee, over both tokens, a day), so that no admin
+///         can throttle releases below it. Each bucket refills its capacity over a day. FERRATA_UNCAPPED=1 deploys
+///         without caps, as the live testnet runs of November 2026 did; the record says which (`uncapped`).
 ///
 ///         Wait Δ, the outbound finality depth (RFP-022 F.12; docs/guides/deployer-guide.md §2, docs/design/bridge.md
 ///         §13): `deltaFloor` = `initialDelta` = the design's default for the rule, 3 h 01 min under rule (A), 1 h under
@@ -142,6 +143,13 @@ contract DeployVault is Script {
                 address(RiscZeroVerifierEmergencyStop(r.stop).verifier()) == r.groth16,
                 "DeployVault: the recorded stop wraps another verifier"
             );
+            if (!uncapped) {
+                require(
+                    _capsAdmitTheFloor([_ethParams(), _tokenParams()], _daily(_releaseFloorDaily())),
+                    "DeployVault: a token's daily release cap is below the release floor (ethDailyCap, tokenDailyCap, "
+                    "releaseFloorDailyValue): the floor is immutable, so this is refused before the vault"
+                );
+            }
             _checkExpectedVault();
             _checkLibraryCode(r.registry);
             r.vault = _create(r, s, abi.encodePacked(_linkedVaultCode(r.registry), abi.encode(_deployment(r.stop))));
@@ -274,14 +282,48 @@ contract DeployVault is Script {
         );
     }
 
-    /// @dev The immutable release floor in value units a day: the params' `releaseFloorDailyValue`, else one largest
-    ///      denomination of the token whose largest is worth least.
+    /// @dev The immutable release floor in value units a day: the params' `releaseFloorDailyValue`, else the largest
+    ///      single exit over both tokens, a refund of a largest leaf (its denomination and relay fee), so that the
+    ///      lowest caps the floor allows still pass every exit (internal review of 27 November 2026, S-2: the earlier
+    ///      default, one largest denomination of the token whose largest is worth least, let caps above it refuse a
+    ///      10,000-token release and a 0.1 ETH refund for good).
     function _releaseFloorDaily() internal view returns (uint256) {
-        FerrataVault.TokenParams memory e = _ethParams();
-        FerrataVault.TokenParams memory t = _tokenParams();
-        uint256 ethLargest = _value(e.denominations[e.denominations.length - 1], e.lezUnit, e.unitWeight);
-        uint256 tokenLargest = _value(t.denominations[t.denominations.length - 1], t.lezUnit, t.unitWeight);
-        return _paramOr(".releaseFloorDailyValue", ethLargest < tokenLargest ? ethLargest : tokenLargest);
+        uint256 eth = _largestExit(_ethParams());
+        uint256 token = _largestExit(_tokenParams());
+        return _paramOr(".releaseFloorDailyValue", eth > token ? eth : token);
+    }
+
+    /// @dev Whether every token's release bucket admits the floor, in value units as the registry converts them
+    ///      (FerrataRegistry.checkReleaseFloor): registration refuses a bucket below the floor, so checking first keeps a
+    ///      vault, whose floor is immutable, from being deployed with ceilings it then cannot register (final review
+    ///      round of 27 November 2026).
+    function _capsAdmitTheFloor(FerrataVault.TokenParams[2] memory ps, FerrataVault.CapParams memory floor)
+        internal
+        pure
+        returns (bool)
+    {
+        for (uint256 i = 0; i < 2; i++) {
+            FerrataVault.CapParams memory c = ps[i].releaseCap;
+            if (c.capacity == UNLIMITED) continue;
+            if (
+                _valueOf(c.capacity, ps[i].lezUnit, ps[i].unitWeight) < floor.capacity
+                    || _valueOf(c.refillPerSecond, ps[i].lezUnit, ps[i].unitWeight) < floor.refillPerSecond
+            ) return false;
+        }
+        return true;
+    }
+
+    /// @dev amount * weight / unit, saturating: the registry's `_toValue`.
+    function _valueOf(uint256 amount, uint256 unit, uint256 weight) internal pure returns (uint256) {
+        if (amount > type(uint256).max / weight) return type(uint256).max;
+        return amount * weight / unit;
+    }
+
+    /// @dev A token's largest exit in value units: its largest denomination and that denomination's relay fee, which a
+    ///      refund returns together.
+    function _largestExit(FerrataVault.TokenParams memory p) internal pure returns (uint256) {
+        uint256 k = p.denominations.length - 1;
+        return _value(p.denominations[k] + p.relayFees[k], p.lezUnit, p.unitWeight);
     }
 
     /// @dev The design's wait Δ for the rule.
@@ -549,14 +591,27 @@ contract DeployVault is Script {
         );
     }
 
+    /// @dev The stop is RISC Zero's emergency stop around `groth16`, by its code, not only its getters: the code of
+    ///      `RiscZeroVerifierEmergencyStop(groth16, ·)` built here in the script's own simulation (never broadcast; its
+    ///      one immutable is the wrapped verifier, the owner is storage); renounced and not tripped (internal review of
+    ///      27 November 2026, S-3: a contract answering verifier(), owner() and paused() passed before).
+    function _checkStop(address stop, address groth16) internal {
+        // Any non-zero owner builds the same code (the owner is storage); not address(this), which forge refuses in a
+        // script.
+        address expected = address(new RiscZeroVerifierEmergencyStop(IRiscZeroVerifierFull(groth16), address(0xdEaD)));
+        require(stop.codehash == expected.codehash, "check: the stop's code is not RISC Zero's emergency stop");
+        require(RiscZeroVerifierEmergencyStop(stop).owner() == address(0), "check: the stop still has an owner");
+        require(!RiscZeroVerifierEmergencyStop(stop).paused(), "check: the stop is tripped");
+        require(
+            address(RiscZeroVerifierEmergencyStop(stop).verifier()) == groth16, "check: the stop wraps another verifier"
+        );
+    }
+
     /// @dev Everything the proposal and the registrations promise, read back from the chain.
     function _check(Record memory r) internal {
         _checkVerifier(r.groth16);
-        RiscZeroVerifierEmergencyStop stop = RiscZeroVerifierEmergencyStop(r.stop);
+        _checkStop(r.stop, r.groth16);
         FerrataVault vault = FerrataVault(payable(r.vault));
-        require(stop.owner() == address(0), "check: the stop still has an owner");
-        require(!stop.paused(), "check: the stop is tripped");
-        require(address(stop.verifier()) == r.groth16, "check: the stop wraps another verifier");
         require(address(vault.verifier()) == r.stop, "check: the vault's verifier is not the stop");
         require(vault.mode() == mode, "check: the vault's rule");
         require(vault.admin() == deployer, "check: admin");

@@ -9,7 +9,6 @@
 use std::collections::BTreeMap;
 use std::fmt;
 use std::path::PathBuf;
-use std::process::Command;
 
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -242,7 +241,7 @@ impl NodeSource {
         let bytes = match self {
             Self::File(p) => std::fs::read(p).with_context(|| format!("reading {}", p.display()))?,
             Self::Cmd(c) => {
-                let out = Command::new("sh").arg("-c").arg(c).output().with_context(|| format!("running {c}"))?;
+                let out = crate::alert::shell(c).output().with_context(|| format!("running {c}"))?;
                 ensure!(out.status.success(), "{c} exited with {}", out.status);
                 out.stdout
             }

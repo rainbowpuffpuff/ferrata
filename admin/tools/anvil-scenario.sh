@@ -306,6 +306,19 @@ assert "the vault's error name is decoded" grep -q "NotFreezeAuthority()" "$OUT_
 act "pause-checkpoints by the admin is refused (NotWatcher)" 1 \
   "${A[@]}" --from "$ADMIN" pause-checkpoints
 assert "the vault's error name is decoded" grep -q "NotWatcher()" "$OUT_DIR/step.out"
+act "an action at an address with no code is refused before its dry run (internal review C-6)" 1 \
+  bash vault/script/admin.sh --rpc-url "$RPC" --vault 0x000000000000000000000000000000000000dEaD --from "$FREEZE" \
+  set-releases-frozen true
+assert "it names the missing contract" grep -q "no contract at 0x000000000000000000000000000000000000dEaD" "$OUT_DIR/step.out"
+# The same with a cast that writes a warning to standard error (a nightly build's banner): the code read is stdout only
+# (final review round: merged into the code it read as "not 0x" and the action went ahead).
+mkdir -p "$OUT_DIR/noisy-cast"
+printf '#!/usr/bin/env bash\necho "Warning: This is a nightly build of Foundry." >&2\nexec %q "$@"\n' "$(command -v cast)" \
+  > "$OUT_DIR/noisy-cast/cast"
+chmod +x "$OUT_DIR/noisy-cast/cast"
+act "the same refusal with a cast that writes a warning to standard error" 1 \
+  env PATH="$OUT_DIR/noisy-cast:$PATH" bash vault/script/admin.sh --rpc-url "$RPC" \
+  --vault 0x000000000000000000000000000000000000dEaD --from "$FREEZE" set-releases-frozen true
 
 # A dry run sends nothing: the sender's nonce and the vault's state are unchanged.
 NONCE_BEFORE=$(cast nonce "$ADMIN" --rpc-url "$RPC")

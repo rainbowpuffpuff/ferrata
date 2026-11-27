@@ -693,6 +693,9 @@ contract FerrataVault is ReentrancyGuardTransient {
         uint256 balanceBefore = erc20.balanceOf(address(this));
         erc20.safeTransferFrom(msg.sender, address(this), total);
         if (erc20.balanceOf(address(this)) != balanceBefore + total) revert TransferAmountMismatch();
+        // A token hook (ERC-777's tokensToSend) runs inside the pull and can call the permissionless `retire()` or
+        // finalise a sunset checkpoint: checked again after it (internal review 2026-11-27, S-1).
+        if (retired || finalSunset) revert VaultRetired();
 
         _recordDeposit(token, amount, total, mintFee, commitment, index);
     }

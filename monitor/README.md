@@ -91,7 +91,9 @@ MONITOR_KEY=… target/release/monitor run --rpc http://127.0.0.1:8545 --vault 0
 - **Key.** The watcher key is given through `--key-env VAR` (hex in the environment), `--key-file FILE`
   (hex in a file only the monitor's user reads) or `--keystore FILE --password-file FILE`, never on the
   command line. A monitor without a key, or with
-  `--dry-run`, decides and raises alerts but sends nothing.
+  `--dry-run`, decides and raises alerts but sends nothing. With `--key-env` the variable is kept out of the alert
+  and node commands' environment, but a command running as the monitor's user can still read the monitor's own
+  `/proc/<pid>/environ`: where those commands are not fully trusted, prefer `--key-file` or the keystore.
 - **Alerts.** Each alert is one JSON line on standard error and in `--alert-log`. Alerts of at least
   `--alert-level` (warn) also go to `--alert-cmd`, which gets the line on its standard input. Kinds:
   `started`, `stopped`, `candidate-passed`, `candidate-waiting`, `cancelled`, `cancel-failed`, `late`,

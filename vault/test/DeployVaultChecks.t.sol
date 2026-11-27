@@ -2,9 +2,12 @@
 pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
+import {IRiscZeroVerifier as IRiscZeroVerifierFull} from "risc0/IRiscZeroVerifier.sol";
+import {RiscZeroVerifierEmergencyStop} from "risc0/RiscZeroVerifierEmergencyStop.sol";
 import {ControlID} from "risc0/groth16/ControlID.sol";
 import {RiscZeroGroth16Verifier} from "risc0/groth16/RiscZeroGroth16Verifier.sol";
 
+import {FakeStop} from "../script/CheckVerifierFixture.s.sol";
 import {DeployVault} from "../script/DeployVault.s.sol";
 
 /// @notice Answers RiscZeroGroth16Verifier 3.1.0's VERSION() and SELECTOR() and accepts every seal: what a check of those
@@ -19,6 +22,10 @@ contract ImpostorGroth16Verifier {
 contract DeployVaultHarness is DeployVault {
     function checkVerifier(address groth16) external {
         _checkVerifier(groth16);
+    }
+
+    function checkStop(address stop, address groth16) external {
+        _checkStop(stop, groth16);
     }
 }
 
@@ -46,5 +53,31 @@ contract DeployVaultChecksTest is Test {
         address other = address(new RiscZeroGroth16Verifier(bytes32(uint256(1)), bytes32(uint256(2))));
         vm.expectRevert(bytes("DeployVault: the Groth16 verifier's selector is not 0xe71e6620"));
         h.checkVerifier(other);
+    }
+
+    /// @notice Internal review of 27 November 2026, S-3: the stop is held to RISC Zero's emergency-stop code around the
+    ///         checked verifier, renounced and not tripped; a contract that answers its getters is refused.
+    function test_S3_theStopIsCheckedByItsCode() public {
+        address g = address(new RiscZeroGroth16Verifier(ControlID.CONTROL_ROOT, ControlID.BN254_CONTROL_ID));
+        RiscZeroVerifierEmergencyStop stop = new RiscZeroVerifierEmergencyStop(IRiscZeroVerifierFull(g), address(this));
+        vm.expectRevert(bytes("check: the stop still has an owner"));
+        h.checkStop(address(stop), g);
+        stop.renounceOwnership();
+        h.checkStop(address(stop), g);
+
+        address fake = address(new FakeStop(g));
+        vm.expectRevert(bytes("check: the stop's code is not RISC Zero's emergency stop"));
+        h.checkStop(fake, g);
+
+        address other = address(new RiscZeroGroth16Verifier(ControlID.CONTROL_ROOT, ControlID.BN254_CONTROL_ID));
+        vm.expectRevert(bytes("check: the stop's code is not RISC Zero's emergency stop"));
+        h.checkStop(address(stop), other);
+
+        RiscZeroVerifierEmergencyStop tripped =
+            new RiscZeroVerifierEmergencyStop(IRiscZeroVerifierFull(g), address(this));
+        tripped.estop();
+        tripped.renounceOwnership();
+        vm.expectRevert(bytes("check: the stop is tripped"));
+        h.checkStop(address(tripped), g);
     }
 }

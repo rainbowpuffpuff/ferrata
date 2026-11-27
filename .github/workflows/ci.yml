@@ -501,6 +501,11 @@ jobs:
       # test checks the version and fails loudly if it is ever older.
       - name: The admin actions from a terminal and the anvil scenario (vault/script/test-admin.sh)
         run: bash vault/script/test-admin.sh
+      # script/check-verifier.sh on a local anvil: the honest wiring passes; a fake verifier answering SELECTOR() and
+      # VERSION() like 3.1.0's, a fake stop, a stop that kept its owner and a tripped stop fail (internal review of
+      # 27 November 2026, S-3).
+      - name: The verifier check against fake wirings (vault/script/test-check-verifier-local.sh)
+        run: bash vault/script/test-check-verifier-local.sh
       # e2e/seqnet deploys the vault through these functions in every mode; DeployVault once refused them unnoticed.
       - name: e2e/seqnet's vault deployment (e2e/seqnet/vault.sh, on anvil)
         run: bash e2e/seqnet/test-vault-deploy.sh
@@ -778,7 +783,7 @@ jobs:
       - name: Every offline check of the quick tier
         run: python3 -I scripts/verify.py --all --offline --strict
       - name: The tamper tests of every check family
-        run: python3 -I scripts/test_verify.py && python3 -I scripts/test_verify_lc.py && python3 -I scripts/test_verify_zone.py && python3 -I scripts/test_verify_f13.py && python3 -I scripts/test_verify_f13_lez.py && python3 -I scripts/test_verify_f7.py && python3 -I scripts/test_verify_bridge.py && python3 -I scripts/test_verify_bridge_rows.py
+        run: python3 -I scripts/test_verify.py && python3 -I scripts/test_verify_lc.py && python3 -I scripts/test_verify_zone.py && python3 -I scripts/test_verify_f13.py && python3 -I scripts/test_verify_f13_lez.py && python3 -I scripts/test_verify_f7.py && python3 -I scripts/test_verify_bridge.py && python3 -I scripts/test_verify_bridge_rows.py && python3 -I scripts/test_verify_sec.py
       - name: The checks and their tests left the tree as they found it
         if: always()
         run: |

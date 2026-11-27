@@ -537,7 +537,7 @@ assigns, exports, recipes, set_shell = justfile_parts((ROOT / "justfile").read_t
 check("justfile: every recipe of the file is parsed (update this list when a recipe is added)",
       set(recipes) == {"default", "bench", "bench-user", "m0", "release", "release-verify", "deploy-testnet",
                        "halmos-long", "verify", "lez-read", "ci-commands", "idl", "admin", "links",
-                       "ci-verify", "lez-harness"})
+                       "ci-verify", "lez-harness", "security-review"})
 check("justfile: RUNNER_TEMP is exported with a local default (the links job's record check writes there)",
       "RUNNER_TEMP" in exports and "env_var_or_default" in assigns.get("RUNNER_TEMP", ""))
 check("justfile: FOUNDRY_OFFLINE is exported as the workflows set it for the whole file (ci.yml's env)",

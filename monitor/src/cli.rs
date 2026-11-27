@@ -113,6 +113,7 @@ pub fn parse_level(s: &str) -> Result<Level> {
 pub fn signer(a: &RunArgs) -> Result<Option<PrivateKeySigner>> {
     if let Some(var) = &a.key_env {
         let hexed = std::env::var(var).with_context(|| format!("{var} is not set"))?;
+        crate::alert::hide_env(var);
         return Ok(Some(hexed.trim().parse().context("the watcher key does not parse")?));
     }
     if let Some(p) = &a.key_file {

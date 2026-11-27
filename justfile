@@ -75,6 +75,17 @@ verify *args:
 lez-read *args:
     python3 -I scripts/lez-read.py "$@"
 
+# The internal security review of 27 November 2026 (docs/security/internal-review-2026-11-27.md): the vault suites of
+# its fixes, of RFP-022 Sec.9's LEZ case (docs/security/lez-receipt-unsound.md), of the real-seal journal words and of
+# R.4's entitlement invariant; the verifier check against fake wirings on anvil; the R.8 checks and their tamper
+# tests. Needs forge, anvil and vault/lib (scripts/vault_libs.py install).
+security-review:
+    cd vault && forge test --match-path 'test/{InternalReview,LezReceiptUnsound,DeployDefaults,DeployVaultChecks,VerifierCode}.t.sol'
+    cd vault && forge test --match-path 'test/{real/Rc3JournalWords,invariant/EntitlementInvariants}.t.sol'
+    bash vault/script/test-check-verifier-local.sh
+    python3 -I scripts/verify.py r8-risc0-selectors r8-phase-split
+    python3 -I scripts/test_verify_sec.py
+
 # Print the commands CI's jobs run, as scripts/ci/ci_model.py reads the workflows (one job, several, or all).
 ci-commands *jobs:
     python3 -I scripts/ci/ci_model.py --trace "$@"
@@ -140,7 +151,7 @@ ci-verify:
     python3 -I scripts/vault_libs.py check
     (cd vault && forge build)
     python3 -I scripts/verify.py --all --offline --strict
-    python3 -I scripts/test_verify.py && python3 -I scripts/test_verify_lc.py && python3 -I scripts/test_verify_zone.py && python3 -I scripts/test_verify_f13.py && python3 -I scripts/test_verify_f13_lez.py && python3 -I scripts/test_verify_f7.py && python3 -I scripts/test_verify_bridge.py && python3 -I scripts/test_verify_bridge_rows.py
+    python3 -I scripts/test_verify.py && python3 -I scripts/test_verify_lc.py && python3 -I scripts/test_verify_zone.py && python3 -I scripts/test_verify_f13.py && python3 -I scripts/test_verify_f13_lez.py && python3 -I scripts/test_verify_f7.py && python3 -I scripts/test_verify_bridge.py && python3 -I scripts/test_verify_bridge_rows.py && python3 -I scripts/test_verify_sec.py
     git status --porcelain --untracked-files=all
     test -z "$(git status --porcelain --untracked-files=all)"
 
