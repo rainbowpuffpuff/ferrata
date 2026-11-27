@@ -1,9 +1,8 @@
 # ADR 0048: Charge the protocol fees on LEZ in the wrapped token, minted in totals by a permissionless `CollectFees`; claims and burns carry no fee value
 
 - **Date:** 27 November 2026
-- **Status:** accepted; built (the vault, the bridge program and its clients); not deployed. Supersedes
-  [ADR 0046](0046-mint-fee-at-deposit.md) where they differ (where the protocol fees are paid out).
-- **Requirements:** RFP-022 F.13 (with F.8, F.11, F.14 and Sec.3 for what the fees must not break)
+- **Status:** accepted; built (the vault, the bridge program and its clients); not deployed; supersedes ADR 0046 where they differ (where the protocol fees are paid out)
+- **Requirements:** RFP-022 F.13, F.8, F.11, F.14, Sec.3
 
 ## Context
 
@@ -29,16 +28,16 @@ from (`e2e/both-halves/results/fees.md`: three and three after a change at leaf 
 
 ## Options considered
 
-1. Keep ADR 0046: both protocol fees paid out on Ethereum. *Recorded:* docs/requirements-status.md's F.13 row before
-   this record ("Not as the RFP words it").
+1. Keep ADR 0046: both protocol fees paid out on Ethereum. *Recorded:* `docs/decisions/0046-mint-fee-at-deposit.md`
+   (its decision), which left F.13's fee on LEZ unmet.
 2. Mint each claim's mint fee on LEZ by its deposit's schedule (D13, B1's program). *Recorded:* the split in
-   `e2e/both-halves/results/fees.md`; ruled out by the clause that "the fee value must not distinguish a user's
-   transaction".
-3. Take the burn fee on LEZ at the burn. *Reconstructed for contrast.* On top of the denomination, a holder of exactly
+   `e2e/both-halves/results/fees.md`; ruled out by F.13's clause that the fee value must not distinguish a user's
+   transaction.
+3. Take the burn fee on LEZ at the burn. *Reconstructed for contrast*. On top of the denomination, a holder of exactly
    one denomination (every claimant) could not burn it without first getting fee units from someone; out of the
    denomination, the note would carry the denomination less the fee in force, and the release's amount on Ethereum
    would tell which span of burn time its burn came from, the split of option 2 on the outbound side.
-4. Charge the fees in native LEZ tokens. *Reconstructed for contrast.* The user (or the relayer) would need a native
+4. Charge the fees in native LEZ tokens. *Reconstructed for contrast*. The user (or the relayer) would need a native
    LEZ balance at the claim or the burn, the funding source the RFP's "Fee payers correlate" warns re-identifies a user,
    and the vault, which holds the deposited asset, could not back a fee in another asset without a price.
 5. Mint the fees on LEZ in totals, not per claim or burn: a permissionless instruction mints to the fee recipient the
@@ -124,12 +123,10 @@ reading of LEZ blocks (it decodes variants 0–3 and ignores the rest), the burn
 
 ## Sources
 
-- RFP-022 (logos-co/rfp at `920fad9`), Functionality #13 and Design Rationale, "Fee structure"
-  (`site/data/rfp-requirements.json`, `F.13`)
+- RFP-022 F.13 (logos-co/rfp at `920fad9`: Functionality #13 and Design Rationale, "Fee structure"; `site/data/rfp-requirements.json`)
 - ADR 0021 (the fees of D13), ADR 0046 (the mint fee at deposit), `e2e/both-halves/results/fees.md` (the split under D13)
 - `vault/src/FerrataVault.sol` (`_recordDeposit`, `release`, `lezFees`), `vault/src/FerrataRegistry.sol` (`_storeFees`)
 - `lez/bridge-wire/src/lib.rs` (`lez_fees_slot`, `FeesState::accrue`, `check_lez_fees`, messages 31–33),
   `lez/guests/bridge/src/main.rs` (`collect_fees`, `accrue_fees`, `mint_fees`)
 - `cli/wallet/src/fees.rs`, `cli/src/relayer.rs` (`plan_fee_collection`), `cli/src/relayerd.rs` (`collect-fees`)
-- The tests and runs that show it: [EVIDENCE](../EVIDENCE.md) and the F.13 row of
-  [requirements-status.md](../requirements-status.md)
+- The tests and runs that show it: the F.13 rows of `docs/requirements-status.md` and `docs/traceability.md`
