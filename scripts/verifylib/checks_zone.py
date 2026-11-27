@@ -114,6 +114,33 @@ def _attestation_verifies(deployment: dict, key_set_hash: bytes, entry: dict, ti
             sigs.ed25519_verify(att_key, message, bytes.fromhex(_hex32(entry["signature"]))))
 
 
+CHECKPOINT_DOMAIN = hashlib.sha256(b"ferrata/vault/checkpoint/v3").digest()  # checkpoint-core's journal, word 0
+RELEASE_DOMAIN = hashlib.sha256(b"ferrata/vault/release/v2").digest()  # ferrata-bridge-core's release journal, word 0
+
+
+def _words(journal: bytes, n: int) -> list:
+    """The journal's n 32-byte ABI words (checkpoint: 17, checkpoint-core/src/journal.rs; release: 11,
+    ferrata-bridge-core/src/encoding.rs ReleaseJournal), or [] if it is not n words long."""
+    return [journal[i * 32:(i + 1) * 32] for i in range(n)] if len(journal) == 32 * n else []
+
+
+def _uint(word: bytes) -> int:
+    return int.from_bytes(word, "big")
+
+
+def _address(word: bytes) -> str:
+    return word[12:].hex() if word[:12] == bytes(12) else "not-an-address:" + word.hex()
+
+
+def _image_id_of(ctx, name: str) -> str | None:
+    """The image id docs/image-ids.md records for a program (`name`), from its table row."""
+    for line in _text(ctx, "docs/image-ids.md").splitlines():
+        if line.startswith("| ") and f": `{name}` |" in line:
+            match = re.search(r"\| `0x([0-9a-f]{64})` \|", line)
+            return match.group(1) if match else None
+    return None
+
+
 def _doc_rows(ctx) -> dict:
     """The texts that state this run's figures: EVIDENCE row 266 and the status rows that cite it."""
     out = {}
@@ -252,7 +279,7 @@ def zone_inscriptions(ctx):
        inputs=(README, f"{CHECKPOINT}/blocks.tsv", f"{CHECKPOINT}/burns.json",
                f"{CHECKPOINT}/zone-28-164.json", f"{CHECKPOINT}/attestor.json", f"{CHECKPOINT}/exec.json",
                f"{CHECKPOINT}/zone-28-164.input", PARAMS, *tuple(_run(f"zone/attestor-{i}/final.json") for i in range(4)),
-               _run("zone/channel-end.json"), _run("identity.json"), *DOCS))
+               _run("zone/channel-end.json"), _run("identity.json"), f"{CHECKPOINT}/receipts/journal.hex", *DOCS))
 def zone_checkpoint(ctx):
     problems = []
     readme = _text(ctx, README)
@@ -285,6 +312,10 @@ def zone_checkpoint(ctx):
     _same(problems, meta_rel, "imported leaf count", meta["imported_leaf_count"], imported_leaves)
     _same(problems, meta_rel, "burn root", meta["burn_root"], burns["burn_root"])
     _same(problems, burns_rel, "burn indices", [row["burn_index"] for row in burns["burns"]], [0, 1])
+    # "both burns (one public, one private)": a burn from a public holding, and one delivered from a private account
+    _same(problems, burns_rel, "the burns' origins", sorted(row["origin"] for row in burns["burns"]),
+          ["PrivateToPublic", "PublicRoot"])
+    _documents(ctx, problems, "RFP-022 F.7", ("both burns (one public, one private)",))
 
     attestor = _json(ctx, attestor_rel)
     final_rels = [_run(f"zone/attestor-{i}/final.json") for i in range(4)]
@@ -338,6 +369,9 @@ def zone_checkpoint(ctx):
         verified += certified and signed and key in live
     finals_verified = 0
     for final_rel, final in zip(final_rels, finals):
+        _same(problems, final_rel, "its tip (the collector's: id, hash, final message)",
+              (int(final["tip_id"]), _hex32(final["tip_hash"]), _hex32(final["final_msg_id"])),
+              (164, _hex32(attestor["tip_hash"]), _hex32(attestor["final_msg_id"])))
         _same(problems, final_rel, "its key-set hash", _hex32(final["key_set_hash"]), key_set_hash.hex())
         _expect(problems, _hex32(final["channel_key"]) in live, f"{final_rel}: not an accredited key's attestor")
         _same(problems, final_rel, "its deployment (the collector's)",
@@ -370,8 +404,45 @@ def zone_checkpoint(ctx):
           ctx.path(f"{CHECKPOINT}/zone-28-164.input").stat().st_size)
     params = _json(ctx, PARAMS)
     _same(problems, exec_rel, "checkpoint image id", execution["image_id"], params["checkpointImageIdB"])
+    # The journal is what the Groth16 seal proves (zone-rc3-multi-proofs verifies the seal over this journal, the
+    # receipt's): every record this check reads is held to its words, so a record cannot say another tip, state,
+    # burn root, key count or deployment than the proof does.
+    _same(problems, f"{CHECKPOINT}/receipts/journal.hex", "the receipt's journal (as the checkpoint record's)",
+          _hex(ctx, f"{CHECKPOINT}/receipts/journal.hex").hex(), journal.hex())
+    words = _words(journal, 17)
+    _expect(problems, bool(words), f"{meta_rel}: the journal is not 17 words")
+    if words:
+        tip_block = next((row for row in rows if int(row["block"]) == 164), {})
+        for name, got, want in (
+                ("word 0, the checkpoint domain", words[0].hex(), CHECKPOINT_DOMAIN.hex()),
+                ("words 1-3, chain, vault, configuration", (_uint(words[1]), _address(words[2]), words[3].hex()),
+                 (int(identity["chainId"]), _hex32(identity["vault"]), _hex32(params["lezConfigId"]))),
+                ("words 4-5, the floors", (_uint(words[4]), _uint(words[5])), (params["nMin"], params["tMin"])),
+                ("word 6, the parent state (the vault's genesis)", words[6].hex(), _hex32(params["genesisState"])),
+                ("word 6, the parent state (the record's)", words[6].hex(), _hex32(meta["parent_state"])),
+                ("word 7, the new state", words[7].hex(), _hex32(meta["new_state"])),
+                ("word 8, the burn root", words[8].hex(), _hex32(burns["burn_root"])),
+                ("words 9-10, burns and imported leaves", (_uint(words[9]), _uint(words[10])),
+                 (burn_count, imported_leaves)),
+                ("word 11, sunset", _uint(words[11]), int(bool(meta["sunset"]))),
+                ("words 13-14, the tip (the collector's)", (_uint(words[13]), words[14].hex()),
+                 (int(attestor["tip_id"]), _hex32(attestor["tip_hash"]))),
+                ("words 13-14, the tip (the checkpoint record's)", (_uint(words[13]), words[14].hex()),
+                 (int(meta["tip"]), _hex32(meta["tip_hash"]))),
+                ("word 14, the tip's hash (blocks.tsv's block 164)", words[14].hex(), _hex32(tip_block.get("hash", ""))),
+                ("words 15-16, n and t", (_uint(words[15]), _uint(words[16])), (attestor["n"], attestor["t"]))):
+            _same(problems, meta_rel, f"the proven journal's {name}", got, want)
+    # the three attestations used, as attestor-core encodes them, are in the guest's input; the one left out is not
+    guest_input = ctx.path(f"{CHECKPOINT}/zone-28-164.input").read_bytes()
+    for final_rel, final in zip(final_rels, finals):
+        encoded = bytes.fromhex(_hex32(final["encoded"]))
+        used_here = "0x" + _hex32(final["channel_key"]) in used_keys
+        _same(problems, final_rel, "its encoded attestation in the guest's input" if used_here
+              else "its encoded attestation absent from the guest's input (left out)",
+              encoded in guest_input, used_here)
     _documents(ctx, problems, "EVIDENCE row 266", ("136 blocks, 287 transactions, 22,149,862 user cycles",
-                                                   "three of four attestations"))
+                                                   "three of four attestations",
+                                                   "sequencers, three of four keys, under RISC Zero 3.1"))
     _documents(ctx, problems, "RFP-022 F.7", ("three of four keys",))
     fail_if(problems, "zone checkpoint records differ")
     return [f"{blocks_rel}: {block_count} contiguous blocks and {transactions:,} transactions; {burns_rel}: "
@@ -380,7 +451,11 @@ def zone_checkpoint(ctx):
             f"them verified, and all {finals_verified} attestors' final attestations (Ed25519: each attestation key "
             f"certified by an accredited channel key of {_run('zone/channel-end.json')}, tip 164 signed under the "
             "channel's key-set hash); "
-            f"omitted {omitted[0][:10] if omitted else '-'}…; n={attestor['n']}, t={attestor['t']}",
+            f"omitted {omitted[0][:10] if omitted else '-'}…; n={attestor['n']}, t={attestor['t']}; the used three "
+            "found encoded in the guest's input, the left-out one not",
+            f"{meta_rel}'s journal, which zone-rc3-multi-proofs verifies with Groth16: its 17 words held to the "
+            "records (chain, vault, configuration, floors, parent and new state, burn root, counts, tip 164 and "
+            "its hash in blocks.tsv, n and t)",
             f"{exec_rel}: {execution['user_cycles']:,} user cycles; native-journal equality asserted, journal "
             f"length/SHA-256 and input length recomputed"]
 
@@ -434,7 +509,7 @@ def zone_refusals(ctx):
         keys = [_hex32(row["channel_key"]) for row in attestations]
         if case == "below-t":
             _same(problems, rel, "attestations below threshold", len(attestations), 2)
-        elif case == "outsider":
+        if case == "outsider":
             outside = [key for key in keys if key not in live]
             _same(problems, rel, "attestations by a key outside the channel's set", len(outside), 1)
         else:
@@ -446,6 +521,9 @@ def zone_refusals(ctx):
         _readme(problems, readme, error.removeprefix("Core(").removesuffix(")"))
     _documents(ctx, problems, "RFP-022 F.7", ("two of four attestations, a key outside the set, one attestor twice and a "
                                               "stale round refused natively and by the guest",))
+    _documents(ctx, problems, "EVIDENCE row 266", ("refused natively and by the guest with the same error: 2 of 4 "
+                                                   "attestations, a key outside the set, one attestor twice, a stale "
+                                                   "round",))
     fail_if(problems, "zone native/guest refusal records differ")
     return [f"four cases rebuilt from {native_rel} and {guest_rel}: below-t, outsider, repeated, stale-tip",
             "for every case: metadata cause, native error, guest record of that native error and guest error all equal",
@@ -473,7 +551,7 @@ PROOF_JOBS = {
        against="prover/calls.tsv, events.jsonl, done answers and summary; receipt metadata and statements; the forge "
                "fixture; RISC Zero 3.1.0 in verifylib/groth16.py; the run README",
        inputs=(README, f"{PROVER}/calls.tsv", f"{PROVER}/events.jsonl", f"{PROVER}/summary.txt", PARAMS,
-               FIXTURE, *tuple(path for job, (receipt, statement, _, _) in PROOF_JOBS.items()
+               _run("identity.json"), f"{CHECKPOINT}/burns.json", "docs/image-ids.md", FIXTURE, *tuple(path for job, (receipt, statement, _, _) in PROOF_JOBS.items()
                                for path in (f"{PROVER}/done/{job}.json", f"{PROVER}/requests/done/{job}.json",
                                             f"{receipt}/seal.hex", f"{receipt}/journal.hex", f"{receipt}/prover.json",
                                             statement)), *DOCS))
@@ -553,6 +631,15 @@ def zone_proofs(ctx):
                 f"{summary_rel}: job/duration row for {row['request']} absent")
 
     params = _json(ctx, PARAMS)
+    identity = _json(ctx, _run("identity.json"))
+    burns = _json(ctx, f"{CHECKPOINT}/burns.json")
+    for program, key in (("checkpoint_b_0_3_5_31", "checkpointImageIdB"), ("release_31", "releaseImageId")):
+        _same(problems, "docs/image-ids.md", f"{program}'s image id (the run's {key})", _image_id_of(ctx, program),
+              _hex32(params[key]))
+    _documents(ctx, problems, "EVIDENCE row 266", (
+        f"`checkpoint_b_0_3_5_31` `0x{_hex32(params['checkpointImageIdB'])[:8]}…`",
+        f"`release_31` `0x{_hex32(params['releaseImageId'])[:8]}…`"))
+    _documents(ctx, problems, "RFP-022 F.7", ("proven by `checkpoint_b_0_3_5_31`",))
     fixture = _json(ctx, FIXTURE)
     fixture_releases = {row["name"]: row for row in fixture["releases"]}
     verified = []
@@ -593,6 +680,25 @@ def zone_proofs(ctx):
                   hashlib.sha256(journal).hexdigest())
         else:
             name = job.removeprefix("1-release-")
+            # the release journal the seal proves, word by word, against the statement this run records for it
+            rwords = _words(journal, 11)
+            _expect(problems, bool(rwords), f"{statement_rel}: the release journal is not 11 words")
+            if rwords:
+                for what, got, want in (
+                        ("word 0, the release domain", rwords[0].hex(), RELEASE_DOMAIN.hex()),
+                        ("words 1-3, chain, vault, configuration",
+                         (_uint(rwords[1]), _address(rwords[2]), rwords[3].hex()),
+                         (int(identity["chainId"]), _hex32(identity["vault"]), _hex32(params["lezConfigId"]))),
+                        ("word 4, the burn root (the checkpoint's, burns.json)", rwords[4].hex(),
+                         _hex32(burns["burn_root"])),
+                        ("word 4, the burn root (the statement's)", rwords[4].hex(), _hex32(statement["burn_root"])),
+                        ("word 5, the nullifier", rwords[5].hex(), _hex32(statement["nullifier"])),
+                        ("word 6, the token", _address(rwords[6]), _hex32(statement["token"])),
+                        ("word 7, the amount", _uint(rwords[7]), int(statement["amount"], 16)),
+                        ("word 8, the recipient", _address(rwords[8]), _hex32(statement["recipient"])),
+                        ("word 9, the relayer", _address(rwords[9]), _hex32(statement["relayer"])),
+                        ("word 10, the relay fee", _uint(rwords[10]), int(statement["relay_fee"], 16))):
+                    _same(problems, statement_rel, f"the proven release journal's {what}", got, want)
             release_fixture = fixture_releases.get(name)
             _expect(problems, release_fixture is not None, f"{FIXTURE}: release {name} absent")
             if release_fixture:

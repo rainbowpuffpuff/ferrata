@@ -26,9 +26,9 @@ python3 -I scripts/test_verify_zone.py         # the four-key rc3 run's tamper t
 Each check prints one block, for example:
 
 ```text
-PASS  run-record  [run-record, offline]  0.4 s
-      rows RFP-021 S.1 · EVIDENCE 242, 248
-      re-checked: lez/updater/results/public-network-run/summary.json: updates applied, committee adoptions, ...
+PASS  run-record  [run-record, offline]  0.1 s
+      rows RFP-021 S.1, RFP-022 S.1 · EVIDENCE 242, 248, 271
+      re-checked: lez/updater/results/public-network-run/summary.json and RECORD.md: updates applied, committee ...
       against:    the transaction list lez/updater/results/public-network-run/transactions.tsv (one line per ...
       as of LEZ block 25776 (2026-11-26T10:17:22.807Z), as chain.json records it: 2117 transactions to the attestation
       program; the list and chain.json agree (times, hashes, 3 pauses, instances, counters); not read from the chain

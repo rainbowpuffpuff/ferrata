@@ -316,6 +316,152 @@ class ZoneBridgeVerifyTamperTests(unittest.TestCase):
             (f"{RUN}/zone/attestor-3/final.json", sig, sig[:-2] + ("00" if sig[-2:] != "00" else "01"), 2)],
             "does not verify")
 
+    def _assert_fails_edit(self, cid: str, edit, contains: str | None = None, extra=()) -> None:
+        """`edit(root)` alters the copy (files read from the tree first, `extra` copied in too)."""
+        check = self.checks[cid]
+        with tempfile.TemporaryDirectory(prefix=cid + "-", dir=SCRATCH) as temporary:
+            root = self._copy(check, Path(temporary))
+            for rel in extra:
+                (root / rel).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(ROOT / rel, root / rel)
+            edit(root)
+            result = run_check(check, Ctx(root=root))
+        self.assertEqual(result.status, "FAIL", f"{cid} did not detect tampering: {result.lines}")
+        if contains:
+            self.assertTrue(any(contains in line for line in result.lines), result.lines)
+
+    def test_14_review_round_2_the_proven_journals(self):
+        """M1, L2: records that agree with each other but not with the journal the seal proves."""
+        import json as _json
+        tip = "1b4bcf6a515c764c0cec26bdbc28359596350d130b673c640fb82a349e21d634"
+
+        def record_fields(**fields):  # the checkpoint record's fields alone, its journal untouched
+            def edit(root: Path) -> None:
+                rel = root / RUN / "checkpoint/zone-28-164.json"
+                d = _json.loads(rel.read_text())
+                d.update(fields)
+                rel.write_text(_json.dumps(d, indent=2))
+                if "tip_hash" in fields:
+                    tsv = root / RUN / "checkpoint/blocks.tsv"
+                    tsv.write_text(tsv.read_text().replace(tip, fields["tip_hash"].removeprefix("0x"), 1))
+            return edit
+        self._assert_fails_edit("zone-rc3-multi-checkpoint", record_fields(tip_hash="0x" + "ab" * 32), "words 13-14")
+        self._assert_fails_edit("zone-rc3-multi-checkpoint", record_fields(new_state="0x" + "ab" * 32), "word 7")
+
+        def recipient(root: Path) -> None:
+            import json as _json
+            new = "0x" + "12" * 20
+            for rel, rows in ((f"{RUN}/releases/release-public-0.json", None), (f"{RUN}/crown.json", "releases"),
+                              (f"{RUN}/vault-checks.json", "releases"), (FIXTURE, "releases")):
+                d = _json.loads((root / rel).read_text())
+                target = d if rows is None else next(r for r in d[rows] if r.get("name", "public-0") == "public-0")
+                target["recipient"] = new
+                (root / rel).write_text(_json.dumps(d, indent=2))
+            log = root / f"{RUN}/logs/zone-bridge.log"
+            log.write_text(log.read_text().replace("release 0: recipient 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+                                                   "release 0: recipient " + new))
+        self._assert_fails_edit("zone-rc3-multi-proofs", recipient, "word 8, the recipient",
+                                extra=(f"{RUN}/crown.json", f"{RUN}/vault-checks.json", f"{RUN}/logs/zone-bridge.log"))
+
+    def test_15_review_round_2_records_and_documents(self):
+        """M2, M4, L3 and the guards no test isolated (Z11, Z15, Z18, Z20, Z22, Z27, Z29, Z30, Z33, Z35)."""
+        import json as _json
+        final3 = f"{RUN}/zone/attestor-3/final.json"
+
+        def copy_over(src):
+            return lambda root: shutil.copy2(ROOT / src, root / final3)
+        # M2: the left-out attestor's real attestation of tip 29; Z11: its key's attestation for another deployment
+        self._assert_fails_edit("zone-rc3-multi-checkpoint", copy_over(f"{RUN}/zone/attestor-3/first-round.json"),
+                                "its tip")
+        self._assert_fails_edit("zone-rc3-multi-checkpoint", copy_over("checkpoint/attestor/runs/zone/att-3.json"),
+                                "deployment")
+
+        def other_left_out(root: Path) -> None:  # Z15: the collector took 90a548e0 and left 6462ecf1 out
+            rel = root / RUN / "checkpoint/attestor.json"
+            d, f = _json.loads(rel.read_text()), _json.loads((ROOT / final3).read_text())
+            i = next(k for k, e in enumerate(d["attestations"]) if e["channel_key"].startswith("0x6462ecf1"))
+            d["attestations"][i] = {"attestation_key": "0x" + f["attestation_key"], "certificate": "0x" + f["certificate"],
+                                    "channel_key": "0x" + f["channel_key"], "file": "final.json",
+                                    "signature": "0x" + f["signature"], "tip_id": f["tip_id"]}
+            rel.write_text(_json.dumps(d, indent=2))
+        self._assert_fails_edit("zone-rc3-multi-checkpoint", other_left_out)
+
+        def outsider_in(case: str, start: str):  # L3, Z18: an accredited attestation moved to the outsider key
+            def edit(root: Path) -> None:
+                rel = root / RUN / f"checkpoint/refusals/zone-28-164-refuse-{case}.json"
+                d = _json.loads(rel.read_text())
+                out = _json.loads((ROOT / RUN / "checkpoint/refusals/zone-28-164-refuse-outsider.json").read_text())
+                key = next(a["channel_key"] for a in out["attestations"] if a["channel_key"].lower().removeprefix("0x")
+                           not in [k.lower().removeprefix("0x") for k in out["keys"]])
+                i = [k for k, a in enumerate(d["attestations"]) if a["channel_key"].lower().removeprefix("0x")
+                     .startswith(start)][-1]
+                d["attestations"][i] = dict(d["attestations"][i], channel_key=key)
+                rel.write_text(_json.dumps(d, indent=2))
+            return edit
+        self._assert_fails_edit("zone-rc3-multi-refusals", outsider_in("below-t", ""), "accredited key")
+        self._assert_fails_edit("zone-rc3-multi-refusals", outsider_in("repeated", "99273f3e"), "accredited key")
+        # Z20, Z22: the checkpoint's answer event another kind, another job
+        self._assert_fails_multi("zone-rc3-multi-proofs", [(f"{RUN}/prover/events.jsonl",
+            '"name": "0-checkpoint", "kind": "checkpoint-b", "ok": true', '"name": "0-checkpoint", "kind": "release", "ok": true', 1)],
+            "kind")
+        self._assert_fails_multi("zone-rc3-multi-proofs", [(f"{RUN}/prover/events.jsonl", "/inbox/0-checkpoint.json",
+                                                            "/inbox/0-checkpoint-old.json", 1)], "inbox")
+
+        def fixture_recipient(root: Path) -> None:  # Z27
+            d = _json.loads((root / FIXTURE).read_text())
+            next(r for r in d["releases"] if r["name"] == "public-0")["recipient"] = "0x" + "11" * 20
+            (root / FIXTURE).write_text(_json.dumps(d, indent=2))
+        self._assert_fails_edit("zone-rc3-multi-proofs", fixture_recipient, "recipient")
+
+        def crown(edit):
+            def go(root: Path) -> None:
+                rel = root / RUN / "crown.json"
+                d = _json.loads(rel.read_text())
+                edit(d["releases"])
+                rel.write_text(_json.dumps(d, indent=2))
+            return go
+
+        def swap_seals(rs):
+            rs[0]["seal"], rs[1]["seal"] = rs[1]["seal"], rs[0]["seal"]
+        self._assert_fails_edit("zone-rc3-multi-anvil", crown(lambda rs: [r.update(denomIndex=1) for r in rs]), "denomination")
+        self._assert_fails_edit("zone-rc3-multi-anvil", crown(swap_seals), "seal")
+        # Z33, M4: the documents' floors, keys, refusals, image id, program and burn kinds
+        for cid, rel, old_, new_ in (
+                ("zone-rc3-multi-fork", "docs/EVIDENCE.md", "floors nMin 4, tMin 3", "floors nMin 4, tMin 2"),
+                ("zone-rc3-multi-checkpoint", "docs/EVIDENCE.md", "sequencers, three of four keys, under",
+                 "sequencers, two of four keys, under"),
+                ("zone-rc3-multi-refusals", "docs/EVIDENCE.md", "same error: 2 of 4 attestations", "same error: 1 of 4 attestations"),
+                ("zone-rc3-multi-proofs", "docs/EVIDENCE.md", "`checkpoint_b_0_3_5_31` `0x8917f58e…`",
+                 "`checkpoint_b_0_3_5_31` `0x9917f58e…`"),
+                ("zone-rc3-multi-proofs", "docs/requirements-status.md", "proven by `checkpoint_b_0_3_5_31`",
+                 "proven by `checkpoint_0_3_5_31`"),
+                ("zone-rc3-multi-checkpoint", "docs/requirements-status.md", "both burns (one public, one private)",
+                 "both burns (two public)")):
+            with self.subTest(document=rel, figure=old_):
+                self._assert_fails_multi(cid, [(rel, old_, new_, 1)])
+        # Z35: the final round a minute after round 24, not seconds
+        self._assert_fails_multi("zone-rc3-multi-resources", [(f"{RUN}/zone/attestor-0/resources.tsv",
+                                                               "2026-11-26T10:04:50Z", "2026-11-26T10:05:50Z", 1)])
+
+    def test_16_records_behind_the_documents(self):
+        """The guest's input, docs/image-ids.md and burns.json: each altered alone fails its own comparison."""
+        import json as _json
+        final0 = _json.loads((ROOT / RUN / "zone/attestor-0/final.json").read_text())
+
+        def input_byte(root: Path) -> None:  # a used attestation's encoding in the guest's input, one byte changed
+            rel = root / RUN / "checkpoint/zone-28-164.input"
+            data = bytearray(rel.read_bytes())
+            at = bytes(data).find(bytes.fromhex(final0["encoded"]))
+            self.assertGreaterEqual(at, 0)
+            data[at + 100] ^= 1
+            rel.write_bytes(bytes(data))
+        self._assert_fails_edit("zone-rc3-multi-checkpoint", input_byte, "guest's input")
+        self._assert_fails_multi("zone-rc3-multi-proofs", [
+            ("docs/image-ids.md", "0x8917f58e76aa805dedc04fc5e2b70404f5078b66b271ec44aaa0c78d9f5eaf04",
+             "0x9917f58e76aa805dedc04fc5e2b70404f5078b66b271ec44aaa0c78d9f5eaf04", 1)], "image-ids")
+        self._assert_fails_multi("zone-rc3-multi-checkpoint", [
+            (f"{RUN}/checkpoint/burns.json", '"origin": "PrivateToPublic"', '"origin": "PublicRoot"', 1)], "origins")
+
     def test_04_ids_inputs_and_evidence_metadata(self):
         self.assertEqual(set(self.checks), set(CHECK_IDS))
         for cid, check in self.checks.items():

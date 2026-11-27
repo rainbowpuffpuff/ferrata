@@ -3,7 +3,8 @@ signatures, verified with the Python standard library only, for scripts/verify.p
 
 Ed25519 verification follows RFC 8032 §5.1.7 with the cofactorless equation [S]B = R + [k]A: the public key A and the
 point R must be canonical encodings of curve points, S below the group order L; the check compares the encoding of
-[S]B - [k]A with R's bytes.
+[S]B - [k]A with R's bytes. Like ed25519-dalek's `verify_strict` (which the attestors use), it refuses a public key or
+an R of small order ([8]P the identity): under such a key a signature can verify for any message.
 """
 from __future__ import annotations
 
@@ -76,11 +77,18 @@ _BY = 4 * _inv(5) % Q
 _BASE = _decode(_BY.to_bytes(32, "little"))
 
 
+_IDENTITY = bytes([1]) + bytes(31)
+
+
+def _small_order(pt) -> bool:
+    return _encode(_mul(8, pt)) == _IDENTITY
+
+
 def ed25519_verify(public: bytes, message: bytes, signature: bytes) -> bool:
     if len(signature) != 64 or len(public) != 32:
         return False
-    a = _decode(public)
-    if a is None or _decode(signature[:32]) is None:
+    a, r = _decode(public), _decode(signature[:32])
+    if a is None or r is None or _small_order(a) or _small_order(r):
         return False
     s = int.from_bytes(signature[32:], "little")
     if s >= L:

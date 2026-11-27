@@ -11,6 +11,9 @@ from __future__ import annotations
 import csv
 import io
 import json
+import re
+import subprocess
+import sys
 
 from .core import REGISTRY, check, fail_if
 
@@ -43,25 +46,33 @@ def _duration(seconds: float) -> str:
 
 
 def _states(problems: list, where: str, line: str | None, fragments) -> None:
+    """Each fragment in the line as a whole figure: no digit, comma or point just before it, nor a digit or a
+    thousands group just after it when it ends with a digit (so "672 updates" is not found in "1672 updates", "0 over"
+    not in "10 over", "25" not in "25,776")."""
     if line is None:
         problems.append(f"{where}: not found")
         return
     for fragment in fragments:
-        if fragment not in line:
+        pattern = r"(?<![\d,.])" + re.escape(fragment) + (r"(?!\d|,\d)" if fragment[-1:].isdigit() else "")
+        if not re.search(pattern, line):
             problems.append(f"{where}: does not state {fragment!r}")
 
 
 @check(id="evidence-rows-integ", family="docs", mode="offline", evidence=(271, 272, 273, 274),
        title="EVIDENCE rows 271-274 and the rows citing them: every figure as the checks behind them recompute it",
-       what="the figures of EVIDENCE rows 271 (the unattended run), 272 (verify.py's registry and coverage), 273 (the "
-            "seals verified locally) and 274 (CI's round trip on rc3), of RFP-021 S.1, RFP-022 S.1, R.10 and R.11, and "
+       what="the offline figures of EVIDENCE rows 271 (the unattended run: those summary.json holds; the chain-read "
+            "ones, 670 of 670 headers canonical and the counter on chain, are run-record-beacon's and "
+            "run-record-counters'), 272 (verify.py's registry and coverage), 273 (the seals verified locally and those "
+            "not verifiable here; the online package count is basecamp-packages-online's) and 274 (CI's round trip on "
+            "rc3), of RFP-021 S.1, RFP-022 S.1, R.10 and R.11 (with check-row-tests.py's CI counts), and "
             "docs/VERIFY.md's counts of named tests",
        against="the run record's summary.json (which run-record holds to the chain data), the recorded seals the seal "
                "checks verify, the rc3 round trip's steps.tsv (which rc3-roundtrip-record checks with CI's check stage), "
                "and the registry and --coverage of this verify.py",
        inputs=(EVIDENCE_DOC, STATUS_DOC, VERIFY_DOC, RUN_SUMMARY, RT_STEPS, "scripts/verify-mainnet-risc0.py",
                "e2e/runs", "vault/test", "bridge/artifacts", "lez/results", "checkpoint/artifacts", "bench/report",
-               "checkpoint/realblocks", "scripts/ci/row-tests.toml"))
+               "checkpoint/realblocks", "checkpoint/attestor/runs", "scripts/ci/row-tests.toml",
+               "scripts/ci/check-row-tests.py"))
 def evidence_rows_integ(ctx):
     from . import catalog, checks_seals  # imported here: catalog imports this module
     problems, lines = [], []
@@ -89,6 +100,14 @@ def evidence_rows_integ(ctx):
         f"participation {run['participants']['min']}–{run['participants']['max']} of 512",
         f"three pauses of block production over 60 s ({', '.join(pauses)})" if len(pauses) == 3 else "pauses: not 3",
         *((f"{full_days.pop()} updates on each full UTC day",) if len(full_days) == 1 else ("full days differ",))))
+    first, last = run["first_update"], run["last_update"]
+    lag = run["lag_behind_finality_s"]
+    open_now = [j for j in run["jobs_opened_not_finished"] if j.get("open_at_as_of")]
+    _states(problems, "EVIDENCE row 271", _evidence_row(evidence, 271), (
+        f"from block {first['block']:,} (", f"to block {last['block']:,} (",
+        f"each update's LEZ block {_duration(lag['min'])} to", f"(median {_duration(lag['median'])})",
+        f"{len(open_now)} open at the as-of block",
+        f"the instance's counter {updates + 1} = 1 + {updates}"))
     none_over = "none over 1 h" if not intervals["over_1h"] else "over 1 h: some"
     _states(problems, "RFP-021 S.1", _status_row(status, "RFP-021", "S.1"), (
         f"{updates} updates to LEZ block {as_of:,}", f"the longest interval {longest}", none_over,
@@ -101,17 +120,21 @@ def evidence_rows_integ(ctx):
                  f"({RUN_SUMMARY})")
 
     # Row 273 and the rows citing it: the recorded seals the seal checks verify
-    counts = {}
+    counts, unverifiable = {}, {}
     for release in ("3.0.0", "3.1.0"):
         # counted as _seal_check counts what it verifies: one entry per (seal, image id, journal), and for 3.1.0 the
         # live round trip's proofs the catalog does not already hold
-        entries, _nojournal, _unmapped = checks_seals.recorded_seals(ctx.root, release)
+        entries, nojournal, unmapped = checks_seals.recorded_seals(ctx.root, release)
         if release == "3.1.0":
+            live = checks_seals._live_proofs(ctx.root)
             seen = {e["seal"] for e in entries}
-            entries = entries + [e for e in checks_seals._live_proofs(ctx.root) if e["seal"] not in seen]
+            entries = entries + [e for e in live if e["seal"] not in seen]
+            unmapped = {k: v for k, v in unmapped.items() if bytes.fromhex(k) not in {e["seal"] for e in live}}
         counts[release] = len(entries)
+        unverifiable[release] = len(nojournal) + len(unmapped)
     _states(problems, "EVIDENCE row 273", _evidence_row(evidence, 273), (
-        f"{counts['3.0.0']} of {counts['3.0.0']} seals of 3.0.0 and {counts['3.1.0']} of {counts['3.1.0']} of 3.1.0",))
+        f"{counts['3.0.0']} of {counts['3.0.0']} seals of 3.0.0 and {counts['3.1.0']} of {counts['3.1.0']} of 3.1.0",
+        f"{unverifiable['3.0.0']} more of 3.0.0 and {unverifiable['3.1.0']} of 3.1.0 are recorded without a journal"))
     for rid in ("F.7", "R.10"):
         row = _status_row(status, "RFP-022", rid)
         if row is None or "273" not in row.rsplit(" | ", 1)[-1]:
@@ -148,10 +171,22 @@ def evidence_rows_integ(ctx):
         f"RFP-022 {sum(bool(v['quick_offline']) for v in b)} of {len(b)} and {sum(bool(v['online']) for v in b)};"))
     _states(problems, "RFP-022 R.11", _status_row(status, "RFP-022", "R.11"), (
         f"(`--coverage`: {with_check} of {len(hard)})", "(row 272)"))
+    # check-row-tests.py reads git and walks the tree; a tamper test's copy (symlinks, no git: ctx.git_dir names the
+    # checkout it mirrors) runs it in that checkout. The figures it gives come from the tree, not from the documents
+    # those tests alter; verify.py and CI run it on the tree itself.
+    where = getattr(ctx, "git_dir", None) or ctx.root
+    out = subprocess.run([sys.executable, "-I", "scripts/ci/check-row-tests.py"], cwd=where, capture_output=True,
+                         text=True, timeout=300).stdout
+    in_ci = {m[0]: (int(m[1]), int(m[2])) for m in re.findall(r"(RFP-02[12]): (\d+) hard rows; (\d+) with a test CI runs",
+                                                              out)}
+    if set(in_ci) != {"RFP-021", "RFP-022"}:
+        problems.append(f"scripts/ci/check-row-tests.py: no count of the rows with a test CI runs ({out[-200:]!r})")
+    else:
+        (h21, c21), (h22, c22) = in_ci["RFP-021"], in_ci["RFP-022"]
+        _states(problems, "RFP-022 R.11", _status_row(status, "RFP-022", "R.11"), (
+            f"{c22} of the {h22} run in CI ({c21} of {h21} RFP-021 rows have a test CI runs)",))
     verify_doc = ctx.path(VERIFY_DOC).read_text(encoding="utf-8")
-    for fragment in (f"{no_ci} run only on a", f"{by_hand} are recipes"):
-        if fragment not in verify_doc:
-            problems.append(f"{VERIFY_DOC}: does not state {fragment!r}")
+    _states(problems, VERIFY_DOC, verify_doc, (f"{no_ci} run only on a", f"{by_hand} are recipes"))
     lines.append(f"row 272, RFP-022 R.11, {VERIFY_DOC}: {len(checks)} checks ({quick} quick offline, {online} online, "
                  f"{len(tests)} named tests, {by_hand} recipes, {no_ci} not in CI); {with_check} of {len(hard)} hard rows "
                  "with a check")

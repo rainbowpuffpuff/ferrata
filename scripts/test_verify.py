@@ -178,7 +178,7 @@ class Registry(unittest.TestCase):
 
 
 SEAL_DIRS = ("e2e/runs", "vault/test", "bridge/artifacts", "lez/results", "checkpoint/artifacts", "bench/report",
-             "checkpoint/realblocks")  # where the seal catalog finds the recorded seals
+             "checkpoint/realblocks", "checkpoint/attestor/runs")  # where the seal catalog finds the recorded seals
 
 
 def walkable(t: Path, rels=SEAL_DIRS) -> Path:
@@ -251,6 +251,27 @@ class EvidenceRows(TamperCase):
         t = walkable(overlay({"docs/requirements-status.md": sub("206, 266, 273; `vault/test/real/ZoneBridgeRc3Multi.t.sol`",
                                                                  "206, 266; `vault/test/real/ZoneBridgeRc3Multi.t.sol`")}))
         self.assertFails("evidence-rows-integ", t, "does not cite row 273")
+
+    def test_review_round_2_figures(self):
+        """Review round 2 (M3, L6): a digit put before a figure, and each figure only one guard reads, altered alone."""
+        cases = (
+            ("docs/EVIDENCE.md", "672 updates applied", "1672 updates applied", "EVIDENCE row 271"),
+            ("docs/EVIDENCE.md", ", 0 over 1 h", ", 10 over 1 h", "EVIDENCE row 271"),
+            ("docs/EVIDENCE.md", "224 updates on each full UTC day", "225 updates on each full UTC day", "EVIDENCE row 271"),
+            ("docs/EVIDENCE.md", "1 min 23 s", "1 min 24 s", "EVIDENCE row 271"),
+            ("docs/EVIDENCE.md", "463–494 of 512", "463–495 of 512", "EVIDENCE row 271"),
+            ("docs/EVIDENCE.md", "from block 75 (", "from block 74 (", "EVIDENCE row 271"),
+            ("docs/EVIDENCE.md", "673 = 1 + 672", "674 = 1 + 673", "EVIDENCE row 271"),
+            ("docs/EVIDENCE.md", "22 more of 3.0.0", "21 more of 3.0.0", "EVIDENCE row 273"),
+            ("docs/requirements-status.md", "672 updates to 26 Nov 2026", "673 updates to 26 Nov 2026", "RFP-022 S.1"),
+            ("docs/requirements-status.md", "14 of 14 steps (row 274", "15 of 15 steps (row 274", "RFP-022 R.10"),
+            ("docs/requirements-status.md", "66 of the 68 run in CI (55 of 59", "67 of the 68 run in CI (56 of 59",
+             "RFP-022 R.11"),
+            ("docs/VERIFY.md", "45 run only on a", "145 run only on a", "docs/VERIFY.md"))
+        for rel, old_, new_, where in cases:
+            with self.subTest(figure=old_):
+                t = walkable(overlay({rel: sub(old_, new_)}))
+                self.assertFails("evidence-rows-integ", t, where)
 
     def test_the_record_moves_the_check(self):
         """A step of the rc3 round trip marked failed: the row's 14 of 14 no longer holds."""
@@ -1304,6 +1325,20 @@ class Signatures(TamperCase):
         ok, why = sigs.minisign_verify(tampered, sums, (dl / "keys/minisign.pub").read_text())
         self.assertFalse(ok)
         self.assertIn("global signature", why)
+
+    def test_small_order_keys_refused(self):
+        """Under a small-order public key a signature [s]B || s verifies for any message (cofactorless check): it is
+        refused, as ed25519-dalek's verify_strict refuses it (review round 2 of the integration, L1)."""
+        from verifylib import sigs
+        identity = bytes([1]) + bytes(31)
+        s = 12345
+        forged = sigs._encode(sigs._mul(s, sigs._BASE)) + s.to_bytes(32, "little")
+        for key in (identity, (sigs.Q - 1).to_bytes(32, "little")):  # the identity; the point of order 2, y = -1
+            self.assertIsNotNone(sigs._decode(key))
+            for message in (b"", b"any message", b"another"):
+                self.assertFalse(sigs.ed25519_verify(key, message, forged), (key.hex(), message))
+        # a small-order R under a real key: refused
+        self.assertFalse(sigs.ed25519_verify(sigs._encode(sigs._mul(7, sigs._BASE)), b"m", identity + bytes(32)))
 
     def test_rfc8032_vectors(self):
         from verifylib import sigs
