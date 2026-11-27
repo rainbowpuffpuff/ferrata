@@ -3,12 +3,13 @@
 #
 # One subcommand per action of vault/src/FerrataVault.sol that is gated on a role (plus the permissionless
 # applyFees/applyRoles that finish an admin's change), and a read-only `status`. Built on Foundry's cast only
-# (cast call, cast send, cast calldata); jq is used for nothing but its date formatting.
+# (cast call, cast send, cast calldata); jq validates receipt JSON and formats dates.
 #
 # Dry run by default: the target, the function, the decoded arguments, the calldata and the result of an
 # eth_call of that calldata from the role's address are printed, and nothing is sent. A call that would
 # revert says so, with the vault's error name decoded from the selector. With --send, and only after the
-# eth_call succeeded, the transaction is sent with cast send.
+# eth_call succeeded, the transaction is sent with cast send --json. A mined receipt whose status is not 1,
+# a missing receipt or malformed receipt JSON is an error; CAST_ASYNC cannot bypass that check.
 #
 # Keys are never a raw private key on the command line: they come through cast's own options, passed
 # through verbatim (--keystore PATH [--password PW | --password-file F], --account NAME, --ledger), or, on
@@ -18,8 +19,9 @@
 # the token; ETH is 18) or a decimal with an explicit unit: 1.5ether, 2gwei. Deltas, delays and indices
 # are seconds or plain integers.
 #
-# Exit codes: 0 ok; 1 the call reverts or a read fails; 2 usage (a malformed argument is refused with
-# exit 2 before any network call).
+# Exit codes: 0 ok; 1 the call or mined transaction reverts, a receipt is unsuccessful or a read fails; 2 usage
+# (lexically malformed arguments are refused with exit 2 before any network call; token-dependent precision
+# validation happens after the token's decimals are read).
 #
 # Usage:
 #   admin.sh [OPTIONS] ACTION [ARGS...]
@@ -27,7 +29,8 @@
 # Options:
 #   --rpc-url URL          (required) the Ethereum JSON-RPC endpoint; no default network
 #   --vault ADDRESS        (required) the deployed FerrataVault
-#   --from ADDRESS         the sender for the dry run (with --unlocked, also for sending)
+#   --from ADDRESS         the sender for the dry run; required for --unlocked, and with a signing wallet
+#                          it must equal the address derived from that wallet
 #   --keystore PATH        cast's keystore option, passed through to cast send / cast wallet address
 #   --account NAME         a keystore account in ~/.foundry/keystores (cast's option, passed through)
 #   --password PW          the keystore password (cast's option, passed through)
@@ -38,8 +41,8 @@
 #   -h, --help             this list
 #
 # Actions (the role that may call them in parentheses):
-#   status [TOKEN...]                            (read-only) roles, caps, freezes, fee state, delays,
-#                                                retirement, and one section per TOKEN named
+#   status [TOKEN...]                            (read-only, pinned to one block) roles, caps, freezes, fee
+#                                                state, delays, retirement, and one section per TOKEN named
 #   set-token-cap TOKEN DEPOSIT|RELEASE CAPACITY REFILL   (admin) a per-token bucket; AMOUNTs in the
 #                                                token's decimals
 #   set-global-cap DEPOSIT|RELEASE CAPACITY REFILL       (admin) a global bucket, in value units
@@ -131,8 +134,8 @@ declare -A ERROR_NAMES=(
 )
 
 # ------------------------------------------------------------------------------------------------------------
-# Argument validation. Everything here runs before any network call, so a malformed argument is exit 2
-# without a single RPC request.
+# Argument validation. Address, boolean, integer, amount-syntax and fee-list-syntax checks run before any
+# network call. Precision conversion for a non-ETH token necessarily follows its decimals() read.
 # ------------------------------------------------------------------------------------------------------------
 
 is_uint() { [[ $1 =~ ^[0-9]+$ ]]; }
@@ -141,7 +144,7 @@ is_uint() { [[ $1 =~ ^[0-9]+$ ]]; }
 # a 20-byte hex value, and is echoed checksummed (cast refuses some non-checksummed forms).
 norm_address() {
   local a=$1
-  if [[ $a == eth || $a == ETH ]]; then echo "0x0000000000000000000000000000000000000000"; return 0; fi
+  if [[ ${a,,} == eth ]]; then echo "0x0000000000000000000000000000000000000000"; return 0; fi
   [[ $a =~ ^0[xX][0-9a-fA-F]{40}$ ]] || usage_error "not an address: '$a' (ETH is 'eth')"
   cast to-check-sum-address "$a" 2>/dev/null || usage_error "not an address: '$a'"
 }
@@ -166,17 +169,22 @@ norm_direction() {
   esac
 }
 
+# validate_amount SPEC: token-independent syntax only. This is safe to run before a non-ETH decimals() read.
+validate_amount() {
+  local spec=$1
+  if is_uint "$spec" || [[ $spec =~ ^([0-9]+(\.[0-9]*)?|\.[0-9]+)(ether|eth|gwei)?$ ]]; then return 0; fi
+  usage_error "malformed amount '$spec' (wei, a decimal, or a decimal with ether/gwei)"
+}
+
 # parse_amount DECIMALS SPEC: the amount in base units. Wei (a plain integer), a bare decimal (in
 # DECIMALS) or a decimal with an explicit unit (ether/eth = 18, gwei = 9).
 parse_amount() {
   local decimals=$1 spec=$2 num unit whole frac pad zeros out extra
+  validate_amount "$spec"
   if is_uint "$spec"; then echo "$spec"; return 0; fi
-  if [[ $spec =~ ^([0-9]+(\.[0-9]*)?|\.[0-9]+)(ether|eth|gwei)?$ ]]; then
-    num=${BASH_REMATCH[1]}
-    unit=${BASH_REMATCH[3]}
-  else
-    usage_error "malformed amount '$spec' (wei, a decimal, or a decimal with ether/gwei)"
-  fi
+  [[ $spec =~ ^([0-9]+(\.[0-9]*)?|\.[0-9]+)(ether|eth|gwei)?$ ]]
+  num=${BASH_REMATCH[1]}
+  unit=${BASH_REMATCH[3]}
   case $unit in
     ether|eth) decimals=18 ;;
     gwei) decimals=9 ;;
@@ -211,27 +219,46 @@ fmt_wei() {
 # fmt_time EPOCH: the epoch as UTC ISO 8601 (jq's todate; cast has no date formatting).
 fmt_time() { jq -rn --argjson t "$1" '$t | todate' 2>/dev/null || echo "$1"; }
 
+# validate_fee_list LIST: every comma-separated entry's syntax, before token metadata is read. Split
+# explicitly rather than through shell words so leading, interior and trailing empty entries are rejected.
+validate_fee_list() {
+  local list=$1 rest item
+  [[ -n $list ]] || return 0
+  rest=$list
+  while [[ $rest == *,* ]]; do
+    item=${rest%%,*}
+    rest=${rest#*,}
+    [[ $item != *[[:space:]]* ]] || usage_error "malformed fee list '$list' (comma-separated amounts, no spaces)"
+    validate_amount "$item"
+  done
+  [[ $rest != *[[:space:]]* ]] || usage_error "malformed fee list '$list' (comma-separated amounts, no spaces)"
+  validate_amount "$rest"
+}
+
 # parse_fee_list DECIMALS LIST: a comma-separated list of amounts (announce-fees), as one entry per
 # denomination, echoed back comma-separated in base units. An empty list is passed on empty.
 parse_fee_list() {
-  local decimals=$1 list=$2 out="" item value
+  local decimals=$1 list=$2 out="" rest item value
   [[ -n $list ]] || { echo ""; return 0; }
-  local IFS=","
-  for item in $list; do
-    [[ $item != *[[:space:]]* ]] || usage_error "malformed fee list '$list' (comma-separated amounts, no spaces)"
+  rest=$list
+  while :; do
+    if [[ $rest == *,* ]]; then item=${rest%%,*}; rest=${rest#*,}; else item=$rest; rest=""; fi
     # The status is checked here: bash does not apply set -e to an assignment whose command
     # substitution failed inside a function that itself runs in one.
     value=$(parse_amount "$decimals" "$item") || exit 2
     out+="${out:+,}$value"
+    [[ $rest == *,* || -n $rest ]] || break
   done
   echo "$out"
 }
 
-# token_decimals TOKEN: the token's decimals, read from the token (ETH is 18 by definition).
+# token_decimals TOKEN [BLOCK]: the token's decimals, read at BLOCK when given (ETH is fixed at 18).
 token_decimals() {
-  local t=$1 d
+  local t=$1 block=${2:-} d
+  local -a pinned=()
+  [[ -z $block ]] || pinned=(--block "$block")
   if [[ $t == 0x0000000000000000000000000000000000000000 ]]; then echo 18; return 0; fi
-  if ! d=$(cast call "$t" "decimals()" --rpc-url "$RPC" 2>&1); then
+  if ! d=$(cast call "$t" "decimals()" "${pinned[@]}" --rpc-url "$RPC" 2>&1); then
     die "could not read decimals() of $t: $d"
   fi
   [[ -n $d && $d != 0x ]] || die "no decimals() answer from $t (not an ERC-20?)"
@@ -285,10 +312,21 @@ fi
 if ((UNLOCKED)) && [[ -z $FROM ]]; then
   usage_error "--unlocked needs --from (the account anvil has unlocked)"
 fi
+if ((UNLOCKED && ${#WALLET_OPTS[@]} > 0)); then
+  usage_error "--unlocked cannot be combined with --keystore/--account/--ledger; use one signing method"
+fi
 
-# The dry run calls from the role's address: --from as given, or derived from the wallet options.
-if [[ -z $FROM ]]; then
-  FROM=$(cast wallet address ${WALLET_OPTS[@]+"${WALLET_OPTS[@]}"} 2>&1) || die "could not derive the sender address: $FROM"
+# A signing wallet determines the sender for both the rehearsal and the send. Even when --from was supplied,
+# derive the wallet address and refuse a mismatch before the first network read. For --unlocked, --from is
+# both the eth_call and eth_sendTransaction sender; a dry-run-only explicit --from remains sufficient.
+if ((!UNLOCKED && ${#WALLET_OPTS[@]} > 0)); then
+  signer=$(cast wallet address "${WALLET_OPTS[@]}" 2>&1) || die "could not derive the sender address: $signer"
+  signer=$(norm_address "$signer") || exit 2
+  if [[ -n $FROM ]]; then
+    FROM=$(norm_address "$FROM") || exit 2
+    [[ ${FROM,,} == "${signer,,}" ]] || usage_error "--from $FROM does not match the signing wallet's address $signer"
+  fi
+  FROM=$signer
 fi
 FROM=$(norm_address "$FROM")
 
@@ -340,17 +378,32 @@ run_action() {
     exit 0
   fi
   echo "sending:    from $FROM"
-  local -a send=(cast send "$VAULT" "$sig" ${@+"$@"} --rpc-url "$RPC")
+  local -a send=(cast send "$VAULT" "$sig" ${@+"$@"} --rpc-url "$RPC" --json)
   if ((UNLOCKED)); then
     send+=(--unlocked --from "$FROM")
   else
-    send+=(${WALLET_OPTS[@]+"${WALLET_OPTS[@]}"})
+    send+=("${WALLET_OPTS[@]}")
   fi
-  if ! out=$("${send[@]}" 2>&1); then
+  # Force synchronous receipt collection even if the caller exported CAST_ASYNC=1. Only cast's stdout (the
+  # receipt's JSON) is captured; its warnings and errors go to stderr as they are, so a warning cannot break the
+  # receipt's parsing.
+  if ! out=$(CAST_ASYNC=false "${send[@]}"); then
     echo "$out"
     die "the transaction could not be sent (the dry run had succeeded; the chain moved?)"
   fi
   printf '%s\n' "$out"
+  local txhash receipt_status
+  if ! txhash=$(jq -er 'if type == "object" and (.transactionHash | type == "string") then .transactionHash else error("missing transactionHash") end' <<< "$out") ||
+      [[ ! $txhash =~ ^0x[0-9a-fA-F]{64}$ ]]; then
+    die "cast send returned no complete transaction receipt (transaction hash missing or malformed)"
+  fi
+  if ! receipt_status=$(jq -er 'if type == "object" and has("status") then .status else error("missing receipt status") end' <<< "$out"); then
+    die "cast send returned no receipt status for $txhash"
+  fi
+  case $receipt_status in
+    1|0x1|0x01) echo "mined:      transaction $txhash succeeded (receipt status 1)" ;;
+    *) die "transaction $txhash was mined but failed (receipt status $receipt_status)" ;;
+  esac
   exit 0
 }
 
@@ -360,10 +413,14 @@ run_action() {
 
 # readget "sig(in)(out)" ARGS...: the vault getter's answer, decoded by cast itself (cast call takes the
 # output signature in the same string), one value per line, with the [1.2e3] annotations cast adds.
+STATUS_BLOCK=""
+
 readget() {
   local sig=$1 out
+  local -a pinned=()
+  [[ -z $STATUS_BLOCK ]] || pinned=(--block "$STATUS_BLOCK")
   shift
-  if ! out=$(cast call "$VAULT" "$sig" ${@+"$@"} --rpc-url "$RPC" 2>&1); then
+  if ! out=$(cast call "$VAULT" "$sig" ${@+"$@"} "${pinned[@]}" --rpc-url "$RPC" 2>&1); then
     die "the read $sig failed: $out"
   fi
   if [[ -z $out || $out == 0x ]]; then echo ""; return 0; fi
@@ -413,7 +470,8 @@ do_status() {
   done
   chain=$(cast chain-id --rpc-url "$RPC") || die "could not read the chain id"
   block=$(cast block-number --rpc-url "$RPC") || die "could not read the block number"
-  now=$(cast block latest --field timestamp --rpc-url "$RPC") || die "could not read the block time"
+  STATUS_BLOCK=$block
+  now=$(cast block "$block" --field timestamp --rpc-url "$RPC") || die "could not read block $block's time"
   echo "vault:        $VAULT"
   echo "endpoint:     $RPC"
   echo "chain:        $chain   block $block   block time $now ($(fmt_time "$now"))"
@@ -464,7 +522,7 @@ do_status() {
       fi
       enabled=$(field 1 "$line")
       echo "  depositsEnabled: $enabled   lezUnit $(field 2 "$line")   unitWeight $(field 3 "$line")   denominations $(rest 4 "$line")"
-      td=$(token_decimals "$t")
+      td=$(token_decimals "$t" "$block")
       for d in 0 1; do
         line=$(readget "tokenCap(address,uint8)(uint256,uint256,uint256)" "$t" "$d")
         echo "  $([[ $d == 0 ]] && echo deposit || echo release) cap: capacity $(fmt_cap "$(field 0 "$line")" "$td"), refill $(field 1 "$line")/s, available $(fmt_cap "$(field 2 "$line")" "$td")"
@@ -482,7 +540,7 @@ do_status() {
   else
     echo "per-token state: name tokens as arguments to show them (the vault cannot enumerate them)"
   fi
-  echo "read at block $block; every read is read-only (eth_call)"
+  echo "non-state-changing snapshot at block $block; every vault/token eth_call above is pinned to that block (chain and block metadata use their own RPC methods)"
 }
 
 # ------------------------------------------------------------------------------------------------------------
@@ -498,6 +556,8 @@ case $ACTION in
     (($# == 4)) || usage_error "set-token-cap TOKEN DEPOSIT|RELEASE CAPACITY REFILL"
     token=$(norm_address "$1") || exit 2
     dir=$(norm_direction "$2")
+    validate_amount "$3"
+    validate_amount "$4"
     d=$(token_decimals "$token") || exit 1
     capacity=$(parse_amount "$d" "$3") || exit 2
     refill=$(parse_amount "$d" "$4") || exit 2
@@ -540,6 +600,9 @@ case $ACTION in
   announce-fees)
     (($# == 4)) || usage_error "announce-fees TOKEN MINTFEES BURNFEES CHECKPOINTFEES (each a comma-separated list, one entry per denomination)"
     token=$(norm_address "$1") || exit 2
+    validate_fee_list "$2"
+    validate_fee_list "$3"
+    validate_fee_list "$4"
     d=$(token_decimals "$token") || exit 1
     mint=$(parse_fee_list "$d" "$2") || exit 2
     burn=$(parse_fee_list "$d" "$3") || exit 2
