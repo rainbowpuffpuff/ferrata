@@ -74,12 +74,17 @@ async fn a_failed_send_or_another_senders_transaction_does_not_strand_the_next_s
     let tx = plain.get_transaction_by_hash(hash).await.unwrap().unwrap();
     assert_eq!(alloy::consensus::Transaction::nonce(&tx), 0, "the account's first transaction");
 
-    // 3. The same key sends elsewhere (the Logos module, an operator by hand): the monitor's next send must follow it.
+    // 3. The same key sends elsewhere (the Logos module, an operator by hand) and that transaction is still pending, not
+    //    mined (automine off): the monitor's next send must take the pending count, not the mined one (review round 2).
+    let _: serde_json::Value = plain.raw_request("evm_setAutomine".into(), (false,)).await.unwrap();
     let other = signing_provider(&url, signer).expect("a second sender with the same key");
-    other.send_transaction(transfer(me)).await.unwrap().get_receipt().await.expect("the other sender's transaction");
-    let pending = p.send_transaction(transfer(me)).await;
-    assert!(pending.is_ok(), "the monitor reused a number another sender used: {pending:?}");
-    let receipt = pending.unwrap().with_timeout(Some(Duration::from_secs(10))).get_receipt().await;
-    assert!(receipt.is_ok(), "not mined: {receipt:?}");
+    let theirs = other.send_transaction(transfer(me)).await.expect("the other sender's transaction");
+    let ours = p.send_transaction(transfer(me)).await;
+    assert!(ours.is_ok(), "the monitor reused a number another sender's pending transaction holds: {ours:?}");
+    let _: serde_json::Value = plain.raw_request("evm_mine".into(), ()).await.unwrap();
+    for (who, pending) in [("theirs", theirs), ("ours", ours.unwrap())] {
+        let receipt = pending.with_timeout(Some(Duration::from_secs(10))).get_receipt().await;
+        assert!(receipt.is_ok(), "{who}: not mined: {receipt:?}");
+    }
     assert_eq!(plain.get_transaction_count(me).await.unwrap(), 3, "three transactions from the key");
 }
