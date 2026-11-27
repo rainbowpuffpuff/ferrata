@@ -25,7 +25,7 @@
 //!   `config(cid)` apply the global ones (`Admit`), and sends `Spend` to
 //!   `nullifier(cid, chain, vault, N)`: it spends `N` once and mints the denomination to a public
 //!   destination (a private destination credits itself) and the relay fee to its account. The vault
-//!   already credited the mint fee on Ethereum at deposit, so no claim field names a fee schedule. A mint
+//!   escrowed the deposit's mint fee for the fee recipient (ADR 0048), so no claim field names a fee schedule. A mint
 //!   writes only at `holder(cid, account)`, a PDA whose seed names the account: never at the account a
 //!   claim names, which could be another actor's address (security review C-1).
 //! * **Burn.** `Burn` at the holder's own actor, as a top-level call or a private root only, debits
@@ -34,6 +34,11 @@
 //!   and records the note at `burn(cid, r)`: once per tag, so a second note with a used tag is refused
 //!   and the whole transaction reverts (the reviews of 22 November 2026, H-1: keyed on the whole note,
 //!   two notes with one tag were both applied and shared one release nullifier).
+//! * **Protocol fees (ADR 0048).** `CollectFees` (anyone) at `config(cid)` attests the vault's cumulative total of
+//!   the mint and burn fees it escrowed for `token` (`lez_fees_slot`) and sends `AccrueFees` to `fees(cid, token)`,
+//!   which keeps how much is minted and sends `MintFees` for the rest (at most the caller's limit) to
+//!   `token(cid, token)`: the token's and the configuration's mint freezes and buckets apply, then `Credit` mints it,
+//!   in the wrapped token, to the fee recipient's `holder(cid, account)`. Claims and burns carry no fee value.
 //! * **Roles.** `Sunset`, `Freeze`, `SetCap` and `SetDepth` are top-level calls at the role's own
 //!   actor, which forwards them to `config(cid)` or `token(cid, token)`; those accept them only from
 //!   the configured freeze authority (`Sunset`, `Freeze`) or admin (`SetCap`, `SetDepth`).
@@ -48,13 +53,13 @@
 
 use ferrata_lez_bridge_wire::{
     Address, BridgeConfig, BridgeMessage, BridgeState, BurnRecord, CapParams, ClaimWitness, Claimed, ConfigState,
-    CosignedAction, DestKind, FeeSchedule, Gate, HolderState, ImportProof, MAX_WATCHERS, Note, NullifierState,
-    PROPOSAL_RECORD_AGE_MS, PairingProof, Pending, PendingClaim, PendingImport, PendingTime, ROLE_TIMELOCK_MS,
-    RoleProposal, Roles, Root, RootState, SLOT_RETIRED, TimeRecord, Timed, TokenEntry, TokenState, VaultProof,
-    burn_actor, burn_seed, check_fees, check_import, check_listing, check_pairing, check_register, check_retired, code,
-    config_actor, fees_slots, holder_actor, holder_seed, import_request, listing_slot, nullifier_actor, nullifier_seed,
-    own_actor, pairing_request, record_time, register_slots, root_actor, root_seed, token_actor, token_seed, u128_of,
-    vault_request, verify_claim,
+    CosignedAction, DestKind, FeeSchedule, FeesState, Gate, HolderState, ImportProof, MAX_WATCHERS, Note,
+    NullifierState, PROPOSAL_RECORD_AGE_MS, PairingProof, Pending, PendingClaim, PendingImport, PendingTime,
+    ROLE_TIMELOCK_MS, RoleProposal, Roles, Root, RootState, SLOT_RETIRED, TimeRecord, Timed, TokenEntry, TokenState,
+    VaultProof, Word, burn_actor, burn_seed, check_fees, check_import, check_lez_fees, check_listing, check_pairing,
+    check_register, check_retired, code, config_actor, fees_actor, fees_seed, fees_slots, holder_actor, holder_seed,
+    import_request, lez_fees_slot, listing_slot, nullifier_actor, nullifier_seed, own_actor, pairing_request,
+    record_time, register_slots, root_actor, root_seed, token_actor, token_seed, u128_of, vault_request, verify_claim,
 };
 use ferrata_lez_wire::{Message as AttestMessage, attest::Attestation, header_actor};
 use lee_core::{
@@ -248,6 +253,13 @@ fn handle(input: &ReceiveInput) -> Result<Response, Refusal> {
         BridgeMessage::SetListing { config_id, token, delisted, record_slot } => {
             set_listing(input, program, state, config_id, token, delisted, record_slot)
         }
+        BridgeMessage::CollectFees { config_id, token, record_slot, limit, proof } => {
+            collect_fees(input, program, state, config_id, token, record_slot, limit, &proof)
+        }
+        BridgeMessage::AccrueFees { config_id, token, total, limit } => {
+            accrue_fees(input, program, state, config_id, token, total, limit)
+        }
+        BridgeMessage::MintFees { config_id, token, amount } => mint_fees(input, program, state, config_id, token, amount),
     }
 }
 
@@ -433,6 +445,12 @@ fn config_reply(input: &ReceiveInput, program: AccountId, state: &ConfigState) -
             let message = BridgeMessage::SetListing { config_id, token: *token, delisted, record_slot: *record_slot };
             SyncMessage::new(token_actor(program, &config_id, token), &message)
                 .with_pda_seeds([token_seed(&config_id, token)])
+        }
+        Pending::Collect { token, record_slot, limit } => {
+            let total = check_lez_fees(&config, token, *record_slot, &attestation)?;
+            let accrue = BridgeMessage::AccrueFees { config_id, token: *token, total, limit: *limit };
+            SyncMessage::new(fees_actor(program, &config_id, token), &accrue)
+                .with_pda_seeds([fees_seed(&config_id, token)])
         }
         Pending::Time(_) => return Err(code::BAD_STATE),
     };
@@ -740,6 +758,103 @@ fn spend(
 }
 
 // ---------------------------------------------------------------------------------------------
+// Protocol fees (RFP-022 F.13, ADR 0048)
+// ---------------------------------------------------------------------------------------------
+
+/// Anyone, at `config(cid)`: ask the vault's cumulative total of the protocol fees it escrowed for `token`
+/// ([`lez_fees_slot`]) under the record at `record_slot`; the reply sends `AccrueFees` to `fees(cid, token)`. Allowed
+/// after `Sunset` (it imports no root: the fees it mints are escrowed, refunds never return them), refused under a
+/// record shallower than the admin's inbound depth (`FROZEN`, as `ImportRoot`).
+#[allow(clippy::too_many_arguments)]
+fn collect_fees(
+    input: &ReceiveInput,
+    program: AccountId,
+    state: Option<BridgeState>,
+    config_id: Root,
+    token: Address,
+    record_slot: u64,
+    limit: u128,
+    proof: &VaultProof,
+) -> Result<Response, Refusal> {
+    if input.receiver != config_actor(program, &config_id) {
+        return Err(code::WRONG_SENDER);
+    }
+    if limit == 0 {
+        return Err(code::BAD_MESSAGE);
+    }
+    let (config, gate, sunset, roles) = ready_config(state)?;
+    // F.12, as for a root import: the record lies at least the admin's inbound depth behind the newest record the clock
+    // read, so a fee total is minted from no fresher Ethereum state than a deposit root is imported from.
+    roles.deep_enough(record_slot)?;
+    let header = header_actor(config.attestation, &config.instance_id, record_slot);
+    let request = vault_request(&config, &[lez_fees_slot(&token)], proof)?;
+    Ok(set(ready(config, Some(Pending::Collect { token, record_slot, limit }), gate, sunset, roles))
+        .send_sync(header, &AttestMessage::Attest { request }))
+}
+
+/// `config(cid)` → `fees(cid, token)`: the attested total. Keep the new count and mint the part not minted yet (at most
+/// `limit`) through `token(cid, token)`. A total below the count (an older record) or already minted is refused.
+fn accrue_fees(
+    input: &ReceiveInput,
+    program: AccountId,
+    state: Option<BridgeState>,
+    config_id: Root,
+    token: Address,
+    total: Word,
+    limit: u128,
+) -> Result<Response, Refusal> {
+    if input.from != Some(config_actor(program, &config_id)) {
+        return Err(code::WRONG_SENDER);
+    }
+    if input.receiver != fees_actor(program, &config_id, &token) {
+        return Err(code::WRONG_SENDER);
+    }
+    let fees = match state {
+        None => FeesState::new(config_id, token),
+        Some(BridgeState::Fees(fees)) if fees.config_id == config_id && fees.token == token => fees,
+        Some(_) => return Err(code::BAD_STATE),
+    };
+    let (amount, fees) = fees.accrue(&total, limit)?;
+    let mint = BridgeMessage::MintFees { config_id, token, amount };
+    // With the token's seed, as every message to `token(cid, token)` carries one: a token the configuration never
+    // registered is then refused by `MintFees` itself (`NOT_REGISTERED`), not left unadmitted by LEZ.
+    Ok(set(BridgeState::Fees(fees))
+        .send(SyncMessage::new(token_actor(program, &config_id, &token), &mint).with_pda_seeds([token_seed(&config_id, &token)])))
+}
+
+/// At `token(cid, token)`, from `fees(cid, token)` only: mint `amount` of protocol fees to the configuration's fee
+/// recipient, in the wrapped token, through the token's mint freeze and bucket and the configuration's (`Admit`).
+fn mint_fees(
+    input: &ReceiveInput,
+    program: AccountId,
+    state: Option<BridgeState>,
+    config_id: Root,
+    token: Address,
+    amount: u128,
+) -> Result<Response, Refusal> {
+    if input.from != Some(fees_actor(program, &config_id, &token)) {
+        return Err(code::WRONG_SENDER);
+    }
+    if input.receiver != token_actor(program, &config_id, &token) {
+        return Err(code::WRONG_SENDER);
+    }
+    let mut state = token_state(state)?;
+    if amount == 0 || amount % state.entry.lez_unit != 0 {
+        return Err(code::BAD_MESSAGE);
+    }
+    let value = state.entry.value(amount).ok_or(code::BAD_STATE)?;
+    state.gate.admit(true, value)?;
+    let to = state.controls.fee_recipient;
+    let admit = BridgeMessage::Admit { config_id, token, mints: true, value };
+    let credit = SyncMessage::new(
+        holder_actor(program, &config_id, AccountId::new(to)),
+        &BridgeMessage::Credit { config_id, token, amount, to },
+    )
+    .with_pda_seeds([holder_seed(&config_id, &to)]);
+    Ok(set(BridgeState::Token(state)).send_sync(config_actor(program, &config_id), &admit).send(credit))
+}
+
+// ---------------------------------------------------------------------------------------------
 // Burn
 // ---------------------------------------------------------------------------------------------
 
@@ -888,7 +1003,8 @@ fn transfer(
     Ok(Response::keep_state().send(forward))
 }
 
-/// `token(cid, token)` → `holder(cid, to)`: credit a transfer (as `Mint` credits a claim).
+/// `token(cid, token)` → `holder(cid, to)`: credit a transfer, or the protocol fees `MintFees` mints to the fee recipient
+/// (as `Mint` credits a claim).
 fn credit(
     input: &ReceiveInput,
     program: AccountId,

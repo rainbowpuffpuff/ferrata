@@ -430,7 +430,7 @@ node writes, not a transaction's cost).
 
 **Met.** In-process harness, the bridge program the live runs deployed (image `ccde6171…`, the same built at any path
 from `f13faee2`: [`image-ids.md`](image-ids.md); since milestone B1 this tree's is `847a4336…` (ADR 0032; B1's first build `ac1fb59b…` was within −5,272 and +4,718),
-its records in `lez/results/b1/`, execution gas within −9,799 and +4,718 of these, the burns now hashing no note; since ADR 0046 this tree's is `ffb47f6e…` (`ferrata_bridge_f13`, not deployed), whose claims name no fee schedule: 24 bytes shorter, the privacy suite's plaintext claims 261,007 execution gas and 2,029 storage gas, its private claims 552,814: `privacy/generated/summary.md`), synthetic vault storage (tables
+its records in `lez/results/b1/`, execution gas within −9,799 and +4,718 of these, the burns now hashing no note; since ADR 0046 `ffb47f6e…` (`ferrata_bridge_f13`, never deployed), whose claims name no fee schedule: 24 bytes shorter, the privacy suite's plaintext claims 261,007 execution gas and 2,029 storage gas, its private claims 552,814: `privacy/generated/summary.md`; since ADR 0048 this tree's is `9d02d54d…` (`ferrata_bridge_lezfee`, not deployed), whose claims are encoded as ADR 0046's), synthetic vault storage (tables
 `lez/results/bridge-*.md`, recorded on 12 November 2026):
 
 | Claim | Handlers (cycles each) | Execution gas | Storage gas |
@@ -610,7 +610,7 @@ real claims and burns of the deployed bridge program, `0xccde6171…`, measured 
 | `nullifier(…, N)` (`nullifier(cid, chain, vault, N)` since milestone B1; the state is the same) | claim | 77 B | 133 B | **165 B** (+165.00 B per record from 1,000 to 100,000) |
 | `burn(cid, r)` (`burn(cid, H(note))` before ADR 0032; the same size) | burn | 185 B | 241 B | **273 B** (+273.00 B per record) |
 | `root(cid, n)` | import | 117 B | 173 B | 205 B (account and key) |
-| holder (since milestone B1 one account per configuration, `holder(cid, account)`) | new holder (a claim's destination or its relayer; the fee recipient's once) | | | **162 B** (the second claim: its destination's); the first claim's +486 B is three new holders: its destination's, the fee recipient's and its relayer's |
+| holder (since milestone B1 one account per configuration, `holder(cid, account)`) | new holder (a claim's destination or its relayer; `CollectFees` creates the fee recipient's) | | | **162 B** (the second claim: its destination's); the first measured pre-ADR 0046 claim's +486 B is three new holders: its destination's, the fee recipient's and its relayer's |
 
 Ethereum ([`lez/results/perf-state-ethereum.txt`](../lez/results/perf-state-ethereum.txt), `vault/test/StateGrowth.t.sol`:
 Foundry's state-diff recording, each slot's value before and after the operation): a release creates **one** vault slot
@@ -627,7 +627,7 @@ bench/perf/projections.py`; *derived*):
 | 10M of each | 1.65 GB | 2.73 GB | 10,000,000 (640 MB) | one per new depositor (at most 10,000,000), plus at most 32 |
 
 LEZ holder accounts grow with new holders, not operations: a claim creates at most two that are not one-time (a new
-destination's and a new relayer's, 162 B each; the fee recipient's is created once), so at most 162 MB at 1M claims and
+destination's and a new relayer's, 162 B each; `CollectFees` creates the fee recipient's once), so at most 162 MB at 1M claims and
 1.62 GB at 10M when claims name relayers already paid, and 324 MB / 3.24 GB if every claim named a new destination and
 a new relayer (*derived*, [`perf-projections.md`](../lez/results/perf-projections.md)); a holder that takes another
 token grows by a 68-B holding (from the account layout).

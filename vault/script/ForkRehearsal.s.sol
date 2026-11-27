@@ -20,12 +20,14 @@ contract RehearsalAcceptAllVerifier is IRiscZeroVerifierFull {
 /// @notice The deposit and refund paths on a local fork, against a deployment of script/deploy.sh (FERRATA_OUT names
 ///         its record). script/fork-rehearsal.sh runs the steps and moves the fork's clock between them:
 ///         deposits()           msg.sender deposits 0.001 ETH (leaf 0) and 100 test tokens (leaf 1), with their fees
-///         checkDeposits(d)     escrow = denomination + relay; owed = mint; balance covers both; root is the reference's
+///         checkDeposits(d)     escrow = the whole payment (denomination + mint + relay, ADR 0048); lezFees = mint;
+///                              nothing owed; balance = escrow; root is the reference's
 ///         sunset()             rule (B): the freeze authority retires the vault and submits a sunset candidate that
 ///                              imported no leaf
 ///         finalizeSunset()     after the wait: finalizeAttested
 ///         refunds(d)           after the revoke window: anyone refunds both leaves to their depositor
-///         checkRefunds(d, b)   each escrow came back (denomination + relay), no escrow is left; mint fees stay owed
+///         checkRefunds(d, b)   each refund returned denomination + relay; only the mint fees stay escrowed, counted in
+///                              lezFees for the fee recipient on LEZ
 contract ForkRehearsal is Script {
     address internal constant ETH = address(0);
     bytes32 internal constant COMMITMENT_ETH = keccak256("ferrata fork rehearsal: ETH deposit");
@@ -41,7 +43,7 @@ contract ForkRehearsal is Script {
         token = TestToken(vm.parseJsonAddress(record, ".token"));
     }
 
-    /// @dev Denomination 0 of `t`, the whole amount its deposit pays, and the mint fee credited on Ethereum.
+    /// @dev Denomination 0 of `t`, the whole amount its deposit pays, and its mint fee (escrowed and counted in `lezFees`).
     function _total(address t) internal view returns (uint256 denom, uint256 total, uint256 mintFee) {
         (,,,, uint256[] memory denoms) = vault.tokenConfig(t);
         (uint64 current,) = vault.feeState(t);
@@ -76,20 +78,22 @@ contract ForkRehearsal is Script {
         _load();
         (uint256 ethDenom, uint256 ethTotal, uint256 ethMintFee) = _total(ETH);
         (uint256 tokenDenom, uint256 tokenTotal, uint256 tokenMintFee) = _total(address(token));
-        uint256 ethEscrow = ethTotal - ethMintFee;
-        uint256 tokenEscrow = tokenTotal - tokenMintFee;
-        require(ethEscrow > ethDenom && tokenEscrow > tokenDenom, "rehearsal: no relay fee escrowed");
-        require(vault.escrowed(ETH) == ethEscrow && address(vault).balance == ethTotal, "rehearsal: ETH accounting");
-        require(vault.totalOwed(ETH) == ethMintFee, "rehearsal: ETH mint fee credit");
+        // ADR 0048: the whole payment is escrowed; the mint fee is counted in lezFees and credited to no one.
+        require(ethTotal - ethMintFee > ethDenom && tokenTotal - tokenMintFee > tokenDenom, "rehearsal: no relay fee escrowed");
+        require(vault.escrowed(ETH) == ethTotal && address(vault).balance == ethTotal, "rehearsal: ETH accounting");
+        require(vault.lezFees(ETH) == ethMintFee && vault.totalOwed(ETH) == 0, "rehearsal: ETH mint fee for LEZ");
         require(
-            vault.escrowed(address(token)) == tokenEscrow && token.balanceOf(address(vault)) == tokenTotal,
+            vault.escrowed(address(token)) == tokenTotal && token.balanceOf(address(vault)) == tokenTotal,
             "rehearsal: token accounting"
         );
-        require(vault.totalOwed(address(token)) == tokenMintFee, "rehearsal: token mint fee credit");
+        require(
+            vault.lezFees(address(token)) == tokenMintFee && vault.totalOwed(address(token)) == 0,
+            "rehearsal: token mint fee for LEZ"
+        );
         require(vault.nextLeafIndex() == 2, "rehearsal: leaf count");
         require(vault.depositRoot() == ReferenceMerkle.root(_leaves(depositor)), "rehearsal: deposit root");
-        console2.log("FERRATA_OK deposits, ETH denomination and escrow (wei):", ethDenom, ethEscrow);
-        console2.log("FERRATA_OK deposits, token denomination and escrow (base units):", tokenDenom, tokenEscrow);
+        console2.log("FERRATA_OK deposits, ETH denomination and escrow (wei):", ethDenom, ethTotal);
+        console2.log("FERRATA_OK deposits, token denomination and escrow (base units):", tokenDenom, tokenTotal);
     }
 
     function _sunsetCheckpoint() internal view returns (FerrataVault.Checkpoint memory c) {
@@ -146,11 +150,17 @@ contract ForkRehearsal is Script {
         uint256 ethEscrow = ethTotal - ethMintFee;
         uint256 tokenEscrow = tokenTotal - tokenMintFee;
         require(vault.refunded(0) && vault.refunded(1), "rehearsal: not refunded");
-        require(vault.escrowed(ETH) == 0 && vault.escrowed(address(token)) == 0, "rehearsal: escrow left");
+        // ADR 0048: a refund returns denomination + relay fee; the mint fee stays escrowed for the fee recipient on LEZ.
+        require(
+            vault.escrowed(ETH) == ethMintFee && vault.escrowed(address(token)) == tokenMintFee, "rehearsal: escrow left"
+        );
         require(depositor.balance == ethBalanceBefore + ethEscrow, "rehearsal: ETH refund amount");
         require(token.balanceOf(depositor) == tokenEscrow, "rehearsal: token refund amount");
-        require(vault.totalOwed(ETH) == ethMintFee, "rehearsal: ETH mint fee is not refunded");
-        require(vault.totalOwed(address(token)) == tokenMintFee, "rehearsal: token mint fee is not refunded");
+        require(vault.lezFees(ETH) == ethMintFee && vault.totalOwed(ETH) == 0, "rehearsal: ETH mint fee is not refunded");
+        require(
+            vault.lezFees(address(token)) == tokenMintFee && vault.totalOwed(address(token)) == 0,
+            "rehearsal: token mint fee is not refunded"
+        );
         console2.log("FERRATA_OK refunds, ETH returned to the depositor (wei):", ethEscrow);
         console2.log("FERRATA_OK refunds, tokens returned to the depositor (base units):", tokenEscrow);
     }

@@ -1,7 +1,7 @@
 # ADR 0046: Take the mint fee on Ethereum at deposit; a claim on LEZ mints the denomination and the fixed relay fee only
 
 - **Date:** 26–27 November 2026
-- **Status:** accepted; built (the vault, the bridge program and its clients); not deployed
+- **Status:** accepted; built (the vault, the bridge program and its clients); not deployed; superseded by ADR 0048 where they differ (both protocol fees escrowed by the vault and minted on LEZ)
 - **Requirements:** RFP-022 F.13
 
 ## Context

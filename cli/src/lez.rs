@@ -485,7 +485,7 @@ pub fn gate_line(scope: &str, g: &bw::Gate) -> String {
 }
 
 /// The bridge program the zone runs at `ctx.program`, by the image id its loader header names ([`Ledger::bridge_image`]):
-/// this tree's (`ferrata_bridge_f13`) or the test network's (`ferrata_bridge_b1`); any other is refused before anything
+/// this tree's (`ferrata_bridge_lezfee`, ADR 0048) or the test network's (`ferrata_bridge_b1`); any other is refused before anything
 /// is built, signed or sent.
 pub async fn bridge_program<L: Ledger>(ledger: &L, ctx: &Context) -> Result<BridgeProgram> {
     match ledger.bridge_image(ctx.program).await? {
@@ -566,7 +566,8 @@ pub async fn plan_claim<L: Ledger>(
         bail!(r);
     }
     // The program the zone runs decides the claim's layout: the test network's B1 reads a fee-schedule range that this
-    // tree's program (ADR 0046) dropped; any other program is refused here, before the claim is built.
+    // tree's program (`ferrata_bridge_lezfee`; dropped since ADR 0046) does not; any other program is refused here,
+    // before the claim is built.
     let program = bridge_program(ledger, ctx).await?;
     // Spent or not from the downloaded history alone (review M-2): asking the sequencer for `nullifier(cid, chain,
     // vault, N)` would name this deposit to it before the claim, in a dry run or while the claim delay holds it.
@@ -958,7 +959,7 @@ impl Ledger for Sequencer {
             let program = call.mentions[0].actor().program_account_id;
             // A proof of another program's execution is refused by the sequencer: check the binary against the image
             // the zone's loader names for the bridge account before proving (the test network runs ferrata_bridge_b1,
-            // this tree builds ferrata_bridge_f13). The flows check it earlier too, before a gas drop or a journal.
+            // this tree builds ferrata_bridge_lezfee). The flows check it earlier too, before a gas drop or a journal.
             let binary = self.bridge_binary(program).await?;
             let catalog =
                 lee::privacy_preserving_transaction::circuit::ProgramCatalog::from([(program, binary)]);
@@ -1442,7 +1443,7 @@ pub async fn zone_status<L: Ledger>(ledger: &L, ctx: &Context, history: &History
                 hx(&id)
             ),
             Ok(BridgeProgram::F13) => {
-                format!("zone: bridge program ferrata_bridge_f13 (image {}, this tree's, ADR 0046)", hx(&id))
+                format!("zone: bridge program ferrata_bridge_lezfee (image {}, this tree's, ADR 0048)", hx(&id))
             }
             Err(e) => format!("zone: {e}"),
         }),
@@ -1728,7 +1729,7 @@ mod tests {
         let path = std::path::Path::new("ferrata_bridge.bin");
         assert!(check_program_binary(path, &deployed::B1_IMAGE_ID, &deployed::B1_IMAGE_ID).is_ok());
         let e = check_program_binary(path, &deployed::F13_IMAGE_ID, &deployed::B1_IMAGE_ID).unwrap_err().to_string();
-        assert!(e.contains("refused before proving") && e.contains("ferrata_bridge_f13") && e.contains("ferrata_bridge_b1"), "{e}");
+        assert!(e.contains("refused before proving") && e.contains("ferrata_bridge_lezfee") && e.contains("ferrata_bridge_b1"), "{e}");
         assert!(check_program_binary(path, &[1; 32], &deployed::F13_IMAGE_ID).is_err());
         // A zone of a program this tool does not know: refused even with its own binary (review r2 M-B1).
         let e = check_program_binary(path, &[0x5a; 32], &[0x5a; 32]).unwrap_err().to_string();

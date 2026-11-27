@@ -1,0 +1,24 @@
+$ ferrata --seed <work>/user/seed.txt --eth-rpc http://127.0.0.1:18547 --chain-id 11155111 --vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 --from-block 12224216 deposit --denomination 0 --kind public --i-accept-public-account --from 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
+
+deposit to the vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 on chain 11155111
+  denomination  0.001 ETH (1000000000000000 base units, 18 decimals)
+  mint fee      0.000005 ETH (5000000000000 base units, 18 decimals)  (schedule 1)
+  relay fee     0.000002 ETH (2000000000000 base units, 18 decimals)  (paid to the relayer that submits your claim)
+  total         0.001007 ETH (1007000000000000 base units, 18 decimals)
+  depositor     0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC   j = 1
+  destination   your public LEZ account /0 (hidden: C commits to it)
+  commitment C  0x0b39223c974127eb20140fde1a3dc78085ece262ef4d7cb788950120d1157874
+  claim delay   3 h after the deposit (from your seed; `ferrata claim` waits for it)
+would send: to 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516  value 1007000000000000  data 0xf7edb85700000000000000000000000000000000000000000000000000000000000000000b39223c974127eb20140fde1a3dc78085ece262ef4d7cb788950120d11578740000000000000000000000000000000000000000000000000000000000000001
+cost: 0.001007 ETH (1007000000000000 base units, 18 decimals) to the vault, and a network fee of about 0.00020525000143675 ETH (205250001436750 base units, 18 decimals) (205250 gas at 1000000007 wei, eth_estimateGas)
+what becomes public (Deposit (Ethereum)):
+  public on Ethereum: your depositor address; the token; the denomination and its fees; the time; the commitment C (random-looking)
+  public on LEZ:      nothing
+  stays private:      the LEZ account that will receive the tokens (C commits to it); which later claim spends it
+privacy of these choices: High: a direct link is public
+  ok Fixed denomination: your deposit looks like every other deposit of 0.001 ETH (1000000000000000 base units, 18 decimals).
+  !! Public destination: the account and its balance become public on LEZ when claimed; anyone can see it received 0.001 ETH (1000000000000000 base units, 18 decimals) at that time.
+  ok Delayed claim: held for 3 h, so the claim's time does not point at your deposit.
+  ok Private fee path: the claim's LEZ fee is paid inside its proof (or by a relayer); no fee payment ties the claim to you.
+WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
+not sent: a dry run (add --send --yes to sign and send)

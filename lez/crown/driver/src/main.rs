@@ -39,7 +39,13 @@
 //! [--recipient ADDR], [--private real|fake], [--claim-time-offset-s S (default -30)], --session-out FILE,
 //! --notes-out FILE, [--operator-only yes] (the updates, Init, Register, ImportFees and ImportRoot only: the
 //! claims and burns are a user's wallet's, e2e/seqnet), [--import-roots no] (no ImportRoot either: the relayer
-//! daemon imports the roots: e2e/seqnet's robust mode, `e2e/seqnet/hook-robust.sh`).
+//! daemon imports the roots: e2e/seqnet's robust mode, `e2e/seqnet/hook-robust.sh`), [--skip-stages N] (the first N
+//! captures were applied by an earlier crown-b on this zone: replayed natively, nothing sent), [--updates-only yes]
+//! (with --operator-only yes: the remaining captures' light-client updates only, no bridge call: a later record for a
+//! relayer's call, e2e/f13/hook.sh's fee collection after the release).
+//! collect-fees: --identity FILE, --capture DIR (repeatable, in order), --stage N (the capture whose record, applied by
+//! an earlier crown-b, it reads), [--limit N], --out FILE: the bridge program's CollectFees (ADR 0048) of the selected
+//! token, the vault's lezFees slot proven from that capture (stand-in chains: a relayer cannot serve their records).
 
 #![allow(dead_code)]
 
@@ -354,8 +360,21 @@ async fn run(args: Args) -> Result<()> {
                 notes_out: args.path("notes-out")?,
                 operator_only: args.get("operator-only") == Some("yes"),
                 import_roots: args.get("import-roots") != Some("no"),
+                skip_stages: args.get("skip-stages").map(str::parse).transpose()?.unwrap_or(0),
+                updates_only: args.get("updates-only") == Some("yes"),
             };
             crown::session_b(&mut live, &program, &bridge, &chain, &b).await?;
+        }
+        "collect-fees" => {
+            let chain = full_chain(&args)?;
+            let c = crown::CollectFees {
+                token,
+                identity: crown::Identity::load(&args.path("identity")?)?,
+                stage: args.get("stage").ok_or_else(|| anyhow!("--stage N (1-based, the capture) is required"))?.parse()?,
+                limit: args.get("limit").map(str::parse).transpose()?.unwrap_or(u128::MAX),
+                out: args.path("out")?,
+            };
+            crown::collect_fees(&mut live, &program, &bridge, &chain, &c).await?;
         }
         "export" => {
             let chain = base_chain(&args)?;

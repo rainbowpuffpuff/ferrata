@@ -34,9 +34,9 @@ expect_id() {  # the image id docs/image-ids.md records for a program named in i
     || { echo "docs/image-ids.md: not exactly one row for \`$1\`" >&2; return 1; }
   printf '%s\n' "$ids"
 }
-# This tree's bridge program: since ADR 0046 docs/image-ids.md's `ferrata_bridge_f13` (`ferrata_bridge_b1` before it, the
+# This tree's bridge program: since ADR 0048 docs/image-ids.md's `ferrata_bridge_lezfee` (`ferrata_bridge_f13` before it, `ferrata_bridge_b1` before that, the
 # test network's; its `ferrata_bridge` row is the program the live runs deployed, at f13faee2).
-BRIDGE_ENTRY=ferrata_bridge_f13
+BRIDGE_ENTRY=ferrata_bridge_lezfee
 OUT="${FERRATA_PRIVACY_OUT:-$T/b1}"
 E="$S/ferrata-e2e"
 

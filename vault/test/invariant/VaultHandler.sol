@@ -137,9 +137,10 @@ contract HandlerCodec {
 ///         finalisations, cancellations, attempts to finalise checkpoints that break monotonicity or were cancelled,
 ///         revocations, retirement, refunds, releases (some to payees that cannot receive), owed claims, nullifier
 ///         and refund replays, direct donations, time, freezes and admin changes, fee announcements (v5, D13), and
-///         keeps ghost accounting for the invariants, including a model of the LEZ side: deposits pay the in-force mint
-///         fee on Ethereum; claims mint one denomination and its fixed relay fee; burns take one denomination out of the
-///         wrapped supply; releases pay burns. Calls the vault rejects simply revert the handler call, which also discards
+///         keeps ghost accounting for the invariants, including a model of the LEZ side: deposits escrow their whole
+///         payment and accrue the mint fee; claims mint one denomination and its fixed relay fee; burns take one
+///         denomination out of the wrapped supply; releases accrue burn fees; a permissionless collection mints any
+///         uncollected part of the cumulative fee total. Calls the vault rejects simply revert the handler call, which also discards
 ///         the ghost updates.
 ///         Calls that have nothing to do are discarded (vm.assume), so in the run table "calls - reverts - discards"
 ///         of finalizePending, cancelPending, finalizeRejected, revoke, refund and release counts exactly the
@@ -205,21 +206,20 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
     uint256 internal _claimCount;
     uint256 internal _burnCount;
     uint256 internal _feeChanges;
+    uint256 public ghostLezFeeCollectionCalls;
 
     address[] internal _tokens;
     address[] internal _actors;
     address[] internal _recipients; // EOAs and two contracts that accept ETH only when open
     ToggleRecipient[] internal _toggles;
 
-    mapping(address token => uint256) public ghostDeposited; // escrow only: denomination + relay fee
+    mapping(address token => uint256) public ghostCollected; // protocol fees the model's LEZ instruction has minted
+    mapping(address token => uint256) public ghostDeposited; // whole payments: denomination + mint fee + relay fee
     mapping(address token => uint256) public ghostReleased;
     mapping(address token => uint256) public ghostRefunded;
     mapping(address token => uint256) public ghostDonated;
-    /// Mint fees expected from every successful deposit's in-force schedule, and the two actual cumulative credit
-    ///      deltas observed in owed[feeRecipient] and totalOwed. Later release fees and owed claims do not alter them.
-    mapping(address token => uint256) public ghostDepositMintFees;
-    mapping(address token => uint256) public ghostMintFeeCredits;
-    mapping(address token => uint256) public ghostMintFeeTotalOwed;
+    /// The in-force mint fees of every successful deposit plus the in-force burn fees of every successful release.
+    mapping(address token => uint256) public ghostLezFees;
     uint256 public ghostDepositCount;
     uint256 public ghostReleaseCount;
     uint256 public ghostDoubleSpends;
@@ -370,7 +370,7 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
     }
 
     /// @notice Every address the vault could owe: recipients, the relayer, depositors (refunds), the handler (the
-    ///         finaliser, credited checkpoint fees) and the fee recipient (burn fees).
+    ///         finaliser, credited checkpoint fees) and the fee recipient (which ADR 0048 requires to stay zero).
     function payees() external view returns (address[] memory list) {
         list = new address[](_recipients.length + _actors.length + 3);
         uint256 n;
@@ -399,23 +399,24 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         uint8 denomIndex = uint8(denomSeed % _denoms(token).length); // < 8: a token has at most 8 denominations
         if (commitment == bytes32(0)) commitment = bytes32(uint256(1));
         uint64 leafIndex = vault.nextLeafIndex();
-        // The model's fees: a due change is in force first (D13). The payer sends all three amounts; escrow and the
-        // LEZ claim contain only denomination + relay, and both pull-payment ledgers gain the mint fee.
+        // The model's fees: a due change is in force first (D13). The payer sends and escrows all three amounts;
+        // the LEZ claim covers only denomination + relay, while the LEZ fee total gains exactly the mint fee.
         _applyDue(token);
         uint256 denomination = _denoms(token)[denomIndex];
         uint256 mintFee = _current(token).mintFees[denomIndex];
         uint256 total = denomination + mintFee + _relayFee(token, denomIndex);
-        uint256 owedBefore = vault.owed(feeRecipient, token);
         uint256 totalOwedBefore = vault.totalOwed(token);
+        uint256 lezFeesBefore = vault.lezFees(token);
         uint256 paid = _callDeposit(actor, token, denomIndex, commitment, total);
         if (paid == type(uint256).max) return; // refused for a different amount: counted
         _recordDepositModel(leafIndex, actor, token, denomIndex, commitment, denomination, total - mintFee);
-        uint256 credited = vault.owed(feeRecipient, token) - owedBefore;
-        uint256 totalCredited = vault.totalOwed(token) - totalOwedBefore;
-        if (paid != total || credited != mintFee || totalCredited != mintFee) ghostFeeMismatches++;
-        ghostDepositMintFees[token] += mintFee;
-        ghostMintFeeCredits[token] += credited;
-        ghostMintFeeTotalOwed[token] += totalCredited;
+        ghostDeposited[token] += mintFee; // `_recordDepositModel` tracks leaf escrow; total deposits include this too
+        uint256 accrued = vault.lezFees(token) - lezFeesBefore;
+        if (
+            paid != total || vault.owed(feeRecipient, token) != 0 || vault.totalOwed(token) - totalOwedBefore != 0
+                || accrued != mintFee
+        ) ghostFeeMismatches++;
+        ghostLezFees[token] += mintFee;
     }
 
     function _recordDepositModel(
@@ -641,7 +642,7 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
 
     /// @dev Releases a burn of the LEZ model against an accepted root, and checks every payout against the fee model:
     ///      the recipient gets the denomination less the relay fee it names and the burn and checkpoint fees in force,
-    ///      the fee recipient is credited the burn fee and the root's finaliser the checkpoint fee (D13).
+    ///      the burn fee accrues for LEZ and the root's finaliser is credited the checkpoint fee (ADR 0048).
     function release(uint256 burnSeed, uint256 rootSeed, uint256 recipientSeed, bool withFee) external {
         vm.assume(_acceptedRoots.length != 0 && _pendingBurns.length != 0);
         uint256 which = burnSeed % _pendingBurns.length;
@@ -660,20 +661,20 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         uint256 amount = _denoms(b.token)[b.denomIndex];
         verifier.accept(vault.releaseImageId(), _codec.releaseDigest(vault, r, amount));
         _applyDue(b.token);
-        uint256[3] memory expected = _expectedReleasePayouts(r, amount); // recipient, fee recipient, finaliser
+        uint256[3] memory expected = _expectedReleasePayouts(r, amount); // recipient, LEZ accrual, finaliser
         address prover = _codec.proverOf(vault, r.burnRoot);
-        uint256[3] memory before =
-            [_valueOf(b.token, r.recipient), vault.owed(feeRecipient, b.token), vault.owed(prover, b.token)];
+        uint256[3] memory before = [_valueOf(b.token, r.recipient), vault.lezFees(b.token), vault.owed(prover, b.token)];
 
         vm.prank(relayer);
         vault.release(r, "");
 
         if (
             _valueOf(b.token, r.recipient) - before[0] != expected[0]
-                || vault.owed(feeRecipient, b.token) - before[1] != expected[1]
-                || vault.owed(prover, b.token) - before[2] != expected[2]
+                || vault.lezFees(b.token) - before[1] != expected[1]
+                || vault.owed(prover, b.token) - before[2] != expected[2] || vault.owed(feeRecipient, b.token) != 0
         ) ghostFeeMismatches++;
-        ghostReleased[b.token] += amount;
+        ghostReleased[b.token] += amount - expected[1];
+        ghostLezFees[b.token] += expected[1];
         ghostUnreleased[b.token] -= amount;
         ghostReleaseCount++;
         _usedNullifiers.push(r.nullifier);
@@ -681,8 +682,8 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         _pendingBurns.pop();
     }
 
-    /// @dev LEZ model after F.13's change: claims a deposit below the settled import count (so never refundable) and
-    ///      mints only its denomination and fixed relay fee; its mint fee was collected on Ethereum. The model still
+    /// @dev LEZ model after ADR 0048: claims a deposit below the settled import count (so never refundable) and mints
+    ///      only its denomination and fixed relay fee; its mint fee is collected separately from `lezFees`. The model still
     ///      checks publication of the current schedule and the next slot, which remain part of the vault's interface.
     function claim(uint256 leafSeed) external {
         uint64 settled = _codec.settledImported(vault);
@@ -705,6 +706,18 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         _claimCount++;
     }
 
+    /// @dev Models the permissionless LEZ fee-collection instruction: choose any new collected total between its old
+    ///      value and the attested cumulative total, minting exactly the difference to the fee recipient on LEZ.
+    function collectLezFees(uint256 tokenSeed, uint256 newCollectedSeed) external {
+        address token = _tokens[tokenSeed % _tokens.length];
+        uint256 oldCollected = ghostCollected[token];
+        uint256 accrued = vault.lezFees(token);
+        uint256 newCollected = _bound(newCollectedSeed, oldCollected, accrued);
+        ghostCollected[token] = newCollected;
+        ghostSupply[token] += newCollected - oldCollected;
+        ghostLezFeeCollectionCalls++;
+    }
+
     /// @dev LEZ model: a holder burns one denomination of the wrapped supply (the first token and denomination from
     ///      the seeds that the supply covers).
     function burn(uint256 tokenSeed, uint256 denomSeed) external {
@@ -725,7 +738,7 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         vm.assume(false); // nothing to burn yet
     }
 
-    /// @dev The admin announces a fee schedule: random fees up to the 1% ceiling (mint fees in whole LEZ units), or,
+    /// @dev The admin announces a fee schedule: random fees up to the 1% ceiling (mint and burn fees in whole LEZ units), or,
     ///      one time in five, the fees in force, which withdraws a pending announcement.
     function announceFees(uint256 tokenSeed, uint256 seed) public {
         address token = _tokens[tokenSeed % _tokens.length];
@@ -743,7 +756,9 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
             f[0][i] = withdraw
                 ? current.mintFees[i]
                 : _bound(uint256(keccak256(abi.encode(seed, i, 0))), 0, ceiling / lezUnit) * lezUnit;
-            f[1][i] = withdraw ? current.burnFees[i] : _bound(uint256(keccak256(abi.encode(seed, i, 1))), 0, ceiling);
+            f[1][i] = withdraw
+                ? current.burnFees[i]
+                : _bound(uint256(keccak256(abi.encode(seed, i, 1))), 0, ceiling / lezUnit) * lezUnit;
             f[2][i] =
                 withdraw ? current.checkpointFees[i] : _bound(uint256(keccak256(abi.encode(seed, i, 2))), 0, ceiling);
         }
@@ -793,7 +808,10 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         vm.prank(relayer);
         try vault.release(r, "") {
             ghostDoubleSpends++;
-            ghostReleased[token] += amount; // keep escrow accounting exact so only the double-spend check fires
+            _applyDue(token);
+            uint256 burnFee = _current(token).burnFees[denomIndex];
+            ghostReleased[token] += amount - burnFee; // keep other accounting exact so only the double-spend check fires
+            ghostLezFees[token] += burnFee;
         } catch (bytes memory err) {
             // Replays can also fail earlier (freeze, delay, revoked root); count the ones the nullifier check stopped.
             // forge-lint: disable-next-line(unsafe-typecast)
@@ -1088,8 +1106,8 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         );
     }
 
-    /// @dev What a release pays the recipient (less the relay fee unless the recipient also relays) and credits the
-    ///      fee recipient and the finaliser, under the schedule in force.
+    /// @dev What a release pays the recipient (less the relay fee unless the recipient also relays), accrues for LEZ,
+    ///      and credits the finaliser, under the schedule in force.
     function _expectedReleasePayouts(FerrataVault.ReleaseRequest memory r, uint256 amount)
         internal
         view

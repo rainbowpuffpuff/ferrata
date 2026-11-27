@@ -790,8 +790,15 @@ tests = [
   { path = "e2e/runs/rc3-roundtrip-b1/REHEARSAL.md", kind = "record" },
   { path = "cli/src/lez.rs", kind = "test", ci = "roundtrip" },
   { path = "modules/ferrata_bridge_module/rust-lib/calls/tests/network_session.rs", kind = "test", ci = "modules-resolve" },
+  { path = "lez/bridge-wire/src/lib.rs", kind = "test", ci = "msg" },
+  { path = "lez/bridge-wire/tests/fees_accrue.rs", kind = "test", ci = "msg" },
+  { path = "cli/src/relayer.rs", kind = "test", ci = "roundtrip" },
+  { path = "e2e/both-halves/results/f13-lez/fees.md", kind = "record" },
+  { path = "e2e/runs/f13-lezfee-1/F13-LEZ.md", kind = "record" },
+  { path = "lez/results/f13/prove-bridge-lezfee.md", kind = "record" },
+  { path = "docs/decisions/0048-protocol-fees-minted-on-lez.md", kind = "document" },
 ]
-note = "fixed fees per token and denomination, at most 1% (fuzzed), in force seven days after announcement; since ADR 0046 the mint fee is taken on Ethereum at the deposit (credited to the fee recipient) and a claim names no schedule, minting the denomination and the registered relay fee (bridge_f13.rs; both halves across a fee change: one set of 6, results/f13/fees.md; on an rc3 sequencer: e2e/runs/f13-roundtrip-1); invariants balance = escrow + owed + donations and LEZ supply = escrow - unminted - unreleased; live on Sepolia (rows 41, 91); the test network still runs B1's program, whose claims name their schedule's range: this tree's ferrata reads the zone's program from its loader header and builds B1's claims for it (cli/src/lez.rs's tests, CI's roundtrip; cli/wallet/src/deployed.rs's against B1's frozen vectors, run there with -p ferrata-wallet), as the bridge module's network session does (network_session.rs, CI's modules-resolve; EVIDENCE row 281)"
+note = "fixed fees per token and denomination, at most 1% (fuzzed), in force seven days after announcement, either one settable to zero; since ADR 0048 the vault escrows each deposit's mint fee and each release's burn fee and counts them in lezFees (Fees.t.sol, the invariants), and the bridge program's CollectFees mints what is not minted yet, in the wrapped token, to the configuration's fee recipient on LEZ (bridge_f13.rs: once per total, a limit, the mint freeze and buckets, the inbound depth, configurations apart); claims name no schedule and mint the denomination and the registered relay fee, burns burn one denomination (both halves across a fee change: one set of 6, both fees collected on LEZ, the supply equal to the escrow at the end; on a LEZ v0.4.0-rc3 sequencer, f13-lezfee-1: both collections minted, 244 and 247 refused, the escrow equal to the wrapped supply; the private claim and burn proven for real, prove-bridge-lezfee.md); FeesState::accrue against a model over 320 random sequences (fees_accrue.rs); the relayer's collect-fees planner's refusals and waits (relayer.rs). ADR 0046's records (results/f13/, f13-roundtrip-1, prove-bridge.md) and B1's (rc3-roundtrip-b1) are kept: the test network runs B1"
 
 [[row]]
 id = "RFP-022 F.14"

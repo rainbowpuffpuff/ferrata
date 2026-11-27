@@ -194,7 +194,8 @@ costs more than on mainnet; not measured on the fork.
 
 These are the vault's own scenarios. Rows marked ¹ go through RISC Zero's emergency stop into a **mock**
 verifier; the same calls with RISC Zero's real Groth16 verifier and real proofs are measured in "With the real
-verifier" below.
+verifier" below. The v5 column, including the fee-credit wording of the last two release rows, is the recorded
+pre-ADR 0048 vault; these are not ADR 0048 gas measurements.
 
 | Operation | v5 gas (whole transaction) | v4 | v3 | v2 |
 |---|---:|---:|---:|---:|

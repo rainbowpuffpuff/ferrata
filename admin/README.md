@@ -82,7 +82,7 @@ makes it fail.
 | Global caps | `globalCap(0)`, `globalCap(1)` (capacity, refill, available; utilisation = capacity − available) | none |
 | Deposits | `nextLeafIndex`, `depositRoot`, `depositCount(depositor)` | `Deposit` (last 20 and per depositor). Slots 0 and 1. The SHA-256 tree is rebuilt from the `Deposit` events and its root compared with `depositRoot` |
 | Releases and refunds | `nullifierUsed(nullifier)`, `refunded(leaf)` | `Release` (last 20, totals), `Refund` |
-| Fees and payments owed | `owed(payee, token)`, `totalOwed(token)` | Payees from `OwedCredited` and `OwedClaimed`, the `feeRecipient` and the checkpoint provers, with their credited and claimed totals |
+| Fees and payments owed | `owed(payee, token)`, `totalOwed(token)` | Payees from `OwedCredited` and `OwedClaimed`, the checkpoint provers, and the immutable `feeRecipient` as a candidate (ADR 0048 credits it no protocol fee), with their credited and claimed totals |
 | Retirement and sunset | `retired`, `retireOpensAt`, `keylessFrom`, `sunsetLeafCountSet`, `sunsetLeafCount`, `sunsetSetAt`, `sunsetFinalizedAt` | `Retired`. Refunds open at `sunsetFinalizedAt + revokeWindow + 1` (derived, as `_refundsOpenAt`) |
 | Control history | none | The last 40 role, cap, delay, freeze, registry, fee, revocation and sunset events |
 | What the contract does not expose | none | The list below |

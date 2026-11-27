@@ -428,7 +428,7 @@ not the deposit, the path, `s`, a private destination or a fee schedule range. P
 whole witness, which links the mint to its deposit for everyone.
 
 **The program the zone runs.** A claim is built in the layout of the bridge program at `--bridge-account`, by the image
-id the zone's program loader names for it (`ferrata_wallet::deployed`): this tree's, `ferrata_bridge_f13` (ADR 0046),
+id the zone's program loader names for it (`ferrata_wallet::deployed`): this tree's, `ferrata_bridge_lezfee` (ADR 0048; claims as since ADR 0046),
 or `ferrata_bridge_b1`, which our test network runs and whose claim names the fee schedule range the token state gives
 (so there a private claim also shows that range, the anonymity line counts the deposits within it, and B1 mints the
 schedule's mint fee to the fee recipient: the output says `program ferrata_bridge_b1 …` and `mint fee …`). Any other

@@ -517,6 +517,9 @@ B_TYPES = [
         v("SetDepth", f("config_id", ROOT32), f("slots", U64)),
         v("AttestListing", f("config_id", ROOT32), f("token", ADDRESS), f("record_slot", U64), f("proof", d("VaultProof"))),
         v("SetListing", f("config_id", ROOT32), f("token", ADDRESS), f("delisted", BOOL), f("record_slot", U64)),
+        v("CollectFees", f("config_id", ROOT32), f("token", ADDRESS), f("record_slot", U64), f("limit", U128), f("proof", d("VaultProof"))),
+        v("AccrueFees", f("config_id", ROOT32), f("token", ADDRESS), f("total", ROOT32), f("limit", U128)),
+        v("MintFees", f("config_id", ROOT32), f("token", ADDRESS), f("amount", U128)),
         docs="Every message the bridge program handles (ferrata_lez_bridge_wire::BridgeMessage).",
     ),
     enum(
@@ -532,6 +535,7 @@ B_TYPES = [
         tv("Time", d("PendingTime")),
         v("Retired", f("record_slot", U64)),
         v("Listing", f("token", ADDRESS), f("record_slot", U64)),
+        v("Collect", f("token", ADDRESS), f("record_slot", U64), f("limit", U128)),
         docs="A transaction-internal step: an attestation asked and not yet answered.",
     ),
     struct("PendingImport", f("record_slot", U64), f("root", ROOT32), f("leaf_count", U64)),
@@ -572,6 +576,13 @@ B_TYPES = [
     ),
     struct("HolderState", f("holdings", vec(d("Holding"))), f("pending", opt(d("PendingClaim")))),
     struct("BurnRecord", f("config_id", ROOT32), f("note", d("Note"))),
+    struct(
+        "FeesState",
+        f("config_id", ROOT32),
+        f("token", ADDRESS),
+        f("collected", ROOT32),
+        docs="fees(cid, token) (ADR 0048): the protocol fees of token minted to the fee recipient so far, in base units, a 256-bit big-endian word; written only by AccrueFees from config(cid).",
+    ),
 ]
 
 B_ACCOUNTS = [
@@ -585,7 +596,8 @@ B_ACCOUNTS = [
             tv("Holder", d("HolderState")),
             tv("Burn", d("BurnRecord")),
             tv("Token", d("TokenState")),
-            docs="The state of every actor of the bridge program: config(cid), root(cid, n), nullifier(cid, chain, vault, N), holder(cid, account), burn(cid, r), token(cid, token).",
+            tv("Fees", d("FeesState")),
+            docs="The state of every actor of the bridge program: config(cid), root(cid, n), nullifier(cid, chain, vault, N), holder(cid, account), burn(cid, r), token(cid, token), fees(cid, token).",
         ),
     }
 ]
@@ -600,6 +612,10 @@ def bridge_idl():
     ROOTA = lambda init=False, docs=None, writable=True: acct("root", pda("root", "config_id", "leaf_count"), init=init, docs=docs, writable=writable)
     NULL = lambda: acct("nullifier", pda("nullifier", "config_id", "evm_chain_id (u256 big-endian)", "vault", "nullifier"), init=True, docs="written once: a second Spend refuses with 250 ALREADY_CLAIMED")
     HOLDER = lambda docs=None: acct("holder", pda("holder", "config_id", "holder"), docs=docs)
+    # The fee recipient's holder(cid, account): its account is no argument of the fee messages but the configuration's
+    # Controls::fee_recipient, which token(cid, token)'s state carries (ADR 0048).
+    FEE_HOLDER = lambda: acct("holder", {"seeds": [{"kind": "const", "value": "holder"}, {"kind": "arg", "path": "config_id"}, {"kind": "account", "path": "token_actor.controls.fee_recipient"}]}, docs="holder(cid, fee_recipient), credited the minted fees: fee_recipient is the configuration's (Controls::fee_recipient, in token(cid, token)'s state), not an argument")
+    FEES = lambda init=False, docs=None: acct("fees", pda("fees", "config_id", "token"), init=init, docs=docs)
     BURN = lambda: acct("burn", pda("burn", "config_id", "r"), init=True, docs="burn(cid, r), written once per tag: a second note with a used tag refuses with 244 ALREADY_WRITTEN")
     OWN = lambda who: acct("own", None, signer=True, docs=f"{who}'s own account (the program's actor at it); signed")
     ANY = lambda docs: acct("receiver", None, writable=False, docs=docs)
@@ -627,7 +643,7 @@ def bridge_idl():
         I(12, "import_fees", [CONFIG(), RECORD(), TOKEN()], "Attest the vault's fee schedule index of token (or its absence) and its leaf count, and extend token(cid, token)."),
         I(13, "write_token", [TOKEN(init=True, docs="from config(cid) only")], "Internal: the attested entry, written once.", internal=True),
         I(14, "extend_fees", [TOKEN(docs="from config(cid) only")], "Internal: an attested fee schedule (appended), or the attested absence of schedule index at a leaf count.", internal=True),
-        I(15, "issue", [TOKEN(), CONFIG(docs="Admit"), NULL()], "A claimant -> token(cid, token) after verifying the deposit: the denomination, the fee schedule of the range, the mint freezes and caps; then Admit and Spend."),
+        I(15, "issue", [TOKEN(), CONFIG(docs="Admit"), NULL()], "A claimant -> token(cid, token) after verifying the deposit: the denomination and the registered relay fee (no fee schedule is read), the mint freezes and caps; then Admit and Spend."),
         I(16, "admit", [CONFIG(docs="from token(cid, token) only")], "Internal: the global freeze and bucket of a mint or a burn of value units, at the configuration's attested time.", internal=True),
         I(17, "freeze", [OWN("the freeze authority"), CONFIG(docs="target when token is None"), TOKEN(docs="target when token is Some"), RECORD("the record whose execution time the target reads first")], "Freeze mints and/or burns of token (or the whole configuration) until until_ms (0 unfreezes), at most 30 days after the attested time."),
         I(18, "set_cap", [OWN("the admin"), CONFIG(docs="target when token is None"), TOKEN(docs="target when token is Some")], "Set the mint (or burn) bucket of token (or the global one), never below the floor."),
@@ -643,6 +659,9 @@ def bridge_idl():
         I(28, "set_depth", [OWN("the admin"), CONFIG()], "The admin sets the inbound finality depth beyond Ethereum finality, in beacon slots (at most 216,000): ImportRoot under a record at slot s waits (242 FROZEN) until the configuration's clock has read a record at s + depth or later. Applies to imports from then on; imported roots stay valid."),
         I(29, "attest_listing", [CONFIG(), RECORD("the record the vault's listing slot of token (sha256(\"ferrata/vault/listing/v1\" || token): 1 delisted, 0 listed) is proven under"), TOKEN(docs="SetListing")], "Anyone: attest the vault's listing of a token (F.10); token(cid, token) then holds whether deposits of it are delisted. Claims, burns and transfers go on."),
         I(30, "set_listing", [TOKEN(docs="from config(cid) only")], "Internal: the attested listing, kept only if its record is newer than the token's last.", internal=True),
+        I(31, "collect_fees", [CONFIG(), RECORD("the record the vault's fees slot of token (sha256(\"ferrata/vault/lezfees/v1\" || token): the cumulative mint and burn fees it escrowed for the fee recipient on LEZ, ADR 0048) is proven under"), FEES(docs="fees(cid, token): created by the first collection (the program derives its seed), rewritten by every later one"), TOKEN(docs="MintFees, through the token's mint freeze and bucket"), FEE_HOLDER()], "Anyone: attest the vault's cumulative protocol fees of token (ADR 0048) and mint the part not minted yet, at most limit, to the fee recipient. No user's transaction is named: the total is over every deposit and release up to that record."),
+        I(32, "accrue_fees", [FEES(docs="from config(cid) only"), TOKEN(docs="MintFees"), CONFIG(docs="Admit"), FEE_HOLDER()], "Internal: the attested total; fees(cid, token) keeps the count and sends MintFees for the difference, at most limit.", internal=True),
+        I(33, "mint_fees", [TOKEN(docs="from fees(cid, token) only"), CONFIG(docs="Admit"), FEE_HOLDER()], "Internal: mint the fees to the configuration's fee recipient, through the token's and the configuration's mint freezes and buckets.", internal=True),
     ]
     return {
         "version": "0.1.0",

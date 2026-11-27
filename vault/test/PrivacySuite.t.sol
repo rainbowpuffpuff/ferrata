@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 pragma solidity ^0.8.26;
 
-import {Vm} from "forge-std/Vm.sol";
+import {Vm, VmSafe} from "forge-std/Vm.sol";
 
 import {IRiscZeroVerifier as IRiscZeroVerifierFull, Receipt} from "risc0/IRiscZeroVerifier.sol";
 import {RiscZeroVerifierEmergencyStop} from "risc0/RiscZeroVerifierEmergencyStop.sol";
@@ -280,6 +280,11 @@ contract PrivacySuiteTest is VaultTestBase {
         bool first = true;
         for (uint256 i = 0; i < accesses.length; i++) {
             if (accesses[i].oldBalance == accesses[i].newBalance || accesses[i].reverted) continue;
+            // A delegatecall's access (the linked library FerrataRegistry, which runs a release's payouts since ADR
+            // 0048) reports the calling context's balance, the vault's, which the vault's own access records already:
+            // kept, it would name the vault's balance under the library's address, an account the adversary does not
+            // know as shared state.
+            if (accesses[i].kind == VmSafe.AccountAccessKind.DelegateCall) continue;
             out = string.concat(out, first ? "" : ",", '{"account":"', vm.toString(accesses[i].account), '","old":"');
             out = string.concat(
                 out, vm.toString(accesses[i].oldBalance), '","new":"', vm.toString(accesses[i].newBalance)

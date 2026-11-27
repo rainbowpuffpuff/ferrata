@@ -1,0 +1,16 @@
+[crown-b] crown STAND-IN: vault 0x67ac447386f2ea14ef2fbf55ef33ce1d8f386516, configId 0x9bbaa29fc91bb5e4f6b0e0947b8e55c41f9ed0a04144fd1c571ce6e78372845d, instance 0xa5000dc5474cce8daf3dbbb73c084ff98c184fcda48320f35fa8adb12cab6423
+[crown-b] stage 1 finality update (block 12224225) Open (step 1)     applied        gas   1996227 block   30 +  2.5s 0c9c5ccb7b5f5aa4f22ddbb2e5da829dd61d884e824019e0bf7fc17b93f79c9e
+[crown-b] stage 1 finality update (block 12224225) Miller (step 2)   applied        gas   3305374 block   31 +  2.6s 40730146ea2650cb16c42c17c4f9df2c68cfc172f1e31c66a781063b405b52fb
+[crown-b] stage 1 finality update (block 12224225) Finish (step 3)   applied        gas   3718957 block   32 +  3.3s 0f21615efb4404ec59c548deb2807793e2706037f3e8036836e74022d6a1725c
+[crown-b] bridge Init (pairing: configId in the vault's slot 2)      applied        gas    225453 block   33 +  2.1s 7eb4fbaf7f716e641d7aa139f0a87872604978b65f1b42eb7c453afbb6a156f9
+[crown-b] ETH schedule 0 announced and effective at 1795794207
+[crown-b] bridge Register ETH (registry entry, schedules 0 and 1, leaf count) applied        gas    461892 block   34 +  2.9s ae11315abb2339b60b09eb0df756d50378968c4b85ea54a6bbd6fb240ed3fbf9
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 1
+[crown-b] bridge ImportRoot n=1 (stage 1, block 12224225)            applied        gas    304813 block   35 +  2.5s 8f07393ab3e2f4b8104cb745203b8144391e4cf12c2dcbce4062898a852015fb
+[crown-b] stage 2 finality update (block 12224229) Open (step 1)     applied        gas   1995925 block   36 +  2.1s 868bf0808706bb50016c2f4f628a9a09f783f5e3f961a8057d9d40045ce37156
+[crown-b] stage 2 finality update (block 12224229) Miller (step 2)   applied        gas   3305374 block   37 +  2.7s 680d12ea07a8e3642c190feb6664382ea1727d87e2d29fb904439e58d5b6aae5
+[crown-b] stage 2 finality update (block 12224229) Finish (step 3)   applied        gas   3718957 block   38 +  3.3s 58401112d3babc2f211bbb117a801d15e2f5b7d4000d493ad529300a0f4964c7
+[crown-b] stage 2: ETH has a schedule 1; not imported (ADR 0046: no claim reads a schedule)
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 1
+[crown-b] bridge ImportRoot n=2 (stage 2, block 12224229)            applied        gas    306731 block   39 +  2.5s 51a8a7bdcc15b2a4c72071aa4ba442df355157d0a18606bab7e17782d43b57c9
+[crown-b] blocks 24..=39 (T1 0xae700640d7980c24c1a6c8a01176efbaa4da35101addbba31edeed2808eafdba); 0 burn note(s) written to ../ci/work/notes.json

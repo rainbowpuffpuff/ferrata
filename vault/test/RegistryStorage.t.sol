@@ -12,7 +12,8 @@ import {VaultTestBase} from "./utils/VaultTestBase.sol";
 ///         moments, and what an importer learns from the vault's events (registry entries, fee schedules, deposits),
 ///         with the depositors' secrets. `lez/harness/tests/bridge_vault_storage.rs` builds Ethereum blocks holding
 ///         exactly this storage and runs the bridge program on it: `Register`, `ImportFees` and `ImportRoot` attest
-///         these slots, and claims mint by the schedules. Nothing here computes a LEZ-side slot or hash.
+///         their slots, while ADR 0048's new `lezFees` slots are present for the separate LEZ fee collector to attest.
+///         Nothing here computes a LEZ-side slot or hash.
 ///         Moment P: the default tokens and a six-decimal token with checkpoint fees registered, three deposits.
 ///         Moment Q: ETH's schedule 1 (mint, burn and checkpoint fees) in force from the next deposit, three more.
 ///         The committed file is test/vectors/registry-storage.json; FERRATA_WRITE_VECTORS=1 rewrites it first.

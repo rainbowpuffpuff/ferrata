@@ -37,13 +37,13 @@ use ferrata_core::{
     Root,
 };
 use ferrata_lez_bridge_wire::{
-    burn_mac_v2, burn_seed, config_seed, fee_slot, fees_slots, holder_seed, nf_out_v2, nullifier_seed, register_slots,
-    registry_slot,
+    burn_mac_v2, burn_seed, config_seed, fee_slot, fees_seed, fees_slots, holder_seed, lez_fees_slot,
+    nf_out_v2, nullifier_seed, register_slots, registry_slot,
     root_seed, token_seed, with_header, word_of, word_of_u128, BridgeConfig, BridgeMessage, BridgeState, CapParams,
     ClaimWitness, ConfigState, Controls, FeeSchedule, HolderState, ImportProof, Note, PairingProof,
     TokenEntry, VaultProof, SLOT_CONFIG_ID, SLOT_COUNT, SLOT_ROOT, UNLIMITED,
 };
-use ferrata_lez_wire::{instance_id, Config};
+use ferrata_lez_wire::{header_seed, instance_id, Config};
 use ferrata_spectests::{
     execkit::{account_proof, keccak},
     testkit::{fake_committee, filler, sign, sparse_tree},
@@ -187,16 +187,17 @@ fn h(bytes: &[u8]) -> String {
 /// refused after the Sepolia stages had deployed a vault and sent deposits. Every command that loads `--bridge-bin`,
 /// and `config-id`, refuses another program before anything is deployed or sent (e2e/crown/README.md, "Since
 /// milestone B1"); the live runs' program needs the driver of `f13faee2`. Since 22 November 2026 (ADR 0032: a burn's
-/// tag is used once, `burn(cid, r)`) B1's program was `0x847a4336…` (B1's first build `0xac1fb59b…`); since ADR 0046 (a claim
-/// names no fee schedule) the program of this tree is `0xffb47f6e…`, docs/image-ids.md `ferrata_bridge_f13`.
-pub const BRIDGE_IMAGE_ID: &str = "ffb47f6eaec6ef13f49505e5e80209f73d38ea53792e77656994f8069dde7675";
+/// tag is used once, `burn(cid, r)`) B1's program was `0x847a4336…` (B1's first build `0xac1fb59b…`); ADR 0046's (a claim
+/// names no fee schedule) was `0xffb47f6e…`, never deployed; since ADR 0048 (protocol fees minted on LEZ by
+/// `CollectFees`) the program of this tree is `0x9d02d54d…`, docs/image-ids.md `ferrata_bridge_lezfee`.
+pub const BRIDGE_IMAGE_ID: &str = "9d02d54d56b026079e94c8d9b12db69f3a96b7acccd11283f68e5bc343bfa321";
 
 /// Refuses a bridge program other than [`BRIDGE_IMAGE_ID`].
 pub fn check_bridge_image(image_id: [u8; 32]) -> Result<()> {
     ensure!(
         hex::encode(image_id) == BRIDGE_IMAGE_ID,
         "the bridge program 0x{} is not the one this crown-driver speaks (0x{BRIDGE_IMAGE_ID}, docs/image-ids.md \
-         `ferrata_bridge_f13`): its messages or accounts differ; B1's program needs the driver of 40e8d799, the live runs' that of f13faee2",
+         `ferrata_bridge_lezfee`): its messages or accounts differ; B1's program needs the driver of 40e8d799, the live runs' that of f13faee2",
         hex::encode(image_id)
     );
     Ok(())
@@ -578,6 +579,8 @@ pub fn capture_slots_for(selected: &BridgeToken) -> Value {
     for (s, what) in register_slots(&selected.address)[..3].iter().zip(names) {
         slots.push(json!({ "slot": h(s), "what": what }));
     }
+    // ADR 0048: the protocol fees the vault escrowed for the fee recipient on LEZ (`collect-fees` attests it).
+    slots.push(json!({ "slot": h(&lez_fees_slot(&selected.address)), "what": format!("lezFees of {}", selected.label()) }));
     json!({ "slots": slots, "fetch_attest_fixture_storage": format!(
         "{{vault}}:0=depositRoot(),1=nextLeafIndex(),2=storedLezConfigId(),{},{},{}",
         h(&registry_slot(&selected.address)), h(&fee_slot(&selected.address, 0)), h(&fee_slot(&selected.address, 1))) })
@@ -1300,6 +1303,89 @@ pub async fn session_a(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
     live.save()
 }
 
+/// `collect-fees`: the bridge program's `CollectFees` (ADR 0048) of the selected token under capture `stage`'s record.
+pub struct CollectFees {
+    pub token: BridgeToken,
+    pub identity: Identity,
+    /// 1-based: the capture whose block's record (its finality update applied on this zone by an earlier crown-b) the
+    /// collection reads, and whose storage proof of the vault's `lezFees` slot it carries.
+    pub stage: usize,
+    pub limit: u128,
+    /// One JSON object: the record, the attested total, `fees(cid, token)` and the fee recipient's holding before and
+    /// after, the outcome (applied, or refused with the program's exit code).
+    pub out: PathBuf,
+}
+
+/// The operator's `CollectFees` on a stand-in chain (ADR 0048): the vault's `lezFees` slot proven from the capture of
+/// `stage`, under that capture's record. A relayer reading Ethereum (`ferrata-relayer collect-fees`) cannot serve a
+/// stand-in record: its block's state root is patched (anvil's fork mode writes zero), so the record's block hash is the
+/// stand-in's, which no endpoint serves. A refusal is reported, not an error: the run's hook expects some.
+pub async fn collect_fees(live: &mut Live, program: &GuestBinary, bridge_bin: &GuestBinary, chain: &Chain, c: &CollectFees) -> Result<()> {
+    let payers = payers()?;
+    let payer = payers[1];
+    let attest = deployment_accounts(ATTEST, program).0;
+    let bridge = deployment_accounts(BRIDGE, bridge_bin).0;
+    let id = &c.identity;
+    ensure!(id.attestation == attest && id.bridge_header == bridge, "session A deployed other programs");
+    ensure!(id.bridge_image_id == image_bytes(bridge_bin.image_id), "session A's bridge image is not --bridge-bin's");
+    ensure!(c.stage >= 1 && c.stage <= chain.stages.len(), "--stage {} of {} captures", c.stage, chain.stages.len());
+    let stage = &chain.stages[c.stage - 1];
+    let vault = chain.stages[0].vault;
+    let config = id.bridge_config_for(vault, &c.token);
+    let cid = config.id(bridge);
+    let slot = stage.update.finalized_header.beacon.slot;
+    let token = c.token.address;
+    let header_pda = Pda { program: attest, seed: header_seed(&id.instance_id, slot) };
+    ensure!(!live.actor_state(header_pda.actor()).await?.is_empty(), "no record at header(id, {slot}): run crown-b over capture {} first", c.stage);
+    let (_, total) = stage.slot(&lez_fees_slot(&token))?;
+    let config_pda = Pda { program: bridge, seed: config_seed(&cid) };
+    let fees_pda = Pda { program: bridge, seed: fees_seed(&cid, &token) };
+    let token_pda = Pda { program: bridge, seed: token_seed(&cid, &token) };
+    let recipient = fee_recipient();
+    let holding = |state: Option<BridgeState>| match state {
+        Some(BridgeState::Holder(h)) => h.holding(&cid, &token).map_or(0, |x| x.amount),
+        _ => 0,
+    };
+    let collected = |state: Option<BridgeState>| match state {
+        Some(BridgeState::Fees(f)) => f.collected,
+        _ => [0u8; 32],
+    };
+    let before = (holding(holder_state(live, bridge, &cid, recipient).await?), collected(bridge_state(live, fees_pda).await?));
+    let message = BridgeMessage::CollectFees {
+        config_id: cid,
+        token,
+        record_slot: slot,
+        limit: c.limit,
+        proof: stage.vault_proof(&[lez_fees_slot(&token)])?,
+    };
+    let mentions = vec![
+        mention(config_pda),
+        mention(header_pda),
+        mention(fees_pda),
+        mention(token_pda),
+        mention(holder_pda(bridge, &cid, recipient)),
+    ];
+    let step = format!("bridge CollectFees {} under header(id, {slot}) ({}, block {})", c.token.label(), stage.label, stage.block);
+    let o = send(live, &step, mentions, &message, payer).await?;
+    let after = (holding(holder_state(live, bridge, &cid, recipient).await?), collected(bridge_state(live, fees_pda).await?));
+    let u256 = |w: &[u8; 32]| -> String {
+        let (hi, lo) = (u128::from_be_bytes(w[..16].try_into().expect("16")), u128::from_be_bytes(w[16..].try_into().expect("16")));
+        if hi == 0 { lo.to_string() } else { format!("0x{}", hex::encode(w)) }
+    };
+    let line = json!({
+        "event": if o.applied() { "lez-fees-collected" } else { "lez-fee-collection-refused" },
+        "token": h(&token), "recordSlot": slot, "block": stage.block, "capture": c.stage,
+        "vaultTotal": u256(&total), "collectedBefore": u256(&before.1), "collectedAfter": u256(&after.1),
+        "amount": (after.0 - before.0).to_string(), "limit": c.limit.to_string(),
+        "feeRecipient": h(recipient.value()), "feeRecipientHoldingBefore": before.0.to_string(),
+        "feeRecipientHoldingAfter": after.0.to_string(), "applied": o.applied(), "exit": o.exit_code(),
+        "tx": o.row.tx_hash, "step": row_json(&o),
+    });
+    fs::write(&c.out, format!("{line}\n"))?;
+    println!("[collect-fees] {}", line);
+    Ok(())
+}
+
 pub struct SessionB {
     pub token: BridgeToken,
     pub identity: Identity,
@@ -1317,6 +1403,13 @@ pub struct SessionB {
     /// `ImportRoot` sent by this session (default); `false` (`--import-roots no`, with `--operator-only yes`): left
     /// to the relayer daemon (`ferrata-relayer --import-roots`, e2e/seqnet).
     pub import_roots: bool,
+    /// The first `skip_stages` captures were applied by an earlier session B on this zone (`--skip-stages N`): their
+    /// updates, and the catch-up before them, are replayed natively only, nothing is sent for them.
+    pub skip_stages: usize,
+    /// Only the light client's updates of the remaining captures (`--updates-only yes`, with `--operator-only yes`):
+    /// no `Init`, `Register`, `ImportFees` or `ImportRoot`. A later record for a call another tool makes under it
+    /// (e2e/f13/hook.sh: the protocol-fee collection after a release, ADR 0048).
+    pub updates_only: bool,
 }
 
 /// Session B: the captures, the bridge's pairing, registration and imports, the claims and the
@@ -1339,7 +1432,21 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
     for (p, update) in &chain.catch_up[..chain.base_updates] {
         native_apply(&mut world.native, &chain.config, update, &format!("period {p} (session A's)"))?;
     }
-    scenario::check_store(live, &world).await.context("the instance is not where session A left it")?;
+    ensure!(b.skip_stages < chain.stages.len(), "--skip-stages {} leaves no capture to apply", b.skip_stages);
+    ensure!(!b.updates_only || b.operator_only, "--updates-only yes needs --operator-only yes");
+    let mut applied = chain.base_updates;
+    for stage in chain.stages.iter().take(b.skip_stages) {
+        // Applied on the zone by an earlier session B: replayed natively, so the native store is where the zone is.
+        let period = stage.update.signature_slot / 8192;
+        while applied < chain.catch_up.len() && chain.catch_up[applied].0 < period {
+            let (p, update) = &chain.catch_up[applied];
+            native_apply(&mut world.native, &chain.config, update, &format!("period {p} (an earlier session B's)"))?;
+            applied += 1;
+        }
+        native_apply(&mut world.native, &chain.config, &stage.update, &format!("{} (an earlier session B's)", stage.label))?;
+    }
+    let where_from = if b.skip_stages == 0 { "session A" } else { "the earlier sessions" };
+    scenario::check_store(live, &world).await.with_context(|| format!("the instance is not where {where_from} left it"))?;
 
     let vault = chain.stages[0].vault;
     let config = id.bridge_config_for(vault, &b.token);
@@ -1352,8 +1459,7 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
     let mut steps: Vec<Value> = Vec::new();
     let mut claims: Vec<Value> = Vec::new();
     let mut notes: Vec<Value> = Vec::new();
-    let mut applied = chain.base_updates;
-    for (k, stage) in chain.stages.iter().enumerate() {
+    for (k, stage) in chain.stages.iter().enumerate().skip(b.skip_stages) {
         let period = stage.update.signature_slot / 8192;
         while applied < chain.catch_up.len() && chain.catch_up[applied].0 < period {
             let (p, update) = &chain.catch_up[applied];
@@ -1363,6 +1469,10 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
         let run = scenario::apply(live, &mut world, &stage.update, &format!("{} finality update (block {})", stage.label, stage.block), Harness::None, payer).await?;
         ensure!(run.outcome.is_some_and(|o| o.advanced), "{}: the finality update does not finalize a new header", stage.label);
         let slot = stage.update.finalized_header.beacon.slot;
+        if b.updates_only {
+            println!("[crown-b] {}: header(id, {slot}) of block {} recorded (--updates-only: no bridge call)", stage.label, stage.block);
+            continue;
+        }
         let (slot2_proof, slot2) = stage.slot(&SLOT_CONFIG_ID)?;
         ensure!(slot2 == cid, "{}: the vault's slot 2 is {}, not this configuration's id", stage.label, h(&slot2));
         let header_pda = world.inst.header(slot);
@@ -1393,9 +1503,10 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
                 let o = send(live, &format!("bridge ImportFees: {} schedule 1 absent at n={n}", b.token.label()), vec![mention(config_pda), mention(header_pda), mention(token_pda)], &message, payer).await?.expect_applied()?;
                 steps.push(row_json(&o));
             } else {
-                // ADR 0046: no claim reads the fee schedules (the vault took each deposit's mint fee), so a schedule 1
-                // announced in the run (e2e/f13/hook.sh) is left unimported; the claims under it go on.
-                println!("[crown-b] {}: {} has a schedule 1; not imported (ADR 0046: no claim reads a schedule)", stage.label, b.token.label());
+                // ADR 0048: neither a claim nor a fee collection reads the fee schedules (the vault escrows the protocol
+                // fees and `CollectFees` attests their total), so a schedule 1 announced in the run (e2e/f13/hook.sh) is
+                // left unimported; the claims under it go on.
+                println!("[crown-b] {}: {} has a schedule 1; not imported (ADR 0048: no claim or collection reads a schedule)", stage.label, b.token.label());
             }
         }
         if let Some(BridgeState::Token(t)) = bridge_state(live, token_pda).await? {
@@ -1711,7 +1822,7 @@ mod tests {
         assert!(2 * one <= c.floor.capacity && 4 * one <= c.token_cap.capacity);
     }
 
-    /// The bridge program this driver speaks is docs/image-ids.md's `ferrata_bridge_f13`; B1's, the live runs' program,
+    /// The bridge program this driver speaks is docs/image-ids.md's `ferrata_bridge_lezfee`; B1's, the live runs' program,
     /// and any other, are refused.
     #[test]
     fn the_driver_speaks_the_bridge_program_since_b1_only() {
@@ -1723,7 +1834,7 @@ mod tests {
             hex::decode_to_slice(&rows[0].split(" | `0x").nth(1).unwrap()[..64], &mut id).unwrap();
             id
         };
-        let tree = id_of("ferrata_bridge_f13");
+        let tree = id_of("ferrata_bridge_lezfee");
         assert_eq!(hex::encode(tree), BRIDGE_IMAGE_ID);
         assert!(check_bridge_image(tree).is_ok());
         let b1 = id_of("ferrata_bridge_b1");

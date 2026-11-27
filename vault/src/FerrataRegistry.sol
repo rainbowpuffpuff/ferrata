@@ -119,6 +119,91 @@ library FerrataRegistry {
         );
     }
 
+    /// @notice The cumulative protocol fees of `token`, published for LEZ at slot
+    ///         sha256("ferrata/vault/lezfees/v1" ‖ token). Starts at zero and only grows.
+    function lezFees(address token) external view returns (uint256 total) {
+        bytes32 slot = sha256(abi.encodePacked("ferrata/vault/lezfees/v1", token));
+        assembly ("memory-safe") {
+            total := sload(slot)
+        }
+    }
+
+    /// @dev Adds a nonzero protocol fee to the cumulative LEZ total at its fixed SHA-256 slot. Delegatecall: the
+    ///      write and event are the vault's; the LEZ fee-collection instruction attests the total and mints its delta.
+    function accrueLezFees(address token, uint256 amount) public {
+        if (amount == 0) return;
+        bytes32 slot = sha256(abi.encodePacked("ferrata/vault/lezfees/v1", token));
+        uint256 total;
+        assembly ("memory-safe") {
+            total := add(sload(slot), amount)
+            sstore(slot, total)
+        }
+        emit FerrataVault.LezFeesAccrued(token, amount, total);
+    }
+
+    /// @dev Escrows a deposit's whole payment and accrues its mint fee. Delegatecall: both writes are the vault's.
+    function recordDepositFees(
+        mapping(address token => uint256) storage escrowed,
+        address token,
+        uint256 total,
+        uint256 mintFee
+    ) external {
+        escrowed[token] += total;
+        if (mintFee != 0) accrueLezFees(token, mintFee);
+    }
+
+    /// @dev The release's fee, escrow and payout effects, run in the vault by delegatecall: apply a due schedule,
+    ///      accrue its burn fee for LEZ, credit its checkpoint fee to the root's prover, retain the burn fee in escrow,
+    ///      then pay or credit the recipient and relayer. This keeps the vault under EIP-170.
+    function releaseFeesAndPayouts(
+        mapping(address token => FerrataVault.TokenConfig) storage tokens,
+        mapping(address token => FerrataVault.FeeState) storage states,
+        mapping(address token => mapping(uint256 index => FerrataVault.FeeSchedule)) storage schedules,
+        mapping(address token => uint256) storage escrowed,
+        mapping(address payee => mapping(address token => uint256)) storage owed,
+        mapping(address token => uint256) storage totalOwed,
+        FerrataVault.ReleaseRequest calldata r,
+        address prover
+    ) external {
+        uint256 amount = tokens[r.token].denominations[r.denomIndex];
+        uint256 outbound = schedules[r.token][applyFees(tokens, states, schedules, r.token)].outbound[r.denomIndex];
+        uint256 burnFee = outbound >> 128;
+        uint256 checkpointFee = uint128(outbound);
+        if (burnFee != 0) accrueLezFees(r.token, burnFee);
+        if (checkpointFee != 0) {
+            owed[prover][r.token] += checkpointFee;
+            totalOwed[r.token] += checkpointFee;
+            emit FerrataVault.OwedCredited(prover, r.token, checkpointFee);
+        }
+        escrowed[r.token] -= amount - burnFee;
+        _payOrCredit(owed, totalOwed, r.token, r.recipient, amount - r.relayFee - burnFee - checkpointFee);
+        if (r.relayFee != 0) {
+            _payOrCredit(owed, totalOwed, r.token, r.relayer == address(0) ? msg.sender : r.relayer, r.relayFee);
+        }
+    }
+
+    /// @dev An Ethereum payment, or an owed credit if it fails (the vault's spec §5.4 pull-payment rule).
+    function _payOrCredit(
+        mapping(address payee => mapping(address token => uint256)) storage owed,
+        mapping(address token => uint256) storage totalOwed,
+        address token,
+        address payee,
+        uint256 amount
+    ) private {
+        bool paid;
+        if (token == address(0)) {
+            assembly ("memory-safe") {
+                paid := call(gas(), payee, amount, 0, 0, 0, 0)
+            }
+        } else {
+            paid = IERC20(token).trySafeTransfer(payee, amount);
+        }
+        if (paid) return;
+        owed[payee][token] += amount;
+        totalOwed[token] += amount;
+        emit FerrataVault.OwedCredited(payee, token, amount);
+    }
+
     /// @notice Puts the token's announced fee schedule in force if it is due, from the current leaf count on, and
     ///         publishes it; returns the index of the schedule in force.
     function applyFees(
@@ -145,7 +230,8 @@ library FerrataRegistry {
     /// @notice The leaf checks of the vault's `refund` (documented there) and the escrow it returns: the leaf exists,
     ///         its token and denomination are registered, and `path` folds it to `depositRoot` (direction bits = the
     ///         bits of `leafIndex`); the escrow is the denomination plus the token's registered relay fee. The mint fee
-    ///         was credited to `feeRecipient` at deposit and is not refunded, so no fee-schedule lookup is needed.
+    ///         stays accrued in `lezFees` for the fee recipient on LEZ and is not refunded, so no fee-schedule lookup
+    ///         is needed.
     /// @dev Reads the leaf count and the root at their fixed slots (1 and 0, part of the cross-chain interface).
     function refundAmount(
         mapping(address token => FerrataVault.TokenConfig) storage tokens,
@@ -421,7 +507,7 @@ library FerrataRegistry {
     }
 
     /// @dev One fee per denomination, each at most 1% of it (fee <= denomination / 100, i.e. fee * 100 <= it) and a
-    ///      whole number of LEZ units, since the claim mints it on LEZ (D13).
+    ///      whole number of LEZ units, since LEZ mints relay and protocol fees in the wrapped token (D13, ADR 0048).
     function _checkRelayFees(uint256[] calldata fees, uint256[] calldata denoms, uint256 lezUnit) private pure {
         if (fees.length != denoms.length) revert FerrataVault.RelayFeeCountMismatch();
         for (uint256 i = 0; i < fees.length; i++) {
@@ -469,8 +555,8 @@ library FerrataRegistry {
         emit FerrataVault.FeesInForce(token, 0, fromLeaf, uint64(block.timestamp), _publishSchedule(token, 0, s, k));
     }
 
-    /// @dev Checks an announced schedule (one fee of each kind per denomination, each at most 1% of it, mint fees in
-    ///      whole LEZ units), writes it packed into `next` with the registered relay fees, and returns whether it
+    /// @dev Checks an announced schedule (one fee of each kind per denomination, each at most 1% of it, mint and burn
+    ///      fees in whole LEZ units since ADR 0048), writes it packed into `next` with the registered relay fees, and returns whether it
     ///      equals the schedule in force, `current`.
     function _storeFees(
         FerrataVault.FeeSchedule storage next,
@@ -490,7 +576,9 @@ library FerrataRegistry {
             if (mintFees[i] > ceiling || burnFees[i] > ceiling || checkpointFees[i] > ceiling) {
                 revert FerrataVault.FeeTooHigh();
             }
-            if (mintFees[i] % cfg.lezUnit != 0) revert FerrataVault.FeeNotMultipleOfLezUnit();
+            if (mintFees[i] % cfg.lezUnit != 0 || burnFees[i] % cfg.lezUnit != 0) {
+                revert FerrataVault.FeeNotMultipleOfLezUnit();
+            }
             uint256 inbound = mintFees[i] << 128 | cfg.relayFees[i];
             uint256 outbound = burnFees[i] << 128 | checkpointFees[i];
             if (inbound != current.inbound[i] || outbound != current.outbound[i]) same = false;

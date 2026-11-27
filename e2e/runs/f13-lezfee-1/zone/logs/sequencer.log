@@ -1,0 +1,311 @@
+[2026-11-27T15:57:41Z INFO  sequencer_service] Config: {"home":"<scratch>/run/sequencer_home","max_num_tx_in_block":20,"mempool_max_size":1000,"block_create_timeout":"3s","retry_pending_blocks_timeout":"5s","bedrock_config":{"channel_id":"0101010101010101010101010101010101010101010101010101010101010101","node_url":"http://127.0.0.1:18080/","auth":null,"priority_fee_percent":12,"stale_refund_slots":300},"genesis":{"channel_params":{"minimum_sequencer_stake":149,"posting_timeframe":300,"posting_timeout":25,"exit_delay":100,"max_block_size":1048576},"actions":[{"supply_account":{"recipient":{"identified":{"key":"6aa4c365699b89d963ef85a59868b9612b6001f90750b4970662a62776332e81"}},"balance":10000000000000}},{"supply_account":{"recipient":{"identified":{"key":"891ae258f92ca8447af6cf09c41d96b3a06187d098b91ab2cc17b42e3c4a2fa1"}},"balance":20000000000000}},{"supply_private_account":{"address":"44KVvzvh2ephQU9aR5snboGUXKgS1FnPYh1W4KZKwmhm","balance":10000000000000}},{"supply_private_account":{"address":"478hD6LXFTYu5gRRkWkCyXPRsWgCwAfRredoCUfxr5b9","balance":20000000000000}}]},"cross_zone":null,"metrics_listen_address":"127.0.0.1:9000","gossip":{"listen_addr":"/ip4/127.0.0.1/udp/0/quic-v1","bootstrap_peers":[]}}, channel signing key file: <scratch>/run/sequencer_home/channel_signing_key, funding public key: "2e03b2eff5a45478e7e79668d2a146cf2c5c7925bce927f2b1c67f2ab4fc0d26"
+[2026-11-27T15:57:41Z INFO  sequencer_service] Storage Actor spawned
+[2026-11-27T15:57:41Z INFO  sequencer_service] Bedrock Broker Actor spawned
+[2026-11-27T15:57:41Z INFO  sequencer_service] Bedrock Actor spawned
+[2026-11-27T15:57:41Z INFO  sequencer_core] Channel signing public key: 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:57:41Z INFO  sequencer_core] Channel does not exist yet; starting it as channel creator
+[2026-11-27T15:57:41Z INFO  sequencer_core] Genesis fingerprint: 537d07e1b6f4875b5139315080fcf686b9f2a5a935dbb8ad8cd2c38bd3a9e875
+[2026-11-27T15:57:42Z INFO  sequencer_core] Producer reward account (stake ownership): 8AhdfuVfMHv8kDi9VEakhQrmM374nKBeNApYPV3YE56X
+[2026-11-27T15:57:42Z INFO  sequencer_core] Genesis fingerprint: 537d07e1b6f4875b5139315080fcf686b9f2a5a935dbb8ad8cd2c38bd3a9e875
+[2026-11-27T15:57:42Z INFO  sequencer_core] No stored channel view; starting on the final tier
+[2026-11-27T15:57:43Z INFO  sequencer_service] Executor Actor spawned
+[2026-11-27T15:57:43Z INFO  libp2p_swarm] local_peer_id=12D3KooWGm5sFcxTm2Jet4gsC2w9uPgpn6F7wLwfw28Ss1DZAD7q
+[2026-11-27T15:57:43Z INFO  sequencer_gossip_actor::actor] Gossip listening on [/ip4/127.0.0.1/udp/16888/quic-v1] as 12D3KooWGm5sFcxTm2Jet4gsC2w9uPgpn6F7wLwfw28Ss1DZAD7q
+[2026-11-27T15:57:43Z INFO  sequencer_service] Gossip network started as 12D3KooWGm5sFcxTm2Jet4gsC2w9uPgpn6F7wLwfw28Ss1DZAD7q
+[2026-11-27T15:57:43Z INFO  sequencer_service] Gossip Actor spawned
+[2026-11-27T15:57:43Z INFO  sequencer_rpc_server_actor::actor] Starting RPC Server on 127.0.0.1:3040
+[2026-11-27T15:57:43Z INFO  sequencer_service] RPC Server Actor spawned
+[2026-11-27T15:57:43Z INFO  sequencer_service] Block production scheduler started
+[2026-11-27T15:57:43Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:40376 conn_id=0
+[2026-11-27T15:57:46Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:63025 conn_id=1
+[2026-11-27T15:57:46Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T15:57:46Z INFO  sequencer_core] Publishing block 2 on pin d30979a1a9a1bf9d65dcd62f979f1cbf13d0fe24b899d12fb9181eefbb503c25
+[2026-11-27T15:57:46Z INFO  sequencer_executor_actor::actor] Block with id 2 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:57:49Z DEBUG sequencer_core] Validated transaction with hash 200da5f6af784f15df1d58671be7bed802b27576a3953d2492ccaeaeeb9dd42b, including it in block
+[2026-11-27T15:57:49Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:57:49Z INFO  sequencer_core] Publishing block 3 on pin 91327d544ba9d9176af1d05bd40710d1447d645e4be881a21d6c8250e4dfda4e
+[2026-11-27T15:57:49Z INFO  sequencer_executor_actor::actor] Block with id 3 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:57:52Z DEBUG sequencer_core] Validated transaction with hash 616b2dc9c257b7e1eaefdaee2b6cff8a83f67a965c153b228233b493f76e45b8, including it in block
+[2026-11-27T15:57:52Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:57:52Z INFO  sequencer_core] Publishing block 4 on pin b9d4b596bcc9864e812c88636422c656869ba5df4dba080e336dbbb1eecd0c30
+[2026-11-27T15:57:52Z INFO  sequencer_executor_actor::actor] Block with id 4 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:57:55Z DEBUG sequencer_core] Validated transaction with hash 459808d648769afd57d933fd43ff1c33a1db5a6608ae76b24db8b17bb8753e54, including it in block
+[2026-11-27T15:57:55Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:57:55Z INFO  sequencer_core] Publishing block 5 on pin af154a01a315f14a2502df36cfbabc53890d7086fa1e9f24c6b173f3a6e72643
+[2026-11-27T15:57:55Z INFO  sequencer_executor_actor::actor] Block with id 5 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:57:58Z DEBUG sequencer_core] Validated transaction with hash 38980f9e83e18dfe1b4212f2334628b84765af5f3e74c8cd45ecfa3834fe3abd, including it in block
+[2026-11-27T15:57:58Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:57:58Z INFO  sequencer_core] Publishing block 6 on pin cdb3a140148130ed13c2079872d92ef390f939c2ad2e03f5d7c04175b0cb64e7
+[2026-11-27T15:57:58Z INFO  sequencer_executor_actor::actor] Block with id 6 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:58:01Z DEBUG sequencer_core] Validated transaction with hash 2092b6c4c922cffed8a72022e5315840f6d8399dd8bb44fc06bf67faa9005c9d, including it in block
+[2026-11-27T15:58:01Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:58:01Z INFO  sequencer_core] Publishing block 7 on pin 0f69a6fa0c97bfeac91fc9f54336a90c0eab73ccbb9be4a00c9b6a10ed618fdc
+[2026-11-27T15:58:01Z INFO  sequencer_executor_actor::actor] Block with id 7 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:58:04Z DEBUG sequencer_core] Validated transaction with hash 534fdc4caa893fe27f8a84fc27856c6ae10991c5a5d5d3ac155d9b522d9b8daa, including it in block
+[2026-11-27T15:58:04Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:58:04Z INFO  sequencer_core] Publishing block 8 on pin 61340dc0a0c12690c03d0e9830b8ddd10331c5ee9282242fc2b6bee62b807ec5
+[2026-11-27T15:58:04Z INFO  sequencer_executor_actor::actor] Block with id 8 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:58:07Z DEBUG sequencer_core] Validated transaction with hash 9d2ba6aa43bac368a09b4ed66b4a452f269cbc3348d941437ec7809760f9afcb, including it in block
+[2026-11-27T15:58:07Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:58:07Z INFO  sequencer_core] Publishing block 9 on pin 0ffc92775f68c709c0e033f363e1dec7fe857bf8120f349152be2cc22fb51f2a
+[2026-11-27T15:58:07Z INFO  sequencer_executor_actor::actor] Block with id 9 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:58:10Z DEBUG sequencer_core] Validated transaction with hash 199050ea5060e03943763f9c18929466d766c7427229b96c5982fc660c7bc995, including it in block
+[2026-11-27T15:58:10Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:58:10Z INFO  sequencer_core] Publishing block 10 on pin 61b7c974036465e4289e0273017667d36253c5e7e365fd18e05445726783dae9
+[2026-11-27T15:58:11Z INFO  sequencer_executor_actor::actor] Block with id 10 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:58:13Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T15:58:13Z INFO  sequencer_core] Publishing block 11 on pin 077d60b10d1326657f79719ae4777f4a6b2e27e9bab931f075dbf944a699a6a2
+[2026-11-27T15:58:13Z INFO  sequencer_executor_actor::actor] Block with id 11 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:58:16Z DEBUG sequencer_core] Validated transaction with hash ae07d1ce7c083c4d7a06f1354069bcad543d6f765e8243f9f8e82e02d7d01052, including it in block
+[2026-11-27T15:58:16Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:58:16Z INFO  sequencer_core] Publishing block 12 on pin e4d61f83f9241886df424115d4fe317b6fc842d0f29a88799bfd00a054abff5f
+[2026-11-27T15:58:17Z INFO  sequencer_executor_actor::actor] Block with id 12 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:58:19Z DEBUG sequencer_core] Validated transaction with hash ad8e2c798eb14ae8a7eba346a8c727133e8a8b050a48703c72afeaf9b432864a, including it in block
+[2026-11-27T15:58:19Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:58:19Z INFO  sequencer_core] Publishing block 13 on pin 3201cda9e8b41efb6ad0209c4d5dec281d23ce98ed0581aa830e99fef7a9b5e6
+[2026-11-27T15:58:19Z INFO  sequencer_executor_actor::actor] Block with id 13 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:58:22Z DEBUG sequencer_core] Validated transaction with hash a58fc9815c8fb2bbefa14c8ebbdd080834f1c29d617cfa4a8b5f531468fd52a9, including it in block
+[2026-11-27T15:58:22Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:58:22Z INFO  sequencer_core] Publishing block 14 on pin 0c9cd3ad78b1024e120d61d824db51110ab595c12b8a698e7bae79e344651720
+[2026-11-27T15:58:22Z INFO  sequencer_executor_actor::actor] Block with id 14 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:58:25Z DEBUG sequencer_core] Validated transaction with hash 0d54242f2ebbdebea210aa9c07f6c4c62f0da8cb97a8606366bfd7a630d3b5e2, including it in block
+[2026-11-27T15:58:25Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:58:25Z INFO  sequencer_core] Publishing block 15 on pin 4de1f9198b2e65944953ccfd59610237e5d85d6289f0b8eecd1ea85f85b82578
+[2026-11-27T15:58:25Z INFO  sequencer_executor_actor::actor] Block with id 15 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:58:28Z DEBUG sequencer_core] Validated transaction with hash 1916339260e4c73491a996ce0f4f0bac1c94e461b65012a949fbd7684d117942, including it in block
+[2026-11-27T15:58:28Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:58:28Z INFO  sequencer_core] Publishing block 16 on pin fc7004ed252097477908b5f0ac286514ca946faab152bd6af0749dc473702bcf
+[2026-11-27T15:58:28Z INFO  sequencer_executor_actor::actor] Block with id 16 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:58:31Z DEBUG sequencer_core] Validated transaction with hash abf521f00dc70dce6ca2376d774f4890e43587e09c3431d536ce0d8e68d1329e, including it in block
+[2026-11-27T15:58:31Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:58:31Z INFO  sequencer_core] Publishing block 17 on pin 475d8d3f2621d48ca3cf97c1c6f47cbe1089f4948bb93da3bc2ca73ea699d850
+[2026-11-27T15:58:31Z INFO  sequencer_executor_actor::actor] Block with id 17 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:58:34Z DEBUG sequencer_core] Validated transaction with hash 1c64f134931ebe7d4332c7d3ac27e49aa0ab83f92ecb95b8ecbda58fdb583a91, including it in block
+[2026-11-27T15:58:34Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:58:34Z INFO  sequencer_core] Publishing block 18 on pin d1ccd4de1fe89254146d7530cec6790d54a2e47189b4b4927de217e256133380
+[2026-11-27T15:58:34Z INFO  sequencer_executor_actor::actor] Block with id 18 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:58:37Z DEBUG sequencer_core] Validated transaction with hash 865e657c06b14bedb447e2643da9349520e9935930a7ee3c4f2eec01c9e02a16, including it in block
+[2026-11-27T15:58:37Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:58:37Z INFO  sequencer_core] Publishing block 19 on pin b00250be6e8d6276730b621b51a2dd86692a259f1df66163ac6b9a748b100bea
+[2026-11-27T15:58:38Z INFO  sequencer_executor_actor::actor] Block with id 19 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:58:40Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T15:58:40Z INFO  sequencer_core] Publishing block 20 on pin 7c06b609b67a2dca13ce540bdb487189bdf7696a5a216fb9c5b2b3b702337990
+[2026-11-27T15:58:40Z INFO  sequencer_executor_actor::actor] Block with id 20 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:58:43Z DEBUG sequencer_core] Validated transaction with hash ad1e8fa0d5ce8422d836ba2374a2337d8e18cc405a21ac570b8ef8f31124ff6d, including it in block
+[2026-11-27T15:58:43Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:58:43Z INFO  sequencer_core] Publishing block 21 on pin e8e0de70d6d50cf0ea155ca2b0845e8ca4e6129f0e8bc7aaa33cdddf1b1510dd
+[2026-11-27T15:58:44Z INFO  sequencer_executor_actor::actor] Block with id 21 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:58:46Z DEBUG sequencer_core] Validated transaction with hash 41cd5b789c7272992c7eac135983320831b57bb57d71d493c49edd472ceb8d8c, including it in block
+[2026-11-27T15:58:46Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:58:46Z INFO  sequencer_core] Publishing block 22 on pin 157e1710a30aaaba62c285493f4885cb433bc207200364395a84aa54823d41be
+[2026-11-27T15:58:47Z INFO  sequencer_executor_actor::actor] Block with id 22 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:58:49Z DEBUG sequencer_core] Validated transaction with hash e26502e5c983fbca04f1940bebae56a98aec0d5adb0ed2149921587406557af0, including it in block
+[2026-11-27T15:58:50Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:58:50Z INFO  sequencer_core] Publishing block 23 on pin 1ee0e56eca03134a57531a6272f795d952d54225e59856091032e444b7b1dadb
+[2026-11-27T15:58:50Z INFO  sequencer_executor_actor::actor] Block with id 23 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:58:52Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T15:58:52Z INFO  sequencer_core] Publishing block 24 on pin bee21cc871e488d0349f68f4b405817d8c52076e400437323b53dfb87a929d48
+[2026-11-27T15:58:52Z INFO  sequencer_executor_actor::actor] Block with id 24 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:58:55Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T15:58:55Z INFO  sequencer_core] Publishing block 25 on pin 68d607f2dc9de962baa0292c6f7136b389c2f0c2a59661135379582f0be85070
+[2026-11-27T15:58:55Z INFO  sequencer_executor_actor::actor] Block with id 25 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:58:58Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T15:58:58Z INFO  sequencer_core] Publishing block 26 on pin f8c0df1aa579f139988f09a7c674dc302256ae514572fb9461cc2e3c1a19ffb5
+[2026-11-27T15:58:58Z INFO  sequencer_executor_actor::actor] Block with id 26 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:59:01Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T15:59:01Z INFO  sequencer_core] Publishing block 27 on pin 3a08bff46d2ae31877ce599c46d89f430482a032353687a9c6e3aa2361533733
+[2026-11-27T15:59:01Z INFO  sequencer_executor_actor::actor] Block with id 27 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:59:04Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T15:59:04Z INFO  sequencer_core] Publishing block 28 on pin 47c02adfad9071f9186ee6c20309801fbe22eddc48bc88c7d3fb297c521b0a61
+[2026-11-27T15:59:04Z INFO  sequencer_executor_actor::actor] Block with id 28 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:59:07Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:38963 conn_id=2
+[2026-11-27T15:59:07Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T15:59:07Z INFO  sequencer_core] Publishing block 29 on pin a55e123484f97e079a7da1297d7c45d746a5cd1a457f00a24767f85af673a461
+[2026-11-27T15:59:07Z INFO  sequencer_executor_actor::actor] Block with id 29 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:59:10Z DEBUG sequencer_core] Validated transaction with hash 0c9c5ccb7b5f5aa4f22ddbb2e5da829dd61d884e824019e0bf7fc17b93f79c9e, including it in block
+[2026-11-27T15:59:10Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:59:10Z INFO  sequencer_core] Publishing block 30 on pin 869450ae46e325caa7a3b96d64d4657f334fcd242967fc828f1177da360a76f2
+[2026-11-27T15:59:11Z INFO  sequencer_executor_actor::actor] Block with id 30 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:59:13Z DEBUG sequencer_core] Validated transaction with hash 40730146ea2650cb16c42c17c4f9df2c68cfc172f1e31c66a781063b405b52fb, including it in block
+[2026-11-27T15:59:13Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:59:13Z INFO  sequencer_core] Publishing block 31 on pin de4bd4f2a075e5f56f53f0e6cc0b355c71654be0fea6decd5fff2bff3a65456e
+[2026-11-27T15:59:14Z INFO  sequencer_executor_actor::actor] Block with id 31 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:59:16Z DEBUG sequencer_core] Validated transaction with hash 0f21615efb4404ec59c548deb2807793e2706037f3e8036836e74022d6a1725c, including it in block
+[2026-11-27T15:59:17Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:59:17Z INFO  sequencer_core] Publishing block 32 on pin 914850a828354eb20fba68d1eb963bbbaeba82d54e5c336c600bcaefc83e207f
+[2026-11-27T15:59:17Z INFO  sequencer_executor_actor::actor] Block with id 32 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:59:19Z DEBUG sequencer_core] Validated transaction with hash 7eb4fbaf7f716e641d7aa139f0a87872604978b65f1b42eb7c453afbb6a156f9, including it in block
+[2026-11-27T15:59:20Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:59:20Z INFO  sequencer_core] Publishing block 33 on pin 25776a2878ea587f250c7ce6438c9a6c42e6ee9cd27d9f9d2a716d7f9b7b0b1b
+[2026-11-27T15:59:20Z INFO  sequencer_executor_actor::actor] Block with id 33 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:59:22Z DEBUG sequencer_core] Validated transaction with hash ae11315abb2339b60b09eb0df756d50378968c4b85ea54a6bbd6fb240ed3fbf9, including it in block
+[2026-11-27T15:59:23Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:59:23Z INFO  sequencer_core] Publishing block 34 on pin 691651dffb7112752ba7cad6fc7b796f590a2a5f664fff693202ffb9e1426ca5
+[2026-11-27T15:59:23Z INFO  sequencer_executor_actor::actor] Block with id 34 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:59:25Z DEBUG sequencer_core] Validated transaction with hash 8f07393ab3e2f4b8104cb745203b8144391e4cf12c2dcbce4062898a852015fb, including it in block
+[2026-11-27T15:59:26Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:59:26Z INFO  sequencer_core] Publishing block 35 on pin fd511ea05eafd6cbfe0edb05277d241bf18b0266327113ae48a5ad83218fff48
+[2026-11-27T15:59:26Z INFO  sequencer_executor_actor::actor] Block with id 35 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:59:28Z DEBUG sequencer_core] Validated transaction with hash 868bf0808706bb50016c2f4f628a9a09f783f5e3f961a8057d9d40045ce37156, including it in block
+[2026-11-27T15:59:28Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:59:28Z INFO  sequencer_core] Publishing block 36 on pin 62649788453562b6efa9a8c1ae467b7452fe0c55470ab7b5a79b5e4028365d03
+[2026-11-27T15:59:29Z INFO  sequencer_executor_actor::actor] Block with id 36 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:59:31Z DEBUG sequencer_core] Validated transaction with hash 680d12ea07a8e3642c190feb6664382ea1727d87e2d29fb904439e58d5b6aae5, including it in block
+[2026-11-27T15:59:31Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:59:31Z INFO  sequencer_core] Publishing block 37 on pin edd698e47d1b2e4ece1c6333bd65360c3baffedceeb8ac9225eb2fff969cabb5
+[2026-11-27T15:59:32Z INFO  sequencer_executor_actor::actor] Block with id 37 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:59:34Z DEBUG sequencer_core] Validated transaction with hash 58401112d3babc2f211bbb117a801d15e2f5b7d4000d493ad529300a0f4964c7, including it in block
+[2026-11-27T15:59:35Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:59:35Z INFO  sequencer_core] Publishing block 38 on pin 7d04ccfe16242077ea7853843e973c23abbcbcf1216beb5f466795ec87027add
+[2026-11-27T15:59:35Z INFO  sequencer_executor_actor::actor] Block with id 38 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:59:37Z DEBUG sequencer_core] Validated transaction with hash 51a8a7bdcc15b2a4c72071aa4ba442df355157d0a18606bab7e17782d43b57c9, including it in block
+[2026-11-27T15:59:38Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:59:38Z INFO  sequencer_core] Publishing block 39 on pin 03a85ac41c3b59b283db650c237862f67bc32e57c8c12c77c522b4116d9c1941
+[2026-11-27T15:59:38Z INFO  sequencer_executor_actor::actor] Block with id 39 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:59:40Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:60077 conn_id=3
+[2026-11-27T15:59:40Z DEBUG sequencer_core] Validated transaction with hash ec22481c681debf83395421adcb8d188ff426811732e7cb4b6ed14265cd2a7c4, including it in block
+[2026-11-27T15:59:40Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:59:40Z INFO  sequencer_core] Publishing block 40 on pin ae700640d7980c24c1a6c8a01176efbaa4da35101addbba31edeed2808eafdba
+[2026-11-27T15:59:40Z INFO  sequencer_executor_actor::actor] Block with id 40 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:59:42Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:35858 conn_id=4
+[2026-11-27T15:59:42Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:48076 conn_id=5
+[2026-11-27T15:59:43Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:50269 conn_id=6
+[2026-11-27T15:59:43Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T15:59:43Z INFO  sequencer_core] Publishing block 41 on pin 831941f76e57f4565c06d373ac02a4beb75585da825a77fb7ed2d526fde5b6d7
+[2026-11-27T15:59:43Z INFO  sequencer_executor_actor::actor] Block with id 41 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:59:43Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:53816 conn_id=7
+[2026-11-27T15:59:47Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:24054 conn_id=8
+[2026-11-27T15:59:47Z DEBUG sequencer_core] Validated transaction with hash b60d914f951828f5c3b37abe3f96b538dd8f348fda2995b666b50064ca7cc47c, including it in block
+[2026-11-27T15:59:47Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:59:47Z INFO  sequencer_core] Publishing block 42 on pin acc068a9baaad8c4241453c0b48d78064a1743b5be4c6c181d867b9a81b478da
+[2026-11-27T15:59:48Z INFO  sequencer_executor_actor::actor] Block with id 42 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:59:48Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:54666 conn_id=9
+[2026-11-27T15:59:48Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:19288 conn_id=10
+[2026-11-27T15:59:48Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:36499 conn_id=11
+[2026-11-27T15:59:49Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:42355 conn_id=12
+[2026-11-27T15:59:49Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:24754 conn_id=13
+[2026-11-27T15:59:49Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T15:59:49Z INFO  sequencer_core] Publishing block 43 on pin e244ab670e1ed1649fd6c739449e96b29f9ad16e62d6a692b380a20d03be2fd1
+[2026-11-27T15:59:49Z INFO  sequencer_executor_actor::actor] Block with id 43 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:59:50Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:18950 conn_id=14
+[2026-11-27T15:59:53Z DEBUG sequencer_core] Validated transaction with hash c3507582b4b6cdedf930cf9c537cc76ddac5a6c8587da76360e845d566102f4d, including it in block
+[2026-11-27T15:59:53Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T15:59:53Z INFO  sequencer_core] Publishing block 44 on pin e63fba3d036299948fafd483575db3292c5d2199046282970fe49aa4a90be818
+[2026-11-27T15:59:53Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:20674 conn_id=15
+[2026-11-27T15:59:54Z INFO  sequencer_executor_actor::actor] Block with id 44 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:59:54Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:57153 conn_id=16
+[2026-11-27T15:59:54Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:32531 conn_id=17
+[2026-11-27T15:59:54Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:23044 conn_id=18
+[2026-11-27T15:59:55Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T15:59:55Z INFO  sequencer_core] Publishing block 45 on pin 4235dcdbccf6e4d824139b6e8d4dec2d10de7c13bfaceaed93c69df59a52b14c
+[2026-11-27T15:59:55Z INFO  sequencer_executor_actor::actor] Block with id 45 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T15:59:58Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T15:59:58Z INFO  sequencer_core] Publishing block 46 on pin e64fc1e00af73908076ad45b07ff6fa760ccbc3cc12fc5da9bafda10511af04d
+[2026-11-27T15:59:58Z INFO  sequencer_executor_actor::actor] Block with id 46 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T16:00:02Z DEBUG sequencer_core] Validated transaction with hash 59925f257f87d6043f524274ef4d0e3593e4665ab5dba753bdd0ca5fe2269e6f, including it in block
+[2026-11-27T16:00:02Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T16:00:02Z INFO  sequencer_core] Publishing block 47 on pin f619f313468f84fd2d529bb4e67562965e980521e8cc0ba68e5b74af21bd39e1
+[2026-11-27T16:00:03Z INFO  sequencer_executor_actor::actor] Block with id 47 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T16:00:04Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T16:00:04Z INFO  sequencer_core] Publishing block 48 on pin dc127b20d730197479c07c5444240105a2e9a970c0aee4295c7c59da61d7c4f6
+[2026-11-27T16:00:04Z INFO  sequencer_executor_actor::actor] Block with id 48 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T16:00:05Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:59718 conn_id=19
+[2026-11-27T16:00:07Z DEBUG sequencer_core] Validated transaction with hash b821ed470ea7aec4a3d7d5e6fa5bb0f673017b8a5e10b3c1241b24ed14615236, including it in block
+[2026-11-27T16:00:08Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T16:00:08Z INFO  sequencer_core] Publishing block 49 on pin 063adde7addbf589a3117607b123ba2fade555f13f3aab06b48f655931efc034
+[2026-11-27T16:00:08Z INFO  sequencer_executor_actor::actor] Block with id 49 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T16:00:10Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:38117 conn_id=20
+[2026-11-27T16:00:10Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T16:00:10Z INFO  sequencer_core] Publishing block 50 on pin ae5cd9daa87a36866c4b8ae73d15f4496b018dd4cfe90cadf62015b6cd88dfdc
+[2026-11-27T16:00:10Z INFO  sequencer_executor_actor::actor] Block with id 50 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T16:00:11Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:63425 conn_id=21
+[2026-11-27T16:00:11Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:64058 conn_id=22
+[2026-11-27T16:00:11Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:49074 conn_id=23
+[2026-11-27T16:00:12Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:19878 conn_id=24
+[2026-11-27T16:00:14Z DEBUG sequencer_core] Validated transaction with hash d9615cff8bb0ec3905b5306b92b2c310b57940d62dd205b166ad63c4adf77702, including it in block
+[2026-11-27T16:00:14Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T16:00:14Z INFO  sequencer_core] Publishing block 51 on pin 6311472f788be50f8baf29cafe63eb8ee7bd64ff08dd2c87eb4bce78c9be6556
+[2026-11-27T16:00:14Z INFO  sequencer_executor_actor::actor] Block with id 51 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T16:00:15Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:31635 conn_id=25
+[2026-11-27T16:00:15Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:21153 conn_id=26
+[2026-11-27T16:00:15Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:18548 conn_id=27
+[2026-11-27T16:00:16Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T16:00:16Z INFO  sequencer_core] Publishing block 52 on pin cb66e1ec7ecd24ff6f9828e29cd753105a83c652c4b833159b85115498454979
+[2026-11-27T16:00:16Z INFO  sequencer_executor_actor::actor] Block with id 52 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T16:00:19Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T16:00:19Z INFO  sequencer_core] Publishing block 53 on pin dfc0f6bc4efd8d30a5b23c7242c17a8191f74749af341834000b90e836bff695
+[2026-11-27T16:00:19Z INFO  sequencer_executor_actor::actor] Block with id 53 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T16:00:22Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T16:00:22Z INFO  sequencer_core] Publishing block 54 on pin 1c8e246194b6af895ea72a9e10d8d91c83253fa1da39c47aba7bf5cc3688db50
+[2026-11-27T16:00:22Z INFO  sequencer_executor_actor::actor] Block with id 54 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T16:00:23Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:42406 conn_id=28
+[2026-11-27T16:00:23Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:59847 conn_id=29
+[2026-11-27T16:00:25Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:23998 conn_id=30
+[2026-11-27T16:00:25Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T16:00:25Z INFO  sequencer_core] Publishing block 55 on pin c2b028dfca1e95ac7aa4f7db2c690be7f8e915b58400474104142c496e052095
+[2026-11-27T16:00:25Z INFO  sequencer_executor_actor::actor] Block with id 55 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T16:00:28Z DEBUG sequencer_core] Validated transaction with hash 7e94ce06b3e4a21d9d73ce02c34d006ab10cdbd0ca6164b989b9de2bf5e305c8, including it in block
+[2026-11-27T16:00:28Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T16:00:28Z INFO  sequencer_core] Publishing block 56 on pin 39203e464ce6b7d532e5224b6854215981f6c8bcd7e8f97c9bc080d7dcd5eb3f
+[2026-11-27T16:00:29Z INFO  sequencer_executor_actor::actor] Block with id 56 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T16:00:31Z DEBUG sequencer_core] Validated transaction with hash 60fd9581cbc6df1f8ef8ad85886a483a7ea5bdbeac73666b98402f22db02e3d2, including it in block
+[2026-11-27T16:00:31Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T16:00:31Z INFO  sequencer_core] Publishing block 57 on pin a4c056a8bd646cac79b60e31695054f496565dde9d1726a3c247a395bae5705d
+[2026-11-27T16:00:32Z INFO  sequencer_executor_actor::actor] Block with id 57 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T16:00:34Z DEBUG sequencer_core] Validated transaction with hash e31635d9feeec97a39d7c89f3553bb114658b32cf8235fdb54b15aa93f700a43, including it in block
+[2026-11-27T16:00:35Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T16:00:35Z INFO  sequencer_core] Publishing block 58 on pin 82e5fa2aa52ec6a49ad6bd0e8c3e2e6a31277f25723090e224a54dad84c4e5db
+[2026-11-27T16:00:35Z INFO  sequencer_executor_actor::actor] Block with id 58 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T16:00:37Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:23413 conn_id=31
+[2026-11-27T16:00:37Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T16:00:37Z INFO  sequencer_core] Publishing block 59 on pin 87687c990685a4c551d9663d925b813889063d450bb7301b8914791fadd6bef5
+[2026-11-27T16:00:37Z INFO  sequencer_executor_actor::actor] Block with id 59 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T16:00:41Z DEBUG sequencer_core] Validated transaction with hash ea1b0286b4f2ed0d777a86eb4c8c2a2c5003878c5ca7c3b9b6643c2988c76cd9, including it in block
+[2026-11-27T16:00:41Z INFO  sequencer_core] Created block with 3 transactions in 1 seconds
+[2026-11-27T16:00:41Z INFO  sequencer_core] Publishing block 60 on pin f5579f8ca3c320c9008f13e601b3f14faaa2a752fb6b5826af41248e0a112e75
+[2026-11-27T16:00:42Z INFO  sequencer_executor_actor::actor] Block with id 60 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T16:00:43Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T16:00:43Z INFO  sequencer_core] Publishing block 61 on pin ca32f503bad6c85625a12e6aa219de70756e7d203eadb90c0963e7a8d5dc41bc
+[2026-11-27T16:00:43Z INFO  sequencer_executor_actor::actor] Block with id 61 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T16:00:44Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:44106 conn_id=32
+[2026-11-27T16:00:46Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T16:00:46Z INFO  sequencer_core] Publishing block 62 on pin ea82856b090814bfd4b2bc635e50862d82442d0e6dc6aeeeb584201fe4500d92
+[2026-11-27T16:00:46Z INFO  sequencer_executor_actor::actor] Block with id 62 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T16:00:49Z DEBUG sequencer_core] Validated transaction with hash 1d7c151c577366e45da8094f8a5959624b9925820885ec6fb1f8265a0bd8e235, including it in block
+[2026-11-27T16:00:50Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-27T16:00:50Z INFO  sequencer_core] Publishing block 63 on pin 7c8614e9d31d5579edf99aead92150d6b7af949626d0080d877e6745dacbdda6
+[2026-11-27T16:00:50Z INFO  sequencer_executor_actor::actor] Block with id 63 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T16:00:52Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-27T16:00:52Z INFO  sequencer_core] Publishing block 64 on pin 172d210020cb29e693164a2bd84700cbe202cb5500b93ba8747663d0d6261510
+[2026-11-27T16:00:52Z INFO  sequencer_executor_actor::actor] Block with id 64 created by 672aa240f117e8829c4a9e4ca2723ce15ea56d1c74ca27fba35a3a1d9b8fe024
+[2026-11-27T16:00:53Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:31999 conn_id=33
+[2026-11-27T16:00:53Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:48882 conn_id=34
+[2026-11-27T16:00:53Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:22506 conn_id=35
+[2026-11-27T16:00:54Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:33233 conn_id=36
+[2026-11-27T16:00:54Z INFO  sequencer_service] Received SIGTERM
+[2026-11-27T16:00:54Z INFO  sequencer_service] Shutting down sequencer...
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] Stopping kameo_actors::scheduler::Scheduler#6 actor...
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] kameo_actors::scheduler::Scheduler#6 actor stopped
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] Killing kameo_actors::scheduler::Scheduler#6 actor
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] Stopping Broker#2 actor...
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] Broker#2 actor stopped
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] Killing Broker#2 actor
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] Stopping sequencer_rpc_server_actor::actor::RpcServerActor#8 actor...
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] sequencer_rpc_server_actor::actor::RpcServerActor#8 actor stopped
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] Killing sequencer_rpc_server_actor::actor::RpcServerActor#8 actor
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] Stopping sequencer_gossip_actor::actor::GossipActor#7 actor...
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] sequencer_gossip_actor::actor::GossipActor#7 actor stopped
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] Killing sequencer_gossip_actor::actor::GossipActor#7 actor
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] Stopping sequencer_executor_actor::actor::ExecutorActor<sequencer_storage_actor::actor::StorageActor, sequencer_bedrock_actor::mock::MockBedrockActor>#1 actor...
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] sequencer_executor_actor::actor::ExecutorActor<sequencer_storage_actor::actor::StorageActor, sequencer_bedrock_actor::mock::MockBedrockActor>#1 actor stopped
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] Killing sequencer_executor_actor::actor::ExecutorActor<sequencer_storage_actor::actor::StorageActor, sequencer_bedrock_actor::mock::MockBedrockActor>#1 actor
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] Stopping sequencer_slasher_actor::actor::SlasherActor#4 actor...
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] sequencer_slasher_actor::actor::SlasherActor#4 actor stopped
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] Killing sequencer_slasher_actor::actor::SlasherActor#4 actor
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] Stopping sequencer_bedrock_actor::mock::MockBedrockActor#3 actor...
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] sequencer_bedrock_actor::mock::MockBedrockActor#3 actor stopped
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] Killing sequencer_bedrock_actor::mock::MockBedrockActor#3 actor
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] Stopping sequencer_storage_actor::actor::StorageActor#0 actor...
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] sequencer_storage_actor::actor::StorageActor#0 actor stopped
+[2026-11-27T16:00:54Z INFO  sequencer_service::actor_handle] Killing sequencer_storage_actor::actor::StorageActor#0 actor
+[2026-11-27T16:00:54Z INFO  sequencer_service] Sequencer shutdown complete

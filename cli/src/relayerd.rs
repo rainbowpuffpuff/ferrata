@@ -212,6 +212,24 @@ pub enum Command {
     },
     /// The vault's final state, live candidates, this relayer's balance and the drop book.
     Status,
+    /// One protocol-fee collection (RFP-022 F.13, ADR 0048): the bridge program's `CollectFees` of `--token` under the
+    /// newest record of the configuration's instance, built and dry-run as the root imports are, then sent from the
+    /// relayer's LEZ account (anyone may send it: it mints only to the configuration's fee recipient, what the vault
+    /// escrowed for it and LEZ has not minted yet). Needs a zone (--sequencer or --lez-devnet) and --bridge-account;
+    /// refused on a zone that runs B1's program, which has no `CollectFees`.
+    CollectFees {
+        /// The token (ETH: the zero address).
+        #[arg(long, default_value = "0x0000000000000000000000000000000000000000")]
+        token: Address,
+        /// Mint at most this many base units (default: all that is due), e.g. to stay within the token's mint bucket; a
+        /// whole number of the token's LEZ unit.
+        #[arg(long)]
+        limit: Option<u128>,
+        /// The record to read the vault under (default: the instance's newest): with an inbound depth, a record at
+        /// least that many slots behind the newest one the configuration's clock has read.
+        #[arg(long)]
+        record_slot: Option<u64>,
+    },
 }
 
 /// Where the daemon's JSON lines go: the binary prints each on standard output, the module keeps them.
@@ -1463,6 +1481,55 @@ pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Op
                     "balanceWei": balance.to_string(), "owedWei": owed.to_string(), "drops": book.drops.len(),
                 }),
             );
+        }
+        Command::CollectFees { token, limit, record_slot } => {
+            let Some((zone, ctx)) = d.zone.as_mut() else {
+                bail!("collect-fees needs a zone: --sequencer, or --lez-devnet for the devnet")
+            };
+            let token = token.into_array();
+            match relayer::plan_fee_collection(&*zone, &d.p, ctx, token, limit.unwrap_or(u128::MAX), record_slot).await? {
+                relayer::FeeCollection::Waiting { reason } => {
+                    log(&sink, "lez-fee-collection-waiting", json!({ "token": hx(&token), "reason": reason }));
+                }
+                relayer::FeeCollection::Planned(plan) => {
+                    let mut fields = json!({
+                        "token": hx(&token), "recordSlot": plan.record_slot, "block": plan.block_number,
+                        "blockHash": hx(&plan.block_hash),
+                        "vaultTotal": alloy::primitives::U256::from_be_bytes(plan.total).to_string(),
+                        "collectedBefore": alloy::primitives::U256::from_be_bytes(plan.collected).to_string(),
+                        "amount": plan.amount.to_string(),
+                        "accounts": plan.call.mentions.len(),
+                    });
+                    // The fee recipient's holding of the token under this configuration, at its holder(cid, account).
+                    let recipient = ferrata_lez_bridge_wire::holder_actor(
+                        ctx.program,
+                        &ctx.cid,
+                        ferrata_wallet::AccountId::new(plan.fee_recipient),
+                    );
+                    let held = |state: Option<BridgeState>| match state {
+                        Some(BridgeState::Holder(h)) => h.holding(&ctx.cid, &token).map_or(0, |x| x.amount),
+                        _ => 0,
+                    };
+                    let before = held(lez::read(&*zone, recipient).await?);
+                    let tx = zone.submit(&plan.call).await?;
+                    // Applied when fees(cid, token) holds what the dry run said the collection writes.
+                    let at = ferrata_lez_bridge_wire::fees_actor(ctx.program, &ctx.cid, &token);
+                    let applied = matches!(lez::read(&*zone, at).await?, Some(BridgeState::Fees(f)) if f == plan.writes);
+                    let after = held(lez::read(&*zone, recipient).await?);
+                    fields["tx"] = json!(tx);
+                    fields["applied"] = json!(applied);
+                    fields["feeRecipient"] = json!(hx(&plan.fee_recipient));
+                    fields["feeRecipientHoldingBefore"] = json!(before.to_string());
+                    fields["feeRecipientHoldingAfter"] = json!(after.to_string());
+                    log(&sink, if applied { "lez-fees-collected" } else { "lez-fee-collection-unconfirmed" }, fields);
+                    ensure!(
+                        applied,
+                        "CollectFees sent ({tx}) but not confirmed: fees(cid, token) does not hold what the dry run wrote (its \
+                         block not applied yet when read, or the program refused it because the zone moved since the dry run: \
+                         a freeze, a bucket, another collection); run it again to see which"
+                    );
+                }
+            }
         }
         Command::Run { inbox, poll_secs, rounds } => {
             std::fs::create_dir_all(&inbox)?;

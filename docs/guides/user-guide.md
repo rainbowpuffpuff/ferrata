@@ -13,8 +13,8 @@ program are prototypes, not audited ([`vault/README.md`](../../vault/README.md);
 `ferrata` ([`cli/README.md`](../../cli/README.md); prototype, run only against a local chain or a test
 deployment), and as a mini-app on a devnet ([`modules/ferrata_bridge_ui`](../../modules/ferrata_bridge_ui/README.md));
 there is no wallet integration yet. The steps below were exercised by tests, harnesses and scripts, and each
-section says where. **Which bridge program.** This tree builds the program of ADR 0046 (`ferrata_bridge_f13`: the mint
-fee is paid on Ethereum at the deposit, a claim names no fee schedule), which is not deployed; the test network runs
+section says where. **Which bridge program.** This tree builds the program of ADR 0048 (`ferrata_bridge_lezfee`: a
+claim names no fee schedule, the protocol fees are minted on LEZ to the fee recipient in totals), which is not deployed; the test network runs
 B1's program (`ferrata_bridge_b1`), whose claims name their fee schedule's range. This tree's `ferrata` and bridge module
 read the image id the zone's program loader names and build each claim in that program's layout (B1's on the test
 network); a zone running any other program is refused before a claim or a burn is built. A private claim or burn there
@@ -99,9 +99,9 @@ Call `depositETH(denomIndex, C, j)` or `deposit(token, denomIndex, C, j)` on the
 ([`vault/README.md`](../../vault/README.md), "Deposits"; [`bridge.md`](../design/bridge.md) §5.1–§5.3):
 
 - the amount is exactly one registered denomination of the token (at most eight per token; the
-  default registers three). You pay denomination + registered mint fee + relay fee; the vault escrows
-  denomination + relay and credits the mint fee on Ethereum, so your LEZ balance will be a whole
-  denomination ([`vault/README.md`](../../vault/README.md), "Fees (v5, D13)"; ADR 0046);
+  default registers three). You pay denomination + registered mint fee + relay fee; the vault escrows all of it
+  and counts the mint fee for the fee recipient on LEZ, so your LEZ balance will be a whole
+  denomination ([`vault/README.md`](../../vault/README.md), "Fees (v5, D13)"; ADR 0048);
 - `j` must equal `depositCount[you]`: your deposits are numbered 0, 1, 2, … and that pair
   `(you, j)` is public;
 - `C = H("ferrata/C/v1" ‖ s ‖ kind ‖ dest)` with `s = HMAC(kAuth, "ferrata/s/v1" ‖ evmChainId ‖ vault
@@ -160,7 +160,7 @@ Three ways, the first preselected:
 |---|---|---|---|---|
 | **Private claim to a private account** (default) | `ClaimPrivately` runs as your destination account inside a privacy-preserving transaction; it reads `root(cid, n)` and credits its own private state | `N`, the configuration, the token, the denomination, which root was read (`n`), the relayer, the time, the bridge program, a one-time fee alias; on the test network's B1, also the fee schedule's range | which deposit (leaf, depositor, `s`, `C`, path) and your account | 553,641 execution gas, 224,063 storage gas; the prover proves 41,736 + 110,862 user cycles (in-process harness, dev mode; figures of the program before ADR 0046, whose claim is 24 bytes longer) |
 | Private claim to a public account | the same proof, from a private account of yours; the mint goes publicly to the destination | the above and the destination | which deposit | 603,981 execution gas |
-| **Plaintext claim** | the witness is transaction data; one public transaction, for users who cannot prove | **everything, including which deposit**: the client must say so before allowing it | nothing | 261,671 execution gas (1 ETH), 2,053 bytes (the program before ADR 0046; this tree's: 261,007 and 2,029) |
+| **Plaintext claim** | the witness is transaction data; one public transaction, for users who cannot prove | **everything, including which deposit**: the client must say so before allowing it | nothing | 261,671 execution gas (1 ETH), 2,053 bytes (the program before ADR 0046); 261,007 and 2,029 on ADR 0046's program, whose claim layout this tree retains (ADR 0048 gas not measured) |
 
 Sources: [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §1 (its last column: the merged program), §3;
 [`lez/BRIDGE.md`](../../lez/BRIDGE.md), "What each path makes public". The private claim's bytes (8,889 since ADR 0046; 8,937 before) were searched for its private inputs
@@ -182,9 +182,12 @@ and in 463.7 s at 16 CPUs ([`lez/results/p4-minimum`](../../lez/results/p4-minim
 **Not measured:** the private claim on a user's laptop (declared minimum: 16 GB, 8 cores with 16 threads, x86-64,
 or an Apple M1 with 16 GB, [`attestation.md`](../design/attestation.md) §13).
 
-**Fees.** Your Ethereum deposit pays denomination + mint fee + relay fee. The vault credits the mint fee to the fee
-recipient on Ethereum, withdrawable there with `claimOwed`. The claim names no fee schedule and mints your denomination
-to you and only the fixed relay fee to the relayer it names ([`bridge.md`](../design/bridge.md) §5.5, §13; ADR 0046).
+**Fees.** Your Ethereum deposit pays denomination + mint fee + relay fee. The vault escrows the mint fee and counts it
+for the fee recipient, to whom anyone's `CollectFees` mints it on LEZ, in a total over many deposits. The claim names no
+fee schedule and mints your denomination to you and only the fixed relay fee to the relayer it names
+([`bridge.md`](../design/bridge.md) §5.5, §13; ADR 0048). A release pays one denomination less the relay fee (if a
+relayer sends it), the burn fee and the checkpoint fee in force at the release; your burn on LEZ burns exactly one
+denomination.
 The LEZ transaction fee of a
 privacy-preserving transaction is paid in native LEZ from a private account of the prover, inside the
 proof; nobody else can pay it on v0.4. The **gas drop** lets a relayer fund that fee without learning which deposit
@@ -344,8 +347,8 @@ choices: `deposit --kind public --i-accept-public-account`; `claim --plaintext
 
 The client shows the **anonymity set** a claim would have (`ferrata claim`'s `anonymity` line, which warns when it is
 1): the deposits of that token and denomination under the root it reads, with no split at a fee-schedule change
-because the mint fee was collected on Ethereum, less those a plaintext claim has published, applied or refused on
-chain (a refused transaction stays in its block,
+because the mint fee stays in the vault's escrow and is minted separately in a total on LEZ, less those a plaintext
+claim has published, applied or refused on chain (a refused transaction stays in its block,
 witness and all), which are public ([`cli/README.md`](../../cli/README.md), "Anonymity set";
 measured over both halves, with plaintext and with private claims:
 [`e2e/both-halves/results/randomised.md`](../../e2e/both-halves/results/randomised.md)). Timing is not counted in it.
@@ -376,7 +379,8 @@ From [`bridge.md`](../design/bridge.md) §17, with the measured dumps of
 - **a retry after a cap rejection**, which shows the first attempt's time; the client checks caps
   before proving;
 - **the root read and timing around a fee-schedule change**, but no fee-value split: the schedule-dependent mint fee
-  stayed on Ethereum, and the claim neither names a schedule range nor mints it (ADR 0046). Our test network still runs
+  is escrowed on Ethereum and minted to the fee recipient in totals, and the claim neither names a schedule range nor
+  mints it (ADR 0046, ADR 0048); a burn burns one denomination whatever the schedule. Our test network still runs
   the program from before it (B1), whose claim names its schedule's range: there a fee change splits the set by
   deposit time, and `ferrata claim` counts the set within that range;
 - **network metadata** (your IP to an RPC or sequencer): out of scope, disclosed;

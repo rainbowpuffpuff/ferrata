@@ -1,7 +1,9 @@
 //! Which bridge program a zone runs, and the claim layout of the one the test network still runs.
 //!
-//! This tree's bridge program is `ferrata_bridge_f13` (ADR 0046): a claim names no fee schedule, and the vault took
-//! the mint fee on Ethereum at the deposit. The test network still runs `ferrata_bridge_b1`, the program before ADR
+//! This tree's bridge program is `ferrata_bridge_lezfee` (ADR 0048): a claim names no fee schedule (the layout since
+//! ADR 0046), and the protocol fees are minted on LEZ to the fee recipient by `CollectFees`, a total over many deposits
+//! and releases. The program of ADR 0046 (`ferrata_bridge_f13`, never deployed) is not one this wallet builds for. The
+//! test network still runs `ferrata_bridge_b1`, the program before ADR
 //! 0046 (`idl/deployed/ferrata_bridge_b1.idl.json`): its `Claim` and `ClaimPrivately` carry a [`ScheduleRange`]
 //! between the witness and the relayer, its token actor checks that range against the imported fee schedules and
 //! mints the schedule's mint fee to the fee recipient on LEZ. Nothing else a wallet sends or reads differs between
@@ -20,8 +22,9 @@ use ferrata_lez_bridge_wire::{self as bw, code, BridgeMessage, ClaimWitness, Roo
 
 use crate::Refusal;
 
-/// `ferrata_bridge_f13`'s image id: this tree's bridge program (`docs/image-ids.md`, ADR 0046).
-pub const F13_IMAGE_ID: [u8; 32] = hex32("ffb47f6eaec6ef13f49505e5e80209f73d38ea53792e77656994f8069dde7675");
+/// `ferrata_bridge_lezfee`'s image id: this tree's bridge program (`docs/image-ids.md`, ADR 0048). The name of the
+/// constant is the claim layout it builds (since ADR 0046: no fee schedule in a claim).
+pub const F13_IMAGE_ID: [u8; 32] = hex32("9d02d54d56b026079e94c8d9b12db69f3a96b7acccd11283f68e5bc343bfa321");
 /// `ferrata_bridge_b1`'s image id: the program the test network runs (`docs/image-ids.md`, "Superseded";
 /// `scripts/reproduce/deployed-programs.json`).
 pub const B1_IMAGE_ID: [u8; 32] = hex32("847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515");
@@ -52,7 +55,8 @@ fn hex(b: &[u8]) -> String {
 /// A bridge program this wallet can build claims for.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BridgeProgram {
-    /// This tree's program (ADR 0046): claims name no fee schedule.
+    /// This tree's program, `ferrata_bridge_lezfee` (ADR 0048): claims name no fee schedule (ADR 0046's layout); the
+    /// protocol fees are minted on LEZ by `CollectFees`.
     F13,
     /// The test network's program: claims name a fee schedule's range.
     B1,
@@ -69,7 +73,7 @@ impl BridgeProgram {
         } else {
             Err(format!(
                 "refused before anything was signed or sent: the zone's bridge program runs image 0x{}, which this ferrata \
-                 does not know; it builds claims and burns for ferrata_bridge_f13 (0x{}, this tree's program, ADR 0046) \
+                 does not know; it builds claims and burns for ferrata_bridge_lezfee (0x{}, this tree's program, ADR 0048) \
                  and for ferrata_bridge_b1 (0x{}, the program our test network runs)",
                 hex(image_id),
                 hex(&F13_IMAGE_ID),
@@ -87,7 +91,7 @@ impl BridgeProgram {
 
     pub fn name(self) -> &'static str {
         match self {
-            BridgeProgram::F13 => "ferrata_bridge_f13",
+            BridgeProgram::F13 => "ferrata_bridge_lezfee",
             BridgeProgram::B1 => "ferrata_bridge_b1",
         }
     }
@@ -395,7 +399,10 @@ mod tests {
         let e = BridgeProgram::of_image_id(&other).unwrap_err();
         assert!(e.contains(&hex(&other)) && e.contains("does not know"), "{e}");
         assert_eq!(BridgeProgram::B1.image_id(), B1_IMAGE_ID);
-        assert_eq!(BridgeProgram::F13.name(), "ferrata_bridge_f13");
+        assert_eq!(BridgeProgram::F13.name(), "ferrata_bridge_lezfee");
+        // ADR 0046's program, never deployed, is not one of them: refused like any other.
+        let adr_0046 = hex32("ffb47f6eaec6ef13f49505e5e80209f73d38ea53792e77656994f8069dde7675");
+        assert!(BridgeProgram::of_image_id(&adr_0046).unwrap_err().contains("does not know"));
     }
 
     /// The constants are the ids `docs/image-ids.md` records (this tree's program) and the deployed list names (B1).
@@ -405,8 +412,8 @@ mod tests {
         let ids = std::fs::read_to_string(format!("{root}/docs/image-ids.md")).unwrap();
         let f13 = ids
             .lines()
-            .find(|l| l.contains("`ferrata_bridge_f13` |"))
-            .expect("docs/image-ids.md has ferrata_bridge_f13's row");
+            .find(|l| l.contains("`ferrata_bridge_lezfee` |"))
+            .expect("docs/image-ids.md has ferrata_bridge_lezfee's row");
         assert!(f13.contains(&format!("`0x{}`", hex(&F13_IMAGE_ID))), "{f13}");
         let deployed: serde_like::Programs = serde_like::programs(&format!("{root}/scripts/reproduce/deployed-programs.json"));
         assert_eq!(deployed.image_id("ferrata_bridge_b1"), format!("0x{}", hex(&B1_IMAGE_ID)));

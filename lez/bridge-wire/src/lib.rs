@@ -3,9 +3,13 @@
 //! a token's registry entry and fee schedules, the claim of a deposit), shared by the guest and the
 //! host. The plan is `lez/BRIDGE.md`.
 //!
-//! Claims do not read fee schedules: the vault takes the mint fee at deposit, and a claim mints only
-//! the denomination and the registry entry's fixed relay fee. `Register`, `ImportFees` and
-//! `ExtendFees` still mirror schedules into [`TokenState`] for the vault's other fee rules.
+//! Protocol fees (RFP-022 F.13, ADR 0048): claims and burns carry no fee value. A claim mints the denomination and
+//! the registry entry's fixed relay fee, whatever its deposit's fee schedule; a burn debits exactly one
+//! denomination. The vault escrows each deposit's mint fee and each release's burn fee and adds them to one
+//! cumulative total per token at [`lez_fees_slot`]; anyone sends `CollectFees`, which attests that total and mints
+//! what it has not minted yet, in the wrapped token, to the configuration's fee recipient (`fees(cid, token)` keeps
+//! the count). `Register`, `ImportFees` and `ExtendFees` still mirror the schedules into [`TokenState`] (the
+//! ceiling and the seven days' notice are re-checked there); no claim or burn reads them.
 //!
 //! | actor | address | state |
 //! |---|---|---|
@@ -16,6 +20,7 @@
 //! | `holder(cid, account)` | PDA `H(…/holder ‖ cid ‖ account)` | [`HolderState`]: an account's public wrapped balances under `cid` (the M0 fallback: no v0.4 token program); written only by `Mint`, `Credit` and the account's own `Burn` and `Transfer` |
 //! | the account's own actor | the account itself | [`HolderState`] of its own private claims (in a private account, its private state); the entry point of its burns and of its role messages; runs only for its owner |
 //! | `burn(cid, r)` | PDA `H(…/burn ‖ cid ‖ r)` | [`BurnRecord`]: the burn note with tag `r`, written once: a second note with a used tag is refused |
+//! | `fees(cid, token)` | PDA `H(…/fees ‖ cid ‖ token)` | [`FeesState`]: the protocol fees of `token` minted to the fee recipient so far (ADR 0048); written only by `AccrueFees` from `config(cid)` |
 //!
 //! `cid` is SPEC-v2 §1's `configId`. Every account a configuration writes is keyed by its `cid`, so one
 //! configuration has no access to another's accounts (RFP-022 F.16, milestone B1; `docs/design/bridge.md` §3,
@@ -124,6 +129,13 @@ pub fn listing_slot(token: &Address) -> Word {
     plain_hash(&[b"ferrata/vault/listing/v1", token])
 }
 
+/// The vault's slot holding the protocol fees of `token` it has escrowed for the fee recipient on LEZ since its
+/// deployment (ADR 0048): every deposit's mint fee and every release's burn fee, in base units, a word that only grows
+/// (`FerrataVault.lezFees`). `sha256("ferrata/vault/lezfees/v1" ‖ token)`. `CollectFees` attests it.
+pub fn lez_fees_slot(token: &Address) -> Word {
+    plain_hash(&[b"ferrata/vault/lezfees/v1", token])
+}
+
 /// `n` as a 256-bit big-endian word.
 pub const fn word_of(n: u64) -> Word {
     let mut w = [0u8; 32];
@@ -156,6 +168,33 @@ pub fn u128_of(word: &Word) -> Option<u128> {
 pub fn word_of_u128(n: u128) -> Word {
     let mut w = [0u8; 32];
     w[16..].copy_from_slice(&n.to_be_bytes());
+    w
+}
+
+/// `a - b` of two 256-bit big-endian words, `None` if `b > a`.
+pub fn word_sub(a: &Word, b: &Word) -> Option<Word> {
+    let (a_hi, a_lo) = halves(a);
+    let (b_hi, b_lo) = halves(b);
+    let (lo, borrow) = a_lo.overflowing_sub(b_lo);
+    let hi = a_hi.checked_sub(b_hi)?.checked_sub(u128::from(borrow))?;
+    Some(join(hi, lo))
+}
+
+/// `a + n` of a 256-bit big-endian word and a `u128`, `None` above 2^256 - 1.
+pub fn word_add_u128(a: &Word, n: u128) -> Option<Word> {
+    let (hi, lo) = halves(a);
+    let (lo, carry) = lo.overflowing_add(n);
+    Some(join(hi.checked_add(u128::from(carry))?, lo))
+}
+
+fn halves(w: &Word) -> (u128, u128) {
+    (u128::from_be_bytes(w[..16].try_into().expect("16 bytes")), u128::from_be_bytes(w[16..].try_into().expect("16 bytes")))
+}
+
+fn join(hi: u128, lo: u128) -> Word {
+    let mut w = [0u8; 32];
+    w[..16].copy_from_slice(&hi.to_be_bytes());
+    w[16..].copy_from_slice(&lo.to_be_bytes());
     w
 }
 
@@ -292,10 +331,11 @@ pub struct FeeSchedule {
     /// Ethereum seconds: when the admin announced it, and when it took effect.
     pub announced_at: u64,
     pub effective_at: u64,
-    /// Credited to the fee recipient by the vault at deposit (F.13); retained in the mirrored
-    /// schedule, but never read by a claim.
+    /// Paid at deposit on top of the denomination; the vault escrows it and adds it to [`lez_fees_slot`] (ADR 0048),
+    /// minted on LEZ to the fee recipient by `CollectFees`. Never read by a claim.
     pub mint_fees: Vec<u128>,
-    /// Deducted from a release on Ethereum (D13); the LEZ side only checks the ceiling.
+    /// Deducted from a release on Ethereum under the schedule in force then; the vault escrows it and adds it to
+    /// [`lez_fees_slot`] (ADR 0048). Never read by a burn.
     pub burn_fees: Vec<u128>,
     pub checkpoint_fees: Vec<u128>,
 }
@@ -320,7 +360,7 @@ impl FeeSchedule {
     }
 
     /// The bounds of §B4 against `entry`: one fee per denomination, each at most 1% of it, mint
-    /// fees multiples of the LEZ unit; schedule 0 (the registration's) charges no protocol fee
+    /// and burn fees multiples of the LEZ unit (both are minted on LEZ, ADR 0048); schedule 0 (the registration's) charges no protocol fee
     /// ("protocol fees start at zero"); a later one took effect at least seven days of Ethereum time
     /// after it was announced.
     pub fn check(&self, entry: &TokenEntry) -> Result<(), u8> {
@@ -331,7 +371,12 @@ impl FeeSchedule {
         for (i, d) in entry.denominations.iter().enumerate() {
             let ceiling = d / FEE_CEILING_DIVISOR;
             let (mint, burn, checkpoint) = (self.mint_fees[i], self.burn_fees[i], self.checkpoint_fees[i]);
-            if mint > ceiling || burn > ceiling || checkpoint > ceiling || mint % entry.lez_unit != 0 {
+            if mint > ceiling
+                || burn > ceiling
+                || checkpoint > ceiling
+                || mint % entry.lez_unit != 0
+                || burn % entry.lez_unit != 0
+            {
                 return Err(code::BAD_MESSAGE);
             }
             if self.index == 0 && (mint != 0 || burn != 0) {
@@ -560,8 +605,8 @@ pub struct Controls {
     pub admin: Root,
     /// Freezes mints and burns (≤ 30 days unless renewed) and runs `Sunset`.
     pub freeze_authority: Root,
-    /// Receives the vault's mint fees at deposit; on LEZ receives the relay fee of a claim that
-    /// names no relayer.
+    /// Receives, on LEZ, the protocol fees `CollectFees` mints (ADR 0048: the vault's mint and burn fees, in the
+    /// wrapped token) and the relay fee of a claim that names no relayer.
     pub fee_recipient: Root,
     /// The immutable floor of every cap.
     pub floor: CapParams,
@@ -793,6 +838,11 @@ pub fn holder_seed(config_id: &Root, account: &Root) -> PdaSeed {
     PdaSeed::new(tagged_hash(b"holder", &[config_id, account]))
 }
 
+/// `fees(cid, token)`'s seed (ADR 0048).
+pub fn fees_seed(config_id: &Root, token: &Address) -> PdaSeed {
+    PdaSeed::new(tagged_hash(b"fees", &[config_id, token]))
+}
+
 fn pda(program: AccountId, seed: &PdaSeed) -> Actor {
     Actor::new(AccountId::for_public_pda(&program, seed), program)
 }
@@ -823,6 +873,11 @@ pub fn nullifier_actor(
 /// `burn(cid, r)`: the burn note with tag `r`, written once ([`burn_seed`]).
 pub fn burn_actor(program: AccountId, config_id: &Root, r: &Root) -> Actor {
     pda(program, &burn_seed(config_id, r))
+}
+
+/// `fees(cid, token)`: the protocol fees of `token` minted to the fee recipient under `cid` so far (ADR 0048).
+pub fn fees_actor(program: AccountId, config_id: &Root, token: &Address) -> Actor {
+    pda(program, &fees_seed(config_id, token))
 }
 
 /// `holder(cid, account)`: the PDA holding `account`'s public wrapped balances under configuration `cid`. Its seed
@@ -1060,7 +1115,8 @@ pub enum BridgeMessage {
     /// the token's LEZ unit) to `holder(to)`. From a private account, only the boundary delivery
     /// to the token is public: not the sender.
     Transfer { config_id: Root, token: Address, amount: u128, to: Root },
-    /// `token(cid, token)` → `holder(cid, to)` only: credit a transfer.
+    /// `token(cid, token)` → `holder(cid, to)` only: credit a transfer, or the protocol fees `MintFees` mints to the
+    /// fee recipient (ADR 0048).
     Credit { config_id: Root, token: Address, amount: u128, to: Root },
     /// Variant 28. The admin, like `SetCap`: the inbound finality depth beyond Ethereum finality, in beacon slots
     /// (at most [`MAX_INBOUND_DEPTH_SLOTS`]; [`Roles::inbound_depth_slots`]). Applies to imports from then on.
@@ -1072,6 +1128,17 @@ pub enum BridgeMessage {
     /// Variant 30. `config(cid)` → `token(cid, token)` only: the attested listing, kept if its record is newer than
     /// the one the token holds.
     SetListing { config_id: Root, token: Address, delisted: bool, record_slot: u64 },
+    /// Variant 31 (ADR 0048). Anyone, at `config(cid)`: attest the vault's [`lez_fees_slot`] of `token` (the protocol
+    /// fees it has escrowed for the fee recipient on LEZ) under the record at `record_slot`, then `AccrueFees` at
+    /// `fees(cid, token)`, which mints at most `limit` of what is not minted yet to the fee recipient. No user's
+    /// transaction is involved: the amount is a total over every deposit and release up to that record.
+    CollectFees { config_id: Root, token: Address, record_slot: u64, limit: u128, proof: VaultProof },
+    /// Variant 32. `config(cid)` → `fees(cid, token)` only: the attested total (a 256-bit big-endian word, as the vault
+    /// holds it); `fees(cid, token)` keeps the new count and sends `MintFees` for the difference (at most `limit`).
+    AccrueFees { config_id: Root, token: Address, total: Word, limit: u128 },
+    /// Variant 33. `fees(cid, token)` → `token(cid, token)` only: mint `amount` (a multiple of the LEZ unit) to the
+    /// configuration's fee recipient, through the token's and the configuration's mint freezes and buckets.
+    MintFees { config_id: Root, token: Address, amount: u128 },
 }
 
 impl BridgeMessage {
@@ -1105,6 +1172,9 @@ pub enum BridgeState {
     Holder(HolderState),
     Burn(BurnRecord),
     Token(TokenState),
+    /// Variant 6 (ADR 0048): `fees(cid, token)`. Appended, so every other variant encodes as before (the B1 program's
+    /// accounts decode with these types).
+    Fees(FeesState),
 }
 
 /// `config(cid)`.
@@ -1164,6 +1234,12 @@ pub enum Pending {
         token: Address,
         record_slot: u64,
     },
+    /// `CollectFees` (ADR 0048): the attestation of the vault's [`lez_fees_slot`] of `token`.
+    Collect {
+        token: Address,
+        record_slot: u64,
+        limit: u128,
+    },
 }
 
 impl Pending {
@@ -1173,7 +1249,8 @@ impl Pending {
             Pending::Register { record_slot, .. }
             | Pending::Fees { record_slot, .. }
             | Pending::Retired { record_slot }
-            | Pending::Listing { record_slot, .. } => *record_slot,
+            | Pending::Listing { record_slot, .. }
+            | Pending::Collect { record_slot, .. } => *record_slot,
             Pending::Time(p) => p.record.record_slot,
         }
     }
@@ -1237,7 +1314,8 @@ impl TokenState {
     }
 
     /// The fixed relay fee of registered denomination `amount`, or `NOT_REGISTERED` if it is not
-    /// registered. Claims never consult `schedules`: the mint fee was taken on Ethereum at deposit.
+    /// registered. Claims never consult `schedules`: the mint fee was escrowed on Ethereum at deposit and is minted
+    /// to the fee recipient by `CollectFees`, in a total over many deposits (ADR 0048).
     pub fn relay_fee_for(&self, amount: u128) -> Result<u128, u8> {
         let d = self.entry.index_of(amount).ok_or(code::NOT_REGISTERED)?;
         Ok(self.entry.relay_fees[d])
@@ -1314,6 +1392,46 @@ pub struct PendingClaim {
 pub struct BurnRecord {
     pub config_id: Root,
     pub note: Note,
+}
+
+/// `fees(cid, token)` (ADR 0048): the protocol fees of `token` minted to the fee recipient under `cid` so far, in base
+/// units, a 256-bit big-endian word as the vault's total is (a cumulative total over a deployment's life is not bounded
+/// by 2^128 even though each fee is: the review of 27 November 2026). It only grows, and never above the vault's
+/// attested [`lez_fees_slot`] total.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct FeesState {
+    pub config_id: Root,
+    pub token: Address,
+    pub collected: Word,
+}
+
+impl FeesState {
+    /// The state before the first collection: nothing minted.
+    pub fn new(config_id: Root, token: Address) -> Self {
+        FeesState { config_id, token, collected: [0u8; 32] }
+    }
+
+    /// The count as a `u128`, for tests and displays of counts below 2^128 (panics above it).
+    pub fn collected_u128(&self) -> u128 {
+        u128_of(&self.collected).expect("a count below 2^128")
+    }
+
+    /// What `AccrueFees` mints of an attested `total`: the part not minted yet, at most `limit` (one mint is a `u128`,
+    /// as every LEZ amount), and the count after it. `IMPORT_MISMATCH` for a total below the count (an older record than
+    /// one already used), `ALREADY_WRITTEN` when nothing is left to mint, `BAD_MESSAGE` for a zero limit.
+    pub fn accrue(&self, total: &Word, limit: u128) -> Result<(u128, FeesState), u8> {
+        if limit == 0 {
+            return Err(code::BAD_MESSAGE);
+        }
+        let due = word_sub(total, &self.collected).ok_or(code::IMPORT_MISMATCH)?;
+        if due == [0u8; 32] {
+            return Err(code::ALREADY_WRITTEN);
+        }
+        let amount = u128_of(&due).map_or(limit, |d| d.min(limit));
+        // collected + amount <= total < 2^256: the addition cannot overflow.
+        let collected = word_add_u128(&self.collected, amount).ok_or(code::BAD_STATE)?;
+        Ok((amount, FeesState { collected, ..*self }))
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1520,6 +1638,13 @@ pub fn check_listing(
     }
 }
 
+/// The reply to `CollectFees` (ADR 0048): the vault's [`lez_fees_slot`] of `token` under the record at
+/// `record_slot`, the protocol fees it has escrowed for the fee recipient on LEZ, as the 256-bit word the vault holds.
+pub fn check_lez_fees(config: &BridgeConfig, token: &Address, record_slot: u64, attestation: &Attestation) -> Result<Word, u8> {
+    let [word] = vault_slots(config, record_slot, attestation, [lez_fees_slot(token)]).ok_or(code::IMPORT_MISMATCH)?;
+    Ok(word)
+}
+
 /// The reply to `AttestRetired`: the vault's [`SLOT_RETIRED`] under the record at `record_slot`
 /// must hold `retired` (`IMPORT_MISMATCH` otherwise, as for any attested fact that differs).
 pub fn check_retired(config: &BridgeConfig, record_slot: u64, attestation: &Attestation) -> Result<(), u8> {
@@ -1616,21 +1741,23 @@ pub mod code {
         /// floor; a freeze authority with a threshold outside 1 to its members, more than eight
         /// members, a repeated member or the admin (at `Init` too), more than three watchers; a
         /// transfer of zero or of an amount that is not a multiple of the token's LEZ unit; an inbound
-        /// depth above 216,000 slots.
+        /// depth above 216,000 slots; a `CollectFees` limit of zero, or a fee mint that is not a
+        /// multiple of the LEZ unit; a mint or burn fee that is not a multiple of the LEZ unit.
         BAD_MESSAGE = 240;
         /// Stored state that does not decode, or is another role's, or a transaction-internal
         /// step (a pending attestation or claim) found where none can be.
         BAD_STATE = 241;
         /// Mints or burns frozen (of the token, or of the whole configuration), or an import
         /// after `Sunset`, or a role proposal applied before its 14 days of attested time, or an
-        /// import under a record less than the configuration's inbound depth behind its clock's.
+        /// import or a fee collection under a record less than the configuration's inbound depth
+        /// behind its clock's.
         FROZEN = 242;
         /// An internal message from an actor other than the expected one, a read with nobody to
         /// reply to, or a receiver that is not the actor the message names.
         WRONG_SENDER = 243;
         /// A write-once account already written: the configuration, a root at the same leaf
         /// count, a token's entry, a burn tag (the same note again, or another note with its tag),
-        /// the sunset.
+        /// the sunset; a `CollectFees` whose attested total is already minted (ADR 0048).
         ALREADY_WRITTEN = 244;
         /// No configuration (an import before `Init`), or no imported root (a claim), or no
         /// role proposal to apply or cancel.
@@ -1640,7 +1767,8 @@ pub mod code {
         /// The attested facts are not the vault's slots holding what the message says (the root
         /// and count, the registry entry, a fee schedule, a schedule out of order), or are of
         /// another instance, chain or record; a vault whose `retired` flag is not set; a listing
-        /// word other than 0 or 1, or a listing record no newer than the one the token holds.
+        /// word other than 0 or 1, or a listing record no newer than the one the token holds; a
+        /// `CollectFees` total below what is already minted (an older record).
         IMPORT_MISMATCH = 247;
         /// A leaf index at or above the imported root's leaf count (a root not imported yet is
         /// `NOT_FOUND`).
@@ -1815,5 +1943,138 @@ mod tests {
             0x5d, 0x24, 0x5c, 0xc7, 0x99, 0x11, 0x54, 0x62, 0xf9, 0x64, 0x9a, 0x0c, 0x6f, 0xc4,
         ];
         assert_eq!(listing_slot(&token), vector);
+    }
+
+    /// F.13, ADR 0048: the vault's cumulative protocol-fee total sits at its own SHA-256 slot, the vault's formula
+    /// (`sha256("ferrata/vault/lezfees/v1" ‖ token)`; the vault's `vault/test/vectors/registry-storage.json`, which
+    /// `RegistryStorage.t.sol` checks, holds the same slot).
+    #[test]
+    fn the_lez_fees_slot_is_its_own() {
+        let eth = [0u8; 20];
+        assert_eq!(lez_fees_slot(&eth), plain_hash(&[b"ferrata/vault/lezfees/v1", &eth]));
+        let vector: [u8; 32] = [
+            0x75, 0x62, 0xa4, 0x5b, 0xac, 0x1c, 0x88, 0x19, 0xe7, 0x29, 0xcd, 0x0e, 0xae, 0xca, 0x60, 0xa9, 0x25, 0x15,
+            0xa5, 0x57, 0x3d, 0xe0, 0xe2, 0x91, 0x91, 0x90, 0xdb, 0xf5, 0xf3, 0xf1, 0x76, 0x76,
+        ];
+        assert_eq!(lez_fees_slot(&eth), vector);
+        for other in [registry_slot(&eth), fee_slot(&eth, 0), fee_slot(&eth, 1), listing_slot(&eth), SLOT_COUNT] {
+            assert_ne!(lez_fees_slot(&eth), other);
+        }
+        assert_ne!(lez_fees_slot(&eth), lez_fees_slot(&[0x7e; 20]));
+    }
+
+    /// ADR 0048: the new messages and the new state take the next variant indices, so every message and state the
+    /// B1 program encodes (variants 0–30, states 0–5) encodes as before.
+    #[test]
+    fn the_fee_messages_and_state_are_appended() {
+        let proof = VaultProof::default();
+        let collect =
+            BridgeMessage::CollectFees { config_id: [7; 32], token: [2; 20], record_slot: 9, limit: u128::MAX, proof };
+        let bytes = borsh::to_vec(&collect).unwrap();
+        assert_eq!(bytes[0], 31);
+        assert_eq!(bytes.len(), 1 + 32 + 20 + 8 + 16 + 4 + 4);
+        let accrue = BridgeMessage::AccrueFees { config_id: [7; 32], token: [2; 20], total: word_of_u128(5), limit: 6 };
+        assert_eq!(borsh::to_vec(&accrue).unwrap()[0], 32);
+        let mint = BridgeMessage::MintFees { config_id: [7; 32], token: [2; 20], amount: 5 };
+        assert_eq!(borsh::to_vec(&mint).unwrap()[0], 33);
+        let listing = BridgeMessage::SetListing { config_id: [7; 32], token: [2; 20], delisted: true, record_slot: 1 };
+        assert_eq!(borsh::to_vec(&listing).unwrap()[0], 30);
+        let fees = BridgeState::Fees(FeesState { config_id: [7; 32], token: [2; 20], collected: word_of_u128(3) });
+        let encoded = borsh::to_vec(&fees).unwrap();
+        assert_eq!((encoded[0], encoded.len()), (6, 1 + 32 + 20 + 32));
+        assert_eq!(BridgeState::try_from_slice(&encoded).unwrap(), fees);
+        let burn = BridgeState::Burn(BurnRecord {
+            config_id: [7; 32],
+            note: Note { r: [1; 32], memo: [2; 20], mac: [3; 16], token: [4; 20], amount: [5; 32], c_out: [6; 32] },
+        });
+        assert_eq!(borsh::to_vec(&burn).unwrap()[0], 4);
+    }
+
+    /// ADR 0048: what one `AccrueFees` mints of an attested total, and what it refuses.
+    #[test]
+    fn accrue_mints_the_rest_at_most_the_limit_and_refuses_an_older_total() {
+        let w = word_of_u128;
+        let none = FeesState::new([7; 32], [2; 20]);
+        let (amount, after) = none.accrue(&w(30), u128::MAX).unwrap();
+        assert_eq!((amount, after.collected), (30, w(30)));
+        assert_eq!(after.config_id, [7; 32]);
+        assert_eq!(after.token, [2; 20]);
+        // A limit splits a collection (a mint bucket smaller than what is due): the rest stays for the next one.
+        let (amount, part) = none.accrue(&w(30), 10).unwrap();
+        assert_eq!((amount, part.collected), (10, w(10)));
+        let (amount, rest) = part.accrue(&w(30), u128::MAX).unwrap();
+        assert_eq!((amount, rest.collected), (20, w(30)));
+        // Nothing new: the total is minted already.
+        assert_eq!(rest.accrue(&w(30), u128::MAX), Err(code::ALREADY_WRITTEN));
+        // An older record (a smaller total) is refused, never minted twice.
+        assert_eq!(rest.accrue(&w(29), u128::MAX), Err(code::IMPORT_MISMATCH));
+        assert_eq!(none.accrue(&w(30), 0), Err(code::BAD_MESSAGE));
+        // A total that grew mints exactly the growth.
+        let (amount, later) = rest.accrue(&w(45), u128::MAX).unwrap();
+        assert_eq!((amount, later.collected), (15, w(45)));
+    }
+
+    /// The review of 27 November 2026: a token's cumulative fee total may pass 2^128 (each fee is at most 1% of a
+    /// denomination below 2^127, but there is no bound on their number), and collections go on across it: the count is
+    /// a 256-bit word, each mint at most the limit.
+    #[test]
+    fn collections_go_on_past_two_to_the_128() {
+        let max = u128::MAX;
+        let mut above = word_of_u128(max);
+        above = word_add_u128(&above, 1).unwrap();
+        assert_eq!(above[15], 1, "2^128");
+        assert_eq!(u128_of(&above), None);
+        let start = FeesState::new([7; 32], [2; 20]);
+        // Up to exactly 2^128 - 1: one mint of it all.
+        let (amount, at_max) = start.accrue(&word_of_u128(max), max).unwrap();
+        assert_eq!((amount, at_max.collected), (max, word_of_u128(max)));
+        // One past it: the rest, 1.
+        let (amount, past) = at_max.accrue(&above, max).unwrap();
+        assert_eq!((amount, past.collected), (1, above));
+        // A due above 2^128 is minted at most the limit at a time, the count passing 2^128 on the way.
+        let total = word_add_u128(&above, 5).unwrap();
+        let (amount, part) = start.accrue(&total, max).unwrap();
+        assert_eq!((amount, part.collected), (max, word_of_u128(max)));
+        let (amount, done) = part.accrue(&total, max).unwrap();
+        assert_eq!(amount, 6);
+        assert_eq!(done.collected, total);
+        assert_eq!(done.accrue(&total, max), Err(code::ALREADY_WRITTEN));
+        assert_eq!(done.accrue(&above, max), Err(code::IMPORT_MISMATCH));
+        // The arithmetic itself.
+        assert_eq!(word_sub(&above, &word_of_u128(1)), Some(word_of_u128(max)));
+        assert_eq!(word_sub(&word_of_u128(1), &above), None);
+        assert_eq!(word_add_u128(&[0xff; 32], 1), None);
+    }
+
+    /// ADR 0048: burn fees are minted on LEZ like mint fees, so a schedule whose burn fee is not a multiple of the LEZ
+    /// unit is refused, as one whose mint fee is not.
+    #[test]
+    fn a_burn_fee_must_be_whole_lez_units() {
+        let entry = TokenEntry {
+            token: [0; 20],
+            lez_definition: [0; 32],
+            decimals: 18,
+            lez_unit: 1_000_000_000,
+            unit_weight: 1,
+            denominations: alloc::vec![1_000_000_000_000_000_000],
+            relay_fees: alloc::vec![0],
+        };
+        let schedule = |mint: u128, burn: u128| FeeSchedule {
+            index: 1,
+            from_leaf: 0,
+            announced_at: 0,
+            effective_at: FEE_NOTICE_SECONDS,
+            mint_fees: alloc::vec![mint],
+            burn_fees: alloc::vec![burn],
+            checkpoint_fees: alloc::vec![1],
+        };
+        assert_eq!(schedule(5_000_000_000, 7_000_000_000).check(&entry), Ok(()));
+        assert_eq!(schedule(5_000_000_000, 7_000_000_001).check(&entry), Err(code::BAD_MESSAGE));
+        assert_eq!(schedule(5_000_000_001, 7_000_000_000).check(&entry), Err(code::BAD_MESSAGE));
+        // Either fee may be zero (RFP-022 F.13: "The admin can also set either fee to zero").
+        assert_eq!(schedule(0, 7_000_000_000).check(&entry), Ok(()));
+        assert_eq!(schedule(5_000_000_000, 0).check(&entry), Ok(()));
+        // Above 1% of the denomination: refused.
+        assert_eq!(schedule(0, 10_000_000_001_000_000).check(&entry), Err(code::BAD_MESSAGE));
     }
 }

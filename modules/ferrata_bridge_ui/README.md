@@ -182,7 +182,7 @@ What works there: the registry and the vault read, the positions found from the 
 the public burn to an address the person enters in its checksummed form, and the release handed to the `ferrata` tool
 (its proof says which burn it is, so it is made on the person's machine). **The plaintext claim is built in the layout
 of the deployment's program**: the test network's bridge is B1 (`ferrata_bridge_b1`), whose `Claim` names a
-fee-schedule range that this tree's program (ADR 0046, `ferrata_bridge_f13`) dropped, so the module builds B1's claim
+fee-schedule range that this tree's program (since ADR 0046; `ferrata_bridge_lezfee`, ADR 0048) dropped, so the module builds B1's claim
 for it, with the range its token state gives (`ferrata_wallet::deployed`), and signs only a claim in that layout; the
 approval shows the program and the range. Run from Basecamp on this network so far: the session, the reads, the
 positions and the faucet; no claim or burn has been sent there yet. Offline, the session's replay

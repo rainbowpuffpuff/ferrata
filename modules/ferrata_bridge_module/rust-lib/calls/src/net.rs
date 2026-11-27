@@ -32,7 +32,7 @@
 //! phrase, the faucet, the plaintext claim of a deposit to a public account, the public burn, and the release's
 //! hand-off (the release proof is the `ferrata` tool's, on the person's machine). A claim is built in the layout of the
 //! deployment's program, which the network's program account must carry (checked at open): the test network's
-//! `ferrata_bridge_b1` names a fee-schedule range in its claim, this tree's `ferrata_bridge_f13` (ADR 0046) does not
+//! `ferrata_bridge_b1` names a fee-schedule range in its claim, this tree's `ferrata_bridge_lezfee` (ADR 0048) does not
 //! (`ferrata_wallet::deployed`). A deposit is made in the web wallet (Basecamp has no Logos signer for Sepolia yet).
 //! A private claim or burn needs a proof of LEZ's privacy circuit, which this module does not make.
 
@@ -68,10 +68,10 @@ pub(crate) struct Deployment {
 
 /// The deployed B1 bridge's image id (`ferrata_wallet::deployed::B1_IMAGE_ID`). Its claims carry a fee-schedule range.
 const B1_IMAGE_ID: &str = "847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515";
-/// `ferrata_bridge_f13`, this tree's program (`ferrata_wallet::deployed::F13_IMAGE_ID`, `docs/image-ids.md`): claims
-/// without a range (ADR 0046).
+/// `ferrata_bridge_lezfee`, this tree's program (`ferrata_wallet::deployed::F13_IMAGE_ID`, `docs/image-ids.md`):
+/// claims without a range (ADR 0046's layout), protocol fees minted on LEZ by `CollectFees` (ADR 0048).
 #[cfg(test)]
-const F13_IMAGE_ID: &str = "ffb47f6eaec6ef13f49505e5e80209f73d38ea53792e77656994f8069dde7675";
+const F13_IMAGE_ID: &str = "9d02d54d56b026079e94c8d9b12db69f3a96b7acccd11283f68e5bc343bfa321";
 
 /// The deployments this module knows: the network's configuration as recorded on 23 November 2026
 /// (`deploy/testnet/web/basecamp/tests/install-test/live-wallet-config.json` and `live-programs.json`). A network that
@@ -1186,7 +1186,7 @@ pub(crate) mod tests {
     /// Same loopback fixture coordinates as B1, but explicitly named this tree's program image. This deployment
     /// exists only in unit tests; production `KNOWN` is untouched, so no fictitious F13 network is advertised.
     static F13_DEPLOYMENT: Deployment = Deployment {
-        name: "internal F13 stand-in (ferrata_bridge_f13)",
+        name: "internal F13 stand-in (ferrata_bridge_lezfee)",
         bridge_program: "36iqVMFpfgHrwoeuVvZhXX3caM1JPBJh56PBw5A4H1rk",
         bridge_image_id: F13_IMAGE_ID,
         config_id: "3773b58836d2fa242e16b3eb580a15630de2a437218a432f52e5b01152ae67cd",

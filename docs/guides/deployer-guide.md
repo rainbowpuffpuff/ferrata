@@ -64,7 +64,7 @@ choose them ([`vault/README.md`](../../vault/README.md), last paragraph of "Sepo
 | Tokens, denominations, relay and checkpoint fees, `lezUnit`, `unitWeight` | three denominations per token; fees ≤ 1% each | ETH 0.001/0.01/0.1, relay 0.2%, checkpoint 0.1%; test token 100/1,000/10,000, 0.25% and 0.1% | write-once per token |
 | Caps per token and day | the smaller of 10% of escrow and a deployer-set ceiling, above an immutable floor | capped by default since milestone B1: per token and day 100 times its largest denomination (10 ETH, 1,000,000 test-token units; `ethDailyCap`, `tokenDailyCap` in the params), globally their sum, an immutable release floor of one largest denomination a day (`script/DeployVault.s.sol`, `test/DeployDefaults.t.sol`); `FERRATA_UNCAPPED=1` deploys without caps, as the live runs of November 2026 did; `script/RoundTrip.s.sol` (the earlier runs' single-script round trip) deploys none. Why 100 times: below | admin, never below the floor |
 | Attestation instance (its root id) | an instance whose checkpoint you verified | the Sepolia period-1378 bootstrap | inside `configId` |
-| Inbound finality depth | Ethereum finality, no extra epochs (depth 0) | 0 | the admin's `SetDepth` on LEZ, in beacon slots beyond finality, at most 216,000; it applies to later imports only (since B1) |
+| Inbound finality depth | Ethereum finality, no extra epochs (depth 0) | 0 | the admin's `SetDepth` on LEZ, in beacon slots beyond finality, at most 216,000; it applies to later imports only (since B1) and, since ADR 0048, to fee collections (`CollectFees`) |
 
 Sources: [`bridge.md`](../design/bridge.md) §9, §13; [`vault/README.md`](../../vault/README.md),
 "Deployment (v5)", "Roles", "Sepolia round trip"; [`lez/live/inbound/README.md`](../../lez/live/inbound/README.md).
@@ -288,9 +288,13 @@ stop and its owner (renounced or not), tokens with their caps and fee schedules,
   deposit keeps its leaf's schedule. On LEZ, `ImportFees` appends it once in force (attested), and
   `ImportFees(j, None)` attests that schedule `j` does not exist yet at a count, extending `known_until`.
   Protocol fees start at zero under an immutable 1% ceiling ([`vault/README.md`](../../vault/README.md),
-  "Fees (v5, D13)"). Under ADR 0046 the deposit's mint fee is credited to `feeRecipient` on Ethereum and only
-  denomination + relay is escrowed; pair the vault with a LEZ claim that names no schedule range and mints no mint fee.
-  Never pair it with the pre-0046 claim, which would mint an unbacked fee. Refunds return only denomination + relay.
+  "Fees (v5, D13)"; ADR 0048); either fee may be set to zero by a later announcement. Under ADR 0048 the vault escrows
+  each deposit's mint fee and each release's burn fee and counts them in `lezFees(token)`; anyone collects them on LEZ
+  (`ferrata-relayer ... collect-fees --token <token>`: the bridge program's `CollectFees`), which mints them, in the
+  wrapped token, to the configuration's fee recipient (`Controls::fee_recipient`, set at `Init`). The vault's
+  `FERRATA_FEE_RECIPIENT` is still a required parameter but is credited nothing. Pair the vault only with this tree's
+  program (`ferrata_bridge_lezfee`); B1's would mint the mint fee per claim and never collect the burn fees. Refunds
+  return only denomination + relay (the mint fee stays escrowed for the fee recipient on LEZ).
 - **Caps.** A mint and a burn token bucket per token and one per configuration on LEZ, in value units
   (`amount / lezUnit × unitWeight`); deposit and release buckets per token and globally on the vault;
   refunds draw on the release buckets. `SetCap` never goes below the configuration's immutable floor.
@@ -303,7 +307,8 @@ stop and its owner (renounced or not), tokens with their caps and fee schedules,
   `maxFreeze`, §2); the admin cannot unfreeze. `Sunset` is the freeze authority's, one-way; imports stop after it.
 - **Inbound depth** (since B1). The admin's `SetDepth` holds every later `ImportRoot` until the configuration's
   clock has read a record that many beacon slots newer than the import's (242 until then); at most 216,000 slots
-  (`lez/harness/tests/bridge_depth.rs`).
+  (`lez/harness/tests/bridge_depth.rs`). Since ADR 0048 it holds a `CollectFees` under a record the same way
+  (`lez/harness/tests/bridge_f13.rs`, `a_collection_waits_for_the_admins_inbound_depth`).
 - **Delisting** (since B1). The admin delists a token on the vault (`setDepositsEnabled(token, false)`): its
   deposits stop, and the vault writes 1 at `sha256("ferrata/vault/listing/v1" ‖ token)` (0 when relisted). Anyone
   then attests that slot on LEZ (`AttestListing`), and `token(cid, token)` records the delisting and the record it

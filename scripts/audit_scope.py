@@ -25,17 +25,17 @@ CHAR_LITERAL = re.compile(r"'(?:\\(?:x[0-9a-fA-F]{2}|u\{[0-9a-fA-F]{1,6}\}|.)|[^
 GROUPS = {
     "crates/ferrata-core/src/": (
         "consensus, SSZ/RLP/MPT/execution proofs and stores",
-        "linked into ferrata_lez / ferrata_bridge_f13",
+        "linked into ferrata_lez / ferrata_bridge_lezfee",
         "library calls from the guests; no independent entry point",
     ),
     "lez/wire/src/": (
         "attestation actors, messages, state and attestation requests",
-        "linked into ferrata_lez and ferrata_bridge_f13",
+        "linked into ferrata_lez and ferrata_bridge_lezfee",
         "defines Message for ferrata_lez",
     ),
     "lez/bridge-wire/src/": (
         "bridge actors, messages, state and vault-proof bindings",
-        "linked into ferrata_bridge_f13",
+        "linked into ferrata_bridge_lezfee",
         "defines BridgeMessage for the bridge guest",
     ),
     "lez/guests/program/src/": (
@@ -45,7 +45,7 @@ GROUPS = {
     ),
     "lez/guests/bridge/src/": (
         "LEZ deposit, burn, balances, clocks, roles and fees",
-        "LEZ R0BF ferrata_bridge_f13 (docs/image-ids.md:47)",
+        "LEZ R0BF ferrata_bridge_lezfee (docs/image-ids.md:47)",
         "main dispatches BridgeMessage",
     ),
     "checkpoint/crates/checkpoint-core/src/": (
@@ -81,7 +81,7 @@ GROUPS = {
     ),
     "bridge/crates/ferrata-bridge-core/src/": (
         "deposit/burn trees, commitments, nullifiers and release encoding",
-        "linked into release_31 and ferrata_bridge_f13",
+        "linked into release_31 and ferrata_bridge_lezfee",
         "library calls from the guests; no independent entry point",
     ),
     "bridge/guests/src/bin/release.rs": (

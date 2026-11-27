@@ -9,7 +9,8 @@
 //!   and forgeries among them: claims with a tampered witness, replayed claims, releases no guest proved, replayed and
 //!   redirected releases. After every step, read from the vault and the zone: the vault's balance is its escrow plus
 //!   what it owes; the zone's wrapped supply is what it minted less what it burnt; and **the wrapped supply plus the
-//!   unminted deposits plus the unreleased burns is the vault's escrow**, so the supply never exceeds the vault's
+//!   unminted deposits plus the unreleased burns plus the protocol fees escrowed but not yet collected on LEZ
+//!   (`lezFees` less `fees(cid, token).collected`) is the vault's escrow**, so the supply never exceeds the vault's
 //!   holdings. For each claim, the anonymity set a private claim of its deposit would have at that moment (the client's
 //!   `anonymity_set`) is recorded per denomination, twice: as run (every claim of these runs is plaintext and publishes
 //!   its deposit, which leaves every later set, refused by the bucket or not) and as if every earlier claim had been
@@ -21,12 +22,15 @@
 //!   unimported deposit refunded to its depositor, every imported one still claimed on LEZ; a new vault and
 //!   configuration take the new deposits. Then RISC Zero's emergency stop is tripped: releases and refunds stop on the
 //!   old vault, nothing else moves (Sec.9's stop-only failsafe), and the new vault goes on.
-//! * `fee_schedules_over_both_halves` (F.13, F.8): the admin announces protocol fees on the vault; seven days later
-//!   they are in force and attested on LEZ (`ImportFees`). The vault credits the mint fee at deposit. Every claim
-//!   mints only the denomination and the fixed relay fee; every release pays the denomination less the burn and
-//!   checkpoint fees of the schedule in force, credited on the vault. The client's anonymity set of a claim counts
-//!   equal-token, equal-amount deposits under the root on both sides of the fee change (before any claim, and at each
-//!   plaintext claim, which publishes its deposit).
+//! * `fee_schedules_over_both_halves` (F.13, F.8; ADR 0048): the admin announces protocol fees on the vault; seven
+//!   days later they are in force and attested on LEZ (`ImportFees`). The vault escrows each deposit's mint fee and
+//!   counts it in `lezFees`. Every claim mints only the denomination and the fixed relay fee; every release pays the
+//!   denomination less the burn and checkpoint fees of the schedule in force, the checkpoint fee credited on the vault
+//!   and the burn fee kept in escrow and counted in `lezFees`. `CollectFees` mints `lezFees` on LEZ, in the wrapped
+//!   token, to the fee recipient: once after the claims (the mint fees), once after the releases (the burn fees); an
+//!   older record's smaller total is refused. The client's anonymity set of a claim counts equal-token, equal-amount
+//!   deposits under the root on both sides of the fee change (before any claim, and at each plaintext claim, which
+//!   publishes its deposit).
 //!
 //! Runs only with `FERRATA_E2E=1` and the built tools in `FERRATA_CI_ZONE`, `FERRATA_CI_CHECKPOINT_B_ELF` and
 //! `FERRATA_CI_RELEASE_ELF` (`e2e/both-halves/run.sh` builds and sets them). Writes `e2e/both-halves/results/`.
@@ -65,7 +69,7 @@ use ferrata_cli::{
     seed::Seed,
 };
 use ferrata_lez_bridge_wire::{
-    config_actor, fee_slot, registry_slot, token_actor, BridgeConfig, BridgeMessage, CapParams, FeeSchedule,
+    config_actor, fee_slot, lez_fees_slot, registry_slot, token_actor, BridgeConfig, BridgeMessage, CapParams, FeeSchedule,
 };
 use harness::{bridge as hb, TxReport};
 use lee::{AccountId, PrivateKey, PublicAccountEvidence};
@@ -100,6 +104,7 @@ sol! {
     interface IFees {
         function announceFees(address token, uint256[] mintFees, uint256[] burnFees, uint256[] checkpointFees) external;
         function applyFees(address token) external;
+        function lezFees(address token) external view returns (uint256);
     }
     #[allow(missing_docs)]
     interface IStop {
@@ -237,8 +242,9 @@ fn scratch(name: &str) -> PathBuf {
 fn results_dir() -> PathBuf {
     let dir = std::env::var("FERRATA_BOTH_HALVES_OUT")
         .map(PathBuf::from)
-        // This tree's programs (ADR 0046) record under results/f13/; results/*.md are the earlier program's records.
-        .unwrap_or_else(|_| Path::new(env!("CARGO_MANIFEST_DIR")).join("../e2e/both-halves/results/f13"));
+        // This tree's programs (ADR 0048) record under results/f13-lez/; results/f13/ are ADR 0046's records and
+        // results/*.md the earlier program's.
+        .unwrap_or_else(|_| Path::new(env!("CARGO_MANIFEST_DIR")).join("../e2e/both-halves/results/f13-lez"));
     std::fs::create_dir_all(&dir).unwrap();
     dir
 }
@@ -545,8 +551,8 @@ async fn deposit(
     )
     .await?;
     let leaf = eth::view(p, vault, IVault::nextLeafIndexCall {}, None).await? - 1;
-    // ADR 0046: the vault escrows the denomination and the relay fee; the mint fee is credited to the fee recipient
-    // (owed) at the deposit, so it is not part of what the zone will mint.
+    // ADR 0048: the vault escrows the whole payment; the claim will mint the denomination and the relay fee, and the
+    // mint fee is counted in `lezFees`, minted to the fee recipient by a collection, not by the claim.
     side.unminted.insert(leaf, price.total - price.mint_fee);
     Ok(leaf)
 }
@@ -860,9 +866,14 @@ async fn invariants(p: &DynProvider, zone: &HarnessLedger, side: &mut Side, user
     ensure!(U256::from(s) <= escrowed, "Sec.6, {}: supply {s} exceeds the vault's escrow {escrowed}", side.name);
     let unminted: u128 = side.unminted.values().sum();
     let unreleased: u128 = side.unreleased.values().sum();
+    // ADR 0048: the protocol fees the vault escrowed for the fee recipient (`lezFees`) less what LEZ has minted of them.
+    let lez_fees = eth::view(p, side.vault, IFees::lezFeesCall { token: Address::ZERO }, None).await?.to::<u128>();
+    let collected = zone.world.fees_state(&side.ctx.cid, &[0; 20]).map_or(0, |f| f.collected_u128());
+    ensure!(collected <= lez_fees, "{}: LEZ minted {collected} of fees, above the vault's total {lez_fees}", side.name);
+    let uncollected = lez_fees - collected;
     ensure!(
-        U256::from(s + unminted + unreleased) == escrowed,
-        "{}: supply {s} + unminted {unminted} + unreleased {unreleased} == escrowed {escrowed}",
+        U256::from(s + unminted + unreleased + uncollected) == escrowed,
+        "{}: supply {s} + unminted {unminted} + unreleased {unreleased} + uncollected fees {uncollected} == escrowed {escrowed}",
         side.name
     );
     side.checked += 1;
@@ -1070,7 +1081,8 @@ async fn randomised_runs_keep_supply_within_holdings() -> Result<()> {
          program in LEZ v0.4.0-rc1's state machine, the two guests executed in RISC Zero dev mode; the mock verifier \
          accepts only the journals the guests committed. {} s in all.\n\n\
          After every step: vault balance == escrowed + owed; zone supply == minted - burnt; supply <= escrowed; and \
-         supply + unminted deposits + unreleased burns == escrowed.\n\n\
+         supply + unminted deposits + unreleased burns + fees escrowed for LEZ not yet collected (none here: every \
+         deposit and release is under schedule 0) == escrowed.\n\n\
          {cap_note}| seed | steps | deposits | imports | claims | claims capped (of them claimed later) | burns | releases | forgeries refused | \
          unminted at the end | unreleased at the end | invariant checks |\n|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n{report}\n\
          ## Anonymity sets of the claims (F.8)\n\nFor each claim, the set a private claim of its deposit would have at \
@@ -1344,7 +1356,7 @@ async fn migration_rehearsal_honours_positions_in_flight() -> Result<()> {
     let _ = writeln!(
         out,
         "\nInvariant checks: A {} times, B {} times (vault balance == escrowed + owed; supply == minted - burnt; supply + \
-         unminted + unreleased == escrowed). Forgeries refused: {}. {} s in all.",
+         unminted + unreleased + uncollected fees == escrowed, the last none here). Forgeries refused: {}. {} s in all.",
         a.checked,
         b.checked,
         log.forged,
@@ -1447,17 +1459,27 @@ async fn fee_schedules_over_both_halves() -> Result<()> {
         s1.checkpoint_fees
     );
 
-    // Schedule 1: three more deposits; the vault credits the new mint fee and escrows denomination + relay fee.
+    // Schedule 1: three more deposits; the vault escrows the whole payment and counts the mint fee in `lezFees`.
+    let owed_at_change = eth::view(&p, a.vault, IRetire::totalOwedCall { token: eth_token }, None).await?;
     for (k, who) in [ANVIL1, ANVIL2, ANVIL3].into_iter().enumerate() {
         leaves.push(deposit(&p, &mut a, &user, who, 3 + k as u32, 1).await?);
     }
     invariants(&p, &zone, &mut a, &user).await?;
+    let lez_fees = |p: DynProvider, vault: Address| async move {
+        eth::view(&p, vault, IFees::lezFeesCall { token: Address::ZERO }, None).await.map(|v| v.to::<u128>())
+    };
+    let mint_total = lez_fees(p.clone(), a.vault).await?;
+    ensure!(mint_total == 3 * s1.mint_fees[1], "lezFees holds the three deposits' mint fees: {mint_total}");
+    ensure!(
+        eth::view(&p, a.vault, IRetire::totalOwedCall { token: eth_token }, None).await? == owed_at_change,
+        "ADR 0048: no mint fee is credited on Ethereum"
+    );
 
     // LEZ: the root of all six, schedule 1 attested from the vault's own slot, and no schedule 2 at this count.
     let n = eth::view(&p, a.vault, IVault::nextLeafIndexCall {}, None).await?;
     let root = eth::view(&p, a.vault, IVault::depositRootCall {}, None).await?;
     let mut storage = Vec::new();
-    for key in [word(0), word(1), word(2), fee_key, fee_slot(&[0; 20], 2)] {
+    for key in [word(0), word(1), word(2), fee_key, fee_slot(&[0; 20], 2), lez_fees_slot(&[0; 20])] {
         storage.push((key, slot(&p, a.vault, key).await?));
     }
     let sl = clock.next();
@@ -1545,6 +1567,17 @@ async fn fee_schedules_over_both_halves() -> Result<()> {
     }
     out.push_str("## Claims (plaintext, 1 ETH each)\n\n");
     out.push_str(&table);
+
+    // The mint fees, collected on LEZ in one total (ADR 0048): anyone's `CollectFees` under the record of block `b`.
+    let fee_before = zone.world.balance(fee_holder, &cid);
+    let r = zone.world.collect_fees("A: CollectFees ETH (the mint fees)", &cid, [0; 20], b, u128::MAX, &a.vault.into_array());
+    zone.keep(r, "CollectFees 1")?;
+    let minted_fees_1 = zone.world.balance(fee_holder, &cid) - fee_before;
+    ensure!(minted_fees_1 == mint_total, "the collection minted the vault's total {mint_total}: {minted_fees_1}");
+    a.minted += minted_fees_1;
+    let r = zone.world.collect_fees("A: CollectFees ETH again", &cid, [0; 20], b, u128::MAX, &a.vault.into_array());
+    ensure!(r.exit_code == Some(244), "a second collection under the same record mints nothing (244): {:?}", r.exit_code);
+    invariants(&p, &zone, &mut a, &user).await?;
     let _ = writeln!(
         out,
         "\nEvery claim of 1 ETH mints the same fixed relay fee and no mint fee. Before any claim, a private claim of any \
@@ -1566,6 +1599,7 @@ async fn fee_schedules_over_both_halves() -> Result<()> {
     let (broot, count, _, _) = checkpoint(&p, &zone, &a, &dir, &checkpoint_elf, images.0).await?;
     advance(&p, 200).await?;
     let owed_before = eth::view(&p, a.vault, IRetire::totalOwedCall { token: eth_token }, None).await?;
+    let lez_fees_before = lez_fees(p.clone(), a.vault).await?;
     let fees_each = s1.burn_fees[1] + s1.checkpoint_fees[1];
     let mut paid = Vec::new();
     for (k, index) in burns.iter().enumerate() {
@@ -1588,16 +1622,55 @@ async fn fee_schedules_over_both_halves() -> Result<()> {
     }
     let owed_after = eth::view(&p, a.vault, IRetire::totalOwedCall { token: eth_token }, None).await?;
     ensure!(
-        owed_after - owed_before == U256::from(fees_each * burns.len() as u128),
-        "the burn and checkpoint fees credited on the vault"
+        owed_after - owed_before == U256::from(s1.checkpoint_fees[1] * burns.len() as u128),
+        "ADR 0048: only the checkpoint fees are credited on the vault"
     );
+    let burn_total = lez_fees(p.clone(), a.vault).await? - lez_fees_before;
+    ensure!(burn_total == s1.burn_fees[1] * burns.len() as u128, "lezFees grew by the releases' burn fees: {burn_total}");
     ensure!(paid.windows(2).all(|w| w[0] == w[1]), "every release of 1 ETH pays the same");
+
+    // The burn fees, collected on LEZ under a record after the releases; the earlier record's total is refused.
+    let mut storage = Vec::new();
+    for key in [word(0), word(1), word(2), lez_fees_slot(&[0; 20])] {
+        storage.push((key, slot(&p, a.vault, key).await?));
+    }
+    let sl = clock.next();
+    let b2 = zone.world.add_block(hb::Block::with_storage(sl, sl, a.vault.into_array(), &storage));
+    let fee_before = zone.world.balance(fee_holder, &cid);
+    let r = zone.world.collect_fees("A: CollectFees ETH (the burn fees)", &cid, [0; 20], b2, u128::MAX, &a.vault.into_array());
+    zone.keep(r, "CollectFees 2")?;
+    let minted_fees_2 = zone.world.balance(fee_holder, &cid) - fee_before;
+    ensure!(minted_fees_2 == burn_total, "the second collection minted the burn fees {burn_total}: {minted_fees_2}");
+    a.minted += minted_fees_2;
+    let r = zone.world.collect_fees("A: CollectFees under the older record", &cid, [0; 20], b, u128::MAX, &a.vault.into_array());
+    ensure!(r.exit_code == Some(247), "an older record's smaller total is refused (247): {:?}", r.exit_code);
+    let collected = zone.world.fees_state(&cid, &[0; 20]).map_or(0, |f| f.collected_u128());
+    ensure!(collected == mint_total + burn_total, "fees(cid, ETH) counts both collections: {collected}");
+    invariants(&p, &zone, &mut a, &user).await?;
+    let escrow_end = eth::view(&p, a.vault, IVault::escrowedCall { token: eth_token }, None).await?;
+    let supply_end = supply(&zone, &a, &user)?;
+    ensure!(
+        a.unminted.is_empty() && a.unreleased.is_empty() && U256::from(supply_end) == escrow_end,
+        "every deposit claimed, every burn released, every fee collected: the supply {supply_end} is the escrow {escrow_end}"
+    );
+    let _ = writeln!(
+        out,
+        "## Protocol fees collected on LEZ (ADR 0048)\n\nAfter the claims, one `CollectFees` under the record of the \
+         claims' root minted {minted_fees_1} wei, the vault's `lezFees` then ({mint_total}: the three schedule-1 \
+         deposits' mint fees), to the fee recipient on LEZ, in the wrapped token; the same collection again minted \
+         nothing (244). Nothing was credited on Ethereum at the deposits.\n"
+    );
     let _ = writeln!(
         out,
         "## Releases (1 ETH each, under schedule 1)\n\nEach recipient received {} wei: 1 ETH less the burn fee {} and the \
-         checkpoint fee {}, credited on the vault to the fee recipient and to the checkpoint's prover (the vault's \
-         `totalOwed` rose by {} wei over {} releases).\n\nInvariant checks: {} (vault balance == escrowed + owed; supply == \
-         minted - burnt; supply + unminted + unreleased == escrowed). Forgeries refused: {}. {} s in all.",
+         checkpoint fee {}; the checkpoint fee credited on the vault to the checkpoint's prover (the vault's `totalOwed` \
+         rose by {} wei over {} releases), the burn fee kept in escrow and counted in `lezFees` (+{burn_total} wei). A \
+         second `CollectFees`, under a record after the releases, minted {minted_fees_2} wei (the burn fees) to the fee \
+         recipient; the earlier record's smaller total was then refused (247). `fees(cid, ETH)` counts {collected} wei \
+         collected. Every deposit claimed, every burn released, every fee collected: the wrapped supply on LEZ, \
+         {supply_end} wei, is the vault's escrow, {escrow_end} wei.\n\nInvariant checks: {} (vault balance == escrowed + \
+         owed; supply == minted - burnt; supply + unminted + unreleased + uncollected fees == escrowed). Forgeries \
+         refused: {}. {} s in all.",
         paid[0],
         s1.burn_fees[1],
         s1.checkpoint_fees[1],
