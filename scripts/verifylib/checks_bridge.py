@@ -165,11 +165,15 @@ def _check_privacy_run(ctx, problems: list, base: str, real: bool) -> dict:
         _expect(problems, lez["candidate_set_sizes"] == [[1, 20]] and lez["exactly_identified"] == 1
                 and lez["success"] == 0.05, f"{label}: claim-to-burn singleton success changed")
     else:
-        # The record's partition: 18 of the 20 burns in one candidate set of 20 (each guessed at 1/20), and the
-        # record's own exactly_identified 0 for the two others, so the rate is 18/20 x 1/20 = 4.5%.
-        derived = 18 / 20 * (1 / 20)
-        _expect(problems, lez["candidate_set_sizes"] == [[1, 2], [20, 18]] and lez["exactly_identified"] == 0
-                and abs(lez["success"] - derived) < 1e-15, f"{label}: 4.5% claim-to-burn rate not rederived")
+        # The record's own partition: the burns in a candidate set of all 20 (each guessed at 1/20) and the others in
+        # singleton sets, none of them right (exactly_identified 0), so the rate is (burns in full sets)/20 x 1/20:
+        # 18 of 20, 4.5%, before ADR 0046; 19 of 20, 4.8% (displayed), since (the sets move with the build's ids).
+        sizes = {size: count for size, count in lez["candidate_set_sizes"]}
+        full = sizes.get(20, 0)
+        derived = full / 20 * (1 / 20)
+        _expect(problems, set(sizes) <= {1, 20} and full + sizes.get(1, 0) == 20 and lez["exactly_identified"] == 0
+                and abs(lez["success"] - derived) < 1e-15,
+                f"{label}: the claim-to-burn rate {lez['success']} is not {full}/20 x 1/20 from its candidate sets")
     # The adversary table row by row: each game's own six cells against its own JSON object, not a search of the
     # whole document (another game's cells would satisfy that).
     adversary_rows = _table(summary, "game")
