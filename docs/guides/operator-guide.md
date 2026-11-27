@@ -167,7 +167,8 @@ two-hour cadence (§2).
   their draws give, however often each polls. An `Open` that falls due when an update is served is counted from the
   block the daemon had read if it polls again before the next block, and from the next block if not: a daemon polling
   once a block starts that count a block later than one polling several times a block about half the time, a bias
-  against the slower poller that no test or run here measures apart. Polling more often only notices a turn sooner, within the
+  against the slower poller that no test or run here measures apart. Polling more often only notices a turn sooner,
+  within the
   blocks between two readings: an operator polling less often than once a block notices some turns up to its poll
   interval late, and counts a turn from the block after its previous reading (at most one block back), which can be
   before the step fell due: reading every 1.5 blocks the two about cancel, reading every third block it notices late
@@ -223,7 +224,8 @@ two-hour cadence (§2).
   in each run where one replay served both daemons and no adversary ran (these, G6–G11), the same instance, updates and
   keys repeating largely the same draws; with copies (G23) 0.498, beside the adversary (G24) 0.497. No run here reads
   less often than once a block or at the example's 12 s. The latency at window 8 is longer than G10's (105 / 157 s), a
-  turn being a 10-s block rather than a round of about 6 s. With copies (G23) every abandoned job was left at its `Open`,
+  turn being a 10-s block rather than a round of about 6 s. With copies (G23) every abandoned job was left at its
+  `Open`,
   opened before the other's `Open` was in a final block: 5 in the same block, 1 ambiguous, and 4 (0.017 of the completed
   jobs' gas) once the other's block was published, which a read of the newest block would have stopped (the daemon reads
   final blocks); A3's ratio there counts refused steps only, and the duplicates show as abandoned gas (0.042). A3's

@@ -209,14 +209,14 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    that reads more often reaches no turn sooner: it only notices a turn sooner, within the blocks between two of its
    readings (for a step a block makes due; an `Open` falls due when an update is served, between blocks, and an
    updater reading once a block starts its count for it a block later than one reading several times a block about
-   half the time: ADR 0049). A turn that starts at a reading is counted from the block after the updater's previous reading, the first
-   at which what it now finds due can have become due, but at most one block before the reading (`due_clock`): one
-   reading every two blocks does not also lose the block between its readings to the start of the count, and one back
-   after a long gap waits its draw like any other (`tests/turns.rs`; in process, honest
-   updaters reading three times and once a block pay 0.533 / 0.467 of the honest fees, counted in rounds 0.847 / 0.153;
-   one reading every 1.5 blocks pays 0.549 against one reading twice a block; one reading every third block, which
-   notices its turns up to three blocks late, pays 0.329: `results/gate-polls.txt`; an operator should read the chain
-   at least once a block). The clock never goes back (a lower height leaves it where it was) and keeps the kind of its
+   half the time: ADR 0049). A turn that starts at a reading is counted from the block after the updater's previous
+   reading, the first at which what it now finds due can have become due, but at most one block before the reading
+   (`due_clock`): one reading every two blocks does not also lose the block between its readings to the start of the
+   count, and one back after a long gap waits its draw like any other (`tests/turns.rs`; in process, honest updaters
+   reading three times and once a block pay 0.533 / 0.467 of the honest fees, counted in rounds 0.847 / 0.153; one
+   reading every 1.5 blocks pays 0.549 against one reading twice a block; one reading every third block, which notices
+   its turns up to three blocks late, pays 0.329: `results/gate-polls.txt`; an operator should read the chain at least
+   once a block). The clock never goes back (a lower height leaves it where it was) and keeps the kind of its
    first reading; a backend that gives no height counts the updater's rounds, as before. The failure handling counts
    rounds still (holds after a refusal, the breaker, demoted sources): it decides nothing between updaters whose steps
    land. Two honest updaters collide on a job's step only when their turns for it end in the same block (or before one
