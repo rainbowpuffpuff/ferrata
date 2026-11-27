@@ -292,7 +292,11 @@ def main():
                       f"{width} px js={js}: reviewer link {key} is {href!r}, not {want!r}")
                 if want.startswith("#"):
                     link.click()
-                    rp.wait_for_timeout(150)
+                    try:  # the page scrolls smoothly (site.css): wait until the section's top is on the screen
+                        rp.wait_for_function("(s) => { const t = document.querySelector(s).getBoundingClientRect().top; "
+                                             "return t >= -2 && t < innerHeight; }", arg=want, timeout=4000)
+                    except Exception:  # noqa: BLE001  the check below names what was seen
+                        pass
                     box = rp.locator(want).bounding_box()
                     check(rp.url.endswith(want) and box and -2 <= box["y"] < 900,
                           f"{width} px js={js}: reviewer link {key} does not bring {want} into view")
