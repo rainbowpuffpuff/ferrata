@@ -47,14 +47,18 @@ machine has its own sums: the README's "What the sha256 pins of Rust binaries me
 ## 2. LEZ: deploy the program of ADR 0048 (the test network's host, as root)
 
 The day-one kit in this tree pins this tree's bridge program (`lez/testnet04/day1.sh`: `BRIDGE_SHA256`,
-`BRIDGE_IMAGE`). `deploy-programs.sh` installs the bridge binary from `/opt/ferrata/programs/ferrata_bridge_b1.bin`
-(the name of the program it first deployed); give it this tree's binary under a name of its own and point the copy at
-it, then run only the kit's bridge stage on the existing network:
+`BRIDGE_IMAGE`). The host runs the kit from its source copy, `/opt/ferrata/src/ferrata`, unpacked from the bundle
+`deploy/testnet/deploy.sh` uploaded with B1's tree: replace that copy with this tree first (B1's `day1.sh` would
+refuse the new binary in its `check_programs`, before anything is sent). `deploy-programs.sh` installs the bridge
+binary from `/opt/ferrata/programs/ferrata_bridge_b1.bin` (the name of the program it first deployed); give it this
+tree's binary under a name of its own and point the copy at it, then run only the kit's bridge stage on the existing
+network (the kit reuses the keys it holds in `/var/lib/ferrata/day1`; it makes new ones only where there are none):
 
 ```sh
+cd /opt/ferrata/src/ferrata                 # this tree, as above
 install -m 644 ferrata_bridge.bin /opt/ferrata/programs/ferrata_bridge_lezfee.bin   # sha256 a17854cc…
 sed -i 's#/opt/ferrata/programs/ferrata_bridge_b1.bin#/opt/ferrata/programs/ferrata_bridge_lezfee.bin#' \
-  /opt/ferrata/src/ferrata/deploy/testnet/deploy-programs.sh
+  deploy/testnet/deploy-programs.sh
 deploy/testnet/deploy-programs.sh plan      # the plan names the bridge program 0x9d02d54d…; check before sending
 deploy/testnet/deploy-programs.sh run       # (e) deploys it if it is not on chain
 ```
