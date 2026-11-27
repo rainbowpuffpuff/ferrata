@@ -308,9 +308,10 @@ export function mountBridge(root, c) {
   syncMint();
 
   let P = null, depositor = null, vault = null, plan = null;
-  // Connect, mint, review and the deposit share the browser wallet and the plan: one of them at a time, the asset,
-  // amount and destination fixed meanwhile (a review started during a deposit would replace the plan it sends).
-  const exclusive = lockGroup([connect, mint, review, assetSel, denom, kind]);
+  // Connect, mint, review, the deposit, "Find my deposits" and the burn's review share the browser wallet (and the
+  // deposit its plan): one of them at a time, the asset, amount and destination fixed meanwhile (a review started
+  // during a deposit would replace the plan it sends; two wallet requests at once are refused by the wallet).
+  const exclusive = lockGroup([connect, mint, review, assetSel, denom, kind, findBtn, burnBtn]);
   // The other buttons: one request at a time each, held from the click until the answer, released in finally.
   const busy = (btn, fn) => async (...args) => {
     if (btn.disabled) return;
@@ -523,7 +524,7 @@ export function mountBridge(root, c) {
     await c.persist();
     return { found, total: logs.length };
   }
-  findBtn.onclick = busy(findBtn, async () => {
+  findBtn.onclick = exclusive(async () => {
     claimOut.className = 'msg'; claimOut.textContent = 'Reading the vault\'s deposits…';
     try { const r = await findMine(); claimOut.textContent = `${r.found} of the vault's ${r.total} deposits are this wallet's.`; claimOut.className = 'msg ok'; renderList(); }
     catch (e) { claimOut.textContent = e.message ?? String(e); claimOut.className = 'msg bad'; }
@@ -581,7 +582,7 @@ export function mountBridge(root, c) {
   burnAsset.onchange = () => { clearBurn(); refreshHoldings(); };   // every change reads; a stale answer is dropped
   burnDenom.onchange = clearBurn;
   burnTo.addEventListener('input', clearBurn);
-  burnBtn.onclick = async () => {
+  burnBtn.onclick = exclusive(async () => {
     clearBurn(); burnBtn.disabled = true; burnOut.className = 'msg'; burnOut.textContent = 'Preparing the review…';
     try {
       if (!c.S.seed) throw new Error('Burning needs a wallet made from a recovery phrase (the note is derived from it).');
@@ -602,7 +603,7 @@ export function mountBridge(root, c) {
       burnOut.textContent = 'Check the recipient character by character, then sign.'; burnOut.className = 'msg';
       burnGo.disabled = false;
     } catch (e) { burnOut.textContent = e.message; burnOut.className = 'msg bad'; } finally { burnBtn.disabled = false; }
-  };
+  });
   burnGo.onclick = async () => {
     if (!burnPlan) return;
     const { plan, A, to, amount } = burnPlan; clearBurn();

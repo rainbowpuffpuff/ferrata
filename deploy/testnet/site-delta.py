@@ -181,6 +181,11 @@ def plan(manifest: dict, ref: str, parts) -> dict:
         raise SystemExit(f"site-delta: {BUILD}/build.json is not at {ref}")
     build_files = set(json.loads(head[f"{BUILD}/build.json"])["files"])
     entries = manifest.get("files") or []
+    for e in entries:   # git reads `REF:repo_path` lines, and install.sh reads paths unquoted: nothing else gets through
+        for key in ("path", "repo_path"):
+            v = str(e.get(key, "")).lstrip("/")
+            if not PATH_OK.match(v) or ".." in v.split("/"):
+                raise SystemExit(f"site-delta: an unexpected {key} in the manifest: {e.get(key)!r}")
     served = {e["path"]: e for e in entries}
     want = {}   # served path -> repository path, for every file this ref would serve from the parts it knows
     for e in entries:

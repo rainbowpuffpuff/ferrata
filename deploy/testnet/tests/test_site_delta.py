@@ -70,6 +70,13 @@ class Plan(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=HERE) as d, self.assertRaises(SystemExit):
             sd.pack(sd.plan(m, HEAD, {"build"}), HEAD, Path(d))
 
+    def test_a_repository_path_with_a_space_is_refused_before_git_reads_it(self):
+        m, _, _ = served_now()
+        m["files"][0]["repo_path"] = "deploy/testnet/web/build/a b.html"
+        with self.assertRaises(SystemExit) as cm:
+            sd.plan(m, HEAD, {"build"})
+        self.assertIn("unexpected repo_path", str(cm.exception))
+
     def test_a_path_install_sh_could_misread_is_refused(self):
         m, _, _ = served_now()
         m["files"].append({"path": "/a b.html", "sha256": "4" * 64, "repo_path": f"{sd.BUILD}/index.html"})
