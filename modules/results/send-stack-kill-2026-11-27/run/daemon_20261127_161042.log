@@ -1,0 +1,117 @@
+[2026-11-27 16:10:42.697] [info] Inter-module access enforcement is OFF (no access policy set): any loaded module may call any other
+[2026-11-27 16:10:42.699] [info] [logos] Granting host services to 'capability_module': token_registry,token_delivery
+[2026-11-27 16:10:42.713] [out] [capability_module] [2026-11-27 16:10:42.713] [info] Granting host services to capability_module: ["token_registry","token_delivery"]
+[2026-11-27 16:10:42.713] [info] [logos] Module loaded: capability_module
+[2026-11-27 16:10:42.728] [info] [logos] Module loaded: modules_state
+[2026-11-27 16:10:42.733] [info] [logos] Pushed module snapshot to modules_state
+[2026-11-27 16:10:42.746] [info] [logos] Module loaded: package_manager
+[2026-11-27 16:10:42.762] [info] [logos] [storage_module] StorageModuleImpl: Initializing...
+[2026-11-27 16:10:42.762] [info] [logos] Module loaded: storage_module
+[2026-11-27 16:10:42.778] [info] [logos] Module loaded: package_downloader
+[2026-11-27 16:10:42.782] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+Logosctl daemon started (pid 63594, instance fdba97fab1b7)
+Daemon state: OUT/session/daemon/state.json
+Local client config: OUT/session/client/config.yaml
+[2026-11-27 16:10:42.784] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:43.305] [warning] [logos] [package_manager] Warning: Package is unsigned: ../tmp/agents/t-mod/out/stack/lgx-eth_rpc_module/logos-eth_rpc_module-module-lib.lgx
+[2026-11-27 16:10:43.645] [warning] [logos] [package_manager] Warning: Package is unsigned: ../tmp/agents/t-mod/out/stack/lgx-fee_module/logos-fee_module-module-lib.lgx
+[2026-11-27 16:10:44.145] [warning] [logos] [package_manager] Warning: Package is unsigned: ../tmp/agents/t-mod/out/stack/lgx-keystore_module/logos-keystore_module-module-lib.lgx
+[2026-11-27 16:10:44.678] [warning] [logos] [package_manager] Warning: Package is unsigned: ../tmp/agents/t-mod/out/stack/lgx-signer_manager_module/logos-signer_manager_module-module-lib.lgx
+[2026-11-27 16:10:45.090] [warning] [logos] [package_manager] Warning: Package is unsigned: ../tmp/agents/t-mod/out/stack/lgx-tx_sender_module/logos-tx_sender_module-module-lib.lgx
+[2026-11-27 16:10:45.441] [warning] [logos] [package_manager] Warning: Package is unsigned: ../tmp/agents/t-mod/out/stack/lgx-evm_signer_cli/logos-evm_signer_cli-module-lib.lgx
+[2026-11-27 16:10:46.763] [warning] [logos] [package_manager] Warning: Package is unsigned: ../tmp/agents/t-mod/out/check/lgx-ferrata_relayer_module/logos-ferrata_relayer_module-module-lib.lgx
+[2026-11-27 16:10:47.955] [warning] [logos] [package_manager] Warning: Package is unsigned: ../tmp/agents/t-mod/out/check/lgx-ferrata_monitor_module/logos-ferrata_monitor_module-module-lib.lgx
+[2026-11-27 16:10:48.241] [info] [logos] Optional dependency 'keycard_module' of 'signer_manager_module' is not installed; loading without it
+[2026-11-27 16:10:48.241] [info] [logos] Optional dependency 'keycard_shell_module' of 'signer_manager_module' is not installed; loading without it
+[2026-11-27 16:10:48.241] [info] [logos] Optional dependency 'qr_signer_module' of 'signer_manager_module' is not installed; loading without it
+[2026-11-27 16:10:48.241] [info] [logos] Optional dependency 'verified_proxy_module' of 'eth_rpc_module' is not installed; loading without it
+[2026-11-27 16:10:48.256] [info] [logos] Module loaded: keystore_module
+[2026-11-27 16:10:48.274] [info] [logos] Module loaded: eth_rpc_module
+[2026-11-27 16:10:48.294] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:48.295] [info] [logos] Module loaded: signer_manager_module
+[2026-11-27 16:10:48.312] [info] [logos] Module loaded: fee_module
+[2026-11-27 16:10:48.334] [info] [logos] Module loaded: tx_sender_module
+[2026-11-27 16:10:48.337] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:48.341] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: no listener at "local:logos_keycard_shell_module_fdba97fab1b7" -- request for "keycard_shell_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-27 16:10:48.358] [info] [logos] Optional dependency 'token_list_module' of 'evm_signer_cli' is not installed; loading without it
+[2026-11-27 16:10:48.375] [info] [logos] Module loaded: evm_signer_cli
+[2026-11-27 16:10:48.379] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:48.422] [info] [logos] Module loaded: ferrata_relayer_module
+[2026-11-27 16:10:48.465] [info] [logos] Module loaded: ferrata_monitor_module
+[2026-11-27 16:10:48.503] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:49.401] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: Timeout waiting for replica: "keycard_shell_module"
+[2026-11-27 16:10:49.402] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: no listener at "local:logos_keycard_module_fdba97fab1b7" -- request for "keycard_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-27 16:10:50.501] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: Timeout waiting for replica: "keycard_module"
+[2026-11-27 16:10:50.502] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: no listener at "local:logos_qr_signer_module_fdba97fab1b7" -- request for "qr_signer_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-27 16:10:51.601] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: Timeout waiting for replica: "qr_signer_module"
+[2026-11-27 16:10:51.644] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:51.684] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:51.704] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:51.751] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:51.781] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:51.800] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:52.000] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_shell_module"::"signer_accounts_changed"' still not reachable after 3709 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:10:52.000] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_shell_module"::"sign_progress"' still not reachable after 3709 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:10:52.000] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_module"::"signer_accounts_changed"' still not reachable after 3709 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:10:52.000] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_module"::"sign_progress"' still not reachable after 3709 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:10:52.000] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"qr_signer_module"::"signer_accounts_changed"' still not reachable after 3708 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:10:52.000] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"qr_signer_module"::"sign_progress"' still not reachable after 3708 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:10:52.036] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:52.041] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:52.045] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:54.258] [critical] [logos] Module process crashed: ferrata_monitor_module
+[2026-11-27 16:10:54.258] [critical] [logos] Module process crashed: fee_module
+[2026-11-27 16:10:54.258] [critical] [logos] Module process crashed: eth_rpc_module
+[2026-11-27 16:10:54.258] [critical] [logos] Module process crashed: tx_sender_module
+[2026-11-27 16:10:54.258] [critical] [logos] Module process crashed: signer_manager_module
+[2026-11-27 16:10:54.258] [critical] [logos] Module process crashed: keystore_module
+[2026-11-27 16:10:54.258] [warning] [logos] [evm_signer_cli] Warning: LogosAPIConsumer: '"signer_manager_module"::"approval_offered"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
+[2026-11-27 16:10:54.258] [warning] [logos] [evm_signer_cli] Warning: LogosAPIConsumer: '"signer_manager_module"::"approval_settled"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
+[2026-11-27 16:10:54.258] [critical] [logos] Module process crashed: ferrata_relayer_module
+[2026-11-27 16:10:54.607] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_signer_manager_module_fdba97fab1b7" -- request for "signer_manager_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-27 16:10:54.665] [info] [logos] Optional dependency 'verified_proxy_module' of 'eth_rpc_module' is not installed; loading without it
+[2026-11-27 16:10:54.683] [info] [logos] Module loaded: eth_rpc_module
+[2026-11-27 16:10:54.756] [info] [logos] Module loaded: fee_module
+[2026-11-27 16:10:54.828] [info] [logos] Module loaded: keystore_module
+[2026-11-27 16:10:54.885] [info] [logos] Optional dependency 'keycard_module' of 'signer_manager_module' is not installed; loading without it
+[2026-11-27 16:10:54.885] [info] [logos] Optional dependency 'keycard_shell_module' of 'signer_manager_module' is not installed; loading without it
+[2026-11-27 16:10:54.885] [info] [logos] Optional dependency 'qr_signer_module' of 'signer_manager_module' is not installed; loading without it
+[2026-11-27 16:10:54.904] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:54.905] [info] [logos] Module loaded: signer_manager_module
+[2026-11-27 16:10:54.987] [info] [logos] Module loaded: tx_sender_module
+[2026-11-27 16:10:54.991] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:54.994] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: no listener at "local:logos_keycard_shell_module_fdba97fab1b7" -- request for "keycard_shell_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-27 16:10:55.001] [info] [logos] [evm_signer_cli] Info: LogosAPIConsumer: '"signer_manager_module"::"approval_offered"' subscription RE-ARMED (generation 2) after 742 ms -- events emitted while it was down were not delivered
+[2026-11-27 16:10:55.001] [info] [logos] [evm_signer_cli] Info: LogosAPIConsumer: '"signer_manager_module"::"approval_settled"' subscription RE-ARMED (generation 2) after 742 ms -- events emitted while it was down were not delivered
+[2026-11-27 16:10:55.001] [warning] [logos] [signer_manager_module] Warning: ModuleProxy: rejecting unauthorized call to "pending" - auth token not recognized
+[2026-11-27 16:10:55.001] [warning] [logos] [evm_signer_cli] Warning: LogosAPIClient: token for "signer_manager_module" rejected by provider; re-exchanging and retrying once
+[2026-11-27 16:10:55.003] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:55.069] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:55.071] [info] [logos] Module loaded: ferrata_relayer_module
+[2026-11-27 16:10:55.156] [info] [logos] Module loaded: ferrata_monitor_module
+[2026-11-27 16:10:56.002] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: Timeout waiting for replica: "keycard_shell_module"
+[2026-11-27 16:10:56.002] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: no listener at "local:logos_keycard_module_fdba97fab1b7" -- request for "keycard_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-27 16:10:57.101] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: Timeout waiting for replica: "keycard_module"
+[2026-11-27 16:10:57.102] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: no listener at "local:logos_qr_signer_module_fdba97fab1b7" -- request for "qr_signer_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-27 16:10:58.202] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: Timeout waiting for replica: "qr_signer_module"
+[2026-11-27 16:10:58.339] [info] [logos] [tx_sender_module] tx_sender_module: 2 unsettled nonces carried over from disk
+[2026-11-27 16:10:58.483] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:58.502] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_shell_module"::"signer_accounts_changed"' still not reachable after 3600 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:10:58.502] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_shell_module"::"sign_progress"' still not reachable after 3600 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:10:58.502] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_module"::"signer_accounts_changed"' still not reachable after 3600 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:10:58.502] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_module"::"sign_progress"' still not reachable after 3600 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:10:58.502] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"qr_signer_module"::"signer_accounts_changed"' still not reachable after 3600 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:10:58.502] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"qr_signer_module"::"sign_progress"' still not reachable after 3599 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:10:58.519] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:58.538] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:58.541] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:58.593] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:58.623] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:58.642] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:58.726] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:10:58.729] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:11:01.118] [critical] [logos] Module process crashed: ferrata_relayer_module
+[2026-11-27 16:11:01.839] [info] [logos] Module loaded: ferrata_relayer_module
+[2026-11-27 16:11:08.196] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:11:08.227] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:11:08.247] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)

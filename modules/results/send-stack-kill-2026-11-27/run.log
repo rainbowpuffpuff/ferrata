@@ -1,0 +1,58 @@
+PASS devnet-register-eth
+PASS devnet-deposit
+PASS logos-core-custody
+PASS K0-submitCandidate-once
+PASS K0-via-tx_sender_module
+== K1 killed: daemon 0 hosts 7 (keystore_module eth_rpc_module signer_manager_module fee_module tx_sender_module ferrata_relayer_module ferrata_monitor_module )
+== K1: the broadcast trapped at the proxy; in flight: {"key":"finalizeAttested:0xb46900967f2b0a08340f1582449ba94c7e59924dad5422a17c272c78d2693301","nonce":1,"hash":null,"request":"snd_smh_523dd69db7533bdcf5f9b503ff393f6b2"}; every module host SIGKILLed
+PASS K1-nothing-left-before-restart
+== K1: after the restart the approver found locked wallets / still locked after its unlock: 2 0
+PASS K1-custody-after-restart
+== K1: after the restart: start,inflight-request-forgotten,inflight-lost,inflight-resent,finalized,stop
+PASS K1-finalizeAttested-once
+PASS K1-no-inflight-left
+== K2 killed: daemon 0 hosts 1 (ferrata_relayer_module )
+== K2: the release's broadcast reached the node, its answer held; in flight: {"key":"release:0x39227af5d1256e38697e730f1997ba18686116f5ca10c1c2f9d443371cf3f637","nonce":2,"hash":null,"request":"snd_smh_fa900dd7ec06d1732c5cf69ecdee66872"}; the relayer module's host SIGKILLed
+PASS K2-mined-while-held
+PASS K2-custody-after-restart
+== K2: after the restart: start,inflight-request-unknown,inflight-found,job-done,fees-collected,stop
+PASS K2-release-once
+FAIL K2-recipient-paid-once: expected [100000000000000000], got [98900000000000000]
+PASS K2-nullifier-used
+PASS K2-claimOwed-once
+PASS K2-no-inflight-left
+== K3 killed: daemon 1 hosts 13 (ferrata_relayer_module capability_module modules_state package_manager storage_module package_downloader evm_signer_cli eth_rpc_module fee_module keystore_module signer_manager_module tx_sender_module ferrata_monitor_module )
+PASS K3-daemon-and-every-host-killed
+PASS K3-nothing-of-the-session-left
+== K3: broadcast and pending (txpool 0x1); in flight: {"key":"submitCandidate:0xdc3ebe7a4a5971a7bc023a7a2f3ecba83e01ac64e775dfa00a5601eb76c12c06","nonce":4,"hash":"0xdf66b0f8f72e3f6bdd75caa43c2db53b58340e34c82a845743ea49f544c5e91f","request":"snd_smh_702725f8ca22524099b5e099cba11d534"}; Logos Core SIGKILLed (daemon and hosts)
+PASS K3-pending-not-mined
+== K3: after the restart the approver found locked wallets / still locked after its unlock: 2 0
+PASS K3-custody-after-restart
+== K3: after the restart: start,job-done,candidate-waiting,stop
+PASS K3-submitCandidate-once
+PASS K3-no-inflight-left
+PASS K4-nothing-sent-during-outage
+== K4: during the outage: ["the Ethereum endpoint did not answer within 600 s: error sending request for url (http://127.0.0.1:51088/): error sending request for url (http://127.0.0.1:51088/): client error (SendRequest): connection closed before message completed"]
+PASS K4-finalizeAttested-once
+== K5: the broadcast answered 503 and forwarded late: 1 late forward(s); the first round: start,job-deferred,stop; in flight: {"key":"submitCandidate:0xb39b18cf57d406e5d8abfc855f483129ce3bc82bc0133ac9a8daca233778a7db","nonce":6,"hash":null,"request":"snd_smh_ec75702f4a4ca61d1882565e3a6662702"}
+== K5: the next round: start,inflight-request-unknown,inflight-found,job-done,candidate-waiting,stop
+PASS K5-submitCandidate-once
+PASS K5-no-inflight-left
+PASS monitor-custody
+PASS M1-wrong-candidate-submitted
+== M1: the monitor's cancel trapped at the proxy; killed: daemon 0 hosts 7 (keystore_module eth_rpc_module signer_manager_module fee_module tx_sender_module ferrata_relayer_module ferrata_monitor_module )
+PASS M1-nothing-left-before-restart
+PASS M1-custody-after-restart
+== M1: after the restart, the alerts: [{"kind":"started","via":null},{"kind":"cancelled","via":{"behind":"0x9aa4a4b3e3331f1a6f8f319dc672d3f2ec0c369b93cec5a039ce438e9a9f9621","gapFill":true,"nonce":0,"path":"plain"}},{"kind":"candidate-passed","via":null},{"kind":"stopped","via":null}]
+PASS M1-cancelled-once
+== M1: the watcher's transactions: [{"nonce":0,"call":"cancelCandidate","status":1},{"nonce":1,"call":"cancelCandidate","status":0}]
+PASS M1-candidate-gone
+PASS M1-watcher-nothing-queued
+PASS M1-watcher-nonces-without-gap
+PASS total-relayer-transactions
+PASS nonces-without-gap
+PASS every-receipt-status-1
+PASS jobs-booked
+PASS inbox-empty
+PASS vault-final-state
+PASS 39 FAIL 1

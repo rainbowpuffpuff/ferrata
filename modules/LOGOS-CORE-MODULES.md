@@ -214,7 +214,7 @@ path, kept as the fallback and for native runs). Every reply that read Ethereum 
   `tx_sender_module` has opened the account's history (it refuses a send with `unavailable` until then). Keystore PR
   #25 (open: "Tier A and D grants come from the access policy; configure is removed") would move the grant to the
   access policy; the custody method stays the same. **After a restart of Logos Core** (measured on 27 Nov 2026,
-  `modules/scripts/send-stack-kill.sh`): nothing stays unlocked (signer manager `on_context_ready`), the keystore
+  `modules/scripts/send-stack-kill.sh`, `modules/results/send-stack-kill-2026-11-27/`): nothing stays unlocked (signer manager `on_context_ready`), the keystore
   answers the re-import "this key is here already, in a locked wallet (…): unlock it in the Signer app first", and only
   an approver may unlock a wallet (`signer_manager_module.unlock_wallet`: the Signer app, a person; `evm_signer_cli
   unlock_wallet` headless), never a custodian. `custody` then answers `"verdict": "locked"` with that step and unlocks

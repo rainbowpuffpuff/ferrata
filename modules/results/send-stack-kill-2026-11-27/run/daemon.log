@@ -1,0 +1,131 @@
+[2026-11-27 16:11:13.755] [info] Inter-module access enforcement is OFF (no access policy set): any loaded module may call any other
+[2026-11-27 16:11:13.759] [info] [logos] Granting host services to 'capability_module': token_registry,token_delivery
+[2026-11-27 16:11:13.773] [out] [capability_module] [2026-11-27 16:11:13.772] [info] Granting host services to capability_module: ["token_registry","token_delivery"]
+[2026-11-27 16:11:13.773] [info] [logos] Module loaded: capability_module
+[2026-11-27 16:11:13.787] [info] [logos] Module loaded: modules_state
+[2026-11-27 16:11:13.795] [info] [logos] Pushed module snapshot to modules_state
+[2026-11-27 16:11:13.812] [info] [logos] Module loaded: package_manager
+[2026-11-27 16:11:13.828] [info] [logos] [storage_module] StorageModuleImpl: Initializing...
+[2026-11-27 16:11:13.829] [info] [logos] Module loaded: storage_module
+[2026-11-27 16:11:13.844] [info] [logos] Module loaded: package_downloader
+[2026-11-27 16:11:13.849] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+Logosctl daemon started (pid 5286, instance bb8f3e97f7b7)
+Daemon state: OUT/session/daemon/state.json
+Local client config: OUT/session/client/config.yaml
+[2026-11-27 16:11:13.851] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:11:14.366] [warning] [logos] [package_manager] Warning: Package is unsigned: ../tmp/agents/t-mod/out/stack/lgx-eth_rpc_module/logos-eth_rpc_module-module-lib.lgx
+[2026-11-27 16:11:14.713] [warning] [logos] [package_manager] Warning: Package is unsigned: ../tmp/agents/t-mod/out/stack/lgx-fee_module/logos-fee_module-module-lib.lgx
+[2026-11-27 16:11:15.219] [warning] [logos] [package_manager] Warning: Package is unsigned: ../tmp/agents/t-mod/out/stack/lgx-keystore_module/logos-keystore_module-module-lib.lgx
+[2026-11-27 16:11:15.755] [warning] [logos] [package_manager] Warning: Package is unsigned: ../tmp/agents/t-mod/out/stack/lgx-signer_manager_module/logos-signer_manager_module-module-lib.lgx
+[2026-11-27 16:11:16.172] [warning] [logos] [package_manager] Warning: Package is unsigned: ../tmp/agents/t-mod/out/stack/lgx-tx_sender_module/logos-tx_sender_module-module-lib.lgx
+[2026-11-27 16:11:16.522] [warning] [logos] [package_manager] Warning: Package is unsigned: ../tmp/agents/t-mod/out/stack/lgx-evm_signer_cli/logos-evm_signer_cli-module-lib.lgx
+[2026-11-27 16:11:17.857] [warning] [logos] [package_manager] Warning: Package is unsigned: ../tmp/agents/t-mod/out/check/lgx-ferrata_relayer_module/logos-ferrata_relayer_module-module-lib.lgx
+[2026-11-27 16:11:19.058] [warning] [logos] [package_manager] Warning: Package is unsigned: ../tmp/agents/t-mod/out/check/lgx-ferrata_monitor_module/logos-ferrata_monitor_module-module-lib.lgx
+[2026-11-27 16:11:19.349] [info] [logos] Optional dependency 'keycard_module' of 'signer_manager_module' is not installed; loading without it
+[2026-11-27 16:11:19.349] [info] [logos] Optional dependency 'keycard_shell_module' of 'signer_manager_module' is not installed; loading without it
+[2026-11-27 16:11:19.349] [info] [logos] Optional dependency 'qr_signer_module' of 'signer_manager_module' is not installed; loading without it
+[2026-11-27 16:11:19.349] [info] [logos] Optional dependency 'verified_proxy_module' of 'eth_rpc_module' is not installed; loading without it
+[2026-11-27 16:11:19.365] [info] [logos] Module loaded: keystore_module
+[2026-11-27 16:11:19.383] [info] [logos] Module loaded: eth_rpc_module
+[2026-11-27 16:11:19.403] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:11:19.404] [info] [logos] Module loaded: signer_manager_module
+[2026-11-27 16:11:19.420] [info] [logos] Module loaded: fee_module
+[2026-11-27 16:11:19.440] [info] [logos] Module loaded: tx_sender_module
+[2026-11-27 16:11:19.445] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:11:19.449] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: no listener at "local:logos_keycard_shell_module_bb8f3e97f7b7" -- request for "keycard_shell_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-27 16:11:19.465] [info] [logos] Optional dependency 'token_list_module' of 'evm_signer_cli' is not installed; loading without it
+[2026-11-27 16:11:19.482] [info] [logos] Module loaded: evm_signer_cli
+[2026-11-27 16:11:19.487] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:11:19.528] [info] [logos] Module loaded: ferrata_relayer_module
+[2026-11-27 16:11:19.568] [info] [logos] Module loaded: ferrata_monitor_module
+[2026-11-27 16:11:19.605] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:11:20.503] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: Timeout waiting for replica: "keycard_shell_module"
+[2026-11-27 16:11:20.504] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: no listener at "local:logos_keycard_module_bb8f3e97f7b7" -- request for "keycard_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-27 16:11:21.601] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: Timeout waiting for replica: "keycard_module"
+[2026-11-27 16:11:21.601] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: no listener at "local:logos_qr_signer_module_bb8f3e97f7b7" -- request for "qr_signer_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-27 16:11:22.701] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: Timeout waiting for replica: "qr_signer_module"
+[2026-11-27 16:11:22.852] [info] [logos] [tx_sender_module] tx_sender_module: 4 unsettled nonces carried over from disk
+[2026-11-27 16:11:23.000] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:11:23.000] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_shell_module"::"signer_accounts_changed"' still not reachable after 3600 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:11:23.000] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_shell_module"::"sign_progress"' still not reachable after 3600 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:11:23.000] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_module"::"signer_accounts_changed"' still not reachable after 3599 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:11:23.000] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_module"::"sign_progress"' still not reachable after 3599 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:11:23.000] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"qr_signer_module"::"signer_accounts_changed"' still not reachable after 3599 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:11:23.000] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"qr_signer_module"::"sign_progress"' still not reachable after 3599 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:11:23.030] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:11:23.051] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:11:23.054] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:11:23.114] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:11:23.145] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:11:23.162] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:12:22.001] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_shell_module"::"signer_accounts_changed"' still pending after 62601 ms. Still retrying; this is the last message about it.
+[2026-11-27 16:12:22.001] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_shell_module"::"sign_progress"' still pending after 62601 ms. Still retrying; this is the last message about it.
+[2026-11-27 16:12:22.001] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_module"::"signer_accounts_changed"' still pending after 62600 ms. Still retrying; this is the last message about it.
+[2026-11-27 16:12:22.001] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_module"::"sign_progress"' still pending after 62600 ms. Still retrying; this is the last message about it.
+[2026-11-27 16:12:22.001] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"qr_signer_module"::"signer_accounts_changed"' still pending after 62600 ms. Still retrying; this is the last message about it.
+[2026-11-27 16:12:22.001] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"qr_signer_module"::"sign_progress"' still pending after 62600 ms. Still retrying; this is the last message about it.
+[2026-11-27 16:21:28.514] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:21:28.521] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:21:43.080] [info] [logos] [ferrata_monitor_module] {"chainTime":1795803694,"dryRun":false,"isFreezeAuthority":false,"isWatcher":true,"kind":"started","level":"info","me":"0xf9f1ac433bc93bfbd2b64794be5c628a1d7b541b","nextBlock":3,"nodes":["file:OUT/run/node-view.json"],"pendingKnown":0,"policy":{"bLagGrace":300,"deltaG":7200,"margin":120,"rule":"B","turnSeconds":0},"resumed":false,"rule":"B","sendVia":{"fallback":true,"from":"0xf9f1ac433bc93bfbd2b64794be5c628a1d7b541b","module":"tx_sender_module","path":"logos"},"ts":1795796503,"vault":"0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0"}
+[2026-11-27 16:21:44.331] [critical] [logos] Module process crashed: tx_sender_module
+[2026-11-27 16:21:44.333] [critical] [logos] Module process crashed: fee_module
+[2026-11-27 16:21:44.333] [critical] [logos] Module process crashed: keystore_module
+[2026-11-27 16:21:44.333] [critical] [logos] Module process crashed: eth_rpc_module
+[2026-11-27 16:21:44.333] [critical] [logos] Module process crashed: ferrata_relayer_module
+[2026-11-27 16:21:44.334] [critical] [logos] Module process crashed: signer_manager_module
+[2026-11-27 16:21:44.334] [warning] [logos] [evm_signer_cli] Warning: LogosAPIConsumer: '"signer_manager_module"::"approval_offered"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
+[2026-11-27 16:21:44.334] [warning] [logos] [evm_signer_cli] Warning: LogosAPIConsumer: '"signer_manager_module"::"approval_settled"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
+[2026-11-27 16:21:44.334] [critical] [logos] Module process crashed: ferrata_monitor_module
+[2026-11-27 16:21:44.870] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_signer_manager_module_bb8f3e97f7b7" -- request for "signer_manager_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-27 16:21:45.069] [info] [logos] Optional dependency 'verified_proxy_module' of 'eth_rpc_module' is not installed; loading without it
+[2026-11-27 16:21:45.093] [info] [logos] Module loaded: eth_rpc_module
+[2026-11-27 16:21:45.163] [info] [logos] Module loaded: fee_module
+[2026-11-27 16:21:45.234] [info] [logos] Module loaded: keystore_module
+[2026-11-27 16:21:45.291] [info] [logos] Optional dependency 'keycard_module' of 'signer_manager_module' is not installed; loading without it
+[2026-11-27 16:21:45.291] [info] [logos] Optional dependency 'keycard_shell_module' of 'signer_manager_module' is not installed; loading without it
+[2026-11-27 16:21:45.291] [info] [logos] Optional dependency 'qr_signer_module' of 'signer_manager_module' is not installed; loading without it
+[2026-11-27 16:21:45.312] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:21:45.313] [info] [logos] Module loaded: signer_manager_module
+[2026-11-27 16:21:45.392] [info] [logos] Module loaded: tx_sender_module
+[2026-11-27 16:21:45.397] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:21:45.400] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: no listener at "local:logos_keycard_shell_module_bb8f3e97f7b7" -- request for "keycard_shell_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-27 16:21:45.479] [info] [logos] Module loaded: ferrata_relayer_module
+[2026-11-27 16:21:45.497] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:21:45.525] [info] [logos] [evm_signer_cli] Info: LogosAPIConsumer: '"signer_manager_module"::"approval_offered"' subscription RE-ARMED (generation 2) after 1190 ms -- events emitted while it was down were not delivered
+[2026-11-27 16:21:45.525] [info] [logos] [evm_signer_cli] Info: LogosAPIConsumer: '"signer_manager_module"::"approval_settled"' subscription RE-ARMED (generation 2) after 1191 ms -- events emitted while it was down were not delivered
+[2026-11-27 16:21:45.525] [warning] [logos] [signer_manager_module] Warning: ModuleProxy: rejecting unauthorized call to "pending" - auth token not recognized
+[2026-11-27 16:21:45.525] [warning] [logos] [evm_signer_cli] Warning: LogosAPIClient: token for "signer_manager_module" rejected by provider; re-exchanging and retrying once
+[2026-11-27 16:21:45.527] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:21:45.569] [info] [logos] Module loaded: ferrata_monitor_module
+[2026-11-27 16:21:46.402] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: Timeout waiting for replica: "keycard_shell_module"
+[2026-11-27 16:21:46.402] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: no listener at "local:logos_keycard_module_bb8f3e97f7b7" -- request for "keycard_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-27 16:21:47.501] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: Timeout waiting for replica: "keycard_module"
+[2026-11-27 16:21:47.501] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: no listener at "local:logos_qr_signer_module_bb8f3e97f7b7" -- request for "qr_signer_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-27 16:21:48.502] [warning] [logos] [signer_manager_module] Warning: RemoteTransportConnection: Timeout waiting for replica: "qr_signer_module"
+[2026-11-27 16:21:48.652] [info] [logos] [tx_sender_module] tx_sender_module: 4 unsettled nonces carried over from disk
+[2026-11-27 16:21:48.716] [info] [logos] [tx_sender_module] tx_sender_module: 1 unsettled nonces carried over from disk
+[2026-11-27 16:21:48.793] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:21:48.828] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:21:48.847] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:21:48.851] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:21:48.903] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:21:48.933] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:21:48.951] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:21:49.000] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_shell_module"::"signer_accounts_changed"' still not reachable after 3691 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:21:49.000] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_shell_module"::"sign_progress"' still not reachable after 3691 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:21:49.000] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_module"::"signer_accounts_changed"' still not reachable after 3691 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:21:49.000] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_module"::"sign_progress"' still not reachable after 3691 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:21:49.000] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"qr_signer_module"::"signer_accounts_changed"' still not reachable after 3690 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:21:49.000] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"qr_signer_module"::"sign_progress"' still not reachable after 3690 ms -- subscription is DEFERRED, not lost; it will arm when the module appears. Is the module loaded?
+[2026-11-27 16:21:49.022] [info] [logos] [ferrata_monitor_module] {"chainTime":1795803694,"dryRun":false,"isFreezeAuthority":false,"isWatcher":true,"kind":"started","level":"info","me":"0xf9f1ac433bc93bfbd2b64794be5c628a1d7b541b","nextBlock":3,"nodes":["file:OUT/run/node-view.json"],"pendingKnown":2,"policy":{"bLagGrace":300,"deltaG":7200,"margin":120,"rule":"B","turnSeconds":0},"resumed":true,"rule":"B","sendVia":{"fallback":true,"from":"0xf9f1ac433bc93bfbd2b64794be5c628a1d7b541b","module":"tx_sender_module","path":"logos"},"ts":1795796509,"vault":"0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0"}
+[2026-11-27 16:21:49.056] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:21:49.060] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-27 16:22:48.001] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_shell_module"::"signer_accounts_changed"' still pending after 62692 ms. Still retrying; this is the last message about it.
+[2026-11-27 16:22:48.001] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_shell_module"::"sign_progress"' still pending after 62692 ms. Still retrying; this is the last message about it.
+[2026-11-27 16:22:48.001] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_module"::"signer_accounts_changed"' still pending after 62691 ms. Still retrying; this is the last message about it.
+[2026-11-27 16:22:48.001] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keycard_module"::"sign_progress"' still pending after 62691 ms. Still retrying; this is the last message about it.
+[2026-11-27 16:22:48.001] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"qr_signer_module"::"signer_accounts_changed"' still pending after 62691 ms. Still retrying; this is the last message about it.
+[2026-11-27 16:22:48.001] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"qr_signer_module"::"sign_progress"' still pending after 62691 ms. Still retrying; this is the last message about it.
+[2026-11-27 16:24:49.167] [info] [logos] [ferrata_monitor_module] {"block":16,"cancelledAt":1795803880,"chainTime":1795803694,"deadline":1795807294,"kind":"cancelled","level":"critical","n":4,"newState":"0x640f413954df6393527371a379382ddd30db0ee7621c5b4abb7f6d96afbf697a","reason":{"finalHash":"0x08d7cfe3c93eabbbecb68f716bd80cee76094b3993f3743c5f7a85b63268fe60","kind":"tipConflict","node":"lez-honest","tipId":30},"secondsAfterSubmission":186,"secondsBeforeDeadline":3414,"submittedAt":1795803694,"t":3,"tipHash":"0x1549566dadffb26f7f4771f171a8da5a4c93aac12bd2e952b18d0c8343482576","tipId":30,"ts":1795796689,"tx":"0x6202dd8f50970f5cd1ea4b90fa27eea439409a80132b5fa6d6f4239ad1d66434","via":{"behind":"0x9aa4a4b3e3331f1a6f8f319dc672d3f2ec0c369b93cec5a039ce438e9a9f9621","gapFill":true,"nonce":0,"path":"plain"}}
+[2026-11-27 16:24:49.168] [info] [logos] [ferrata_monitor_module] {"attestations":[],"chainTime":1795803694,"deadline":1795807289,"kind":"candidate-passed","level":"info","n":4,"newState":"0xb39b18cf57d406e5d8abfc855f483129ce3bc82bc0133ac9a8daca233778a7db","submittedAt":1795803689,"t":3,"tipHash":"0x2aa6519f8f0f236f7ebf8df61ba66b118b8a0abf3c78e590f7eea98de6b94ba8","tipId":40,"ts":1795796689}
+[2026-11-27 16:24:50.180] [info] [logos] [ferrata_monitor_module] {"chainTime":1795803880,"kind":"stopped","level":"info","nextBlock":17,"polls":2,"ts":1795796690}
