@@ -31,8 +31,11 @@ the recipient their burns name, **99,900,000 base units each** (100 TUSD less th
 release's and the checkpoint's mined calldata called again: refused (`NullifierAlreadyUsed` twice, `ParentNotFinal`).
 The same seals in forge, `vault/test/real/ZoneBridgeRc3Erc20.t.sol` (fixture `zone-bridge-rc3-erc20.json`): the
 checkpoint, then both real releases paying exact amounts and the escrow falling by them; another registered token and
-another denomination refused by the real verifier (2 of 2). `verify`: the checkpoint input, journal and burns
-re-derived from the recorded node answers and attestations, equal; every receipt verified.
+another denomination refused by the real verifier (2 of 2). `verify` (`logs/verify.txt`): the checkpoint input,
+journal and burns re-derived from the recorded node answers and attestations, equal; each GPU journal the native one or
+the statement's, and the candidate's seal the recorded one. That stage does not verify the seals itself (the run keeps
+the seals and journals, not receipt files): RISC Zero's verifier checks them, on chain in the vault stage and in the
+forge test.
 
 `vault-attempt-1/`: the vault stage's first attempt, which stopped before its checks on a parsing error of the
 script (an ERC-20 balance read as `cast` prints it, the number followed by its scientific notation; fixed); its records
