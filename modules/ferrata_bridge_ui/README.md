@@ -179,10 +179,15 @@ What protects the phrase and the session (review of 24 Nov 2026):
   call after 15 idle minutes); quitting Basecamp ends the module's process, its memory going with it without a wipe.
 
 What works there: the registry and the vault read, the positions found from the phrase, the faucet and the LGO balances,
-the plaintext claim of a deposit to one of the phrase's public accounts, the public burn to an address the person enters
-in its checksummed form, and the release handed to the `ferrata` tool (its proof says which burn it is, so it is made on
-the person's machine). Run from Basecamp on this network so far: the session, the reads, the positions and the
-faucet; no claim or burn has been sent there yet, and the module's tests sign them against a stand-in LEZ node.
+the public burn to an address the person enters in its checksummed form, and the release handed to the `ferrata` tool
+(its proof says which burn it is, so it is made on the person's machine). **A plaintext claim is refused on the
+currently deployed test network before anything is signed or sent**: its bridge is B1 (`ferrata_bridge_b1`), whose
+`Claim` requires a fee-schedule range, while this ADR 0046 tree builds range-free F13 claims. Claims stay disabled
+until a redeployment pairs `ferrata_bridge_f13` with its matching vault and configuration and the module pins that new
+deployment; the error names `deploy/testnet/F13-REDEPLOY.md`. Run from Basecamp on this network so far: the session,
+the reads, the positions and the faucet; no claim or burn has been sent there yet. Offline, the replay proves the B1
+refusal and the unchanged burn flow, and an F13 deployment stand-in decodes the signed claim with this tree's Borsh
+wire before treating it as settled.
 Deposits are made in the network's web wallet with the same phrase: Basecamp 0.4.0-rc.2 has no
 Logos signer for Sepolia (`tx_sender_module`, `keystore_module`), so the deposit button is off in the session. A private
 claim or burn needs a proof of LEZ's privacy circuit, which the module does not make: the view says to use the `ferrata`

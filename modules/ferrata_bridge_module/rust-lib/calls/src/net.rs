@@ -29,10 +29,11 @@
 //! Ethereum transactions are never signed here.
 //!
 //! What runs here: the public side, as the web wallet runs it in a page: the registry, the positions recovered from the
-//! phrase, the faucet, the plaintext claim of a deposit to a public account, the public burn, and the release's hand-off
-//! (the release proof is the `ferrata` tool's, on the person's machine). A deposit is made in the web wallet (Basecamp
-//! has no Logos signer for Sepolia yet). A private claim or burn needs a proof of LEZ's privacy circuit, which this
-//! module does not make.
+//! phrase, the faucet, the public burn, and the release's hand-off (the release proof is the `ferrata` tool's, on the
+//! person's machine). The currently deployed B1 program's claims are incompatible with this tree's range-free F13
+//! encoder, so claim preparation is refused until a separately pinned F13 deployment exists. A deposit is made in the
+//! web wallet (Basecamp has no Logos signer for Sepolia yet). A private claim or burn needs a proof of LEZ's privacy
+//! circuit, which this module does not make.
 
 use std::cell::Cell;
 use std::sync::{Mutex, MutexGuard};
@@ -63,13 +64,23 @@ pub(crate) struct Deployment {
     pub from_block: u64,
 }
 
+/// The deployed B1 bridge's image id. Its claims carry a fee-schedule range; ADR 0046 removed that field.
+const B1_IMAGE_ID: &str = "847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515";
+/// `ferrata_bridge_f13`, the range-free claim layout built by this tree (`docs/image-ids.md`).
+const F13_IMAGE_ID: &str = "ffb47f6eaec6ef13f49505e5e80209f73d38ea53792e77656994f8069dde7675";
+
+pub(crate) const B1_CLAIM_REFUSED: &str = "refused: this deployment runs ferrata_bridge_b1, whose Claim requires a fee-schedule \
+range, but this module builds ADR 0046 range-free claims that B1 cannot decode. A claim cannot be prepared here until the bridge \
+is redeployed with ferrata_bridge_f13 and a matching vault/configuration; see deploy/testnet/F13-REDEPLOY.md. Nothing was signed or sent";
+
 /// The deployments this module knows: the network's configuration as recorded on 23 November 2026
 /// (`deploy/testnet/web/basecamp/tests/install-test/live-wallet-config.json` and `live-programs.json`). A network that
-/// names anything else is refused; a new deployment needs a new module.
+/// names anything else is refused; a new deployment needs a new module. B1 remains known for reads, faucet and burns,
+/// but its claims are refused by [`require_f13_claim_layout`] before this tree's incompatible message can be signed.
 pub(crate) const KNOWN: &[Deployment] = &[Deployment {
     name: "Ferrata's LEZ v0.4.0-rc3 test network (vault on Sepolia, RISC Zero 3.1)",
     bridge_program: "36iqVMFpfgHrwoeuVvZhXX3caM1JPBJh56PBw5A4H1rk",
-    bridge_image_id: "847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515",
+    bridge_image_id: B1_IMAGE_ID,
     config_id: "3773b58836d2fa242e16b3eb580a15630de2a437218a432f52e5b01152ae67cd",
     evm_chain_id: 11_155_111,
     vault: "19499061cec0bac2a3e1869ba5ae6b403aa82787",
@@ -431,6 +442,8 @@ struct Net {
     chain_id: u64,
     eth: String,
     from_block: u64,
+    /// Only the recorded F13 image accepts this tree's range-free `Claim`/`ClaimPrivately` encoding.
+    f13_claim_layout: bool,
     accounts: Vec<PublicAccount>,
     keys: WipedKeys,
     /// The view's channel (`seal.rs`): the calls' MAC key.
@@ -793,6 +806,7 @@ pub(crate) fn open(params: &Value, channel: seal::Keys) -> Result<(Value, Value)
         chain_id: c.dep.evm_chain_id,
         eth,
         from_block: c.dep.from_block,
+        f13_claim_layout: same_hex(c.dep.bridge_image_id, F13_IMAGE_ID),
         accounts,
         keys,
         channel,
@@ -935,6 +949,19 @@ fn named(id: &[u8; 32]) -> String {
     }
 }
 
+/// ADR 0046's claim encoder is incompatible with the deployed B1 decoder. Check the image pinned at open,
+/// before claim preparation can build an approval or reach a signature. A future image must be added explicitly,
+/// not assumed compatible merely because it is not B1.
+pub(crate) fn require_f13_claim_layout() -> Result<(), String> {
+    with(|n| {
+        if n.f13_claim_layout {
+            Ok(())
+        } else {
+            Err(B1_CLAIM_REFUSED.into())
+        }
+    })
+}
+
 /// Builds the module's message as a LEZ public transaction paid (and co-signed) by public account `/payer`, for the
 /// person's approval, and signs nothing: the transaction waits under a new id (one at a time; a new one replaces it)
 /// until [`confirm`]. Returns what the approval shows: the call, its payer and signers, the fee ceiling, the message
@@ -943,6 +970,9 @@ fn named(id: &[u8; 32]) -> String {
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn prepare(kind: &'static str, message: &[u8], accounts: &Value, root_index: usize, what: &str, payer: u32,
                       expect: Option<WActor>, gas_limit: u64, reply: Value, holding_of: u32) -> Result<Value, String> {
+    if kind == "claim" {
+        require_f13_claim_layout()?;
+    }
     let lez = lez()?;
     let (payer_id, _) = public_account(payer)?;
     let list = accounts.as_array().ok_or("accounts")?;
@@ -1142,12 +1172,26 @@ pub(crate) mod tests {
     pub(crate) static SKIP_CHECKS: AtomicBool = AtomicBool::new(false);
     /// A shorter idle limit for a test (milliseconds; 0: [`IDLE`]).
     pub(crate) static IDLE_MS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    /// Select the internal F13 deployment for the next checked stand-in. Never compiled into the module.
+    pub(crate) static F13_STAND_IN_DEPLOYMENT: AtomicBool = AtomicBool::new(false);
 
     pub(crate) const PHRASE: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
 
+    /// Same loopback fixture coordinates as B1, but explicitly named this tree's program image. This deployment
+    /// exists only in unit tests; production `KNOWN` is untouched, so no fictitious F13 network is advertised.
+    static F13_DEPLOYMENT: Deployment = Deployment {
+        name: "internal F13 stand-in (ferrata_bridge_f13)",
+        bridge_program: "36iqVMFpfgHrwoeuVvZhXX3caM1JPBJh56PBw5A4H1rk",
+        bridge_image_id: F13_IMAGE_ID,
+        config_id: "3773b58836d2fa242e16b3eb580a15630de2a437218a432f52e5b01152ae67cd",
+        evm_chain_id: 11_155_111,
+        vault: "19499061cec0bac2a3e1869ba5ae6b403aa82787",
+        from_block: 12_196_188,
+    };
+
     /// The network as checked, for a stand-in LEZ RPC at `base/rpc` (no Ethereum side).
     pub(crate) fn checked_stand_in(base: &str) -> Result<Checked, String> {
-        let dep = &KNOWN[0];
+        let dep = if F13_STAND_IN_DEPLOYMENT.load(Ordering::SeqCst) { &F13_DEPLOYMENT } else { &KNOWN[0] };
         Ok(Checked {
             dep,
             lez: Lez { url: format!("{base}/rpc") },
@@ -1193,16 +1237,54 @@ pub(crate) mod tests {
         pub url: String,
         pub methods: Arc<Mutex<Vec<String>>>,
         pub sent: Arc<Mutex<Vec<String>>>,
+        /// Messages the strict F13 stand-in decoded from accepted public transactions.
+        pub decoded: Arc<Mutex<Vec<bw::BridgeMessage>>>,
         pub base_fee: Arc<std::sync::atomic::AtomicU64>,
     }
 
+    /// Decode the root call's data out of a captured public LEZ transaction, then decode that data with
+    /// this tree's own Borsh `BridgeMessage`. A B1-layout claim therefore fails rather than settling by send count.
+    fn captured_bridge_message(wire: &str) -> Result<bw::BridgeMessage, String> {
+        use base64::Engine as _;
+        let raw = base64::engine::general_purpose::STANDARD.decode(wire).map_err(|e| e.to_string())?;
+        let tx = raw.get(1..).ok_or("short public transaction")?;
+        let mut at = 0usize;
+        let mut take = |n: usize| -> Result<&[u8], String> {
+            let out = tx.get(at..at + n).ok_or("truncated transaction message")?;
+            at += n;
+            Ok(out)
+        };
+        let count = |b: &[u8]| -> Result<usize, String> {
+            Ok(u32::from_le_bytes(b.try_into().map_err(|_| "u32 length")?) as usize)
+        };
+        let actors = count(take(4)?)?;
+        take(actors.checked_mul(64).ok_or("actor count overflow")?)?;
+        let signers = count(take(4)?)?;
+        take(signers.checked_mul(32).ok_or("signer count overflow")?)?;
+        if count(take(4)?)? != 0 {
+            return Err("promoted actors in a public bridge call".into());
+        }
+        take(64)?;
+        let data_len = count(take(4)?)?;
+        bw::BridgeMessage::try_from_slice(take(data_len)?).map_err(|e| format!("current BridgeMessage decoder: {e}"))
+    }
+
     pub(crate) fn stand_in_lez(holder: [u8; 32], held: u128, delay: Duration) -> StandIn {
+        stand_in_lez_impl(holder, held, delay, false)
+    }
+
+    fn stand_in_f13(holder: [u8; 32], held: u128) -> StandIn {
+        stand_in_lez_impl(holder, held, Duration::ZERO, true)
+    }
+
+    fn stand_in_lez_impl(holder: [u8; 32], held: u128, delay: Duration, require_current_claim: bool) -> StandIn {
         let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let url = format!("http://{}", l.local_addr().unwrap());
         let methods = Arc::new(Mutex::new(Vec::new()));
         let sent = Arc::new(Mutex::new(Vec::new()));
+        let decoded = Arc::new(Mutex::new(Vec::new()));
         let base_fee = Arc::new(std::sync::atomic::AtomicU64::new(8));
-        let (m, tx, fee) = (methods.clone(), sent.clone(), base_fee.clone());
+        let (m, tx, fee, messages) = (methods.clone(), sent.clone(), base_fee.clone(), decoded.clone());
         let dep = &KNOWN[0];
         let cid: Hash = fixed(&json!(dep.config_id), "c").unwrap();
         let holder_state = borsh::to_vec(&BridgeState::Holder(bw::HolderState {
@@ -1213,7 +1295,7 @@ pub(crate) mod tests {
         std::thread::spawn(move || {
             for s in l.incoming() {
                 let Ok(mut s) = s else { break };
-                let (m, tx, holder_state, fee) = (m.clone(), tx.clone(), holder_state.clone(), fee.clone());
+                let (m, tx, holder_state, fee, messages) = (m.clone(), tx.clone(), holder_state.clone(), fee.clone(), messages.clone());
                 std::thread::spawn(move || {
                     let mut buf = Vec::new();
                     let mut chunk = [0u8; 8192];
@@ -1243,7 +1325,23 @@ pub(crate) mod tests {
                         "getLastBlockId" => json!(5),
                         "getTransaction" => json!(["tx", 6]),
                         "sendTransaction" => {
-                            tx.lock().unwrap().push(req["params"][0].as_str().unwrap_or("").to_string());
+                            let wire = req["params"][0].as_str().unwrap_or("").to_string();
+                            if require_current_claim {
+                                match captured_bridge_message(&wire) {
+                                    Ok(message @ bw::BridgeMessage::Claim { .. }) => messages.lock().unwrap().push(message),
+                                    Ok(_) => {
+                                        let text = json!({ "jsonrpc": "2.0", "id": req["id"], "error": { "code": -32000, "message": "F13 stand-in accepts a Claim only" } }).to_string();
+                                        let _ = write!(s, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", text.len(), text);
+                                        return;
+                                    }
+                                    Err(e) => {
+                                        let text = json!({ "jsonrpc": "2.0", "id": req["id"], "error": { "code": -32000, "message": e } }).to_string();
+                                        let _ = write!(s, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", text.len(), text);
+                                        return;
+                                    }
+                                }
+                            }
+                            tx.lock().unwrap().push(wire);
                             Value::Null
                         }
                         "getAccount" => {
@@ -1264,7 +1362,7 @@ pub(crate) mod tests {
                 });
             }
         });
-        StandIn { url, methods, sent, base_fee }
+        StandIn { url, methods, sent, decoded, base_fee }
     }
 
     #[test]
@@ -1460,6 +1558,152 @@ pub(crate) mod tests {
         assert!(methods.lock().unwrap().len() <= 3, "it stopped asking: {:?}", methods.lock().unwrap());
         // Outside a call's deadline (a job's thread) the same reads are not cut short.
         assert!(lez.head().is_ok());
+    }
+
+    /// Review r1 M1: on an F13 stand-in, claim preparation and confirmation use this tree's actual claim builder.
+    /// The stand-in decodes the captured transaction with this tree's wire before exposing the claim's actor state;
+    /// inserting B1's ScheduleRange makes that decoder reject the same claim.
+    #[test]
+    fn m1_f13_claim_is_approved_signed_and_decoded_with_the_current_wire() {
+        use ferrata_bridge_core::{chain_id_u256, inbound, tree::Tree};
+
+        let _s = crate::jobs::tests::serial();
+        close();
+        let dep = &F13_DEPLOYMENT;
+        assert_eq!(dep.bridge_image_id, "ffb47f6eaec6ef13f49505e5e80209f73d38ea53792e77656994f8069dde7675");
+        let program = AccountId::new(lezkey::id_from_string(dep.bridge_program).unwrap());
+        let cid: Hash = fixed(&json!(dep.config_id), "config id").unwrap();
+        let vault: [u8; 20] = fixed(&json!(dep.vault), "vault").unwrap();
+        let seed = lezkey::seed_of_phrase(PHRASE).unwrap();
+        let dest = lezkey::public_accounts(&seed, 1).unwrap()[0].id;
+        let holder = *bw::holder_actor(program, &cid, AccountId::new(dest)).account_id.value();
+        let net = stand_in_f13(holder, 0);
+        SKIP_CHECKS.store(true, Ordering::SeqCst);
+        F13_STAND_IN_DEPLOYMENT.store(true, Ordering::SeqCst);
+        let (params, _view) = sealed(json!({ "network": net.url, "eth_rpc": "http://127.0.0.1:9" }), Some(PHRASE));
+        let opened = open_sealed(&params);
+        F13_STAND_IN_DEPLOYMENT.store(false, Ordering::SeqCst);
+        SKIP_CHECKS.store(false, Ordering::SeqCst);
+        opened.expect("the F13 stand-in opens");
+        require_f13_claim_layout().expect("F13 claims are enabled");
+
+        let depositor = [0x98u8; 20];
+        let amount = 1_000u128;
+        let mut amount_word = [0u8; 32];
+        amount_word[16..].copy_from_slice(&amount.to_be_bytes());
+        let secret = with(|n| {
+            Ok(inbound::deposit_secret(&n.keys.auth, &chain_id_u256(dep.evm_chain_id), &vault, &depositor, 0))
+        })
+        .unwrap();
+        let commitment = inbound::commitment(&secret, inbound::DestKind::Public, &dest);
+        let leaf = inbound::deposit_leaf(0, &depositor, &[0u8; 20], &amount_word, &commitment);
+        let deposit_root = Tree::from_leaves(vec![leaf]).unwrap().root();
+        let root_state = borsh::to_vec(&BridgeState::Root(bw::RootState {
+            config_id: cid,
+            evm_chain_id: dep.evm_chain_id,
+            vault,
+            leaf_count: 1,
+            root: deposit_root,
+            record_slot: 1,
+            block_number: 42,
+        }))
+        .unwrap();
+        let unlimited = bw::CapParams { capacity: u128::MAX, refill_per_second: u128::MAX };
+        let controls = bw::Controls {
+            admin: [1; 32],
+            freeze_authority: [2; 32],
+            fee_recipient: [3; 32],
+            floor: bw::CapParams { capacity: 1, refill_per_second: 1 },
+            token_cap: unlimited,
+            global_cap: unlimited,
+        };
+        let token_state = borsh::to_vec(&BridgeState::Token(bw::TokenState {
+            config_id: cid,
+            evm_chain_id: dep.evm_chain_id,
+            vault,
+            attestation: AccountId::new([6; 32]),
+            instance_id: [7; 32],
+            entry: bw::TokenEntry {
+                token: [0u8; 20],
+                lez_definition: [0; 32],
+                decimals: 18,
+                lez_unit: 1,
+                unit_weight: 1,
+                denominations: vec![amount],
+                relay_fees: vec![0],
+            },
+            schedules: vec![],
+            known_until: 1,
+            controls,
+            gate: bw::Gate::new(unlimited, 0),
+            pending: None,
+            delisted: false,
+            listing_slot: 0,
+        }))
+        .unwrap();
+        let req = json!({
+            "chain_id": dep.evm_chain_id,
+            "vault": hex(&vault),
+            "config_id": hex(&cid),
+            "program": hex(program.value()),
+            "depositor": hex(&depositor),
+            "j": 0,
+            "leaf_index": 0,
+            "token": hex(&[0u8; 20]),
+            "amount": amount.to_string(),
+            "kind": "public",
+            "dest": hex(&dest),
+            "private": false,
+            "leaves": [hex(&leaf)],
+            "imported": [1],
+            "root_state": hex(&root_state),
+            "token_state": hex(&token_state),
+            "nullifier_state": "0x",
+        });
+        let built = crate::with_session_keys(|| crate::wallet::claim_with_state(&req)).unwrap();
+        assert_eq!(built["verdict"], "claimable", "{built}");
+        assert_eq!(built["variant"], "Claim");
+        let message = unhex(built["message"].as_str().unwrap()).unwrap();
+        assert!(matches!(bw::BridgeMessage::try_from_slice(&message), Ok(bw::BridgeMessage::Claim { .. })));
+        let nullifier: Hash = fixed(&built["nullifier"], "nullifier").unwrap();
+        let expect = bw::nullifier_actor(program, &cid, dep.evm_chain_id, &vault, &nullifier);
+        let approval = prepare(
+            "claim",
+            &message,
+            &built["accounts"],
+            built["root_index"].as_u64().unwrap() as usize,
+            "F13 stand-in claim",
+            0,
+            Some(expect),
+            CLAIM_GAS,
+            json!({ "variant": built["variant"] }),
+            0,
+        )
+        .unwrap();
+        assert_eq!(approval["signed"], false);
+        assert!(net.sent.lock().unwrap().is_empty(), "approval itself sent nothing");
+        let done = confirm(approval["pending_id"].as_str().unwrap()).unwrap();
+        assert_eq!(done["settled"], true, "{done}");
+        assert_eq!(done["approved"]["message_hash"], approval["message_hash"]);
+        assert_eq!(net.sent.lock().unwrap().len(), 1);
+        assert_eq!(net.decoded.lock().unwrap().as_slice(), &[bw::BridgeMessage::try_from_slice(&message).unwrap()]);
+        assert_eq!(
+            captured_bridge_message(&net.sent.lock().unwrap()[0]).unwrap(),
+            bw::BridgeMessage::try_from_slice(&message).unwrap()
+        );
+
+        // B1 put ScheduleRange { index, from_leaf, until_leaf } immediately before relayer. This claim names
+        // no relayer, so its option is the last byte; splice the old range there and require strict decode failure.
+        let mut b1_layout = message.clone();
+        let relayer_option = b1_layout.pop().expect("the range-free message ends in relayer: None");
+        assert_eq!(relayer_option, 0);
+        b1_layout.extend_from_slice(&[0u8; 24]);
+        b1_layout.push(relayer_option);
+        assert!(
+            bw::BridgeMessage::try_from_slice(&b1_layout).is_err(),
+            "B1-layout claim must fail the F13 stand-in's decoder"
+        );
+        close();
     }
 
     /// Review H1 and L3: a burn is built for the person's approval and signed only when confirmed, exactly as approved,

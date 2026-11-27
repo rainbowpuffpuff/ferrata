@@ -1386,6 +1386,11 @@ impl Chain {
         if private && self.network() {
             return Err(crate::net::PRIVATE_NEEDS_PROOF.into());
         }
+        if self.network() {
+            // The deployed B1 program expects ScheduleRange in Claim. ADR 0046 removed it: stop before
+            // gathering a claim plan or preparing anything that could subsequently be signed.
+            crate::net::require_f13_claim_layout()?;
+        }
         let inputs = self.inputs(json!({ "token": ETH }))?;
         let (_, deposits, _) = self.positions(&inputs)?;
         let d = deposits.iter().find(|d| d["leaf_index"].as_u64() == Some(leaf)).ok_or("not a deposit of this wallet")?;
