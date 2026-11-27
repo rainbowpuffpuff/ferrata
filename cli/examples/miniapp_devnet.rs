@@ -1455,7 +1455,7 @@ impl Devnet {
                 "proof": self.proof_json(&run),
             }));
         }
-        let call = LezCall { what: what.clone(), mentions, root_index, message };
+        let call = LezCall { what: what.clone(), mentions, root_index, message, wire: None };
         let report = self.zone.settle(&call);
         Ok(json!({
             "settled": report.ok(),

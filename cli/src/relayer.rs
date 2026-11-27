@@ -1356,6 +1356,7 @@ pub async fn plan_root_import<L: crate::lez::Ledger>(
         mentions: c.mentions.into_iter().map(Into::into).collect(),
         root_index: c.root_index,
         message: c.message,
+        wire: None,
     };
     Ok(RootImport::Planned(Box::new(PlannedImport {
         call,

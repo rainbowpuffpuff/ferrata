@@ -571,6 +571,16 @@ fn claim_of(req: &Value) -> Result<Value, String> {
                 _ => return Err("the request needs `leaf_count` (the imported root's leaf count) or `leaves`".into()),
             };
             let relayer = if req["relayer"].is_null() { None } else { Some(fixed::<32>(&req["relayer"], "relayer")?) };
+            if !req["bridge_image_id"].is_null() {
+                let image: Hash = fixed(&req["bridge_image_id"], "bridge_image_id")?;
+                if ferrata_wallet::deployed::BridgeProgram::of_image_id(&image)?
+                    == ferrata_wallet::deployed::BridgeProgram::B1
+                {
+                    return Err("a claim to ferrata_bridge_b1 (the test network's program) names the token's fee schedule \
+                                range: give `root_state` and `token_state`, and the claim is built with the tool's code"
+                        .into());
+                }
+            }
             let m = claim_message(&config_id, leaf_count, &w, relayer, private);
             out["variant"] = json!(if private { "ClaimPrivately" } else { "Claim" });
             out["message"] = json!(hex(&m));

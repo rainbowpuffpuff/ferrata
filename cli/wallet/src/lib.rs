@@ -7,6 +7,8 @@
 //!   and, with the `prove` feature, the release guest run through r0vm;
 //! * [`claim`]: a deposit's claim, plaintext (`Claim`) or private (`ClaimPrivately`), with the bridge
 //!   program's own checks (since ADR 0046 a claim names no fee schedule);
+//! * [`deployed`]: which bridge program a zone runs (this tree's `ferrata_bridge_f13`, or the test network's
+//!   `ferrata_bridge_b1`, by the image id its loader header names) and B1's claim layout (a fee-schedule range);
 //! * [`import`]: the relayer's `ImportRoot` of a deposit root from the vault's `eth_getProof` proofs,
 //!   dry-run with the attestation and bridge programs' own functions.
 //!
@@ -15,6 +17,7 @@
 #![forbid(unsafe_code)]
 
 pub mod claim;
+pub mod deployed;
 pub mod import;
 pub mod release;
 

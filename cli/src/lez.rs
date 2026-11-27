@@ -29,6 +29,7 @@ use sequencer_service_rpc::SequencerClient;
 use wallet::{AccountIdentity, AccountMention, WalletCore, WalletSequencerClient as _};
 
 use ferrata_wallet::claim;
+use ferrata_wallet::deployed::{self, BridgeProgram};
 
 #[cfg(feature = "lez-wallet")]
 use crate::seed::{Seed, DEFAULT_GAP};
@@ -96,6 +97,19 @@ pub struct LezCall {
     pub mentions: Vec<Mention>,
     pub root_index: usize,
     pub message: BridgeMessage,
+    /// The bytes sent in place of `message`'s own encoding, for a program that reads another layout: a claim to the test
+    /// network's `ferrata_bridge_b1` (`ferrata_wallet::deployed`). `None`: `message` as this tree's program reads it.
+    pub wire: Option<Vec<u8>>,
+}
+
+impl LezCall {
+    /// The bytes the bridge program receives.
+    pub fn bytes(&self) -> Result<Vec<u8>> {
+        match &self.wire {
+            Some(w) => Ok(w.clone()),
+            None => Ok(borsh::to_vec(&self.message)?),
+        }
+    }
 }
 
 /// One applied public call of the bridge program, in chain order.
@@ -133,6 +147,12 @@ pub trait Ledger {
     }
     /// The bridge state of `actor` (empty if none).
     async fn actor_state(&self, actor: Actor) -> Result<Vec<u8>>;
+    /// The image id the zone's program loader names for the program at `program` (its header), where the ledger is a
+    /// zone with a loader (a sequencer); `None` for an in-process zone, which runs this tree's program.
+    async fn bridge_image(&self, program: AccountId) -> Result<Option<[u8; 32]>> {
+        let _ = program;
+        Ok(None)
+    }
     /// Sign and send `call`; returns the transaction hash (hex).
     async fn submit(&mut self, call: &LezCall) -> Result<String>;
     /// The wallet's own view of its private account `id`, decrypted from the zone (LEZ's wallet
@@ -266,6 +286,16 @@ pub fn history(ctx: &Context, applied: &[Applied]) -> History {
     let mut h = History::default();
     let chain = chain_id_u256(ctx.chain_id);
     for call in applied.iter().filter(|c| c.to.program_account_id == ctx.program) {
+        // A plaintext claim of either layout (the test network's B1 names a fee range): `deployed::decode_claim`.
+        if let Some(c) = deployed::decode_claim(&call.message).filter(|c| !c.private) {
+            let Some(leaf) = published_leaf(&c.witness) else { continue };
+            h.opened.insert(leaf);
+            if c.config_id == ctx.cid {
+                let fid = inbound::deposit_id(&chain, &ctx.vault, c.witness.leaf_index, &leaf);
+                h.claimed.insert(inbound::nullifier(&c.witness.s, &fid));
+            }
+            continue;
+        }
         let Ok(message) = BridgeMessage::try_from_slice(&call.message) else { continue };
         match message {
             BridgeMessage::ImportRoot { config_id, leaf_count, record_slot, .. } if config_id == ctx.cid => {
@@ -275,14 +305,6 @@ pub fn history(ctx: &Context, applied: &[Applied]) -> History {
             BridgeMessage::Burn { config_id, r, memo, mac, token, amount, c_out } if config_id == ctx.cid => {
                 let burn_index = h.burns.len() as u64;
                 h.burns.push(PublishedBurn { burn_index, note: BurnNote { r, memo, mac, token, amount, c_out } });
-            }
-            BridgeMessage::Claim { config_id, witness: w, .. } => {
-                let Some(leaf) = published_leaf(&w) else { continue };
-                h.opened.insert(leaf);
-                if config_id == ctx.cid {
-                    let fid = inbound::deposit_id(&chain, &ctx.vault, w.leaf_index, &leaf);
-                    h.claimed.insert(inbound::nullifier(&w.s, &fid));
-                }
             }
             _ => {}
         }
@@ -306,8 +328,11 @@ impl History {
     /// memo is public in the block): it joins `refused_burns`. Nothing else of a refused call counts.
     pub fn note_refused(&mut self, ctx: &Context, refused: &[Applied]) {
         for call in refused.iter().filter(|c| c.to.program_account_id == ctx.program) {
+            if let Some(c) = deployed::decode_claim(&call.message).filter(|c| !c.private) {
+                self.opened.extend(published_leaf(&c.witness));
+                continue;
+            }
             match BridgeMessage::try_from_slice(&call.message) {
-                Ok(BridgeMessage::Claim { witness, .. }) => self.opened.extend(published_leaf(&witness)),
                 Ok(BridgeMessage::Burn { config_id, r, memo, mac, token, amount, c_out }) if config_id == ctx.cid => {
                     self.refused_burns.push(PublishedBurn {
                         burn_index: REFUSED,
@@ -452,10 +477,42 @@ pub fn gate_line(scope: &str, g: &bw::Gate) -> String {
     )
 }
 
+/// The bridge program the zone runs at `ctx.program`, by the image id its loader header names ([`Ledger::bridge_image`]):
+/// this tree's (`ferrata_bridge_f13`) or the test network's (`ferrata_bridge_b1`); any other is refused before anything
+/// is built, signed or sent.
+pub async fn bridge_program<L: Ledger>(ledger: &L, ctx: &Context) -> Result<BridgeProgram> {
+    match ledger.bridge_image(ctx.program).await? {
+        None => Ok(BridgeProgram::F13),
+        Some(id) => BridgeProgram::of_image_id(&id).map_err(|e| anyhow!(e)),
+    }
+}
+
+/// Refuses a private call's program binary (`--bridge-program`) whose image id `binary` is not `zone`'s, the image the
+/// zone's loader names for the bridge account: the sequencer would refuse the proof, after minutes of proving.
+pub fn check_program_binary(path: &Path, binary: &[u8; 32], zone: &[u8; 32]) -> Result<()> {
+    if binary == zone {
+        return Ok(());
+    }
+    let named = |id: &[u8; 32]| match BridgeProgram::of_image_id(id) {
+        Ok(p) => format!("{} ({})", hx(id), p.name()),
+        Err(_) => hx(id),
+    };
+    bail!(
+        "refused before proving: --bridge-program {} is image {}, but the zone's bridge program runs {}; prove with the \
+         binary of the program the zone runs (our test network: ferrata_bridge_b1.bin, docs/VERIFY.md §5)",
+        path.display(),
+        named(binary),
+        named(zone)
+    )
+}
+
 /// A claim, built and checked.
 #[derive(Clone, Debug)]
 pub struct ClaimPlan {
     pub call: LezCall,
+    /// The program the claim is built for, and for the test network's B1 its range and mint fee.
+    pub program: BridgeProgram,
+    pub b1: Option<deployed::B1Claim>,
     /// The imported root the claim is proven under (`root(cid, leaf_count)`).
     pub root: Hash,
     pub leaf_count: u64,
@@ -503,13 +560,23 @@ pub async fn plan_claim<L: Ledger>(
     let spent = is_claimed(ctx, history, &owned.nullifier);
     let inputs = claim::ClaimInputs { leaves, leaf_count: n, root: &root_state, token: &token, spent };
     let plan = claim::build_claim(ctx, owned, &inputs, private, relayer, prover).map_err(refused)?;
+    // The program the zone runs decides the claim's layout: the test network's B1 reads a fee-schedule range that this
+    // tree's program (ADR 0046) dropped; B1's checks of it run here, before anything is signed.
+    let program = bridge_program(ledger, ctx).await?;
+    let b1 = match program {
+        BridgeProgram::B1 => Some(deployed::b1_claim(&plan.message, &token).map_err(refused)?),
+        BridgeProgram::F13 => None,
+    };
     Ok(ClaimPlan {
         call: LezCall {
             what: plan.what,
             mentions: plan.mentions.into_iter().map(Mention::from).collect(),
             root_index: plan.root_index,
             message: plan.message,
+            wire: b1.as_ref().map(|b| b.bytes.clone()),
         },
+        program,
+        b1,
         root: root_state.root,
         leaf_count: plan.leaf_count,
         nullifier: plan.nullifier,
@@ -595,6 +662,7 @@ pub fn described_burn(
         mentions: Vec::new(),
         root_index: 0,
         message: BridgeMessage::burn(ctx.cid, &wire),
+        wire: None,
     };
     BurnPlan { call, note, i }
 }
@@ -661,6 +729,7 @@ pub async fn plan_burn_at<L: Ledger>(
         mentions,
         root_index: 0,
         message: BridgeMessage::burn(ctx.cid, &wire),
+        wire: None,
     };
     Ok(BurnPlan { call, note, i: next_i })
 }
@@ -828,10 +897,23 @@ impl Ledger for Sequencer {
         Ok(account.map(|a| a.data.actor_state(actor.program_account_id).to_vec()).unwrap_or_default())
     }
 
+    async fn bridge_image(&self, program: AccountId) -> Result<Option<[u8; 32]>> {
+        let state = self.actor_state(Actor::new(program, lee_core::program::PROGRAM_LOADER_ACCOUNT_ID)).await?;
+        match deployed::loader_header_image_id(&state) {
+            Some(id) => Ok(Some(id)),
+            None => bail!(
+                "refused before anything was signed or sent: the zone's program loader holds no program header at the \
+                 bridge account {} ({} bytes there): --bridge-account must name the account of a deployed bridge program",
+                hx(program.value()),
+                state.len()
+            ),
+        }
+    }
+
     async fn submit(&mut self, call: &LezCall) -> Result<String> {
         self.synced = false;
         let mentions: Vec<AccountMention> = call.mentions.iter().map(mention).collect();
-        let message = borsh::to_vec(&call.message)?;
+        let message = call.bytes()?;
         if matches!(call.mentions.first(), Some(Mention::PrivateSelf(_))) {
             // The private accounts' newest states, as the zone holds them: a private transaction spends them, and
             // the sequencer refuses one built on a state an earlier transaction spent ("Nullifier already seen";
@@ -845,11 +927,16 @@ impl Ledger for Sequencer {
             })?;
             let bytes = std::fs::read(path).with_context(|| format!("reading {}", path.display()))?;
             let program = call.mentions[0].actor().program_account_id;
-            let catalog = lee::privacy_preserving_transaction::circuit::ProgramCatalog::from([(
-                program,
-                lee::program::Program::new(std::borrow::Cow::Owned(bytes))
-                    .map_err(|e| anyhow!("the bridge program does not load: {e}"))?,
-            )]);
+            let binary = lee::program::Program::new(std::borrow::Cow::Owned(bytes))
+                .map_err(|e| anyhow!("the bridge program does not load: {e}"))?;
+            // A proof of another program's execution is refused by the sequencer: check the binary against the image
+            // the zone's loader names for the bridge account before proving (the test network runs ferrata_bridge_b1,
+            // this tree builds ferrata_bridge_f13).
+            if let Some(zone) = self.bridge_image(program).await? {
+                check_program_binary(path, &deployed::program_id_bytes(&binary.id()), &zone)?;
+            }
+            let catalog =
+                lee::privacy_preserving_transaction::circuit::ProgramCatalog::from([(program, binary)]);
             if let Some(payer) = self.private_fee_payer {
                 // A dry run first: the transaction claims the gas drop's credit into the one-time account and
                 // pays its fee from it.
@@ -1168,7 +1255,7 @@ impl Ledger for DevnetZone {
             .call(
                 "module.submit",
                 serde_json::json!({
-                    "what": call.what, "message": hx(&borsh::to_vec(&call.message)?),
+                    "what": call.what, "message": hx(&call.bytes()?),
                     "accounts": accounts, "root_index": call.root_index,
                 }),
             )
@@ -1321,6 +1408,20 @@ pub async fn record<L: Ledger>(
 /// and the record it read, the burns published.
 pub async fn zone_status<L: Ledger>(ledger: &L, ctx: &Context, history: &History) -> Result<Vec<String>> {
     let mut out = Vec::new();
+    match ledger.bridge_image(ctx.program).await? {
+        None => {}
+        Some(id) => out.push(match BridgeProgram::of_image_id(&id) {
+            Ok(BridgeProgram::B1) => format!(
+                "zone: bridge program ferrata_bridge_b1 (image {}, the test network's, before ADR 0046): claims are sent \
+                 in its layout, with a fee-schedule range",
+                hx(&id)
+            ),
+            Ok(BridgeProgram::F13) => {
+                format!("zone: bridge program ferrata_bridge_f13 (image {}, this tree's, ADR 0046)", hx(&id))
+            }
+            Err(e) => format!("zone: {e}"),
+        }),
+    }
     let config = match read(ledger, config_actor(ctx.program, &ctx.cid)).await? {
         Some(BridgeState::Config(bw::ConfigState::Ready { config, gate, sunset, .. })) => {
             out.push(format!(
@@ -1376,6 +1477,11 @@ pub fn reveals(call: &LezCall) -> &'static str {
         BridgeMessage::Claim { .. } => {
             "PLAINTEXT CLAIM: the whole witness is public — which deposit (leaf, depositor, j), the secret s, the destination; \
              anyone can link this mint to the Ethereum deposit"
+        }
+        BridgeMessage::ClaimPrivately { .. } if call.wire.is_some() => {
+            "private claim to the test network's ferrata_bridge_b1: N, the token, the denomination, the root read, the fee \
+             schedule range it names (deposits on the other side of a fee change are not in its set), the relayer, when \
+             (its block); not the deposit, the path, s or the private destination"
         }
         BridgeMessage::ClaimPrivately { .. } => {
             "private claim: N, the token, the denomination, the root read, the relayer, when (its block); \
@@ -1448,6 +1554,200 @@ mod tests {
 
     /// `history_of` reads a ledger's refused calls: the leaf of a refused plaintext claim leaves the anonymity set of
     /// every other deposit's private claim, and the owner of that deposit sees it opened (`flow::claim`'s line of 1).
+    /// A zone serving a root and a token state, with the image id its loader names for the bridge account.
+    struct Served {
+        states: std::collections::HashMap<AccountId, Vec<u8>>,
+        image: Option<[u8; 32]>,
+    }
+    impl Ledger for Served {
+        async fn applied(&self, _: AccountId) -> Result<Vec<Applied>> {
+            Ok(Vec::new())
+        }
+        async fn actor_state(&self, actor: Actor) -> Result<Vec<u8>> {
+            Ok(self.states.get(&actor.account_id).cloned().unwrap_or_default())
+        }
+        async fn bridge_image(&self, _: AccountId) -> Result<Option<[u8; 32]>> {
+            Ok(self.image)
+        }
+        async fn submit(&mut self, _: &LezCall) -> Result<String> {
+            unreachable!("planning sends nothing")
+        }
+    }
+
+    /// One deposit of 1000 to a public account, its root imported at 1, a token with one fee schedule from leaf 0
+    /// (mint fee 5) known up to leaf `known_until`.
+    fn served(image: Option<[u8; 32]>, known_until: u64) -> (Served, Context, OwnedDeposit, Vec<Hash>) {
+        use ferrata_bridge_core::{chain_id_u256, inbound::VaultDeposit, tree::Tree};
+        let program = AccountId::new([0x10; 32]);
+        let ctx = Context { program, cid: [0x20; 32], chain_id: 11_155_111, vault: [0x30; 20] };
+        let (s, dest) = ([0x50; 32], [0x40; 32]);
+        let mut amount = [0u8; 32];
+        amount[16..].copy_from_slice(&1_000u128.to_be_bytes());
+        let commitment = inbound::commitment(&s, DestKind::Public, &dest);
+        let leaf = inbound::deposit_leaf(0, &[0x60; 20], &[0; 20], &amount, &commitment);
+        let fid = inbound::deposit_id(&chain_id_u256(ctx.chain_id), &ctx.vault, 0, &leaf);
+        let deposit = VaultDeposit { depositor: [0x60; 20], j: 0, leaf_index: 0, token: [0; 20], amount, commitment };
+        let owned = OwnedDeposit {
+            deposit,
+            s,
+            kind: DestKind::Public,
+            account_index: 0,
+            dest,
+            leaf,
+            nullifier: inbound::nullifier(&s, &fid),
+        };
+        let unlimited = bw::CapParams { capacity: u128::MAX, refill_per_second: u128::MAX };
+        let controls = bw::Controls {
+            admin: [1; 32],
+            freeze_authority: [2; 32],
+            fee_recipient: [3; 32],
+            floor: bw::CapParams { capacity: 1, refill_per_second: 1 },
+            token_cap: unlimited,
+            global_cap: unlimited,
+        };
+        let root = BridgeState::Root(RootState {
+            config_id: ctx.cid,
+            evm_chain_id: ctx.chain_id,
+            vault: ctx.vault,
+            leaf_count: 1,
+            root: Tree::from_leaves(vec![leaf]).unwrap().root(),
+            record_slot: 1,
+            block_number: 2,
+        });
+        let token = BridgeState::Token(TokenState {
+            config_id: ctx.cid,
+            evm_chain_id: ctx.chain_id,
+            vault: ctx.vault,
+            attestation: AccountId::new([4; 32]),
+            instance_id: [5; 32],
+            entry: bw::TokenEntry {
+                token: [0; 20],
+                lez_definition: [6; 32],
+                decimals: 18,
+                lez_unit: 1,
+                unit_weight: 1,
+                denominations: vec![1_000],
+                relay_fees: vec![7],
+            },
+            schedules: vec![bw::FeeSchedule {
+                index: 0,
+                from_leaf: 0,
+                announced_at: 0,
+                effective_at: 0,
+                mint_fees: vec![5],
+                burn_fees: vec![0],
+                checkpoint_fees: vec![0],
+            }],
+            known_until,
+            controls,
+            gate: bw::Gate::new(unlimited, 0),
+            pending: None,
+            delisted: false,
+            listing_slot: 0,
+        });
+        let states = [
+            (root_actor(program, &ctx.cid, 1).account_id, borsh::to_vec(&root).unwrap()),
+            (token_actor(program, &ctx.cid, &[0; 20]).account_id, borsh::to_vec(&token).unwrap()),
+        ]
+        .into_iter()
+        .collect();
+        (Served { states, image }, ctx, owned, vec![leaf])
+    }
+
+    /// The claim's layout is the zone's program's: no loader (an in-process zone) and this tree's image give this tree's
+    /// message; the test network's B1 gives B1's bytes with the range and mint fee its token state gives; an unknown image
+    /// is refused before anything is built.
+    #[tokio::test]
+    async fn the_claim_takes_the_layout_of_the_program_the_zone_runs() {
+        let history = History { roots: vec![1], ..History::default() };
+        for image in [None, Some(deployed::F13_IMAGE_ID)] {
+            let (zone, ctx, owned, leaves) = served(image, 1);
+            let plan = plan_claim(&zone, &ctx, &leaves, &owned, &history, false, None, None).await.unwrap();
+            assert_eq!(plan.program, BridgeProgram::F13);
+            assert!(plan.b1.is_none() && plan.call.wire.is_none());
+            assert_eq!(plan.call.bytes().unwrap(), borsh::to_vec(&plan.call.message).unwrap());
+            assert!(reveals(&plan.call).contains("PLAINTEXT CLAIM"));
+        }
+        let (zone, ctx, owned, leaves) = served(Some(deployed::B1_IMAGE_ID), 1);
+        for private in [false, true] {
+            let prover = private.then_some(AccountId::new([0x91; 32]));
+            let plan = plan_claim(&zone, &ctx, &leaves, &owned, &history, private, None, prover).await.unwrap();
+            assert_eq!(plan.program, BridgeProgram::B1);
+            let b1 = plan.b1.as_ref().unwrap();
+            assert_eq!(b1.range, deployed::ScheduleRange { index: 0, from_leaf: 0, until_leaf: 1 });
+            assert_eq!(b1.mint_fee, 5);
+            let bytes = plan.call.bytes().unwrap();
+            assert_eq!(bytes, deployed::encode_b1(&plan.call.message, &b1.range).unwrap(), "B1's bytes are sent");
+            assert!(BridgeMessage::try_from_slice(&bytes).is_err(), "not this tree's layout");
+            let back = deployed::decode_claim(&bytes).unwrap();
+            assert_eq!((back.private, back.range), (private, Some(b1.range)));
+            if private {
+                assert!(reveals(&plan.call).contains("fee schedule range"), "{}", reveals(&plan.call));
+            }
+        }
+        // B1 refuses a leaf its imported fee schedules do not cover yet: so does the plan, with B1's code.
+        let (zone, ctx, owned, leaves) = served(Some(deployed::B1_IMAGE_ID), 0);
+        let e = plan_claim(&zone, &ctx, &leaves, &owned, &history, false, None, None).await.unwrap_err().to_string();
+        assert!(e.contains("248") && e.contains("ferrata_bridge_b1"), "{e}");
+        // The same leaf is claimable on this tree's program, which reads no schedule.
+        let (zone, ctx, owned, leaves) = served(Some(deployed::F13_IMAGE_ID), 0);
+        assert!(plan_claim(&zone, &ctx, &leaves, &owned, &history, false, None, None).await.is_ok());
+        let (zone, ctx, owned, leaves) = served(Some([0x5a; 32]), 1);
+        let e = plan_claim(&zone, &ctx, &leaves, &owned, &history, false, None, None).await.unwrap_err().to_string();
+        assert!(e.contains("does not know") && e.contains("refused before anything was signed or sent"), "{e}");
+    }
+
+    /// A private call's binary must be the program the zone runs: B1's binary on B1's zone, this tree's on this tree's.
+    #[test]
+    fn a_binary_of_another_program_is_refused_before_proving() {
+        let path = std::path::Path::new("ferrata_bridge.bin");
+        assert!(check_program_binary(path, &deployed::B1_IMAGE_ID, &deployed::B1_IMAGE_ID).is_ok());
+        let e = check_program_binary(path, &deployed::F13_IMAGE_ID, &deployed::B1_IMAGE_ID).unwrap_err().to_string();
+        assert!(e.contains("refused before proving") && e.contains("ferrata_bridge_f13") && e.contains("ferrata_bridge_b1"), "{e}");
+        assert!(check_program_binary(path, &[1; 32], &deployed::F13_IMAGE_ID).is_err());
+    }
+
+    /// The history reads the plaintext claims of either layout (the test network's B1 names a range): each publishes its
+    /// leaf, and this configuration's spend their nullifiers, applied or refused alike.
+    #[test]
+    fn the_history_reads_plaintext_claims_of_both_layouts() {
+        use ferrata_bridge_core::chain_id_u256;
+        let program = AccountId::new([7; 32]);
+        let ctx = Context { program, cid: [1; 32], chain_id: 11_155_111, vault: [0xaa; 20] };
+        let witness = |i: u64| ClaimWitness {
+            depositor: [0xd1; 20],
+            token: [0; 20],
+            amount: [2; 32],
+            leaf_index: i,
+            path: vec![[0; 32]; 32],
+            s: [i as u8 + 1; 32],
+            kind: DestKind::Public as u8,
+            dest: [9; 32],
+        };
+        let f13 = |i: u64| BridgeMessage::Claim { config_id: ctx.cid, leaf_count: 4, witness: witness(i), relayer: None };
+        let range = deployed::ScheduleRange { index: 0, from_leaf: 0, until_leaf: 4 };
+        let to = config_actor(program, &ctx.cid);
+        let applied = vec![
+            Applied { to, message: borsh::to_vec(&f13(0)).unwrap() },
+            Applied { to, message: deployed::encode_b1(&f13(1), &range).unwrap() },
+        ];
+        let mut h = history(&ctx, &applied);
+        h.note_refused(&ctx, &[Applied { to, message: deployed::encode_b1(&f13(2), &range).unwrap() }]);
+        let leaf = |i: u64| {
+            let w = witness(i);
+            inbound::deposit_leaf(i, &w.depositor, &w.token, &w.amount, &inbound::commitment(&w.s, DestKind::Public, &w.dest))
+        };
+        for i in 0..3 {
+            assert!(h.opened.contains(&leaf(i)), "leaf {i} published");
+        }
+        assert!(!h.opened.contains(&leaf(3)));
+        let spent = |i: u64| {
+            inbound::nullifier(&witness(i).s, &inbound::deposit_id(&chain_id_u256(ctx.chain_id), &ctx.vault, i, &leaf(i)))
+        };
+        assert!(h.claimed.contains(&spent(0)) && h.claimed.contains(&spent(1)), "both applied layouts spend");
+        assert!(!h.claimed.contains(&spent(2)), "a refused claim spends nothing");
+    }
+
     #[tokio::test]
     async fn history_of_counts_refused_plaintext_claims() {
         struct Blocks(Included);

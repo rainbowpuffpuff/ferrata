@@ -1,8 +1,9 @@
 //! The mini-app's whole network session from its committed terminal calls file. Every server is bound to
 //! 127.0.0.1: the network configuration, faucet and LEZ JSON-RPC on one loopback origin, and Ethereum JSON-RPC on
 //! another. Nothing on a public network is contacted. As in tests/endpoints.rs, these are protocol stand-ins, not
-//! chains: they serve real Borsh states, a Deposit log and its recomputed root. The claim on pinned B1 is refused
-//! without a send. The burn's confirm must decode as this tree's exact `Burn` before resulting state is exposed.
+//! chains: they serve real Borsh states, a Deposit log and its recomputed root. The deployment pins B1 (the test
+//! network's program): the plaintext claim is built in B1's layout (its fee schedule range), approved, and its confirm
+//! must decode as that exact B1 claim, and the burn's as this tree's exact `Burn`, before resulting state is exposed.
 //!
 //! Run all targets: `cargo test --locked --offline` from calls/. The replay uses the same `wallet_calls` function as
 //! `cargo run --example call -- wallet examples/network-session.jsonl` (with loopback URLs substituted here).
@@ -17,6 +18,7 @@ use borsh::BorshDeserialize as _;
 use ferrata_bridge_calls::{wallet_as, wallet_calls, ViewClient};
 use ferrata_bridge_core::{chain_id_u256, hmac_sha256, inbound, outbound, sha256, tree::Tree, BridgeKeys, Hash, U256};
 use ferrata_lez_bridge_wire::{self as bw, BridgeState};
+use ferrata_wallet::deployed::{self, DecodedClaim, ScheduleRange};
 use ferrata_wallet::AccountId;
 use serde_json::{json, Value};
 use tiny_keccak::{Hasher, Keccak};
@@ -142,6 +144,9 @@ struct Fixture {
     token_state: Vec<u8>,
     burn_state: Vec<u8>,
     burn_message: bw::BridgeMessage,
+    /// The plaintext claim of deposit 0 the network expects, in B1's layout.
+    claim: DecodedClaim,
+    nullifier_state: Vec<u8>,
     holder_before_burn: Vec<u8>,
     holder_after_burn: Vec<u8>,
     deposit_log: Value,
@@ -260,6 +265,31 @@ impl Fixture {
                 pending: None,
             }))
         };
+        let mut path = Tree::from_leaves(vec![leaf]).unwrap().path(0).unwrap().siblings.to_vec();
+        path.truncate(32);
+        let claim = DecodedClaim {
+            private: false,
+            config_id: cid,
+            leaf_count: 1,
+            witness: bw::ClaimWitness {
+                depositor,
+                token: [0u8; 20],
+                amount: amount(CLAIM_AMOUNT),
+                leaf_index: 0,
+                path,
+                s: secret,
+                kind: inbound::DestKind::Public as u8,
+                dest,
+            },
+            range: Some(ScheduleRange { index: 0, from_leaf: 0, until_leaf: 1 }),
+            relayer: None,
+        };
+        let nullifier_state = encode_state(&BridgeState::Nullifier(bw::NullifierState {
+            config_id: cid,
+            token: [0u8; 20],
+            leaf_count: 1,
+            amount: CLAIM_AMOUNT,
+        }));
         let deposit_log = json!({
             "topics": [hex(&keccak("Deposit(address,uint64,uint64,address,uint256,bytes32)")), hex(&word_addr(&depositor)), hex(&word_addr(&[0u8; 20]))],
             "data": hex(&[word64(0), word64(0), amount(CLAIM_AMOUNT), commitment].concat()),
@@ -272,6 +302,8 @@ impl Fixture {
             config: id58(bw::config_actor(program, &cid).account_id.value()),
             root: id58(bw::root_actor(program, &cid, 1).account_id.value()),
             token: id58(bw::token_actor(program, &cid, &[0u8; 20]).account_id.value()),
+            claim,
+            nullifier_state,
             holder_before_burn: holder_state(CLAIM_AMOUNT),
             holder_after_burn: holder_state(CLAIM_AMOUNT - BURN_AMOUNT),
             deposit_log,
@@ -297,6 +329,9 @@ struct NetworkRequest {
 struct NetworkState {
     sent: Vec<String>,
     decoded: Vec<bw::BridgeMessage>,
+    /// Plaintext claims the network decoded in B1's layout.
+    claims: Vec<DecodedClaim>,
+    claim_applied: bool,
     burn_applied: bool,
     requests: Vec<NetworkRequest>,
     faucet_body: Option<Value>,
@@ -306,6 +341,11 @@ struct NetworkState {
 /// Decode a captured public transaction's root call with the current bridge wire. Unlike the old send-count
 /// simulation, malformed or wrong-layout data cannot make the stand-in report its actor states as applied.
 fn captured_bridge_message(wire: &str) -> Result<bw::BridgeMessage, String> {
+    bw::BridgeMessage::try_from_slice(&captured_bridge_data(wire)?).map_err(|e| format!("current BridgeMessage decoder: {e}"))
+}
+
+/// A captured transaction's root call's data.
+fn captured_bridge_data(wire: &str) -> Result<Vec<u8>, String> {
     let raw = base64::engine::general_purpose::STANDARD.decode(wire).map_err(|e| e.to_string())?;
     let tx = raw.get(1..).ok_or("short public transaction")?;
     let mut at = 0usize;
@@ -326,7 +366,7 @@ fn captured_bridge_message(wire: &str) -> Result<bw::BridgeMessage, String> {
     }
     take(64)?;
     let data_len = count(take(4)?)?;
-    bw::BridgeMessage::try_from_slice(take(data_len)?).map_err(|e| format!("current BridgeMessage decoder: {e}"))
+    Ok(take(data_len)?.to_vec())
 }
 
 fn network(f: Arc<Fixture>, state: Arc<Mutex<NetworkState>>) -> String {
@@ -352,6 +392,7 @@ fn network(f: Arc<Fixture>, state: Arc<Mutex<NetworkState>>) -> String {
         let sends_before = st.sent.len();
         st.requests.push(NetworkRequest { method: method.clone(), sends_before });
         let burn_applied = st.burn_applied;
+        let claim_applied = st.claim_applied;
         let result = match method.as_str() {
             "getLastBlockId" => json!(5),
             "getAccountsNonces" => {
@@ -368,6 +409,22 @@ fn network(f: Arc<Fixture>, state: Arc<Mutex<NetworkState>>) -> String {
                 let wire = req["params"][0].as_str().unwrap().to_string();
                 let tx = base64::engine::general_purpose::STANDARD.decode(&wire).unwrap();
                 assert_eq!(tx[0], 0, "public transaction wire");
+                // The network runs B1: a plaintext claim must be the expected claim in B1's layout (its range), read
+                // by B1's decoder; this tree's range-free layout is not B1's and is refused, as B1 would refuse it.
+                let data = captured_bridge_data(&wire).unwrap_or_default();
+                if let Some(claim) = deployed::decode_claim(&data) {
+                    if claim != f.claim {
+                        return (
+                            200,
+                            json!({ "jsonrpc": "2.0", "id": req["id"], "error": { "code": -32000, "message": format!("B1 network: not the expected claim in B1's layout: {claim:?}") } }),
+                        );
+                    }
+                    let reply = hash_hex(&sha256(&tx[1..]));
+                    st.claims.push(claim);
+                    st.claim_applied = true;
+                    st.sent.push(wire);
+                    return (200, json!({ "jsonrpc": "2.0", "id": req["id"], "result": reply }));
+                }
                 let decoded = match captured_bridge_message(&wire) {
                     Ok(message) if message == f.burn_message => message,
                     Ok(message) => {
@@ -406,9 +463,16 @@ fn network(f: Arc<Fixture>, state: Arc<Mutex<NetworkState>>) -> String {
                 } else if id == f.token {
                     json!(f.token_state)
                 } else if id == f.holder {
-                    json!(if burn_applied { &f.holder_after_burn } else { &f.holder_before_burn })
+                    if burn_applied {
+                        json!(&f.holder_after_burn)
+                    } else if claim_applied {
+                        json!(&f.holder_before_burn)
+                    } else {
+                        Value::Null // nothing claimed yet: no holding
+                    }
                 } else if id == f.nullifier {
-                    Value::Null // B1 refused the claim: decoding another message must not manufacture this state.
+                    // Spent only once the network decoded the expected B1 claim: no state from a send count.
+                    if claim_applied { json!(&f.nullifier_state) } else { Value::Null }
                 } else if id == f.burn && burn_applied {
                     json!(f.burn_state)
                 } else {
@@ -536,7 +600,7 @@ fn terminal_calls_file_drives_the_whole_network_session_offline() {
     let file = include_str!("../examples/network-session.jsonl").replace("$NETWORK", &base).replace("$ETH_RPC", &eth);
     assert!(!file.contains("https://"), "no public endpoint in the replay");
     let replies = wallet_calls(&file);
-    assert_eq!(replies.len(), 16, "one reply per directive in the committed calls file");
+    assert_eq!(replies.len(), 18, "one reply per directive in the committed calls file");
     let r: Vec<Value> = replies.iter().map(|s| value(s)).collect();
 
     assert_error(&r[0], "opened by the Ferrata Bridge view");
@@ -553,7 +617,7 @@ fn terminal_calls_file_drives_the_whole_network_session_offline() {
     assert!(!replies[3].contains(PHRASE), "the phrase is never printed by the open reply");
     assert_error(&r[4], "belongs to the Ferrata Bridge view");
     assert_error(&r[5], "each call must carry its counter and MAC");
-    for (i, r) in r.iter().enumerate().take(14).skip(3) {
+    for (i, r) in r.iter().enumerate().take(16).skip(3) {
         assert_eq!(r["session_account"], ACCOUNT0, "reply {i} names the session's /0");
     }
 
@@ -576,25 +640,26 @@ fn terminal_calls_file_drives_the_whole_network_session_offline() {
     assert_eq!(faucet["result"]["tx_hash"], "faucet-transaction");
     assert_error(&r[8], "no transaction waits for approval");
 
-    // Review r1 M1: this server pins B1. The F13 range-free claim is refused before there is an approval,
-    // signature or send; no nullifier/holder state may be manufactured from this request afterwards.
-    assert_error(&r[9], "ferrata_bridge_b1");
-    let claim_error = r[9]["error"].as_str().unwrap();
-    assert!(
-        claim_error.contains("fee-schedule range") && claim_error.contains("deploy/testnet/F13-REDEPLOY.md"),
-        "{claim_error}"
-    );
-    assert!(claim_error.contains("Nothing was signed or sent"), "{claim_error}");
-    assert!(
-        r[9].get("result").is_none() && r[9]["result"]["to_approve"].is_null(),
-        "no claim approval exists: {}",
-        r[9]
-    );
-    // The driver has completed the file by this point; below, the final capture must contain the later
-    // burn alone. In particular, this refusal produced no claim approval and no captured claim transaction.
+    // The deployment pins B1 (the test network's program): the plaintext claim is built in B1's layout, with the fee
+    // schedule range its token state gives, for approval; nothing is signed or sent until its confirm.
+    let claim = assert_ok(&r[9]);
+    let claim_approval = &claim["result"]["to_approve"];
+    assert_eq!(claim_approval["kind"], "claim");
+    assert_eq!(claim_approval["signed"], false);
+    assert_eq!(claim_approval["program"], "ferrata_bridge_b1");
+    assert_eq!(claim_approval["fee_schedule_range"], json!({ "index": 0, "from_leaf": 0, "until_leaf": 1 }));
+    let claim_bytes = unhex(&claim_approval["message"].as_str().unwrap()[2..]);
+    assert_eq!(deployed::decode_claim(&claim_bytes).as_ref(), Some(&fixture.claim), "the approved claim is B1's");
+    assert!(bw::BridgeMessage::try_from_slice(&claim_bytes).is_err(), "not this tree's range-free layout");
+    assert_eq!(assert_ok(&r[10])["result"]["job"]["kind"], "claim");
+    let claim_job = assert_ok(&r[11]);
+    assert_eq!(claim_job["result"]["state"], "settled", "{claim_job}");
+    let claim_done = &claim_job["result"]["result"];
+    assert_eq!(claim_done["approved"]["message_hash"], claim_approval["message_hash"]);
+    assert_eq!(claim_done["balance"], CLAIM_AMOUNT.to_string(), "{claim_done}");
     assert_eq!(state.lock().unwrap().faucet_body, Some(json!({ "account": ACCOUNT0, "public_key": PUBLIC_KEY0 })));
 
-    let burn = assert_ok(&r[10]);
+    let burn = assert_ok(&r[12]);
     let burn_approval = &burn["result"]["to_approve"];
     assert_eq!(burn_approval["signed"], false);
     assert_eq!(burn_approval["kind"], "burn");
@@ -605,18 +670,20 @@ fn terminal_calls_file_drives_the_whole_network_session_offline() {
         burn["result"].get("tx_hash").is_none() && burn["result"].get("block").is_none(),
         "the public burn's approve step sends nothing"
     );
-    assert_eq!(assert_ok(&r[11])["result"]["job"]["kind"], "burn");
-    let burn_job = assert_ok(&r[12]);
+    assert_eq!(assert_ok(&r[13])["result"]["job"]["kind"], "burn");
+    let burn_job = assert_ok(&r[14]);
     assert_eq!(burn_job["result"]["state"], "settled", "{burn_job}");
     let burn_done = &burn_job["result"]["result"];
     assert_eq!(burn_done["approved"]["message_hash"], burn_approval["message_hash"]);
     assert_eq!(burn_done["balance"], (CLAIM_AMOUNT - BURN_AMOUNT).to_string());
     {
         let st = state.lock().unwrap();
-        assert_eq!(st.sent.len(), 1, "only the burn is sent; the incompatible claim was not");
-        assert!(st.decoded.iter().all(|m| matches!(m, bw::BridgeMessage::Burn { .. })), "no claim was signed or sent");
-        assert_signed(&st.sent[0], burn_done["approved"]["message_hash"].as_str().unwrap());
-        assert_eq!(captured_bridge_message(&st.sent[0]).unwrap(), fixture.burn_message);
+        assert_eq!(st.sent.len(), 2, "the confirmed claim, then the confirmed burn");
+        assert_signed(&st.sent[0], claim_done["approved"]["message_hash"].as_str().unwrap());
+        assert_eq!(captured_bridge_data(&st.sent[0]).unwrap(), claim_bytes);
+        assert_eq!(st.claims.as_slice(), &[fixture.claim.clone()], "state followed the decoded B1 claim");
+        assert_signed(&st.sent[1], burn_done["approved"]["message_hash"].as_str().unwrap());
+        assert_eq!(captured_bridge_message(&st.sent[1]).unwrap(), fixture.burn_message);
         assert_eq!(
             st.decoded.as_slice(),
             &[fixture.burn_message.clone()],
@@ -624,7 +691,7 @@ fn terminal_calls_file_drives_the_whole_network_session_offline() {
         );
     }
 
-    let release = assert_ok(&r[13]);
+    let release = assert_ok(&r[15]);
     assert_eq!(release["result"]["handoff"], true);
     assert_eq!(release["result"]["settled"], false);
     assert_eq!(release["result"]["released"], false);
@@ -632,13 +699,12 @@ fn terminal_calls_file_drives_the_whole_network_session_offline() {
     assert_eq!(release["result"]["amount"], BURN_AMOUNT.to_string());
     assert_eq!(release["result"]["recipient"], format!("0x{DEPOSITOR_HEX}"));
     assert!(release["result"]["what"].as_str().unwrap().contains("ferrata release --burn 0"));
-    assert_eq!(assert_ok(&r[14])["result"]["keys"], "wiped");
-    assert_error(&r[15], "no wallet session");
+    assert_eq!(assert_ok(&r[16])["result"]["keys"], "wiped");
+    assert_error(&r[17], "no wallet session");
 
     // A second open exercises the same client as the file: a genuine envelope succeeds once, its exact replay is
     // refused, a forged tag and another caller cannot replace it, and a fresh counter works afterwards.
-    // Use a fresh B1 fixture so the direct approval-boundary checks below begin with an empty send ledger.
-    // (The working claim's F13 stand-in unit test likewise asserts its ledger is empty immediately after prepare.)
+    // A fresh B1 fixture, so the direct approval-boundary checks below begin with an empty send ledger.
     let fixture = Arc::new(Fixture::new());
     let state = Arc::new(Mutex::new(NetworkState::default()));
     let base = network(fixture.clone(), state.clone());
@@ -656,14 +722,20 @@ fn terminal_calls_file_drives_the_whole_network_session_offline() {
     assert_error(&value(&wallet_as("module:ferrata_bridge_ui", forged)), "MAC does not hold");
     assert_ok(&value(&view.call("balances", &json!({}))));
 
-    // Review r1 M1: drive these boundaries interactively. The B1 refusal sends nothing; the burn cannot sign/send at
-    // approve time and hide that send in a ledger inspected only after confirm. The request snapshots cover every RPC
-    // made before either assertion, including the prepare nonce/fee/balance reads and any misplaced sendTransaction.
+    // Review r1 M1: drive these boundaries interactively. Neither the claim nor the burn signs or sends at approve time
+    // (a send hidden in a ledger inspected only after confirm would fail here). The request snapshots cover every RPC
+    // made before each assertion, including the prepare nonce/fee/balance reads and any misplaced sendTransaction.
     assert_ok(&value(&view.call("faucet", &json!({ "account": 0 }))));
     let first_request = state.lock().unwrap().requests.len();
-    let refused = value(&view.call("claim", &json!({ "leaf_index": 0, "private": false })));
-    assert_error(&refused, "ferrata_bridge_b1");
-    assert_no_new_send(&state, first_request, 0, "B1 claim refusal");
+    let boundary_claim = value(&view.call("claim", &json!({ "leaf_index": 0, "private": false })));
+    assert_ok(&boundary_claim);
+    let approval = &boundary_claim["result"]["to_approve"];
+    assert_eq!((approval["kind"].as_str(), approval["program"].as_str()), (Some("claim"), Some("ferrata_bridge_b1")));
+    assert_no_new_send(&state, first_request, 0, "claim approval");
+    let claim_hash = approval["message_hash"].as_str().unwrap().to_string();
+    let claim_job = confirm_and_wait(&mut view, approval["pending_id"].as_str().unwrap());
+    assert_eq!(claim_job["result"]["state"], "settled", "{claim_job}");
+    assert_eq!(claim_job["result"]["result"]["approved"]["message_hash"], claim_hash);
 
     let first_request = state.lock().unwrap().requests.len();
     let boundary_burn = value(&view.call(
@@ -677,7 +749,7 @@ fn terminal_calls_file_drives_the_whole_network_session_offline() {
     let approval = &boundary_burn["result"]["to_approve"];
     assert_eq!(approval["kind"], "burn");
     assert_eq!(approval["signed"], false);
-    assert_no_new_send(&state, first_request, 0, "burn approval");
+    assert_no_new_send(&state, first_request, 1, "burn approval");
     let pending_id = approval["pending_id"].as_str().unwrap().to_string();
     let approved_hash = approval["message_hash"].as_str().unwrap().to_string();
     let boundary_job = confirm_and_wait(&mut view, &pending_id);
@@ -687,9 +759,11 @@ fn terminal_calls_file_drives_the_whole_network_session_offline() {
     assert_eq!(boundary_done["approved"]["message_hash"], approved_hash);
     {
         let st = state.lock().unwrap();
-        assert_eq!(st.sent.len(), 1, "exactly the confirmed burn was sent; the B1 claim refusal sent nothing");
-        assert_signed(&st.sent[0], &approved_hash);
-        assert_eq!(captured_bridge_message(&st.sent[0]).unwrap(), fixture.burn_message);
+        assert_eq!(st.sent.len(), 2, "exactly the confirmed claim and the confirmed burn were sent");
+        assert_signed(&st.sent[0], &claim_hash);
+        assert_eq!(st.claims.as_slice(), &[fixture.claim.clone()]);
+        assert_signed(&st.sent[1], &approved_hash);
+        assert_eq!(captured_bridge_message(&st.sent[1]).unwrap(), fixture.burn_message);
         assert_eq!(st.decoded.as_slice(), &[fixture.burn_message.clone()]);
     }
     assert_ok(&value(&view.call("close", &json!({}))));

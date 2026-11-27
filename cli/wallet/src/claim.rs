@@ -47,10 +47,35 @@ pub fn anonymity_set(
     amount: &[u8; 32],
     leaf_count: u64,
 ) -> usize {
+    anonymity_set_in(deposits, opened, token, amount, 0, leaf_count)
+}
+
+/// [`anonymity_set`] for a claim to the test network's B1 program (`crate::deployed`), whose claim publishes the fee
+/// schedule range it names: only the deposits of the same token and amount in `[range.from_leaf, min(range.until_leaf,
+/// leaf_count))` share its set, so a fee change splits it.
+pub fn anonymity_set_b1(
+    deposits: &[VaultDeposit],
+    opened: &HashSet<Hash>,
+    token: &[u8; 20],
+    amount: &[u8; 32],
+    leaf_count: u64,
+    range: &crate::deployed::ScheduleRange,
+) -> usize {
+    anonymity_set_in(deposits, opened, token, amount, range.from_leaf, range.until_leaf.min(leaf_count))
+}
+
+fn anonymity_set_in(
+    deposits: &[VaultDeposit],
+    opened: &HashSet<Hash>,
+    token: &[u8; 20],
+    amount: &[u8; 32],
+    from_leaf: u64,
+    until_leaf: u64,
+) -> usize {
     deposits
         .iter()
         .filter(|d| d.token == *token && d.amount == *amount)
-        .filter(|d| d.leaf_index < leaf_count)
+        .filter(|d| d.leaf_index >= from_leaf && d.leaf_index < until_leaf)
         .filter(|d| !opened.contains(&deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment)))
         .count()
 }
@@ -418,5 +443,12 @@ mod tests {
         assert_eq!(anonymity_set(&list, &opened, &eth, &word(1), 10), 4, "leaves 0, 3, 5 and 9");
         assert_eq!(anonymity_set(&list, &opened, &eth, &word(1), 6), 3, "leaves 0, 3 and 5");
         assert_eq!(anonymity_set(&list, &opened, &eth, &word(2), 10), 2, "no deposit of 2 opened");
+        // On the test network's B1 program a claim names its fee schedule's range, which splits the set.
+        let all = crate::deployed::ScheduleRange { index: 0, from_leaf: 0, until_leaf: u64::MAX };
+        let schedule_1 = crate::deployed::ScheduleRange { index: 1, from_leaf: 5, until_leaf: 9 };
+        assert_eq!(anonymity_set_b1(&list, &none, &eth, &word(1), 10, &all), 6, "one schedule: as without a range");
+        assert_eq!(anonymity_set_b1(&list, &none, &eth, &word(1), 10, &schedule_1), 2, "leaves 5 and 8");
+        assert_eq!(anonymity_set_b1(&list, &opened, &eth, &word(1), 10, &schedule_1), 1, "leaf 5 alone");
+        assert_eq!(anonymity_set_b1(&list, &opened, &eth, &word(1), 6, &schedule_1), 1, "leaf 5, under root(cid, 6)");
     }
 }

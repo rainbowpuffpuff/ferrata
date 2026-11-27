@@ -1386,11 +1386,6 @@ impl Chain {
         if private && self.network() {
             return Err(crate::net::PRIVATE_NEEDS_PROOF.into());
         }
-        if self.network() {
-            // The deployed B1 program expects ScheduleRange in Claim. ADR 0046 removed it: stop before
-            // gathering a claim plan or preparing anything that could subsequently be signed.
-            crate::net::require_f13_claim_layout()?;
-        }
         let inputs = self.inputs(json!({ "token": ETH }))?;
         let (_, deposits, _) = self.positions(&inputs)?;
         let d = deposits.iter().find(|d| d["leaf_index"].as_u64() == Some(leaf)).ok_or("not a deposit of this wallet")?;
@@ -1411,6 +1406,10 @@ impl Chain {
         }
         if self.network() && d["kind"] != "public" {
             return Err(format!("leaf {leaf} was deposited to your private account /{}: {}", d["account"], crate::net::PRIVATE_NEEDS_PROOF));
+        }
+        if self.network() {
+            // The claim's layout is the deployment's program's: the test network's B1 names a fee-schedule range.
+            req["bridge_image_id"] = json!(hex(&crate::net::bridge_program()?.image_id()));
         }
         let c = w::claim_with_state(&req)?;
         if c["verdict"] != "claimable" {
@@ -1436,6 +1435,8 @@ impl Chain {
                 "proof": null,
                 "variant": c["variant"],
                 "accounts": c["accounts"],
+                "program": c["program"],
+                "fee_schedule_range": c["fee_schedule_range"],
                 "made_by": "ferrata_bridge_module claim (the tool's claim with LEZ state), signed with your public account's key after your approval",
                 "public_on_lez": ["the nullifier N (its account)", "the deposit it spends (a plaintext claim names it)", "the destination account and its balance", "the token and denomination"],
                 "hidden": ["the depositor's other deposits"],
@@ -1444,6 +1445,11 @@ impl Chain {
             let mut rec = crate::net::prepare("claim", &message, &c["accounts"], root_index, &what, payer, Some(expect), crate::net::CLAIM_GAS, reply, a as u32)?;
             rec["leaf_index"] = json!(leaf);
             rec["account"] = json!(a);
+            rec["program"] = c["program"].clone();
+            rec["message"] = c["message"].clone();
+            if !c["fee_schedule_range"].is_null() {
+                rec["fee_schedule_range"] = c["fee_schedule_range"].clone();
+            }
             rec["amount"] = d["amount"].clone();
             rec["destination"] = json!(format!("your public account /{a}"));
             return Ok(json!({ "to_approve": rec }));

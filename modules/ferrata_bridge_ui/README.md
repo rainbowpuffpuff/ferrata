@@ -180,14 +180,15 @@ What protects the phrase and the session (review of 24 Nov 2026):
 
 What works there: the registry and the vault read, the positions found from the phrase, the faucet and the LGO balances,
 the public burn to an address the person enters in its checksummed form, and the release handed to the `ferrata` tool
-(its proof says which burn it is, so it is made on the person's machine). **A plaintext claim is refused on the
-currently deployed test network before anything is signed or sent**: its bridge is B1 (`ferrata_bridge_b1`), whose
-`Claim` requires a fee-schedule range, while this ADR 0046 tree builds range-free F13 claims. Claims stay disabled
-until a redeployment pairs `ferrata_bridge_f13` with its matching vault and configuration and the module pins that new
-deployment; the error names `deploy/testnet/F13-REDEPLOY.md`. Run from Basecamp on this network so far: the session,
-the reads, the positions and the faucet; no claim or burn has been sent there yet. Offline, the replay proves the B1
-refusal and the unchanged burn flow, and an F13 deployment stand-in decodes the signed claim with this tree's Borsh
-wire before treating it as settled.
+(its proof says which burn it is, so it is made on the person's machine). **The plaintext claim is built in the layout
+of the deployment's program**: the test network's bridge is B1 (`ferrata_bridge_b1`), whose `Claim` names a
+fee-schedule range that this tree's program (ADR 0046, `ferrata_bridge_f13`) dropped, so the module builds B1's claim
+for it, with the range its token state gives (`ferrata_wallet::deployed`), and signs only a claim in that layout; the
+approval shows the program and the range. Run from Basecamp on this network so far: the session, the reads, the
+positions and the faucet; no claim or burn has been sent there yet. Offline, the session's replay
+(`calls/tests/network_session.rs`) approves, confirms and decodes the claim in B1's layout against a B1 stand-in, with
+the burn unchanged, and an F13 deployment stand-in decodes the signed claim with this tree's wire; each refuses the
+other layout at approval, unsigned (EVIDENCE row 281).
 Deposits are made in the network's web wallet with the same phrase: Basecamp 0.4.0-rc.2 has no
 Logos signer for Sepolia (`tx_sender_module`, `keystore_module`), so the deposit button is off in the session. A private
 claim or burn needs a proof of LEZ's privacy circuit, which the module does not make: the view says to use the `ferrata`

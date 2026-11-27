@@ -679,13 +679,41 @@ pub async fn claim_row<L: Ledger>(
         hx(ctx.program.value())
     ));
     out.line(format!("  nullifier N  {}", hx(&plan.nullifier)));
+    if let Some(b) = &plan.b1 {
+        out.line(format!(
+            "  program      ferrata_bridge_b1, the test network's (before ADR 0046): the claim is sent in its layout and \
+             names the fee schedule range {} (leaves {}..{})",
+            b.range.index, b.range.from_leaf, b.range.until_leaf
+        ));
+    }
     // F.8: the deposits this claim cannot be told apart from on chain (the same token and amount under the root,
-    // less those plaintext claims have published); a plaintext claim names its own. Fee changes do not split the set.
+    // less those plaintext claims have published); a plaintext claim names its own. On this tree's program fee changes
+    // do not split the set; a claim to the test network's B1 names its fee schedule range, which does.
     let own_opened =
         history.opened.contains(&inbound::deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment));
-    let set =
-        ferrata_wallet::claim::anonymity_set(&list.deposits, &history.opened, &d.token, &d.amount, plan.leaf_count);
-    let among = format!("of {} under root(cid, {})", show(amount), plan.leaf_count);
+    let (set, among) = match &plan.b1 {
+        None => (
+            ferrata_wallet::claim::anonymity_set(&list.deposits, &history.opened, &d.token, &d.amount, plan.leaf_count),
+            format!("of {} under root(cid, {})", show(amount), plan.leaf_count),
+        ),
+        Some(b) => (
+            ferrata_wallet::claim::anonymity_set_b1(
+                &list.deposits,
+                &history.opened,
+                &d.token,
+                &d.amount,
+                plan.leaf_count,
+                &b.range,
+            ),
+            format!(
+                "of {} under root(cid, {}) in leaves {}..{} (the fee schedule range the claim names)",
+                show(amount),
+                plan.leaf_count,
+                b.range.from_leaf,
+                b.range.until_leaf.min(plan.leaf_count)
+            ),
+        ),
+    };
     out.line(anonymity_line(private, own_opened, set, &among));
     out.line(format!(
         "  relay fee    {} minted here (paid with the deposit on Ethereum); the LEZ fee is paid {}",
@@ -696,6 +724,12 @@ pub async fn claim_row<L: Ledger>(
             (false, _) => "by the payer account, in public",
         }
     ));
+    if let Some(b) = &plan.b1 {
+        out.line(format!(
+            "  mint fee     {} minted to the fee recipient by the test network's B1 program (escrowed with the deposit)",
+            show(b.mint_fee)
+        ));
+    }
     out.line(format!(
         "  delay        {hours} h after the deposit: from Ethereum block {from_block} (now {}){}",
         list.block,

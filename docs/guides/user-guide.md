@@ -373,7 +373,9 @@ From [`bridge.md`](../design/bridge.md) §17, with the measured dumps of
 - **a retry after a cap rejection**, which shows the first attempt's time; the client checks caps
   before proving;
 - **the root read and timing around a fee-schedule change**, but no fee-value split: the schedule-dependent mint fee
-  stayed on Ethereum, and the claim neither names a schedule range nor mints it (ADR 0046);
+  stayed on Ethereum, and the claim neither names a schedule range nor mints it (ADR 0046). Our test network still runs
+  the program from before it (B1), whose claim names its schedule's range: there a fee change splits the set by
+  deposit time, and `ferrata claim` counts the set within that range;
 - **network metadata** (your IP to an RPC or sequencer): out of scope, disclosed;
 - **an adversary's own deposits**, which it can subtract from any set;
 - **the fee payer** of a first private claim, unless a relayer's gas drop funds it (§5).

@@ -3,9 +3,15 @@
 ADR 0046 changes both halves together: the vault credits each deposit's mint fee to the fee recipient and escrows the
 denomination and the relay fee; the bridge program's claim names no fee schedule and mints the denomination and the
 relay fee only. **Neither half may be paired with the other's earlier version**: the earlier program would mint a mint
-fee the new vault never escrowed, and this tree's clients build claims the earlier program refuses (the claim is 24
-bytes shorter). The test network's bridge program (`ferrata_bridge_b1`, `0x847a4336…7515`) and the Sepolia vault of 23
-November 2026 keep running as they are; nothing here changes them. This is the owner's procedure: it deploys a new
+fee the new vault never escrowed, and the new program refuses claims in the earlier layout (B1's claim is 24 bytes longer:
+its fee-schedule range). The test network's bridge program (`ferrata_bridge_b1`, `0x847a4336…7515`) and the Sepolia
+vault of 23 November 2026 keep running as they are; nothing here changes them. Until this procedure is run, this tree's
+`ferrata` and bridge module address that network as it is and build B1's claims for it
+([`cli/wallet/src/deployed.rs`](../../cli/wallet/src/deployed.rs), EVIDENCE row 281): `ferrata` by the image id the
+network's program loader names for the bridge account, the module by the image id it records for the deployment, which
+it checks against the program account at open. After it, `ferrata` reads `ferrata_bridge_f13`'s id there and builds this
+tree's claims without a rebuild; the module needs the new deployment (program account, configuration, vault) added to
+its list (`KNOWN` in `modules/ferrata_bridge_module/rust-lib/calls/src/net.rs`), as any new deployment does. This is the owner's procedure: it deploys a new
 program and a new vault and sends transactions on Sepolia and on the test network. **Not run** by this project.
 
 What is new and what stays:
@@ -15,7 +21,7 @@ What is new and what stays:
 | bridge program | `ferrata_bridge_b1` `0x847a4336…7515`, binary sha256 `537cbe7a…` | `ferrata_bridge_f13` `0xffb47f6e…7675`, binary sha256 `c84fe2db…` ([`docs/image-ids.md`](../../docs/image-ids.md)) |
 | attestation program, release and checkpoint guests | unchanged | unchanged (19 of 20 guests rebuild to their recorded ids) |
 | vault | v5, mint fee escrowed and minted on LEZ | v5 with ADR 0046's deposit and refund |
-| clients (`ferrata`, the module, crown-driver, relayer) | claims with a range | claims without one: rebuild from this tree |
+| clients (`ferrata`, the module, crown-driver, relayer) | claims with a range | this tree's `ferrata` builds either layout by the image id the zone's loader names, the module by its deployment's recorded id (B1's today); crown-driver and the relayer build no claim for this network |
 | the web wallet (`deploy/testnet/web/wallet`), the explorer's IDL, `scripts/lez-read.py` | speak B1's claims (`idl/deployed/`) | not updated in this tree: the web wallet's claim encoder (`claim.js`) and the three readers move to `idl/ferrata_bridge.idl.json` with the redeploy (`idl/deployed/README.md`) |
 
 ## 1. Build and check (any machine; no key)

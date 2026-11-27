@@ -24,7 +24,9 @@ use ferrata_bridge_core::{
 use ferrata_lez_bridge_wire::{self as bw, BridgeConfig, BridgeState, ConfigState, RootState, TokenState};
 use ferrata_lez_wire::RecordState;
 use ferrata_wallet::{
-    claim, import,
+    claim,
+    deployed::{self, BridgeProgram},
+    import,
     release::{self, AcceptedRoot, ReleasePlan},
     AccountId, Context, Mention, Refusal,
 };
@@ -182,10 +184,27 @@ pub(crate) fn claim_with_state(req: &Value) -> Result<Value, String> {
     let relayer = if req["relayer"].is_null() { None } else { Some(fixed::<32>(&req["relayer"], "relayer")?) };
     let prover = if req["prover"].is_null() { None } else { Some(account(&req["prover"], "prover")?) };
     let inputs = claim::ClaimInputs { leaves: &leaves, leaf_count: n, root: &root, token: &token_state, spent };
+    // The program the claim goes to (`bridge_image_id`, as the zone's loader names it): this tree's (ADR 0046, the
+    // default) or the test network's B1, whose claim names a fee-schedule range (`ferrata_wallet::deployed`).
+    let program = if req["bridge_image_id"].is_null() {
+        BridgeProgram::F13
+    } else {
+        BridgeProgram::of_image_id(&fixed(&req["bridge_image_id"], "bridge_image_id")?)?
+    };
     Ok(match claim::build_claim(&ctx, &owned, &inputs, private, relayer, prover) {
         Ok(plan) => {
-            let m = borsh::to_vec(&plan.message).expect("borsh");
-            json!({
+            let b1 = match program {
+                BridgeProgram::F13 => None,
+                BridgeProgram::B1 => match deployed::b1_claim(&plan.message, &token_state) {
+                    Ok(b) => Some(b),
+                    Err(r) => return Ok(refused(r)),
+                },
+            };
+            let m = match &b1 {
+                Some(b) => b.bytes.clone(),
+                None => borsh::to_vec(&plan.message).expect("borsh"),
+            };
+            let mut out = json!({
                 "verdict": "claimable",
                 "what": plan.what,
                 "private": private,
@@ -203,7 +222,14 @@ pub(crate) fn claim_with_state(req: &Value) -> Result<Value, String> {
                 "kind": kind_name(k),
                 "path": path_json(&plan.path),
                 "relay_fee": plan.relay_fee.to_string(),
-            })
+                "program": program.name(),
+            });
+            if let Some(b) = b1 {
+                out["fee_schedule_range"] =
+                    json!({ "index": b.range.index, "from_leaf": b.range.from_leaf, "until_leaf": b.range.until_leaf });
+                out["mint_fee"] = json!(b.mint_fee.to_string());
+            }
+            out
         }
         Err(r) => refused(r),
     })

@@ -29,11 +29,12 @@
 //! Ethereum transactions are never signed here.
 //!
 //! What runs here: the public side, as the web wallet runs it in a page: the registry, the positions recovered from the
-//! phrase, the faucet, the public burn, and the release's hand-off (the release proof is the `ferrata` tool's, on the
-//! person's machine). The currently deployed B1 program's claims are incompatible with this tree's range-free F13
-//! encoder, so claim preparation is refused until a separately pinned F13 deployment exists. A deposit is made in the
-//! web wallet (Basecamp has no Logos signer for Sepolia yet). A private claim or burn needs a proof of LEZ's privacy
-//! circuit, which this module does not make.
+//! phrase, the faucet, the plaintext claim of a deposit to a public account, the public burn, and the release's
+//! hand-off (the release proof is the `ferrata` tool's, on the person's machine). A claim is built in the layout of the
+//! deployment's program, which the network's program account must carry (checked at open): the test network's
+//! `ferrata_bridge_b1` names a fee-schedule range in its claim, this tree's `ferrata_bridge_f13` (ADR 0046) does not
+//! (`ferrata_wallet::deployed`). A deposit is made in the web wallet (Basecamp has no Logos signer for Sepolia yet).
+//! A private claim or burn needs a proof of LEZ's privacy circuit, which this module does not make.
 
 use std::cell::Cell;
 use std::sync::{Mutex, MutexGuard};
@@ -42,6 +43,7 @@ use std::time::{Duration, Instant};
 use borsh::BorshDeserialize as _;
 use ferrata_bridge_core::{outbound, BridgeKeys, Hash};
 use ferrata_lez_bridge_wire::{self as bw, BridgeState, ConfigState};
+use ferrata_wallet::deployed::{self, BridgeProgram};
 use ferrata_wallet::{AccountId, Actor as WActor};
 use serde_json::{json, Value};
 use zeroize::Zeroizing;
@@ -64,19 +66,17 @@ pub(crate) struct Deployment {
     pub from_block: u64,
 }
 
-/// The deployed B1 bridge's image id. Its claims carry a fee-schedule range; ADR 0046 removed that field.
+/// The deployed B1 bridge's image id (`ferrata_wallet::deployed::B1_IMAGE_ID`). Its claims carry a fee-schedule range.
 const B1_IMAGE_ID: &str = "847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515";
-/// `ferrata_bridge_f13`, the range-free claim layout built by this tree (`docs/image-ids.md`).
+/// `ferrata_bridge_f13`, this tree's program (`ferrata_wallet::deployed::F13_IMAGE_ID`, `docs/image-ids.md`): claims
+/// without a range (ADR 0046).
+#[cfg(test)]
 const F13_IMAGE_ID: &str = "ffb47f6eaec6ef13f49505e5e80209f73d38ea53792e77656994f8069dde7675";
-
-pub(crate) const B1_CLAIM_REFUSED: &str = "refused: this deployment runs ferrata_bridge_b1, whose Claim requires a fee-schedule \
-range, but this module builds ADR 0046 range-free claims that B1 cannot decode. A claim cannot be prepared here until the bridge \
-is redeployed with ferrata_bridge_f13 and a matching vault/configuration; see deploy/testnet/F13-REDEPLOY.md. Nothing was signed or sent";
 
 /// The deployments this module knows: the network's configuration as recorded on 23 November 2026
 /// (`deploy/testnet/web/basecamp/tests/install-test/live-wallet-config.json` and `live-programs.json`). A network that
-/// names anything else is refused; a new deployment needs a new module. B1 remains known for reads, faucet and burns,
-/// but its claims are refused by [`require_f13_claim_layout`] before this tree's incompatible message can be signed.
+/// names anything else is refused; a new deployment needs a new module. Its program is B1's: claims to it are built in
+/// B1's layout ([`bridge_program`], `ferrata_wallet::deployed`).
 pub(crate) const KNOWN: &[Deployment] = &[Deployment {
     name: "Ferrata's LEZ v0.4.0-rc3 test network (vault on Sepolia, RISC Zero 3.1)",
     bridge_program: "36iqVMFpfgHrwoeuVvZhXX3caM1JPBJh56PBw5A4H1rk",
@@ -442,8 +442,9 @@ struct Net {
     chain_id: u64,
     eth: String,
     from_block: u64,
-    /// Only the recorded F13 image accepts this tree's range-free `Claim`/`ClaimPrivately` encoding.
-    f13_claim_layout: bool,
+    /// The deployment's bridge program, by its recorded image id (which the network's program account carries: checked
+    /// at open): the layout its claims are built in.
+    bridge: BridgeProgram,
     accounts: Vec<PublicAccount>,
     keys: WipedKeys,
     /// The view's channel (`seal.rs`): the calls' MAC key.
@@ -806,7 +807,7 @@ pub(crate) fn open(params: &Value, channel: seal::Keys) -> Result<(Value, Value)
         chain_id: c.dep.evm_chain_id,
         eth,
         from_block: c.dep.from_block,
-        f13_claim_layout: same_hex(c.dep.bridge_image_id, F13_IMAGE_ID),
+        bridge: BridgeProgram::of_image_id(&fixed(&json!(c.dep.bridge_image_id), "image id")?)?,
         accounts,
         keys,
         channel,
@@ -949,17 +950,10 @@ fn named(id: &[u8; 32]) -> String {
     }
 }
 
-/// ADR 0046's claim encoder is incompatible with the deployed B1 decoder. Check the image pinned at open,
-/// before claim preparation can build an approval or reach a signature. A future image must be added explicitly,
-/// not assumed compatible merely because it is not B1.
-pub(crate) fn require_f13_claim_layout() -> Result<(), String> {
-    with(|n| {
-        if n.f13_claim_layout {
-            Ok(())
-        } else {
-            Err(B1_CLAIM_REFUSED.into())
-        }
-    })
+/// The session's deployment's bridge program: the layout its claims are built in (the test network's B1 names a
+/// fee-schedule range, this tree's program does not). An image id the module does not know is refused at open.
+pub(crate) fn bridge_program() -> Result<BridgeProgram, String> {
+    with(|n| Ok(n.bridge))
 }
 
 /// Builds the module's message as a LEZ public transaction paid (and co-signed) by public account `/payer`, for the
@@ -971,7 +965,19 @@ pub(crate) fn require_f13_claim_layout() -> Result<(), String> {
 pub(crate) fn prepare(kind: &'static str, message: &[u8], accounts: &Value, root_index: usize, what: &str, payer: u32,
                       expect: Option<WActor>, gas_limit: u64, reply: Value, holding_of: u32) -> Result<Value, String> {
     if kind == "claim" {
-        require_f13_claim_layout()?;
+        // Signed only in the layout of the deployment's program: a claim the program cannot read is refused there, and
+        // a claim it misreads must not be signed (the test network's B1 reads a range this tree's layout dropped).
+        let bridge = bridge_program()?;
+        match deployed::decode_claim(message) {
+            Some(c) if !c.private && c.range.is_some() == (bridge == BridgeProgram::B1) => {}
+            _ => {
+                return Err(format!(
+                    "refused: this claim's message is not a plaintext claim in the layout of the deployment's program ({}); \
+                     nothing was signed or sent",
+                    bridge.name()
+                ))
+            }
+        }
     }
     let lez = lez()?;
     let (payer_id, _) = public_account(payer)?;
@@ -1237,14 +1243,13 @@ pub(crate) mod tests {
         pub url: String,
         pub methods: Arc<Mutex<Vec<String>>>,
         pub sent: Arc<Mutex<Vec<String>>>,
-        /// Messages the strict F13 stand-in decoded from accepted public transactions.
-        pub decoded: Arc<Mutex<Vec<bw::BridgeMessage>>>,
+        /// Claims a strict stand-in decoded, in its program's layout, from accepted public transactions.
+        pub decoded: Arc<Mutex<Vec<deployed::DecodedClaim>>>,
         pub base_fee: Arc<std::sync::atomic::AtomicU64>,
     }
 
-    /// Decode the root call's data out of a captured public LEZ transaction, then decode that data with
-    /// this tree's own Borsh `BridgeMessage`. A B1-layout claim therefore fails rather than settling by send count.
-    fn captured_bridge_message(wire: &str) -> Result<bw::BridgeMessage, String> {
+    /// The root call's data out of a captured public LEZ transaction.
+    fn captured_bridge_data(wire: &str) -> Result<Vec<u8>, String> {
         use base64::Engine as _;
         let raw = base64::engine::general_purpose::STANDARD.decode(wire).map_err(|e| e.to_string())?;
         let tx = raw.get(1..).ok_or("short public transaction")?;
@@ -1266,18 +1271,29 @@ pub(crate) mod tests {
         }
         take(64)?;
         let data_len = count(take(4)?)?;
-        bw::BridgeMessage::try_from_slice(take(data_len)?).map_err(|e| format!("current BridgeMessage decoder: {e}"))
+        Ok(take(data_len)?.to_vec())
+    }
+
+    /// A captured transaction's bridge call read as a plaintext claim in `layout`'s program's layout, and only that:
+    /// a claim of the other layout, or any other message, fails rather than settling by send count.
+    fn captured_claim(wire: &str, layout: BridgeProgram) -> Result<deployed::DecodedClaim, String> {
+        let data = captured_bridge_data(wire)?;
+        match deployed::decode_claim(&data) {
+            Some(c) if !c.private && c.range.is_some() == (layout == BridgeProgram::B1) => Ok(c),
+            Some(_) => Err(format!("{} stand-in: a claim in another layout", layout.name())),
+            None => Err(format!("{} stand-in accepts a plaintext Claim only", layout.name())),
+        }
     }
 
     pub(crate) fn stand_in_lez(holder: [u8; 32], held: u128, delay: Duration) -> StandIn {
-        stand_in_lez_impl(holder, held, delay, false)
+        stand_in_lez_impl(holder, held, delay, None)
     }
 
-    fn stand_in_f13(holder: [u8; 32], held: u128) -> StandIn {
-        stand_in_lez_impl(holder, held, Duration::ZERO, true)
+    fn stand_in_claims(holder: [u8; 32], held: u128, layout: BridgeProgram) -> StandIn {
+        stand_in_lez_impl(holder, held, Duration::ZERO, Some(layout))
     }
 
-    fn stand_in_lez_impl(holder: [u8; 32], held: u128, delay: Duration, require_current_claim: bool) -> StandIn {
+    fn stand_in_lez_impl(holder: [u8; 32], held: u128, delay: Duration, claims: Option<BridgeProgram>) -> StandIn {
         let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let url = format!("http://{}", l.local_addr().unwrap());
         let methods = Arc::new(Mutex::new(Vec::new()));
@@ -1326,14 +1342,9 @@ pub(crate) mod tests {
                         "getTransaction" => json!(["tx", 6]),
                         "sendTransaction" => {
                             let wire = req["params"][0].as_str().unwrap_or("").to_string();
-                            if require_current_claim {
-                                match captured_bridge_message(&wire) {
-                                    Ok(message @ bw::BridgeMessage::Claim { .. }) => messages.lock().unwrap().push(message),
-                                    Ok(_) => {
-                                        let text = json!({ "jsonrpc": "2.0", "id": req["id"], "error": { "code": -32000, "message": "F13 stand-in accepts a Claim only" } }).to_string();
-                                        let _ = write!(s, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", text.len(), text);
-                                        return;
-                                    }
+                            if let Some(layout) = claims {
+                                match captured_claim(&wire, layout) {
+                                    Ok(claim) => messages.lock().unwrap().push(claim),
                                     Err(e) => {
                                         let text = json!({ "jsonrpc": "2.0", "id": req["id"], "error": { "code": -32000, "message": e } }).to_string();
                                         let _ = write!(s, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", text.len(), text);
@@ -1560,32 +1571,35 @@ pub(crate) mod tests {
         assert!(lez.head().is_ok());
     }
 
-    /// Review r1 M1: on an F13 stand-in, claim preparation and confirmation use this tree's actual claim builder.
-    /// The stand-in decodes the captured transaction with this tree's wire before exposing the claim's actor state;
-    /// inserting B1's ScheduleRange makes that decoder reject the same claim.
-    #[test]
-    fn m1_f13_claim_is_approved_signed_and_decoded_with_the_current_wire() {
+    /// A plaintext claim through the network session's approval for a deployment running `layout`'s program: built by
+    /// the tool's claim builder in that program's layout, approved, signed once confirmed, and decoded by the stand-in
+    /// in that layout (and only that one) before it exposes the claim's actor state. The other layout's bytes are refused
+    /// at approval, unsigned and unsent.
+    fn claim_is_approved_signed_and_decoded_in_the_programs_layout(layout: BridgeProgram) {
         use ferrata_bridge_core::{chain_id_u256, inbound, tree::Tree};
 
         let _s = crate::jobs::tests::serial();
         close();
-        let dep = &F13_DEPLOYMENT;
-        assert_eq!(dep.bridge_image_id, "ffb47f6eaec6ef13f49505e5e80209f73d38ea53792e77656994f8069dde7675");
+        let dep = match layout {
+            BridgeProgram::F13 => &F13_DEPLOYMENT,
+            BridgeProgram::B1 => &KNOWN[0],
+        };
+        assert_eq!(dep.bridge_image_id, &hex(&layout.image_id())[2..]);
         let program = AccountId::new(lezkey::id_from_string(dep.bridge_program).unwrap());
         let cid: Hash = fixed(&json!(dep.config_id), "config id").unwrap();
         let vault: [u8; 20] = fixed(&json!(dep.vault), "vault").unwrap();
         let seed = lezkey::seed_of_phrase(PHRASE).unwrap();
         let dest = lezkey::public_accounts(&seed, 1).unwrap()[0].id;
         let holder = *bw::holder_actor(program, &cid, AccountId::new(dest)).account_id.value();
-        let net = stand_in_f13(holder, 0);
+        let net = stand_in_claims(holder, 0, layout);
         SKIP_CHECKS.store(true, Ordering::SeqCst);
-        F13_STAND_IN_DEPLOYMENT.store(true, Ordering::SeqCst);
+        F13_STAND_IN_DEPLOYMENT.store(layout == BridgeProgram::F13, Ordering::SeqCst);
         let (params, _view) = sealed(json!({ "network": net.url, "eth_rpc": "http://127.0.0.1:9" }), Some(PHRASE));
         let opened = open_sealed(&params);
         F13_STAND_IN_DEPLOYMENT.store(false, Ordering::SeqCst);
         SKIP_CHECKS.store(false, Ordering::SeqCst);
-        opened.expect("the F13 stand-in opens");
-        require_f13_claim_layout().expect("F13 claims are enabled");
+        opened.expect("the stand-in opens");
+        assert_eq!(bridge_program().unwrap(), layout);
 
         let depositor = [0x98u8; 20];
         let amount = 1_000u128;
@@ -1632,7 +1646,15 @@ pub(crate) mod tests {
                 denominations: vec![amount],
                 relay_fees: vec![0],
             },
-            schedules: vec![],
+            schedules: vec![bw::FeeSchedule {
+                index: 0,
+                from_leaf: 0,
+                announced_at: 0,
+                effective_at: 0,
+                mint_fees: vec![5],
+                burn_fees: vec![0],
+                checkpoint_fees: vec![0],
+            }],
             known_until: 1,
             controls,
             gate: bw::Gate::new(unlimited, 0),
@@ -1659,12 +1681,50 @@ pub(crate) mod tests {
             "root_state": hex(&root_state),
             "token_state": hex(&token_state),
             "nullifier_state": "0x",
+            "bridge_image_id": hex(&layout.image_id()),
         });
         let built = crate::with_session_keys(|| crate::wallet::claim_with_state(&req)).unwrap();
         assert_eq!(built["verdict"], "claimable", "{built}");
         assert_eq!(built["variant"], "Claim");
+        assert_eq!(built["program"], layout.name());
         let message = unhex(built["message"].as_str().unwrap()).unwrap();
-        assert!(matches!(bw::BridgeMessage::try_from_slice(&message), Ok(bw::BridgeMessage::Claim { .. })));
+        let claim = deployed::decode_claim(&message).expect("a claim");
+        assert!(!claim.private);
+        match layout {
+            BridgeProgram::F13 => {
+                assert!(matches!(bw::BridgeMessage::try_from_slice(&message), Ok(bw::BridgeMessage::Claim { .. })));
+                assert_eq!(claim.range, None);
+                assert!(built["fee_schedule_range"].is_null() && built["mint_fee"].is_null());
+            }
+            BridgeProgram::B1 => {
+                assert!(bw::BridgeMessage::try_from_slice(&message).is_err(), "B1's claim is not this tree's layout");
+                assert_eq!(claim.range, Some(deployed::ScheduleRange { index: 0, from_leaf: 0, until_leaf: 1 }));
+                assert_eq!(built["fee_schedule_range"], json!({ "index": 0, "from_leaf": 0, "until_leaf": 1 }));
+                assert_eq!(built["mint_fee"], "5");
+            }
+        }
+        // The other program's layout of the same claim is refused at approval: nothing signed, nothing sent.
+        let other = match layout {
+            BridgeProgram::F13 => deployed::encode_b1(
+                &bw::BridgeMessage::try_from_slice(&message).unwrap(),
+                &deployed::ScheduleRange { index: 0, from_leaf: 0, until_leaf: 1 },
+            )
+            .unwrap(),
+            BridgeProgram::B1 => {
+                let c = claim.clone();
+                borsh::to_vec(&bw::BridgeMessage::Claim {
+                    config_id: c.config_id,
+                    leaf_count: c.leaf_count,
+                    witness: c.witness,
+                    relayer: c.relayer,
+                })
+                .unwrap()
+            }
+        };
+        let e = prepare("claim", &other, &built["accounts"], 0, "the other layout", 0, None, CLAIM_GAS, json!({}), 0)
+            .unwrap_err();
+        assert!(e.contains("not a plaintext claim in the layout of the deployment's program") && e.contains(layout.name()), "{e}");
+        assert!(net.sent.lock().unwrap().is_empty(), "the refused layout sent nothing");
         let nullifier: Hash = fixed(&built["nullifier"], "nullifier").unwrap();
         let expect = bw::nullifier_actor(program, &cid, dep.evm_chain_id, &vault, &nullifier);
         let approval = prepare(
@@ -1672,7 +1732,7 @@ pub(crate) mod tests {
             &message,
             &built["accounts"],
             built["root_index"].as_u64().unwrap() as usize,
-            "F13 stand-in claim",
+            "stand-in claim",
             0,
             Some(expect),
             CLAIM_GAS,
@@ -1686,24 +1746,31 @@ pub(crate) mod tests {
         assert_eq!(done["settled"], true, "{done}");
         assert_eq!(done["approved"]["message_hash"], approval["message_hash"]);
         assert_eq!(net.sent.lock().unwrap().len(), 1);
-        assert_eq!(net.decoded.lock().unwrap().as_slice(), &[bw::BridgeMessage::try_from_slice(&message).unwrap()]);
-        assert_eq!(
-            captured_bridge_message(&net.sent.lock().unwrap()[0]).unwrap(),
-            bw::BridgeMessage::try_from_slice(&message).unwrap()
-        );
-
-        // B1 put ScheduleRange { index, from_leaf, until_leaf } immediately before relayer. This claim names
-        // no relayer, so its option is the last byte; splice the old range there and require strict decode failure.
-        let mut b1_layout = message.clone();
-        let relayer_option = b1_layout.pop().expect("the range-free message ends in relayer: None");
-        assert_eq!(relayer_option, 0);
-        b1_layout.extend_from_slice(&[0u8; 24]);
-        b1_layout.push(relayer_option);
-        assert!(
-            bw::BridgeMessage::try_from_slice(&b1_layout).is_err(),
-            "B1-layout claim must fail the F13 stand-in's decoder"
-        );
+        assert_eq!(net.decoded.lock().unwrap().as_slice(), &[claim.clone()]);
+        assert_eq!(captured_bridge_data(&net.sent.lock().unwrap()[0]).unwrap(), message);
         close();
+    }
+
+    /// Review r1 M1: on an F13 stand-in, claim preparation and confirmation use this tree's actual claim builder, and
+    /// the stand-in decodes the captured transaction with this tree's wire.
+    #[test]
+    fn m1_f13_claim_is_approved_signed_and_decoded_with_the_current_wire() {
+        claim_is_approved_signed_and_decoded_in_the_programs_layout(BridgeProgram::F13);
+    }
+
+    /// The test network runs B1: its claim is built in B1's layout (the fee schedule range its token state gives),
+    /// approved, signed once confirmed, and decoded in B1's layout by the stand-in; this tree's layout is refused.
+    #[test]
+    fn b1_claim_is_approved_signed_and_decoded_in_b1s_layout() {
+        claim_is_approved_signed_and_decoded_in_the_programs_layout(BridgeProgram::B1);
+    }
+
+    /// The module's image ids are the wallet's (`ferrata_wallet::deployed`), which its own tests hold to the records.
+    #[test]
+    fn the_module_names_the_wallets_image_ids() {
+        assert_eq!(B1_IMAGE_ID, &hex(&deployed::B1_IMAGE_ID)[2..]);
+        assert_eq!(F13_IMAGE_ID, &hex(&deployed::F13_IMAGE_ID)[2..]);
+        assert_eq!(KNOWN[0].bridge_image_id, B1_IMAGE_ID);
     }
 
     /// Review H1 and L3: a burn is built for the person's approval and signed only when confirmed, exactly as approved,

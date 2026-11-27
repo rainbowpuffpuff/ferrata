@@ -954,7 +954,7 @@ impl Chain {
         let private = matches!(mentions.first(), Some(Mention::PrivateSelf(_)));
         let since =
             self.seq.wallet.client().get_last_block_id().await.map_err(|e| anyhow!("get_last_block_id: {e}"))?;
-        let call = LezCall { what: what.clone(), mentions, root_index, message };
+        let call = LezCall { what: what.clone(), mentions, root_index, message, wire: None };
         if private {
             // The wallet proves from its own view of the private account: brought up to the zone's head first
             // (another process of the wallet, the gas drop's stand-in, may have changed it).
