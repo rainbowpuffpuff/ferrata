@@ -482,10 +482,14 @@ pub(crate) fn switch_sequencer(sequencer: &str) -> Result<(Value, Switched), Str
             Ok((json!({ "held_by": "lez_core", "config": copy, "from": prev.sequencer, "read": read }), prev))
         }
         Err(why) => {
-            let back = put_back(&prev).map_or_else(|e| format!("; putting lez_core back on {} failed: {e}", prev.config), |_| String::new());
-            // The copy this failed switch wrote is in nobody's use (never the config in use: `config_copy`).
-            let _ = std::fs::remove_file(&copy);
-            log(json!({ "kind": "switch", "from": prev.sequencer, "to": sequencer, "error": why, "put_back": back.is_empty() }));
+            let back = match put_back(&prev) {
+                // lez_core is back on its config: the copy this failed switch wrote is in nobody's use (it is never the
+                // config in use: `config_copy`), and goes.
+                Ok(()) => std::fs::remove_file(&copy).map_or_else(|e| format!("; its copy {copy} could not be removed: {e}"), |()| String::new()),
+                // lez_core may still have the copy open: kept, and named.
+                Err(e) => format!("; putting lez_core back on {} failed: {e}; the copy {copy} is kept", prev.config),
+            };
+            log(json!({ "kind": "switch", "from": prev.sequencer, "to": sequencer, "error": why, "after": back }));
             Err(format!("{why}{back}"))
         }
     }

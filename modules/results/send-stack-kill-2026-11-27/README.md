@@ -13,8 +13,9 @@ This record is run 2, the script as of `ca4d071a` and the two Ferrata modules wi
 **39 of 40 checks** (`checks.tsv`, `summary.txt`); the one failure is the harness's own expectation, not the relayer:
 K2 expected the recipient to receive the whole denomination, and the chain shows one payment of 0.0989 ETH, the
 denomination less the relay and checkpoint fees (a second payment would show 0.1978). Every relayer and monitor line
-per step is in `run/`, every SIGKILL's command line in `run/kills.log`, every module call in `calls.jsonl`; no key or
-password. That each fault fired is in the run's own notes (`checks.tsv`, NOTE lines): K1 and M1 trapped at the proxy
+per step is in `run/`, every SIGKILL's command line in `run/kills.log`, every module call but the daemons' `status`
+polls in `calls.jsonl`; neither the run's generated relayer and watcher keys nor its password (`run/anvil.log` prints
+anvil's own published test accounts, as anvil always does). That each fault fired is in the run's own notes (`checks.tsv`, NOTE lines): K1 and M1 trapped at the proxy
 with 7 module hosts killed, K2 with the relayer's host alone, K3 with its transaction in anvil's pool (`txpool 0x1`) and
 the daemon and 13 hosts killed, K4's round ended on the endpoint's error, K5 with one late forward.
 

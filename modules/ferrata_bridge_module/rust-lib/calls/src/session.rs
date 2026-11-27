@@ -615,23 +615,32 @@ fn set_endpoints(params: &Value) -> Result<Value, String> {
             Err(e) => {
                 // No answer is not "nothing switched": the service switches before it answers. Read it again, and put
                 // back what it switched, so that it and lez_core stay on one sequencer.
-                let back = match c.post("module.endpoints", json!({})) {
+                // Ok(note): its endpoints are those in use again; Err(note): they are not known to be.
+                let back: Result<String, String> = match c.post("module.endpoints", json!({})) {
                     Ok(v) => {
                         let moved = v["sequencer"].as_str() != Some(seq_cur.as_str())
                             || (svc_eth.is_some() && owner.endpoint(&v).ok().as_deref() != Some(eth_cur.as_str()));
                         if moved {
                             let eth_back = svc_eth.as_ref().map(|_| eth_cur.clone());
                             c.post("module.set_endpoints", json!({ "sequencer": seq_cur, "eth_rpc": eth_back })).map_or_else(
-                                |e| format!("; it had switched, and putting it back failed: {e}"),
-                                |_| "; it had switched: put back".to_string(),
+                                |e| Err(format!("; it had switched, and putting it back failed: {e}")),
+                                |_| Ok("; it had switched: put back".to_string()),
                             )
                         } else {
-                            "; it had not switched".to_string()
+                            Ok("; it had not switched".to_string())
                         }
                     }
-                    Err(e2) => format!("; its endpoints could not be read again ({e2}): check them before switching again"),
+                    Err(e2) => Err(format!("; its endpoints could not be read again ({e2})")),
                 };
-                return Err(kept(&format!("the chain service did not answer the switch ({e}){back}")));
+                return Err(match back {
+                    Ok(note) => kept(&format!("the chain service did not answer the switch ({e}){note}")),
+                    // Not "kept": the chain service may still be on the new endpoints.
+                    Err(note) => format!(
+                        "not switched: the chain service did not answer the switch ({e}){note}. Before: Ethereum RPC {eth_cur} ({}), \
+                         {seq_in_use}; the chain service's endpoints now are not known: read them (info) before switching again",
+                        owner.label()
+                    ),
+                });
             }
         }
     }
