@@ -764,8 +764,11 @@ tests = [
   { path = "e2e/both-halves/results/fees.md", kind = "record" },
   { path = "lez/harness/tests/bridge_inbound.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/harness/tests/bridge_vault_storage.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/harness/tests/bridge_f13.rs", kind = "test", ci = "lez-harness" },
+  { path = "e2e/both-halves/results/f13/fees.md", kind = "record" },
+  { path = "e2e/runs/f13-roundtrip-1/F13.md", kind = "record" },
 ]
-note = "fixed fees per token and denomination, in the wrapped token only, at most 1% (fuzzed), in force seven days after announcement, a deposit keeping its leaf index's schedule; invariants balance = escrow + owed + donations and LEZ supply = escrow - unminted - unreleased; live on Sepolia (rows 41, 91)"
+note = "fixed fees per token and denomination, at most 1% (fuzzed), in force seven days after announcement; since ADR 0046 the mint fee is taken on Ethereum at the deposit (credited to the fee recipient) and a claim names no schedule, minting the denomination and the registered relay fee (bridge_f13.rs; both halves across a fee change: one set of 6, results/f13/fees.md; on an rc3 sequencer: e2e/runs/f13-roundtrip-1); invariants balance = escrow + owed + donations and LEZ supply = escrow - unminted - unreleased; live on Sepolia (rows 41, 91)"
 
 [[row]]
 id = "RFP-022 F.14"

@@ -46,7 +46,8 @@ METHODS = {"CHECKPOINT_B_ID": "checkpoint_b", "CHECKPOINT_ID": "checkpoint", "SE
            "RELEASE_ID": "release"}
 # Guests whose source or toolchain changed after the live runs: the docs/image-ids.md entry this tree builds, where it is
 # not the guest's own name (that one is the program the live deployments keep, in docs/image-ids.md's "Superseded"):
-# the bridge program since milestone B1 (its superseded row rebuilds from f13faee2), and the Ethereum-side guests since
+# the bridge program since ADR 0046, `ferrata_bridge_f13` (B1's superseded row rebuilds from 40e8d799, the live runs'
+# from f13faee2), and the Ethereum-side guests since
 # RISC Zero 3.1 (risc0-zkvm 3.1.0, docs/design/risc0-3.1-migration.md; their superseded rows rebuild from 3d984678, the
 # tree before the move). docs/image-ids.md's first table lists this tree's builds under these entry names.
 TREE_ENTRY = {"ferrata_bridge": "ferrata_bridge_f13"}

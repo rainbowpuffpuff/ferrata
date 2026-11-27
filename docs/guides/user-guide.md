@@ -13,7 +13,11 @@ program are prototypes, not audited ([`vault/README.md`](../../vault/README.md);
 `ferrata` ([`cli/README.md`](../../cli/README.md); prototype, run only against a local chain or a test
 deployment), and as a mini-app on a devnet ([`modules/ferrata_bridge_ui`](../../modules/ferrata_bridge_ui/README.md));
 there is no wallet integration yet. The steps below were exercised by tests, harnesses and scripts, and each
-section says where. Labels:
+section says where. **Since ADR 0046 (27 November 2026)** this tree's `ferrata`, module and relayer build claims for the bridge
+program of ADR 0046 (`ferrata_bridge_f13`: the mint fee is paid on Ethereum at the deposit, a claim names no fee
+schedule), which is not deployed; the test network runs B1's program, which refuses them. Against the test network use
+the binaries [`deploy/testnet/install-bridge.sh`](../../deploy/testnet/install-bridge.sh) pins (built before ADR 0046);
+the owner's procedure for the new program and vault is [`deploy/testnet/F13-REDEPLOY.md`](../../deploy/testnet/F13-REDEPLOY.md). Labels:
 **measured** (a run in the repository, with where it ran), **derived**, **estimated**, **not built**
 ([`docs/design/bridge.md`](../design/bridge.md), opening section).
 
@@ -151,7 +155,7 @@ Three ways, the first preselected:
 
 | Path | How | Public | Hidden | Measured |
 |---|---|---|---|---|
-| **Private claim to a private account** (default) | `ClaimPrivately` runs as your destination account inside a privacy-preserving transaction; it reads `root(cid, n)` and credits its own private state | `N`, the configuration, the token, the denomination, which root was read (`n`), the relayer, the time, the bridge program, a one-time fee alias | which deposit (leaf, depositor, `s`, `C`, path) and your account | 553,641 execution gas, 224,063 storage gas; the prover proves 41,736 + 110,862 user cycles (in-process harness, dev mode, this tree's program; figures from the pre-ADR-0046 program) |
+| **Private claim to a private account** (default) | `ClaimPrivately` runs as your destination account inside a privacy-preserving transaction; it reads `root(cid, n)` and credits its own private state | `N`, the configuration, the token, the denomination, which root was read (`n`), the relayer, the time, the bridge program, a one-time fee alias | which deposit (leaf, depositor, `s`, `C`, path) and your account | 553,641 execution gas, 224,063 storage gas; the prover proves 41,736 + 110,862 user cycles (in-process harness, dev mode; figures of the program before ADR 0046, whose claim is 24 bytes longer) |
 | Private claim to a public account | the same proof, from a private account of yours; the mint goes publicly to the destination | the above and the destination | which deposit | 603,981 execution gas |
 | **Plaintext claim** | the witness is transaction data; one public transaction, for users who cannot prove | **everything, including which deposit**: the client must say so before allowing it | nothing | 261,671 execution gas (1 ETH), 2,053 bytes |
 

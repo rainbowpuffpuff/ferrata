@@ -237,7 +237,8 @@ fn scratch(name: &str) -> PathBuf {
 fn results_dir() -> PathBuf {
     let dir = std::env::var("FERRATA_BOTH_HALVES_OUT")
         .map(PathBuf::from)
-        .unwrap_or_else(|_| Path::new(env!("CARGO_MANIFEST_DIR")).join("../e2e/both-halves/results"));
+        // This tree's programs (ADR 0046) record under results/f13/; results/*.md are the earlier program's records.
+        .unwrap_or_else(|_| Path::new(env!("CARGO_MANIFEST_DIR")).join("../e2e/both-halves/results/f13"));
     std::fs::create_dir_all(&dir).unwrap();
     dir
 }
