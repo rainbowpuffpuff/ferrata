@@ -964,7 +964,8 @@ def render_paths(site, model, hard):
                    f'<b>{v["quick"]}</b> offline checks in minutes (Python; a few also need Node or Foundry); '
                    f'<code>--online</code> adds <b>{v["online"]}</b> read-only ones.'),
         "testers": (f"{TESTERS_DIR}/", "Try it on our test network",
-                    "The faucet, the wallet, a deposit on Sepolia and a private claim: every step, and what it should show."),
+                    "The faucet, the wallet, a deposit on Sepolia and its claim: every step, and what it should show; a "
+                    "private claim from the command line too."),
         "runs": ("#runs", "The run records",
                  "What ran where, its transactions, whether its proofs were real, and the command that re-checks it."),
     }
