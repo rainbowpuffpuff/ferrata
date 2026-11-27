@@ -13,8 +13,9 @@ the evidence for our proposal to Logos, [logos-co/rfp #257](https://github.com/l
    requirements of RFP-021 and the 68 of RFP-022, **49 and 47 are shown** under our strict rule; 6 and 18 in part,
    1 and 1 not yet, 3 and 2 wait on Logos (27 November 2026). Each row gives its reason, tests and evidence.
 2. **Verify it in ten minutes:** [docs/VERIFY.md](docs/VERIFY.md). Clone, then `python3 -I scripts/verify.py --all`
-   runs the 119 quick offline checks with Python alone, each naming the requirement rows it backs; then
-   `python3 -I scripts/verify.py --all --online` runs the 22 online checks, read-only.
+   runs the 119 quick offline checks in minutes, each naming the requirement rows it backs (Python 3.11; the few that
+   also need Node or Foundry say so and skip without them); then `python3 -I scripts/verify.py --all --online` runs
+   the 22 online checks, read-only.
 3. **Try it on our test network:** [the testers' page](https://54-156-116-24.sslip.io/testers/): the faucet, the web
    wallet, a deposit on Sepolia and a private claim on LEZ, step by step, with what each step should show. It is a
    LEZ v0.4.0-rc3 network we run for the bid, not Logos's LEZ testnet 0.4 (not released); its tokens have no value.
