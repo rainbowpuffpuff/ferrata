@@ -20,7 +20,8 @@ import tempfile
 from .core import REGISTRY, CheckFailed, Ctx, check, command, fail_if, run_script, scratch_env
 from .rows import status_rows
 
-CHECK_MODULES = ("checks_hashes", "checks_seals", "checks_sigs", "checks_lc", "checks_f13", "checks_f7", "checks_bridge",
+CHECK_MODULES = ("checks_hashes", "checks_seals", "checks_sigs", "checks_lc", "checks_f13", "checks_f13_lez",
+                 "checks_f7", "checks_bridge",
                  "checks_bridge_rows", "checks_online", "runrecord", "checks_zone", "checks_evidence")
 
 

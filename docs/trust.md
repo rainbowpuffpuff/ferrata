@@ -598,9 +598,10 @@ built, and the test or recorded run that shows the mitigation.
     period and slot-order rules of `apply_core_compact` (`:304-335`), which bound each job, not where a run of them
     ends: over a few jobs a forger installs a committee of its own. So it could write any instance's store and
     records, from which every attestation follows, public consumers' included;
-  - in the bridge program, `issue`, which mints (`lez/guests/bridge/src/main.rs:639`), the burn delivery a checkpoint
-    reads (`:775`) and the transfer delivery (`:852`), and the handlers that accept a configuration's or a nullifier's
-    actor as sender (`:180`, `:202`, `:448`, `:473`);
+  - in the bridge program, `issue`, which mints (`lez/guests/bridge/src/main.rs:655`), the burn delivery a checkpoint
+    reads (`:885`) and the transfer delivery (`:962`), the handlers that accept a configuration's or a nullifier's
+    actor as sender (`:186`, `:208`, `:467`, `:492`, and ADR 0048's `accrue_fees`, `:806`), and `mint_fees`, which
+    accepts the fees account's (`:835`);
   - in the reference consumer, `spend` (`lez/guests/consumer/src/main.rs:185`) and its credits (`:219`, `:285`); and in
     `ferrata_holdings`, `ferrata_statements`, the statements reader and `ferrata_rebate`, the replies they accept by
     their sender, a record's, an entry's or an instance's (`lez/guests/holdings/src/main.rs:40`,
@@ -609,7 +610,7 @@ built, and the test or recorded run that shows the mitigation.
   No Ferrata program is outside this, and nothing in these programs removes it. A program cannot tell a replayed call
   from a call another actor makes. A replayed call always names a sender (LEZ's `Sender::source`,
   `execution_state.rs:346-351`), so only handlers that take top-level calls alone are out of its reach, such as the
-  bridge's role actors (`lez/guests/bridge/src/main.rs:979`). Every Ferrata program accepts calls from other actors
+  bridge's role actors (`lez/guests/bridge/src/main.rs:1090`). Every Ferrata program accepts calls from other actors
   somewhere, and no flag of ours separates them: an instance refusing `ApplyVerified` would still accept `Apply` and
   `Record` in its own actors' names. The fix is LEZ's: a LEZ whose receipt check is sound, a LEZ on
   risc0 3.1.0 (LEZ `dev` moved at `6aaabe5`). No live exposure follows today: no v0.4 program of ours runs on a public
@@ -676,7 +677,7 @@ freeze reopens the forged path.
 | Rule (A) outside F1–F4, watchers down or eclipsed | a released burn later dropped on LEZ (double spend) | as above | the same |
 | Proof system unsound (the verifier accepts any seal) | forged checkpoints and releases, a forged sunset's refunds (to the leaves' depositors) | escrow, token by token, any depositor's | per-token escrow; the wait, cancel and revoke; the release delay; release caps; freezes; the stop, which anyone can then trip with a junk proof of exploit (with an accept-all verifier; under GHSA-mm6c-35cm-g4x2 no such proof was known and the stop did not trip) ([`vault/README.md`](../vault/README.md) "Under a broken verifier") |
 | Proof system unsound | anything a proof gates, until the stop trips | after the stop: every unreleased burn and unrefunded deposit stays in the vault | caps and freezes before; the stop after; the stop may never trip (§5) |
-| LEZ's check of private-transaction receipts unsound (LEZ v0.4.0-rc1 and rc3 on risc0-zkvm 3.0.5; GHSA-g6qg-9j8p-7j87, for Logos to confirm; §5) | a forged receipt delivers the bridge program's `Mint` from a nullifier's actor and writes a burn record from a token's actor, neither through the gate that holds LEZ's mint and burn caps and freezes (`lez/guests/bridge/src/main.rs:179-193`, `:761-771`); it can also write the attestation program's records (§5) | wrapped supply above escrow, without bound on LEZ; a forged burn record is LEZ state, so an honest checkpoint carries it and its release pays out of escrow, token by token; the shortfall falls on late redeemers. What happens to each in-flight position is not analysed for this case | on Ethereum only: the release caps; the release and checkpoint freezes while renewed; `revokeFrom` inside the window, at the freeze authority's judgement (the checkpoint is true to LEZ's state, so the wait and the watchers do not refuse it); retirement. Nothing on LEZ. The fix is LEZ's (a LEZ on RISC Zero 3.1) |
+| LEZ's check of private-transaction receipts unsound (LEZ v0.4.0-rc1 and rc3 on risc0-zkvm 3.0.5; GHSA-g6qg-9j8p-7j87, for Logos to confirm; §5) | a forged receipt delivers the bridge program's `Mint` from a nullifier's actor and writes a burn record from a token's actor, neither through the gate that holds LEZ's mint and burn caps and freezes (`lez/guests/bridge/src/main.rs:185-199`, `:873-880`); it can also write the attestation program's records (§5) | wrapped supply above escrow, without bound on LEZ; a forged burn record is LEZ state, so an honest checkpoint carries it and its release pays out of escrow, token by token; the shortfall falls on late redeemers. What happens to each in-flight position is not analysed for this case | on Ethereum only: the release caps; the release and checkpoint freezes while renewed; `revokeFrom` inside the window, at the freeze authority's judgement (the checkpoint is true to LEZ's state, so the wait and the watchers do not refuse it); retirement. Nothing on LEZ. The fix is LEZ's (a LEZ on RISC Zero 3.1) |
 | A bug in Ferrata's guests | depends on the bug | depends | release freeze and `revokeFrom` ([`bridge.md`](design/bridge.md) §14) |
 | A bug in the vault | depends; no upgrade | depends | freezes, retirement; caps |
 | A wrong checkpoint not revoked within 7 days | the vault halts for good | every position not yet released | caps bound what the error itself released |
