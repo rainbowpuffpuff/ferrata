@@ -214,8 +214,9 @@ two-hour cadence (§2).
   | G25: the default | 60 s | 165 / 285 s | 41 / 55 | 5.2M | 1.059 | 0.059 | 0.0550 | 0.577 |
   | G26: the default | 60 s | 145 / 255 s | 44 / 52 | 5.4M | 1.048 | 0.048 | 0.0484 | 0.583 |
 
-  Polling every 2 s against 6 s (G22) left honest-1's share where equal polls put it (G25, G26): honest-1 has paid more
-  than half in every run, these and G6–G11, with the same instance, updates and keys repeating largely the same draws.
+  Polling every 2 s against 6 s (G22) left honest-1's share where equal polls put it (G25, G26): honest-1 paid more
+  than half in each run where one replay served both daemons and no adversary ran (these, G6–G11), the same instance,
+  updates and keys repeating largely the same draws; with copies (G23) 0.498, beside the adversary (G24) 0.497.
   The latency at window 8 is longer than G10's (105 / 157 s), a turn being a 10-s block rather than a round of about
   6 s. With copies (G23) every abandoned job was left at its `Open`, opened before the other's `Open` was in a final
   block; A3's adversary (G24), never deferring and polling every 2 s, sent almost every step, and the honest daemons' few

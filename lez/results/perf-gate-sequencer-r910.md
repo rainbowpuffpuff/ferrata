@@ -27,9 +27,10 @@ written `<repo>`.
 
 **R.10.** Polling three times as often did not change who pays: in `gate-g22` honest-1, polling every 2 s, paid 0.575 of
 the honest fees and honest-2, every 6 s, 0.425; with both polling every 4 s honest-1 paid 0.577 (`gate-g25`) and 0.583
-(`gate-g26`). Honest-1 has paid more than half in every gate run so far, before this updater too (G6–G11: 0.521–0.617),
-whatever the polls: the runs share one instance, one sequence of updates and the daemons' two keys, so they repeat
-largely the same draws of `H(key, job, step)`; no run here varied the keys. Under the earlier updater a daemon that never
+(`gate-g26`). Honest-1 paid more than half in each run at this size where one replay served both daemons the same bytes
+and no adversary ran, before this updater too (G6–G11: 0.521–0.617; here 0.575, 0.577, 0.583), whatever the polls; with
+copies (`gate-g23`) 0.498, beside the adversary (`gate-g24`) 0.497. Those runs share one instance, one sequence of
+updates and the daemons' two keys, so they repeat largely the same draws of `H(key, job, step)`; no run varied the keys. Under the earlier updater a daemon that never
 deferred, polling every 2 s against 4, applied 93 of 99 steps (G2). Every revealed finality update was covered in every
 run. Latency at window 8 grew with the turns in blocks: medians 145–165 s and p90 255–286 s without the adversary
 (G10, rounds of about 6 s: 105 / 157 s).
