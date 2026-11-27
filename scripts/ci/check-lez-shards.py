@@ -753,6 +753,9 @@ def build_shard_plan(
         gate_py = f"{repo_prefix}scripts/privacy/check-results.py"
         cmds.append({"cwd": ".", "dev_mode": False, "argv": ["bash", run_sh, privacy_out]})
         cmds.append({"cwd": ".", "dev_mode": False, "argv": ["python3", "-I", gate_py, privacy_out]})
+        controls_py = f"{repo_prefix}scripts/privacy/controls.py"
+        cmds.append({"cwd": ".", "dev_mode": False,
+                     "argv": ["python3", "-I", controls_py, privacy_out, privacy_out + "-controls"]})
 
     if not cmds:
         raise ValueError(f"shard {shard_name!r} produces no commands (empty shard)")
