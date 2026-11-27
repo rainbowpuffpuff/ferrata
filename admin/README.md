@@ -125,6 +125,15 @@ ADMIN_KEY=<anvil account 0's published key> FREEZE_KEY=<any key> \
 node ../admin/dump.mjs http://127.0.0.1:8545 <the vault> 0
 ```
 
+The same sequence runs as one script, on a free local port, with the report compared against the
+committed record after masking what legitimately differs between runs, and then the vault's admin
+actions driven from a terminal through [`../vault/script/admin.sh`](../vault/script/admin.sh) and
+checked on the chain:
+
+```sh
+admin/tools/anvil-scenario.sh OUT_DIR     # tested by vault/script/test-admin.sh (CI's vault job)
+```
+
 [`results/local-anvil-scenario.txt`](results/local-anvil-scenario.txt): 91 read-only requests; the
 candidate "PENDING, waiting", its wait ending 602 s after submission (delta 600 s plus (t − 1) turns of
 2 s), and the rule (A) beacon its submission recorded;

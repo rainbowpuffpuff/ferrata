@@ -724,6 +724,7 @@ note = "from the seed alone: exactly the 7 own deposits among 100,000 natively; 
 [[row]]
 id = "RFP-022 F.10"
 tests = [
+  { path = "vault/script/test-admin.sh", kind = "test", ci = "vault" },
   { path = "vault/test/Admin.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/Release.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/Listing.t.sol", kind = "test", ci = "vault" },
@@ -736,6 +737,7 @@ note = "write-once registry on both sides; the LEZ entry written by attesting th
 [[row]]
 id = "RFP-022 F.11"
 tests = [
+  { path = "vault/script/test-admin.sh", kind = "test", ci = "vault" },
   { path = "vault/test/Caps.t.sol", kind = "test", ci = "vault" },
   { path = "lez/harness/tests/bridge_controls.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/harness/tests/bridge_time.rs", kind = "test", ci = "lez-harness" },
@@ -755,6 +757,7 @@ note = "outbound wait refused one second before W and accepted at it for t = 2, 
 [[row]]
 id = "RFP-022 F.13"
 tests = [
+  { path = "vault/script/test-admin.sh", kind = "test", ci = "vault" },
   { path = "vault/test/Fees.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/invariant/VaultInvariants.t.sol", kind = "test", ci = "vault" },
   { path = "cli/tests/both_halves.rs", kind = "test", ci = "box", run = "e2e/both-halves/run.sh" },
@@ -767,6 +770,7 @@ note = "fixed fees per token and denomination, in the wrapped token only, at mos
 [[row]]
 id = "RFP-022 F.14"
 tests = [
+  { path = "vault/script/test-admin.sh", kind = "test", ci = "vault" },
   { path = "vault/test/Freeze.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/Checkpoint.t.sol", kind = "test", ci = "vault" },
   { path = "lez/harness/tests/bridge_controls.rs", kind = "test", ci = "lez-harness" },
@@ -1213,6 +1217,7 @@ note = "token buckets per token and globally on both sides with the immutable fl
 [[row]]
 id = "RFP-022 Sec.5"
 tests = [
+  { path = "vault/script/test-admin.sh", kind = "test", ci = "vault" },
   { path = "vault/test/Freeze.t.sol", kind = "test", ci = "vault" },
   { path = "lez/harness/tests/bridge_roles.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/harness/tests/bridge_time.rs", kind = "test", ci = "lez-harness" },
