@@ -481,9 +481,10 @@ messages for each code.
 ## 13. For developers: integrating both flows through the core module (R.12)
 
 `ferrata_bridge_module` is the bridge's core module: the user's side of both flows, recovery and the registry, as
-eleven methods a Logos ui module or a client calls ([`modules/README.md`](../../modules/README.md),
-"`ferrata_bridge_module`"); the nine of the flows are below, and `wallet` (the LEZ wallet's accounts) and `version`
-are described there. It derives every key from the wallet's seed and never returns `kAuth`, `kView`, `s` or
+twelve methods a Logos ui module or a client calls ([`modules/README.md`](../../modules/README.md),
+"`ferrata_bridge_module`"); the nine of the flows are below, and `wallet` (the LEZ wallet's accounts), `version` and
+`admin` (the vault's and the bridge program's admin actions) are described there. It derives every key from the
+wallet's seed and never returns `kAuth`, `kView`, `s` or
 `sOut` (a claim message carries `s` as the private execution's input, or in the clear on the plaintext path the user
 chose). It builds what is to be signed and sent; the user's Ethereum wallet signs the vault calls, and LEZ's wallet
 proves and sends the private ones. In a headless Logos Core each method takes one JSON request:
@@ -512,7 +513,7 @@ logosctl daemon stop
 | out | release | `release` by the wallet's rule | the zone's published burns, the vault's accepted roots with their delays, the time | `releasable` with the 352-byte journal against the newest root past its delay, or the refusal | prove it (`prove_release`), hand the job to any relayer |
 | both | recover | `recover`, `status` | the seed, the vault's `Deposit` events, the published burn notes, what LEZ and the vault say is spent | your deposits and burns, each with its state | resume wherever you stopped |
 
-**Run end to end.** The eleven methods natively and inside a headless Logos Core on the mini-app's devnet (a local
+**Run end to end.** The twelve methods natively and inside a headless Logos Core on the mini-app's devnet (a local
 LEZ zone and anvil): `modules/scripts/bridge_e2e.sh`, 24 of 24 checks, also through the daemon, one release proven
 for real through Logos Core (EVIDENCE row 93, `modules/results/complete-2026-11-12/`); the calls equal to the shared
 vectors (row 59); `import_root` reading the vault itself through Logos Core's `eth_rpc_module` (row 109); the user's

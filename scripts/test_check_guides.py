@@ -1,8 +1,9 @@
 """Tests of scripts/check-guides.py's checks 2 (the mini-app's privacy table), 4 (no guide, and no index pointing at
-the guides, still calls a guide a first draft) and 5 (keyless retirement as the vault counts it):
-`python3 -I scripts/test_check_guides.py`.
+the guides, still calls a guide a first draft), 5 (keyless retirement as the vault counts it) and 6 (the counts a
+terminal user relies on): `python3 -I scripts/test_check_guides.py`.
 
-Standard library only; nothing is written to disk. The texts are built here; the last test reads the repository.
+Standard library only; nothing is written to disk. The texts are built here; the last test of each class reads the
+repository.
 """
 
 import importlib.util
@@ -142,6 +143,148 @@ class KeylessRetirement(unittest.TestCase):
             with open(os.path.join(self.ROOT, p), encoding="utf-8") as f:
                 texts[p] = f.read()
         self.assertEqual(cg.retirement_findings(texts), [])
+
+
+class MethodCounts(unittest.TestCase):
+    """Check 6's first half: the stated method counts against each module's trait."""
+
+    ROOT = os.path.dirname(HERE)
+    # The five counts as they stand: every path the check reads, in step with the traits below.
+    COUNTS = {
+        "modules/README.md": "`ferrata_attest_module` (eleven methods: dry runs),\n"
+                             "`ferrata_bridge_module` (twelve: deposit, claim), and\n",
+        "docs/guides/consumer-guide.md": "Logos core module (eleven methods, `ferrata_attest_module`), so a\n",
+        "docs/guides/user-guide.md": "twelve methods a Logos ui module or a client calls; "
+                                     "The twelve methods natively\n",
+    }
+    # The traits the counts must match: 11 attest methods, 12 bridge methods.
+    TRAITS = {"ferrata_attest_module": ["version"] * 11, "ferrata_bridge_module": ["version"] * 12}
+    # The shapes as they stood before the fix of 26 November 2026, against the traits as they are.
+    OLD_MODULES_README = ("# Logos modules\n\n`ferrata_attest_module` (eight methods: dry runs, checkpoint checks),\n"
+                          "`ferrata_bridge_module` (eleven: deposit, claim, burn), and the daemons.\n")
+    TRAIT = ("/// The module's methods.\npub trait FerrataBridgeModule: Send + 'static {\n"
+             "    fn version(&mut self) -> String;\n    fn deposit(&mut self, request: String) -> String;\n"
+             "    fn claim(&mut self, request: String) -> String;\n"
+             "    fn on_context_ready(&mut self, _ctx: &RustModuleContext) {}\n}\n")
+
+    def texts(self, **planted):
+        texts = dict(self.COUNTS)
+        texts.update(planted)
+        return texts
+
+    def test_the_traits_methods_are_counted_without_the_hook(self):
+        self.assertEqual(cg.trait_methods(self.TRAIT), ["version", "deposit", "claim"])
+
+    def test_a_file_without_a_trait_is_refused(self):
+        self.assertIsNone(cg.trait_methods("// no trait here\n"))
+
+    def test_the_old_counts_are_caught(self):
+        out = cg.method_count_findings(self.texts(**{"modules/README.md": self.OLD_MODULES_README}), self.TRAITS)
+        self.assertEqual(len(out), 2, out)
+        self.assertIn("says eight methods of ferrata_attest_module, its trait has 11", out[0])
+        self.assertIn("says eleven methods of ferrata_bridge_module, its trait has 12", out[1])
+
+    def test_a_sentence_reworded_away_from_a_number_is_caught(self):
+        text = "`ferrata_attest_module` (some methods: dry runs),\n`ferrata_bridge_module` (twelve: deposit), and\n"
+        out = cg.method_count_findings(self.texts(**{"modules/README.md": text}), self.TRAITS)
+        self.assertEqual(len(out), 1, out)
+        self.assertIn("no method count of ferrata_attest_module", out[0])
+
+    def test_an_unreadable_trait_is_caught(self):
+        out = cg.method_count_findings(self.texts(), {"ferrata_attest_module": None,
+                                                      "ferrata_bridge_module": None})
+        self.assertEqual(len(out), 5, out)
+        self.assertTrue(all("no `pub trait` block to count the methods of" in f for f in out), out)
+
+    def test_a_method_left_out_of_the_table_is_caught(self):
+        readme = "| Module | Directory | Methods |\n|---|---|---|\n" \
+                 "| `ferrata_bridge_module` | `ferrata_bridge_module/` | `version`, `deposit`, `claim` |\n"
+        out = cg.method_list_findings(readme, {"ferrata_bridge_module": ["version", "deposit", "claim", "admin"]})
+        self.assertEqual(out, ["modules/README.md: ferrata_bridge_module's trait has `admin`, "
+                               "its table row does not name it"])
+
+    def test_a_removed_method_left_in_the_table_is_caught(self):
+        """The other direction (review round 3, M8): a row may not name a callable the trait no longer has, for a
+        module with no numeric count shape to catch it either."""
+        readme = ("| Module | Directory | Methods |\n|---|---|---|\n"
+                  "| `ferrata_monitor_module` | `ferrata_monitor_module/` | `version`, `check`, `removed_method` |\n")
+        out = cg.method_list_findings(readme, {"ferrata_monitor_module": ["version", "check"]})
+        self.assertEqual(out, ["modules/README.md: ferrata_monitor_module's table row names `removed_method`, "
+                               "its trait has no such method"])
+
+    def test_the_rows_descriptive_references_still_pass(self):
+        """A row's notes may name other modules' parts (`keystore_module`, `tx_sender_module`) in backticks."""
+        readme = ("| Module | Directory | Methods |\n|---|---|---|\n"
+                  "| `ferrata_monitor_module` | `ferrata_monitor_module/` | `version`, `run`; `custody` (the watcher "
+                  "key into Logos Core's `keystore_module`, unlocked for `tx_sender_module`) |\n")
+        self.assertEqual(cg.method_list_findings(readme, {"ferrata_monitor_module": ["version", "run", "custody"]}), [])
+
+    def test_the_repository_agrees(self):
+        methods = {}
+        for module, path in cg.MODULES.items():
+            with open(os.path.join(self.ROOT, path), encoding="utf-8") as f:
+                methods[module] = cg.trait_methods(f.read())
+        texts = {}
+        for path in dict.fromkeys(p for p, _, _ in cg.METHOD_COUNTS):
+            with open(os.path.join(self.ROOT, path), encoding="utf-8") as f:
+                texts[path] = f.read()
+        self.assertEqual(cg.method_count_findings(texts, methods), [])
+        with open(os.path.join(self.ROOT, "modules", "README.md"), encoding="utf-8") as f:
+            self.assertEqual(cg.method_list_findings(f.read(), methods), [])
+
+
+class TestCounts(unittest.TestCase):
+    """Check 6's second half: the web wallet's README and the mini-app's, against what they describe."""
+
+    ROOT = os.path.dirname(HERE)
+    WALLET_README = ("```sh\nnode --test test/*.test.mjs                       # 48: LEZ's pinned vectors\n```\n"
+                     "\n- `test/fork_bridge.py`: the bridge tab against the deployed Sepolia vault on an anvil fork "
+                     "of Sepolia (nothing reaches Sepolia; `--fork-url`, `--deployment vault/deployments/x.json`, "
+                     "`--config-id`, and `--out`, the directory the record is written to; all four are required):\n"
+                     "  deposits refused.\n- `test/public_read.py`: read-only against the public network.\n")
+    TESTS = {f"test/{n}.test.mjs": "test('a', () => {});\ntest('b', () => {});\n" for n in ("one", "two")}
+    FORK = ('    ap.add_argument("--fork-url", required=True)\n'
+            '    ap.add_argument("--deployment", required=True)\n'
+            '    ap.add_argument("--out", required=True)\n'
+            '    ap.add_argument("--config-id", required=True)\n')
+    UI_README = "the view's 27 test\nfunctions pass, 27 of 27 on 23 November\n"
+    UI_RESULTS = "On the Modal build box: `scripts/box-test.sh` ran the view's 27 test functions, **27 passed in 40.5 s**\n"
+
+    def test_the_wallets_test_count_is_read_from_the_files(self):
+        out = cg.wallet_test_count_findings(self.WALLET_README, self.TESTS)
+        self.assertIn("says 48 Node tests, the files declare 4", out[0])
+
+    def test_the_missing_out_argument_is_caught(self):
+        with open(os.path.join(self.ROOT, cg.FORK_BRIDGE), encoding="utf-8") as f:
+            script = f.read()
+        readme = self.WALLET_README.replace("`--config-id`, and `--out`, the directory the record is written to; "
+                                            "all four are required", "`--config-id`")
+        out = cg.fork_bridge_args_findings(readme, script)
+        self.assertEqual(out, [f"{cg.WALLET_README}: `test/fork_bridge.py` requires --out, "
+                               "its bullet does not name it"])
+
+    def test_the_mini_apps_count_against_its_results(self):
+        out = cg.ui_count_findings(self.UI_README.replace("27", "17"), self.UI_RESULTS)
+        self.assertEqual(len(out), 1, out)
+        self.assertIn("says 17 of 17", out[0])
+
+    def test_a_results_file_this_check_cannot_read_is_caught(self):
+        self.assertEqual(len(cg.ui_count_findings(self.UI_README, "nothing to read here")), 1)
+
+    def test_the_repository_agrees(self):
+        with open(os.path.join(self.ROOT, cg.WALLET_README), encoding="utf-8") as f:
+            readme = f.read()
+        tests = {}
+        for name in sorted(os.listdir(os.path.join(self.ROOT, cg.WALLET_TESTS))):
+            if name.endswith(".test.mjs"):
+                with open(os.path.join(self.ROOT, cg.WALLET_TESTS, name), encoding="utf-8") as f:
+                    tests[f"test/{name}"] = f.read()
+        self.assertEqual(cg.wallet_test_count_findings(readme, tests), [])
+        with open(os.path.join(self.ROOT, cg.UI_README), encoding="utf-8") as f:
+            ui = f.read()
+        with open(os.path.join(self.ROOT, cg.UI_RESULTS), encoding="utf-8") as f:
+            results = f.read()
+        self.assertEqual(cg.ui_count_findings(ui, results), [])
 
 
 if __name__ == "__main__":

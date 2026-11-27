@@ -788,7 +788,7 @@ in-process harness, not on a live sequencer. It was built and run on v0.4.0-rc1 
 
 Your program runs on LEZ; its users' clients, and its own operators, need the off-chain half: find a record, fetch
 the proofs, predict the verdict, build the transaction, read the result. `ferrata_attest_module` is that half as a
-Logos core module (eight methods, [`modules/README.md`](../../modules/README.md), "`ferrata_attest_module`"), so a
+Logos core module (eleven methods, [`modules/README.md`](../../modules/README.md), "`ferrata_attest_module`"), so a
 Logos ui module or a daemon calls the same code. In a headless Logos Core, each method takes one JSON request:
 
 ```sh

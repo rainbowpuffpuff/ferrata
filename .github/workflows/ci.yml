@@ -592,6 +592,9 @@ jobs:
 
   links:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -722,6 +725,9 @@ jobs:
   # runs with lez/ (by hand) and fails when the wire and the committed vectors part.
   idl:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: The IDL alone decodes every committed borsh vector of both programs
@@ -731,6 +737,9 @@ jobs:
   # vault's selectors, topics and hash vectors, run from admin/index.html's inline script.
   admin:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: The admin view's self-test
@@ -744,6 +753,9 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -764,7 +776,7 @@ jobs:
       - name: Every offline check of the quick tier
         run: python3 -I scripts/verify.py --all --offline --strict
       - name: The tamper tests of every check family
-        run: python3 -I scripts/test_verify.py && python3 -I scripts/test_verify_lc.py && python3 -I scripts/test_verify_f13.py
+        run: python3 -I scripts/test_verify.py && python3 -I scripts/test_verify_lc.py && python3 -I scripts/test_verify_f13.py && python3 -I scripts/test_verify_bridge.py && python3 -I scripts/test_verify_bridge_rows.py
       - name: The checks and their tests left the tree as they found it
         if: always()
         run: |
