@@ -63,6 +63,13 @@ class Plan(unittest.TestCase):
             self.assertEqual(d, data[repo_path], path)                 # the bytes HEAD has
         self.assertEqual([x[0] for x in sd.plan(m, HEAD, set(sd.PARTS))["left_out"]], [])
 
+    def test_a_manifest_hash_that_is_not_hex_is_refused(self):
+        m, _, _ = served_now()
+        by = {e["path"]: e for e in m["files"]}
+        by["/index.html"]["sha256"] = "0" * 63 + "\n"
+        with tempfile.TemporaryDirectory(dir=HERE) as d, self.assertRaises(SystemExit):
+            sd.pack(sd.plan(m, HEAD, {"build"}), HEAD, Path(d))
+
     def test_a_path_install_sh_could_misread_is_refused(self):
         m, _, _ = served_now()
         m["files"].append({"path": "/a b.html", "sha256": "4" * 64, "repo_path": f"{sd.BUILD}/index.html"})
@@ -101,7 +108,8 @@ class Pack(unittest.TestCase):
         return subprocess.run(["bash", str(self.pkg / "install.sh")], env=env, capture_output=True, text=True)
 
     def test_the_package_holds_exactly_the_plan(self):
-        want = sorted(["www/index.html", "www/wallet/bridge.js", "www/testers/index.html", "SHA256SUMS", "EXPECT", "install.sh"])
+        want = sorted(["www/index.html", "www/wallet/bridge.js", "www/testers/index.html", "SHA256SUMS", "EXPECT", "install.sh",
+                       "rollback.sh"])
         self.assertEqual(self.names, want)
         self.assertEqual(sorted((self.pkg / "EXPECT").read_text().splitlines()), sorted([
             f"{hashlib.sha256(self.old['/index.html']).hexdigest()} index.html",
@@ -150,9 +158,9 @@ class Pack(unittest.TestCase):
         shim = self.d / "shim"
         shim.mkdir()
         real = subprocess.run(["bash", "-c", "command -v mv"], capture_output=True, text=True).stdout.strip()
-        (shim / "mv").write_text(  # the second mv call fails, as a rename could
+        (shim / "mv").write_text(  # the third rename fails, after index.html and the new testers/index.html moved
             "#!/bin/bash\nn=$(( $(cat \"$MV_COUNT\" 2>/dev/null || echo 0) + 1 )); echo $n > \"$MV_COUNT\"\n"
-            f"[ \"$n\" = 2 ] && {{ echo 'mv: injected failure' >&2; exit 1; }}\nexec {real} \"$@\"\n")
+            f"[ \"$n\" = 3 ] && {{ echo 'mv: injected failure' >&2; exit 1; }}\nexec {real} \"$@\"\n")
         (shim / "mv").chmod(0o755)
         r = self.install(path_prefix=str(shim), MV_COUNT=str(self.d / "mv-count"))
         self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
@@ -161,6 +169,18 @@ class Pack(unittest.TestCase):
         self.assertEqual((self.www / "wallet/bridge.js").read_bytes(), self.old["/wallet/bridge.js"])
         self.assertFalse((self.www / "testers/index.html").exists())
         self.assertFalse([p for p in self.www.rglob("*") if p.name.endswith((".site-delta-new", ".site-delta-old"))])
+
+    def test_rollback_puts_back_what_install_replaced(self):
+        self.assertEqual(self.install().returncode, 0)
+        env = dict(os.environ, WWW=str(self.www), OWNER=ME)
+        r = subprocess.run(["bash", str(self.pkg / "rollback.sh"), str(self.d / "backup")], env=env, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("put back 3 file(s)", r.stdout)
+        for path, body in self.old.items():
+            self.assertEqual((self.www / path.lstrip("/")).read_bytes(), body, path)
+        self.assertFalse((self.www / "testers/index.html").exists())
+        r = subprocess.run(["bash", str(self.pkg / "rollback.sh"), str(self.d / "no-such-backup")], env=env, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 1)
 
     def test_a_damaged_package_installs_nothing(self):
         p = self.pkg / "www/index.html"
@@ -190,6 +210,26 @@ class PackGuard(unittest.TestCase):
                 self.assertEqual(len(list(out.glob("site-*.tar"))), 1)
             finally:
                 sd.bundle_fresh = saved
+
+    def test_a_dirty_tree_and_a_stale_bundle_are_refused(self):
+        """bundle_fresh's own checks, in a scratch worktree of HEAD: a changed tracked file, then a bundle file that
+        differs from a fresh build while git sees a clean tree."""
+        saved = sd.ROOT
+        with tempfile.TemporaryDirectory(dir=HERE) as d:
+            wt = Path(d) / "wt"
+            sd.git("worktree", "add", "--detach", "--quiet", str(wt), "HEAD")
+            try:
+                sd.ROOT = wt
+                (wt / "README.md").write_text((wt / "README.md").read_text() + "\nchanged\n")
+                self.assertIn("the working tree has changes", sd.bundle_fresh(HEAD)[1])
+                sd.git("checkout", "--", "README.md")
+                bj = f"{sd.BUILD}/build.json"
+                sd.git("update-index", "--assume-unchanged", bj)
+                (wt / bj).write_text((wt / bj).read_text() + " ")
+                self.assertIn("site/build.py --check", sd.bundle_fresh(HEAD)[1])
+            finally:
+                sd.ROOT = saved
+                sd.git("worktree", "remove", "--force", str(wt))
 
     def test_only_the_checked_out_commit(self):
         ok, why = sd.bundle_fresh(sd.git("rev-parse", "HEAD~1").decode().strip())

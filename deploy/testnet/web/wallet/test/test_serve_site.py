@@ -39,6 +39,8 @@ class ServeSite(unittest.TestCase):
         (cls.site / "notes.sh").write_text("echo not a page type")
         (root / "secret.html").write_text("<p>outside the bundle</p>")
         (cls.site / "link.html").symlink_to(root / "secret.html")
+        (root / "site-x").mkdir()                        # a sibling whose name starts with the bundle's
+        (root / "site-x" / "secret.html").write_text("<p>outside the bundle</p>")
         cls.port = free_port()
         cls.proc = subprocess.Popen([sys.executable, "-I", str(HERE / "serve.py"), "--port", str(cls.port), "--rpc",
                                      "http://127.0.0.1:1", "--site", str(cls.site)],
@@ -83,7 +85,7 @@ class ServeSite(unittest.TestCase):
 
     def test_nothing_outside_the_bundle(self):
         for path in ("/../secret.html", "/testers/../../secret.html", "/link.html", "/notes.sh", "/missing.html",
-                     "/%2e%2e/secret.html", "/wallet/../../secret.html"):
+                     "/%2e%2e/secret.html", "/wallet/../../secret.html", "/../site-x/secret.html"):
             status, _, body = self.get(path)
             self.assertEqual(status, 404, path)
             self.assertNotIn(b"outside the bundle", body, path)

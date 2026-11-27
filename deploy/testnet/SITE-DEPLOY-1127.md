@@ -65,14 +65,15 @@ it replaces any, and puts back the files already renamed if a rename fails. Othe
 `installed N file(s) from TIP12; the replaced ones are in /var/lib/ferrata/site-backup/TIP12-<time>`. Caddy, the
 configs, the sequencer and every other file are untouched; no service restarts.
 
-**Roll back** (only if a page breaks): the backup directory holds every replaced file at its path under the web root;
-files the package added are listed `absent` in its `EXPECT`.
+**Roll back** (only if a page breaks): the package holds `rollback.sh`, which puts every replaced file back from the
+backup install.sh printed (each checked against the SHA-256 it had before) and removes the files the package added.
+On the host, as root (an SSM command as above, its JSON written the same way):
 
 ```sh
-# on the host, as root (an SSM command as above): B=/var/lib/ferrata/site-backup/<TIP12-time>; D=<the package's directory>
-cd "$B" && find . -type f -print0 | while IFS= read -r -d '' f; do install -o root -g root -m 644 "$f" "/srv/ferrata/www/$f"; done
-awk '$1 == "absent" {print $2}' "$D/EXPECT" | while read -r p; do rm -f "/srv/ferrata/www/$p"; done
+bash <the package's directory>/rollback.sh /var/lib/ferrata/site-backup/<TIP12-time>
 ```
+
+It runs under bash, not the host's `/bin/sh`, and says which file, if any, it could not put back.
 
 ## 4. Check the live site (any machine; read-only)
 

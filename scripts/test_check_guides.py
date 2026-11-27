@@ -328,6 +328,8 @@ class ReviewerLinks(unittest.TestCase):
     def test_a_check_count_is_held_to_verify_md(self):
         out = self.run_on(verify=self.VERIFY.replace("the 119 quick", "the 120 quick"))
         self.assertEqual(out, ["README.md: the reviewer block says ['119'] quick offline checks, docs/VERIFY.md ['120']"])
+        out = self.run_on(verify=self.VERIFY.replace("the 22 online", "the 23 online"))
+        self.assertEqual(out, ["README.md: the reviewer block says ['22'] online checks, docs/VERIFY.md ['23']"])
 
     def test_the_testers_page_on_another_host_is_caught(self):
         self.assertEqual(len(self.run_on(net="https://5-6-7-8.sslip.io")), 1)
