@@ -497,6 +497,9 @@ pub async fn bridge_program<L: Ledger>(ledger: &L, ctx: &Context) -> Result<Brid
 /// Refuses a private call's program binary (`--bridge-program`) whose image id `binary` is not `zone`'s, the image the
 /// zone's loader names for the bridge account: the sequencer would refuse the proof, after minutes of proving.
 pub fn check_program_binary(path: &std::path::Path, binary: &[u8; 32], zone: &[u8; 32]) -> Result<()> {
+    // A zone whose program this tool does not know is refused whatever the binary (review r2 M-B1): its messages may
+    // read differently from both layouts the tool builds.
+    BridgeProgram::of_image_id(zone).map_err(|e| anyhow!(e))?;
     if binary == zone {
         return Ok(());
     }
@@ -690,6 +693,9 @@ pub async fn plan_burn_at<L: Ledger>(
     history: &History,
     counter: Option<u64>,
 ) -> Result<BurnPlan> {
+    // A burn reads alike in the test network's B1 and this tree's program; a program the zone runs that this tool does
+    // not know is refused here, before the burn is built (review r2 M-B1: a burn destroys the holding).
+    bridge_program(ledger, ctx).await?;
     let t = token_state(ledger, ctx, &token).await?;
     if t.entry.index_of(amount).is_none() {
         bail!(program_refusal(251, "checked before sending: the amount is not one of the token's denominations"));
@@ -1724,6 +1730,33 @@ mod tests {
         let e = check_program_binary(path, &deployed::F13_IMAGE_ID, &deployed::B1_IMAGE_ID).unwrap_err().to_string();
         assert!(e.contains("refused before proving") && e.contains("ferrata_bridge_f13") && e.contains("ferrata_bridge_b1"), "{e}");
         assert!(check_program_binary(path, &[1; 32], &deployed::F13_IMAGE_ID).is_err());
+        // A zone of a program this tool does not know: refused even with its own binary (review r2 M-B1).
+        let e = check_program_binary(path, &[0x5a; 32], &[0x5a; 32]).unwrap_err().to_string();
+        assert!(e.contains("does not know"), "{e}");
+    }
+
+    /// A burn reads the zone's program too (review r2 M-B1): B1's and this tree's programs read burns alike, so both
+    /// plan it; a program this tool does not know is refused before the burn is built, as a claim is.
+    #[tokio::test]
+    async fn a_burn_is_refused_on_a_zone_whose_program_is_unknown() {
+        let keys = crate::seed::Seed::from_phrase(
+            "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+        )
+        .unwrap()
+        .bridge_keys();
+        let holder = BurnFrom::Private { account: AccountId::new([0x91; 32]), held: 1_000 };
+        let history = History::default();
+        for image in [None, Some(deployed::F13_IMAGE_ID), Some(deployed::B1_IMAGE_ID)] {
+            let (zone, ctx, _, _) = served(image, 1);
+            let plan = plan_burn_at(&zone, &ctx, &keys, holder, [0; 20], 1_000, [0x77; 20], &history, None).await;
+            assert!(plan.is_ok(), "{image:?}: {:?}", plan.err());
+        }
+        let (zone, ctx, _, _) = served(Some([0x5a; 32]), 1);
+        let e = plan_burn_at(&zone, &ctx, &keys, holder, [0; 20], 1_000, [0x77; 20], &history, None)
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(e.contains("does not know") && e.contains("refused before anything was signed or sent"), "{e}");
     }
 
     /// The history reads the plaintext claims of either layout (the test network's B1 names a range): each publishes its

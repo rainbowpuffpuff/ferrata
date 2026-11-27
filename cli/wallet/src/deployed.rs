@@ -69,8 +69,8 @@ impl BridgeProgram {
         } else {
             Err(format!(
                 "refused before anything was signed or sent: the zone's bridge program runs image 0x{}, which this ferrata \
-                 does not know; it builds claims for ferrata_bridge_f13 (0x{}, this tree's program, ADR 0046) and for \
-                 ferrata_bridge_b1 (0x{}, the program our test network runs)",
+                 does not know; it builds claims and burns for ferrata_bridge_f13 (0x{}, this tree's program, ADR 0046) \
+                 and for ferrata_bridge_b1 (0x{}, the program our test network runs)",
                 hex(image_id),
                 hex(&F13_IMAGE_ID),
                 hex(&B1_IMAGE_ID)
@@ -277,6 +277,17 @@ pub fn decode_claim(bytes: &[u8]) -> Option<DecodedClaim> {
     })
 }
 
+/// The name a listing gives a claim in B1's layout (`seqnet-txs`, review r2 L11): `Claim (B1)` or
+/// `ClaimPrivately (B1)`; `None` for anything else, this tree's layout included (its own decoder names those). B1's
+/// `Issue` to the token actor, which also names a range, is not read here.
+pub fn b1_claim_label(bytes: &[u8]) -> Option<&'static str> {
+    match decode_claim(bytes)? {
+        DecodedClaim { range: Some(_), private: false, .. } => Some("Claim (B1)"),
+        DecodedClaim { range: Some(_), private: true, .. } => Some("ClaimPrivately (B1)"),
+        DecodedClaim { range: None, .. } => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -449,6 +460,8 @@ mod tests {
             assert_eq!(back.private, name.contains("Privately"));
             let back = decode_claim(&f13).unwrap();
             assert_eq!(back.range, None);
+            let label = if name.contains("Privately") { "ClaimPrivately (B1)" } else { "Claim (B1)" };
+            assert_eq!((b1_claim_label(&b1), b1_claim_label(&f13)), (Some(label), None), "{name}");
             seen += 1;
         }
         assert_eq!(seen, 3);

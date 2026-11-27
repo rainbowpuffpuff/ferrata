@@ -46,7 +46,8 @@ fn account(hex_id: &str) -> Result<AccountId> {
 fn variant(message: &[u8]) -> String {
     match BridgeMessage::try_from_slice(message) {
         Ok(m) => format!("{m:?}").split(['{', '(', ' ']).next().unwrap_or("?").to_string(),
-        Err(_) => "undecoded".to_string(),
+        // The test network's B1 claims name a fee-schedule range (cli/wallet/src/deployed.rs).
+        Err(_) => ferrata_wallet::deployed::b1_claim_label(message).unwrap_or("undecoded").to_string(),
     }
 }
 

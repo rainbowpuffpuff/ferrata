@@ -450,5 +450,8 @@ mod tests {
         assert_eq!(anonymity_set_b1(&list, &none, &eth, &word(1), 10, &schedule_1), 2, "leaves 5 and 8");
         assert_eq!(anonymity_set_b1(&list, &opened, &eth, &word(1), 10, &schedule_1), 1, "leaf 5 alone");
         assert_eq!(anonymity_set_b1(&list, &opened, &eth, &word(1), 6, &schedule_1), 1, "leaf 5, under root(cid, 6)");
+        // The range is cut at the root's leaf count (review r2 M-B3): leaf 8 is in the range, not yet under root(cid, 6).
+        assert_eq!(anonymity_set_b1(&list, &none, &eth, &word(1), 6, &schedule_1), 1, "leaf 5 only, under root(cid, 6)");
+        assert_eq!(anonymity_set_b1(&list, &none, &eth, &word(1), 6, &all), 4, "leaves 0, 2, 3 and 5");
     }
 }
