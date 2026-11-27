@@ -563,7 +563,9 @@ contract DeployVault is Script {
     ///      one immutable is the wrapped verifier, the owner is storage); renounced and not tripped (internal review of
     ///      27 November 2026, S-3: a contract answering verifier(), owner() and paused() passed before).
     function _checkStop(address stop, address groth16) internal {
-        address expected = address(new RiscZeroVerifierEmergencyStop(IRiscZeroVerifierFull(groth16), address(this)));
+        // Any non-zero owner builds the same code (the owner is storage); not address(this), which forge refuses in a
+        // script.
+        address expected = address(new RiscZeroVerifierEmergencyStop(IRiscZeroVerifierFull(groth16), address(0xdEaD)));
         require(stop.codehash == expected.codehash, "check: the stop's code is not RISC Zero's emergency stop");
         require(RiscZeroVerifierEmergencyStop(stop).owner() == address(0), "check: the stop still has an owner");
         require(!RiscZeroVerifierEmergencyStop(stop).paused(), "check: the stop is tripped");
