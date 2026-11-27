@@ -5,6 +5,7 @@ import {DeployVault} from "../script/DeployVault.s.sol";
 import {FerrataVault} from "../src/FerrataVault.sol";
 
 import {MockERC20} from "./mocks/MockTokens.sol";
+import {ReferenceMerkle} from "./utils/ReferenceMerkle.sol";
 import {VaultTestBase} from "./utils/VaultTestBase.sol";
 
 /// @notice What script/DeployVault.s.sol would deploy, without sending anything: its own `_deployment` and token
@@ -180,6 +181,40 @@ contract DeployDefaultsTest is VaultTestBase {
         );
         deployed.release(r, SEAL);
         assertTrue(deployed.nullifierUsed(r.nullifier), "released under the lowest caps the floor allows");
+
+        // And the largest refund, a 0.1 ETH leaf LEZ never imported (its denomination and relay fee), under the same caps.
+        _refundUnderTheLowestCaps(root);
+    }
+
+    /// @dev Deposits a 0.1 ETH leaf, retires `deployed`, finalises a sunset checkpoint that counts only the first leaf
+    ///      imported, and refunds the new leaf once the window has passed.
+    function _refundUnderTheLowestCaps(bytes32 root) internal {
+        bytes32[] memory leaves = new bytes32[](2);
+        leaves[0] = _leafHash(0, alice, address(testToken), 10_000e6, keccak256("the largest leaf"));
+        bytes32 commitment = keccak256("a 0.1 ETH leaf never imported");
+        uint64 leafIndex = _depositInto(deployed, bob, ETH, 2, commitment);
+        assertEq(leafIndex, 1);
+        leaves[1] = _leafHash(1, bob, ETH, 0.1 ether, commitment);
+        assertEq(ReferenceMerkle.root(leaves), deployed.depositRoot(), "the reference tree is the vault's");
+        vm.prank(deployed.freezeAuthority());
+        deployed.retire();
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(deployed, root, 1, true);
+        verifier.accept(
+            deployed.checkpointImageId(),
+            sha256(_checkpointJournalBytes(_checkpointJournal(deployed, deployed.lezConfigId(), c)))
+        );
+        deployed.submitCandidate(c, SEAL);
+        vm.warp(block.timestamp + deployed.delta());
+        deployed.finalizeAttested(c);
+        vm.warp(block.timestamp + deployed.revokeWindow() + 1);
+        bytes32[] memory siblings = ReferenceMerkle.path(leaves, 1);
+        bytes32[32] memory path;
+        for (uint256 h = 0; h < 32; h++) {
+            path[h] = siblings[h];
+        }
+        uint256 before = bob.balance;
+        deployed.refund(1, bob, ETH, 2, commitment, path);
+        assertEq(bob.balance - before, 0.1 ether + _relayFeesOf(deployed, ETH)[2], "refunded whole under the lowest caps");
     }
 
     /// @notice F.12: by default the vault waits the design's Δ for its rule, as floor and initial value.

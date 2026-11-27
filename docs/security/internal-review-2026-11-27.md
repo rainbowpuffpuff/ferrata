@@ -111,8 +111,9 @@ register a token of a given kind, or a deployer to misconfigure, is ranked by wh
   stop them outright (ADR 0033's runbook, which rests on the freezes, not the caps). A floor per token, in a later
   vault, would remove the coupling; until then the deployer chooses with `releaseFloorDailyValue`.
 - **Test.** `vault/test/DeployDefaults.t.sol` `test_S2_atTheLowestCapsTheFloorAllowsEveryExitStillPasses`: the admin
-  sets every release bucket as low as the floor allows, each token's largest exit must fit, and a 10,000-token
-  release goes through (on `50b396a8`: 0.1002 ETH > 0.1 ETH).
+  sets every release bucket as low as the floor allows, each token's largest exit must fit, a 10,000-token release
+  goes through, and so does the refund of a 0.1 ETH leaf after retirement and a sunset checkpoint (on `50b396a8`:
+  0.1002 ETH > 0.1 ETH).
 
 ### S-3 (Low) — the verifier check trusted getters any contract can answer
 
