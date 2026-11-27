@@ -39,8 +39,8 @@ contract Crown is Script {
 
     /// @notice What deposit j pays: the denomination plus the mint and relay fees of the schedule the deposit will be
     ///         priced under, the one in force or an announced one that is due (the vault puts it in force at the
-    ///         deposit: `_feesInForce`), so a run may deposit after a fee change. The vault escrows the denomination
-    ///         and the relay fee and credits the mint fee to the fee recipient (ADR 0046). An absent token is native
+    ///         deposit: `_feesInForce`), so a run may deposit after a fee change. The vault escrows the whole payment
+    ///         and counts the mint fee in `lezFees` for the fee recipient on LEZ (ADR 0048). An absent token is native
     ///         ETH, as in every crown.json written before ERC-20 selection was added.
     function depositValue(uint256 j) public view returns (uint8 denom, uint256 total) {
         address token = _depositToken(j);
