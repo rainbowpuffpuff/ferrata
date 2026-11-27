@@ -107,6 +107,16 @@ if [ ! -f "$TOOLS/.rc3" ]; then
   for f in ferrata ferrata-relayer seqnet-fund seqnet-txs crown-driver; do cp "$TGT/release/$f" "$TOOLS/"; done
   touch "$TOOLS/.rc3"
 fi
+# FERRATA_RC3_RT_BRIDGE_BIN: another bridge program's binary in place of the one built here (the test network's
+# ferrata_bridge_b1, with FERRATA_CI_BRIDGE_ROW=ferrata_bridge_b1: this tree's tools against the program it runs); the
+# built one is kept beside it and put back for a run without the variable.
+if [ -n "${FERRATA_RC3_RT_BRIDGE_BIN:-}" ]; then
+  [ -f "$FERRATA_RC3_RT_BRIDGE_BIN" ] || die "no bridge binary $FERRATA_RC3_RT_BRIDGE_BIN"
+  [ -f "$TOOLS/ferrata_bridge.built.bin" ] || cp "$TOOLS/ferrata_bridge.bin" "$TOOLS/ferrata_bridge.built.bin"
+  cp "$FERRATA_RC3_RT_BRIDGE_BIN" "$TOOLS/ferrata_bridge.bin"
+elif [ -f "$TOOLS/ferrata_bridge.built.bin" ]; then
+  cp "$TOOLS/ferrata_bridge.built.bin" "$TOOLS/ferrata_bridge.bin"
+fi
 ( cd "$TOOLS" && sha256sum ./* ) > "$T/tools.sha256"
 
 # ---- the round trip -----------------------------------------------------------------------------------------------
