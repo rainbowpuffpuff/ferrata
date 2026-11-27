@@ -510,7 +510,11 @@ under the newest record is minted already, or the record is not deep enough: not
 `lez-fee-collection-unconfirmed`; it refuses before building anything on a zone that runs B1's program (no
 `CollectFees`) or for a token the configuration has not registered, and before sending a `--limit` that is not a whole
 number of the token's LEZ unit. The count and the vault's total are 256-bit (a token's fees over a deployment's life are
-not bounded by 2^128); each collection mints at most 2^128 − 1. Rehearsed on anvil and a local LEZ v0.4.0-rc3 sequencer by `e2e/f13/hook.sh`.
+not bounded by 2^128); each collection mints at most 2^128 − 1. Not run end to end: it needs a record whose block an Ethereum endpoint serves (Sepolia's, for example), and the
+rehearsal's stand-in chain has none (anvil's fork mode writes a zero state root, which the stand-in replaces, so its
+records name blocks no endpoint has); there the operator's `crown-driver collect-fees` sends the same `CollectFees` from a
+capture's storage proof (`e2e/f13/hook.sh`, on a local LEZ v0.4.0-rc3 sequencer). Its builder is tested
+(`ferrata_wallet::fees`); its planner shares the root import's record and block checks.
 
 Logs are one JSON object per line (`start`, `root-imported`, `root-import-waiting`, `root-import-refused`,
 `root-import-failed`, `root-import-closed`, `job-done`, `job-refused`, `candidate-waiting`, `finalized`,

@@ -26,11 +26,12 @@
 #                   denomination to /0 and the registered relay fee to /1, whatever the deposit's schedule; neither
 #                   claim names a schedule or a fee (the message has no such field)
 #   mint fees collected
-#                   `ferrata-relayer collect-fees`, sent from the user's own LEZ account (anyone may): CollectFees
-#                   attests the vault's lezFees under the newest record (capture 2's block) and mints it, in the wrapped
-#                   token, to the configuration's fee recipient on LEZ: its holding grows by schedule 1's mint fee
+#                   crown-driver collect-fees (anyone may send CollectFees; on this stand-in chain the operator's tool
+#                   does, since no Ethereum endpoint serves a stand-in record's block to ferrata-relayer collect-fees):
+#                   CollectFees attests the vault's lezFees under capture 2's record and mints it, in the wrapped token,
+#                   to the configuration's fee recipient on LEZ: its holding grows by schedule 1's mint fee
 #   nothing more to collect
-#                   the same command again: nothing sent (the total under that record is minted already)
+#                   the same collection again: refused by the program (244), nothing minted
 #   claim again refused, burn, checkpoint journal, checkpoint accepted, release journal
 #                   as the CI hook (one denomination burnt)
 #   release paid    the release under schedule 1 pays the fresh address the denomination less the relay, burn and
@@ -40,7 +41,10 @@
 #                   the vault captured after the release; crown-driver crown-b --skip-stages 2 --updates-only yes: the
 #                   stand-in committee finalizes that block (a record, no bridge call)
 #   burn fee collected
-#                   `ferrata-relayer collect-fees` again: the fee recipient's holding grows by schedule 1's burn fee
+#                   crown-driver collect-fees under capture 3's record: the fee recipient's holding grows by schedule
+#                   1's burn fee
+#   older record refused
+#                   a collection under capture 2's record (a smaller total): refused by the program (247)
 #   escrow backs LEZ
 #                   every deposit claimed, the burn released, every fee collected: the vault's ETH escrow equals the
 #                   wrapped ETH on LEZ (the user's /0 and /1 and the fee recipient)
@@ -371,30 +375,34 @@ for f in 08-claim 08c-claim-2; do
 done
 ok "LEZ tx $CLAIM2_TX applied: /0 +$(( HOLD_CLAIM2 - HOLD_CLAIM )) (the denomination), the relayer /1 +$(( RELAYED_1 - RELAYED_0 )) (the relay fee): the same amounts as the claim under schedule 0"
 
-# collect_fees NAME: `ferrata-relayer collect-fees` of ETH, sent from the user's own LEZ wallet and public /0 (anyone may
-# send it); its JSON lines in eth/NAME.jsonl; prints the last line's event
-RLZ=("$B/ferrata-relayer" --eth-rpc "$RPC" --vault "$VAULT" --chain-id "$CHAIN" --unlocked "$RELAYER" --from-block "$FROM"
-     --state "$W/relayer-fees" --sequencer "$SEQ" --seed "$U/seed.txt" --lez-wallet "$U/lez-wallet" --lez-password-file "$U/lez.pass"
-     --lez-account "$PUB0" --bridge-account "$BRIDGE")
+# collect_fees NAME STAGE CAPTURES...: the bridge program's CollectFees of ETH under capture STAGE's record (crown-driver
+# collect-fees: the vault's lezFees slot proven from that capture). Anyone may send it; on this stand-in chain the
+# operator's tool sends it, since a record's block hash here is the stand-in's (anvil's fork mode writes a zero state
+# root, which the capture replaces), which no Ethereum endpoint serves to `ferrata-relayer collect-fees`. Its JSON in
+# lez/NAME.json; prints the event
 collect_fees() {
-  "${RLZ[@]}" collect-fees --token "$ETH" > "$R/eth/$1.jsonl" 2> "$W/$1.err" || { tail -n 10 "$W/$1.err"; die "ferrata-relayer collect-fees"; }
-  grep -E '^\{' "$R/eth/$1.jsonl" | tail -n 1 | jq -r .event
+  local name="$1" stage="$2"; shift 2; local caps=()
+  for c in "$@"; do caps+=(--capture "$W/$c"); done
+  "$B/crown-driver" collect-fees --chain stand-in "${D[@]}" --identity "$SA" "${caps[@]}" --stage "$stage" \
+    --out "$R/lez/$name.json" > "$R/lez/$name.log" 2>&1 || { tail -n 20 "$R/lez/$name.log"; die "crown-driver collect-fees"; }
+  jq -r .event "$R/lez/$name.json"
 }
-last() { grep -E '^\{' "$R/eth/$1.jsonl" | tail -n 1 | jq -r --arg k "$2" '.[$k] // empty'; }
+last() { jq -r --arg k "$2" '.[$k] // empty | tostring' "$R/lez/$1.json"; }
 
 begin "mint fees collected"
-[ "$(collect_fees 17-collect-mint)" = lez-fees-collected ] || die "the collection was not applied ($(tail -n 1 "$R/eth/17-collect-mint.jsonl" | cut -c1-300))"
+[ "$(collect_fees 17-collect-mint 2 capture-1 capture-2)" = lez-fees-collected ] || die "the collection was not applied ($(cut -c1-300 "$R/lez/17-collect-mint.json"))"
 [ "$(last 17-collect-mint vaultTotal)" = "$LF_2" ] || die "the collection read the vault's total $(last 17-collect-mint vaultTotal), not lezFees at capture 2 ($LF_2)"
 [ "$(last 17-collect-mint amount)" = "$M1" ] && [ "$(last 17-collect-mint collectedBefore)" = 0 ] || die "the collection minted $(last 17-collect-mint amount) after $(last 17-collect-mint collectedBefore), not the mint fee $M1 after 0"
 FR_LEZ="$(last 17-collect-mint feeRecipient)"; FR_1="$(last 17-collect-mint feeRecipientHoldingAfter)"
 [ "$(last 17-collect-mint feeRecipientHoldingBefore)" = 0 ] && [ "$FR_1" = "$M1" ] || die "the fee recipient's LEZ holding went $(last 17-collect-mint feeRecipientHoldingBefore) -> $FR_1, not 0 -> $M1"
 COLLECT1_TX="$(last 17-collect-mint tx)"
-ok "LEZ tx $COLLECT1_TX (CollectFees, sent from the user's public /0) applied under header(id, $(last 17-collect-mint recordSlot)) of block $(last 17-collect-mint block): the vault's lezFees $LF_2 attested, $M1 minted to the fee recipient $FR_LEZ on LEZ (holding 0 -> $FR_1)"
+[ "$(last 17-collect-mint applied)" = true ] && [ "$(last 17-collect-mint collectedAfter)" = "$M1" ] || die "fees(cid, ETH) does not count $M1 after the collection"
+ok "LEZ tx $COLLECT1_TX (CollectFees) applied under header(id, $(last 17-collect-mint recordSlot)) of block $(last 17-collect-mint block): the vault's lezFees $LF_2 attested, $M1 minted to the fee recipient $FR_LEZ on LEZ (holding 0 -> $FR_1; fees(cid, ETH) counts $M1)"
 
 begin "nothing more to collect"
-[ "$(collect_fees 18-collect-again)" = lez-fee-collection-waiting ] || die "a second collection under the same record was not refused before sending ($(tail -n 1 "$R/eth/18-collect-again.jsonl" | cut -c1-300))"
-last 18-collect-again reason | grep -q 'minted already' || die "the second collection waits for another reason: $(last 18-collect-again reason)"
-ok "nothing sent: $(last 18-collect-again reason | cut -c1-200)"
+[ "$(collect_fees 18-collect-again 2 capture-1 capture-2)" = lez-fee-collection-refused ] || die "a second collection under the same record was applied ($(cut -c1-300 "$R/lez/18-collect-again.json"))"
+[ "$(last 18-collect-again exit)" = 244 ] && [ "$(last 18-collect-again amount)" = 0 ] || die "the second collection was refused with $(last 18-collect-again exit), minting $(last 18-collect-again amount)"
+ok "the same collection again: refused by the program with 244 (ALREADY_WRITTEN; LEZ tx $(last 18-collect-again tx)), nothing minted, fees(cid, ETH) still $(last 18-collect-again collectedAfter)"
 
 begin "claim again refused"
 if u 10-claim-again "${F[@]}" "${C[@]}" --leaf 0 --send --yes; then die "a second claim of leaf 0 was not refused"; fi
@@ -502,13 +510,19 @@ grep -q 'recorded (--updates-only' "$R/lez/crown-b-record-3.log" || die "crown-b
 ok "the stand-in committee finalized the fork's block $(jq -r .block "$W/capture-3/fixture.json") (after the release): $(grep -o 'header(id, [0-9]*) of block [0-9]*' "$R/lez/crown-b-record-3.log" | tail -n 1)"
 
 begin "burn fee collected"
-[ "$(collect_fees 19-collect-burn)" = lez-fees-collected ] || die "the collection after the release was not applied ($(tail -n 1 "$R/eth/19-collect-burn.jsonl" | cut -c1-300))"
+[ "$(collect_fees 19-collect-burn 3 capture-1 capture-2 capture-3)" = lez-fees-collected ] || die "the collection after the release was not applied ($(cut -c1-300 "$R/lez/19-collect-burn.json"))"
 [ "$(last 19-collect-burn vaultTotal)" = "$LF_R" ] || die "the collection read the vault's total $(last 19-collect-burn vaultTotal), not lezFees after the release ($LF_R)"
 [ "$(last 19-collect-burn amount)" = "$B1" ] && [ "$(last 19-collect-burn collectedBefore)" = "$M1" ] || die "the collection minted $(last 19-collect-burn amount) after $(last 19-collect-burn collectedBefore), not the burn fee $B1 after $M1"
 FR_2="$(last 19-collect-burn feeRecipientHoldingAfter)"
 [ "$(last 19-collect-burn feeRecipientHoldingBefore)" = "$FR_1" ] && [ "$FR_2" = "$(( M1 + B1 ))" ] || die "the fee recipient's LEZ holding went $(last 19-collect-burn feeRecipientHoldingBefore) -> $FR_2, not $FR_1 -> $(( M1 + B1 ))"
 COLLECT2_TX="$(last 19-collect-burn tx)"
-ok "LEZ tx $COLLECT2_TX (CollectFees) applied under header(id, $(last 19-collect-burn recordSlot)) of block $(last 19-collect-burn block): lezFees $LF_R attested, $B1 (the release's burn fee) minted to the fee recipient (holding $FR_1 -> $FR_2)"
+[ "$(last 19-collect-burn collectedAfter)" = "$(( M1 + B1 ))" ] || die "fees(cid, ETH) does not count $(( M1 + B1 )) after the second collection"
+ok "LEZ tx $COLLECT2_TX (CollectFees) applied under header(id, $(last 19-collect-burn recordSlot)) of block $(last 19-collect-burn block): lezFees $LF_R attested, $B1 (the release's burn fee) minted to the fee recipient (holding $FR_1 -> $FR_2; fees(cid, ETH) counts $(( M1 + B1 )))"
+
+begin "older record refused"
+[ "$(collect_fees 19b-collect-older 2 capture-1 capture-2 capture-3)" = lez-fee-collection-refused ] || die "a collection under the older record was applied ($(cut -c1-300 "$R/lez/19b-collect-older.json"))"
+[ "$(last 19b-collect-older exit)" = 247 ] && [ "$(last 19b-collect-older amount)" = 0 ] || die "the older record's collection was refused with $(last 19b-collect-older exit), minting $(last 19b-collect-older amount)"
+ok "a collection under capture 2's record (lezFees $LF_2, below the $(( M1 + B1 )) minted): refused by the program with 247 (IMPORT_MISMATCH; LEZ tx $(last 19b-collect-older tx)), nothing minted"
 
 begin "escrow backs LEZ"
 HOLD_END="$(holding public 20-recover)" || die "the user's holding could not be read"

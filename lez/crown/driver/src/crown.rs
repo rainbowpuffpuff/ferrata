@@ -37,13 +37,13 @@ use ferrata_core::{
     Root,
 };
 use ferrata_lez_bridge_wire::{
-    burn_mac_v2, burn_seed, config_seed, fee_slot, fees_slots, holder_seed, nf_out_v2, nullifier_seed, register_slots,
-    registry_slot,
+    burn_mac_v2, burn_seed, config_seed, fee_slot, fees_seed, fees_slots, holder_seed, lez_fees_slot,
+    nf_out_v2, nullifier_seed, register_slots, registry_slot,
     root_seed, token_seed, with_header, word_of, word_of_u128, BridgeConfig, BridgeMessage, BridgeState, CapParams,
     ClaimWitness, ConfigState, Controls, FeeSchedule, HolderState, ImportProof, Note, PairingProof,
     TokenEntry, VaultProof, SLOT_CONFIG_ID, SLOT_COUNT, SLOT_ROOT, UNLIMITED,
 };
-use ferrata_lez_wire::{instance_id, Config};
+use ferrata_lez_wire::{header_seed, instance_id, Config};
 use ferrata_spectests::{
     execkit::{account_proof, keccak},
     testkit::{fake_committee, filler, sign, sparse_tree},
@@ -579,6 +579,8 @@ pub fn capture_slots_for(selected: &BridgeToken) -> Value {
     for (s, what) in register_slots(&selected.address)[..3].iter().zip(names) {
         slots.push(json!({ "slot": h(s), "what": what }));
     }
+    // ADR 0048: the protocol fees the vault escrowed for the fee recipient on LEZ (`collect-fees` attests it).
+    slots.push(json!({ "slot": h(&lez_fees_slot(&selected.address)), "what": format!("lezFees of {}", selected.label()) }));
     json!({ "slots": slots, "fetch_attest_fixture_storage": format!(
         "{{vault}}:0=depositRoot(),1=nextLeafIndex(),2=storedLezConfigId(),{},{},{}",
         h(&registry_slot(&selected.address)), h(&fee_slot(&selected.address, 0)), h(&fee_slot(&selected.address, 1))) })
@@ -1299,6 +1301,89 @@ pub async fn session_a(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
     fs::write(&a.identity_out, serde_json::to_string_pretty(&out)? + "\n")?;
     println!("[crown-a] T0 = block {tip_id} 0x{}; identity written to {}", hex::encode(tip_hash), a.identity_out.display());
     live.save()
+}
+
+/// `collect-fees`: the bridge program's `CollectFees` (ADR 0048) of the selected token under capture `stage`'s record.
+pub struct CollectFees {
+    pub token: BridgeToken,
+    pub identity: Identity,
+    /// 1-based: the capture whose block's record (its finality update applied on this zone by an earlier crown-b) the
+    /// collection reads, and whose storage proof of the vault's `lezFees` slot it carries.
+    pub stage: usize,
+    pub limit: u128,
+    /// One JSON object: the record, the attested total, `fees(cid, token)` and the fee recipient's holding before and
+    /// after, the outcome (applied, or refused with the program's exit code).
+    pub out: PathBuf,
+}
+
+/// The operator's `CollectFees` on a stand-in chain (ADR 0048): the vault's `lezFees` slot proven from the capture of
+/// `stage`, under that capture's record. A relayer reading Ethereum (`ferrata-relayer collect-fees`) cannot serve a
+/// stand-in record: its block's state root is patched (anvil's fork mode writes zero), so the record's block hash is the
+/// stand-in's, which no endpoint serves. A refusal is reported, not an error: the run's hook expects some.
+pub async fn collect_fees(live: &mut Live, program: &GuestBinary, bridge_bin: &GuestBinary, chain: &Chain, c: &CollectFees) -> Result<()> {
+    let payers = payers()?;
+    let payer = payers[1];
+    let attest = deployment_accounts(ATTEST, program).0;
+    let bridge = deployment_accounts(BRIDGE, bridge_bin).0;
+    let id = &c.identity;
+    ensure!(id.attestation == attest && id.bridge_header == bridge, "session A deployed other programs");
+    ensure!(id.bridge_image_id == image_bytes(bridge_bin.image_id), "session A's bridge image is not --bridge-bin's");
+    ensure!(c.stage >= 1 && c.stage <= chain.stages.len(), "--stage {} of {} captures", c.stage, chain.stages.len());
+    let stage = &chain.stages[c.stage - 1];
+    let vault = chain.stages[0].vault;
+    let config = id.bridge_config_for(vault, &c.token);
+    let cid = config.id(bridge);
+    let slot = stage.update.finalized_header.beacon.slot;
+    let token = c.token.address;
+    let header_pda = Pda { program: attest, seed: header_seed(&id.instance_id, slot) };
+    ensure!(!live.actor_state(header_pda.actor()).await?.is_empty(), "no record at header(id, {slot}): run crown-b over capture {} first", c.stage);
+    let (_, total) = stage.slot(&lez_fees_slot(&token))?;
+    let config_pda = Pda { program: bridge, seed: config_seed(&cid) };
+    let fees_pda = Pda { program: bridge, seed: fees_seed(&cid, &token) };
+    let token_pda = Pda { program: bridge, seed: token_seed(&cid, &token) };
+    let recipient = fee_recipient();
+    let holding = |state: Option<BridgeState>| match state {
+        Some(BridgeState::Holder(h)) => h.holding(&cid, &token).map_or(0, |x| x.amount),
+        _ => 0,
+    };
+    let collected = |state: Option<BridgeState>| match state {
+        Some(BridgeState::Fees(f)) => f.collected,
+        _ => [0u8; 32],
+    };
+    let before = (holding(holder_state(live, bridge, &cid, recipient).await?), collected(bridge_state(live, fees_pda).await?));
+    let message = BridgeMessage::CollectFees {
+        config_id: cid,
+        token,
+        record_slot: slot,
+        limit: c.limit,
+        proof: stage.vault_proof(&[lez_fees_slot(&token)])?,
+    };
+    let mentions = vec![
+        mention(config_pda),
+        mention(header_pda),
+        mention(fees_pda),
+        mention(token_pda),
+        mention(holder_pda(bridge, &cid, recipient)),
+    ];
+    let step = format!("bridge CollectFees {} under header(id, {slot}) ({}, block {})", c.token.label(), stage.label, stage.block);
+    let o = send(live, &step, mentions, &message, payer).await?;
+    let after = (holding(holder_state(live, bridge, &cid, recipient).await?), collected(bridge_state(live, fees_pda).await?));
+    let u256 = |w: &[u8; 32]| -> String {
+        let (hi, lo) = (u128::from_be_bytes(w[..16].try_into().expect("16")), u128::from_be_bytes(w[16..].try_into().expect("16")));
+        if hi == 0 { lo.to_string() } else { format!("0x{}", hex::encode(w)) }
+    };
+    let line = json!({
+        "event": if o.applied() { "lez-fees-collected" } else { "lez-fee-collection-refused" },
+        "token": h(&token), "recordSlot": slot, "block": stage.block, "capture": c.stage,
+        "vaultTotal": u256(&total), "collectedBefore": u256(&before.1), "collectedAfter": u256(&after.1),
+        "amount": (after.0 - before.0).to_string(), "limit": c.limit.to_string(),
+        "feeRecipient": h(recipient.value()), "feeRecipientHoldingBefore": before.0.to_string(),
+        "feeRecipientHoldingAfter": after.0.to_string(), "applied": o.applied(), "exit": o.exit_code(),
+        "tx": o.row.tx_hash, "step": row_json(&o),
+    });
+    fs::write(&c.out, format!("{line}\n"))?;
+    println!("[collect-fees] {}", line);
+    Ok(())
 }
 
 pub struct SessionB {
