@@ -491,6 +491,15 @@ jobs:
       - name: The v2 vault and RISC Zero verifier (bridge/evm-verify)
         working-directory: bridge/evm-verify
         run: forge test
+      # The vault's admin, freeze-authority and watcher actions from a terminal (vault/script/admin.sh,
+      # docs/cli-coverage.md G4) and the admin view's anvil scenario as one script (G14): anvil on a free
+      # local port, forge script script/AdminScenario.s.sol --broadcast, node admin/dump.mjs compared with
+      # the committed record after masking, then the admin actions through admin.sh --send with the wrong
+      # roles refused in the dry run and every change checked on the chain. Node 22 for dump.mjs comes from
+      # the runner image, as the admin job already relies on for the same script on the same image; the
+      # test checks the version and fails loudly if it is ever older.
+      - name: The admin actions from a terminal and the anvil scenario (vault/script/test-admin.sh)
+        run: bash vault/script/test-admin.sh
       # e2e/seqnet deploys the vault through these functions in every mode; DeployVault once refused them unnoticed.
       - name: e2e/seqnet's vault deployment (e2e/seqnet/vault.sh, on anvil)
         run: bash e2e/seqnet/test-vault-deploy.sh
