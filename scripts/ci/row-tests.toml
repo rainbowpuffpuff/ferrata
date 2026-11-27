@@ -787,6 +787,7 @@ tests = [
   { path = "e2e/both-halves/results/f13/fees.md", kind = "record" },
   { path = "e2e/runs/f13-roundtrip-1/F13.md", kind = "record" },
   { path = "lez/results/f13/prove-bridge.md", kind = "record" },
+  { path = "e2e/runs/rc3-roundtrip-b1/REHEARSAL.md", kind = "record" },
   { path = "cli/src/lez.rs", kind = "test", ci = "roundtrip" },
   { path = "modules/ferrata_bridge_module/rust-lib/calls/tests/network_session.rs", kind = "test", ci = "modules-resolve" },
 ]

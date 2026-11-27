@@ -256,7 +256,7 @@ def _span(values: list, unit: str = "") -> str:
        inputs=(EVIDENCE_DOC, STATUS_DOC, GATE_100, GATE_JOIN, GATE_OVERLAP, F13_FEES, F13_FEES_B1, F13_RT_STEPS,
                F13_PROOFS, f"{F7_ERC20}/vault-checks.json", f"{F7_ROTATION}/checkpoint/attestor.json",
                f"{F7_ROTATION}/vault-checks.json", f"{F7_ERC20}/prover/done", f"{F7_ROTATION}/prover/done",
-               "cli/wallet/src/deployed.rs", "cli/src/lez.rs",
+               "cli/wallet/src/deployed.rs", "cli/src/lez.rs", "e2e/runs/rc3-roundtrip-b1/run/steps.tsv",
                "modules/ferrata_bridge_module/rust-lib/calls/tests/network_session.rs"))
 def evidence_rows_final(ctx):
     problems, lines = [], []
@@ -383,6 +383,9 @@ def evidence_rows_final(ctx):
         if name not in read(rel):
             problems.append(f"EVIDENCE row 281: {rel} has no {name}")
     _states(problems, "EVIDENCE row 281", _evidence_row(evidence, 281), ("B1's three frozen claim vectors",))
+    b1_steps = [r for r in csv.reader(io.StringIO(read("e2e/runs/rc3-roundtrip-b1/run/steps.tsv")), delimiter="\t") if r]
+    b1_ok = sum(1 for r in b1_steps if len(r) > 1 and r[1] == "ok")
+    _states(problems, "EVIDENCE row 281", _evidence_row(evidence, 281), (f"{b1_ok} of {len(b1_steps)} steps ok",))
     lines.append("row 281: the B1-layout tests it names are in cli/wallet/src/deployed.rs, cli/src/lez.rs and the "
                  "module's network_session.rs (their toolchain runs are CI's roundtrip and modules-resolve jobs)")
     fail_if(problems, "EVIDENCE rows 275-281 and the rows citing them")

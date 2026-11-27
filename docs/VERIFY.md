@@ -18,7 +18,7 @@ without them those checks are skipped, and say so. Nothing else is built or inst
 ```sh
 git clone https://github.com/rainbowpuffpuff/ferrata && cd ferrata
 python3 -I scripts/verify.py --list            # every check: its family, mode, requirement rows and EVIDENCE rows
-python3 -I scripts/verify.py --all             # the 118 quick offline checks: about 6 minutes
+python3 -I scripts/verify.py --all             # the 119 quick offline checks: about 6 minutes
 python3 -I scripts/test_verify.py              # the tamper tests: about 30 seconds
 python3 -I scripts/test_verify_lc.py           # the light-client records' tamper tests: seconds
 python3 -I scripts/test_verify_zone.py         # the four-key rc3 run's tamper tests: seconds
@@ -190,8 +190,10 @@ proving and refuses another. That binary, `ferrata_bridge_b1.bin` (the image `0x
 from its recorded source commit; `scripts/reproduce-image-ids.sh build` builds this tree's programs, `ferrata_bridge_f13`
 among them, which this network would refuse. Check its image id with `r0vm --id` before using it. What has run of this:
 the tests of both layouts (B1's frozen encoding vectors, the loader header of LEZ rc1 and rc3, the claim plans and the
-module's session against stand-ins); a send to this network with this tree's tool has not (this project sends nothing
-to it from these tests).
+module's session against stand-ins), and CI's round trip on a LEZ v0.4.0-rc3 sequencer of our own with the deployed
+B1 binary in place of this tree's program: this tree's `ferrata` sent its plaintext claim in B1's layout, B1 applied it,
+and the burn and release followed, 14 of 14 steps (`e2e/runs/rc3-roundtrip-b1/`, EVIDENCE row 281). A send to our test
+network with this tree's tool has not been made (this project sends nothing to it).
 
 | Step | Command | What it printed in the rehearsal of 26 November 2026 (a throwaway seed and keystore, no funds, nothing sent) |
 |---|---|---|

@@ -1,0 +1,23 @@
+$ ferrata --seed <work>/user/seed.txt --eth-rpc http://127.0.0.1:18547 --chain-id 11155111 --vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 --from-block 12222587 --sequencer http://127.0.0.1:3040 --lez-wallet <work>/user/lez-wallet --lez-password-file <work>/user/lez.pass --bridge-account 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d claim --plaintext --i-accept-plaintext-links-deposit --payer 0x8a7162a5acc0f2c0beab5a9d07dfab129e7dc9b18cd9c14b3090fe2cc40154b0
+
+claim on LEZ (configuration 0xe7aab60e0bae94ca508d32b4a0f2c240ad549bc22b6232c30583a805fe021e0e):
+  deposit      0.001 ETH (1000000000000000 base units, 18 decimals) to your public account /0, under root(cid, 1)
+  would send   Claim in a public transaction (the witness in the clear) to the bridge program 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d
+  nullifier N  0x1ef6c9eca7f955040411311da365e1164bcd0e8ad71b505964101816270ec91e
+  program      ferrata_bridge_b1, the test network's (before ADR 0046): the claim is sent in its layout and names the fee schedule range 0 (leaves 0..1)
+  anonymity    1: a plaintext claim names its deposit
+  relay fee    0.000002 ETH (2000000000000 base units, 18 decimals) minted here (paid with the deposit on Ethereum); the LEZ fee is paid by the payer account, in public
+  mint fee     0 ETH (0 base units, 18 decimals) minted to the fee recipient by the test network's B1 program (escrowed with the deposit)
+  delay        9 h after the deposit: from Ethereum block 12225296 (now 12222596), not reached
+what becomes public (Plaintext claim (LEZ)):
+  public on Ethereum: nothing
+  public on LEZ:      the whole witness: the leaf index, the depositor, j, the secret s and the destination; the nullifier N; the denomination; which imported root was read; the destination and its balance
+  stays private:      nothing
+privacy of these choices: High: a direct link is public
+  !! Plaintext claim: names on LEZ which deposit paid which account.
+  !! Public destination: the account and its new balance are public.
+  ok Held by your random delay: the claim will not follow the deposit closely in time.
+  !  Self-submitted: the account paying the LEZ fee is linked to the claim.
+WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
+public: PLAINTEXT CLAIM: the whole witness is public — which deposit (leaf, depositor, j), the secret s, the destination; anyone can link this mint to the Ethereum deposit
+error: held by your claim delay: this deposit can be claimed from Ethereum block 12225296, about 540 min from now (a claim right after its deposit narrows which deposit it could be); wait, or add --no-delay to claim now, less privately

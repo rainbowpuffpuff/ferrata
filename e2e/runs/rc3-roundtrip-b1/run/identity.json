@@ -1,0 +1,8 @@
+{
+  "label": "CI: anvil forking Sepolia; DeployVault deploys RISC Zero Groth16 verifier, whose code is then replaced on the fork by the vault tests MockRiscZeroVerifier",
+  "chainId": 11155111,
+  "vault": "0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516",
+  "configId": "0xe7aab60e0bae94ca508d32b4a0f2c240ad549bc22b6232c30583a805fe021e0e",
+  "genesisState": "0x8e54c7d6a8de29730ff8874b4f6ab32653c3d6f85274cc44fa19057391a3efb8",
+  "delta": 3600
+}

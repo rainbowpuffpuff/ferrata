@@ -1,0 +1,5 @@
+$ ferrata --seed <work>/user/seed.txt --eth-rpc http://127.0.0.1:18547 --chain-id 11155111 --vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 --from-block 12222587 scan
+
+vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516: 1 deposits at block 12222596, root 0x8329ba573c07cb4574c0f167fb27fedb0bda905f53f31749456a917763f5639f (equal to depositRoot: checked)
+deposits of this seed: 1
+  leaf      0  j    0  0.001 ETH (1000000000000000 base units, 18 decimals)  to public /0  N 0x1ef6c9eca7f95504  claim state unknown (no --sequencer)

@@ -1,0 +1,13 @@
+{
+  "_source": "CI sequencer round trip (scripts/ci/sequencer-roundtrip.sh): rule (B); the checkpoint key set is ci_zone test committee (n = 4, nMin 3, tMin 2)",
+  "checkpointImageIdA": "0x7c93425e9b6fedbd0d79092b3a0b6c164b9a6ee250b9e2e89b26a7fadc4497c1",
+  "checkpointImageIdB": "0xdafa6ab9a26841681fd071b8e4cdfae514371f82902426dc9fb1e2c80d29cda0",
+  "releaseImageId": "0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd",
+  "lezConfigId": "0xe7aab60e0bae94ca508d32b4a0f2c240ad549bc22b6232c30583a805fe021e0e",
+  "genesisState": "0x8e54c7d6a8de29730ff8874b4f6ab32653c3d6f85274cc44fa19057391a3efb8",
+  "nMin": 3,
+  "tMin": 2,
+  "postingTimeframe": 0,
+  "ethLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "tokenLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000"
+}

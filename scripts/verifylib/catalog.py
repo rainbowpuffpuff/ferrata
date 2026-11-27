@@ -99,6 +99,15 @@ def _register_wrappers() -> None:
           against="CI's own check stage (scripts/ci/sequencer-roundtrip.sh check) on the record's facts.json, "
                   "steps.tsv and Ethereum transactions", needs=("bash", "python3"),
           inputs=(RC3_RT, "scripts/ci/sequencer-roundtrip.sh"))(_rc3_roundtrip)
+    check(id="rc3-roundtrip-b1-record", family="record", mode="offline", evidence=(281,), rows=("RFP-022 F.13",),
+          title="This tree's ferrata against the test network's bridge program (B1) on LEZ v0.4.0-rc3: its records",
+          what=f"{RC3_RT_B1}/: CI's check stage on the round trip; the image the zone's loader held (B1's), the binary "
+               "the run used (the deployed B1's sha256), the claim the tool sent in B1's layout and applied, the same "
+               "claim again refused",
+          against="CI's own check stage on the record, its tools.sha256, scripts/reproduce/deployed-programs.json and the "
+                  "tool's transcripts", needs=("bash", "python3"),
+          inputs=(RC3_RT_B1, "scripts/ci/sequencer-roundtrip.sh", "scripts/reproduce/deployed-programs.json"))(
+        _rc3_roundtrip_b1)
     for cid, rec, ev, rows, title in (
             ("updater-live-sepolia", "lez/updater/results/live-sepolia/zone-2", (99,), ("RFP-021 P.5", "RFP-021 S.5"),
              "The updater's 8 h live run on LEZ sequencers following Sepolia, re-checked from its record"),
@@ -365,13 +374,14 @@ def _perf_projections(ctx):
 RC3_RT = "e2e/runs/rc3-roundtrip-1"
 
 
-def _rc3_roundtrip(ctx):
+def _rc3_roundtrip(ctx, rec: str = None):
     """CI's own check stage on the record, with its clock set to the record's end (the fork's time plus the steps'
     seconds): the check's freshness rule is for CI's runs of the day, not for an archived record."""
     import datetime
     import subprocess
-    facts = json.loads((ctx.root / RC3_RT / "run/facts.json").read_text())
-    steps = (ctx.root / RC3_RT / "run/steps.tsv").read_text().splitlines()
+    rec = rec or RC3_RT
+    facts = json.loads((ctx.root / rec / "run/facts.json").read_text())
+    steps = (ctx.root / rec / "run/steps.tsv").read_text().splitlines()
     fork = datetime.datetime.strptime(facts["fork"]["time"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc)
     end = int(fork.timestamp()) + int(facts["fork"].get("ageS", 0)) + sum(int(ln.split("\t")[2]) for ln in steps)
     env = dict(os.environ, FERRATA_CI_NOW=str(end), **scratch_env(ctx))
@@ -381,8 +391,8 @@ def _rc3_roundtrip(ctx):
     work = ctx.root / ".scratch" / "verify-rc3"
     work.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=work) as d:
-        copy = Path(d) / "rc3-roundtrip-1"
-        shutil.copytree(ctx.root / RC3_RT, copy, symlinks=False)  # files, never links back into the record
+        copy = Path(d) / Path(rec).name
+        shutil.copytree(ctx.root / rec, copy, symlinks=False)  # files, never links back into the record
         p = subprocess.run(["bash", "scripts/ci/sequencer-roundtrip.sh", str(copy.relative_to(ctx.root)), "check"],
                            cwd=ctx.root, env=env, capture_output=True, text=True, timeout=300)
     out = [ln.strip() for ln in (p.stdout + p.stderr).splitlines() if ln.strip()]
@@ -391,6 +401,41 @@ def _rc3_roundtrip(ctx):
     oks = [ln for ln in out if ln.startswith("ok:")]
     return [f"{len(oks)} of the check stage's conditions hold, its clock at the record's end "
             f"({datetime.datetime.fromtimestamp(end, datetime.timezone.utc):%Y-%m-%dT%H:%M:%SZ})"] + oks[-6:]
+
+
+RC3_RT_B1 = "e2e/runs/rc3-roundtrip-b1"
+B1_IMAGE = "0x847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515"
+
+
+def _rc3_roundtrip_b1(ctx):
+    """The round trip against B1's program: CI's check stage on its records, then what makes it B1's: the image the
+    zone's loader holds for the bridge account, the binary the run used, and the claim the tool sent in B1's layout."""
+    lines = _rc3_roundtrip(ctx, RC3_RT_B1)
+    rec = ctx.root / RC3_RT_B1
+    problems = []
+    image = json.loads((rec / "run/lez/session-a.json").read_text())["bridge"]["imageId"]
+    fail_if([] if image == B1_IMAGE else [f"run/lez/session-a.json: the bridge program is {image}, not B1's {B1_IMAGE}"],
+            "the program deployed")
+    sums = dict(reversed(ln.split("  ./", 1)) for ln in (rec / "tools.sha256").read_text().splitlines() if "  ./" in ln)
+    expected = json.loads((ctx.root / "scripts/reproduce/deployed-programs.json").read_text())
+    b1 = next(p for p in expected["programs"] if p["name"] == "ferrata_bridge_b1")
+    if b1["image_id"] != B1_IMAGE or sums.get("ferrata_bridge.bin") != b1["binary_sha256"]:
+        problems.append(f"tools.sha256: the bridge binary {sums.get('ferrata_bridge.bin')} is not the deployed B1's "
+                        f"{b1['binary_sha256']}")
+    claim = (rec / "run/user/08-claim.txt").read_text()
+    for fragment in ("program      ferrata_bridge_b1", "the claim is sent in its layout and names the fee schedule range"):
+        if fragment not in claim:
+            problems.append(f"run/user/08-claim.txt: no {fragment!r}")
+    steps = [ln.split("\t") for ln in (rec / "run/steps.tsv").read_text().splitlines()]
+    claim_step = next((s for s in steps if s[0] == "claim (plaintext)"), None)
+    if not claim_step or claim_step[1] != "ok" or "applied" not in claim_step[3]:
+        problems.append("run/steps.tsv: the plaintext claim was not applied")
+    again = next((s for s in steps if s[0] == "claim again refused"), None)
+    if not again or "250 ALREADY_CLAIMED" not in again[3]:
+        problems.append("run/steps.tsv: the claim again was not refused as already claimed")
+    fail_if(problems, "the B1 round trip's records")
+    return lines + [f"the zone's bridge program {image[:12]}… (B1's), its binary sha256 {sums['ferrata_bridge.bin'][:12]}… "
+                    "(deployed-programs.json's); ferrata's claim in B1's layout applied, the same claim again refused (250)"]
 
 
 def load(root: Path) -> list:

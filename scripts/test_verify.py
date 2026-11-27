@@ -224,6 +224,28 @@ def walkable(t: Path, rels=SEAL_DIRS) -> Path:
     return t
 
 
+class RoundTripB1(TamperCase):
+    """rc3-roundtrip-b1-record: the round trip against B1's program must be B1's (the image the loader held, the binary
+    used) and the tool's claim must be in B1's layout, applied."""
+
+    def test_passes_on_the_tree(self):
+        self.assertPasses("rc3-roundtrip-b1-record")
+
+    def test_a_record_altered(self):
+        rec = "e2e/runs/rc3-roundtrip-b1"
+        cases = (
+            (f"{rec}/run/lez/session-a.json", "847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515",
+             "ffb47f6eaec6ef13f49505e5e80209f73d38ea53792e77656994f8069dde7675", "the program deployed"),
+            (f"{rec}/tools.sha256", "537cbe7a4c6900419b54e556b9741a9e37d86adf53f5e65683aa2b22c8e9a036  ./ferrata_bridge.bin",
+             "c84fe2dbbc008c1a94c096fb6c598eb1580da2996b6b1e54ae807d0041e08fdc  ./ferrata_bridge.bin", "tools.sha256"),
+            (f"{rec}/run/user/08-claim.txt", "program      ferrata_bridge_b1", "program      ferrata_bridge_f13",
+             "08-claim.txt"),
+        )
+        for path, old, new, where in cases:
+            with self.subTest(path):
+                self.assertFails("rc3-roundtrip-b1-record", overlay({path: sub(old, new)}), where)
+
+
 class EvidenceRowsFinal(TamperCase):
     """evidence-rows-final: EVIDENCE rows 275-281 and RFP-021 R.9, R.10, RFP-022 F.7, F.13, held to their records. Each
     altered document or record must fail on the figure altered."""

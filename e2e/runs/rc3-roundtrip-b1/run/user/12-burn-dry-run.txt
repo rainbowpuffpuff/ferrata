@@ -1,0 +1,18 @@
+$ ferrata --seed <work>/user/seed.txt --eth-rpc http://127.0.0.1:18547 --chain-id 11155111 --vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 --from-block 12222587 --sequencer http://127.0.0.1:3040 --lez-wallet <work>/user/lez-wallet --lez-password-file <work>/user/lez.pass --bridge-account 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d burn --from public --i-accept-public-account --account 0 --amount 0.001 --recipient 0x5540889c6F8c7b7eD633BCF0857B5803F0b90785 --payer 0x8a7162a5acc0f2c0beab5a9d07dfab129e7dc9b18cd9c14b3090fe2cc40154b0
+
+burn on LEZ (configuration 0xe7aab60e0bae94ca508d32b4a0f2c240ad549bc22b6232c30583a805fe021e0e):
+  amount       0.001 ETH (1000000000000000 base units, 18 decimals) from your public account /0 (0x8a7162a5acc0f2c0beab5a9d07dfab129e7dc9b18cd9c14b3090fe2cc40154b0)
+  recipient    0x5540889c6F8c7b7eD633BCF0857B5803F0b90785 on Ethereum (bound into COut, encrypted in the memo)
+  would send   Burn to the bridge program 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d, signed by the holder; note r 0xab9d5ac8d5658a9a5fb2417bdd5dded817e2d2198767383ac762fddface49e85  COut 0x45ffd43cdd98d1e43e62581af11db8d22e38628741a6e0aa29d250bd650d7968  burn counter 0
+  cost         at release, the burn fee 0 ETH (0 base units, 18 decimals) and the checkpoint fee 0.000001 ETH (1000000000000 base units, 18 decimals) in force now are deducted: the recipient receives 0.000997 ETH (997000000000000 base units, 18 decimals) through a relayer (relay fee 0.000002 ETH (2000000000000 base units, 18 decimals)), 0.000999 ETH (999000000000000 base units, 18 decimals) if you send the release yourself; the LEZ fee is paid by the holder, in public
+what becomes public (Burn (LEZ)):
+  public on Ethereum: nothing
+  public on LEZ:      the burn note: token, denomination, r, the recipient encrypted (c_out); the holder account, if it is public
+  stays private:      the Ethereum recipient (encrypted to you); a private holder and its balance
+privacy of these choices: High: a direct link is public
+  !! Burn from a public account: the holder, its balance and the burn are public on LEZ.
+  ok Fresh recipient address: nothing on Ethereum ties the release to your depositor address.
+  ok Released through a relayer: the recipient needs no ETH for gas.
+WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
+public: burn: the holder's account (a public holding), the token, the denomination, the time and the note (r, memo, mac, COut); not the Ethereum recipient (encrypted in the memo)
+not sent: a dry run (add --send --yes to sign and send)
