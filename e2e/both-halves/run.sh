@@ -6,8 +6,9 @@
 #   e2e/both-halves/run.sh                      the three tests (seeds 1,2,3; 40 steps each)
 #   FERRATA_BOTH_HALVES_SEEDS=4,5 FERRATA_BOTH_HALVES_STEPS=60 e2e/both-halves/run.sh randomised
 #
-# Writes e2e/both-halves/results/f13/randomised.md, migration.md and fees.md (FERRATA_BOTH_HALVES_OUT=DIR elsewhere): this
-# tree's programs, since ADR 0046. e2e/both-halves/results/*.md are the records of the programs before it; a run leaves them.
+# Writes e2e/both-halves/results/f13-lez/randomised.md, migration.md and fees.md (FERRATA_BOTH_HALVES_OUT=DIR elsewhere):
+# this tree's programs, since ADR 0048. results/f13/ holds ADR 0046's records, results/*.md those of the programs before
+# it; a run leaves them.
 set -euo pipefail
 repo="$(cd "$(dirname "$0")/../.." && pwd)"
 "$repo/e2e/ci/run.sh" build

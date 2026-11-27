@@ -3301,6 +3301,332 @@
         "Internal: the attested listing, kept only if its record is newer than the token's last."
       ],
       "internal": true
+    },
+    {
+      "name": "collect_fees",
+      "variant": "CollectFees",
+      "discriminator": [
+        31
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "config"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "attestation_record",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "header"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "record_slot"
+              }
+            ]
+          },
+          "docs": [
+            "the record the vault's fees slot of token (sha256(\"ferrata/vault/lezfees/v1\" || token): the cumulative mint and burn fees it escrowed for the fee recipient on LEZ, ADR 0048) is proven under; the attestation program's account (its PDA domain is ferrata-lez/v1/, see ferrata_attestation.idl.json)"
+          ],
+          "owner": "ferrata_attestation"
+        },
+        {
+          "name": "fees",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "fees"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "token"
+              }
+            ]
+          },
+          "docs": [
+            "fees(cid, token), created by the collection (the program derives its seed)"
+          ]
+        },
+        {
+          "name": "token_actor",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "token"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "token"
+              }
+            ]
+          },
+          "docs": [
+            "MintFees, through the token's mint freeze and bucket"
+          ]
+        },
+        {
+          "name": "holder",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "holder"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "holder"
+              }
+            ]
+          },
+          "docs": [
+            "holder(cid, fee_recipient), credited the minted fees"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "record_slot",
+          "type": "u64"
+        },
+        {
+          "name": "limit",
+          "type": "u128"
+        },
+        {
+          "name": "proof",
+          "type": {
+            "defined": "VaultProof"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Anyone: attest the vault's cumulative protocol fees of token (ADR 0048) and mint the part not minted yet, at most limit, to the fee recipient. No user's transaction is named: the total is over every deposit and release up to that record."
+      ]
+    },
+    {
+      "name": "accrue_fees",
+      "variant": "AccrueFees",
+      "discriminator": [
+        32
+      ],
+      "accounts": [
+        {
+          "name": "fees",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "fees"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "token"
+              }
+            ]
+          },
+          "docs": [
+            "from config(cid) only"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "total",
+          "type": "u128"
+        },
+        {
+          "name": "limit",
+          "type": "u128"
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal: the attested total; fees(cid, token) keeps the count and sends MintFees for the difference, at most limit."
+      ],
+      "internal": true
+    },
+    {
+      "name": "mint_fees",
+      "variant": "MintFees",
+      "discriminator": [
+        33
+      ],
+      "accounts": [
+        {
+          "name": "token_actor",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "token"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "token"
+              }
+            ]
+          },
+          "docs": [
+            "from fees(cid, token) only"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u128"
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal: mint the fees to the configuration's fee recipient, through the token's and the configuration's mint freezes and buckets."
+      ],
+      "internal": true
     }
   ],
   "accounts": [
@@ -3375,10 +3701,21 @@
                 }
               }
             ]
+          },
+          {
+            "name": "Fees",
+            "fields": [
+              {
+                "name": "0",
+                "type": {
+                  "defined": "FeesState"
+                }
+              }
+            ]
           }
         ],
         "docs": [
-          "The state of every actor of the bridge program: config(cid), root(cid, n), nullifier(cid, chain, vault, N), holder(cid, account), burn(cid, r), token(cid, token)."
+          "The state of every actor of the bridge program: config(cid), root(cid, n), nullifier(cid, chain, vault, N), holder(cid, account), burn(cid, r), token(cid, token), fees(cid, token)."
         ]
       }
     }
@@ -5171,6 +5508,101 @@
               "type": "u64"
             }
           ]
+        },
+        {
+          "name": "CollectFees",
+          "fields": [
+            {
+              "name": "config_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "token",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "record_slot",
+              "type": "u64"
+            },
+            {
+              "name": "limit",
+              "type": "u128"
+            },
+            {
+              "name": "proof",
+              "type": {
+                "defined": "VaultProof"
+              }
+            }
+          ]
+        },
+        {
+          "name": "AccrueFees",
+          "fields": [
+            {
+              "name": "config_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "token",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "total",
+              "type": "u128"
+            },
+            {
+              "name": "limit",
+              "type": "u128"
+            }
+          ]
+        },
+        {
+          "name": "MintFees",
+          "fields": [
+            {
+              "name": "config_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "token",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "amount",
+              "type": "u128"
+            }
+          ]
         }
       ],
       "docs": [
@@ -5334,6 +5766,28 @@
             {
               "name": "record_slot",
               "type": "u64"
+            }
+          ]
+        },
+        {
+          "name": "Collect",
+          "fields": [
+            {
+              "name": "token",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "record_slot",
+              "type": "u64"
+            },
+            {
+              "name": "limit",
+              "type": "u128"
             }
           ]
         }
@@ -5639,13 +6093,44 @@
           }
         }
       ]
+    },
+    {
+      "name": "FeesState",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "collected",
+          "type": "u128"
+        }
+      ],
+      "docs": [
+        "fees(cid, token) (ADR 0048): the protocol fees of token minted to the fee recipient so far, in base units; written only by AccrueFees from config(cid)."
+      ]
     }
   ],
   "errors": [
     {
       "code": 240,
       "name": "BAD_MESSAGE",
-      "msg": "A message that does not decode or that this actor does not take, or values outside the specified bounds: more than eight denominations, unsorted or zero, not multiples of a power-of-ten LEZ unit, a fee above 1% of its denomination, a protocol fee in schedule 0, a fee change with less than seven days' notice, a freeze beyond 30 days, a cap below the floor; a freeze authority with a threshold outside 1 to its members, more than eight members, a repeated member or the admin (at `Init` too), more than three watchers; a transfer of zero or of an amount that is not a multiple of the token's LEZ unit; an inbound depth above 216,000 slots."
+      "msg": "A message that does not decode or that this actor does not take, or values outside the specified bounds: more than eight denominations, unsorted or zero, not multiples of a power-of-ten LEZ unit, a fee above 1% of its denomination, a protocol fee in schedule 0, a fee change with less than seven days' notice, a freeze beyond 30 days, a cap below the floor; a freeze authority with a threshold outside 1 to its members, more than eight members, a repeated member or the admin (at `Init` too), more than three watchers; a transfer of zero or of an amount that is not a multiple of the token's LEZ unit; an inbound depth above 216,000 slots; a `CollectFees` limit of zero, or a fee mint that is not a multiple of the LEZ unit; a mint or burn fee that is not a multiple of the LEZ unit."
     },
     {
       "code": 241,
@@ -5665,7 +6150,7 @@
     {
       "code": 244,
       "name": "ALREADY_WRITTEN",
-      "msg": "A write-once account already written: the configuration, a root at the same leaf count, a token's entry, a burn tag (the same note again, or another note with its tag), the sunset."
+      "msg": "A write-once account already written: the configuration, a root at the same leaf count, a token's entry, a burn tag (the same note again, or another note with its tag), the sunset; a `CollectFees` whose attested total is already minted (ADR 0048)."
     },
     {
       "code": 245,
@@ -5680,7 +6165,7 @@
     {
       "code": 247,
       "name": "IMPORT_MISMATCH",
-      "msg": "The attested facts are not the vault's slots holding what the message says (the root and count, the registry entry, a fee schedule, a schedule out of order), or are of another instance, chain or record; a vault whose `retired` flag is not set; a listing word other than 0 or 1, or a listing record no newer than the one the token holds."
+      "msg": "The attested facts are not the vault's slots holding what the message says (the root and count, the registry entry, a fee schedule, a schedule out of order), or are of another instance, chain or record; a vault whose `retired` flag is not set; a listing word other than 0 or 1, or a listing record no newer than the one the token holds; a `CollectFees` total below what is already minted (an older record) or above 2^128."
     },
     {
       "code": 248,

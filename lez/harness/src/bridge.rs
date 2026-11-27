@@ -30,9 +30,9 @@ use ferrata_core::{
 };
 use ferrata_lez_bridge_wire::{
     self as bw, code, config_actor, config_seed, fee_slot, own_actor, register_slots, registry_slot, root_actor,
-    root_seed, token_actor, BridgeConfig, BridgeMessage, BridgeState, CapParams, ClaimWitness, Controls, FeeSchedule,
-    HolderState, ImportProof, NullifierState, PairingProof, RootState, TimeRecord, TokenEntry, TokenState, VaultProof,
-    Word, SLOT_CONFIG_ID, SLOT_COUNT, SLOT_ROOT,
+    root_seed, token_actor, BridgeConfig, BridgeMessage, BridgeState, CapParams, ClaimWitness, Controls,
+    FeeSchedule, HolderState, ImportProof, NullifierState, PairingProof, RootState, TimeRecord, TokenEntry, TokenState,
+    VaultProof, Word, SLOT_CONFIG_ID, SLOT_COUNT, SLOT_ROOT,
 };
 use ferrata_lez_wire::{header_actor, RecordState};
 use ferrata_spectests::execkit::{account_rlp, enc, header_rlp, keccak, Trie};
@@ -371,6 +371,12 @@ pub fn registry_slots(entry: &TokenEntry, more: &[FeeSchedule]) -> Vec<(Word, Ha
         slots.push((fee_slot(&entry.token, s.index), s.hash(&entry.token)));
     }
     slots
+}
+
+/// The vault's cumulative protocol-fee slot of `token` holding `total` base units (ADR 0048), for
+/// [`VaultSlots::extra`]: [`bw::lez_fees_slot`], what a `CollectFees` attests.
+pub fn lez_fees_slots(token: &[u8; 20], total: u128) -> Vec<(Word, Hash)> {
+    vec![(bw::lez_fees_slot(token), bw::word_of_u128(total))]
 }
 
 /// A synthetic execution block: its state trie, the vaults' storage tries, and its record; for a
@@ -846,6 +852,16 @@ impl World {
         }
     }
 
+    /// `fees(cid, token)`: the protocol fees of `token` minted to the fee recipient under `cid` so
+    /// far (ADR 0048).
+    pub fn fees_state(&self, cid: &Hash, token: &[u8; 20]) -> Option<bw::FeesState> {
+        match self.state(bw::fees_actor(self.program, cid, token)) {
+            Some(BridgeState::Fees(fees)) => Some(fees),
+            None => None,
+            other => panic!("not the fees account: {other:?}"),
+        }
+    }
+
     /// The balance of `token` that `account` holds under `cid`.
     pub fn balance_of(&self, account: AccountId, cid: &Hash, token: &[u8; 20]) -> u128 {
         self.holder(cid, account).and_then(|h| h.holding(cid, token).map(|h| h.amount)).unwrap_or(0)
@@ -1176,6 +1192,44 @@ impl World {
         let root = config_actor(self.program, cid);
         let header = header_actor(ferrata_account(), &INSTANCE, b.slot);
         self.send(label, root, &message, vec![root, header, token_actor(self.program, cid, &token)])
+    }
+
+    /// `CollectFees` of `token` for `cid` under block `block` (ADR 0048): attest the vault's
+    /// cumulative protocol-fee total of `token` in that block (`lez_fees_slot`) and mint what is not
+    /// minted yet, at most `limit`, to the configuration's fee recipient. The transaction touches
+    /// `config(cid)`, the record's actor, `fees(cid, token)`, `token(cid, token)` and the fee
+    /// recipient's `holder(cid, fee_recipient)`; a token the configuration never registered still
+    /// has its actor admitted (LEZ admits no delivery to an account that does not exist), so the
+    /// program refuses it with its own code.
+    #[allow(clippy::too_many_arguments)]
+    pub fn collect_fees(
+        &mut self,
+        label: &str,
+        cid: &Hash,
+        token: [u8; 20],
+        block: usize,
+        limit: u128,
+        vault: &[u8; 20],
+    ) -> TxReport {
+        let b = &self.blocks[block];
+        let message = BridgeMessage::CollectFees {
+            config_id: *cid,
+            token,
+            record_slot: b.slot,
+            limit,
+            proof: b.vault_proof(vault, &[bw::lez_fees_slot(&token)]),
+        };
+        let root = config_actor(self.program, cid);
+        let header = header_actor(ferrata_account(), &INSTANCE, b.slot);
+        let token_at = token_actor(self.program, cid, &token);
+        let actors = vec![
+            root,
+            header,
+            bw::fees_actor(self.program, cid, &token),
+            token_at,
+            holder_of(self.program, cid, fee_recipient()),
+        ];
+        self.send(label, root, &message, actors)
     }
 
     /// `ApplyRoles` for `cid`, reading the record of block `block`.

@@ -5,7 +5,7 @@
 | File | What |
 |---|---|
 | [`ferrata_attestation.idl.json`](ferrata_attestation.idl.json) | The attestation program (RFP-021): 13 instructions, 16 types, 3 actor states, 68 exit codes |
-| [`ferrata_bridge.idl.json`](ferrata_bridge.idl.json) | The bridge program (RFP-022): 31 instructions, 32 types, the actor state enum, 16 exit codes (since B1: config-keyed nullifier and holder accounts, `SetDepth`, `AttestListing`) |
+| [`ferrata_bridge.idl.json`](ferrata_bridge.idl.json) | The bridge program (RFP-022): 34 instructions, 33 types, the actor state enum, 16 exit codes (since B1: config-keyed nullifier and holder accounts, `SetDepth`, `AttestListing`; since ADR 0048: `CollectFees` and the `fees(cid, token)` PDA) |
 | [`vectors/`](vectors/) | Borsh vectors written by the Rust wire crates, each with its Rust `Debug` text |
 | [`check.py`](check.py) | The check CI runs: decodes every vector with the IDL alone |
 | [`tools/build_idl.py`](tools/build_idl.py) | How the JSON was written (by hand, in Python); the error lists are read from the Rust sources |
@@ -174,11 +174,12 @@ build, so SPEL's encoder (`spel encode`) is not run here; the hand-written IDL's
 
 ## Results
 
-Measured on the Modal build box (`mrun`, 11 November 2026) and in CI's command:
+Measured on the Modal build box (`mrun`, 11 November 2026) and in CI's command; the counts below
+are what today's tree prints (`check.py` on 27 November 2026, after ADR 0048's `CollectFees`):
 
-- `idl_vectors`: 2 passed (19 attestation vectors, 37 bridge vectors).
-- `check.py`: attestation 19 vectors, 13 of 13 instructions, 19 types, 31 enum variants, 68 codes,
-  5 of 5 mutants rejected; bridge 37 vectors, 20 of 20 instructions, 29 types, 34 enum variants,
+- `idl_vectors`: 3 passed (21 attestation vectors, 60 bridge vectors, 15 PDAs).
+- `check.py`: attestation 21 vectors, 15 of 15 instructions, 19 types, 33 enum variants, 71 codes,
+  5 of 5 mutants rejected; bridge 60 vectors, 34 of 34 instructions, 33 types, 57 enum variants,
   16 codes, 5 of 5 mutants rejected.
 - `--decode`: three of `ferrata-attest`'s messages (7,201, 2,153 and 31,654 bytes, built from real
   Sepolia proofs) equal to their `Debug` text ([`lez/results/attest-cli/idl-decode.txt`](../lez/results/attest-cli/idl-decode.txt)).

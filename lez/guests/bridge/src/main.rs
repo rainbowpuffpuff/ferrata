@@ -816,7 +816,10 @@ fn accrue_fees(
     };
     let (amount, fees) = fees.accrue(total, limit)?;
     let mint = BridgeMessage::MintFees { config_id, token, amount };
-    Ok(set(BridgeState::Fees(fees)).send_sync(token_actor(program, &config_id, &token), &mint))
+    // With the token's seed, as every message to `token(cid, token)` carries one: a token the configuration never
+    // registered is then refused by `MintFees` itself (`NOT_REGISTERED`), not left unadmitted by LEZ.
+    Ok(set(BridgeState::Fees(fees))
+        .send(SyncMessage::new(token_actor(program, &config_id, &token), &mint).with_pda_seeds([token_seed(&config_id, &token)])))
 }
 
 /// At `token(cid, token)`, from `fees(cid, token)` only: mint `amount` of protocol fees to the configuration's fee

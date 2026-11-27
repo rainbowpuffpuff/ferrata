@@ -873,6 +873,13 @@ fn pda_vectors() {
         ),
         pda_entry(
             "ferrata_bridge",
+            "fees",
+            &program,
+            &[("config_id", "bytes", hex(&cid)), ("token", "bytes", hex(&token))],
+            &bw::fees_actor(program, &cid, &token),
+        ),
+        pda_entry(
+            "ferrata_bridge",
             "holder",
             &program,
             &[("config_id", "bytes", hex(&cid)), ("holder", "bytes", hex(holder.value()))],
