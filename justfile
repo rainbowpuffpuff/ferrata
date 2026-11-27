@@ -140,7 +140,7 @@ ci-verify:
     python3 -I scripts/vault_libs.py check
     (cd vault && forge build)
     python3 -I scripts/verify.py --all --offline --strict
-    python3 -I scripts/test_verify.py && python3 -I scripts/test_verify_lc.py && python3 -I scripts/test_verify_f13.py && python3 -I scripts/test_verify_bridge.py && python3 -I scripts/test_verify_bridge_rows.py
+    python3 -I scripts/test_verify.py && python3 -I scripts/test_verify_lc.py && python3 -I scripts/test_verify_f13.py && python3 -I scripts/test_verify_f7.py && python3 -I scripts/test_verify_bridge.py && python3 -I scripts/test_verify_bridge_rows.py
     git status --porcelain --untracked-files=all
     test -z "$(git status --porcelain --untracked-files=all)"
 
