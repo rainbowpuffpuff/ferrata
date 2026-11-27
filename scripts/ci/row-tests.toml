@@ -845,6 +845,7 @@ tests = [
   { path = "cli/README.md", kind = "document" },
   { path = "modules/scripts/bridge-send-stack.sh", kind = "test", ci = "box", run = "bash modules/scripts/bridge-send-stack.sh run OUT" },
   { path = "modules/results/bridge-send-stack-r4/README.md", kind = "record" },
+  { path = "modules/results/bridge-send-stack-r5/README.md", kind = "record" },
 ]
 note = "the user functions as the ferrata tool (deposit, claim, burn, release, recover, status; rows 84, 85) and in ferrata_bridge_module (row 59), its LEZ reads and private claim and burn through lez_core (rows 113, 114); since, the module's Ethereum reads through eth_rpc_module and its user and admin sends through Logos's send stack, only to the pinned deployment (EVIDENCE rows 198, 199); admin functions in the mini-app and a read-only view"
 
@@ -891,6 +892,7 @@ tests = [
   { path = "e2e/seqnet/hook-gasdrop.sh", kind = "test", ci = "box", run = "e2e/seqnet/run.sh gasdrop NAME" },
   { path = "e2e/runs/seqnet-gasdrop-4/gasdrop.md", kind = "record" },
   { path = "e2e/runs/seqnet-gasdrop-5/gasdrop.md", kind = "record" },
+  { path = "modules/ferrata_bridge_ui/tests/privacy-test.mjs", kind = "test", ci = "msg" },
 ]
 note = "fixed denominations, the claim delay and the relayer release preselected; each dry run prints the exposure of the choices; the fee-payer gas drop ran on rc3 with real proofs (EVIDENCE row 124, M0 check 2 GO); the tool now uses the network's relayer by default for the claim and pays a later private burn from the drop's remainder, the relayer read from the network's gateway, only 404/410 read as none published, every other answer stopping the claim or burn (gasdrop_net tests; seqnet-gasdrop-4, rc1's sequencer, dev-mode proofs); the gateway verifies a job's receipt before it counts against its caps and refuses an N it admitted before (seqnet-gasdrop-5); not in the mini-app's claim, not yet live on the test network"
 
@@ -937,7 +939,7 @@ tests = [
   { path = "e2e/endpoints/run.sh", kind = "test", ci = "box", run = "e2e/endpoints/run.sh build && e2e/endpoints/run.sh live NAME" },
   { path = "modules/ferrata_bridge_ui/scripts/box-test.sh", kind = "test", ci = "box", run = "modules/ferrata_bridge_ui/scripts/box-test.sh" },
 ]
-note = "--eth-rpc, --sequencer (and the vault, bridge account and chain id) by option or environment variable; a silent RPC, another chain's RPC and an address with no vault each reported (row 85). Inside Logos Core the view's Apply and test switches the LEZ sequencer at the chain service and the Ethereum RPC at eth_rpc_module (or the chain service), each only after the new one answered for the deployment, both kept otherwise: natively against stand-ins in CI (modules-resolve), and live in one headless Logos Core on the build box (e2e/endpoints: three of a zone's four sequencers, two anvil endpoints; with U9_PUBLIC=1 and our test network's RPC URL from the owner, U9_LIVE_LEZ_URL, also two public Sepolia RPCs, read only). The LEZ sequencer is switched at seqnet-chain, the stand-in for Logos Core's LEZ module: with LEZ through lez_core a sequencer change is refused (in part)"
+note = "--eth-rpc, --sequencer (and the vault, bridge account and chain id) by option or environment variable; a silent RPC, another chain's RPC and an address with no vault each reported (row 85). Inside Logos Core the view's Apply and test switches the LEZ sequencer at the chain service and the Ethereum RPC at eth_rpc_module (or the chain service), each only after the new one answered for the deployment, both kept otherwise: natively against stand-ins in CI (modules-resolve), and live in one headless Logos Core on the build box (e2e/endpoints: three of a zone's four sequencers, two anvil endpoints; with U9_PUBLIC=1 and our test network's RPC URL from the owner, U9_LIVE_LEZ_URL, also two public Sepolia RPCs, read only). The LEZ sequencer is switched at seqnet-chain, the stand-in for Logos Core's LEZ module: with LEZ through lez_core a sequencer change now moves lez_core's wallet too, both or neither, a lost answer read again and put back, a split healed (calls/tests/endpoints.rs, natively in CI's modules-resolve); its live run (e2e/endpoints/run.sh live with U9_LEZCORE) is written, not run (in part)"
 
 [[row]]
 id = "RFP-022 U.10"
@@ -990,6 +992,7 @@ tests = [
   { path = "e2e/both-halves/results/migration.md", kind = "record" },
   { path = "lez/harness/tests/bridge_time.rs", kind = "test", ci = "lez-harness" },
   { path = "vault/test/FailsafeBrokenVerifier.t.sol", kind = "test", ci = "vault" },
+  { path = "vault/test/invariant/EntitlementInvariants.t.sol", kind = "test", ci = "vault" },
 ]
 note = "freezes, caps and delisting only delay on both sides; a capped claim (255) or freeze (242) stays claimable and succeeds after the refill or once the freeze ends; the disclosed exceptions are the sunset, the emergency stop and a retirement (Refund.t.sol, EmergencyStop.t.sol, Sunset), and ADR 0033's freezes under a broken verifier with no proof of exploit, which hold releases and refunds while renewed (FailsafeBrokenVerifier.t.sol)"
 
@@ -1016,8 +1019,11 @@ tests = [
   { path = "deploy/testnet/tests/prover-kill-resume-modal.sh", kind = "test", ci = "box", run = "deploy/testnet/tests/prover-kill-resume-modal.sh OUT REQ.json ..." },
   { path = "e2e/runs/zone-bridge-rc3-multi/README.md", kind = "record" },
   { path = "monitor/results/logos-fallback/README.md", kind = "record" },
+  { path = "modules/scripts/send-stack-kill.sh", kind = "test", ci = "box", run = "modules/scripts/send-stack-kill.sh" },
+  { path = "monitor/src/logos_send.rs", kind = "test", ci = "monitor" },
+  { path = "modules/results/send-stack-kill-2026-11-27/README.md", kind = "record" },
 ]
-note = "monitor SIGKILLed mid-window and restarted still cancels exactly once; with its state file lost it rescans and makes exactly one cancellation; a watcher without gas cancels once funded (rows 43, 96); the relayer records a gas drop before sending and refuses a second after a restart (row 47); the relayer daemon killed at each of its transactions, at random and in the record's narrow windows, behind failing endpoints, through a stand-in of tx_sender_module, and on LEZ (root imports on the devnet's zone, gas drops on rc1's sequencer): every job once (row 203); monitor's sends the module fails go the plain way, and a send held behind a number the module burnt, after the fallback's own send failed, is followed by the same call at that number (10 of 10, in CI); the checkpoint and release prover's client killed mid-proof against Modal itself resumed the same call and wrote each job once (row 266, on the build box); the real tx_sender_module and the module killed are not shown"
+note = "monitor SIGKILLed mid-window and restarted still cancels exactly once; with its state file lost it rescans and makes exactly one cancellation; a watcher without gas cancels once funded (rows 43, 96); the relayer records a gas drop before sending and refuses a second after a restart (row 47); the relayer daemon killed at each of its transactions, at random and in the record's narrow windows, behind failing endpoints, through a stand-in of tx_sender_module, and on LEZ (root imports on the devnet's zone, gas drops on rc1's sequencer): every job once (row 203); monitor's sends the module fails go the plain way, and a send held behind a number the module burnt, after the fallback's own send failed, is followed by the same call at that number (10 of 10, in CI); the checkpoint and release prover's client killed mid-proof against Modal itself resumed the same call and wrote each job once (row 266, on the build box); on Logos's real send stack the relayer and monitor modules killed and cut off (modules/scripts/send-stack-kill.sh, run 2 on the build box, 39 of 40 checks, row 290), not yet with the reviews' checks on this tree's modules (in part)"
 
 [[row]]
 id = "RFP-022 R.7"
@@ -1036,6 +1042,8 @@ tests = [
   { path = "vault/test/Verifier31.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/real/ZoneBridgeRc3.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/DeployVaultChecks.t.sol", kind = "test", ci = "vault" },
+  { path = "vault/test/VerifierCode.t.sol", kind = "test", ci = "vault" },
+  { path = "vault/script/test-check-verifier-local.sh", kind = "test", ci = "vault" },
 ]
 note = "RISC Zero zkVM 3.1.0 receipts (the advisories' fixed releases) and RISC Zero's unmodified base Groth16 verifier 3.1.0 (risc0-ethereum v3.1.0, vault/lib.lock) behind its emergency-stop wrapper: the library is 3.1.0, a 3.0.5 seal is refused, real 3.1 seals of rule (B) checkpoints and releases verify, DeployVault puts no other verifier code behind the stop; no new ZK primitive. Whether 3.1.0 is covered by an audit is not established. bridge/evm-verify (risc0-ethereum v3.0.0, seals of the v2 release program) is a record of 3.0.5, not cited."
 
@@ -1239,6 +1247,7 @@ tests = [
   { path = "checkpoint/fidelity/tests/formats.rs", kind = "test", ci = "box", run = "cd checkpoint/fidelity && cargo +1.98.1 test -- --nocapture" },
   { path = "e2e/ci/run.sh", kind = "test", ci = "roundtrip" },
   { path = "vault/test/real/ZoneBridgeRc3Multi.t.sol", kind = "test", ci = "vault" },
+  { path = "vault/test/real/Rc3JournalWords.t.sol", kind = "test", ci = "vault" },
 ]
 note = "under RISC Zero's verifier 3.1.0 with real 3.1 seals (rule (B)): a flipped seal byte, another program's or another journal's seal, a swapped proof, a seal of risc0 3.0.5 and replays refused; altered requests refused; wrong inputs, state and tampering refused on LEZ (249, 110; a flipped receipt bit by LEZ's settlement, rows 75, 88; LEZ verifies with risc0 3.0.5). The same with the four-key rc3 run's real seals: a flipped seal byte and another image refused (ZoneBridgeRc3Multi.t.sol, row 266). Rule (A) has no real-seal test under 3.1 (vault/test/real/README.md)."
 
@@ -1249,6 +1258,7 @@ tests = [
   { path = "vault/test/JournalBinding.t.sol", kind = "test", ci = "vault" },
   { path = "cli/tests/relayer.sh", kind = "test", ci = "box", run = "cd cli && bash tests/relayer.sh" },
   { path = "vault/test/real/ZoneBridgeRc3Multi.t.sol", kind = "test", ci = "vault" },
+  { path = "vault/test/real/Rc3JournalWords.t.sol", kind = "test", ci = "vault" },
 ]
 note = "C and C_out bind the destination under a seed-derived secret, the release journal binds recipient, relayer and fee, the gas-drop receipt binds N, a one-time address and the relayer: redirected, fee-raised and replayed releases refused under the real verifier (EVIDENCE row 46; with the four-key rc3 run's real 3.1 seals, row 266: the recipient, the relayer, the relay fee or the nullifier changed alone refused, ZoneBridgeRc3Multi.t.sol), a redirected claim refused on LEZ (249, 252)"
 
@@ -1281,6 +1291,7 @@ tests = [
   { path = "e2e/both-halves/results/randomised.md", kind = "record" },
   { path = "scripts/verify-sepolia.py", kind = "test", ci = "local", run = "python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-3" },
   { path = "vault/test/real/ZoneBridgeRc3Multi.t.sol", kind = "test", ci = "vault" },
+  { path = "vault/test/InternalReview.t.sol", kind = "test", ci = "vault" },
 ]
 note = "the invariants hold over 256 runs x 100 calls (balance = escrowed + totalOwed + donations, escrowed = deposits - releases - refunds) and the supply invariant on both rules (F.13's row); after the live round trip the vault's balance equals escrowed + totalOwed (EVIDENCE row 42); invalid mints and releases refused (Sec.2); over both real halves at once, 496 checks over eight randomised seeds (EVIDENCE row 184); the four-key rc3 run's releases, under verifier 3.1.0 with real seals, paid only for their real burns, each once (ZoneBridgeRc3Multi.t.sol, row 266)"
 
@@ -1322,6 +1333,8 @@ tests = [
   { path = "vault/script/deploy.sh", kind = "test", ci = "box", run = "vault/script/deploy.sh" },
   { path = "vault/test/FailsafeBrokenVerifier.t.sol", kind = "test", ci = "vault" },
   { path = "docs/decisions/0033-broken-verifier-without-proof-of-exploit.md", kind = "document" },
+  { path = "vault/test/LezReceiptUnsound.t.sol", kind = "test", ci = "vault" },
+  { path = "docs/security/lez-receipt-unsound.md", kind = "document" },
 ]
 note = "stop-only, no fund recovery (MIGRATION.md sections 4 and 5, trust.md section 6): after the verifier stop no role moves escrow, owed balances still pay their payee, refunds are refused even with a final sunset checkpoint; a bug in one of Ferrata's guests is met by the release and checkpoint freezes and revokeFrom: renewed, the release freeze holds releases and refunds, left to lapse it reopens the forged path; per-token release freezes let d2 be refunded while releases stay shut; a revoked forged checkpoint pays nothing and b1 still releases (MigrationFailsafe.t.sol, 8 tests, CI's vault job); the guardian and proof-of-exploit stops (EmergencyStop.t.sol; Halmos, EVIDENCE row 35); revocation inside and outside the window; the deployment script renounces the stop's owner and checks it, live on Sepolia (rows 41, 91); a broken verifier with no proof of exploit (ADR 0033, row 269): no escrow-moving exit meets Security #9's constraints, the containment runbook (releases frozen globally, checkpoints frozen, each freeze renewed, caps, retirement) rehearsed under rules (A) and (B) with a verifier that accepts every seal but no proof of exploit (FailsafeBrokenVerifier.t.sol, 13 tests, CI's vault job). Not documented: per-position outcomes if LEZ's own receipt check is unsound (trust.md section 6 gives its reach and the Ethereum-side bounds)"
 
@@ -1406,5 +1419,6 @@ tests = [
   { path = "cli/src/gasdrop_net.rs", kind = "test", ci = "roundtrip" },
   { path = "e2e/seqnet/hook-gasdrop.sh", kind = "test", ci = "box", run = "e2e/seqnet/run.sh gasdrop NAME" },
   { path = "e2e/runs/seqnet-gasdrop-4/gasdrop.md", kind = "record" },
+  { path = "modules/ferrata_bridge_ui/tests/privacy-test.mjs", kind = "test", ci = "msg" },
 ]
 note = "on the defaults a deposit goes to the wallet's private account, the claim is private and delayed, the burn private to a fresh address; a public destination, a plaintext claim and a public burn each print a WARNING and are refused without their own acknowledgement (rows 62, 84-86); the fee payer: the network's gas-drop relayer by default, the user's own account only where none is published (404/410) or with --no-gas-drop, every other answer (429, 5xx, timeouts, paused, unreadable) stopping the claim or burn (gasdrop_net tests; seqnet-gasdrop-4's failure paths and opt-out)"
