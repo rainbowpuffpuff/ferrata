@@ -148,5 +148,5 @@ RISC0_DEV_MODE=1 cargo test -p ferrata-updater --features harness --locked -- --
 stamp "the privacy suite end to end, then its gate, into $privacy_out"
 bash "$repo/scripts/privacy/run.sh" "$privacy_out"
 python3 -I "$repo/scripts/privacy/check-results.py" "$privacy_out"
-python3 -I "$repo/scripts/privacy/controls.py" "$privacy_out" "$privacy_out-controls"
+python3 -I "$repo/scripts/privacy/controls.py" "${FERRATA_PRIVACY_DIR:-$repo/target/privacy}" "$privacy_out-controls"
 stamp "passed"

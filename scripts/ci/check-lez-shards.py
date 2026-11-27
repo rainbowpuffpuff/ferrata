@@ -23,6 +23,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 import re
 import shlex
@@ -764,9 +765,13 @@ def build_shard_plan(
         gate_py = f"{repo_prefix}scripts/privacy/check-results.py"
         cmds.append({"cwd": ".", "dev_mode": False, "argv": ["bash", run_sh, privacy_out]})
         cmds.append({"cwd": ".", "dev_mode": False, "argv": ["python3", "-I", gate_py, privacy_out]})
+        # The negative controls read what run.sh's collectors wrote (FERRATA_PRIVACY_DIR, else target/privacy at the
+        # repository's root), not the tables run.sh writes to privacy_out (a build box run of the shard found
+        # controls.py reading privacy_out/lez.json, which run.sh never writes).
         controls_py = f"{repo_prefix}scripts/privacy/controls.py"
+        privacy_data = os.environ.get("FERRATA_PRIVACY_DIR") or f"{repo_prefix}target/privacy"
         cmds.append({"cwd": ".", "dev_mode": False,
-                     "argv": ["python3", "-I", controls_py, privacy_out, privacy_out + "-controls"]})
+                     "argv": ["python3", "-I", controls_py, privacy_data, privacy_out + "-controls"]})
 
     if not cmds:
         raise ValueError(f"shard {shard_name!r} produces no commands (empty shard)")
