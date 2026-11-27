@@ -41,8 +41,10 @@ The turns on the chain's height and the jobs of other parties' copies (ADR 0048,
 sooner: `tests/turns.rs`; c1gate the same, the in-process gate with honest updaters reading at different rates); c2
 (join or wait's bounds count rounds); c3 (the stall alarm counts rounds); c4 (no alarm for a height that stops); c5 (a
 turn counted from this reading, not the block after the previous one: a reader reading less often than once a block
-loses the blocks between its readings); l1 (no `Open` learned from the chain: `tests/copies.rs`; l1gate the in-process
-gate with copies); e1 (a light-client header written in an SSZ container as a fixed field: the bytes an `Open` gives
+loses the blocks between its readings); c6 (that credit not capped at a block: an updater back after a long gap finds
+every draw elapsed); l1 (no `Open` learned from the chain: `tests/copies.rs`; l1gate the in-process gate with copies);
+l2 (a learned update whose job is open not marked open before it is remembered: a batch of copies pushes the leading
+job's update out); e1 (a light-client header written in an SSZ container as a fixed field: the bytes an `Open` gives
 back are not the ones a source served).
 """
 import os
@@ -147,15 +149,21 @@ MUTANTS = {
     "c4": ([(U, "            if self.metrics.turn_clock_height { self.round.saturating_sub(self.clock_moved_round) } else { 0 };",
              "            if false { self.round.saturating_sub(self.clock_moved_round) } else { 0 };")],
            ["--test", "turns", "the_stall_alarm_counts_blocks"]),
-    "c5": ([(U, "        self.prev_clock.map_or(self.clock, |p| p.saturating_add(1).min(self.clock))",
+    "c5": ([(U, "        self.prev_clock.map_or(self.clock, |p| p.saturating_add(1).max(self.clock.saturating_sub(1)).min(self.clock))",
              "        self.prev_clock.map_or(self.clock, |_| self.clock)")],
            ["--test", "recorded", "gate_poll_speeds_share_the_cost"]),
-    "l1": ([(U, "        self.learn_from_chain(ledger, store);\n        let seen = state_turn(state);",
-             "        let seen = state_turn(state);")],
+    "l1": ([(U, "        self.learn_from_chain(ledger, store);\n        let mut wanted",
+             "        let mut wanted")],
            ["--test", "copies"]),
-    "l1gate": ([(U, "        self.learn_from_chain(ledger, store);\n        let seen = state_turn(state);",
-                 "        let seen = state_turn(state);")],
+    "l1gate": ([(U, "        self.learn_from_chain(ledger, store);\n        let mut wanted",
+                 "        let mut wanted")],
                ["--test", "recorded", "gate_copies_join_or_wait"]),
+    "l2": ([(U, "        if !matches!(self.job_on_chain(ledger, &p.jid), Ok(None)) {\n            self.open_digests.insert(digest);",
+             "        if false {\n            self.open_digests.insert(digest);")],
+           ["--test", "copies", "a_batch_of_copies"]),
+    "c6": ([(U, "        self.prev_clock.map_or(self.clock, |p| p.saturating_add(1).max(self.clock.saturating_sub(1)).min(self.clock))",
+             "        self.prev_clock.map_or(self.clock, |p| p.saturating_add(1).min(self.clock))")],
+           ["--test", "turns", "an_updater_back_after_a_long_gap"]),
     "e1": ([("lez/advance/src/lib.rs", "    matches!(layout, LcFork::Capella | LcFork::Deneb | LcFork::Electra)",
              "    matches!(layout, LcFork::Capella | LcFork::Deneb)")],
            ["--test", "copies", "an_open_gives_back"]),

@@ -166,7 +166,8 @@ two-hour cadence (§2).
   at the heights their draws give, however often each polls. Polling more often only notices a turn sooner, within the
   blocks between two readings: an operator polling less often than once a block notices some turns up to its poll
   interval late, and counts a turn from the block after its previous reading, which can be before the step fell due;
-  in process the two about cancel. Before this, the window counted each daemon's own polling rounds, so an
+  in process the two about cancel. An operator whose beacon sources serve a new update sooner finds its `Open` due
+  sooner, by as many blocks as they lead (seconds, between honest beacon nodes: under a block). Before this, the window counted each daemon's own polling rounds, so an
   operator polling more often waited fewer seconds and sent first more often (a daemon that never deferred, polling
   every 2 s against 4, applied 93 of 99 steps: run G2 below). In process (`lez/updater/results/gate-polls.txt`, CI's
   `recorded.rs`), honest updaters reading the chain once and three times a block pay 0.533 and 0.467 of the honest fees

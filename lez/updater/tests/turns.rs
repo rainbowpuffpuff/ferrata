@@ -7,18 +7,25 @@
 //! (`HarnessLedger::height`), on the lab's recorded mainnet data.
 #![cfg(feature = "harness")]
 
-use std::fs;
+use std::{
+    cell::Cell,
+    fs,
+    sync::{
+        atomic::{AtomicBool, Ordering::SeqCst},
+        Arc,
+    },
+};
 
 use ferrata_core::Root;
 use ferrata_lez_wire::Config;
 use ferrata_updater::{
     chain::{decode_finality_update, preset, root},
     config::{Fees, Policy},
-    ledger::{HarnessLedger, Ledger},
+    ledger::{HarnessLedger, Ledger, Tx, TxOutcome},
     source::{lab_record, load_entries, Clock, Entry, Recorded, Source},
     updater::{Instance, Plan, Step, Updater},
 };
-use lee::PrivateKey;
+use lee::{Actor, PrivateKey};
 
 fn key(b: u8) -> PrivateKey {
     PrivateKey::try_new([b; 32]).unwrap()
@@ -223,4 +230,113 @@ fn the_stall_alarm_counts_blocks_and_a_height_that_stops() {
             assert!(rd >= 2 * down, "not before {down} blocks: {rd}");
         }
     }
+}
+
+/// A source that fails every request while `down` is set.
+struct Toggle {
+    inner: Recorded,
+    down: Arc<AtomicBool>,
+}
+
+impl Source for Toggle {
+    fn name(&self) -> &str {
+        self.inner.name()
+    }
+    fn bootstrap(&mut self, block_root: &Root) -> anyhow::Result<Vec<u8>> {
+        anyhow::ensure!(!self.down.load(SeqCst), "down (injected)");
+        self.inner.bootstrap(block_root)
+    }
+    fn updates(&mut self, start_period: u64, count: u64) -> anyhow::Result<Vec<Vec<u8>>> {
+        anyhow::ensure!(!self.down.load(SeqCst), "down (injected)");
+        self.inner.updates(start_period, count)
+    }
+    fn finality_update(&mut self) -> anyhow::Result<Vec<u8>> {
+        anyhow::ensure!(!self.down.load(SeqCst), "down (injected)");
+        self.inner.finality_update()
+    }
+}
+
+/// An updater back after a long gap waits its draw: it read the chain at height 0 (its source down, nothing found due),
+/// then next at height 100, when it first finds the instance's `Init` due. Its turn is counted from one block before
+/// that reading (the credit for not reading in between stops at one block), so with a draw of `w` (at least 2 here) it
+/// sends at height `99 + w`, not at once as it would if the whole gap counted.
+#[test]
+fn an_updater_back_after_a_long_gap_waits_its_draw() {
+    let fx = Fx::load();
+    let label = (0..100)
+        .map(|i| format!("t{i}"))
+        .find(|l| first_send(&fx, l, 1, true).1 >= 2)
+        .expect("a label whose Init waits two blocks or more");
+    let (_, w) = first_send(&fx, &label, 1, true);
+    let payer = key(0x91);
+    let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+    let down = Arc::new(AtomicBool::new(true));
+    let source = Toggle { inner: Recorded::open("a", &fx.dir, &fx.config, fx.clock.clone()).unwrap(), down: down.clone() };
+    let inst = Instance::new("mainnet", HarnessLedger::program(), fx.config.clone(), fx.checkpoint);
+    let mut u = Updater::new(&label, inst, payer, Fees::default(), window(8), vec![Box::new(source)], None).unwrap();
+    u.sleep = no_sleep;
+    l.height = Some(0);
+    assert!(matches!(u.plan(&l).unwrap(), Plan::Stuck(_)), "nothing found due at height 0");
+    down.store(false, SeqCst);
+    let mut height = 100;
+    loop {
+        l.height = Some(height);
+        match u.plan(&l).unwrap() {
+            Plan::Send(a) => {
+                assert_eq!(a.step, Step::Init);
+                break;
+            }
+            Plan::Deferred(Step::Init) => {}
+            p => panic!("{p:?}"),
+        }
+        height += 1;
+        assert!(height < 120);
+    }
+    println!("{label}: draw {w}; back at height 100 after reading at 0, sent at {height}");
+    assert_eq!(height, 99 + w, "counted from one block before its reading, not from the block after the one before");
+}
+
+/// The in-process chain with a scripted height (`None`: none given).
+struct Scripted {
+    inner: HarnessLedger,
+    height: Cell<Option<u64>>,
+}
+
+impl Ledger for Scripted {
+    fn actor_state(&self, actor: Actor) -> anyhow::Result<Vec<u8>> {
+        self.inner.actor_state(actor)
+    }
+    fn submit(&mut self, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> anyhow::Result<TxOutcome> {
+        self.inner.submit(payer, tx, gas_limit, max_fee)
+    }
+    fn height(&self) -> Option<u64> {
+        self.height.get()
+    }
+}
+
+/// The clock keeps the kind of its first reading and never goes back: heights 100, 90 (a follower restored from an older
+/// state), none (a backend that stops giving it), 105 read as 100, 100, 100 and 105, all heights; a backend giving none
+/// at first and a height later is read as rounds throughout, so turns never mix rounds and blocks.
+#[test]
+fn the_clock_keeps_its_kind_and_never_goes_back() {
+    let fx = Fx::load();
+    let payer = key(0x95);
+    let mut l = Scripted { inner: HarnessLedger::new(std::slice::from_ref(&payer)), height: Cell::new(None) };
+    let mut u = fx.updater("clock", payer.clone(), window(8));
+    let mut read = Vec::new();
+    for h in [Some(100), Some(90), None, Some(105)] {
+        l.height.set(h);
+        let _ = u.plan(&l).unwrap();
+        read.push((u.metrics.turn_clock, u.metrics.turn_clock_height));
+    }
+    assert_eq!(read, vec![(100, true), (100, true), (100, true), (105, true)]);
+    let mut v = fx.updater("clock2", payer, window(8));
+    let mut read = Vec::new();
+    for h in [None, Some(50), Some(51)] {
+        l.height.set(h);
+        let _ = v.plan(&l).unwrap();
+        read.push((v.metrics.turn_clock, v.metrics.turn_clock_height));
+    }
+    assert_eq!(read, vec![(1, false), (2, false), (3, false)], "rounds, as its first reading gave no height");
+    let _ = &mut l;
 }

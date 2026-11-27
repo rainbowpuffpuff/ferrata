@@ -8,7 +8,7 @@
 
 use std::{
     cmp::Reverse,
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, VecDeque},
     fmt::Write as _,
     fs,
     io::Write as _,
@@ -166,6 +166,18 @@ pub const MAX_UNJUDGED: usize = 64;
 /// that a job another party opened for one of them can be found on chain (a job's account is found by its id, which
 /// hashes the store and the update); the least recently served is dropped first.
 pub const MAX_KNOWN: usize = 64;
+/// `policy.join_wait_rounds`: the `Open`s read from the chain ([`Ledger::messages_to`]) judged in one round at most; the
+/// rest wait in a queue of at most [`MAX_PENDING_OPENS`] (the oldest dropped first, counted), so a long history read
+/// once (the first read after a start goes back to the follower's start) or many `Open`s in a few blocks cost a bounded
+/// amount of native checking per round. An `Open` of a period update whose next committee this updater holds nowhere
+/// yet stays queued, judged again in later rounds, until its update no longer moves the store.
+pub const MAX_LEARN_PER_ROUND: usize = 64;
+/// See [`MAX_LEARN_PER_ROUND`].
+pub const MAX_PENDING_OPENS: usize = 256;
+/// Rounds in a row in which the instance's transactions could not be read (`Ledger::messages_to` failed) after which
+/// `/health` says so (`degraded`): the jobs other parties open for copies of an update this updater's sources do not
+/// serve are not seen meanwhile.
+pub const LEARN_FAILURES_DEGRADED: u32 = 5;
 /// ... and of one kind (updates whose jobs would leave the store at the same place: copies of one update), at most this
 /// many: copies a source serves in numbers (a re-dated copy is as valid) push out older copies of their own kind only,
 /// not the update of another party's job. One whose job was found open on the instance's state is kept.
@@ -518,6 +530,10 @@ pub struct Metrics {
     /// `policy.join_wait_rounds`: updates this updater learned from other parties' `Open`s on chain
     /// ([`Ledger::messages_to`]) that its sources had not served (copies of an update included), counted once each.
     pub updates_from_chain: u64,
+    /// ... `Open`s read from the chain and dropped unjudged, the queue full ([`MAX_PENDING_OPENS`]).
+    pub opens_dropped: u64,
+    /// ... rounds in a row in which the instance's transactions could not be read ([`LEARN_FAILURES_DEGRADED`]).
+    pub learn_failures: u32,
     /// `policy.min_distinct_clients`: this round waits for clients, and the furthest update the sources serve that the
     /// program would not refuse finalizes this many slots past the instance (`None`: not waiting for clients). Beyond
     /// `max_lag_slots`, `/health` says so.
@@ -638,6 +654,8 @@ pub struct Updater {
     /// round they were read in.
     chain_seen: u64,
     chain_read: u64,
+    /// The compact updates of `Open`s read from the chain and not judged yet ([`MAX_LEARN_PER_ROUND`]).
+    pending_opens: VecDeque<Vec<u8>>,
     /// Per job, the steps the chain held once this updater's last applied step of it landed: a job whose count is still
     /// that, and which this updater does not carry, last moved by this updater's own step (it opened the job and left
     /// it, `finish_own_jobs = false`): it holds this updater back no longer. At most [`MAX_HELD`].
@@ -713,6 +731,7 @@ impl Updater {
             clock_moved_round: 0,
             chain_seen: 0,
             chain_read: 0,
+            pending_opens: VecDeque::new(),
             own_moves: BTreeMap::new(),
             waiting_for: None,
             breaker: Breaker::default(),
@@ -1225,14 +1244,16 @@ impl Updater {
         self.metrics.turn_clock_height = height;
     }
 
-    /// Where a turn that starts at this reading is counted from: the block after this updater's previous reading, the
-    /// first at which what it now finds due can have become due (a block applying a step, or an update served, since it
-    /// last read the chain); this reading's where there was none, or where it read the chain in the same block or the one
-    /// before. An updater reading once a block or more often counts from the height it reads (the block that made the
-    /// step due); one reading less often does not lose the blocks between its readings to the anchor, only to noticing
-    /// its turn (RFP-021 R.10).
+    /// Where a turn that starts at this reading is counted from: the block after this updater's previous reading (the
+    /// first at which what it now finds due can have become due: a block applying a step, or an update served, since it
+    /// last read the chain), but at most one block before this reading; this reading's where there was none, or where it
+    /// read the chain in the same block or the one before. An updater reading once a block or more often counts from the
+    /// height it reads (the block that made the step due); one reading every two blocks is credited the block between
+    /// its readings, which it would otherwise lose to the anchor as well as to noticing its turn (RFP-021 R.10). The
+    /// credit stops at one block: an updater back after a long gap (an outage, a slow poll) waits its draw like any
+    /// other, rather than finding every draw elapsed and sending at once (beside another back in the same block).
     fn due_clock(&self) -> u64 {
-        self.prev_clock.map_or(self.clock, |p| p.saturating_add(1).min(self.clock))
+        self.prev_clock.map_or(self.clock, |p| p.saturating_add(1).max(self.clock.saturating_sub(1)).min(self.clock))
     }
 
     /// What the turn clock counts, for the log and `/health`.
@@ -1765,6 +1786,16 @@ impl Updater {
                 self.known.remove(&d);
             }
         }
+        // At most twice MAX_KNOWN whatever is kept for its kind or as open (each kind's earliest copy is kept, and a long
+        // run sees a new kind with each update): the least recently served goes.
+        while self.known.len() > 2 * MAX_KNOWN {
+            let Some(d) = self.known.iter().filter(|(d, _)| **d != digest).min_by_key(|(_, k)| k.2).map(|(d, _)| *d)
+            else {
+                break;
+            };
+            self.known.remove(&d);
+            self.open_digests.remove(&d);
+        }
     }
 
     /// For a round that does not otherwise ask the sources (a step of a job this updater carries comes first): ask them
@@ -1808,60 +1839,106 @@ impl Updater {
     /// same update for the store ([`KnownJob::lands`]) and joined, or waited for (RFP-021 R.9). An `Open` carries the
     /// update in the program's compact encoding; the bytes a source would serve are rebuilt from it
     /// (`ferrata_advance::served_update_of_open`; a period update's next committee from the full committee this updater
-    /// holds for its summary, from the store's committees or a period update its sources served). A backend that gives
-    /// no messages (`None`) leaves the updater with the jobs of the updates its sources served, as before.
+    /// holds for its summary, from the store's committees or a period update its sources served). The `Open`s read are
+    /// queued and at most [`MAX_LEARN_PER_ROUND`] judged a round; a learned update whose job is open on chain is marked
+    /// open before it is remembered, so a batch of copies cannot push it out of `known` first. A backend that gives no
+    /// messages (`None`) leaves the updater with the jobs of the updates its sources served, as before; one whose read
+    /// fails is read again next round from the same block (`/health` says so after [`LEARN_FAILURES_DEGRADED`] rounds).
     fn learn_from_chain(&mut self, ledger: &dyn Ledger, store: &CompactStore) {
         if self.policy.join_wait() == 0 || self.chain_read == self.round {
             return;
         }
         self.chain_read = self.round;
-        let read = match ledger.messages_to(self.inst.actor(), self.chain_seen) {
-            Ok(Some(r)) => r,
-            Ok(None) => return,
-            Err(e) => {
-                // Read again next round, from the same block.
-                self.log(&format!("the instance's transactions could not be read: {e:#}"));
-                return;
+        match ledger.messages_to(self.inst.actor(), self.chain_seen) {
+            Ok(Some((messages, newest))) => {
+                self.metrics.learn_failures = 0;
+                self.chain_seen = self.chain_seen.max(newest);
+                for m in messages {
+                    if let Ok(Message::Open { update, .. }) = borsh::from_slice::<Message>(&m) {
+                        self.pending_opens.push_back(update);
+                    }
+                }
+                while self.pending_opens.len() > MAX_PENDING_OPENS {
+                    self.pending_opens.pop_front();
+                    self.metrics.opens_dropped += 1;
+                }
             }
-        };
-        let (messages, newest) = read;
-        self.chain_seen = self.chain_seen.max(newest);
-        for m in messages {
-            let Ok(Message::Open { update, .. }) = borsh::from_slice::<Message>(&m) else {
-                continue;
-            };
-            let committees = &self.committees;
-            let known = &self.known;
-            let config = &self.inst.config;
-            let committee = |root: &Root| {
-                committees.get(root).cloned().or_else(|| {
-                    known.values().filter(|k| k.0).find_map(|k| {
-                        let (u, _) = decode_update(&k.1, config).ok()?;
-                        (committee_key(&u.next_sync_committee) == *root).then_some(u.next_sync_committee)
-                    })
-                })
-            };
-            let Some((period_update, raw, decoded)) = ferrata_advance::served_update_of_open(&update, config, committee)
-            else {
-                continue;
-            };
-            let Verdict::Useful(p) = self.evaluate(store, &decoded) else {
-                continue;
-            };
-            let digest: Root = Sha256::digest(&raw).into();
-            if !self.known.contains_key(&digest) {
-                self.metrics.updates_from_chain += 1;
-                self.log(&format!(
-                    "learned from another party's Open on chain: the update finalizing slot {} (attested slot {}, \
-                     signature slot {}), job 0x{}",
-                    p.update.finalized_header.beacon.slot,
-                    p.update.attested_header.beacon.slot,
-                    p.update.signature_slot,
-                    &hex::encode(p.jid)[..16]
-                ));
-                self.remember(period_update, &raw, Self::lands_of(&p), p.update.signature_slot);
+            Ok(None) => {}
+            Err(e) => {
+                self.metrics.learn_failures = self.metrics.learn_failures.saturating_add(1);
+                self.log(&format!("the instance's transactions could not be read: {e:#}"));
             }
         }
+        let mut waiting = VecDeque::new();
+        for _ in 0..MAX_LEARN_PER_ROUND {
+            let Some(update) = self.pending_opens.pop_front() else { break };
+            if !self.learn_open(ledger, store, &update) {
+                waiting.push_back(update);
+            }
+        }
+        while let Some(update) = waiting.pop_back() {
+            self.pending_opens.push_front(update);
+        }
+    }
+
+    /// One `Open`'s update (its compact encoding), judged on `store` ([`Updater::learn_from_chain`]): `false` when it is a
+    /// period update that still moves the store and whose next committee this updater holds nowhere yet (judged again
+    /// later); `true` otherwise (learned, known already, moot, or not an update a source serves).
+    fn learn_open(&mut self, ledger: &dyn Ledger, store: &CompactStore, update: &[u8]) -> bool {
+        let config = &self.inst.config;
+        let Some(c) = CompactUpdate::layout_of(update)
+            .ok()
+            .and_then(|l| CompactUpdate::decode(update, l, config.sync_committee_size as usize).ok())
+        else {
+            return true;
+        };
+        // An update that no longer moves the store never will again (the store only moves on).
+        let adopts = c.next_sync_committee.is_some() && store.next.is_none();
+        if c.finalized_header.beacon.slot <= store.finalized.slot && !adopts {
+            return true;
+        }
+        let committees = &self.committees;
+        let known = &self.known;
+        let committee = |root: &Root| {
+            committees.get(root).cloned().or_else(|| {
+                known.values().filter(|k| k.0).find_map(|k| {
+                    let (u, _) = decode_update(&k.1, config).ok()?;
+                    (committee_key(&u.next_sync_committee) == *root).then_some(u.next_sync_committee)
+                })
+            })
+        };
+        if let Some(summary) = &c.next_sync_committee {
+            if committee(&summary.pubkeys_root).is_none() {
+                return false;
+            }
+        }
+        let Some((period_update, raw, decoded)) = ferrata_advance::served_update_of_open(update, config, committee)
+        else {
+            return true;
+        };
+        let Verdict::Useful(p) = self.evaluate(store, &decoded) else {
+            return true;
+        };
+        let digest: Root = Sha256::digest(&raw).into();
+        if self.known.contains_key(&digest) {
+            return true;
+        }
+        // Its job is open on chain (or its account not readable now: as `open_jobs` takes it): kept in `known` from
+        // the start, so that later copies of a batch do not push it out before it is read.
+        if !matches!(self.job_on_chain(ledger, &p.jid), Ok(None)) {
+            self.open_digests.insert(digest);
+        }
+        self.metrics.updates_from_chain += 1;
+        self.log(&format!(
+            "learned from another party's Open on chain: the update finalizing slot {} (attested slot {}, signature slot \
+             {}), job 0x{}",
+            p.update.finalized_header.beacon.slot,
+            p.update.attested_header.beacon.slot,
+            p.update.signature_slot,
+            &hex::encode(p.jid)[..16]
+        ));
+        self.remember(period_update, &raw, Self::lands_of(&p), p.update.signature_slot);
+        true
     }
 
     /// How `p`'s update ranks on `store` ([`Rank`]).
@@ -1912,12 +1989,12 @@ impl Updater {
         state: &InstanceState,
         own: &Root,
     ) -> Result<Vec<(KnownJob, Option<(u32, Step)>)>> {
-        self.learn_from_chain(ledger, store);
         let seen = state_turn(state);
         if self.known_jobs.0 != seen {
             self.known_jobs = (seen, BTreeMap::new());
             self.open_digests.clear();
         }
+        self.learn_from_chain(ledger, store);
         let mut wanted: BTreeMap<Root, (bool, &Vec<u8>)> =
             self.known.iter().map(|(d, (p, raw, ..))| (*d, (*p, raw))).collect();
         for (p, raw) in self.carried.values() {
@@ -2800,6 +2877,13 @@ impl Updater {
                 self.metrics.failed_rounds, self.metrics.last_error
             ));
         }
+        if self.metrics.learn_failures >= LEARN_FAILURES_DEGRADED {
+            why.push(format!(
+                "the instance's transactions could not be read for {} rounds: jobs other parties open for copies of an \
+                 update the sources do not serve are not seen",
+                self.metrics.learn_failures
+            ));
+        }
         let behind = self.metrics.sources_head.saturating_sub(self.metrics.finalized_slot);
         // Counted on the turn clock, as the deferral the alarm leaves room for is; and, on the chain's height, the rounds
         // it has not moved for: a height that stops (a follower that no longer gets final blocks) stops every turn.
@@ -2905,6 +2989,8 @@ impl Updater {
         let _ = writeln!(o, "ferrata_updater_join_waits_capped_total{{{l}}} {}", m.wait_caps);
         let _ = writeln!(o, "ferrata_updater_waits_for_unreadable_jobs_total{{{l}}} {}", m.unreadable_waits);
         let _ = writeln!(o, "ferrata_updater_updates_from_chain_total{{{l}}} {}", m.updates_from_chain);
+        let _ = writeln!(o, "ferrata_updater_opens_dropped_total{{{l}}} {}", m.opens_dropped);
+        let _ = writeln!(o, "ferrata_updater_transactions_unread_rounds{{{l}}} {}", m.learn_failures);
         let _ = writeln!(o, "ferrata_updater_turn_clock{{{l}}} {}", m.turn_clock);
         let _ = writeln!(o, "ferrata_updater_turn_clock_is_height{{{l}}} {}", u8::from(m.turn_clock_height));
         let _ = writeln!(o, "ferrata_updater_jobs_finished_total{{{l}}} {}", m.jobs_finished);

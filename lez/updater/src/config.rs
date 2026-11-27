@@ -297,6 +297,13 @@ impl File {
         if self.policy.defer_window == 0 || self.policy.max_attempts == 0 {
             bail!("policy: defer_window and max_attempts must be at least 1");
         }
+        if self.policy.defer_window > 1000 {
+            bail!(
+                "policy.defer_window = {}: at most 1000 turns (blocks of the chain; a turn older than 1024 is forgotten once \
+                 4096 are kept, and would start again)",
+                self.policy.defer_window
+            );
+        }
         if let Some(n) = self.policy.join_wait_rounds.filter(|&n| n != 0) {
             let least = self.policy.defer_window.saturating_add(4);
             if n < least || n > 1_000_000 {

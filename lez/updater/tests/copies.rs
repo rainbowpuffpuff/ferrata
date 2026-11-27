@@ -10,15 +10,17 @@
 
 use std::fs;
 
+use sha2::Digest as _;
+
 use ferrata_core::{witness::CompactUpdate, Root};
-use ferrata_lez_wire::Config;
+use ferrata_lez_wire::{Config, Message};
 use ferrata_updater::{
     chain::{
         committee_key, decode_finality_update, decode_update, encode_finality_update, encode_update, preset, root,
         served_update_of_open,
     },
     config::{Fees, Policy},
-    ledger::HarnessLedger,
+    ledger::{HarnessLedger, Ledger, Tx},
     source::{lab_record, load_entries, Clock, Entry, Recorded, Source},
     updater::{Instance, Plan, Step, Updater},
 };
@@ -234,4 +236,62 @@ fn of_two_copies_opened_in_one_block_one_is_finished_and_the_other_left_at_its_o
     }
     assert_eq!(abandoned_steps[0], 1, "learning each other's copies, the job left has its Open alone");
     assert!(abandoned_steps[1] > 1, "without it, the job left has more: {}", abandoned_steps[1]);
+}
+
+/// The finality update `bytes` with its signature slot moved by `k` slots (within its period, after its attested slot).
+fn copy_by(bytes: &[u8], config: &Config, k: u64) -> (Vec<u8>, ferrata_core::types::LightClientUpdate) {
+    let (mut u, layout) = decode_finality_update(bytes, config).unwrap();
+    let spec = config.spec();
+    let s = u.signature_slot;
+    assert_eq!(spec.period_at_slot(s + k), spec.period_at_slot(s), "copy {k} stays in the period");
+    u.signature_slot = s + k;
+    (encode_finality_update(&u, layout), u)
+}
+
+/// Another party opens the jobs of five copies of U on one store, then sends the `Miller` of one of them: that job
+/// leads. An updater whose source serves U itself reads the five `Open`s in one round. Remembered one by one, five
+/// copies of one update exceed `KNOWN_PER_KIND` (4) beside its own: before this test's fix a later copy pushed an
+/// earlier one out of `known` before its job was read open, and the one pushed out first (the least digest of the first
+/// three, all served in one round) is the one this test advances. The updater finds the leading job and joins it: its
+/// first step is that job's `Finish`.
+#[test]
+fn a_batch_of_copies_read_at_once_keeps_the_job_that_leads() {
+    let fx = Fx::load();
+    let c = fx.new_finality_update();
+    let (kb, opener) = (key(0x85), key(0x86));
+    let mut l = HarnessLedger::new(&[kb.clone(), opener.clone()]);
+    let mut b = fx.updater("b", kb, false);
+    catch_up(&fx, &mut b, &mut l, c);
+    fx.clock.set(c + 1);
+    let copies: Vec<(Vec<u8>, Tx)> = (1..=5u64)
+        .map(|k| {
+            let (raw, u) = copy_by(&fx.entries[c].bytes, &fx.config, k);
+            let tx = b.open_unchecked(&l, &u).unwrap();
+            (raw, tx)
+        })
+        .collect();
+    for (_, tx) in &copies {
+        assert!(l.submit(&opener, tx, 4_800_000, 1_000_000_000).unwrap().applied, "the other party's Open");
+    }
+    // The copy remembered fourth pushed out the least digest of the first three.
+    let digest = |raw: &Vec<u8>| -> Root { sha2::Sha256::digest(raw).into() };
+    let lead = (0..3).min_by_key(|&i| digest(&copies[i].0)).unwrap();
+    let job = copies[lead].1.actors[1];
+    let miller = Tx {
+        label: "the other party's Miller".into(),
+        root: job,
+        message: borsh::to_vec(&Message::Miller).unwrap(),
+        actors: vec![job],
+        evidence: vec![],
+        time_ms: copies[lead].1.time_ms,
+    };
+    assert!(l.submit(&opener, &miller, 4_800_000, 1_000_000_000).unwrap().applied, "the leading job's Miller");
+    let first = b.tick(&mut l).unwrap();
+    println!("five copies' jobs open, copy {} through its Miller: b {}", lead + 1, show(&first));
+    assert_eq!(b.metrics.updates_from_chain, 5, "the five copies learned");
+    assert!(
+        matches!(&first, Plan::Send(x) if x.step == Step::Finish && x.tx.root == job),
+        "b joins the leading job: {}",
+        show(&first)
+    );
 }
