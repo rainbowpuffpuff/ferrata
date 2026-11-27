@@ -365,8 +365,9 @@ run_action() {
   echo "calldata:   $calldata"
   # A call to an address without code returns nothing and "succeeds", and so would a send: refuse it before the dry
   # run (internal review of 27 November 2026, C-6).
+  # Standard output only: a warning cast writes to standard error must not count as code (final review round).
   local code
-  code=$(cast code "$VAULT" --rpc-url "$RPC" 2>&1) || die "could not read the code at $VAULT: $code"
+  code=$(cast code "$VAULT" --rpc-url "$RPC" 2>/dev/null) || die "could not read the code at $VAULT (cast code failed)"
   [[ $code != 0x ]] || die "no contract at $VAULT on this endpoint: wrong --vault or --rpc-url? Nothing was sent"
   if ! out=$(cast call "$VAULT" "$sig" ${@+"$@"} --from "$FROM" --rpc-url "$RPC" 2>&1); then
     echo "dry run:    the call would revert from $FROM"
