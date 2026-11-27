@@ -202,6 +202,9 @@ GATE_JOIN = "lez/results/perf-gate-sequencer-join.md"
 GATE_OVERLAP = "lez/updater/results/gate-overlap.txt"
 F13_FEES, F13_FEES_B1 = "e2e/both-halves/results/f13/fees.md", "e2e/both-halves/results/fees.md"
 F13_RT_STEPS, F13_PROOFS = "e2e/runs/f13-roundtrip-1/run/steps.tsv", "lez/results/f13/prove-bridge.md"
+# The F.13 row states ADR 0048's records (this tree's program); rows 277-278 keep ADR 0046's.
+F13L_FEES, F13L_RT_STEPS = "e2e/both-halves/results/f13-lez/fees.md", "e2e/runs/f13-lezfee-1/run/steps.tsv"
+F13L_PROOFS = "lez/results/f13/prove-bridge-lezfee.md"
 F7_ERC20, F7_ROTATION = "e2e/runs/zone-bridge-rc3-erc20", "e2e/runs/zone-bridge-rc3-rotation"
 
 
@@ -257,7 +260,7 @@ def _span(values: list, unit: str = "") -> str:
                "record, the F.7 runs' vault checks and checkpoint attestor records (f7-* re-derive them), and the test "
                "sources",
        inputs=(EVIDENCE_DOC, STATUS_DOC, GATE_100, GATE_JOIN, GATE_OVERLAP, F13_FEES, F13_FEES_B1, F13_RT_STEPS,
-               F13_PROOFS, f"{F7_ERC20}/vault-checks.json", f"{F7_ROTATION}/checkpoint/attestor.json",
+               F13_PROOFS, F13L_FEES, F13L_RT_STEPS, F13L_PROOFS, f"{F7_ERC20}/vault-checks.json", f"{F7_ROTATION}/checkpoint/attestor.json",
                f"{F7_ROTATION}/vault-checks.json", f"{F7_ERC20}/prover/done", f"{F7_ROTATION}/prover/done",
                "cli/wallet/src/deployed.rs", "cli/src/lez.rs", "e2e/runs/rc3-roundtrip-b1/run/steps.tsv",
                "modules/ferrata_bridge_module/rust-lib/calls/tests/network_session.rs"))
@@ -319,27 +322,35 @@ def evidence_rows_final(ctx):
         table = read(rel).split("## Claims", 1)[-1].split("## Releases", 1)[0]
         sets = [int(m) for m in re.findall(r"^\| \d+ \| \d+ \|(?: [^|]+ \|)* (\d+) \| \d+ \|$", table, re.M)]
         return sets
-    new_sets, old_sets = set_before(F13_FEES), set_before(F13_FEES_B1)
-    if len(new_sets) != 6 or len(old_sets) != 6:
-        problems.append(f"the both-halves fee tables did not parse: {new_sets} {old_sets}")
+    new_sets, old_sets, lez_sets = set_before(F13_FEES), set_before(F13_FEES_B1), set_before(F13L_FEES)
+    if len(new_sets) != 6 or len(old_sets) != 6 or len(lez_sets) != 6:
+        problems.append(f"the both-halves fee tables did not parse: {new_sets} {old_sets} {lez_sets}")
     else:
-        lo, hi = new_sets[:3], new_sets[3:]
+        lo = new_sets[:3]
         _states(problems, "RFP-022 F.13", _status_row(status, "RFP-022", "F.13"), (
-            f"keep one anonymity set ({lo[0]} and {hi[0]}; {old_sets[0]} and {old_sets[3]} before ADR 0046)",))
+            f"keep one anonymity set ({lez_sets[0]} and {lez_sets[3]}; {old_sets[0]} and {old_sets[3]} before ADR 0046)",))
         _states(problems, "EVIDENCE row 277", _evidence_row(evidence, 277), (f"the set is {lo[0]} on both sides",))
-        if len(set(new_sets)) != 1:
-            problems.append(f"{F13_FEES}: the sets before any claim differ across the change: {new_sets}")
-    steps = [r for r in csv.reader(io.StringIO(read(F13_RT_STEPS)), delimiter="\t") if r]
-    ok = sum(1 for r in steps if len(r) > 1 and r[1] == "ok")
-    proofs = read(F13_PROOFS)
-    claim_s = (re.search(r"private claim: REAL PROOF: execute_and_prove ([\d.]+) s", proofs) or [None, "?"])[1]
-    burn_s = (re.search(r"private burn: REAL PROOF: execute_and_prove ([\d.]+) s", proofs) or [None, "?"])[1]
-    _states(problems, "RFP-022 F.13", _status_row(status, "RFP-022", "F.13"),
-            (f"({ok} of {len(steps)} steps)", f"{claim_s} s and {burn_s} s", "277, 278, 281"))
+        for rel, sets in ((F13_FEES, new_sets), (F13L_FEES, lez_sets)):
+            if len(set(sets)) != 1:
+                problems.append(f"{rel}: the sets before any claim differ across the change: {sets}")
+
+    def run_figures(steps_rel, proofs_rel):
+        steps = [r for r in csv.reader(io.StringIO(read(steps_rel)), delimiter="\t") if r]
+        ok = sum(1 for r in steps if len(r) > 1 and r[1] == "ok")
+        proofs = read(proofs_rel)
+        claim = (re.search(r"private claim: REAL PROOF: execute_and_prove ([\d.]+) s", proofs) or [None, "?"])[1]
+        burn = (re.search(r"private burn: REAL PROOF: execute_and_prove ([\d.]+) s", proofs) or [None, "?"])[1]
+        return ok, len(steps), claim, burn
+
+    ok, n, claim_s, burn_s = run_figures(F13_RT_STEPS, F13_PROOFS)
     _states(problems, "EVIDENCE row 278", _evidence_row(evidence, 278),
-            (f"{ok} of {len(steps)} steps ok", f"the private claim {claim_s} s", f"the private burn {burn_s} s"))
-    lines.append(f"rows 277-278, RFP-022 F.13: sets {new_sets} (before ADR 0046 {old_sets}); {ok} of {len(steps)} steps; "
-                 f"real proofs {claim_s} s and {burn_s} s")
+            (f"{ok} of {n} steps ok", f"the private claim {claim_s} s", f"the private burn {burn_s} s"))
+    ok_l, n_l, claim_l, burn_l = run_figures(F13L_RT_STEPS, F13L_PROOFS)
+    _states(problems, "RFP-022 F.13", _status_row(status, "RFP-022", "F.13"),
+            (f"({ok_l} of {n_l} steps)", f"{claim_l} s and {burn_l} s", "277, 278, 281"))
+    lines.append(f"rows 277-278: sets {new_sets} (before ADR 0046 {old_sets}); {ok} of {n} steps; real proofs {claim_s} s "
+                 f"and {burn_s} s; RFP-022 F.13 (ADR 0048): sets {lez_sets}; {ok_l} of {n_l} steps; real proofs {claim_l} s "
+                 f"and {burn_l} s")
 
     # Rows 279, 280; F.7
     checks = json.loads(read(f"{F7_ERC20}/vault-checks.json"))

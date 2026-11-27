@@ -139,7 +139,9 @@ contract VaultInvariants is VaultTestBase {
     }
 
     /// @notice Per token, `lezFees` equals the ghost sum of the in-force mint and burn fees of every successful deposit
-    ///         and release. LEZ can collect any prefix of that total but never more, and Ethereum's feeRecipient gets 0.
+    ///         and release, and Ethereum's feeRecipient gets 0. The handler's collections (`collectLezFees`) take any
+    ///         part of what is not collected yet, so `ghostCollected <= lezFees` holds by construction: it models LEZ's
+    ///         collections for the supply identity; their rule (`FeesState::accrue`) is tested on the LEZ side.
     function invariant_lezFeesMatchTheInForceSchedulesAndCollections() public view {
         address[] memory tokens = handler.tokens();
         for (uint256 i = 0; i < tokens.length; i++) {

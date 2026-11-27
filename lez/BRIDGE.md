@@ -254,7 +254,7 @@ schedule range, so fee changes do not split claims by deposit time. A burn debit
 count or nothing due is refused). `MintFees` checks that the amount is a whole number of LEZ units, applies the token's
 and configuration's mint freezes and buckets, and credits the wrapped tokens to `Controls::fee_recipient`. A collection
 names no deposit, claim, burn or leaf. This is covered by `harness/tests/bridge_f13.rs`, including repeated and older
-records, limits, both gates and the depth; `bridge-wire`'s unit tests carry totals above 2^128.
+records, limits, the token's and the configuration's mint freezes, the token's bucket and the depth; `bridge-wire`'s unit tests carry totals above 2^128.
 
 The token still mirrors fee schedules and `known_until`: every leaf below the latter falls under a
 known schedule. Registration sets it to the attested count if schedule 1 does not exist yet.

@@ -853,7 +853,7 @@ the table above and drives real candidate → beacon → finalisation sequences 
 | `Admin.t.sol` | Constructor checks, including `turnSeconds` and `minReleaseDelay`; the v3 domain tag; write-once registry; relay-fee ceiling (fuzzed); role separation; two-step handovers (v4: the admin's own; the freeze authority changes only through `proposeRoles`) |
 | `Caps.t.sol`, `Merkle.t.sol`, `Privacy.t.sol`, `TreeVectors.t.sol`, `GasScenarios.t.sol` | Rate limits; slots 0, 1 and 2 and tree algebra; LEZ-side data never appears in calldata, events or storage writes; vectors; gas |
 | `Fees.t.sol` (v5, ADR 0048) | D13's fees, 35 tests: registration publishes the registry entry and schedule 0 at their slots (known answers, recomputed byte by byte) and emits them; the fee rules (1% ceiling, mint/burn LEZ units, schedule 0 without protocol fees); `announceFees` only by the admin and only for a registered token (fuzzed ceiling); changes in force seven days later; ETH, ERC-20 and USDT-style deposits and releases with exact debit, whole-payment escrow, `lezFees`, published-slot and event checks; no protocol-fee credit to the Ethereum feeRecipient; releases paying unchanged recipient/relayer/prover amounts and retaining burn fees; either or both protocol fees zero; refunds across schedules returning only denomination + relay and leaving mint fees escrowed; caps; randomized in-ceiling fee schedules and deposit/release sequences |
-| `invariant/` | 16 invariants over 256 runs × 100 calls, on a rule (A) vault (`VaultInvariants`) and on a rule (B) vault (`VaultInvariantsB`), listed below |
+| `invariant/` | 15 invariants over 256 runs × 100 calls, on a rule (A) vault (`VaultInvariants`) and on a rule (B) vault (`VaultInvariantsB`), listed below |
 | `invariant/BrokenVerifier*` | The vault under a verifier that accepts every seal: an attacker forges checkpoints and releases at the earliest second while deposits go on and the freeze authority, a watcher and anyone with a junk proof of exploit sometimes react; 8 invariants on rules (A) and (B) ("Under a broken verifier") |
 | `BrokenVerifier.t.sol` | The same attack in seven steps with their numbers, rules (A) and (B) |
 | `ModeB.t.sol` (v4) | Rule (B): the constructor (turnSeconds 0 under B, non-zero under A); a candidate records no beacon and keeps its journal digest; final at its wait and not a second before, whatever its t; every journal word (the 11 the caller can change, and echoNonce) must be the candidate's; `recordBeacon` and `finalize` are rule (A) only, `finalizeAttested` rule (B) only; a watcher cancels within the wait and the same proof waits again in full; revocation, a competing finalisation, a pending duplicate, the checkpoint freeze, the verifier stop; monotonicity and the leaf bound; a Δ raise only for later candidates; the program's image id pinned; a release against a rule (B) root |
@@ -873,7 +873,7 @@ It finalises under the vault's rule (`finalizeAttested` under rule (B)). It also
 releases (some to payees that cannot receive), claims, replays nullifiers and refunds, donates, moves time, and
 changes freezes, caps and delays; watchers pause and cancel, and the admin's role proposals are applied on time
 and early; since v5 it also announces and applies fees, and models the LEZ side's supply (claims of settled
-deposits, burns, releases of burns and collection of any available part of `lezFees`). Its 16 invariants:
+deposits, burns, releases of burns and collection of any available part of `lezFees`). Its 15 invariants:
 - `balance == escrowed + totalOwed + donations` (an equality, so value stranded in the vault fails it too), and
   `escrowed == whole deposits − net release debits − refunds`, for every token;
 - `totalOwed` equals the sum over all payees;
@@ -893,8 +893,9 @@ deposits, burns, releases of burns and collection of any available part of `lezF
 - (v4) no candidate is finalised before its wait, and under rule (B) no beacon is ever recorded;
 - (v5, ADR 0048) supply: for every token, wrapped LEZ supply (claims mint denomination + relay, burns take one
   denomination, fee collection mints its delta) equals escrow less unminted deposits, unreleased burns and
-  `lezFees − collected`; `lezFees` equals the ghost sum of all in-force mint and burn fees, `collected ≤ lezFees`, and
-  the Ethereum feeRecipient is owed nothing;
+  `lezFees − collected`; `lezFees` equals the ghost sum of all in-force mint and burn fees, and the Ethereum
+  feeRecipient is owed nothing (the handler's collections take any part of what is not collected yet: a model of
+  LEZ's, whose rule, `FeesState::accrue`, the LEZ side tests: `lez/bridge-wire/tests/fees_accrue.rs`, `bridge_f13.rs`);
 - (v5) every deposit's escrow and whole payment, every release paid and credited, every refund returned exactly what
   the fee model says; every published schedule hash is the model's preimage; no claimed deposit is refunded.
 

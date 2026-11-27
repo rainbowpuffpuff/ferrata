@@ -1946,7 +1946,8 @@ mod tests {
     }
 
     /// F.13, ADR 0048: the vault's cumulative protocol-fee total sits at its own SHA-256 slot, the vault's formula
-    /// (`sha256("ferrata/vault/lezfees/v1" ‖ token)`; the vault's test `LezFees.t.sol` reads the same word).
+    /// (`sha256("ferrata/vault/lezfees/v1" ‖ token)`; the vault's `vault/test/vectors/registry-storage.json`, which
+    /// `RegistryStorage.t.sol` checks, holds the same slot).
     #[test]
     fn the_lez_fees_slot_is_its_own() {
         let eth = [0u8; 20];

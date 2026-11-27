@@ -271,7 +271,8 @@ class EvidenceRowsFinal(TamperCase):
             ("docs/requirements-status.md", "275–341 s at window 30", "275–342 s at window 30", "RFP-021 R.10"),
             ("docs/requirements-status.md", "(6 and 6; 3 and 3 before ADR 0046)", "(6 and 5; 3 and 3 before ADR 0046)",
              "RFP-022 F.13"),
-            ("docs/requirements-status.md", "301.9 s and 260.4 s", "301.9 s and 206.4 s", "RFP-022 F.13"),
+            ("docs/requirements-status.md", "298.2 s and 252.1 s", "298.2 s and 225.1 s", "RFP-022 F.13"),
+            ("docs/requirements-status.md", "(23 of 23 steps)", "(22 of 23 steps)", "RFP-022 F.13"),
             ("docs/requirements-status.md", "each released once for 99,900,000 base units",
              "each released once for 99,000,000 base units", "RFP-022 F.7"),
             ("docs/EVIDENCE.md", "(n = 5, t = 4)", "(n = 5, t = 3)", "EVIDENCE row 280"),
@@ -297,7 +298,12 @@ class EvidenceRowsFinal(TamperCase):
         t = overlay({"e2e/runs/zone-bridge-rc3-rotation/prover/done/0-checkpoint.json": sub('"seconds": 193.8', '"seconds": 93.8')})
         self.assertFails("evidence-rows-final", t, "EVIDENCE row 280")
         t = overlay({"lez/results/f13/prove-bridge.md": sub("execute_and_prove 301.9 s", "execute_and_prove 310.9 s")})
+        self.assertFails("evidence-rows-final", t, "EVIDENCE row 278")
+        t = overlay({"lez/results/f13/prove-bridge-lezfee.md": sub("execute_and_prove 298.2 s", "execute_and_prove 289.2 s")})
         self.assertFails("evidence-rows-final", t, "RFP-022 F.13")
+        t = overlay({"e2e/both-halves/results/f13-lez/fees.md": sub("| 1 | 0 | 1000000000000000 | 6 | 5 |",
+                                                                    "| 1 | 0 | 1000000000000000 | 5 | 5 |")})
+        self.assertFails("evidence-rows-final", t, "the sets before any claim differ")
         t = overlay({"cli/src/lez.rs": sub("fn the_claim_takes_the_layout_of_the_program_the_zone_runs",
                                            "fn the_claim_layout")})
         self.assertFails("evidence-rows-final", t, "EVIDENCE row 281")

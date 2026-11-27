@@ -76,8 +76,9 @@ destination, the registered relay fee to the relayer); `Burn` debits exactly one
 the new account state are appended, so every message and account the B1 program encodes reads the same.
 
 **The clients.** `ferrata_wallet::fees` builds and dry-runs `CollectFees`; `ferrata-relayer collect-fees` sends it
-under the newest record the admin's inbound depth allows, or the one `--record-slot` names (the record's block checked
-against the Ethereum endpoint, as for a root import), and refuses before sending on a B1 zone (B1 has no such
+under the configuration's newest record, or the one `--record-slot` names (with an inbound depth the newest record is
+never deep enough: the relayer waits, and an earlier one is named; the record's block is checked against the Ethereum
+endpoint, as for a root import), and refuses before sending on a B1 zone (B1 has no such
 instruction), for a token not registered, and for an amount that is not whole LEZ units; with nothing due it sends
 nothing. This tree's program is `ferrata_bridge_lezfee` (`docs/image-ids.md`). `ferrata` and the relayer read which
 program a zone runs (the image id its program loader names for the bridge account; the chain service, as `ferrata`

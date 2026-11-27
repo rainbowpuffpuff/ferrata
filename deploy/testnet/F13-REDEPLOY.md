@@ -104,5 +104,7 @@ trip (`docs/VERIFY.md` §5 with this tree's `ferrata`): a deposit under a nonzer
 `ferrata-relayer ... collect-fees --token 0x0000000000000000000000000000000000000000` minting the fee to the fee
 recipient on LEZ (its JSON line names the record, the total and the fee recipient's holding before and after), and,
 after a release under a nonzero burn fee, a second collection of that fee. The same steps were rehearsed on anvil and a
-local LEZ v0.4.0-rc3 sequencer (`e2e/f13/hook.sh`; its record is cited by the F.13 row). Then
+local LEZ v0.4.0-rc3 sequencer (`e2e/f13/hook.sh`; its record is cited by the F.13 row), the collections sent there by
+`crown-driver collect-fees` from the rehearsal's captures: `ferrata-relayer collect-fees` has not run end to end (its
+planner is unit-tested), so this first live collection is also its first run. Then
 `python3 -I scripts/verify-sepolia.py` on two endpoints, as for the earlier vaults.
