@@ -35,8 +35,8 @@ minutes and 16 GB at the minimum (`scripts/m0.py`, `LIMIT_S`).
 The third. User devices are declared to prove facts reached through at most two hops behind the record they read: up
 to 16,382 blocks, about 2.3 days of Ethereum blocks at 12 s. A consumer's client with an older fact chooses a record
 from at most two hops after the fact's block (records never expire: `docs/design/attestation.md`), or uses the
-public path. The programs are
-unchanged: the consumer still verifies any number of hops it is given, and no client enforces the limit yet.
+public path. The programs are unchanged: the consumer still verifies any number of hops it is given, and no client
+enforces the limit yet.
 
 ## Rationale and trade-offs
 
