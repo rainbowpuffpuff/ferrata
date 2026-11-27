@@ -1081,7 +1081,8 @@ async fn randomised_runs_keep_supply_within_holdings() -> Result<()> {
          program in LEZ v0.4.0-rc1's state machine, the two guests executed in RISC Zero dev mode; the mock verifier \
          accepts only the journals the guests committed. {} s in all.\n\n\
          After every step: vault balance == escrowed + owed; zone supply == minted - burnt; supply <= escrowed; and \
-         supply + unminted deposits + unreleased burns == escrowed.\n\n\
+         supply + unminted deposits + unreleased burns + fees escrowed for LEZ not yet collected (none here: every \
+         deposit and release is under schedule 0) == escrowed.\n\n\
          {cap_note}| seed | steps | deposits | imports | claims | claims capped (of them claimed later) | burns | releases | forgeries refused | \
          unminted at the end | unreleased at the end | invariant checks |\n|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n{report}\n\
          ## Anonymity sets of the claims (F.8)\n\nFor each claim, the set a private claim of its deposit would have at \
