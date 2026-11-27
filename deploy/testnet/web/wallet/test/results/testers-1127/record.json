@@ -68,7 +68,7 @@
   {
    "check": "step 6a: \"Deposited: leaf N in block M\", and anvil's vault logged it",
    "ok": true,
-   "detail": "Deposited: leaf 0 in block 12 (0x01857d9fa850f44683e7afae262b424055fdecbcacbac9ff763b4e29ca8ae98a). Next: the claim on LEZ, once the zone imports the vault's deposits."
+   "detail": "Deposited: leaf 0 in block 12 (0xc2d6574f003f1658646efe390713ca449477d3e6faa33215c3158a038ce2450c). Next: the claim on LEZ, once the zone imports the vault's deposits."
   },
   {
    "check": "choosing the private account says what its claim needs and links the testers' step 6e",
@@ -78,12 +78,12 @@
   {
    "check": "that link lands on the private claim's step, in view",
    "ok": true,
-   "detail": "{'x': 108.1875, 'y': 638.6875, 'width': 769.90625, 'height': 474.328125}"
+   "detail": "{'x': 108.1875, 'y': 704.6875, 'width': 769.90625, 'height': 499.125}"
   },
   {
    "check": "a deposit to the wallet's private account /0 (step 6e's first half)",
    "ok": true,
-   "detail": "Deposited: leaf 1 in block 13 (0x163e1deb480c4bf4ae613f3e917a612ca249918ee34ed02e1a208f0f9e6699ba). Next: the claim on LEZ, once the zone imports the vault's deposits."
+   "detail": "Deposited: leaf 1 in block 13 (0x5933f8325ad921625545b9f29692da577258da81b2fc4a3412195eaf5b26b7ff). Next: the claim on LEZ, once the zone imports the vault's deposits."
   },
   {
    "check": "no Sepolia ETH: refused at the review in plain words, nothing to sign, nothing deposited",
@@ -93,12 +93,12 @@
   {
    "check": "enough for the deposit and its fees, not for the gas: refused at the review, before any signature",
    "ok": true,
-   "detail": "Your Sepolia ETH, 0.100100000000000001 ETH, does not cover 0.100281626 ETH (the deposit, its fees and the gas): get some Sepolia ETH first (the testers' page, Limits, names public faucets). Nothing was signed."
+   "detail": "Your Sepolia ETH, 0.100100000000000001 ETH, does not cover 0.100281612 ETH (the deposit, its fees and the gas): get some Sepolia ETH first (the testers' page, Limits, names public faucets). Nothing was signed."
   },
   {
    "check": "Review pressed during a deposit's signature: the controls locked, the reviewed plan sent",
    "ok": true,
-   "detail": "({'bridge-review': True, 'bridge-connect': True, 'bridge-kind': True, 'bridge-denom': True}, 'Deposited: leaf 2 in block 14 (0x4fbc7be7721661ef7bfc9e59a3adc2779ab4d5c0ed05c63bc843c65b839c4480). Next: the claim on L')"
+   "detail": "({'bridge-review': True, 'bridge-connect': True, 'bridge-kind': True, 'bridge-denom': True}, 'Deposited: leaf 2 in block 14 (0x17832bae764d65be764f5068eefbc08c355f14ce089374b91d0197cadf8c2084). Next: the claim on L')"
   },
   {
    "check": "\"Find my deposits on the vault\" finds this wallet's 3",
@@ -108,7 +108,7 @@
   {
    "check": "the private deposit links the steps of a private claim",
    "ok": true,
-   "detail": "0.1 ETH \u2192 public LEZ account DCv3UxGY\u2026 \u00b7 deposited \u00b7 leaf 2\nj = 2\nC 0xe70430d2b4caa8cd91d89af3a65ca264d2e9ebdb5ea22ed4e31dfad669d943e6 \u00b7 0x4fbc7be7721661ef7bfc9e59a3adc2779ab4d5c0ed05c63bc843c65b839c4480 \u00b7 claim here (public: shows the deposit and its LEZ account), or with the ferrata tool\n0.1 ETH \u2192"
+   "detail": "0.1 ETH \u2192 public LEZ account 43W9sDYa\u2026 \u00b7 deposited \u00b7 leaf 2\nj = 2\nC 0xf50ac58b0595a36f360e05dc12ef5f97ec0c0de70a07967d9f6f30d168de0dc1 \u00b7 0x17832bae764d65be764f5068eefbc08c355f14ce089374b91d0197cadf8c2084 \u00b7 claim here (public: shows the deposit and its LEZ account), or with the ferrata tool\n0.1 ETH \u2192"
   },
   {
    "check": "every request went to the page's own origin (GitHub's badges and API aside, which the build page names)",
