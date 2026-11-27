@@ -1,0 +1,114 @@
+{
+ "passed": 21,
+ "failed": 0,
+ "notes": {
+  "claim": "not rehearsed: no attestation or bridge program on this local zone, so the page offers no \"Claim on LEZ\" (and it offers none)"
+ },
+ "checks": [
+  {
+   "check": "the build page opens with a reviewer's four links",
+   "ok": true,
+   "detail": "['requirements', 'verify', 'testers', 'runs']"
+  },
+  {
+   "check": "the reviewer link 'requirements' names a section of the page",
+   "ok": true,
+   "detail": "#requirements"
+  },
+  {
+   "check": "the reviewer link 'runs' names a section of the page",
+   "ok": true,
+   "detail": "#runs"
+  },
+  {
+   "check": "one click leads to the testers' page",
+   "ok": true,
+   "detail": "http://127.0.0.1:18650/testers/"
+  },
+  {
+   "check": "the testers' page lists seven steps, the bridge's with five, the private claim among them",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "step 1's link opens the wallet",
+   "ok": true,
+   "detail": "http://127.0.0.1:18650/wallet/"
+  },
+  {
+   "check": "step 1: Home with the account id and a public balance of 0 (as the page says)",
+   "ok": true,
+   "detail": "0 LGO"
+  },
+  {
+   "check": "step 2: \"Received: your balance is N LGO\", and the RPC agrees",
+   "ok": true,
+   "detail": "Received: your balance is 5 LGO. / RPC 5000000000"
+  },
+  {
+   "check": "the connected address is shown EIP-55 checksummed",
+   "ok": true,
+   "detail": "Connected 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 on chain 11155111; your next deposit index j = 0."
+  },
+  {
+   "check": "the review prices the gas now (an estimate from anvil, at its gas price)",
+   "ok": true,
+   "detail": "From\n0x70997970C51812dc3A010C7d01b50e0d17dc79C8\nVault\n0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9\nAsset\nETH\nAmount\n0.1 ETH\nFees\nmint 0 ETH, relay 0.0001 ETH (schedule 0)\nTotal\n0.1001 ETH\nGas\nabout 0.000252572 ETH (200,744 gas at 1.26 gwei, read now; your wallet shows the final figure)\nYour Sepolia ET"
+  },
+  {
+   "check": "the review shows this address's Sepolia ETH and the vault's address checksummed",
+   "ok": true,
+   "detail": "From\n0x70997970C51812dc3A010C7d01b50e0d17dc79C8\nVault\n0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9\nAsset\nETH\nAmount\n0.1 ETH\nFees\nmint 0 ETH, relay 0.0001 ETH (schedule 0)\nTotal\n0.1001 ETH\nGas\nabout 0.000252572 ETH (200,744 gas at 1.26 gwei, read now; your wallet shows the final figure)\nYour Sepolia ET"
+  },
+  {
+   "check": "declined in the browser wallet: said in plain words beside the button, nothing deposited, the button usable again",
+   "ok": true,
+   "detail": "You declined it in your browser wallet, so it was not sent."
+  },
+  {
+   "check": "step 6a: \"Deposited: leaf N in block M\", and anvil's vault logged it",
+   "ok": true,
+   "detail": "Deposited: leaf 0 in block 12 (0x9262f3e53b305c903ee945c47637e6f3046c776d5e3ea2d80aea6e4d3b1e5b3a). Next: the claim on LEZ, once the zone imports the vault's deposits."
+  },
+  {
+   "check": "choosing the private account says what its claim needs and links the testers' step 6e",
+   "ok": true,
+   "detail": "A deposit to your private account is claimed with the ferrata tool, from this phrase, on an x86-64 Linux computer (16 threads and 16 GB for the proof); the claim waits a delay of 1 to 12 hours for privacy. The steps."
+  },
+  {
+   "check": "that link lands on the private claim's step, in view",
+   "ok": true,
+   "detail": "{'x': 108.1875, 'y': 779.6875, 'width': 769.90625, 'height': 399.9375}"
+  },
+  {
+   "check": "a deposit to the wallet's private account /0 (step 6e's first half)",
+   "ok": true,
+   "detail": "Deposited: leaf 1 in block 13 (0xc0450cf64b563a998b430d594b2dde12321abb29cc2f28b7b4b5a149c79eddb3). Next: the claim on LEZ, once the zone imports the vault's deposits."
+  },
+  {
+   "check": "no Sepolia ETH: refused at the review in plain words, nothing to sign, nothing deposited",
+   "ok": true,
+   "detail": "Your Sepolia ETH, 0 ETH, does not cover 0.1001 ETH (the deposit and its fees, before the gas): get some Sepolia ETH first (the testers' page, Limits, names public faucets). Nothing was signed."
+  },
+  {
+   "check": "\"Find my deposits on the vault\" finds this wallet's two",
+   "ok": true,
+   "detail": "2 of the vault's 2 deposits are this wallet's."
+  },
+  {
+   "check": "the private deposit links the steps of a private claim",
+   "ok": true,
+   "detail": "0.1 ETH \u2192 private LEZ account ZftM5bjK\u2026 \u00b7 deposited \u00b7 leaf 1\nj = 1\nC 0xe1ab1f02481d5359dad691e0fd16f53348dc587b261580614fc768efb4587bf4 \u00b7 0xc0450cf64b563a998b430d594b2dde12321abb29cc2f28b7b4b5a149c79eddb3 \u00b7 claim privately with the ferrata tool (same phrase): a private claim needs a proof made with "
+  },
+  {
+   "check": "every request went to the page's own origin (GitHub's badges and API aside, which the build page names)",
+   "ok": true,
+   "detail": "['https://api.github.com/repos/logos-co/rfp/issues/257', 'https://api.github.com/repos/rainbowpuffpuff/ferrata/actions/workflows/ci.yml/runs?branch=main&per_page=1', 'https://api.github.com/repos/rainbowpuffpuff/ferrata/actions/workflows/lez-full.yml/runs?branch=main&per_page=1', 'https://api.github"
+  },
+  {
+   "check": "no uncaught script error",
+   "ok": true,
+   "detail": "[]"
+  }
+ ]
+}
