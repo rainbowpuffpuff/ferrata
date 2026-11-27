@@ -10,10 +10,10 @@ the evidence for our proposal to Logos, [logos-co/rfp #257](https://github.com/l
 ## For reviewers: four links
 
 1. **The status, with counts:** [docs/requirements-status.md](docs/requirements-status.md). Of the 59 hard
-   requirements of RFP-021 and the 68 of RFP-022, **49 and 47 are shown** under our strict rule; 6 and 18 in part,
+   requirements of RFP-021 and the 68 of RFP-022, **49 and 48 are shown** under our strict rule; 6 and 17 in part,
    1 and 1 not yet, 3 and 2 wait on Logos (27 November 2026). Each row gives its reason, tests and evidence.
 2. **Verify it in ten minutes:** [docs/VERIFY.md](docs/VERIFY.md). Clone, then `python3 -I scripts/verify.py --all`
-   runs the 119 quick offline checks in minutes, each naming the requirement rows it backs (Python 3.11; the few that
+   runs the 124 quick offline checks in minutes, each naming the requirement rows it backs (Python 3.11; the few that
    also need Node or Foundry say so and skip without them); then `python3 -I scripts/verify.py --all --online` runs
    the 22 online checks, read-only.
 3. **Try it on our test network:** [the testers' page](https://54-156-116-24.sslip.io/testers/): the faucet, the web

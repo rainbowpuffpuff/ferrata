@@ -28,6 +28,8 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+# docs/VERIFY.md's count of named tests no CI job runs, as it stands (the tests below change it and expect a failure).
+VERIFY_NO_CI = int(re.search(r"(\d+) run only on a", (ROOT / "docs/VERIFY.md").read_text()).group(1))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from verifylib import catalog, lez, runrecord  # noqa: E402
@@ -350,7 +352,7 @@ class EvidenceRows(TamperCase):
         self.assertFails("evidence-rows-integ", t, "RFP-021 S.1")
         t = walkable(overlay({"docs/requirements-status.md": sub("(`--coverage`: 127 of 127)", "(`--coverage`: 126 of 127)")}))
         self.assertFails("evidence-rows-integ", t, "RFP-022 R.11")
-        t = walkable(overlay({"docs/VERIFY.md": sub("39 run only on a", "37 run only on a")}))
+        t = walkable(overlay({"docs/VERIFY.md": sub(f"{VERIFY_NO_CI} run only on a", f"{VERIFY_NO_CI - 2} run only on a")}))
         self.assertFails("evidence-rows-integ", t, "docs/VERIFY.md")
 
     def test_a_missing_row_or_citation(self):
@@ -377,7 +379,7 @@ class EvidenceRows(TamperCase):
             ("docs/requirements-status.md", "14 of 14 steps (row 274", "15 of 15 steps (row 274", "RFP-022 R.10"),
             ("docs/requirements-status.md", "66 of the 68 run in CI (56 of 59", "67 of the 68 run in CI (57 of 59",
              "RFP-022 R.11"),
-            ("docs/VERIFY.md", "39 run only on a", "139 run only on a", "docs/VERIFY.md"))
+            ("docs/VERIFY.md", f"{VERIFY_NO_CI} run only on a", f"{VERIFY_NO_CI + 100} run only on a", "docs/VERIFY.md"))
         for rel, old_, new_, where in cases:
             with self.subTest(figure=old_):
                 t = walkable(overlay({rel: sub(old_, new_)}))

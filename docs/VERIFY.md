@@ -19,7 +19,7 @@ without them those checks are skipped, and say so. Nothing else is built or inst
 ```sh
 git clone https://github.com/rainbowpuffpuff/ferrata && cd ferrata
 python3 -I scripts/verify.py --list            # every check: its family, mode, requirement rows and EVIDENCE rows
-python3 -I scripts/verify.py --all             # the 122 quick offline checks: about 6 minutes
+python3 -I scripts/verify.py --all             # the 124 quick offline checks: about 6 minutes
 python3 -I scripts/test_verify.py              # the tamper tests: a few minutes (201 s on a laptop)
 python3 -I scripts/test_verify_lc.py           # the light-client records' tamper tests: seconds
 python3 -I scripts/test_verify_zone.py         # the four-key rc3 run's tamper tests: seconds
@@ -122,7 +122,7 @@ python3 -I scripts/verify.py RFP-021:F.4 --tests
 They need their toolchains: Rust (`cargo`), Foundry (`forge`), RISC Zero 3.0.5 (`r0vm`, `scripts/ci/install-risc0.sh`),
 LEZ's sources beside the repository (`scripts/fetch-upstream.sh`), the consensus vectors (`scripts/fetch-vectors.sh`);
 a missing tool is reported as a skip with the command to run once it is there. All of them take hours on one
-machine. CI's jobs run most of them (`scripts/ci/check-row-tests.py` shows which job runs which test); 39 run only on a
+machine. CI's jobs run most of them (`scripts/ci/check-row-tests.py` shows which job runs which test); 40 run only on a
 build machine or by hand (their titles say "not in CI"); 14 are recipes `--tests` lists but never runs, because their
 commands have placeholders to fill in or can send transactions (`ferrata-attest … --send`, the day-one kit's `go`):
 they print the recipe instead (titles marked "[by hand]").
