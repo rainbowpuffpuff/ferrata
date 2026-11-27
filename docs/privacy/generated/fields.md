@@ -46,7 +46,6 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `boundary[].out.message.Issue.token` | 20 | constant | constant |  | token |
 | `boundary[].out.message.Issue.nullifier` | 32 | 20 distinct | nullifier | N | N |
 | `boundary[].out.message.Issue.amount` | 16 | constant | constant |  | denomination |
-| `boundary[].out.message.Issue.range` | 24 | constant | constant | the fee schedule's leaf range the claim names | - |
 | `boundary[].out.message.Issue.leaf_count` | 8 | constant | constant | the root read (its leaf count) | the root read |
 | `boundary[].out.message.Issue.relayer` | 32 | constant | constant | the relayer the claim names (relay fee minted to it publicly) | - |
 | `boundary[].out.message.native.Credit` | 16 | constant | constant | the fee reserve, moved from the alias to the fee inbox | a one-time fee alias with a fixed reserve |
@@ -68,7 +67,7 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `witness_set.signatures` | 4 | constant | constant | the witness set's signatures: none (the sender is an alias) | - |
 | `proof.length` | 4 | constant | constant | the proof's length: the receipt's size in bytes | - |
 | `proof.kind` | 1 | constant | constant | the receipt's kind (borsh tag of InnerReceipt: 1 succinct, 3 fake) | - |
-| `proof.claim` | 4524 | 20 distinct | a function of public data | the receipt's claim: ReceiptClaim::ok(circuit id, journal), the journal the frame of the transaction's message (checked from the public bytes) | - |
+| `proof.claim` | 4500 | 20 distinct | a function of public data | the receipt's claim: ReceiptClaim::ok(circuit id, journal), the journal the frame of the transaction's message (checked from the public bytes) | - |
 | `receipt.gas_exec` | 8 | 2 distinct | time / order | LEZ execution gas: follows the position (the shared state the public part updates) | - |
 | `receipt.cycles` | 8 | 2 distinct | time / order | LEZ execution gas: follows the position (the shared state the public part updates) | - |
 | `receipt.gas_stor` | 8 | constant | constant |  | - |
@@ -78,10 +77,10 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `block.timestamp` | 8 | 20 distinct | time / order | time | time |
 | `commitment_root.before` | 32 | 20 distinct | time / order | LEZ: the commitment-set root (state the proof read) | - |
 | `commitment_root.after` | 32 | 20 distinct | time / order | LEZ: the commitment-set root (state the proof read) | - |
-| `state: the account in `derived.nullifier_account`` | 0 | one per record (20 distinct) | nullifier | created or changed by this record only | N |
-| `state: holder(the relayer) (its wrapped balance: relay fees)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: the harness's fee payer (refund_to)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: LEZ fee inbox` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: the account in `derived.nullifier_account`` | 0 | one per record (20 distinct) | nullifier | created or changed by this record only | N |
+| `state: holder(the relayer) (its wrapped balance: relay fees)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: config(cid) (global gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: token(cid, ETH) (token gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 
@@ -103,7 +102,6 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `root.message.Claim.witness.s` | 32 | 20 distinct | UNCLASSIFIED |  | - |
 | `root.message.Claim.witness.kind` | 1 | constant | constant |  | - |
 | `root.message.Claim.witness.dest` | 32 | 20 distinct | UNCLASSIFIED |  | - |
-| `root.message.Claim.range` | 24 | constant | constant | the fee schedule's leaf range the claim names | - |
 | `root.message.Claim.relayer` | 32 | constant | constant | the relayer the claim names (relay fee minted to it publicly) | - |
 | `fee` | 65 | constant | constant | fee declaration / nonces of the public submitter (the harness's payer) | - |
 | `nonces` | 52 | 20 distinct | time / order | time | - |
@@ -117,13 +115,13 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `block.timestamp` | 8 | 20 distinct | time / order | time | - |
 | `commitment_root.before` | 32 | constant | constant | LEZ: the commitment-set root (state the proof read) | - |
 | `commitment_root.after` | 32 | constant | constant | LEZ: the commitment-set root (state the proof read) | - |
-| `state: holder(a public destination) (plaintext universe)` | 0 | one per record (20 distinct) | UNCLASSIFIED | created or changed by this record only | - |
-| `state: holder(the relayer) (its wrapped balance: relay fees)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: the account in `derived.nullifier_account`` | 0 | one per record (20 distinct) | nullifier | created or changed by this record only | - |
 | `state: the harness's fee payer (refund_to)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: LEZ fee inbox` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: holder(the relayer) (its wrapped balance: relay fees)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: config(cid) (global gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: token(cid, ETH) (token gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: holder(a public destination) (plaintext universe)` | 0 | one per record (20 distinct) | UNCLASSIFIED | created or changed by this record only | - |
 
 ## burn, private holding
 
@@ -169,10 +167,10 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `block.timestamp` | 8 | 20 distinct | time / order | time | time |
 | `commitment_root.before` | 32 | 20 distinct | time / order | LEZ: the commitment-set root (state the proof read) | - |
 | `commitment_root.after` | 32 | 20 distinct | time / order | LEZ: the commitment-set root (state the proof read) | - |
+| `state: the account in `derived.burn_record_account`` | 0 | one per record (20 distinct) | fresh randomness | created or changed by this record only | the burn note |
 | `state: the harness's fee payer (refund_to)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: LEZ fee inbox` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: config(cid) (global gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
-| `state: the account in `derived.burn_record_account`` | 0 | one per record (20 distinct) | fresh randomness | created or changed by this record only | the burn note |
 | `state: token(cid, ETH) (token gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 
 ## release, NOut of the release statement
@@ -231,7 +229,7 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `block.timestamp` | 8 | constant | constant | time | - |
 | `commitment_root.before` | 32 | constant | constant | LEZ: the commitment-set root (state the proof read) | - |
 | `commitment_root.after` | 32 | constant | constant | LEZ: the commitment-set root (state the proof read) | - |
+| `state: root(cid, 20)` | 0 | changed in every record | constant |  | - |
 | `state: the harness's fee payer (refund_to)` | 0 | changed in every record | constant |  | - |
 | `state: LEZ fee inbox` | 0 | changed in every record | constant |  | - |
-| `state: root(cid, 20)` | 0 | changed in every record | constant |  | - |
 

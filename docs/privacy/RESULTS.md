@@ -80,18 +80,29 @@ substantive checks passed on it unchanged (the adversary at chance on both legs,
 each way) before the tables were committed. The private burn's execution gas is 511,731 (516,059 before; 101,967
 cycles), the note no longer hashed.
 
+**Regenerated on 27 November 2026 (ADR 0046).** A claim names no fee schedule any more: `Claim.range` and, in every
+private claim's boundary message, `Issue.range` (24 bytes each) are gone (image `ffb47f6e…7675`, `ferrata_bridge_f13`
+in [`../image-ids.md`](../image-ids.md)), which moves the configuration id and every value derived from it.
+`generated/` is the suite's run inside CI's `lez-harness` script on the build box (`FERRATA_PRIVACY_OUT`, dev mode);
+the gate's 29 substantive checks passed on it unchanged (the adversary at chance on both legs, nothing hidden found,
+recovery complete) before the tables were committed; the four "published" checks had compared it with the earlier
+tables. The private claim is 8,889 bytes (48 shorter: the range in `Issue` and in the receipt's journal) and the
+plaintext claim 2,029 (24 shorter); a claim's execution gas steps by 4,366 per position; the private burn's execution
+gas is 511,932; Ethereum deposits cost 172 more gas (the vault of ADR 0046 credits the mint fee at the deposit); the
+informational claim → burn rate is 4.8% (one record drew a wrong singleton set; the rate moves with the build's ids).
+
 ## Results in brief
 
 | check | default private path | linkable variants |
 |---|---|---|
-| differential gate (identical once nullifiers, fresh randomness, a user's own address and time are cut; receipts included) | identical: deposits, private claims (8,937 bytes each), private burns (7,857), releases (324 bytes of calldata) | plaintext claim: **differs** (the declared accounts, the witness); naive `N = fid` claim: identical (the gate cannot see that a nullifier is computable; the adversary does) |
+| differential gate (identical once nullifiers, fresh randomness, a user's own address and time are cut; receipts included) | identical: deposits, private claims (8,889 bytes each), private burns (7,857), releases (324 bytes of calldata) | plaintext claim: **differs** (the declared accounts, the witness); naive `N = fid` claim: identical (the gate cannot see that a nullifier is computable; the adversary does) |
 | adversary, inbound (deposit → claim), chance 5.0% | **5.0%**: no shared value at all; every candidate set is all 20 deposits | naive `N = fid`: **100%** (20 of 20 identified); plaintext claim: **100%** (20 of 20) |
 | adversary, outbound (burn → release), chance 5.0% | **5.0%**: every candidate set is all 20 burns | naive `NOut = burnId`: **100%** (20 of 20) |
 | §B6's hidden column, searched in every record's public bytes | 0 of 320 values found (destination, `s`, `C`, leaf, `fid`, depositor; holder, recipient; `r`, `COut`, memo, mac, burn leaf, `burnId`) | – |
 | recovery from the seed alone, after 10 claims and 10 releases | unclaimed deposits **10 of 10**, unreleased burns **10 of 10**; claimed and released ones seen as such, 10 and 10; no other user's item taken; recovered `NOut` equal to the vault's for 20 of 20 | – |
 
 Informational: deposit → release over the round trip, 5.0%; claim → burn on LEZ (the same private
-accounts), 4.5%. Including the order-bearing state the main adversary leaves out (below) changes none of
+accounts), 4.8%. Including the order-bearing state the main adversary leaves out (below) changes none of
 the rates.
 
 ## Method
@@ -168,9 +179,9 @@ memo, checks `COut` and computes `NOut` (v1, the release guest's).
 |---|---|---|
 | deposit (A: private destinations) | 100–100 | yes |
 | deposit (B: public destinations) | 100–100 | yes |
-| claim, private (default) | 8,937–8,937 | yes |
-| claim, naive nullifier N = fid | 8,937–8,937 | yes |
-| claim, plaintext | 2,053–2,053 | no: from byte 133 of the transaction (the declared accounts, after the program id), then the witness |
+| claim, private (default) | 8,889–8,889 | yes |
+| claim, naive nullifier N = fid | 8,889–8,889 | yes |
+| claim, plaintext | 2,029–2,029 | no: from byte 133 of the transaction (the declared accounts, after the program id), then the witness |
 | burn, private holding | 7,857–7,857 | yes |
 | release, NOut of the release statement | 324–324 | yes |
 | release, naive NOut = burnId | 324–324 | yes |
@@ -185,7 +196,7 @@ memo, checks `COut` and computes `NOut` (v1, the release guest's).
 | outbound, private (default) | 5.0% | 0 of 20 | 20: 20 | 5.0% | 5.0% | 5.0% |
 | outbound, naive NOut = burnId | 100.0% | 20 of 20 | 1: 20 | 5.0% | 100.0% | 5.0% |
 | round trip: deposit to release | 5.0% | 0 of 20 | 20: 20 | 5.0% | 5.0% | 5.0% |
-| on LEZ: claim to burn | 4.5% | 0 of 20 | 1: 2, 20: 18 | 4.5% | 4.5% | 5.0% |
+| on LEZ: claim to burn | 4.8% | 0 of 20 | 1: 1, 20: 19 | 4.8% | 4.8% | 5.0% |
 
 "Order only" pairs the k-th of each side in time order: what the client's delay has to defeat, at
 chance here because the orders are random by construction. The naive variants are found only through a
@@ -195,10 +206,10 @@ adversary computes them.
 ### Receipts
 
 Gas is public, and it varies; every variation follows the operation's position, not its user:
-- **LEZ claims.** Execution gas, minus the first claim's: `[0, 4377, 4377, …]` by position (4,335 at `ccde6171…`, `4720` on image `cf41b7e5`), the same
+- **LEZ claims.** Execution gas, minus the first claim's: `[0, 4366, 4366, …]` by position (4,377 at `847a4336…`, 4,335 at `ccde6171…`, `4720` on image `cf41b7e5`), the same
   sequence in the private and the plaintext universe, whose users stand in different orders, so it is the
   shared public part (Issue, Admit, Spend, the mints) that varies, with the state the claims before it left.
-  Storage gas is constant (224,063 private, 2,053 plaintext).
+  Storage gas is constant (224,063 private, 2,029 plaintext).
 - **LEZ burns.** Every burn costs the same.
 - **Ethereum releases.** The first costs 105,461 gas, the 19 others 80,461: 25,000 more, the EVM's charge
   for a value transfer that creates an account, here the relayer's (a fresh address) on its first relay
@@ -228,6 +239,8 @@ randomness, a user's own address or time. The differences, each a finding:
    relayers splits the claim's anonymity set by relayer.
 2. **The claim names its fee schedule's leaf range** (`Issue.range`). Known (`BRIDGE.md` §2: the mint
    fee already shows the schedule); constant here, since all 20 leaves are under schedule 0. §B6 as first drafted did not list it (now listed).
+   Since ADR 0046 the field is gone (`ferrata_bridge_f13`: a claim names no schedule and mints no mint fee;
+   `generated/fields.md` has no `range` row): this finding holds for the earlier programs only.
 3. **The fee reserve's refund account is public, and so is the refund.** `fee.refund_to` in every
    private claim and burn, and that account's balance in the state diff. §B6 as first drafted did not list either (now listed). In the harness
    it is one shared account; a wallet that named an account of its own would tie all its private

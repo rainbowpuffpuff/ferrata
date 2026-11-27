@@ -156,7 +156,7 @@ Three ways, the first preselected:
 | **Plaintext claim** | the witness is transaction data; one public transaction, for users who cannot prove | **everything, including which deposit**: the client must say so before allowing it | nothing | 261,671 execution gas (1 ETH), 2,053 bytes |
 
 Sources: [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §1 (its last column: the merged program), §3;
-[`lez/BRIDGE.md`](../../lez/BRIDGE.md), "What each path makes public". The private claim's 8,937 bytes were searched for its private inputs
+[`lez/BRIDGE.md`](../../lez/BRIDGE.md), "What each path makes public". The private claim's bytes (8,889 since ADR 0046; 8,937 before) were searched for its private inputs
 (destination, `s`, `C`, the leaf, the depositor, the witness, the 32 siblings): all absent
 (`a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_read` in
 [`lez/harness/tests/bridge_private.rs`](../../lez/harness/tests/bridge_private.rs)).
