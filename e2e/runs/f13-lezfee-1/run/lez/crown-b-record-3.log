@@ -1,0 +1,6 @@
+[crown-b] crown STAND-IN: vault 0x67ac447386f2ea14ef2fbf55ef33ce1d8f386516, configId 0x9bbaa29fc91bb5e4f6b0e0947b8e55c41f9ed0a04144fd1c571ce6e78372845d, instance 0xa5000dc5474cce8daf3dbbb73c084ff98c184fcda48320f35fa8adb12cab6423
+[crown-b] stage 3 finality update (block 12226934) Open (step 1)     applied        gas   1996051 block   56 +  1.8s 7e94ce06b3e4a21d9d73ce02c34d006ab10cdbd0ca6164b989b9de2bf5e305c8
+[crown-b] stage 3 finality update (block 12226934) Miller (step 2)   applied        gas   3305374 block   57 +  2.6s 60fd9581cbc6df1f8ef8ad85886a483a7ea5bdbeac73666b98402f22db02e3d2
+[crown-b] stage 3 finality update (block 12226934) Finish (step 3)   applied        gas   3718957 block   58 +  3.3s e31635d9feeec97a39d7c89f3553bb114658b32cf8235fdb54b15aa93f700a43
+[crown-b] stage 3: header(id, 11665664) of block 12226934 recorded (--updates-only: no bridge call)
+[crown-b] blocks 24..=58 (T1 0x87687c990685a4c551d9663d925b813889063d450bb7301b8914791fadd6bef5); 0 burn note(s) written to ../ci/work/notes-3.json

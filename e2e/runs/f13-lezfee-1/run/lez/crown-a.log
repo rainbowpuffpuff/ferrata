@@ -1,0 +1,56 @@
+Transaction hash is 200da5f6af784f15df1d58671be7bed802b27576a3953d2492ccaeaeeb9dd42b
+Transaction is included in block 3
+Transaction hash is 616b2dc9c257b7e1eaefdaee2b6cff8a83f67a965c153b228233b493f76e45b8
+Transaction is included in block 4
+Transaction hash is 459808d648769afd57d933fd43ff1c33a1db5a6608ae76b24db8b17bb8753e54
+Transaction is included in block 5
+Transaction hash is 38980f9e83e18dfe1b4212f2334628b84765af5f3e74c8cd45ecfa3834fe3abd
+Transaction is included in block 6
+Transaction hash is 2092b6c4c922cffed8a72022e5315840f6d8399dd8bb44fc06bf67faa9005c9d
+Transaction is included in block 7
+Transaction hash is 534fdc4caa893fe27f8a84fc27856c6ae10991c5a5d5d3ac155d9b522d9b8daa
+Transaction is included in block 8
+Transaction hash is 9d2ba6aa43bac368a09b4ed66b4a452f269cbc3348d941437ec7809760f9afcb
+Transaction is included in block 9
+Transaction hash is 199050ea5060e03943763f9c18929466d766c7427229b96c5982fc660c7bc995
+Transaction is included in block 10
+[crown-a] deploy attest: WriteSegment 7 of 7 (4816 bytes)            applied   gas         0 +    5396 bytes, block    3
+[crown-a] deploy attest: WriteSegment 6 of 7 (98304 bytes)           applied   gas      4822 +   98916 bytes, block    4
+[crown-a] deploy attest: WriteSegment 5 of 7 (98304 bytes)           applied   gas     98342 +   98916 bytes, block    5
+[crown-a] deploy attest: WriteSegment 4 of 7 (98304 bytes)           applied   gas     98342 +   98916 bytes, block    6
+[crown-a] deploy attest: WriteSegment 3 of 7 (98304 bytes)           applied   gas     98342 +   98916 bytes, block    7
+[crown-a] deploy attest: WriteSegment 2 of 7 (98304 bytes)           applied   gas     98342 +   98916 bytes, block    8
+[crown-a] deploy attest: WriteSegment 1 of 7 (98304 bytes)           applied   gas     98342 +   98916 bytes, block    9
+[crown-a] deploy attest: CreateHeader (immutable) at A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX applied   gas    594874 +     608 bytes, block   10
+[deploy] attest: image 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df at A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX (computed by the sequencer's loader), immutable
+Transaction hash is ae07d1ce7c083c4d7a06f1354069bcad543d6f765e8243f9f8e82e02d7d01052
+Transaction is included in block 12
+Transaction hash is ad8e2c798eb14ae8a7eba346a8c727133e8a8b050a48703c72afeaf9b432864a
+Transaction is included in block 13
+Transaction hash is a58fc9815c8fb2bbefa14c8ebbdd080834f1c29d617cfa4a8b5f531468fd52a9
+Transaction is included in block 14
+Transaction hash is 0d54242f2ebbdebea210aa9c07f6c4c62f0da8cb97a8606366bfd7a630d3b5e2
+Transaction is included in block 15
+Transaction hash is 1916339260e4c73491a996ce0f4f0bac1c94e461b65012a949fbd7684d117942
+Transaction is included in block 16
+Transaction hash is abf521f00dc70dce6ca2376d774f4890e43587e09c3431d536ce0d8e68d1329e
+Transaction is included in block 17
+Transaction hash is 1c64f134931ebe7d4332c7d3ac27e49aa0ab83f92ecb95b8ecbda58fdb583a91
+Transaction is included in block 18
+Transaction hash is 865e657c06b14bedb447e2643da9349520e9935930a7ee3c4f2eec01c9e02a16
+Transaction is included in block 19
+[crown-a] deploy bridge: WriteSegment 7 of 7 (1956 bytes)            applied   gas         0 +    2536 bytes, block   12
+[crown-a] deploy bridge: WriteSegment 6 of 7 (98304 bytes)           applied   gas      1962 +   98916 bytes, block   13
+[crown-a] deploy bridge: WriteSegment 5 of 7 (98304 bytes)           applied   gas     98342 +   98916 bytes, block   14
+[crown-a] deploy bridge: WriteSegment 4 of 7 (98304 bytes)           applied   gas     98342 +   98916 bytes, block   15
+[crown-a] deploy bridge: WriteSegment 3 of 7 (98304 bytes)           applied   gas     98342 +   98916 bytes, block   16
+[crown-a] deploy bridge: WriteSegment 2 of 7 (98304 bytes)           applied   gas     98342 +   98916 bytes, block   17
+[crown-a] deploy bridge: WriteSegment 1 of 7 (98304 bytes)           applied   gas     98342 +   98916 bytes, block   18
+[crown-a] deploy bridge: CreateHeader (immutable) at AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp applied   gas    592014 +     608 bytes, block   19
+[deploy] bridge: image 9d02d54d56b026079e94c8d9b12db69f3a96b7acccd11283f68e5bc343bfa321 at AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp (computed by the sequencer's loader), immutable
+[crown-a] crown STAND-IN: attestation program A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX, bridge AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp, instance 0xa5000dc5474cce8daf3dbbb73c084ff98c184fcda48320f35fa8adb12cab6423
+[crown-a] crown STAND-IN Init Init                                   applied        gas    114811 block   21 +  3.7s ad1e8fa0d5ce8422d836ba2374a2337d8e18cc405a21ac570b8ef8f31124ff6d
+[crown-a] crown STAND-IN Init adopt 1/2                              applied        gas   3397076 block   22 +  2.9s 41cd5b789c7272992c7eac135983320831b57bb57d71d493c49edd472ceb8d8c
+[crown-a] crown STAND-IN Init adopt 2/2                              applied        gas   3480132 block   23 +  3.3s e26502e5c983fbca04f1940bebae56a98aec0d5adb0ed2149921587406557af0
+[crown-a] the channel accredits 1 key(s)
+[crown-a] T0 = block 23 0xbee21cc871e488d0349f68f4b405817d8c52076e400437323b53dfb87a929d48; identity written to ../ci/work/session-a.json
