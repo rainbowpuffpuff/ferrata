@@ -153,5 +153,19 @@ class F13VerifyTamperTests(unittest.TestCase):
         self._assert_fails(ROUNDTRIP, lambda root: _replace(root / rel, old, new), "LEZ ledger")
 
 
+    def test_17_both_halves_pre_claim_set_fails(self):
+        # Review of the Kimi pieces, M2 (a): the "set before any claim" column had no tamper case.
+        old = "| 2 | 0 | 1000000000000000 | 6 | 4 |"
+        new = "| 2 | 0 | 1000000000000000 | 5 | 4 |"
+        self._assert_fails(BOTH, lambda root: _replace(root / NEW_FEES, old, new), "pre-claim set")
+
+    def test_18_roundtrip_claim_transcript_naming_a_schedule_fails(self):
+        # Review of the Kimi pieces, M2 (b): ADR 0046's property itself, a claim that names no schedule or range.
+        rel = f"{RT}/run/user/08-claim.txt"
+        old = "claim on LEZ (configuration "
+        new = "claim on LEZ under fee schedule 0 (configuration "
+        self._assert_fails(ROUNDTRIP, lambda root: _replace(root / rel, old, new), "names a schedule or range")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

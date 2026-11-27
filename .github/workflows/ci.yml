@@ -567,6 +567,8 @@ jobs:
       - name: The monitor module's calls crate, all targets
         working-directory: modules/ferrata_monitor_module/rust-lib/calls
         run: cargo test --locked
+      # The job's default toolchain (as the attestor and monitor steps); modules-resolve.sh uses +1.98.1 only for the
+      # relayer's metadata. A LEZ bump needing 1.98.1 would show here first: then run this step with cargo +1.98.1.
       - name: The relayer module's calls crate, all targets
         working-directory: modules/ferrata_relayer_module/rust-lib/calls
         run: cargo test --locked
