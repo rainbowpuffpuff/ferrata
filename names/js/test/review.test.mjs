@@ -177,3 +177,129 @@ test('a program account has no name, and is not an account\'s state', async () =
     await assert.rejects(names.user(pda), N.NotAnAccount, what);
   }
 });
+
+// G15: a complete register send path, offline. The little reader is independent
+// of names.js's encoder: the signed bytes captured by the RPC stand-in must
+// decode to the intended Commit and Register instructions. No production
+// encoder is used to construct the expected instruction bytes.
+const u64le = (n) => { const b = new Uint8Array(8); new DataView(b.buffer).setBigUint64(0, BigInt(n), true); return b; };
+const u32leTest = (n) => { const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0, n, true); return b; };
+class InstructionReader {
+  constructor(b) { this.b = b; this.o = 0; this.v = new DataView(b.buffer, b.byteOffset, b.byteLength); }
+  take(n) { assert.ok(this.o + n <= this.b.length, 'truncated instruction'); const s = this.b.slice(this.o, this.o + n); this.o += n; return s; }
+  u8() { return this.take(1)[0]; }
+  u32() { const n = this.v.getUint32(this.o, true); this.take(4); return n; }
+  u64() { const n = this.v.getBigUint64(this.o, true); this.take(8); return n; }
+  str() { return new TextDecoder().decode(this.take(this.u32())); }
+  end() { assert.equal(this.o, this.b.length, 'trailing instruction bytes'); }
+}
+
+test('G15: register sends a signed Commit then the intended signed Register', async () => {
+  const lez = await import(join(HERE, '..', '..', '..', 'deploy', 'testnet', 'web', 'wallet', 'lez.js'));
+  const me = lez.rawKeyNode(SK);
+  const myId = lez.idToString(me.accountId);
+  const sent = [];
+  let userState = null;
+  const calls = [];
+  const server = createServer((req, res) => {
+    assert.equal(req.socket.remoteAddress, '127.0.0.1');
+    let body = '';
+    req.on('data', (c) => { body += c; });
+    req.on('end', () => {
+      const { id, method, params } = JSON.parse(body);
+      calls.push(method);
+      let result = null;
+      if (method === 'getAccountView') {
+        result = params[0].account_id === myId && userState
+          ? { nonce: 0, data: { actor_states: { [PROGRAM]: Array.from(userState) } } }
+          : null;
+      } else if (method === 'getAccountsNonces') result = params[0].map(() => 0);
+      else if (method === 'getFeeState') result = { base_fee_exec: 8, base_fee_stor: 8 };
+      else if (method === 'getAccountBalance') result = '100000000000';
+      else if (method === 'sendTransaction') {
+        const w = lez.decodeWire(params[0]);
+        sent.push(w);
+        if (sent.length === 1) {
+          // UserState { names: [], primary: None, commit: Some(…) } for the
+          // reveal's preflight, constructed here independently of names.js.
+          const r = new InstructionReader(w.tx.data);
+          assert.equal(r.u8(), 7);
+          const commitment = r.take(32), nowMs = r.u64();
+          r.end();
+          userState = concatTest(u32leTest(0), Uint8Array.of(0, 1), commitment, u64le(1),
+            u64le(nowMs + 240_000n), u64le(nowMs + 3_600_000n));
+        }
+        result = 'sent';
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json', Connection: 'close' });
+      res.end(JSON.stringify({ jsonrpc: '2.0', id, result }));
+    });
+  });
+  const url = await new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(`http://127.0.0.1:${server.address().port}`)));
+  const d = scratch();
+  try {
+    const state = join(d, 'alice.commit.json');
+    const r = await cli(['--rpc', url, '--program', PROGRAM, 'register', 'alice', '--key', join(d, 'k.key'), '--state', state, '--no-wait'],
+      { FERRATA_NAMES_TEST_COMMIT_OFFSET_MS: '-300000' });
+    assert.equal(r.code, 0, r.err);
+    assert.equal(sent.length, 2, 'both the commit and the reveal reached the stand-in');
+    assert.deepEqual(calls.filter((m) => m === 'sendTransaction'), ['sendTransaction', 'sendTransaction']);
+    assert.match(r.out, /"action": "Commit"/);
+    assert.match(r.out, /"action": "Register"/);
+
+    const st = JSON.parse(readFileSync(state, 'utf8'));
+    const salt = N.unhex(st.salt);
+    const commit = new InstructionReader(sent[0].tx.data);
+    assert.equal(commit.u8(), 7, 'Commit is variant 7');
+    const { createHash } = await import('node:crypto');
+    const domain = new TextEncoder().encode('ferrata-names/v2/commit/');
+    const expectedCommitment = createHash('sha256').update(concatTest(domain, me.accountId, salt, new TextEncoder().encode('alice'))).digest();
+    assert.deepEqual(commit.take(32), Uint8Array.from(expectedCommitment), 'independent SHA-256 commitment over owner, salt and name');
+    const committedAt = commit.u64();
+    commit.end();
+
+    const reveal = new InstructionReader(sent[1].tx.data);
+    assert.equal(reveal.u8(), 0, 'Register is variant 0');
+    assert.equal(reveal.str(), 'alice');
+    assert.ok(reveal.u64() >= committedAt, 'the reveal carries its own execution time');
+    assert.equal(reveal.u8(), 1, 'the default target is present');
+    assert.equal(N.hex(reveal.take(32)), N.hex(me.accountId), 'the target is the signer');
+    assert.equal(reveal.u8(), 0, 'no private receiver was requested');
+    assert.deepEqual(reveal.take(32), salt, 'the reveal opens exactly the saved salt');
+    reveal.end();
+    for (const [i, w] of sent.entries()) {
+      assert.equal(w.kind, 'public');
+      assert.equal(N.hex(w.tx.to.account), N.hex(me.accountId));
+      assert.equal(N.hex(w.tx.to.program), N.hex(N.accountId(PROGRAM)));
+      assert.equal(w.tx.witnesses.length, 1);
+      assert.ok(lez.verify(w.tx.witnesses[0].sig, lez.messageHash(w.tx.messageBytes), me.pk), `signature ${i + 1} verifies`);
+    }
+  } finally { await new Promise((ok) => server.close(ok)); rmSync(d, { recursive: true, force: true }); }
+});
+
+test('G15: write-command and register refusals send nothing', async () => {
+  const d = scratch();
+  const auth = ['--rpc', 'http://127.0.0.1:1', '--program', PROGRAM];
+  const key = ['--key', join(d, 'k.key')];
+  const cases = [
+    { args: [...auth, 'register', ...key], code: 2, error: /register NAME/ },
+    { args: [...auth, 'renew', ...key], code: 2, error: /renew NAME/ },
+    { args: [...auth, 'transfer', 'alice', ...key], code: 2, error: /transfer NAME TO/ },
+    { args: [...auth, 'renew', 'alice'], code: 2, error: /signed command needs --key/ },
+    { args: [...auth, 'register', 'wallet', ...key, '--state', join(d, 'reserved.json'), '--no-wait'], code: 1, error: /reserved/i },
+  ];
+  try {
+    for (const c of cases) {
+      const r = await cli(c.args);
+      assert.equal(r.code, c.code, `${c.args.join(' ')}: ${r.err}`);
+      assert.match(r.err, c.error, c.args.join(' '));
+    }
+  } finally { rmSync(d, { recursive: true, force: true }); }
+});
+
+function concatTest(...parts) {
+  const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+  let o = 0;
+  for (const p of parts) { out.set(p, o); o += p.length; }
+  return out;
+}

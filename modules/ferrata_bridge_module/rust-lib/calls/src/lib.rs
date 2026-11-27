@@ -156,6 +156,89 @@ pub fn wallet_as(caller: &str, request: &str) -> String {
     session::wallet_as(caller, request)
 }
 
+/// Drive `call wallet FILE`: one JSON `{"method", "params"}` per nonempty, non-comment line, with the
+/// `client`, `as` and `raw` fields documented by `examples/call.rs`. Returns one printed reply per input line.
+///
+/// A network session's approval id is random, so a calls file may write `"pending_id": "$previous"` after a
+/// claim or burn and `"id": "$previous"` after `confirm`. With `"wait": true` on `confirm`, the same client polls
+/// its job privately before the next input line; the following `job` line therefore returns its terminal state.
+pub fn wallet_calls(calls: &str) -> Vec<String> {
+    let mut clients: std::collections::HashMap<String, ViewClient> = std::collections::HashMap::new();
+    let mut previous = Value::Null;
+    let mut printed = Vec::new();
+    for line in calls.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with('#')) {
+        let v: Value = match serde_json::from_str(line) {
+            Ok(v) => v,
+            Err(_) => {
+                printed.push(wallet(line));
+                previous = Value::Null;
+                continue;
+            }
+        };
+        let caller = v["as"].as_str().unwrap_or("module:ferrata_bridge_ui").to_string();
+        let method = v["method"].as_str().unwrap_or("");
+        let reply = if v["raw"] == true {
+            let body = json!({ "method": method, "params": v["params"] }).to_string();
+            wallet_as(&caller, &body)
+        } else if let Some(name) = v["client"].as_str() {
+            let client = clients.entry(name.to_string()).or_insert_with(|| ViewClient::new(&caller));
+            if method == "open_network" {
+                let mut params = v["params"].clone();
+                let phrase =
+                    params.get("phrase").and_then(|p| p.as_str()).map(|p| zeroize::Zeroizing::new(p.to_string()));
+                if let Some(o) = params.as_object_mut() {
+                    o.remove("phrase");
+                }
+                let (reply, words) = client.open(&params, phrase.as_deref().map(|p| p.as_str()));
+                match words {
+                    Some(w) => format!(
+                        "{reply} (a new phrase of {} words, opened by the client, not printed)",
+                        w.split(' ').count()
+                    ),
+                    None => reply,
+                }
+            } else {
+                let mut params = v["params"].clone();
+                if params["pending_id"] == "$previous" {
+                    params["pending_id"] = previous["result"]["to_approve"]["pending_id"].clone();
+                }
+                if params["id"] == "$previous" {
+                    params["id"] = previous["result"]["job"]["id"].clone();
+                }
+                let wait = method == "confirm" && params.get("wait").and_then(Value::as_bool) == Some(true);
+                if let Some(o) = params.as_object_mut() {
+                    o.remove("wait");
+                }
+                let reply = client.call(method, &params);
+                if wait {
+                    if let Some(id) =
+                        serde_json::from_str::<Value>(&reply).ok().and_then(|r| r["result"]["job"]["id"].as_u64())
+                    {
+                        let until = std::time::Instant::now() + std::time::Duration::from_secs(190);
+                        loop {
+                            let job: Value =
+                                serde_json::from_str(&client.call("job", &json!({ "id": id }))).unwrap_or(Value::Null);
+                            let done = job["result"]["running"].as_bool() == Some(false)
+                                || (job["ok"].as_bool() == Some(false) && job.get("error").is_some());
+                            if done || std::time::Instant::now() >= until {
+                                break;
+                            }
+                            std::thread::sleep(std::time::Duration::from_millis(10));
+                        }
+                    }
+                }
+                reply
+            }
+        } else {
+            wallet(line)
+        };
+        previous =
+            serde_json::from_str(reply.split(" (a new phrase of ").next().unwrap_or(&reply)).unwrap_or(Value::Null);
+        printed.push(reply);
+    }
+    printed
+}
+
 /// A public method's request. One that names keys (`keys`) is refused: the network session's keys serve only the
 /// session's own calls (`wallet`, from its view, each with its MAC; review round 2, MF1).
 fn parse(request: &str) -> Result<Value, String> {

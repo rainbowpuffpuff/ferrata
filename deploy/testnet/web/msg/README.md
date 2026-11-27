@@ -11,7 +11,7 @@
 | harness tests (LEZ state machine + fee settlement) | [`lez/harness/tests/messages_v2.rs`](../../../../lez/harness/tests/messages_v2.rs), [`messages_findings.rs`](../../../../lez/harness/tests/messages_findings.rs), [`messages.rs`](../../../../lez/harness/tests/messages.rs) (v1); records in [`lez/results/`](../../../../lez/results/messages-v2.md) (`messages-v2.md`, `messages-findings.md`, `messages.md`) |
 | JS library (browser and node) | [`ferrata-msg.js`](ferrata-msg.js) (keys, envelopes, borsh, PDAs, preflight), [`client.js`](client.js) (RPC, signing, outcomes; uses `../wallet/lez.js`) |
 | CLI | [`ferrata-msg.mjs`](ferrata-msg.mjs) |
-| tests | `node --test deploy/testnet/web/msg/test/*.test.mjs` (library; an independent implementation against OpenSSL's ML-KEM values), `cargo test -p ferrata-lez-msg-v2-wire -p ferrata-lez-msg-wire` (logic, vectors), [`test/box.sh`](test/box.sh) (LEZ rc3's own sequencer, end to end; record [`test/results/local-2/`](test/results/local-2/record.txt)) |
+| tests | `node --test deploy/testnet/web/msg/test/*.test.mjs` (library; the CLI process offline against loopback RPC stand-ins; an independent implementation against OpenSSL's ML-KEM values), `cargo test -p ferrata-lez-msg-v2-wire -p ferrata-lez-msg-wire` (logic, vectors), [`test/box.sh`](test/box.sh) (LEZ rc3's own sequencer, end to end; record [`test/results/local-2/`](test/results/local-2/record.txt)) |
 
 ## CLI
 

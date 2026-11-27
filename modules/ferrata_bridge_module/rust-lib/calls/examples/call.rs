@@ -5,7 +5,8 @@
 //! it: a line may name a `client` (a view of its own, `as` a caller: by default `module:ferrata_bridge_ui`), whose
 //! `open_network` seals `params.phrase` to the module's one-time key (no phrase: a new one, its words not printed) and
 //! whose later calls carry their counter and MAC; a line with `"raw": true` is sent as it is, `as` its caller (another
-//! module, or the view without the session's key).
+//! module, or the view without the session's key). After a claim or burn, `"pending_id": "$previous"` names its
+//! approval; after `confirm`, `"id": "$previous"` names its job. `"wait": true` on `confirm` waits for that job.
 
 fn main() {
     let mut args = std::env::args().skip(1);
@@ -30,41 +31,8 @@ fn main() {
         "registry" => ferrata_bridge_calls::registry(&request),
         "admin" => ferrata_bridge_calls::admin(&request),
         "wallet" => {
-            let mut clients: std::collections::HashMap<String, ferrata_bridge_calls::ViewClient> = std::collections::HashMap::new();
-            for line in request.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with('#')) {
-                let v: serde_json::Value = match serde_json::from_str(line) {
-                    Ok(v) => v,
-                    Err(_) => {
-                        println!("{}", ferrata_bridge_calls::wallet(line));
-                        continue;
-                    }
-                };
-                let caller = v["as"].as_str().unwrap_or("module:ferrata_bridge_ui").to_string();
-                let method = v["method"].as_str().unwrap_or("");
-                if v["raw"] == true {
-                    let body = serde_json::json!({ "method": method, "params": v["params"] }).to_string();
-                    println!("{}", ferrata_bridge_calls::wallet_as(&caller, &body));
-                    continue;
-                }
-                let Some(name) = v["client"].as_str() else {
-                    println!("{}", ferrata_bridge_calls::wallet(line));
-                    continue;
-                };
-                let client = clients.entry(name.to_string()).or_insert_with(|| ferrata_bridge_calls::ViewClient::new(&caller));
-                if method == "open_network" {
-                    let mut params = v["params"].clone();
-                    let phrase = params.get("phrase").and_then(|p| p.as_str()).map(|p| zeroize::Zeroizing::new(p.to_string()));
-                    if let Some(o) = params.as_object_mut() {
-                        o.remove("phrase");
-                    }
-                    let (reply, words) = client.open(&params, phrase.as_deref().map(|p| p.as_str()));
-                    match words {
-                        Some(w) => println!("{} (a new phrase of {} words, opened by the client, not printed)", reply, w.split(' ').count()),
-                        None => println!("{reply}"),
-                    }
-                } else {
-                    println!("{}", client.call(method, &v["params"]));
-                }
+            for reply in ferrata_bridge_calls::wallet_calls(&request) {
+                println!("{reply}");
             }
             return;
         }
