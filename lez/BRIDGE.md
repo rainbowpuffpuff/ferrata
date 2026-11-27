@@ -16,7 +16,7 @@ settlement by the harness (`harness/src/bridge.rs`, `harness/tests/bridge_*.rs`)
 | configuration | §1 `configId`; B5 reciprocal pairing | `Init` writes a write-once `config(cid)` after attesting the vault's slot 2 = `cid`; the roles and cap defaults are in `cid` (§5) |
 | root import | B1, D13 inbound | `ImportRoot` attests slots 0 and 1 under one record in its own transaction, writes a write-once `root(cid, n)`; refused after `Sunset` |
 | registry | F.8, F.10, §B4 | `Register` attests a token's entry hash and fee schedules 0 and 1 from the vault's storage and writes a write-once `token(cid, token)`: at most eight denominations, each an exact multiple of a power-of-ten LEZ unit (§5) |
-| fees | F.13, D13, §B4 | the vault credits the mint fee on Ethereum at deposit; a claim mints only the denomination to the user and the fixed relay fee to the relayer it names (none: the fee recipient); `ImportFees` still imports the mirrored schedules; 1% ceiling and seven-day notice re-checked (§5); no claim field names one |
+| fees | F.13, D13, ADR 0048, §B4 | the vault escrows each deposit's whole payment and each release's burn fee and counts both protocol fees in `lezFees(token)`; anyone's `CollectFees` attests that total and mints its uncollected part through the mint gates to the configuration's fee recipient (§5). A claim mints only the denomination to the user and the fixed relay fee to the relayer it names (none: the fee recipient); `ImportFees` still imports the mirrored schedules; 1% ceiling and seven-day notice re-checked (§5); no claim field names one |
 | caps | F.11, §B4 | token buckets per token and global, for mints and for burns, in the vault's value units, on attested Ethereum time (§6); an immutable floor (§5) |
 | freezes and roles | F.14, §B4 | the freeze authority freezes mints or burns, per token or globally, for at most 30 days of attested Ethereum time; the admin sets caps (never below the floor) and cannot unfreeze (§5, §6) |
 | retirement | SPEC-v2 §4.5, §B5, D13 | `Sunset` by the freeze authority, or by anyone once the vault is attested retired (`AttestRetired`, D13's keyless retirement) or a multisig authority approved it; one-way: no `ImportRoot` after it; claims, burns and transfers go on; the checkpoint collects it (§5) |
@@ -56,8 +56,9 @@ header account is `bridgeHeader`). PDAs are public PDAs of `B`; seeds are
 
 | actor | address | state (write-once unless said) | written by |
 |---|---|---|---|
-| `config(cid)` | PDA `config ‖ cid` | `Config { config }`; mutable: the global gate (freezes, mint and burn buckets, the attested clock, §6), `sunset` (one-way), the live roles (`Roles`: freeze authority, watchers, a pending proposal, the vault attested retired, a multisig's `Sunset` approval); transiently a pending attestation or record read inside one transaction | `Init`; attestation and record replies; `Admit`; `Freeze`, `SetCap`, `Tick`, `Sunset`, `Pause`, `ProposeRoles`, `ApplyRoles`, `CancelRoles`, `Cosigned`, `AttestRetired` |
-| `token(cid, token)` | PDA `token ‖ cid ‖ token` | `Token { entry, schedules, known_until, roles, attestation program and instance, gate }`; mutable: schedules (appended), `known_until` (grows), the gate; transiently a pending record read | `WriteToken` and `ExtendFees` from `config(cid)` only; `Issue`, `Burn`, `Freeze`, `SetCap`, `Tick`; record replies |
+| `config(cid)` | PDA `config ‖ cid` | `Config { config }`; mutable: the global gate (freezes, mint and burn buckets, the attested clock, §6), `sunset` (one-way), the live roles (`Roles`: freeze authority, watchers, a pending proposal, the vault attested retired, a multisig's `Sunset` approval); transiently a pending attestation or record read inside one transaction | `Init`; attestation and record replies; `Admit`; `CollectFees`, `Freeze`, `SetCap`, `Tick`, `Sunset`, `Pause`, `ProposeRoles`, `ApplyRoles`, `CancelRoles`, `Cosigned`, `AttestRetired` |
+| `token(cid, token)` | PDA `token ‖ cid ‖ token` | `Token { entry, schedules, known_until, roles, attestation program and instance, gate }`; mutable: schedules (appended), `known_until` (grows), the gate; transiently a pending record read | `WriteToken` and `ExtendFees` from `config(cid)` only; `Issue`, `MintFees`, `Burn`, `Freeze`, `SetCap`, `Tick`; record replies |
+| `fees(cid, token)` | PDA `fees ‖ cid ‖ token` | `FeesState { config_id, token, collected }`; mutable: the 256-bit count of protocol fees already minted | `AccrueFees` from `config(cid)` only |
 | `root(cid, n)` | PDA `root ‖ cid ‖ n` | `Root { cid, chain, vault, n, root, record_slot, block_number }` | `WriteRoot` from `config(cid)` only |
 | `nullifier(cid, chain, vault, N)` | PDA `nullifier ‖ cid ‖ chain:u256 ‖ vault ‖ N` (since B1; without `cid` before) | `Spent { cid, token, n, amount }` | `Spend` from `token(cid, token)` only |
 | `holder(cid, account)` | PDA `holder ‖ cid ‖ account` (since B1; `holder ‖ account` before, one list for every configuration) | `Holder { holdings: [(cid, token, amount)] }` (mutable): public balances, of `cid`'s tokens only | `Mint` from `nullifier(cid, …)` (naming `account`); `Credit` from `token(cid, token)`; `Burn` and `Transfer` forwarded by the account's own actor |
@@ -104,9 +105,12 @@ bytes on chain.
 | 25 | `Cosigned { cid, signers, action }` | each signer's own actor in turn; then `config(cid)` (then the token of a token freeze) | top-level at the first signer's actor; every signer signs the transaction | `action`: `Freeze` (as 17) or `Sunset` (an approval: anyone then sends 2 at `config(cid)`); at least the threshold of distinct members |
 | 26 | `Transfer { cid, token, amount, to }` | the holder's own actor; then (if its own state lacks the amount) `holder(cid, account)`; then `token(cid, token)` | a call the holder authorised (top-level, private root, or nested) | debits the amount; the token checks a multiple of its LEZ unit; then `Credit` |
 | 27 | `Credit { cid, token, amount, to }` | `holder(cid, to)` only | `token(cid, token)` only | credits the amount |
-| 28 | `SetDepth { cid, slots }` (B1, RFP-022 F.12) | the admin's actor; then `config(cid)` | top-level, signed by it | the inbound finality depth in beacon slots beyond finality, at most 216,000 (240 above); from then on `ImportRoot` under the record at slot `s` waits (242) until the configuration's clock has read a record at `s + slots` or later; roots already imported stay |
+| 28 | `SetDepth { cid, slots }` (B1, RFP-022 F.12) | the admin's actor; then `config(cid)` | top-level, signed by it | the inbound finality depth in beacon slots beyond finality, at most 216,000 (240 above); from then on `ImportRoot` and `CollectFees` under the record at slot `s` wait (242) until the configuration's clock has read a record at `s + slots` or later; roots already imported stay |
 | 29 | `AttestListing { cid, token, record_slot, proof }` (B1, F.10) | `config(cid)` | anyone | `Attest` of the vault's listing slot `sha256("ferrata/vault/listing/v1" ‖ token)` (1 delisted, 0 listed; another value 247); on the reply, `SetListing` |
 | 30 | `SetListing { cid, token, delisted, record_slot }` (B1) | `token(cid, token)` | `config(cid)` only | records the listing and its record slot, only from a newer record (247 otherwise); claims, burns and transfers are unaffected |
+| 31 | `CollectFees { cid, token, record_slot, limit, proof }` (ADR 0048) | `config(cid)` | anyone | `Attest` of `lezFees(token)` at `sha256("ferrata/vault/lezfees/v1" ‖ token)` under a record no fresher than the inbound depth allows; on the reply, `AccrueFees` |
+| 32 | `AccrueFees { cid, token, total, limit }` | `fees(cid, token)` | `config(cid)` only | refuses a total below `collected` (247) or nothing due (244); advances the count by at most `limit`, then `MintFees` |
+| 33 | `MintFees { cid, token, amount }` | `token(cid, token)` | `fees(cid, token)` only | checks the LEZ unit, the token's mint freeze and bucket and the configuration's `Admit`, then `Credit` to `Controls::fee_recipient` |
 
 Every handler checks that its receiver is the actor the message names. Replies are accepted only
 from the actor the receiver is waiting for (the consumer's rule, `guests/consumer`).
@@ -127,9 +131,9 @@ relay fee. It reads no fee schedule. The plaintext path requires
   (`N`, `cid`, the token, the amount, `n`, the relayer, the time; `mint_to` only for a public
   destination), then `Spend` and the public relay-fee mint, the fee alias and reserve. Not the leaf
   index, depositor, `s`, `C`, the leaf, the path, a private `dest`, or a schedule range. The mint fee
-  was credited on Ethereum at deposit and no minted amount varies by schedule, so the fee change does
-  not split a private claim's anonymity set. The test dumps the transaction and searches its bytes
-  for each private input.
+  stays in the vault's escrow and `CollectFees` mints protocol fees in a total over many deposits and releases;
+  no amount a claim mints varies by schedule, so a fee change does not split a private claim's anonymity set.
+  The test dumps the transaction and searches its bytes for each private input.
 - private `Burn`: the boundary `Burn` to `token(cid, token)` (the note), from an alias.
 - `Sunset`, `Freeze`, `SetCap`: the whole message and the role's account (they are public acts).
 
@@ -225,7 +229,9 @@ roots, burn notes, every encoding the checkpoint reads and every refusal stay as
 - fee schedule `j` of `token`: slot `sha256("ferrata/vault/fees/v1" ‖ token ‖ j:u64)` holds
   `sha256("ferrata/fees/v1" ‖ token ‖ j:u64 ‖ fromLeaf:u64 ‖ announcedAt:u64 ‖ effectiveAt:u64 ‖
   k:u8 ‖ mintFees[k] ‖ burnFees[k] ‖ checkpointFees[k])`, written when it takes effect (`fromLeaf`
-  = the vault's `nextLeafIndex` then); schedule 0 at registration.
+  = the vault's `nextLeafIndex` then); schedule 0 at registration;
+- `lezFees(token)`: slot `sha256("ferrata/vault/lezfees/v1" ‖ token)` holds the cumulative, only-growing 256-bit total
+  of mint and burn fees escrowed for LEZ, as a raw word (`FerrataRegistry.accrueLezFees`).
 
 **Registry.** `Register` checks the bounds before it asks anything: 1 to 8 denominations, strictly
 increasing, each an exact multiple of a power-of-ten `lezUnit` (at most `10^decimals`), relay fees
@@ -234,26 +240,34 @@ at most 1% and multiples of `lezUnit`, a non-zero `unitWeight`, schedule 0 witho
 schedules 0 and 1, the leaf count. Delisting has no LEZ effect (the spec stops deposits on the
 vault; claims and releases go on).
 
-**Fees.** The vault credits the mint fee to the fee recipient when it takes the deposit, so its
-escrow per deposit is the denomination plus the fixed relay fee. On LEZ, `TokenState::relay_fee_for`
-looks up only the registered denomination and its write-once relay fee, refusing another amount. A
-claim mints exactly the denomination to the user and that relay fee to the relayer it names (none
-named: the fee recipient), and nothing to the fee recipient for the mint fee. Neither `Claim`,
-`ClaimPrivately` nor the public `Issue` boundary carries a schedule range, so fee changes do not split
-claims by deposit time.
+**Fees.** `vault/src/FerrataVault.sol` escrows each deposit's denomination + mint fee + fixed relay fee and adds the
+mint fee to `lezFees(token)`. Each release's burn fee likewise stays in escrow and is added to `lezFees`; only its
+checkpoint fee is credited on Ethereum. The immutable Ethereum `feeRecipient` receives nothing. On LEZ,
+`TokenState::relay_fee_for` looks up only the registered denomination and its write-once relay fee, refusing another
+amount. A claim mints exactly the denomination to the user and that relay fee to the relayer it names (none named:
+the fee recipient), and no protocol fee. Neither `Claim`, `ClaimPrivately` nor the public `Issue` boundary carries a
+schedule range, so fee changes do not split claims by deposit time. A burn debits exactly one denomination.
+
+**Fee collection (ADR 0048).** Anyone sends `CollectFees` at `config(cid)`. Its `collect_fees` handler attests
+`lezFees(token)` under a light-client record that satisfies the admin's inbound depth. `AccrueFees` writes
+`fees(cid, token)` and takes the attested 256-bit total less its `collected` count, at most `limit` (a total below the
+count or nothing due is refused). `MintFees` checks that the amount is a whole number of LEZ units, applies the token's
+and configuration's mint freezes and buckets, and credits the wrapped tokens to `Controls::fee_recipient`. A collection
+names no deposit, claim, burn or leaf. This is covered by `harness/tests/bridge_f13.rs`, including repeated and older
+records, limits, both gates and the depth; `bridge-wire`'s unit tests carry totals above 2^128.
 
 The token still mirrors fee schedules and `known_until`: every leaf below the latter falls under a
 known schedule. Registration sets it to the attested count if schedule 1 does not exist yet.
 `ImportFees(j, schedule)` appends schedule `j` (in order, starting at or after `known_until` and the
-previous one, bounds: each fee ≤ 1% of its denomination, mint fees multiples of `lezUnit`,
+previous one, bounds: each fee ≤ 1% of its denomination, mint and burn fees multiples of `lezUnit`,
 `effectiveAt ≥ announcedAt + 7 days`) and sets `known_until` to its `fromLeaf`;
 `ImportFees(j, None)` attests that schedule `j` does not exist at a count, and raises `known_until`
 to it. Claims do not read this mirror. Outbound fees (burn, relay, checkpoint) are deducted from the
 release on Ethereum (D13); the LEZ burn debits one denomination.
 
 **Caps.** A gate per token and one per configuration: a mint and a burn token bucket each, in the
-vault's value units (`amount / lezUnit × unitWeight`), counting what a claim mints (denomination
-and fees) and what a burn destroys, at the actor's attested clock (§6). The admin's `SetCap`
+vault's value units (`amount / lezUnit × unitWeight`), counting every claim mint (denomination and relay fee), every
+fee-collection mint and every burn, at the actor's attested clock (§6). The admin's `SetCap`
 refills under the old parameters at that clock, then sets the new ones, never below the
 configuration's immutable floor; raising a capacity does not refill. A refused claim reverts the
 whole transaction, so the deposit stays claimable.

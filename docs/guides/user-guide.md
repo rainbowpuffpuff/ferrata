@@ -160,7 +160,7 @@ Three ways, the first preselected:
 |---|---|---|---|---|
 | **Private claim to a private account** (default) | `ClaimPrivately` runs as your destination account inside a privacy-preserving transaction; it reads `root(cid, n)` and credits its own private state | `N`, the configuration, the token, the denomination, which root was read (`n`), the relayer, the time, the bridge program, a one-time fee alias; on the test network's B1, also the fee schedule's range | which deposit (leaf, depositor, `s`, `C`, path) and your account | 553,641 execution gas, 224,063 storage gas; the prover proves 41,736 + 110,862 user cycles (in-process harness, dev mode; figures of the program before ADR 0046, whose claim is 24 bytes longer) |
 | Private claim to a public account | the same proof, from a private account of yours; the mint goes publicly to the destination | the above and the destination | which deposit | 603,981 execution gas |
-| **Plaintext claim** | the witness is transaction data; one public transaction, for users who cannot prove | **everything, including which deposit**: the client must say so before allowing it | nothing | 261,671 execution gas (1 ETH), 2,053 bytes (the program before ADR 0046; this tree's: 261,007 and 2,029) |
+| **Plaintext claim** | the witness is transaction data; one public transaction, for users who cannot prove | **everything, including which deposit**: the client must say so before allowing it | nothing | 261,671 execution gas (1 ETH), 2,053 bytes (the program before ADR 0046); 261,007 and 2,029 on ADR 0046's program, whose claim layout this tree retains (ADR 0048 gas not measured) |
 
 Sources: [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §1 (its last column: the merged program), §3;
 [`lez/BRIDGE.md`](../../lez/BRIDGE.md), "What each path makes public". The private claim's bytes (8,889 since ADR 0046; 8,937 before) were searched for its private inputs
@@ -347,8 +347,8 @@ choices: `deposit --kind public --i-accept-public-account`; `claim --plaintext
 
 The client shows the **anonymity set** a claim would have (`ferrata claim`'s `anonymity` line, which warns when it is
 1): the deposits of that token and denomination under the root it reads, with no split at a fee-schedule change
-because the mint fee was collected on Ethereum, less those a plaintext claim has published, applied or refused on
-chain (a refused transaction stays in its block,
+because the mint fee stays in the vault's escrow and is minted separately in a total on LEZ, less those a plaintext
+claim has published, applied or refused on chain (a refused transaction stays in its block,
 witness and all), which are public ([`cli/README.md`](../../cli/README.md), "Anonymity set";
 measured over both halves, with plaintext and with private claims:
 [`e2e/both-halves/results/randomised.md`](../../e2e/both-halves/results/randomised.md)). Timing is not counted in it.

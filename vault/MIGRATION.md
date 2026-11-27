@@ -75,8 +75,9 @@ and each is honoured:
 | b2 | burned, released already | nothing owed: it completed before the announcement | step 2 (asserted) |
 
 The escrow accounting is asserted at each step (e.g. step 7 ends with only the relay fees of the already-burned
-deposits in escrow: refunds return the leaf's whole escrow, denomination + relay fee; releases pay the bare
-denomination. Any deposit mint fees were credited to the fee recipient at deposit and are not refunded).
+deposits in escrow: refunds return the leaf's escrow, denomination + relay fee; releases pay the bare denomination in
+that zero-protocol-fee scenario. Since ADR 0048 any deposit mint fees stay escrowed and counted in `lezFees` for
+collection on LEZ and are not refunded).
 
 ## 3. The proof-system change (Soft Requirement 4)
 

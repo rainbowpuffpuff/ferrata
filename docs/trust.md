@@ -687,9 +687,10 @@ freeze reopens the forged path.
 | A recipient that can never receive | its `owed` balance stays forever | that payee's amount | pull payments isolate it from everyone else |
 
 Sources: [`bridge.md`](design/bridge.md) §13 ("Supply"), §15, §16, §20; [`vault/README.md`](../vault/README.md).
-**Supply (Security #6):** wrapped supply never exceeds escrow under the stated trust, because supply
-changes by exactly one denomination at each mint and burn; a breach creates a shortfall of at most the
-caps before a freeze ([`bridge.md`](design/bridge.md) §13).
+**Supply (Security #6):** per token, wrapped supply = escrow − unminted deposits (denomination + relay fee each) −
+unreleased burns − (`lezFees` − collected). Claims mint denomination + relay fee, burns take one denomination, and
+`CollectFees` mints only the uncollected delta, so supply never exceeds escrow under the stated trust; a breach creates
+a shortfall of at most the caps before a freeze ([`bridge.md`](design/bridge.md) §13).
 
 ## 7. Who sends each transition, and why
 
