@@ -151,20 +151,109 @@ STATUS_NUMBER = {
                                   "each public choice needs no acknowledgement"),
 }
 
-# The adversarial review's own reproductions (REVIEW-cli.md), one per finding in the record checks: each altered
-# record escaped its check before the fix, and each must be what fails it now.  Same shape as the tables above.
+# The full dev claim-to-burn game, used for coherent JSON+Markdown tampers of its raw partition.
+LEZ_CLAIM_TO_BURN = """  "on LEZ: claim to burn (informational)": {
+   "success": 0.047500000000000014,
+   "chance": 0.05,
+   "exactly_identified": 0,
+   "candidate_set_sizes": [
+    [
+     1,
+     1
+    ],
+    [
+     20,
+     19
+    ]
+   ],
+   "max_score": 2.995732273553991,
+   "without_derived_identifiers": 0.047500000000000014,
+   "with_order_state": 0.047500000000000014
+  }"""
+LEZ_DUPLICATE_BINS = LEZ_CLAIM_TO_BURN.replace("""    [
+     1,
+     1
+    ],
+    [
+     20,
+     19
+    ]""", """    [
+     1,
+     5
+    ],
+    [
+     1,
+     2
+    ],
+    [
+     20,
+     18
+    ]""").replace("0.047500000000000014", "0.045")
+LEZ_NEGATIVE_COUNT = LEZ_CLAIM_TO_BURN.replace("""    [
+     1,
+     1
+    ],
+    [
+     20,
+     19
+    ]""", """    [
+     1,
+     -1
+    ],
+    [
+     1,
+     1
+    ],
+    [
+     20,
+     19
+    ]""")
+LEZ_SUMMARY_ROW = ("| on LEZ: claim to burn (informational) | 4.8% | 0 of 20 | 1: 1, 20: 19 | "
+                   "4.8% | 4.8% | 5.0% |")
+FREEZE_ANCHORS = (
+    "FREEZE (vault, deposit): error: refused: vault error DepositsAreFrozen()",
+    "FREEZE (vault, deposit): error: refused: vault error TokenDepositsAreFrozen()",
+    "FREEZE (LEZ, claim, mints of this token):",
+    "FREEZE (LEZ, claim, mints of the whole configuration):",
+    "FREEZE (LEZ, burn, burns of this token):",
+    "FREEZE (LEZ, burn, burns of the whole configuration):",
+    "FREEZE (vault, release): refused: vault error ReleasesAreFrozen()",
+    "FREEZE (vault, release): refused: vault error TokenReleasesAreFrozen()",
+    "FREEZE (LEZ, private claim):",
+)
+
+# The adversarial reviews' own reproductions (REVIEW-cli-round1.md and REVIEW-clifix.md): each altered record
+# escaped its check before the fix, and each must be what fails it now. A case is one (path, old, new) edit, or a
+# tuple of such edits when the JSON and its rendered Markdown must be tampered coherently.
 REVIEW_REPRODUCTIONS = {
     # 1: the informational adversary row rewritten with other games' values (100%, 20 of 20, singleton sets).
     "bridge-privacy": ((f"{PRIVACY}/real/generated/summary.md",
                         "| round trip: deposit to release (informational) | 5.0% | 0 of 20 | 20: 20 | 5.0% | 5.0% | 5.0% |",
-                        "| round trip: deposit to release (informational) | 100.0% | 20 of 20 | 1: 20 | 100.0% | 100.0% | 100.0% |"),),
+                        "| round trip: deposit to release (informational) | 100.0% | 20 of 20 | 1: 20 | 100.0% | 100.0% | 100.0% |"),
+                       # M1: duplicate size-1 bins hide five extra records by collapsing to {1: 2, 20: 18}.
+                       ((f"{PRIVACY}/generated/results.json", LEZ_CLAIM_TO_BURN, LEZ_DUPLICATE_BINS),
+                        (f"{PRIVACY}/generated/summary.md", LEZ_SUMMARY_ROW,
+                         "| on LEZ: claim to burn (informational) | 4.5% | 0 of 20 | 1: 5, 1: 2, 20: 18 | "
+                         "4.5% | 4.5% | 5.0% |")),
+                       # M1: a negative count is offset by a duplicate singleton bin; the collapsed bins still say 20.
+                       ((f"{PRIVACY}/generated/results.json", LEZ_CLAIM_TO_BURN, LEZ_NEGATIVE_COUNT),
+                        (f"{PRIVACY}/generated/summary.md", LEZ_SUMMARY_ROW,
+                         "| on LEZ: claim to burn (informational) | 4.8% | 0 of 20 | 1: -1, 1: 1, 20: 19 | "
+                         "4.8% | 4.8% | 5.0% |"))),
     # 2: Q0 loses both of its expected failures (25 passed, 2 failed -> 27 passed, 0 failed).
     "bridge-u8-refusals": (("e2e/runs/cli-u8/README.md", "25 passed, 2 failed: exactly those",
                             "27 passed, 0 failed: none"),
+                           # M2: two entries name the same test, so two failures are not two distinct named tests.
+                           ("e2e/runs/cli-u8/README.md", "| `test_09`, `test_12` | 25 passed, 2 failed: exactly those |",
+                            "| `test_09`, `test_09` | 25 passed, 2 failed: exactly those |"),
                            # 3: the required private-path freeze row renamed to an unclassified case.
                            ("e2e/runs/cli-freezes/README.md",
                             "| bridge mints, whole configuration | `claim` (private path, before its proof) |",
-                            "| an unclassified freeze case | `claim` (private path, before its proof) |")),
+                            "| an unclassified freeze case | `claim` (private path, before its proof) |"),
+                           # M4: every row's own raw-log marker, not just its Markdown label or shared error code.
+                           # Only the marker is renamed; the code/refusal and the other eight rows stay untouched.
+                           *(("e2e/runs/cli-freezes/test.log", anchor, anchor.replace("FREEZE", "RENAMED FREEZE", 1))
+                             for anchor in FREEZE_ANCHORS)),
     # 6: the root row's actor state (117) changed without its borsh Account (173), so 999 + 56 != 173.
     "bridge-state-projections": (("lez/results/perf-state.md",
                                   "| (an `ImportRoot` of `with_roots`) | root(cid, 8) | 117 | 173 | — | — |",
@@ -281,11 +370,15 @@ class BridgeVerifyTamperTests(unittest.TestCase):
                 self._assert_fails(cid, lambda root, row=row, old=old, new=new: _status_tamper(root, row, old, new))
 
     def test_05_review_reproductions_fail(self):
-        """Each altered record the adversarial review escaped with (REVIEW-cli.md) is refused by the fixed check."""
+        """Each altered record escaped with in REVIEW-cli-round1.md or REVIEW-clifix.md is now refused."""
         for cid, tampers in REVIEW_REPRODUCTIONS.items():
-            for i, (rel, old, new) in enumerate(tampers):
+            for i, case in enumerate(tampers):
+                edits = case if isinstance(case[0], tuple) else (case,)
                 with self.subTest(check=cid, tamper=i):
-                    self._assert_fails(cid, lambda root, rel=rel, old=old, new=new: _replace(root / rel, old, new))
+                    def mutate(root, edits=edits):
+                        for rel, old, new in edits:
+                            _replace(root / rel, old, new)
+                    self._assert_fails(cid, mutate)
 
     def test_06_r12_prints_the_guides_own_method_count(self):
         """The R.12 check's result line states the method count the user guide itself states, not a number

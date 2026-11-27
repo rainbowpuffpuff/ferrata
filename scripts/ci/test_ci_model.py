@@ -551,8 +551,8 @@ check("justfile: every recipe line runs under bash with errexit and pipefail (th
 
 # What a recipe line and a CI step's command line each run with, beyond the text: the directory, the
 # environment set for it, and the shell options. GitHub's runner provides GITHUB_WORKSPACE and RUNNER_TEMP to
-# every step (no workflow sets them; the justfile exports RUNNER_TEMP as its local stand-in), so those two are
-# neither side's own doing and are left out of the comparison.
+# every step, and the justfile exports RUNNER_TEMP as its local stand-in. Ignore only those implicit defaults:
+# an explicit workflow/job/step override belongs to that job and must be compared like any other environment.
 RUNNER_PROVIDES = {"GITHUB_WORKSPACE", "RUNNER_TEMP"}
 
 
@@ -561,7 +561,8 @@ def job_entries(job):
     step's directory, environment and shell options, as ci_model.run_steps reads them from the workflow."""
     out = []
     for step in ci_model.run_steps(job):
-        env = {k: v for k, v in step["env"].items() if k not in RUNNER_PROVIDES}
+        explicit = set(job.env) | set(job.steps[step["step"] - 1].get("env") or {})
+        env = {k: v for k, v in step["env"].items() if k not in RUNNER_PROVIDES or k in explicit}
         for line in step["text"].splitlines():
             if line.strip():
                 out.append({"text": line.strip(), "cwd": step["cwd"], "env": dict(env),
@@ -666,6 +667,14 @@ other_env = recipe_drift(job_of(DRIFT_WORKFLOW.replace(
     "      - run: make check", "      - run: make check\n        env:\n          FOO: bar")), recipe_of("make check"))
 check("recipes: a step's environment the recipe does not set is drift",
       len(other_env) == 1 and "the job's environment" in other_env[0] and "'FOO': 'bar'" in other_env[0])
+for reserved_name, reserved_value in (("RUNNER_TEMP", "/chosen/runner-temp"),
+                                      ("GITHUB_WORKSPACE", "/chosen/workspace")):
+    reserved_env = recipe_drift(job_of(DRIFT_WORKFLOW.replace(
+        "      - run: make check",
+        f"      - run: make check\n        env:\n          {reserved_name}: {reserved_value}")), recipe_of("make check"))
+    check(f"recipes: an explicit step {reserved_name} override the recipe does not set is drift",
+          len(reserved_env) == 1 and "the job's environment" in reserved_env[0]
+          and f"'{reserved_name}': '{reserved_value}'" in reserved_env[0])
 pipeline = recipe_drift(job_of(DRIFT_WORKFLOW.replace(
     "    defaults:\n      run:\n        shell: bash\n", "").replace("make check", "false | true")),
     recipe_of("false | true"))

@@ -165,15 +165,18 @@ def _check_privacy_run(ctx, problems: list, base: str, real: bool) -> dict:
         _expect(problems, lez["candidate_set_sizes"] == [[1, 20]] and lez["exactly_identified"] == 1
                 and lez["success"] == 0.05, f"{label}: claim-to-burn singleton success changed")
     else:
-        # The record's own partition: the burns in a candidate set of all 20 (each guessed at 1/20) and the others in
-        # singleton sets, none of them right (exactly_identified 0), so the rate is (burns in full sets)/20 x 1/20:
-        # 18 of 20, 4.5%, before ADR 0046; 19 of 20, 4.8% (displayed), since (the sets move with the build's ids).
-        sizes = {size: count for size, count in lez["candidate_set_sizes"]}
-        full = sizes.get(20, 0)
+        # The record's own raw partition: allowed, unique size bins with nonnegative counts covering exactly 20.
+        # The burns in a candidate set of all 20 (each guessed at 1/20) and the others in singleton sets, none right
+        # (exactly_identified 0), give (burns in full sets)/20 x 1/20: 18 full, 4.5%, before ADR 0046; 19 full, 4.8%.
+        pairs = lez["candidate_set_sizes"]
+        full = sum(count for size, count in pairs if size == 20)
         derived = full / 20 * (1 / 20)
-        _expect(problems, set(sizes) <= {1, 20} and full + sizes.get(1, 0) == 20 and lez["exactly_identified"] == 0
-                and abs(lez["success"] - derived) < 1e-15,
-                f"{label}: the claim-to-burn rate {lez['success']} is not {full}/20 x 1/20 from its candidate sets")
+        _expect(problems, all(size in {1, 20} for size, _ in pairs)
+                and len({size for size, _ in pairs}) == len(pairs)
+                and all(count >= 0 for _, count in pairs) and sum(count for _, count in pairs) == 20
+                and lez["exactly_identified"] == 0 and abs(lez["success"] - derived) < 1e-15,
+                f"{label}: the claim-to-burn rate {lez['success']} is not {full}/20 x 1/20 from a valid "
+                f"20-record candidate-set partition")
     # The adversary table row by row: each game's own six cells against its own JSON object, not a search of the
     # whole document (another game's cells would satisfy that).
     adversary_rows = _table(summary, "game")
@@ -823,8 +826,9 @@ def bridge_u8(ctx):
         else:
             named = _expected_failures(must_break)
             _expect(problems, failed > 0, f"U.8: mutant {mid} broke nothing ({result!r})")
-            _expect(problems, len(named) == failed,
-                    f"U.8: mutant {mid}: {must_break!r} names {len(named)} tests, {failed} failed")
+            _expect(problems, len(named) == len(set(named)) == failed,
+                    f"U.8: mutant {mid}: {must_break!r} names {len(set(named))} distinct tests in "
+                    f"{len(named)} entries, {failed} failed")
             _expect(problems, all(_named_test(n) for n in named),
                     f"U.8: mutant {mid}: {must_break!r} names tests the 27-case run does not have: {named}")
     _phrases(problems, u8, "U.8 README", "31 named forms fail", "names_nothing_catches_every_form", "every U.08 refusal of the sequence",
