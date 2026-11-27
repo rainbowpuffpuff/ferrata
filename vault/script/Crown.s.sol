@@ -37,14 +37,18 @@ contract Crown is Script {
         return string.concat(".", list, "[", vm.toString(i), "].", field);
     }
 
-    /// @notice What deposit j pays: the denomination plus the mint and relay fees of schedule 0 (the vault escrows the
-    ///         denomination and the relay fee and credits the mint fee to the fee recipient: ADR 0046). An absent token
-    ///         is native ETH, as in every crown.json written before ERC-20 selection was added.
+    /// @notice What deposit j pays: the denomination plus the mint and relay fees of the schedule the deposit will be
+    ///         priced under, the one in force or an announced one that is due (the vault puts it in force at the
+    ///         deposit: `_feesInForce`), so a run may deposit after a fee change. The vault escrows the denomination
+    ///         and the relay fee and credits the mint fee to the fee recipient (ADR 0046). An absent token is native
+    ///         ETH, as in every crown.json written before ERC-20 selection was added.
     function depositValue(uint256 j) public view returns (uint8 denom, uint256 total) {
         address token = _depositToken(j);
         denom = uint8(vm.parseJsonUint(json, _at("deposits", j, "denomIndex")));
         (,,,, uint256[] memory denoms) = vault.tokenConfig(token);
-        (uint256 mintFee, uint256 relayFee,,) = vault.fees(token, 0, denom);
+        (uint64 current, uint64 pendingAt) = vault.feeState(token);
+        uint256 schedule = pendingAt != 0 && block.timestamp >= pendingAt ? uint256(current) + 1 : current;
+        (uint256 mintFee, uint256 relayFee,,) = vault.fees(token, schedule, denom);
         total = denoms[denom] + mintFee + relayFee;
     }
 
