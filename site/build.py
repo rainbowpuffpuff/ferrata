@@ -866,7 +866,7 @@ def render_index(site, model):
                  f'<a href="{h(t["explorer"])}">Explorer</a> · <a href="{h(t["wallet"])}">Wallet</a> · '
                  f'<a href="{h(t["agents"])}">For agents</a> (<a href="{h(t["agents_md"])}">AGENTS.md</a>) · '
                  f'<a href="{h(t["status"])}">Status page</a></p>'
-                 '<p class="small">A LEZ network we run for the bid, not LEZ testnet 0.4 (not released).</p></article>')
+                 '<p class="small">A LEZ network we run for the bid, not LEZ testnet 0.4 (none is announced).</p></article>')
     parts.append('<article class="card" id="live-facts" aria-labelledby="h-facts"><h3 id="h-facts">Latest attested Ethereum facts</h3>'
                  '<div data-live="facts"><p class="small">Read from the test network’s status when it lists them.</p></div></article>')
     parts.append("</div></section>")

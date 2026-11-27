@@ -19,7 +19,7 @@ the evidence for our proposal to Logos, [logos-co/rfp #257](https://github.com/l
 3. **Try it on our test network:** [the testers' page](https://54-156-116-24.sslip.io/testers/): the faucet, the web
    wallet, a deposit on Sepolia and its claim on LEZ, step by step, with what each step should show; also a private
    claim from the command line, whose step says what still stops it. It is a LEZ v0.4.0-rc3 network we run for the
-   bid, not Logos's LEZ testnet 0.4 (not released); its tokens have no value.
+   bid, not Logos's LEZ testnet 0.4 (none is announced); its tokens have no value.
 4. **The run records:** [docs/EVIDENCE.md](docs/EVIDENCE.md): every run and test, where it ran, whether its proofs
    were real, its record and the command that re-checks it; [What has run](#what-has-run) below picks the main ones.
 
