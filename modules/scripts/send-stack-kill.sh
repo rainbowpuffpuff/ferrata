@@ -359,9 +359,10 @@ check K3-no-inflight-left none "$(inflight)"
 # K4: the endpoint down for a whole round, then up: the second checkpoint's finalizeAttested.
 warp 3601
 echo outage > "$CTL"
-o0=$(grep -c '"outage"' "$R/proxy.jsonl" 2>/dev/null || echo 0)
+outages() { local n; n=$(grep -c '"outage"' "$R/proxy.jsonl" 2>/dev/null); echo "${n:-0}"; }   # grep -c prints 0 itself
+o0=$(outages)
 round K4a > "$R/K4.log" 2>&1
-check K4-the-outage-met-the-round yes "$( [ "$(grep -c '"outage"' "$R/proxy.jsonl" 2>/dev/null || echo 0)" -gt "$o0" ] && echo yes || echo no)"
+check K4-the-outage-met-the-round yes "$( [ "$(outages)" -gt "$o0" ] && echo yes || echo no)"
 check K4-nothing-sent-during-outage 1 "$(count finalizeAttested)"
 note "K4: during the outage: $(jq -c '[.. | objects | select(.error? != null) | .error] | .[0:2]' "$R/K4a-lines.json" 2>/dev/null)"
 echo pass > "$CTL"
