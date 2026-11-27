@@ -6,9 +6,32 @@ use std::fs::OpenOptions;
 use std::io::Write as _;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use std::sync::Mutex;
 
 use serde::Serialize;
 use serde_json::{json, Value};
+
+/// Environment variables no command the monitor runs may see: the one `--key-env` names, registered by
+/// `cli::signer` (internal review of 27 November 2026, C-4: alert and node commands inherited the watcher key).
+static HIDDEN_ENV: Mutex<Vec<String>> = Mutex::new(Vec::new());
+
+/// Keeps `var` out of every command the monitor runs from now on.
+pub fn hide_env(var: &str) {
+    let mut hidden = HIDDEN_ENV.lock().unwrap_or_else(|e| e.into_inner());
+    if !hidden.iter().any(|v| v == var) {
+        hidden.push(var.to_owned());
+    }
+}
+
+/// `sh -c command`, its environment the monitor's without the hidden variables.
+pub fn shell(command: &str) -> Command {
+    let mut c = Command::new("sh");
+    c.arg("-c").arg(command);
+    for var in HIDDEN_ENV.lock().unwrap_or_else(|e| e.into_inner()).iter() {
+        c.env_remove(var);
+    }
+    c
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -58,7 +81,7 @@ impl Alerts {
         }
         if let Some(cmd) = &self.cmd {
             if rank(level) >= rank(self.cmd_level.unwrap_or(Level::Warn)) {
-                let sent = Command::new("sh").arg("-c").arg(cmd).stdin(Stdio::piped()).spawn().and_then(|mut child| {
+                let sent = shell(cmd).stdin(Stdio::piped()).spawn().and_then(|mut child| {
                     if let Some(mut stdin) = child.stdin.take() {
                         stdin.write_all(text.as_bytes())?;
                     }
