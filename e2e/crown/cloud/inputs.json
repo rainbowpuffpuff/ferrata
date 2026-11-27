@@ -22,7 +22,7 @@
  },
  "rc3-b1": {
   "dir": "inputs-rc3-b1",
-  "lez": "LEZ v0.4.0-rc3 as rc3, with this tree's crown-driver and the bridge program since milestone B1 (docs/image-ids.md ferrata_bridge_b1; the runner refuses a bundle with another)",
+  "lez": "LEZ v0.4.0-rc3 as rc3, with this tree's crown-driver and the bridge program since ADR 0046 (docs/image-ids.md ferrata_bridge_f13; the runner refuses a bundle with another)",
   "programs": {
    "checkpoint_b": {"file": "checkpoint_b_0_3_5", "image_id": "0xafbf402314e9498f3854f02d533e2a355d4692ca2b64b913bcb0232200c63bcf"},
    "checkpoint": {"file": "checkpoint_0_3_5", "image_id": "0x259cd89ebd255d34dfbfbbc22e4922d25f5f5d1a57858871475e187e399b9b0f"},

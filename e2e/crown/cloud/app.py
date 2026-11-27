@@ -502,7 +502,7 @@ UPDATER_ENV = ("CROWN_UPDATER_MIN", "CROWN_UPDATER_RESTART_MIN", "CROWN_UPDATER_
 # The bridge program since B1 (config-keyed accounts) and ADR 0032 (one burn note per tag: 0x847a4336…; B1's first
 # build was 0xac1fb59b…); the live runs of November 2026 deployed 0xccde6171…71dd.
 FINAL_IMAGE_IDS = {"attestation": "0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df",
-                   "bridge": "0x847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515"}
+                   "bridge": "0xffb47f6eaec6ef13f49505e5e80209f73d38ea53792e77656994f8069dde7675"}
 control = modal.Dict.from_name("ferrata-crown-control", create_if_missing=True)
 
 

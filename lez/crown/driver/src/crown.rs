@@ -120,15 +120,16 @@ fn h(bytes: &[u8]) -> String {
 /// refused after the Sepolia stages had deployed a vault and sent deposits. Every command that loads `--bridge-bin`,
 /// and `config-id`, refuses another program before anything is deployed or sent (e2e/crown/README.md, "Since
 /// milestone B1"); the live runs' program needs the driver of `f13faee2`. Since 22 November 2026 (ADR 0032: a burn's
-/// tag is used once, `burn(cid, r)`) the program of this tree is `0x847a4336…`; B1's first build was `0xac1fb59b…`.
-pub const BRIDGE_IMAGE_ID: &str = "847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515";
+/// tag is used once, `burn(cid, r)`) B1's program was `0x847a4336…` (B1's first build `0xac1fb59b…`); since ADR 0046 (a claim
+/// names no fee schedule) the program of this tree is `0xffb47f6e…`, docs/image-ids.md `ferrata_bridge_f13`.
+pub const BRIDGE_IMAGE_ID: &str = "ffb47f6eaec6ef13f49505e5e80209f73d38ea53792e77656994f8069dde7675";
 
 /// Refuses a bridge program other than [`BRIDGE_IMAGE_ID`].
 pub fn check_bridge_image(image_id: [u8; 32]) -> Result<()> {
     ensure!(
         hex::encode(image_id) == BRIDGE_IMAGE_ID,
         "the bridge program 0x{} is not the one this crown-driver speaks (0x{BRIDGE_IMAGE_ID}, docs/image-ids.md \
-         `ferrata_bridge_b1`): its accounts differ; the bridge program of the live runs needs the driver of f13faee2",
+         `ferrata_bridge_f13`): its messages or accounts differ; B1's program needs the driver of 40e8d799, the live runs' that of f13faee2",
         hex::encode(image_id)
     );
     Ok(())
@@ -1523,8 +1524,8 @@ mod tests {
         assert_ne!(c.token_cap.capacity, UNLIMITED);
     }
 
-    /// The bridge program this driver speaks is docs/image-ids.md's `ferrata_bridge_b1`; the live runs' program, and
-    /// any other, is refused.
+    /// The bridge program this driver speaks is docs/image-ids.md's `ferrata_bridge_f13`; B1's, the live runs' program,
+    /// and any other, are refused.
     #[test]
     fn the_driver_speaks_the_bridge_program_since_b1_only() {
         let doc = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../docs/image-ids.md")).unwrap();
@@ -1535,13 +1536,15 @@ mod tests {
             hex::decode_to_slice(&rows[0].split(" | `0x").nth(1).unwrap()[..64], &mut id).unwrap();
             id
         };
+        let tree = id_of("ferrata_bridge_f13");
+        assert_eq!(hex::encode(tree), BRIDGE_IMAGE_ID);
+        assert!(check_bridge_image(tree).is_ok());
         let b1 = id_of("ferrata_bridge_b1");
-        assert_eq!(hex::encode(b1), BRIDGE_IMAGE_ID);
-        assert!(check_bridge_image(b1).is_ok());
+        assert!(check_bridge_image(b1).is_err(), "B1's bridge program (a claim names a range) is refused");
         let live = id_of("ferrata_bridge");
-        assert_ne!(live, b1);
+        assert_ne!(live, tree);
         assert!(check_bridge_image(live).is_err(), "the live runs' bridge program is refused");
-        let mut other = b1;
+        let mut other = tree;
         other[31] ^= 1;
         assert!(check_bridge_image(other).is_err());
     }

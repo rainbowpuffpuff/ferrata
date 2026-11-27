@@ -49,10 +49,10 @@ METHODS = {"CHECKPOINT_B_ID": "checkpoint_b", "CHECKPOINT_ID": "checkpoint", "SE
 # the bridge program since milestone B1 (its superseded row rebuilds from f13faee2), and the Ethereum-side guests since
 # RISC Zero 3.1 (risc0-zkvm 3.1.0, docs/design/risc0-3.1-migration.md; their superseded rows rebuild from 3d984678, the
 # tree before the move). docs/image-ids.md's first table lists this tree's builds under these entry names.
-TREE_ENTRY = {"ferrata_bridge": "ferrata_bridge_b1"}
+TREE_ENTRY = {"ferrata_bridge": "ferrata_bridge_f13"}
 TREE_ENTRY.update({g: g + "_31" for g in ("checkpoint", "checkpoint_b", "checkpoint_0_3_5", "checkpoint_b_0_3_5",
                                           "segment", "micro", "release", "claim", "gasdrop")})
-TREE_FROM = {"ferrata_bridge_b1": "f13faee2, the tree before B1"}
+TREE_FROM = {"ferrata_bridge_f13": "40e8d799, the tree before ADR 0046 (B1's program, `ferrata_bridge_b1`); f13faee2 before B1"}
 GUEST = {e: g for g, e in TREE_ENTRY.items()}  # an entry name of the first table: the guest a build names
 GUEST_OF = {"attestation": "ferrata_lez", "bridge": "ferrata_bridge", "checkpoint_b": "checkpoint_b",
             "checkpoint": "checkpoint", "segment": "segment", "release": "release"}  # the crown run's roles: guests

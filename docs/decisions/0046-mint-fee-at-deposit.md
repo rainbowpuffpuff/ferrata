@@ -1,7 +1,7 @@
 # ADR 0046: Take the mint fee on Ethereum at deposit; a claim on LEZ mints the denomination and the fixed relay fee only
 
 - **Date:** 26–27 November 2026
-- **Status:** accepted; the vault built; the bridge program's claim not yet changed
+- **Status:** accepted; built (the vault, the bridge program and its clients); not deployed
 - **Requirements:** RFP-022 F.13
 
 ## Context
@@ -71,3 +71,7 @@ expect a refund to return the mint fee.
   (`refundAmount`)
 - `vault/test/Fees.t.sol` (the deposits on both sides of a fee change, the refunds, the fee recipient's withdrawal)
   and `vault/test/invariant/VaultInvariants.t.sol` (`invariant_depositMintFeeCreditsMatchTheInForceSchedules`)
+- `lez/bridge-wire/src/lib.rs` (`verify_claim`, `relay_fee_for`, `BridgeMessage`), `lez/guests/bridge/src/main.rs`
+  (`issue`); `lez/harness/tests/bridge_f13.rs` (claims on both sides of an imported fee change mint the same amounts,
+  public and private); `e2e/both-halves/results/f13/fees.md` (both halves: one anonymity set across the change)
+- `docs/image-ids.md`, "The bridge program since ADR 0046" (the program's new image id)
