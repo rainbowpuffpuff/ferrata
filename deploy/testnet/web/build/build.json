@@ -1,8 +1,8 @@
 {
- "commit": "4cb3c3de960c4f0ca269582adb0026eb931ceb6c",
+ "commit": "ad5553dd1ed5301fe33b570a4d5f0a8f70c208ea",
  "date": "2026-11-27",
  "dirty": false,
- "statuses_from": "4cb3c3de960c4f0ca269582adb0026eb931ceb6c",
+ "statuses_from": "ad5553dd1ed5301fe33b570a4d5f0a8f70c208ea",
  "hard": {
   "RFP-021": {
    "shown": 50,
