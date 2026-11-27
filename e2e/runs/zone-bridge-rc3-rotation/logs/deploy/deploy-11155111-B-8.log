@@ -1,0 +1,20 @@
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+  deployer 0x2a87a5a5790163476f9c892D7212e8ee41c3aFb3, rule B, gas rule eip8037, cap 100000000, block gas limit 100000000
+  FERRATA_STEP registerToken
+  warning: a zero LEZ definition (registration is write-once; set it in FERRATA_PARAMS)
+  FERRATA_GAS registerToken estimate 761260 limit 951575 cap 100000000
+
+SKIPPING ON CHAIN SIMULATION.
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: vault/broadcast/DeployVault.s.sol/11155111/run-latest.json
+
+Sensitive values saved to: vault/cache/DeployVault.s.sol/11155111/run-latest.json
+

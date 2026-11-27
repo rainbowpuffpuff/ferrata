@@ -1,0 +1,10 @@
+{"event": "started", "requests": "e2e/runs/zone-bridge-rc3-rotation/prover/requests", "inbox": "e2e/runs/zone-bridge-rc3-rotation/prover/inbox"}
+{"event": "spawned", "name": "0-checkpoint", "call_id": "fc-01M8DFW9BYV18T4E65VHPZN5HT", "attempt": 1}
+{"event": "started", "requests": "e2e/runs/zone-bridge-rc3-rotation/prover/requests", "inbox": "e2e/runs/zone-bridge-rc3-rotation/prover/inbox"}
+{"event": "resumed", "name": "0-checkpoint", "call_id": "fc-01M8DFW9BYV18T4E65VHPZN5HT", "attempt": 1}
+{"name": "0-checkpoint", "kind": "checkpoint-b", "ok": true, "seconds": 193.8, "job": "e2e/runs/zone-bridge-rc3-rotation/prover/inbox/0-checkpoint.json", "error": null, "call_id": "fc-01M8DFW9BYV18T4E65VHPZN5HT", "attempts": 1, "resumed": true}
+{"event": "spawned", "name": "1-release-private-1", "call_id": "fc-01M8DG2CXG9TPACYAB2QAZXT2J", "attempt": 1}
+{"name": "1-release-private-1", "kind": "release", "ok": true, "seconds": 14.4, "job": "e2e/runs/zone-bridge-rc3-rotation/prover/inbox/1-release-private-1.json", "error": null, "call_id": "fc-01M8DG2CXG9TPACYAB2QAZXT2J", "attempts": 1, "resumed": false}
+{"event": "spawned", "name": "1-release-public-0", "call_id": "fc-01M8DG2THN82TJ9EWJQF5YRG0K", "attempt": 1}
+{"name": "1-release-public-0", "kind": "release", "ok": true, "seconds": 18.9, "job": "e2e/runs/zone-bridge-rc3-rotation/prover/inbox/1-release-public-0.json", "error": null, "call_id": "fc-01M8DG2THN82TJ9EWJQF5YRG0K", "attempts": 1, "resumed": false}
+{"event": "stop", "reason": "SIGTERM"}

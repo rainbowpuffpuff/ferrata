@@ -1,0 +1,4 @@
+zone-32-176-refuse-below-t: native refused: Core(InsufficientAttestations { have: 2, need: 4 }); guest checkpoint refused: Core(InsufficientAttestations { have: 2, need: 4 })
+zone-32-176-refuse-outsider: native refused: Core(NotAccredited); guest checkpoint refused: Core(NotAccredited)
+zone-32-176-refuse-repeated: native refused: Core(DuplicateAttestor); guest checkpoint refused: Core(DuplicateAttestor)
+zone-32-176-refuse-stale-tip: native refused: Core(NotADescendant { tip_id: 33 }); guest checkpoint refused: Core(NotADescendant { tip_id: 33 })
