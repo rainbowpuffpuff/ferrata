@@ -153,31 +153,32 @@ STATUS_NUMBER = {
 
 # The full dev claim-to-burn game, used for coherent JSON+Markdown tampers of its raw partition.
 LEZ_CLAIM_TO_BURN = """  "on LEZ: claim to burn (informational)": {
-   "success": 0.047500000000000014,
+   "success": 0.04500000000000001,
    "chance": 0.05,
    "exactly_identified": 0,
    "candidate_set_sizes": [
     [
      1,
-     1
+     2
     ],
     [
      20,
-     19
+     18
     ]
    ],
    "max_score": 2.995732273553991,
-   "without_derived_identifiers": 0.047500000000000014,
-   "with_order_state": 0.047500000000000014
+   "without_derived_identifiers": 0.04500000000000001,
+   "with_order_state": 0.04500000000000001
   }"""
-LEZ_DUPLICATE_BINS = LEZ_CLAIM_TO_BURN.replace("""    [
+_LEZ_BINS = """    [
      1,
-     1
+     2
     ],
     [
      20,
-     19
-    ]""", """    [
+     18
+    ]"""
+LEZ_DUPLICATE_BINS = LEZ_CLAIM_TO_BURN.replace(_LEZ_BINS, """    [
      1,
      5
     ],
@@ -188,28 +189,21 @@ LEZ_DUPLICATE_BINS = LEZ_CLAIM_TO_BURN.replace("""    [
     [
      20,
      18
-    ]""").replace("0.047500000000000014", "0.045")
-LEZ_NEGATIVE_COUNT = LEZ_CLAIM_TO_BURN.replace("""    [
-     1,
-     1
-    ],
-    [
-     20,
-     19
-    ]""", """    [
+    ]""").replace("0.04500000000000001", "0.045")
+LEZ_NEGATIVE_COUNT = LEZ_CLAIM_TO_BURN.replace(_LEZ_BINS, """    [
      1,
      -1
     ],
     [
      1,
-     1
+     2
     ],
     [
      20,
-     19
+     18
     ]""")
-LEZ_SUMMARY_ROW = ("| on LEZ: claim to burn (informational) | 4.8% | 0 of 20 | 1: 1, 20: 19 | "
-                   "4.8% | 4.8% | 5.0% |")
+LEZ_SUMMARY_ROW = ("| on LEZ: claim to burn (informational) | 4.5% | 0 of 20 | 1: 2, 20: 18 | "
+                   "4.5% | 4.5% | 5.0% |")
 FREEZE_ANCHORS = (
     "FREEZE (vault, deposit): error: refused: vault error DepositsAreFrozen()",
     "FREEZE (vault, deposit): error: refused: vault error TokenDepositsAreFrozen()",
