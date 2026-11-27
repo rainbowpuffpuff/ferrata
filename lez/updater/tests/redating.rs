@@ -277,12 +277,11 @@ fn starved(finish_own_jobs: bool, payer_byte: u8, n13: usize, n20: usize) -> Sta
         served: served.clone(),
     };
     let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
-    // With `finish_own_jobs = false` the updater leaves each job it opens, and those tests measure the whole turn after
-    // a send: the ledger gives no transactions there, since from them the updater would find its own earlier job by its
-    // `Open` on chain and join it (ADR 0048), which bounds its `Open`s without the turn.
-    l.serve_messages = finish_own_jobs;
     let honest = r.honest_1908("honest", &clock);
-    let pol = Policy { finish_own_jobs, ..policy(8) };
+    // With `finish_own_jobs = false` the updater leaves each job it opens, and those tests measure the whole turn after
+    // a send: join or wait is off there, since with it the updater would find its own earlier job open and join it
+    // (ADR 0047; and from its `Open` on chain, ADR 0048), which bounds its `Open`s without the turn.
+    let pol = Policy { finish_own_jobs, join_wait_rounds: (!finish_own_jobs).then_some(0), ..policy(8) };
     let mut u = r.updater(label, payer.clone(), vec![Box::new(liar), Box::new(honest)], pol);
     assert_eq!(u.payer_id, payer_id, "the tag as the source computes it");
     settle(&mut u, &mut l, 200);
@@ -702,24 +701,23 @@ impl Source for Newest {
 /// update each round and leaves the job it opened, so it finishes none; after each `Open` sent on the state, the next
 /// one there waits a whole turn: at most one `Open` per 8 rounds (the review: 21 in 60 rounds before the whole turn
 /// after a send, a fresh turn after each send ending at the first round whose wait, drawn from that round's job, had
-/// run out; 9 with the turn counted by the job). The ledger gives no transactions (`serve_messages = false`), as a
-/// backend that does not say: from them the updater would find its own earlier job by its `Open` on chain and join it
-/// (ADR 0048), bounding its `Open`s without the turn; that run is made too, and is bounded as well.
+/// run out; 9 with the turn counted by the job). Join or wait is off (`join_wait_rounds = 0`): with it the updater finds
+/// its own earlier job open and joins it (ADR 0047; and from its `Open` on chain, ADR 0048), which bounds its `Open`s
+/// without the turn; that run is made too, and is bounded as well.
 #[test]
 fn newest_only_sources_with_finish_own_jobs_off_open_once_per_turn() {
-    for messages in [false, true] {
-        newest_only_run(messages);
+    for join_wait in [false, true] {
+        newest_only_run(join_wait);
     }
 }
 
-fn newest_only_run(messages: bool) {
+fn newest_only_run(join_wait: bool) {
     let w = 8u64;
     let r = mainnet();
     let clock = Clock::new(3);
     let eth = Arc::new(AtomicU64::new(0));
     let payer = key(0xf7);
     let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
-    l.serve_messages = messages;
     let src = |name: &str| -> Box<dyn Source> {
         Box::new(Newest {
             inner: r.recorded(name, &clock),
@@ -728,7 +726,7 @@ fn newest_only_run(messages: bool) {
             delay_ms: 2_000,
         })
     };
-    let pol = Policy { finish_own_jobs: false, ..policy(w) };
+    let pol = Policy { finish_own_jobs: false, join_wait_rounds: (!join_wait).then_some(0), ..policy(w) };
     let mut u = r.updater("newest", payer.clone(), vec![src("a"), src("b")], pol);
     settle(&mut u, &mut l, 60);
     let (n0, fin) = (l.log.len(), store(&u, &l).finalized.slot);
@@ -749,9 +747,9 @@ fn newest_only_run(messages: bool) {
     let fee: u128 = sent.iter().map(|(_, _, o)| o.fee).sum();
     let moved = store(&u, &l).finalized.slot;
     println!(
-        "finish_own_jobs = false, two sources serving their newest finality update each slot, defer_window {w}, the \
-         chain's Opens read {messages}: {rounds} rounds, {opens} Opens applied (one per turn: at most {}), finalized slot \
-         {fin} -> {moved}, fees {fee}; refused txs {}",
+        "finish_own_jobs = false, two sources serving their newest finality update each slot, defer_window {w}, join or \
+         wait {join_wait}: {rounds} rounds, {opens} Opens applied (one per turn: at most {}), finalized slot {fin} -> \
+         {moved}, fees {fee}; refused txs {}",
         rounds.div_ceil(w),
         refused(&l, n0)
     );
