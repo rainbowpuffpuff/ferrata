@@ -89,8 +89,10 @@ register a token of a given kind, or a deployer to misconfigure, is ranked by wh
   EIP-170 (90 left; the fee rewrite on `f13-lez` changes the size too, so the merge must be measured again).
 - **Test.** `vault/test/InternalReview.t.sol`: `test_S1_aTokenHookCannotLandADepositAfterRetirement`,
   `test_S1_aTokenHookCannotLandADepositAfterASunsetCheckpoint` (both "next call did not revert" on `50b396a8`), and a
-  control in which the hook changes nothing. Two reviewers checked that no other input `_checkDeposit` reads can be
-  changed from an unprivileged hook.
+  control in which the hook changes nothing. No other input `_checkDeposit` reads can be changed from an unprivileged
+  hook: the freezes, the listing and the caps need a role, the index and the leaf sit behind `nonReentrant`, and a
+  due fee change is put in force by `_checkDeposit` itself before the pull, so the permissionless `applyFees` a hook
+  might call finds nothing due at the same timestamp (a review round's contrary reading was checked and is not so).
 
 ### S-2 (Low) — the default release floor lets an admin refuse the largest exits for good
 
@@ -130,7 +132,9 @@ register a token of a given kind, or a deployer to misconfigure, is ranked by wh
   immutable (the wrapped verifier's address) masked, to equal `vault/script/params/verifier-31.json`, the stop to
   have no owner and not be tripped. `vault/test/VerifierCode.t.sol` holds both pins to vault/lib.lock's build (the
   Groth16 hash equals the one the recorded DeployVault runs report). `DeployVault._checkStop` compares the stop's
-  code with RISC Zero's built in simulation. The 3.0.0 branch (the four November vaults, capped at zero) is unchanged.
+  code with RISC Zero's built in simulation. The 3.0.0 branch (the four November vaults, capped at zero) is unchanged:
+  it still checks only the selector and that both caps read 0 at the time of the run, not the code, the owner or the
+  pause (review round 2), which suits vaults that are closed, not ones in use.
 - **On Sepolia, read-only** (block 12,224,884): the 3.1 vault `0x1949…2787` passes the new check (verifier
   `0x43C8…dc96` and stop `0xC159…b314` as pinned, the stop renounced and not tripped), and the November vault
   `0x04eE…e44c` the unchanged 3.0.0 rule. The code hash is taken from `eth_getCode` (round 1: `cast codehash` asks

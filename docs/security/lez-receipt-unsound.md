@@ -1,7 +1,7 @@
 # If LEZ's check of private-transaction receipts is unsound: affected funds, in-flight positions, and why there is no failsafe
 
 RFP-022 Security #9, the case of a vulnerability below Ferrata's own verification: LEZ accepts a forged receipt of a
-private transaction. Written 27 November 2026. The Ethereum side of every outcome below is shown by
+private transaction. Written 27 November 2026. The Ethereum side of every outcome below that has one is shown by
 `vault/test/LezReceiptUnsound.t.sol` (9 tests); the LEZ side is from reading the bridge program and the checkpoint
 program at this commit (cited lines), not tested. Whether LEZ accepts a forged receipt at all has not been
 established: we built none, and it is for Logos to confirm ([`docs/trust.md`](../trust.md) §5).
