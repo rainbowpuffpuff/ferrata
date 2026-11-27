@@ -1,0 +1,44 @@
+[hook 01:41:19] == fork
+[hook 01:41:20] ok: fork: Sepolia block 12220225 (2026-11-27T01:24:36Z, 1003 s old), hash 0x41406f5730fa07a92e7a1a0c813be88939cf125384be90e446086517dc936601, from https://ethereum-sepolia-rpc.publicnode.com; anvil forks it, chain id 11155111
+[hook 01:41:20] == zone: programs and the stand-in instance
+[hook 01:42:24] ok: zone: programs and the stand-in instance: attestation program 0x816d1fef46… and bridge program 0xffb47f6eae… deployed through LEZ's loader; stand-in instance 0xa5000dc547… (bootstrap slot 11665472); zone tip 22
+[hook 01:42:24] == vault deployed on the fork
+[hook 01:42:36] ok: vault deployed on the fork: vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 (rule B), configId 0x3be8f71ad9d2b61c67e99d045de817fc67e91023e7af45c68693a7eaca844c96, genesisState 0x8e54c7d6a8de29730ff8874b4f6ab32653c3d6f85274cc44fa19057391a3efb8 (ci_zone's test committee); RISC Zero's Groth16 verifier 0x25Fa4286d401bdc4AC7657bc7a1ebdE1B737F4b1 (code hash 0x47dfdcd8969f76d298cd5c4bc1f2889a6bc042b8c0f1e428f526cce1316b9970) deployed by DeployVault, its code then replaced on the fork by MockRiscZeroVerifier's; checkpoint guest 0xdafa6ab9a26841681fd071b8e4cdfae514371f82902426dc9fb1e2c80d29cda0, release guest 0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd
+[hook 01:42:36] == deposit under schedule 0
+[hook 01:42:38] ok: deposit under schedule 0: Ethereum tx 0x2705d2c4bb064e645133f15858403cf4ee483184b0601a329a0db56137c89419: 0.001 ETH to the user's public /0; escrow +1002000000000000 wei (the denomination and the relay fee 2000000000000), the fee recipient's credit +0; the vault captured
+[hook 01:42:38] == fee change
+[hook 01:42:38] the fork's clock moved on 604801 s: the fee announcement's seven days
+[hook 01:42:39] ok: fee change: announceFees (mint fees 5000000000000 50000000000000 500000000000000 wei; burn 0 0 0, checkpoint 1000000000000 10000000000000 100000000000000 unchanged); the seven days passed on the fork's clock; schedule 1 in force: denomination 0 pays mint fee 5000000000000 and relay fee 2000000000000
+[hook 01:42:39] == deposit under schedule 1
+[hook 01:42:40] ok: deposit under schedule 1: Ethereum tx 0x67313d6ef3c63b6fe44c792172bffaa04f4cb18359b44d237bd6ec3266dcf514: escrow +1002000000000000 wei (the denomination and the relay fee, as under schedule 0); the fee recipient 0x000000000000000000000000000000005e9de901 credited 5000000000000 wei at the deposit (OwedCredited); the vault captured
+[hook 01:42:40] == operator import
+[hook 01:43:27] ok: operator import: the stand-in committee finalized the fork's blocks 12220234 and 12220238; bridge Init (pairing: configId in the vault's slot 2), bridge Register ETH (registry entry, schedules 0 and 1, leaf count), bridge ImportRoot n=1 (stage 1, block 12220234), bridge ImportRoot n=2 (stage 2, block 12220238): 4 of 4 applied
+[hook 01:43:27] == fees
+[hook 01:43:31] ok: fees: native LEZ to the user's public /0 (0x8a7162a5acc0f2c0beab5a9d07dfab129e7dc9b18cd9c14b3090fe2cc40154b0): 3000000000000
+[hook 01:43:31] == claim of leaf 0 (schedule 0)
+[hook 01:43:32] the claim's delay let pass on the fork's clock: 2697 blocks
+[hook 01:43:39] ok: claim of leaf 0 (schedule 0): LEZ tx ec31a6ad3cce52d57ee2cd3bd74b297108ca7a097b5e093dce879063767011d2 applied: the user's public /0 holds 1000000000000000 (the denomination), the relayer /1 2000000000000 (the relay fee)
+[hook 01:43:39] == claim of leaf 1 (schedule 1)
+[hook 01:43:39] the claim of leaf 1 was not held by its delay
+[hook 01:43:44] ok: claim of leaf 1 (schedule 1): LEZ tx f3bee10ece2911dc24b6c3278394a3101790063d2877ed1473c188335a7869eb applied: /0 +1000000000000000 (the denomination), the relayer /1 +2000000000000 (the relay fee): the same amounts as the claim under schedule 0
+[hook 01:43:44] == claim again refused
+[hook 01:43:45] ok: claim again refused: refused: error: refused: LEZ bridge program exit code 250 ALREADY_CLAIMED (checked before sending: the zone's history shows it claimed): the deposit's nullifier is spent; the holding unchanged
+[hook 01:43:45] == burn
+[hook 01:43:52] ok: burn: LEZ tx 610d32757de5a313f31499c4e98fd3ab7e6f2ad94a93d50a48e53e62c45efdf4 applied: 0.001 ETH burnt to 0x28E77c15720bD320D1879B5F86eF86D526565c01; the holding is 1000000000000000 (the other claim's denomination)
+[hook 01:43:52] == checkpoint journal
+[hook 01:44:00] ok: checkpoint journal: 39 applied zone transactions in 33 blocks; the guest's journal equals the native one ({"executor_wall_s":0.500734015,"image_id":"0xdafa6ab9a26841681fd071b8e4cdfae514371f82902426dc9fb1e2c80d29cda0","input_by); 1 burn, root 0xd56c121cb25ccd49feda76e95e1228d5727a116a968ea3d78317da28024ccfee
+[hook 01:44:00] == checkpoint accepted
+[hook 01:44:00] the fork's clock moved on 3601 s: the candidate's wait (Delta 3600 s)
+[hook 01:44:00] ok: checkpoint accepted: submitCandidate, Delta let pass, finalizeAttested by ferrata-relayer; finalState 0xb90413c6219d23fc13eb8c59d64692e1bc951d7c71cd90d8dc48fe071645a057; burn root accepted
+[hook 01:44:00] == release journal
+[hook 01:44:01] the release was held (its delay after the checkpoint)
+[hook 01:44:01] the fork's clock moved on 121 s: the release delay (120 s after finalizeAttested)
+[hook 01:44:01] ok: release journal: release guest 0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd: journal equal to the native one (RISC0_DEV_MODE: executed, receipt fake)
+[hook 01:44:01] == release paid
+[hook 01:44:02] ok: release paid: Ethereum tx 0xa85bf2c9354abe648509eefb193a57263b661d6213a6905d9ab2fb89950041af: the Release event pays out the burnt 1000000000000000 wei: 997000000000000 to the fresh address, 2000000000000 relay fee to the relayer, 1000000000000 credited (OwedCredited: the checkpoint fee)
+[hook 01:44:02] == release again refused
+[hook 01:44:02] ok: release again refused: eth_call of the same release reverts with NullifierAlreadyUsed (0xcad2ae02); nullifierUsed(0x13bae80c15b269ee50e54aaf9767e62842b646f7a514fb14719426e0301bce79) = true
+[hook 01:44:10] ethtxs.py failed:   File "<repo>/e2e/seqnet/ethtxs.py", line 20, in rpc
+    raise RuntimeError(f"{method}: {out['error']}")
+RuntimeError: eth_getBlockTransactionCountByNumber: {'code': 4444, 'message': 'pruned history unavailable: requested 0, earliest available 1000000'}
+[hook 01:44:10] the round trip: every step ok (17 steps)

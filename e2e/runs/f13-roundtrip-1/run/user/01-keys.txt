@@ -1,0 +1,10 @@
+$ ferrata --seed <work>/user/seed.txt --eth-rpc http://127.0.0.1:18547 --chain-id 11155111 --vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 --from-block 12220225 keys --accounts 2
+
+LEZ public accounts (wallet key tree, /a):
+  /0  0x8a7162a5acc0f2c0beab5a9d07dfab129e7dc9b18cd9c14b3090fe2cc40154b0
+  /1  0xc0fe2bd986326ba82ec6cafdde255e0a7ea70054f7def10080914cb173acc9bc
+LEZ private accounts (wallet key tree, /a):
+  /0  0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85
+  /1  0x57f5ae1946491d89030fd11f7bba203811fff0018b8b081b4473ca81a99552f2
+kAuth  fingerprint 0x2837b820ce651723  (sha256 of the key; --show-secrets prints it)
+kView  fingerprint 0x2e0b7663cf8942fd
