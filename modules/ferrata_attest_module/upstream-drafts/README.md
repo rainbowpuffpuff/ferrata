@@ -60,7 +60,8 @@ runs' checkpoint `0x3b901f5e…ccf7c` (slot 11,562,112; EVIDENCE rows 105, 117, 
 three operators (ChainSafe's Lodestar, publicnode, ethPandaOps) and of the module's plain-http Nimbus provider:
 verdict **ok**, 3 counted, each at slot 11,562,112 with finalized slot 11,671,647; Nimbus agreed and was not counted
 ([`results/verify-checkpoint-live-2026-11-27.json`](results/verify-checkpoint-live-2026-11-27.json), the reply and
-the command). Nimbus's Sepolia host did not answer over https that day.
+the command). Nimbus's Sepolia host did not answer over https that day. The live run used the patch before the evening's two
+fixes (a missing slot, `min_providers` 0); both only add refusals, and every provider gave the root's slot.
 
 ## What RFP-021 F.9 still lacks after `beacon_api_module` (27 November 2026)
 

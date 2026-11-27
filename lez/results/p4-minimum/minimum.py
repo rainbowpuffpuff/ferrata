@@ -78,10 +78,13 @@ JOBS = {
     },
     # RFP-021 P.4, hops inside the user's proof: the reference consumer's private claim of the vault fixture's deposit 0,
     # its block reached through K EIP-2935 hops (harness/src/bin/prove_vault_claim.rs; staged by
-    # lez/scripts/stage-prove-vault-claim.sh, the fixtures read through the stage's MANIFEST.json "env"), padded
+    # lez/scripts/stage-prove-vault-claim.sh, the fixtures read through the stage's MANIFEST.json "env"), padded as
+    # LEZ's wallet pads it; "settle" names the same K and shape on the settlement's command line (the transaction
+    # shows neither: runs before 27 November 2026, 21:30Z, settled with the binary's defaults in their logs' first line)
     **{f"claim-hops{k}-pad": {
         "binary": "prove_vault_claim",
         "prove": ["--hops", str(k), "--shape", "wallet", "--tx-out", "tx-claim.borsh"],
+        "settle": ["--hops", str(k), "--shape", "wallet"],
         "txs": ["tx-claim.borsh"],
         "bundle": "claim-hops",
     } for k in range(1, 6)},
@@ -358,14 +361,16 @@ def prove(job: str, runs: int, tag: str, declared: dict, affinity: int = 0) -> d
         txs = [t for t in spec["txs"] if os.path.exists(f"{rd}/{t}")]
         s_rc, s_wall = (None, None)
         if rc == 0 and len(txs) == len(spec["txs"]):
-            s_rc, s_wall = _run([f"{work}/{binary}", "--settle", *txs], rd, settle_env, f"{rd}/settle.log", 1800)
+            s_rc, s_wall = _run([f"{work}/{binary}", *spec.get("settle", []), "--settle", *txs], rd, settle_env,
+                                f"{rd}/settle.log", 1800)
         tamper = []
         if i == 1 and s_rc == 0:
             for k, t in enumerate(txs):
                 bad = f"{rd}/tampered-{t}"
                 at = _flip(f"{rd}/{t}", bad)
                 files = [bad if j == k else f"{rd}/{u}" for j, u in enumerate(txs)]
-                t_rc, _ = _run([f"{work}/{binary}", "--settle", *files], rd, settle_env, f"{rd}/tampered-{t}.log", 1800)
+                t_rc, _ = _run([f"{work}/{binary}", *spec.get("settle", []), "--settle", *files], rd, settle_env,
+                               f"{rd}/tampered-{t}.log", 1800)
                 tail = open(f"{rd}/tampered-{t}.log").read()[-400:]
                 tamper.append({"tx": t, "flipped_bit0_of_byte": at, "settle_exit": t_rc, "log_tail": tail})
                 os.remove(bad)

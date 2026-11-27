@@ -39,8 +39,8 @@ const MAINNET_SUMS: &str = include_str!("../../../crates/ferrata-spectests/fixtu
 const SEPOLIA_CLAIM_SUMS: &str =
     include_str!("../../../crates/ferrata-spectests/fixtures/sepolia-hops-2026-11-27/SHA256SUMS");
 
-/// The most hops a private claim of the vault fixture's deposit 0 is built with here
-/// ([`claim_hops`]): the user-side limit RFP-021 P.4 states (`docs/performance.md`).
+/// The longest chain [`claim_hops`] builds to the vault fixture's deposit 0: the chains the fixtures
+/// hold. The user-side limit RFP-021 P.4 declares is two hops at the x86-64 minimum (ADR 0056).
 pub const MAX_USER_HOPS: usize = 5;
 
 /// `FERRATA_HOPS_FIXTURES_DIR` if set (a directory holding the hop fixtures by name, to run a built

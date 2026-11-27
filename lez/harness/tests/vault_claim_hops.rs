@@ -12,8 +12,8 @@
 //! * a chain with a link broken (a header swapped for another block's, a hop left out, the order
 //!   reversed) is refused with the core's code, and nothing is sent.
 //!
-//! The real proofs of the padded private claim at 5 hops: `prove_vault_claim --hops 5 --shape
-//! wallet` (`lez/results/p4-hops/`).
+//! The real proofs of the padded private claim at 1, 2, 3 and 5 hops: `prove_vault_claim --hops K
+//! --shape wallet` (`lez/results/p4-hops/`).
 
 use ferrata_core::Error;
 use ferrata_lez_wire::consumer::{secret_nullifier, ConsumerMessage};
@@ -140,17 +140,17 @@ fn a_broken_chain_is_refused_and_sends_nothing() {
     let mut swapped = five.clone();
     swapped.hops[2].header = five.hops[3].header.clone();
     let swapped_code = refused("a swapped header", swapped);
-    assert_ne!(swapped_code, 0);
+    assert_eq!(swapped_code, u32::from(Error::ProofNodeMismatch.code()), "the slot's proof is of another slot");
     // A hop left out: the next hop's proofs are of another block's state than the one reached.
     let mut gap = five.clone();
     gap.hops.remove(2);
     let gap_code = refused("a hop left out", gap);
-    assert_ne!(gap_code, 0);
+    assert_eq!(gap_code, u32::from(Error::ProofNodeMismatch.code()), "the next proofs are of another state");
     // The chain reversed: the first hop reaches a block its record's window does not hold (newest first).
     let mut reversed = five.clone();
     reversed.hops.reverse();
     let reversed_code = refused("the chain reversed", reversed);
-    assert_ne!(reversed_code, 0);
+    assert_eq!(reversed_code, u32::from(Error::ProofNodeMismatch.code()), "the first proofs are of another state");
     // The same chain, intact, verifies (the refusals above are the breaks, not the chain).
     let (_, reply) = transitions(&vw, &claim(&vw, five));
     assert_eq!(reply.expect("the reply runs").exit_code, 0);

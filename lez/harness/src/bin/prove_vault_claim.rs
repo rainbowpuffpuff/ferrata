@@ -10,8 +10,11 @@
 //! * `--hops K` (1 to 5, default 1): the deposit's block reached through a chain of `K` EIP-2935
 //!   hops inside the claimant's proof (`harness::hops::claim_hops`: the vault fixture's own hop,
 //!   then the fixtures `sepolia-hops-2026-11-18` and `sepolia-hops-2026-11-27`), as a private
-//!   consumer that reads a recent record does for an older fact (RFP-021 P.4: the user-side limit is
-//!   5 hops, `docs/performance.md`).
+//!   consumer that reads a recent record does for an older fact (RFP-021 P.4: the declared
+//!   user-side limit is two hops at the x86-64 minimum, ADR 0056; five is the longest chain the
+//!   fixtures hold). Deposit 1 has only its one-hop chain.
+//! * `--settle` reads only the transaction, which shows neither the hops nor the shape: with
+//!   `--settle`, `--hops` and `--shape` only label the output.
 //! * `--shape wallet` pads the transaction as LEZ v0.4.0-rc1's wallet pads every private
 //!   transaction ([`harness::private::Shape::Wallet`]); `bare` (the default) builds it as this
 //!   binary did before 27 November 2026.
@@ -78,7 +81,12 @@ fn main() {
             _ => usage(),
         }
     }
-    let dev = std::env::var("RISC0_DEV_MODE").is_ok_and(|v| !v.is_empty() && v != "0" && v != "false");
+    if i == 1 && hops > 1 {
+        eprintln!("--deposit 1 has only its one-hop chain (its block is not where the longer chains end)");
+        usage();
+    }
+    // RISC Zero's own reading of RISC0_DEV_MODE (true, 1 or yes, any case), so the labels below follow it.
+    let dev = risc0_zkvm::is_dev_mode();
     if dev && !allow_dev && settle_from.is_none() && !only_ids {
         eprintln!("RISC0_DEV_MODE is set: the receipt would be fake. Unset it, or pass --allow-dev-mode.");
         std::process::exit(2);
@@ -242,11 +250,8 @@ fn settle(v: &mut RealVault, path: &str) -> PrivateRun {
             .expect("settlement accepts the transaction");
     v.w.chain.block_id += 1;
     let proof_bytes = tx.witness_set.proof().clone().into_inner().len();
-    let verified = if matches!(std::env::var("RISC0_DEV_MODE").as_deref(), Ok("1") | Ok("true")) {
-        "RISC0_DEV_MODE on: a fake receipt passes too"
-    } else {
-        "receipt verified"
-    };
+    let verified =
+        if risc0_zkvm::is_dev_mode() { "RISC0_DEV_MODE on: a fake receipt passes too" } else { "receipt verified" };
     println!(
         "SETTLED FROM {path} ({verified}): receipt {proof_bytes} bytes, transaction {} bytes, settled in {:.1} s",
         bytes.len(),
