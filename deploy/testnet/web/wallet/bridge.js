@@ -151,6 +151,23 @@ export function costOf({ gas, gasPrice, balance, value = 0n }) {
     text: `about ${fmtUnits(fee)} (${Number(g).toLocaleString('en-US')} gas at ${at} gwei, read now; your wallet shows the final figure)` };
 }
 
+/** One operation at a time over a group of controls (the browser wallet's requests and the deposit's plan are shared
+ *  by connect, mint, review and the deposit): while one runs, every control of the group is disabled and a second
+ *  start returns at once; after it, each control's own state is put back, whatever the operation did elsewhere. */
+export function lockGroup(controls) {
+  let held = false;
+  return (fn) => async (...args) => {
+    if (held) return undefined;
+    held = true;
+    const before = controls.map((x) => x.disabled);
+    for (const x of controls) x.disabled = true;
+    try { return await fn(...args); } finally {
+      controls.forEach((x, i) => { x.disabled = before[i]; });
+      held = false;
+    }
+  };
+}
+
 /**
  * The burn's Ethereum recipient and the words the review uses for where it came from: an address typed in the field
  * (mixed case must pass EIP-55; all one case has no checksum to check) or, when the field is empty, the browser
@@ -288,7 +305,10 @@ export function mountBridge(root, c) {
   syncMint();
 
   let P = null, depositor = null, vault = null, plan = null;
-  // One request at a time per button: held from the click until the answer (or the refusal), released in finally.
+  // Connect, mint, review and the deposit share the browser wallet and the plan: one of them at a time, the asset,
+  // amount and destination fixed meanwhile (a review started during a deposit would replace the plan it sends).
+  const exclusive = lockGroup([connect, mint, review, assetSel, denom, kind]);
+  // The other buttons: one request at a time each, held from the click until the answer, released in finally.
   const busy = (btn, fn) => async (...args) => {
     if (btn.disabled) return;
     btn.disabled = true;
@@ -337,11 +357,11 @@ export function mountBridge(root, c) {
   const clearDeposit = () => { plan = null; go.disabled = true; sum.textContent = ''; };
   denom.onchange = clearDeposit;
   kind.onchange = () => { clearDeposit(); kindNote.hidden = kind.value !== 'private'; };
-  connect.onclick = busy(connect, async () => { out.textContent = ''; try { await connectWallet(); } catch (e) { fail(e); } });
-  assetSel.onchange = async () => {
+  connect.onclick = exclusive(async () => { out.textContent = ''; try { await connectWallet(); } catch (e) { fail(e); } });
+  assetSel.onchange = exclusive(async () => {
     syncMint(); sum.textContent = ''; go.disabled = true; plan = null; out.textContent = ''; denom.textContent = '';
     if (P) { try { await connectWallet(); } catch (e) { fail(e); } }
-  };
+  });
 
   async function sendAndWait(tx, what) {
     const hash = await P.request({ method: 'eth_sendTransaction', params: [tx] });
@@ -351,7 +371,7 @@ export function mountBridge(root, c) {
     return { hash, receipt };
   }
 
-  mint.onclick = busy(mint, async () => {
+  mint.onclick = exclusive(async () => {
     out.textContent = ''; out.className = 'msg';
     try {
       await connectWallet();
@@ -365,7 +385,7 @@ export function mountBridge(root, c) {
     } catch (e) { fail(e); }
   });
 
-  review.onclick = busy(review, async () => {
+  review.onclick = exclusive(async () => {
     out.textContent = ''; out.className = 'msg'; sum.textContent = ''; go.disabled = true; plan = null;
     try {
       if (B.lezReady === false) throw new Error('Deposits are not open yet: the LEZ side of this bridge is still being set up.');
@@ -423,28 +443,29 @@ export function mountBridge(root, c) {
     } catch (e) { plan = null; go.disabled = true; fail(e); }
   });
 
-  go.onclick = async () => {
-    if (!plan) return;
+  go.onclick = exclusive(async () => {
+    const p = plan;   // the reviewed plan, whatever happens to `plan` meanwhile
+    if (!p) return;
     go.disabled = true;
     try {
       const chain = Number(BigInt(await P.request({ method: 'eth_chainId' })));
       const acct = String((await P.request({ method: 'eth_accounts' }))[0] ?? '').toLowerCase();
       if (chain !== Number(B.evmChainId) || acct !== depositor) throw new Error('Your wallet changed network or account since the review; nothing was sent. Review again.');
-      if (plan.record.kind === 'public' && plan.record.dest !== c.acct().id) { clearDeposit(); throw new Error('The selected LEZ account changed since the review; nothing was sent. Review again.'); }
-      const token = plan.record.token ?? ETH;
+      if (p.record.kind === 'public' && p.record.dest !== c.acct().id) { clearDeposit(); throw new Error('The selected LEZ account changed since the review; nothing was sent. Review again.'); }
+      const token = p.record.token ?? ETH;
       let fresh = await readVault(P, B.vault, depositor, token);
-      if (fresh.j.toString() !== plan.record.j) throw new Error('Your deposit index changed since the review (another deposit?); nothing was sent. Review again.');
-      if (plan.approve && fresh.allowance < BigInt(plan.record.total)) {
-        out.textContent = `Waiting for your wallet's signature: approve the vault for ${fmtUnits(plan.record.total, plan.record.decimals, plan.record.symbol)} (1 of 2)…`; out.className = 'msg';
-        const ap = await sendAndWait(plan.approve, 'Approval (1 of 2)');
+      if (fresh.j.toString() !== p.record.j) throw new Error('Your deposit index changed since the review (another deposit?); nothing was sent. Review again.');
+      if (p.approve && fresh.allowance < BigInt(p.record.total)) {
+        out.textContent = `Waiting for your wallet's signature: approve the vault for ${fmtUnits(p.record.total, p.record.decimals, p.record.symbol)} (1 of 2)…`; out.className = 'msg';
+        const ap = await sendAndWait(p.approve, 'Approval (1 of 2)');
         if (!ap.receipt || ap.receipt.status !== '0x1') throw new Error(`The approval ${ap.hash} ${ap.receipt ? 'failed' : 'is not mined yet'}; nothing was deposited.`);
         fresh = await readVault(P, B.vault, depositor, token);
-        if (fresh.allowance < BigInt(plan.record.total)) throw new Error('The approval is mined but the vault\'s allowance is still short; nothing was deposited.');
-        if (fresh.j.toString() !== plan.record.j) throw new Error('Your deposit index changed during the approval; nothing was deposited. Review again.');
+        if (fresh.allowance < BigInt(p.record.total)) throw new Error('The approval is mined but the vault\'s allowance is still short; nothing was deposited.');
+        if (fresh.j.toString() !== p.record.j) throw new Error('Your deposit index changed during the approval; nothing was deposited. Review again.');
       }
-      out.textContent = `Waiting for your wallet's signature${plan.approve ? ' (2 of 2)' : ''}…`; out.className = 'msg';
-      const hash = await P.request({ method: 'eth_sendTransaction', params: [plan.tx] });
-      const rec = { ...plan.record, ethTx: hash, sent: Date.now() };
+      out.textContent = `Waiting for your wallet's signature${p.approve ? ' (2 of 2)' : ''}…`; out.className = 'msg';
+      const hash = await P.request({ method: 'eth_sendTransaction', params: [p.tx] });
+      const rec = { ...p.record, ethTx: hash, sent: Date.now() };
       (c.S.secret.deposits ??= []).push(rec); await c.persist();
       out.textContent = `Sent ${hash}; waiting for it to be mined…`;
       let receipt = null;
@@ -459,8 +480,8 @@ export function mountBridge(root, c) {
       await c.persist();
       out.textContent = `Deposited: leaf ${rec.leafIndex} in block ${rec.block} (${hash}). Next: the claim on LEZ, once the zone imports the vault's deposits.`; out.className = 'msg ok';
       plan = null; renderList();
-    } catch (e) { fail(e); go.disabled = !plan; }
-  };
+    } catch (e) { fail(e); go.disabled = plan !== p; }
+  });
 
   // The deposits this phrase opens, read from the vault's Deposit events: for each, s from (depositor, j) and C tried
   // against this wallet's public accounts (and its private account /0), so deposits made anywhere with this phrase show.

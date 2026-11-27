@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DEPOSIT_REFUSALS, revertDataOf, walletError, costOf, burnRecipient } from '../bridge.js';
+import { DEPOSIT_REFUSALS, revertDataOf, walletError, costOf, burnRecipient, lockGroup } from '../bridge.js';
 import { keccak } from '../eth.js';
 import { hex } from '../lez.js';
 
@@ -40,6 +40,37 @@ test('the vault\'s refusals by name, wherever the wallet put the revert data', (
   // An address inside a message is not a selector; an unknown refusal keeps the node's words.
   assert.equal(revertDataOf({ message: 'execution reverted: to 0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787' }), null);
   assert.equal(walletError({ code: 3, message: 'execution reverted', data: '0xdeadbeef' }), 'The vault refuses it (execution reverted). It was not sent.');
+});
+
+test('the refusals by their selectors as Foundry\'s cast computes them (a typo in a signature is caught without vault/lib)', () => {
+  // cast sig "ERC20InsufficientBalance(address,uint256,uint256)" and the others, Foundry 1.3.6
+  for (const [sel4, name] of [['0xe450d38c', 'ERC20InsufficientBalance'], ['0xfb8f41b2', 'ERC20InsufficientAllowance'],
+    ['0x0140df75', 'TokenDepositCapExceeded'], ['0x3acace01', 'WrongEthAmount']]) {
+    assert.match(walletError({ code: 3, message: 'execution reverted', data: sel4 + '0'.repeat(192) }), new RegExp(`\\(${name}\\)`), name);
+  }
+});
+
+test('one operation at a time over the deposit controls; each control put back, also after a failure', async () => {
+  const a = { disabled: false }, b = { disabled: true }, outside = { disabled: true };
+  const run = lockGroup([a, b]);
+  let calls = 0, release;
+  const op = run(async () => {
+    calls++;
+    assert.deepEqual([a.disabled, b.disabled], [true, true]);
+    outside.disabled = false;                       // what the operation does outside the group stays done
+    await new Promise((r) => { release = r; });
+    return 'done';
+  });
+  const first = op();
+  const second = await Promise.race([op(), new Promise((r) => setTimeout(() => r('still running'), 100))]);
+  assert.equal(second, undefined);                  // a second start while the first holds the group: nothing runs
+  assert.equal(calls, 1);
+  release();
+  assert.equal(await first, 'done');
+  assert.deepEqual([a.disabled, b.disabled, outside.disabled], [false, true, false]);
+  await assert.rejects(run(async () => { throw new Error('refused'); })(), /refused/);
+  assert.equal(a.disabled, false);
+  assert.equal(await run(async () => 'again')(), 'again');   // released after the failure
 });
 
 test('every refusal the page names is declared where it says (the vault; OpenZeppelin\'s ERC-20 errors when vault/lib is there)', () => {
