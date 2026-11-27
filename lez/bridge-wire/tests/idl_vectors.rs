@@ -308,6 +308,9 @@ fn bridge_label(m: &bw::BridgeMessage) -> &'static str {
         SetDepth { .. } => "SetDepth",
         AttestListing { .. } => "AttestListing",
         SetListing { .. } => "SetListing",
+        CollectFees { .. } => "CollectFees",
+        AccrueFees { .. } => "AccrueFees",
+        MintFees { .. } => "MintFees",
     }
 }
 
@@ -328,12 +331,14 @@ fn state_label(s: &bw::BridgeState) -> &'static str {
             },
             bw::Pending::Retired { .. } => "Config.Ready.Retired",
             bw::Pending::Listing { .. } => "Config.Ready.Listing",
+            bw::Pending::Collect { .. } => "Config.Ready.Collect",
         },
         bw::BridgeState::Root(_) => "Root",
         bw::BridgeState::Nullifier(_) => "Nullifier",
         bw::BridgeState::Holder(_) => "Holder",
         bw::BridgeState::Burn(_) => "Burn",
         bw::BridgeState::Token(_) => "Token",
+        bw::BridgeState::Fees(_) => "Fees",
     }
 }
 
@@ -604,6 +609,15 @@ fn bridge_vectors() -> Vec<Vector> {
             proof: bw::VaultProof { account: vec![vec![0xf8, 0x51]], slots: vec![vec![vec![0xe3, 0x01]]] },
         },
         SetListing { config_id: r(60), token: a(40), delisted: true, record_slot: 11_547_320 },
+        CollectFees {
+            config_id: r(60),
+            token: a(40),
+            record_slot: 11_547_330,
+            limit: 5_000_000_000_000,
+            proof: bw::VaultProof { account: vec![vec![0xf8, 0x52]], slots: vec![vec![vec![0xe3, 0x02]]] },
+        },
+        AccrueFees { config_id: r(60), token: a(40), total: 7_000_000_000_000, limit: u128::MAX },
+        MintFees { config_id: r(60), token: a(40), amount: 7_000_000_000_000 },
     ];
     let mut out: Vec<Vector> = Vec::new();
     let mut seen = std::collections::BTreeMap::<&str, u32>::new();
@@ -667,6 +681,11 @@ fn bridge_vectors() -> Vec<Vector> {
         })))),
         bw::BridgeState::Config(ready(Some(bw::Pending::Retired { record_slot: 11_547_310 }))),
         bw::BridgeState::Config(ready(Some(bw::Pending::Listing { token: a(40), record_slot: 11_547_320 }))),
+        bw::BridgeState::Config(ready(Some(bw::Pending::Collect {
+            token: a(40),
+            record_slot: 11_547_330,
+            limit: 5_000_000_000_000,
+        }))),
         bw::BridgeState::Root(root_state()),
         bw::BridgeState::Nullifier(bw::NullifierState {
             config_id: r(60),
@@ -692,6 +711,7 @@ fn bridge_vectors() -> Vec<Vector> {
             then: bw::Timed::Freeze { mints: false, burns: true, until_ms: 9 },
         }))),
         bw::BridgeState::Token(bw::TokenState { delisted: true, listing_slot: 11_547_320, ..token_state(None) }),
+        bw::BridgeState::Fees(bw::FeesState { config_id: r(60), token: a(40), collected: 7_000_000_000_000 }),
     ];
     let mut seen = std::collections::BTreeMap::<&str, u32>::new();
     for s in &states {
