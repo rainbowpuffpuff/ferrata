@@ -446,6 +446,35 @@ fn message_of(bytes: &[u8]) -> Result<(BridgeMessage, Option<Vec<u8>>)> {
     }
 }
 
+/// What the zone's program lets the module send, checked before anything is signed or proven (ADR 0048): a claim in
+/// that program's layout only (our test network's B1 names a fee-schedule range), and none of the fee collection's
+/// messages (`CollectFees`, `AccrueFees`, `MintFees`, variants 31-33) to B1, which has no such instruction. A program
+/// this tool does not know was refused already, by `lez::bridge_program`.
+fn check_for_program(program: BridgeProgram, bytes: &[u8], message: &BridgeMessage) -> Result<()> {
+    if let Some(c) = deployed::decode_claim(bytes) {
+        ensure!(
+            c.range.is_some() == (program == BridgeProgram::B1),
+            "refused before anything was signed: the module's claim is in {}'s layout, but the zone runs {}",
+            if c.range.is_some() { BridgeProgram::B1.name() } else { BridgeProgram::F13.name() },
+            program.name()
+        );
+    }
+    let fee_message = match message {
+        BridgeMessage::CollectFees { .. } => Some("CollectFees"),
+        BridgeMessage::AccrueFees { .. } => Some("AccrueFees"),
+        BridgeMessage::MintFees { .. } => Some("MintFees"),
+        _ => None,
+    };
+    if let (BridgeProgram::B1, Some(name)) = (program, fee_message) {
+        bail!(
+            "refused before anything was signed: {name} is ADR 0048's fee collection, which the zone's program {} does \
+             not have",
+            program.name()
+        );
+    }
+    Ok(())
+}
+
 fn hex_bytes(v: &Value, what: &str) -> Result<Vec<u8>> {
     hex::decode(v.as_str().with_context(|| format!("{what}: a hex string"))?.trim_start_matches("0x"))
         .with_context(|| format!("{what}: hex"))
@@ -966,17 +995,10 @@ impl Chain {
     async fn submit_now(&mut self, params: &Value) -> Result<Value> {
         let bytes = hex_bytes(&params["message"], "message")?;
         let (message, wire) = message_of(&bytes)?;
-        // A claim goes in the layout of the program the zone runs (our test network's B1 names a fee-schedule range):
-        // the other layout is refused here, before anything is signed or proven.
-        if let Some(c) = deployed::decode_claim(&bytes) {
-            let program = lez::bridge_program(&self.seq, &self.ctx).await?;
-            ensure!(
-                c.range.is_some() == (program == BridgeProgram::B1),
-                "refused before anything was signed: the module's claim is in {}'s layout, but the zone runs {}",
-                if c.range.is_some() { BridgeProgram::B1.name() } else { BridgeProgram::F13.name() },
-                program.name()
-            );
-        }
+        // Every message, not only a claim, goes to a program this tool knows, in what that program reads (review r1):
+        // the zone's program is read and checked here, before anything is signed or proven.
+        let program = lez::bridge_program(&self.seq, &self.ctx).await?;
+        check_for_program(program, &bytes, &message)?;
         let accounts = params["accounts"].as_array().context("accounts")?;
         let root_index = params["root_index"].as_u64().unwrap_or(0) as usize;
         let mut mentions = Vec::new();
@@ -1320,6 +1342,49 @@ mod tests {
         let b1 = deployed::encode_b1(&claim, &range).unwrap();
         assert_eq!(message_of(&b1).unwrap(), (claim, Some(b1.clone())));
         assert!(message_of(&b1[..b1.len() - 1]).is_err());
+    }
+
+    /// ADR 0048: the zone's program decides what is sent. A claim goes in its program's layout only; the fee
+    /// collection's messages never go to B1; every other message goes to either program.
+    #[test]
+    fn what_each_program_is_sent() {
+        let witness = bw::ClaimWitness {
+            depositor: [1; 20],
+            token: [0; 20],
+            amount: [2; 32],
+            leaf_index: 3,
+            path: vec![[4; 32]; 32],
+            s: [5; 32],
+            kind: 2,
+            dest: [6; 32],
+        };
+        let claim = BridgeMessage::Claim { config_id: [7; 32], leaf_count: 4, witness, relayer: None };
+        let this_tree = borsh::to_vec(&claim).unwrap();
+        let range = deployed::ScheduleRange { index: 0, from_leaf: 0, until_leaf: 4 };
+        let b1 = deployed::encode_b1(&claim, &range).unwrap();
+        let (b1_message, _) = message_of(&b1).unwrap();
+        let (b1p, lez) = (BridgeProgram::B1, BridgeProgram::F13);
+        check_for_program(b1p, &b1, &b1_message).unwrap();
+        check_for_program(lez, &this_tree, &claim).unwrap();
+        assert!(check_for_program(b1p, &this_tree, &claim).unwrap_err().to_string().contains("refused before"));
+        assert!(check_for_program(lez, &b1, &b1_message).unwrap_err().to_string().contains("refused before"));
+
+        let proof = bw::VaultProof { account: vec![vec![1]], slots: vec![vec![vec![2]]] };
+        let fees = [
+            BridgeMessage::CollectFees { config_id: [7; 32], token: [0; 20], record_slot: 9, limit: u128::MAX, proof },
+            BridgeMessage::AccrueFees { config_id: [7; 32], token: [0; 20], total: [0; 32], limit: 1 },
+            BridgeMessage::MintFees { config_id: [7; 32], token: [0; 20], amount: 1 },
+        ];
+        for message in &fees {
+            let bytes = borsh::to_vec(message).unwrap();
+            check_for_program(lez, &bytes, message).unwrap();
+            let refusal = check_for_program(b1p, &bytes, message).unwrap_err().to_string();
+            assert!(refusal.contains("refused before anything was signed") && refusal.contains("ferrata_bridge_b1"));
+        }
+        let sunset = BridgeMessage::Sunset { config_id: [7; 32] };
+        let bytes = borsh::to_vec(&sunset).unwrap();
+        check_for_program(b1p, &bytes, &sunset).unwrap();
+        check_for_program(lez, &bytes, &sunset).unwrap();
     }
 
     fn config(vault: [u8; 20], chain: u64) -> bw::BridgeConfig {

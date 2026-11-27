@@ -1768,7 +1768,7 @@
         "private_owned": false
       },
       "docs": [
-        "A claimant -> token(cid, token) after verifying the deposit: the denomination, the fee schedule of the range, the mint freezes and caps; then Admit and Spend."
+        "A claimant -> token(cid, token) after verifying the deposit: the denomination and the registered relay fee (no fee schedule is read), the mint freezes and caps; then Admit and Spend."
       ]
     },
     {
@@ -3520,6 +3520,86 @@
           "docs": [
             "from config(cid) only"
           ]
+        },
+        {
+          "name": "token_actor",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "token"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "token"
+              }
+            ]
+          },
+          "docs": [
+            "MintFees"
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "config"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              }
+            ]
+          },
+          "docs": [
+            "Admit"
+          ]
+        },
+        {
+          "name": "holder",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "holder"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "holder"
+              }
+            ]
+          },
+          "docs": [
+            "holder(cid, fee_recipient), credited the minted fees"
+          ]
         }
       ],
       "args": [
@@ -3597,6 +3677,58 @@
           },
           "docs": [
             "from fees(cid, token) only"
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "config"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              }
+            ]
+          },
+          "docs": [
+            "Admit"
+          ]
+        },
+        {
+          "name": "holder",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "holder"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "holder"
+              }
+            ]
+          },
+          "docs": [
+            "holder(cid, fee_recipient), credited the minted fees"
           ]
         }
       ],

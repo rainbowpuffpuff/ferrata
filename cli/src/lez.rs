@@ -566,7 +566,8 @@ pub async fn plan_claim<L: Ledger>(
         bail!(r);
     }
     // The program the zone runs decides the claim's layout: the test network's B1 reads a fee-schedule range that this
-    // tree's program (ADR 0046) dropped; any other program is refused here, before the claim is built.
+    // tree's program (`ferrata_bridge_lezfee`; dropped since ADR 0046) does not; any other program is refused here,
+    // before the claim is built.
     let program = bridge_program(ledger, ctx).await?;
     // Spent or not from the downloaded history alone (review M-2): asking the sequencer for `nullifier(cid, chain,
     // vault, N)` would name this deposit to it before the claim, in a dry run or while the claim delay holds it.
