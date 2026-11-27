@@ -2,8 +2,28 @@
 
 [![ci](https://github.com/rainbowpuffpuff/ferrata/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/rainbowpuffpuff/ferrata/actions/workflows/ci.yml)
 
-Ferrata lets programs on the Logos Execution Zone (LEZ) act on Ethereum facts without a trusted relayer,
-and moves ETH and ERC-20 tokens between Ethereum and LEZ without linking the two sides. It has two parts:
+Ferrata lets programs on the Logos Execution Zone (LEZ) act on Ethereum facts without a trusted relayer
+(RFP-021), and moves ETH and ERC-20 tokens between Ethereum and LEZ without linking the two sides (RFP-022). It is
+the evidence for our proposal to Logos, [logos-co/rfp #257](https://github.com/logos-co/rfp/issues/257). Prototypes:
+**not audited, not for production.**
+
+## For reviewers: four links
+
+1. **The status, with counts:** [docs/requirements-status.md](docs/requirements-status.md). Of the 59 hard
+   requirements of RFP-021 and the 68 of RFP-022, **49 and 47 are shown** under our strict rule; 6 and 18 in part,
+   1 and 1 not yet, 3 and 2 wait on Logos (27 November 2026). Each row gives its reason, tests and evidence.
+2. **Verify it in ten minutes:** [docs/VERIFY.md](docs/VERIFY.md). Clone, then `python3 -I scripts/verify.py --all`
+   runs the 119 quick offline checks with Python alone, each naming the requirement rows it backs; then
+   `python3 -I scripts/verify.py --all --online` runs the 22 online checks, read-only.
+3. **Try it on our test network:** [the testers' page](https://54-156-116-24.sslip.io/testers/): the faucet, the web
+   wallet, a deposit on Sepolia and a private claim on LEZ, step by step, with what each step should show. It is a
+   LEZ v0.4.0-rc3 network we run for the bid, not Logos's LEZ testnet 0.4 (not released); its tokens have no value.
+4. **The run records:** [docs/EVIDENCE.md](docs/EVIDENCE.md): every run and test, where it ran, whether its proofs
+   were real, its record and the command that re-checks it; [What has run](#what-has-run) below picks the main ones.
+
+The same four links open the build page our test network serves (`/` on the address above).
+
+## What it is
 
 - **An attestation primitive** (RFP-021): a LEZ program that checks Ethereum sync-committee signatures
   itself and keeps a write-once record of every finalized header it accepts, so that any LEZ program can
@@ -21,9 +41,9 @@ for LEZ) that also covers RFP-021 (trustless Ethereum state attestation for LEZ)
 
 What is here are prototypes and their measurements. **Not audited. Not for production.**
 
-**21 November 2026:** every proof here is made with RISC Zero 3.0.5, whose Groth16 verifier accepts forged claims (RISC Zero's advisories of 11 November 2026), and the owner closed the Sepolia vaults the same day (every release and deposit cap zero): [security note](docs/security/risc0-groth16-advisory-2026-11-21/README.md).
+**21 November 2026:** every proof here is made with RISC Zero 3.0.5, whose Groth16 verifier accepts forged claims (RISC Zero's advisories of 11 November 2026), and the owner closed the Sepolia vaults the same day (every release and deposit cap zero): [security note](docs/security/risc0-groth16-advisory-2026-11-21/README.md). On 23 November a new vault on RISC Zero's fixed verifier 3.1.0 took their place; it is the one our test network uses (the note's status of that day).
 
-## Start here
+## Where to find the rest
 
 | To | Read |
 |---|---|
@@ -31,7 +51,7 @@ What is here are prototypes and their measurements. **Not audited. Not for produ
 | re-check every claim from a terminal: each check with its requirement rows, offline in minutes, then online | [docs/VERIFY.md](docs/VERIFY.md): `python3 -I scripts/verify.py --all`; every component's command-line path: [docs/cli-coverage.md](docs/cli-coverage.md) |
 | check the live Sepolia round trip yourself | [docs/guides/verify.md](docs/guides/verify.md) |
 | find where each RFP requirement is met | [docs/traceability.md](docs/traceability.md) |
-| see the status of each requirement | [docs/requirements-status.md](docs/requirements-status.md): of the 59 and 68 hard requirements of RFP-021 and RFP-022, 49 and 47 shown, 6 and 18 in part, 1 and 1 not yet, 3 and 2 waiting on Logos (our own strict count, 27 November 2026) |
+| see the status of each requirement | [docs/requirements-status.md](docs/requirements-status.md): one row per requirement, its status, reason, tests and evidence (the counts: [For reviewers](#for-reviewers-four-links)) |
 | see the light client on the public LEZ testnet's version (v0.3.1) | [lez-v03/](lez-v03/README.md): an experimental, unaudited port; a finality update in one transaction (6,647,546 gas, 66.5% of the cap), run on a v0.3.1 sequencer we started with the image `8d3b59ff…` ([EVIDENCE](docs/EVIDENCE.md) row 131), the reviewed image deployed on the public testnet on 19 November (`Init`, two finality updates, an attestation of the vault; [EVIDENCE](docs/EVIDENCE.md) row 150). This branch's image `bac768a8…` adds a committee handoff in one transaction, sound only under the light client's honest-supermajority assumption (the next committee adopted by its summary; at most 6,737,794 gas on the mainnet replay and 6,682,541 on Sepolia's 32, in v0.3.1's block application in our harness, [EVIDENCE](docs/EVIDENCE.md) row 137); that image has not run on a sequencer. Its image `155b7317…` also freezes an instance on evidence that a sync committee it holds signed finality contradicting its records (one transaction, 6,656,148 gas at 510 of 512 signers; never produced by an honest network for an instance started from a finalized checkpoint, the assumption of [trust.md](docs/trust.md) §2.1; it must land while the instance is in the signing committee's period; experimental, unaudited, deployed nowhere, [`bench/MISBEHAVIOUR.md`](bench/MISBEHAVIOUR.md), [EVIDENCE](docs/EVIDENCE.md) row 144) |
 | see the bridge's inbound leg and burns on LEZ v0.3.1 | [lez-v03-bridge/](lez-v03-bridge/README.md): an experimental, unaudited port; on a v0.3.1 sequencer we started, a private claim and a private burn proven for real; it already carries the fix of the two v0.4 known issues of [row 136](docs/EVIDENCE.md); reviewed twice ([EVIDENCE](docs/EVIDENCE.md) rows 132, 133) |
 | see the leg back from the public LEZ testnet (a testnet stand-in) | [lez-v03-return/](lez-v03-return/README.md): **a stand-in, not the design**: the unchanged vault and real release proofs, the burn root attested by keys we hold (no checkpoint proof can exist for a v0.3.1 zone today); the attestor signs only after it has compared the burns with the bridge's state on the LEZ node at a Finalized block; rehearsed on a fork of Sepolia ([run](e2e/runs/testnet-return-fork-2/README.md)), not sent; and how far a real checkpoint gets on that network's own data ([EVIDENCE](docs/EVIDENCE.md) rows 134, 135) |

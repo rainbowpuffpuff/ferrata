@@ -517,11 +517,21 @@ dialog.sheet[open] { display: flex; }
   .top-wrap .top-in { flex-wrap: wrap; row-gap: 0; padding-top: .35rem; padding-bottom: .35rem; }
   .top-wrap nav { flex-basis: 100%; margin-left: -.6rem; }
 }
-.testers-cta { display: flex; flex-wrap: wrap; align-items: baseline; gap: .15rem .6rem; max-width: 76ch; margin: -.4rem 0 1.4rem;
-  padding: .55rem .9rem; background: var(--surface); border: 1px solid var(--hair); border-left: 4px solid var(--accent);
-  border-radius: var(--r); }
-.testers-cta a { font-weight: 650; }
-.testers-cta span { color: var(--ink-2); font-size: .94rem; }
+/* The hero's four links for a reviewer: one card each, the whole card the link; numbered, four across when they fit */
+.paths { margin: 0 0 1.3rem; }
+.paths h2 { font-size: .8rem; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); margin: 0 0 .5rem; }
+.paths ol { list-style: none; counter-reset: path; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: .7rem; padding: 0; margin: 0; }
+.paths li { counter-increment: path; display: flex; min-width: 0; }
+.path { display: flex; flex-direction: column; gap: .3rem; flex: 1; min-width: 0; padding: .7rem .95rem .8rem;
+  background: var(--surface); border: 1px solid var(--hair); border-top: 4px solid var(--accent); border-radius: var(--r);
+  color: var(--ink-2); text-decoration: none; font-size: .92rem; line-height: 1.4; overflow-wrap: anywhere; }
+.path:hover { border-color: var(--base); border-top-color: var(--accent); }
+.path:hover .path-t { text-decoration: underline; }
+.path-t { color: var(--link); font-size: 1.02rem; font-weight: 650; }
+.path-t::before { content: counter(path) ". "; color: var(--accent); }
+.path-d b { color: var(--ink); font-weight: 650; }
+.path-d code { font-size: .86em; overflow-wrap: anywhere; }
 .t-alert { max-width: 76ch; margin: .9rem 0 0; padding: .6rem .9rem; background: var(--surface); border-radius: var(--r);
   border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--hair)); border-left: 4px solid var(--warn); }
 .t-agent { max-width: 76ch; margin: .6rem 0 0; padding: .5rem .9rem; background: var(--surface); border: 1px solid var(--hair);
