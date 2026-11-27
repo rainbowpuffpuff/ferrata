@@ -21,8 +21,9 @@ the daemon and 13 hosts killed, K4's round ended on the endpoint's error, K5 wit
 Checks added after this run, from the two review rounds (not in this record): every fault must fire and the hosts meant
 must die as hard checks, K3's transaction broadcast and pending, K4's outage seen by the proxy, K5's late fault fired, a
 round still running or unread at the end of its wait a failure, at most one reverted extra monitor call, nothing in
-flight or queued for the relayer at the end, K2's expected payment corrected. Run 3, with most of them, ran on the box,
-but its record could not be fetched: the box's spend ledger reached its cap first.
+flight or queued for the relayer at the end, K2's expected payment corrected. Run 3, with most of them, was started on
+the box, but its container was replaced before it finished, and it was not repeated (the box's spend ledger had
+reached its cap).
 
 | Step | Fault | What happened (the relayer's or monitor's own lines) | Checked on the chain |
 |---|---|---|---|
