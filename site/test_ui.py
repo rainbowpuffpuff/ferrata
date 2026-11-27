@@ -324,7 +324,9 @@ def main():
         tp.goto(base + "testers/", wait_until="load")
         check(tp.locator("script").count() == 0, "testers/ loads a script")
         check(tp.locator("ol.t-steps > li").count() == 7, f"testers/: {tp.locator('ol.t-steps > li').count()} steps, not 7")
-        check(tp.locator("#step-bridge ol.t-sub > li").count() == 4, "testers/: the bridge has not four steps")
+        check(tp.locator("#step-bridge ol.t-sub > li").count() == 5, "testers/: the bridge has not five steps")
+        check(tp.locator("#step-bridge #step-private a[href*='/docs/VERIFY.md#5-']").count() == 1,
+              "testers/: the private claim does not link docs/VERIFY.md's section 5")
         check(tp.locator("#report a.btn").get_attribute("href") == report, "testers/: the report link is not the tester-report form")
         check(tp.locator("#safety").is_visible() and tp.locator(".t-alert").is_visible(), "testers/: the safety notes do not show")
         for where in ("#agents", "#report"):

@@ -65,9 +65,9 @@ the page works under any host name. -->
 <!-- source: deploy/testnet/web/explorer/config.json | "scan_blocks": 300, -->
 
 <li id="step-bridge"><h3>The bridge: Sepolia to LEZ and back</h3>
-<p>You need MetaMask, or another browser wallet, on Sepolia with a little Sepolia ETH of your own (<a href="#limits">Limits</a>). How long each stage takes: <a href="#bridge-times">the table below</a>.</p>
+<p>You need MetaMask, or another browser wallet, on Sepolia with a little Sepolia ETH of your own (<a href="#limits">Limits</a>); for a private claim (step e), also a Linux computer. How long each stage takes: <a href="#bridge-times">the table below</a>.</p>
 <ol class="t-sub" type="a">
-<li><b>Deposit.</b> In the wallet’s Bridge tab, press “Connect your browser wallet”. Pick ETH, 0.001, and “this wallet’s selected public account”; press “Review the deposit”, then “Deposit with my browser wallet”, and confirm in MetaMask.
+<li><b>Deposit.</b> In the wallet’s Bridge tab, press “Connect your browser wallet”. Pick ETH, 0.001, and “this wallet’s selected public account” (or “this wallet’s private account /0” for a private claim: step e); press “Review the deposit”. The review prices the gas now and checks that your Sepolia ETH covers the deposit, its fees and the gas. Then press “Deposit with my browser wallet”, and confirm in MetaMask.
 <span class="t-ok"><b>You should see</b> “Deposited: leaf N in block M”.</span></li>
 <li><b>Wait for the import, then claim.</b> About 20 minutes later, press “Find my deposits on the vault”, then “Claim on LEZ” (the wallet imports the deposit first if nobody has yet).
 <span class="t-ok"><b>You should see</b> “Claimed in LEZ block N: 0.001 ETH now held by your account on LEZ”.</span></li>
@@ -79,6 +79,17 @@ the page works under any host name. -->
 <!-- source: vault/script/DeployVault.s.sol | _three(2e12, 2e13, 2e14), -->
 <!-- source: vault/script/DeployVault.s.sol | _three(1e12, 1e13, 1e14), -->
 This is the least-tested step: tell us where it stops.</li>
+<li id="step-private"><b>Or claim privately (command line).</b> Steps b and c put your deposit and your LEZ account together in public. For a claim that nothing public links to its deposit, pick “this wallet’s private account /0” in step a. The claim is then made on your own computer by the <code>ferrata</code> tool, from the same 24 words: you need an x86-64 Linux computer with 16 threads and 16 GB (the proof takes about 10 minutes at 16 threads), Rust, RISC Zero’s <code>r0vm</code> 3.0.5 and LEZ v0.4.0-rc3’s sources.
+<!-- source: docs/VERIFY.md | What you need: an x86-64 Linux machine with 16 threads and 16 GB for the two private proofs (about 10 minutes each at 16 threads; -->
+<!-- source: docs/VERIFY.md | LEZ v0.4.0-rc3's sources (`scripts/fetch-upstream.sh`), `r0vm` 3.0.5, -->
+The commands, in order, are in <a href="{{src:docs/VERIFY.md#5-a-round-trip-of-your-own-sepolia--our-test-network-from-the-command-line}}">docs/VERIFY.md, section 5</a>: build the tool for this network, set this network’s addresses, run <code>ferrata scan</code> until it says your deposit is claimable, then <code>ferrata claim --bridge-program ferrata_bridge_b1.bin</code> (a dry run: the plan, what becomes public, and your claim delay of 1 to 12 hours, fixed by your phrase) and the same with <code>--send --yes</code>.
+<!-- source: docs/VERIFY.md | | claim, privately | `ferrata claim --bridge-program ferrata_bridge_b1.bin`, then with `--send --yes` (through the pager) | -->
+<!-- source: docs/VERIFY.md | held for its claim delay (1-12 h from the seed; -->
+<span class="t-ok"><b>You should see</b> the claim in the explorer as a private transaction (no amount, no account), and <code>ferrata recover</code> listing your deposit as claimed.</span>
+<b>Not yet done by anyone outside the project, and one piece is not published:</b> LEZ’s wallet, which the tool runs to make the proof, asks for 100 blocks at a time and stops at this network’s gateway, which serves 50, unless a local pager sits in between; the kit with that pager is not merged yet (section 5 says so). Tell us where it stops.
+<!-- source: docs/VERIFY.md | syncs in ranges of 100 blocks and stops at the first refusal -->
+<!-- source: docs/VERIFY.md | The gateway serves at most 50 blocks per `getBlockRange` -->
+<!-- source: docs/VERIFY.md | reviewed, on branch `private-kit`, not yet merged --></li>
 </ol></li>
 
 <li id="step-facts"><h3>Read the latest attested Ethereum facts</h3>

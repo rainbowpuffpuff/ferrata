@@ -30,6 +30,7 @@ body:
         - "6b. Bridge: the import and the claim"
         - "6c. Bridge: the burn"
         - "6d. Bridge: the release on Sepolia (command line)"
+        - "6e. Bridge: a private claim (command line)"
         - "7. Attested Ethereum facts (build page, status page, Prove tab)"
         - "Other"
     validations:
