@@ -38,6 +38,7 @@ The page's Content-Security-Policy allows scripts, styles and connections to its
 node --test test/*.test.mjs                       # 53: LEZ's pinned vectors, recorded Attest messages, SPEC-v2 and IDL vectors, the PWA list, the review's findings, the bridge tab's plain words
 bash test/box.sh build                            # LEZ rc3's sequencer + wallet CLI (LEZ's source beside the repository)
 bash test/box.sh e2e NAME                         # with Foundry and vault/lib present, the bridge steps too
+bash test/box.sh testers NAME                     # the host's layout (serve.py --site): the testers' path from the build page
 ```
 
 `box.sh` keeps its build in `WALLET_WORK` (default `ferrata-scratch/wallet/box` beside the repository); on a build
@@ -50,6 +51,12 @@ machine that saves only some directories between runs, point `WALLET_WORK` at on
   `eth_gasPrice`, rounded up to the gwei) with the Sepolia ETH it needs, refused before any signature when the
   balance falls short; a name typed as the burn's recipient refused with its reason. In the page, each button holds
   one request at a time, and the review shows the addresses EIP-55 checksummed.
+- `test/testers_path.py` (`box.sh testers`): what a visitor does, in headless Chromium against a local rc3 sequencer
+  and anvil, with the pages laid out as the host serves them (`serve.py --site BUILD_DIR`: the build page at `/`, the
+  wallet at `/wallet/`): the build page's reviewer link to the testers' page, its link to the wallet, a new wallet,
+  the faucet, a deposit declined in the browser wallet and then made, the private destination's note and its link to
+  step 6e, a deposit to the private account, a browser wallet without Sepolia ETH refused at the review, "Find my
+  deposits". Not the claim: that needs the attestation and bridge programs on the zone (the record says so).
 - `test/review.test.mjs`: the findings of the independent review that unit tests can hold: amounts with a comma are
   refused, a transaction missing from its block is "outcome unknown", EIP-55 (the EIP's own examples), a record past
   200 KB, the record's iteration count kept on save, no second wallet over the first, embedded trie nodes (a forged

@@ -6,6 +6,8 @@
 #   box.sh build           LEZ rc3's sequencer_service (feature `standalone`) and LEZ's wallet CLI, from the unmodified tag
 #   box.sh probe           start the sequencer, record its RPC answers and a transfer signed by LEZ's own wallet CLI
 #   box.sh e2e [NAME]      start the sequencer and test/serve.py, run the Playwright test (test/e2e_test.py), stop both
+#   box.sh testers [NAME]  the same with the host's layout (serve.py --site: the build page at /, the wallet at /wallet/;
+#                          WALLET_SITE, default deploy/testnet/web/build) and the testers' path (test/testers_path.py)
 #
 # Layout: LEZ at upstream/lez-v0.4.0-rc3 beside the repository (LEZ_SRC overrides); scratch in ferrata-scratch/wallet/box
 # beside the repository (WALLET_WORK overrides). Everything a command starts is stopped before it returns.
@@ -147,6 +149,7 @@ case "${1:-}" in
   build) build ;;
   probe) probe ;;
   e2e) shift; . "$HERE/e2e.sh" ;;
+  testers) shift; WALLET_TEST_SCRIPT=testers_path.py WALLET_SITE="${WALLET_SITE:-$REPO/deploy/testnet/web/build}"; . "$HERE/e2e.sh" ;;
   metamask) shift; . "$HERE/metamask.sh" ;;
   *) sed -n '2,12p' "${BASH_SOURCE[0]}"; exit 2 ;;
 esac

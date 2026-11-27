@@ -395,18 +395,20 @@ export function mountBridge(root, c) {
       // needed; the wallet prices the deposit after it) and whether this address's Sepolia ETH covers it. An estimate
       // that fails is the vault's refusal, said here and not after a signature.
       const first = plan.approve ?? plan.tx;
-      let gas, gasPrice, balance;
+      const value = isEth() ? total : 0n;
+      const short = (need, what) => { plan = null; return new Error(`Your Sepolia ETH, ${fmtUnits(balance)}, does not cover ${fmtUnits(need)} (${what}): `
+        + 'get some Sepolia ETH first (the testers\' page, Limits, names public faucets). Nothing was signed.'); };
+      // The balance first, so that one too small for the deposit itself is said the same way whatever the estimate does.
+      const balance = BigInt(await P.request({ method: 'eth_getBalance', params: [depositor, 'latest'] }));
+      if (balance < value) throw short(value, 'the deposit and its fees, before the gas');
+      let gas, gasPrice;
       try {
-        [gas, gasPrice, balance] = await Promise.all([
+        [gas, gasPrice] = await Promise.all([
           P.request({ method: 'eth_estimateGas', params: [{ from: first.from, to: first.to, value: first.value, data: first.data }] }),
-          P.request({ method: 'eth_gasPrice' }), P.request({ method: 'eth_getBalance', params: [depositor, 'latest'] })]);
+          P.request({ method: 'eth_gasPrice' })]);
       } catch (e) { plan = null; throw e; }
-      const cost = costOf({ gas, gasPrice, balance, value: isEth() ? total : 0n });
-      if (!cost.enough) {
-        plan = null;
-        throw new Error(`Your Sepolia ETH, ${fmtUnits(BigInt(balance))}, does not cover ${fmtUnits(cost.need)} (${isEth() ? 'the deposit, its fees and ' : ''}the gas): `
-          + 'get some Sepolia ETH first (the testers\' page, Limits, names public faucets). Nothing was signed.');
-      }
+      const cost = costOf({ gas, gasPrice, balance, value });
+      if (!cost.enough) throw short(cost.need, isEth() ? 'the deposit, its fees and the gas' : 'the gas');
       const add = (x, y) => sum.append(el('dt', { text: x }), el('dd', { text: y }));
       add('From', toChecksumAddress(depositor)); add('Vault', toChecksumAddress(B.vault)); add('Asset', isEth() ? 'ETH' : `${A.symbol} ${toChecksumAddress(A.address)}`); add('Amount', fmt(vault.denominations[i]));
       add('Fees', `mint ${fmt(vault.fees[i].mint)}, relay ${fmt(vault.fees[i].relay)} (schedule ${vault.schedule})`); add('Total', fmt(total));
@@ -415,7 +417,7 @@ export function mountBridge(root, c) {
           : `none needed (the vault may already take ${fmt(vault.allowance)})`);
       }
       add(plan.approve ? 'Gas, the approval' : 'Gas', cost.text);
-      add('Your Sepolia ETH', fmtUnits(BigInt(balance)));
+      add('Your Sepolia ETH', fmtUnits(balance));
       add('Index j', vault.j.toString()); add('Commitment C', '0x' + hex(C));
       add('Destination', `${kind.value} LEZ account ${c.lez.idToString(d)} (inside C, not public)`);
       add('Calldata', data);
