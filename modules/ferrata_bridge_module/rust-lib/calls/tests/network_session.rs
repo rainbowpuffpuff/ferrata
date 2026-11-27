@@ -286,12 +286,19 @@ impl Fixture {
     }
 }
 
+#[derive(Clone, Debug)]
+struct NetworkRequest {
+    method: String,
+    /// The send ledger's length before this request was served; a sendTransaction records the preceding count.
+    sends_before: usize,
+}
+
 #[derive(Debug, Default)]
 struct NetworkState {
     sent: Vec<String>,
     decoded: Vec<bw::BridgeMessage>,
     burn_applied: bool,
-    methods: Vec<String>,
+    requests: Vec<NetworkRequest>,
     faucet_body: Option<Value>,
     faucet_called: bool,
 }
@@ -342,7 +349,8 @@ fn network(f: Arc<Fixture>, state: Arc<Mutex<NetworkState>>) -> String {
         assert_eq!(path, "/rpc", "only the recorded network paths");
         let method = req["method"].as_str().unwrap_or("").to_string();
         let mut st = state.lock().unwrap();
-        st.methods.push(method.clone());
+        let sends_before = st.sent.len();
+        st.requests.push(NetworkRequest { method: method.clone(), sends_before });
         let burn_applied = st.burn_applied;
         let result = match method.as_str() {
             "getLastBlockId" => json!(5),
@@ -471,6 +479,33 @@ fn assert_error(r: &Value, part: &str) {
 fn assert_ok(r: &Value) -> &Value {
     assert_eq!(r["ok"], true, "{r}");
     r
+}
+
+/// Inspect the ledger before confirm is submitted, not only after the whole calls file. Each request's snapshot also
+/// proves that the stand-in had received only the preceding operations' transactions while this phase was answered.
+fn assert_no_new_send(state: &Mutex<NetworkState>, first_request: usize, sends_before: usize, phase: &str) {
+    let st = state.lock().unwrap();
+    assert_eq!(st.sent.len(), sends_before, "{phase} sent a transaction before its confirm phase");
+    let requests = &st.requests[first_request..];
+    assert!(requests.iter().all(|r| r.sends_before == sends_before), "{phase} observed an early send: {requests:?}");
+    assert!(!requests.iter().any(|r| r.method == "sendTransaction"), "{phase} reached sendTransaction: {requests:?}");
+}
+
+fn confirm_and_wait(view: &mut ViewClient, pending_id: &str) -> Value {
+    let started = value(&view.call("confirm", &json!({ "pending_id": pending_id })));
+    assert_ok(&started);
+    let id = started["result"]["job"]["id"].clone();
+    assert!(!id.is_null(), "confirm returned no job: {started}");
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    loop {
+        let job = value(&view.call("job", &json!({ "id": id })));
+        assert_ok(&job);
+        if job["result"]["running"] == false {
+            return job;
+        }
+        assert!(std::time::Instant::now() < deadline, "confirm job did not finish: {job}");
+        thread::sleep(std::time::Duration::from_millis(10));
+    }
 }
 
 /// The captured burn carries one valid signature over exactly its approved message hash.
@@ -602,6 +637,12 @@ fn terminal_calls_file_drives_the_whole_network_session_offline() {
 
     // A second open exercises the same client as the file: a genuine envelope succeeds once, its exact replay is
     // refused, a forged tag and another caller cannot replace it, and a fresh counter works afterwards.
+    // Use a fresh B1 fixture so the direct approval-boundary checks below begin with an empty send ledger.
+    // (The working claim's F13 stand-in unit test likewise asserts its ledger is empty immediately after prepare.)
+    let fixture = Arc::new(Fixture::new());
+    let state = Arc::new(Mutex::new(NetworkState::default()));
+    let base = network(fixture.clone(), state.clone());
+    let eth = ethereum(fixture.clone());
     let mut view = ViewClient::new("module:ferrata_bridge_ui");
     let (opened, words) = view.open(&json!({ "network": base, "eth_rpc": eth }), Some(PHRASE));
     assert!(words.is_none());
@@ -614,5 +655,42 @@ fn terminal_calls_file_drives_the_whole_network_session_offline() {
     let forged = r#"{"call":"{\"method\":\"balances\",\"params\":{}}","n":99,"mac":"00"}"#;
     assert_error(&value(&wallet_as("module:ferrata_bridge_ui", forged)), "MAC does not hold");
     assert_ok(&value(&view.call("balances", &json!({}))));
+
+    // Review r1 M1: drive these boundaries interactively. The B1 refusal sends nothing; the burn cannot sign/send at
+    // approve time and hide that send in a ledger inspected only after confirm. The request snapshots cover every RPC
+    // made before either assertion, including the prepare nonce/fee/balance reads and any misplaced sendTransaction.
+    assert_ok(&value(&view.call("faucet", &json!({ "account": 0 }))));
+    let first_request = state.lock().unwrap().requests.len();
+    let refused = value(&view.call("claim", &json!({ "leaf_index": 0, "private": false })));
+    assert_error(&refused, "ferrata_bridge_b1");
+    assert_no_new_send(&state, first_request, 0, "B1 claim refusal");
+
+    let first_request = state.lock().unwrap().requests.len();
+    let boundary_burn = value(&view.call(
+        "burn",
+        &json!({
+            "private": false, "account": 0, "amount": BURN_AMOUNT.to_string(), "recipient": RECIPIENT,
+            "release_delay_ms": 1000,
+        }),
+    ));
+    assert_ok(&boundary_burn);
+    let approval = &boundary_burn["result"]["to_approve"];
+    assert_eq!(approval["kind"], "burn");
+    assert_eq!(approval["signed"], false);
+    assert_no_new_send(&state, first_request, 0, "burn approval");
+    let pending_id = approval["pending_id"].as_str().unwrap().to_string();
+    let approved_hash = approval["message_hash"].as_str().unwrap().to_string();
+    let boundary_job = confirm_and_wait(&mut view, &pending_id);
+    let boundary_done = &boundary_job["result"]["result"];
+    assert_eq!(boundary_job["result"]["state"], "settled", "{boundary_job}");
+    assert_eq!(boundary_done["settled"], true, "{boundary_done}");
+    assert_eq!(boundary_done["approved"]["message_hash"], approved_hash);
+    {
+        let st = state.lock().unwrap();
+        assert_eq!(st.sent.len(), 1, "exactly the confirmed burn was sent; the B1 claim refusal sent nothing");
+        assert_signed(&st.sent[0], &approved_hash);
+        assert_eq!(captured_bridge_message(&st.sent[0]).unwrap(), fixture.burn_message);
+        assert_eq!(st.decoded.as_slice(), &[fixture.burn_message.clone()]);
+    }
     assert_ok(&value(&view.call("close", &json!({}))));
 }
