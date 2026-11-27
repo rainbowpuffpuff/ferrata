@@ -231,6 +231,70 @@ def _site_manifest(ctx):
     raise Skipped(f"{len(fails)} file(s) could not be fetched from the host, twice: " + fails[0].strip()[:160])
 
 
+@check(id="day1-discover-online", family="lez-network", mode="online", evidence=(248,),
+       title="The day-one kit's read-only probe of the test network: what the endpoint is",
+       what="lez/testnet04/day1.sh discover: health, the head and fee state, the program ids the endpoint holds, "
+            "its channel, the clock, whether it is a v0.4 network at all (a method v0.3 lacks)",
+       against="the endpoint's own answers, read only: JSON-RPC reads (checkHealth, getLastBlockId, getFeeState, "
+               "getProgramIds, getChannelId, getBlock, getPublications) and no transaction (the script's own "
+               "header says it sends none)",
+       needs=("bash", "python3", "curl", "network"), inputs=("lez/testnet04/day1.sh",))
+def _day1_discover(ctx):
+    # The state the probe writes goes to .scratch: the script's default is beside the repository.
+    state = ctx.root / ".scratch" / "day1-discover"
+    state.mkdir(parents=True, exist_ok=True)
+    rc, out = _run(ctx, ["bash", "lez/testnet04/day1.sh", "discover", ctx.lez_url.rstrip("/") + "/rpc"],
+                   env={"FERRATA_DAY1_STATE": str(state)})
+    if rc != 0:
+        raise CheckFailed("\n".join([f"exit status {rc}"] + out[-10:]))
+    try:
+        d = json.loads((state / "discover.json").read_text())
+    except (OSError, ValueError) as e:
+        raise CheckFailed(f"discover wrote no readable answer at {state / 'discover.json'}: {e}")
+    head = d.get("getLastBlockId", {})
+    if not isinstance(head.get("result"), int) or "error" in d.get("checkHealth", {}):
+        raise Skipped(f"the endpoint could not be read: checkHealth {d.get('checkHealth')}, "
+                      f"getLastBlockId {head}")
+    return out[-6:]
+
+
+SOURCIFY_FIELDS = ("vault", "registry", "token", "emergencyStop", "groth16Verifier")
+
+
+def _sourcify_rows(lines):
+    """(field, address, match) for each contract line the script prints; match None when the reply was unreadable
+    (the script prints `unreadable` where a readable reply gives `exact_match`, `match` or `none`)."""
+    out = []
+    for ln in lines:
+        parts = ln.split()
+        if parts and parts[0] in SOURCIFY_FIELDS:
+            out.append((parts[0], parts[1],
+                        next((w for w in parts[2:] if w in ("exact_match", "match", "none")), None)))
+    return out
+
+
+@check(id="sourcify-status-online", family="sepolia", mode="online", evidence=(122,),
+       title="What Sourcify holds for every contract of the live round trip (the crown-live-3 deployment)",
+       what="vault/script/sourcify.sh status: each of the five addresses' match (exact, a match, or nothing) and "
+            "the fully qualified name Sourcify shows for it",
+       against="the exact matches EVIDENCE row 122 records for crown-live-3's five contracts (vault, registry, token, "
+               "emergency stop, Groth16 verifier; five of the row's twelve, which cover three deployments); GET "
+               "requests only (the script's `risc0` and `vault` modes publish, and are not run here)",
+       needs=("bash", "curl", "jq", "network"), inputs=("vault/script/sourcify.sh", "e2e/runs/crown-live-3"))
+def _sourcify_status(ctx):
+    # exit 0 either way: the verdict is read from what it prints, one line per contract.
+    rc, out = _run(ctx, ["bash", "vault/script/sourcify.sh", "status"])
+    if rc != 0:
+        raise CheckFailed("\n".join([f"exit status {rc}"] + out[-10:]))
+    rows = _sourcify_rows(out)
+    if not rows:
+        raise Skipped("the script named no contract (the deployment record names none)")
+    if any(m is None for _, _, m in rows):
+        raise Skipped("sourcify.dev could not be read: " + out[0].strip()[:160])
+    fail_if([f"{f} {a}: Sourcify holds {m}" for f, a, m in rows if m != "exact_match"], "the contracts")
+    return [f"{f:16} {a}  {m}" for f, a, m in rows]
+
+
 @check(id="updater-live-sepolia-beacon", family="beacon", mode="online", evidence=(99, 104),
        rows=("RFP-021 U.3", "RFP-021 R.4", "RFP-021 R.5"),
        title="The updater's 8 h live run on LEZ sequencers: its record re-checked, every applied root against Sepolia",

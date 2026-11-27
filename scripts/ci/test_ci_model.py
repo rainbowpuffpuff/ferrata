@@ -478,6 +478,90 @@ check("jobs: lez-harness-full runs unsharded in lez-full.yml on schedule and wor
       and "schedule" in LHF.triggers and "workflow_dispatch" in LHF.triggers
       and ci_model.step_guard(LHF, lhf_last) is None)
 
+# ── The justfile runs the CI jobs' commands (docs/cli-coverage.md, G17) ─────────────────────────────
+# `just` itself need not be installed (and is not, on the machine that wrote this): the justfile is parsed
+# here, and each job recipe's commands are compared with the job's `run:` steps as run_steps reads them
+# from the workflows, so a recipe cannot drift from its job (a command added, dropped or a job renamed).
+
+
+def justfile_parts(text):
+    """The justfile read as just reads it, as far as these recipes need: its assignments (name -> text, the
+    exported names apart) and its recipes (name -> params and command lines, `@` and shell comments out)."""
+    assigns, exports, recipes, current = {}, set(), {}, None
+    for line in text.split("\n"):
+        if not line.strip():
+            continue
+        if line[0] in " \t":  # a recipe's body
+            if current is None:
+                raise AssertionError(f"justfile: an indented line outside any recipe: {line!r}")
+            body = line.strip()
+            if body.startswith("#"):  # passed to the shell, which takes it for a comment
+                continue
+            if body.startswith("@"):  # just's "quiet" marker, not part of the command
+                body = body[1:].lstrip()
+            current["lines"].append(body)
+            continue
+        if current is not None:
+            recipes[current["name"]] = current
+            current = None
+        if line.startswith("#") or line.startswith("set "):
+            continue
+        if ":=" in line:  # an assignment (`set shell := …` was caught above)
+            lhs, _, value = line.partition(":=")
+            lhs = lhs.strip()
+            if lhs.startswith("export "):
+                lhs = lhs[len("export "):].strip()
+                exports.add(lhs)
+            assigns[lhs] = value.strip()
+            continue
+        if line.endswith(":"):  # a recipe header
+            m = re.match(r"^([A-Za-z_][A-Za-z0-9_-]*)(.*)$", line[:-1].strip())
+            if not m:
+                raise AssertionError(f"justfile: an unparsable recipe header: {line!r}")
+            current = {"name": m.group(1), "params": (m.group(2) or "").split(), "lines": []}
+            continue
+        raise AssertionError(f"justfile: an unparsable line: {line!r}")
+    if current is not None:
+        recipes[current["name"]] = current
+    return assigns, exports, recipes
+
+
+assigns, exports, recipes = justfile_parts((ROOT / "justfile").read_text(encoding="utf-8"))
+check("justfile: every recipe of the file is parsed (update this list when a recipe is added)",
+      set(recipes) == {"default", "bench", "bench-user", "m0", "release", "release-verify", "deploy-testnet",
+                       "halmos-long", "verify", "lez-read", "ci-commands", "idl", "admin", "links",
+                       "ci-verify", "lez-harness"})
+check("justfile: RUNNER_TEMP is exported with a local default (the links job's record check writes there)",
+      "RUNNER_TEMP" in exports and "env_var_or_default" in assigns.get("RUNNER_TEMP", ""))
+# The recipe that runs a whole CI job, and the job it runs (`ci-verify` because `verify` passes ARGS through
+# to scripts/verify.py itself). Each recipe line is one command line of the job, in order, exactly as
+# written in the workflow; `uses:` steps are the runner's setup and no recipe's business.
+for recipe_name, job_name in (("idl", "idl"), ("admin", "admin"), ("links", "links"), ("ci-verify", "verify")):
+    job = jobs.get(job_name)
+    check(f"justfile: the recipe {recipe_name} names a job the workflows define", job is not None)
+    if job is None:
+        continue
+    check(f"justfile: the recipe {recipe_name} takes no argument (the job's commands are fixed)",
+          recipe_name in recipes and not recipes[recipe_name]["params"])
+    want = [line.strip() for step in ci_model.run_steps(job) for line in step["text"].splitlines()
+            if line.strip()]
+    check(f"justfile: the recipe {recipe_name} runs exactly the {job_name} job's commands, in order",
+          recipe_name in recipes and recipes[recipe_name]["lines"] == want)
+# `just lez-harness SHARD`: the job's test step, with the recipe's argument for the matrix value. The steps
+# before it are the runner's setup (toolchains, upstream sources, libraries) and the job's own build step.
+LH_STEPS = {}
+for step in ci_model.run_steps(jobs["lez-harness"]):
+    LH_STEPS.setdefault(repr(step["combo"]), []).append(step)
+check("justfile: the recipe lez-harness takes the shard as its one argument",
+      "lez-harness" in recipes and recipes["lez-harness"]["params"] == ["shard"])
+for combo, steps in LH_STEPS.items():
+    shard = steps[0]["combo"]["shard"]
+    last = steps[-1]  # the step that runs the shard's tests (the one after the build step)
+    want = last["text"].replace('"$SHARD"', shard)
+    got = (recipes.get("lez-harness", {}).get("lines") or [""])[0].replace('"$1"', shard)
+    check(f"justfile: the recipe lez-harness runs the job's test step of shard {shard}",
+          got == want and last["text"].endswith('lez-harness.sh --shard "$SHARD"'))
+
 # ── check-row-tests.py refuses false claims ────────────────────────────────────────────────────────
 checker = HERE / "check-row-tests.py"
 real = (HERE / "row-tests.toml").read_text(encoding="utf-8")

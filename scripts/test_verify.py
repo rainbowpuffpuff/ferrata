@@ -18,10 +18,12 @@ import json
 import os
 import re
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
 from pathlib import Path
 
@@ -458,6 +460,7 @@ class StandInRpc:
 
     def close(self):
         self.server.shutdown()
+        self.server.server_close()  # joins the request threads and closes the listening socket
 
 
 FIXTURE = ROOT / "scripts/verifylib/testdata/lez-rc3-blocks-25190-25260.json"
@@ -894,6 +897,40 @@ class Families(TamperCase):
             api.close()
 
 
+class OnlineWrappers(unittest.TestCase):
+    """The online checks that wrap a repository script, against a stand-in network and the script's own output."""
+
+    def test_day1_discover_against_a_stand_in_network(self):
+        """The day-one kit's probe of a network that answers: it passes; one that answers nothing skips."""
+        fx = json.loads(FIXTURE.read_text())
+        blocks = {fx["first"] + i: b for i, b in enumerate(fx["blocks"])}
+        rpc = StandInRpc(dict(blocks), {})
+        try:
+            r = run("day1-discover-online", ROOT, lez_url=rpc.url)
+            self.assertEqual(r.status, "PASS", "\n".join(r.lines))
+        finally:
+            rpc.close()
+        rpc = StandInRpc({}, {})
+        try:
+            r = run("day1-discover-online", ROOT, lez_url=rpc.url)
+            self.assertEqual(r.status, "SKIP", "\n".join(r.lines))
+        finally:
+            rpc.close()
+
+    def test_sourcify_rows_from_the_scripts_output(self):
+        """What `sourcify.sh status` prints, one row per contract: the match word, or none when unreadable."""
+        from verifylib import checks_online
+        lines = ["vault            0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c  exact_match  "
+                 "src/FerrataVault.sol:FerrataVault",
+                 "registry         0xa75e653BdaD23d198Ea357277b715aD8A9687673  match  other",
+                 "token            0x6b479b044501C8764a326EaBb64b5f441F96C3CB  none  ",
+                 "emergencyStop    0x1dB3fa8041E8178f1608c2F7dF627d7EC16C8221  unreadable",
+                 "groth16Verifier  0x8f0Af3Bf302C64d57f840127F94d9c123a8Fa2A0  exact_match  v"]
+        self.assertEqual([m for _, _, m in checks_online._sourcify_rows(lines)],
+                         ["exact_match", "match", "none", None, "exact_match"])
+        self.assertEqual(checks_online._sourcify_rows(["check-unaudited.sh: every file is marked"]), [])
+
+
 class GasDrop(unittest.TestCase):
     """gasdrop-terms-online against a stand-in gateway (review round 2, M4)."""
 
@@ -1061,6 +1098,221 @@ class LezRead(unittest.TestCase):
         self.rpc.blocks[bid] = base64.b64encode(bytes(raw)).decode()
         rc, out, err = self.read("block", str(bid))
         self.assertEqual(rc, 1, (out, err))
+
+    # ---- `instance ACCOUNT --alarms`: the status page's rules from a terminal --------------------------
+
+    GENESIS = 1655733600  # Sepolia's genesis, as the public network's instances configure it
+    WS_EPOCHS = 3532      # Sepolia's weak-subjectivity period in epochs, as they configure it
+
+    def instance_state(self, slot, next_committee=True, active=True, ws_period_epochs=WS_EPOCHS, genesis_time=GENESIS,
+                       seconds_per_slot=12, slots_per_epoch=32, epochs_per_period=256):
+        """An InstanceState of the attestation program, borsh-encoded as the program stores it (the IDL's layout:
+        id, Config, active, the store, applied, root and parent ids): the Sepolia configuration the public network's
+        instances use, a finalized beacon header at `slot`, and the next committee known or not, as given."""
+        forks = b"".join((0x90000000 + i).to_bytes(4, "little") for i in range(9))
+        cfg = (struct.pack("<QIQQQ", 11155111, 512, slots_per_epoch, epochs_per_period, 1) + forks
+               + b"".join((50 + 1000 * i).to_bytes(8, "little") for i in range(9)) + bytes(range(32))
+               + struct.pack("<QQ", genesis_time, seconds_per_slot) + bytes([4, 2])
+               + struct.pack("<Q", ws_period_epochs))
+        header = (slot.to_bytes(8, "little") + (1).to_bytes(8, "little")
+                  + bytes.fromhex("02" * 32) + bytes.fromhex("03" * 32) + bytes.fromhex("04" * 32))
+        # CompactStore (ferrata.js `decodeCompactStore`): fork byte, the header, the current committee's summary,
+        # a flag, the next committee's summary when the flag is set.
+        store = (bytes([4]) + header + bytes(32) + bytes(48) + bytes([1 if next_committee else 0])
+                 + (bytes(32) + bytes(48) if next_committee else b""))
+        assert len(cfg) == 202 and len(header) == 112 and len(store) in (194, 274)
+        return (bytes(range(1, 33)) + cfg + bytes([1 if active else 0]) + struct.pack("<I", len(store)) + store
+                + struct.pack("<Q", 673) + bytes(range(1, 33)) + bytes(range(2, 34)))
+
+    def instance_rpc(self, state):
+        """A stand-in network serving one instance: its /programs.json, and the instance's state at its account."""
+        chain = json.loads((ROOT / RR / "chain.json").read_text())
+        program, account = chain["program_account"], lez.b58encode(bytes(range(65, 97)))
+        files = {"/programs.json": {"programs": {"ferrata_attestation": {
+            "program_account": program, "image_id": "0x" + runrecord.ATTESTATION_IMAGE}}}}
+        return StandInRpc({}, files, {(account, program): state}), account
+
+    def read_instance(self, state, *extra):
+        """`lez-read instance ACCOUNT [--alarms ...] --json` against a stand-in network serving `state`."""
+        rpc, account = self.instance_rpc(state)
+        try:
+            p = subprocess.run([sys.executable, "-I", str(ROOT / "scripts/lez-read.py"), "--lez", rpc.url,
+                                "--json", "instance", account, *extra], capture_output=True, text=True, timeout=120)
+        finally:
+            rpc.close()
+        return p.returncode, (json.loads(p.stdout) if p.stdout.strip() else None), p.stderr
+
+    def slot_of(self, seconds_ago, genesis_time=GENESIS):
+        """The slot whose time is `seconds_ago` before now, as the wall clock counts it."""
+        return (int(time.time()) - seconds_ago - genesis_time) // 12
+
+    def test_instance(self):
+        from verifylib import lc
+        slot = self.slot_of(6 * 3600)
+        rc, out, err = self.read_instance(self.instance_state(slot))
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(out["chain_id"], 11155111)
+        self.assertTrue(out["active"])
+        self.assertTrue(out["next_committee"])
+        self.assertEqual(out["finalized_slot"], slot)
+        self.assertEqual(out["ws_period_epochs"], self.WS_EPOCHS)
+        header = (slot.to_bytes(8, "little") + (1).to_bytes(8, "little")
+                  + bytes.fromhex("02" * 32) + bytes.fromhex("03" * 32) + bytes.fromhex("04" * 32))
+        self.assertEqual(out["finalized_root"], "0x" + lc.beacon_root(lc._beacon(header)).hex())
+
+    def test_no_alarms_when_healthy(self):
+        """An instance an epoch behind the wall clock: the one alarm is the ok one, and the exit is 0."""
+        rc, out, err = self.read_instance(self.instance_state(self.slot_of(20 * 60)), "--alarms")
+        self.assertEqual(rc, 0, (err, out))
+        self.assertEqual([a["level"] for a in out["alarms"]], ["ok"], out["alarms"])
+        self.assertEqual(out["alarms"][0]["lag_epochs"], 1, out["alarms"])
+
+    def test_lag_warns(self):
+        """Twelve epochs behind: a warning, and the exit is still 0 (behind, not wrong)."""
+        rc, out, err = self.read_instance(self.instance_state(self.slot_of((12 * 32 + 64) * 12 + 60)), "--alarms")
+        self.assertEqual(rc, 0, (err, out))
+        self.assertTrue(any(a["level"] == "warn" and "12 epochs behind" in a["text"] for a in out["alarms"]),
+                        out["alarms"])
+
+    def test_lag_alarms(self):
+        """A hundred epochs behind: a bad alarm, and the exit is 1."""
+        rc, out, err = self.read_instance(self.instance_state(self.slot_of((100 * 32 + 64) * 12 + 60)), "--alarms")
+        self.assertEqual(rc, 1, (err, out))
+        self.assertTrue(any(a["level"] == "bad" and "100 epochs behind" in a["text"] for a in out["alarms"]),
+                        out["alarms"])
+
+    def test_lag_by_a_given_finalized_slot(self):
+        """With --finalized-slot the lag is judged by Ethereum's checkpoint, as the page judges it by the APIs'."""
+        slot = self.slot_of(4000)
+        rc, out, err = self.read_instance(self.instance_state(slot), "--alarms", "--finalized-slot", str(slot + 32))
+        self.assertEqual(rc, 0, (err, out))
+        self.assertEqual([a["level"] for a in out["alarms"]], ["ok"], out["alarms"])
+        rc, out, err = self.read_instance(self.instance_state(slot), "--alarms",
+                                          "--finalized-slot", str(slot + 32 * 100))
+        self.assertEqual(rc, 1, (err, out))
+        self.assertTrue(any("100 epochs behind" in a["text"] for a in out["alarms"]), out["alarms"])
+
+    def test_a_stale_finalized_slot_warns(self):
+        """A checkpoint far behind the wall clock: the page's warning that Ethereum's finality looks stalled."""
+        rc, out, err = self.read_instance(self.instance_state(self.slot_of(20 * 60)), "--alarms",
+                                          "--finalized-slot", str(self.slot_of(32 * 200 * 12)))
+        self.assertEqual(rc, 0, (err, out))
+        self.assertTrue(any(a["level"] == "warn" and "200 epochs behind the wall clock" in a["text"]
+                             for a in out["alarms"]), out["alarms"])
+
+    def test_an_unknown_next_committee_near_the_period_end(self):
+        """The next committee unknown with the period ending in minutes: a warning; past the end: a bad alarm."""
+        period_end = ((self.slot_of(0) // 8192) + 1) * 8192
+        # a genesis that puts the period ending now + 6 min (the header 64 slots inside it, so its own lag is none)
+        genesis = int(time.time()) + 360 - period_end * 12
+        slot = period_end - 64
+        state = self.instance_state(slot, next_committee=False, genesis_time=genesis)
+        rc, out, err = self.read_instance(state, "--alarms")
+        self.assertEqual(rc, 0, (err, out))
+        self.assertTrue(any(a["level"] == "warn" and "next sync committee is unknown and the period ends" in a["text"]
+                            for a in out["alarms"]), out["alarms"])
+        past = self.instance_state(slot, next_committee=False, genesis_time=genesis - 7 * 60)
+        rc, out, err = self.read_instance(past, "--alarms")
+        self.assertEqual(rc, 1, (err, out))
+        self.assertTrue(any(a["level"] == "bad" and "period has ended" in a["text"] for a in out["alarms"]),
+                        out["alarms"])
+
+    def test_a_known_next_committee_near_the_period_end(self):
+        """The same instance with the next committee known: no period alarm at all."""
+        period_end = ((self.slot_of(0) // 8192) + 1) * 8192
+        genesis = int(time.time()) + 360 - period_end * 12
+        rc, out, err = self.read_instance(self.instance_state(period_end - 64, genesis_time=genesis), "--alarms")
+        self.assertEqual(rc, 0, (err, out))
+        self.assertEqual([a["level"] for a in out["alarms"]], ["ok"], out["alarms"])
+
+    def test_weak_subjectivity_warns(self):
+        """The weak-subjectivity period ending in two hours: a warning (the same header is a whole period old, so
+        the lag alarms beside it, as the page shows both)."""
+        slot = self.slot_of((self.WS_EPOCHS * 32 - 600) * 12)
+        rc, out, err = self.read_instance(self.instance_state(slot), "--alarms")
+        self.assertEqual(rc, 1, (err, out))
+        self.assertTrue(any(a["level"] == "warn" and "weak-subjectivity period of the finalized header ends in"
+                            in a["text"] for a in out["alarms"]), out["alarms"])
+
+    def test_weak_subjectivity_alarms(self):
+        """A finalized header older than the weak-subjectivity period: a bad alarm, and the exit is 1."""
+        slot = self.slot_of((self.WS_EPOCHS * 32 + 100) * 12)
+        rc, out, err = self.read_instance(self.instance_state(slot), "--alarms")
+        self.assertEqual(rc, 1, (err, out))
+        self.assertTrue(any(a["level"] == "bad" and "older than the weak-subjectivity period" in a["text"]
+                             for a in out["alarms"]), out["alarms"])
+
+    def test_an_inactive_instance_warns(self):
+        rc, out, err = self.read_instance(self.instance_state(self.slot_of(20 * 60), active=False), "--alarms")
+        self.assertEqual(rc, 0, (err, out))
+        self.assertTrue(any(a["level"] == "warn" and "Not yet active" in a["text"] for a in out["alarms"]),
+                        out["alarms"])
+
+    def test_an_account_with_no_state(self):
+        """The page's `missing` alarm is this tool's read failing: no state, exit 1."""
+        rpc, account = self.instance_rpc(b"")
+        try:
+            rpc.accounts.pop((account, json.loads((ROOT / RR / "chain.json").read_text())["program_account"]))
+            p = subprocess.run([sys.executable, "-I", str(ROOT / "scripts/lez-read.py"), "--lez", rpc.url, "--json",
+                                "instance", account, "--alarms"], capture_output=True, text=True, timeout=120)
+        finally:
+            rpc.close()
+        self.assertEqual(p.returncode, 1, p.stderr)
+        self.assertIn("holds no InstanceState", p.stderr)
+
+    def test_the_page_rules_on_the_page_tests_own_cases(self):
+        """The Python rules give the JS rules' verdicts on the status page's own test cases
+        (deploy/testnet/web/explorer/test/alarms.test.mjs, read as data; Node is not run): the same configuration,
+        the same fixed now, the same instances and checkpoints. Not ported: the cases whose rules need the public
+        APIs a browser calls per provider (a beacon API's root at our slot, an execution RPC's block for the
+        record) and the missing-record warning, which this terminal does not compute."""
+        import datetime
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("lez_read", ROOT / "scripts/lez-read.py")
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        cfg = {"slots_per_epoch": 32, "epochs_per_sync_committee_period": 256, "genesis_time": 1655733600,
+               "seconds_per_slot": 12, "ws_period_epochs": 3532}
+        now = int(datetime.datetime(2026, 11, 23, 12, 0, 0, tzinfo=datetime.timezone.utc)
+                  .timestamp() * 1000)  # Date.UTC(2026, 10, 23, 12, 0, 0)
+        now_slot = (now // 1000 - cfg["genesis_time"]) // cfg["seconds_per_slot"]
+
+        def alarms_of(behind=96, next_=True, active=True, ref=None, slot=None, at=now):
+            return m.alarms(cfg, now_slot - behind if slot is None else slot, active=active, next_committee=next_,
+                            now_ms=at, network_finalized=ref)
+
+        def has(a, level, pattern):
+            return any(x["level"] == level and re.search(pattern, x["text"]) for x in a)
+
+        self.assertEqual(",".join(x["level"] for x in alarms_of()), "ok",
+                         "an instance 1 epoch behind Ethereum's finality: healthy")
+        self.assertTrue(all(x["level"] != "bad" for x in alarms_of(ref=now_slot - 64 + 200)),
+                        "a provider ahead of the wall clock is no alarm")
+        self.assertTrue(has(alarms_of(behind=64 + 32 * 10, ref=now_slot - 64), "warn", r"10 epochs behind"),
+                        "10 epochs behind: warning")
+        self.assertTrue(has(alarms_of(behind=64 + 32 * 100, ref=now_slot - 64), "bad", r"100 epochs behind"),
+                        "100 epochs behind: alarm")
+        no_provider = alarms_of(ref=None)
+        self.assertFalse(has(no_provider, "bad", r"epochs behind"),
+                        "no checkpoint: the lag is the wall clock's, a warning at most")
+        self.assertTrue(has(alarms_of(ref=now_slot - 32 * 200), "warn", r"200 epochs behind the wall clock"),
+                        "a checkpoint 200 epochs behind the wall clock: warning")
+        period_end = ((now_slot // 8192) + 1) * 8192
+        period_end_ms = (cfg["genesis_time"] + period_end * 12) * 1000
+        near = alarms_of(next_=False, slot=period_end - 1 - 32, ref=period_end - 1,
+                         at=period_end_ms - 6.4 * 60000)
+        self.assertTrue(has(near, "warn", r"next sync committee is unknown and the period ends"),
+                        "next committee unknown, period ends soon: warning")
+        self.assertTrue(has(alarms_of(next_=False, slot=period_end - 1 - 32, ref=period_end - 1,
+                                       at=period_end_ms + 60000), "bad", r"period has ended"),
+                        "next committee unknown after the period end: alarm")
+        self.assertTrue(has(alarms_of(behind=3532 * 32 + 100, ref=now_slot - 64), "bad",
+                            r"older than the weak-subjectivity"),
+                        "header older than the weak-subjectivity period: alarm")
+        self.assertTrue(has(alarms_of(behind=3532 * 32 - 600, ref=now_slot - 64), "warn",
+                            r"weak-subjectivity period of the finalized header ends in"),
+                        "weak-subjectivity end within a day: warning")
+        self.assertTrue(has(alarms_of(active=False), "warn", r"Not yet active"), "inactive instance: warning")
 
 
 class Records(TamperCase):

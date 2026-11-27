@@ -110,7 +110,8 @@ BASECAMP_BUILD=OUT bash e2e/seqnet/run.sh basecamp NAME     # the round trip in 
 
 `box-test.sh` builds the devnet backend with the `ferrata` tool, so it needs what `cli/` needs (`libpcsclite-dev`,
 RISC Zero's guest Rust 1.91.1: [`cli/README.md`](../../cli/README.md)), and Qt 6's test runner with the QML modules the
-view imports. On Ubuntu 24.04 (Debian names; checked on the Modal build box, 12 Nov 2026: 17 of 17 passed):
+view imports. On Ubuntu 24.04 (Debian names; checked on the Modal build box, 12 Nov 2026; the view's 27 test
+functions pass, 27 of 27 on 23 November: [`RESULTS.md`](RESULTS.md)):
 
 ```sh
 sudo apt-get install --no-install-recommends qt6-qpa-plugins qml-qt6 qt6-declarative-dev-tools \
