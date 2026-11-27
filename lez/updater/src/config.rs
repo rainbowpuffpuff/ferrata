@@ -120,6 +120,18 @@ pub struct Policy {
     /// finishes it too.
     #[serde(default = "default_true")]
     pub finish_own_jobs: bool,
+    /// Join or wait (RFP-021 R.9): a job finishes only on the store it began on, so two jobs open on one store waste
+    /// the steps of the one that does not finish. This updater does not send a step of a job (its `Open` included)
+    /// while another job open on the instance's store leads it, and has moved within this many rounds: it waits for
+    /// that job, or joins it when that job's update is the one it chose. A job leads another when the chain holds more
+    /// of its steps, then when its update ranks higher (as an update is chosen: adopting the next committee the store
+    /// lacks, then the furthest finalized header, the earliest signature slot, the most signers), then by job id.
+    /// Only jobs of updates this updater's sources served (and the program's checks accepted) can be found: a job's
+    /// account is found by its id, which hashes the store and the update. A job that has not moved for this many
+    /// rounds no longer holds this updater back (the bound on the wait). Default (unset): `2 * defer_window + 10`;
+    /// 0: off (a job is opened whatever else is open).
+    #[serde(default)]
+    pub join_wait_rounds: Option<u64>,
     /// Client diversity (0, the default: off; otherwise at least 2): send only an update that sources reporting at
     /// least this many different consensus clients agree on, as `client_match` says. A source's client is what it
     /// reports at `/eth/v1/node/version`, asked every round, by its first word (`Lodestar/v1.51.0/7923280`:
@@ -157,9 +169,17 @@ impl Default for Policy {
             demote_rounds: 50,
             max_periods_per_request: 16,
             finish_own_jobs: true,
+            join_wait_rounds: None,
             min_distinct_clients: 0,
             client_match: ClientMatch::Bytes,
         }
+    }
+}
+
+impl Policy {
+    /// `join_wait_rounds` as it applies: `2 * defer_window + 10` unless set (0: off).
+    pub fn join_wait(&self) -> u64 {
+        self.join_wait_rounds.unwrap_or_else(|| self.defer_window.saturating_mul(2).saturating_add(10))
     }
 }
 
