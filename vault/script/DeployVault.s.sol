@@ -47,8 +47,8 @@ import {TestToken} from "./TestToken.sol";
 ///         globally, deposits and releases each at most the params' `globalDailyValue` in value units (by default the
 ///         sum of the two ceilings' values); and an immutable release floor (`releaseFloorDailyValue`, by default the
 ///         largest single exit, a largest leaf's denomination and relay fee, over both tokens, a day), so that no admin
-///         can throttle releases below it. Each bucket refills its capacity over a day. FERRATA_UNCAPPED=1 deploys without caps, as
-///         the live testnet runs of November 2026 did; the record says which (`uncapped`).
+///         can throttle releases below it. Each bucket refills its capacity over a day. FERRATA_UNCAPPED=1 deploys
+///         without caps, as the live testnet runs of November 2026 did; the record says which (`uncapped`).
 ///
 ///         Wait Δ, the outbound finality depth (RFP-022 F.12; docs/guides/deployer-guide.md §2, docs/design/bridge.md
 ///         §13): `deltaFloor` = `initialDelta` = the design's default for the rule, 3 h 01 min under rule (A), 1 h under
@@ -567,7 +567,9 @@ contract DeployVault is Script {
         require(stop.codehash == expected.codehash, "check: the stop's code is not RISC Zero's emergency stop");
         require(RiscZeroVerifierEmergencyStop(stop).owner() == address(0), "check: the stop still has an owner");
         require(!RiscZeroVerifierEmergencyStop(stop).paused(), "check: the stop is tripped");
-        require(address(RiscZeroVerifierEmergencyStop(stop).verifier()) == groth16, "check: the stop wraps another verifier");
+        require(
+            address(RiscZeroVerifierEmergencyStop(stop).verifier()) == groth16, "check: the stop wraps another verifier"
+        );
     }
 
     /// @dev Everything the proposal and the registrations promise, read back from the chain.
