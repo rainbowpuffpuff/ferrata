@@ -904,7 +904,7 @@ class TestGateJoin(unittest.TestCase):
 
 
 class TestGateR910(unittest.TestCase):
-    """`lez/results/perf-gate-sequencer-r910.md` (RFP-021 R.9 and R.10 with the turns on the chain's height, ADR 0048):
+    """`lez/results/perf-gate-sequencer-r910.md` (RFP-021 R.9 and R.10 with the turns on the chain's height, ADR 0049):
     a hand-written header, then `bench/perf/summarize_gate.py`'s output on the five runs, then
     `bench/perf/gate_abandoned.py`'s, byte for byte. The runs are the ones the header describes, all on one build
     (each `machine.txt`, `done.txt`, `reveals.tsv`, the daemons' configurations): `gate-g22` honest daemons polling

@@ -161,9 +161,13 @@ two-hour cadence (§2).
   **The clock is the LEZ chain's height** ([ADR 0049](../decisions/0049-updater-turns-on-the-chains-height.md), since
   27 November 2026): the newest block the daemon's reads reflect (the sequencer backend: its follower's last block, final
   on Bedrock), the same for every operator reading the chain, and one no operator can bring sooner. A step falls due
-  when a block applies the previous step (or when an update is served, between two blocks), and a turn is counted from
-  the block after the daemon's previous reading (at most one block before its reading), so two daemons find a step due
-  at the same height and reach their turns at the heights their draws give, however often each polls. Polling more often only notices a turn sooner, within the
+  when a block applies the previous step (or, for an `Open`, when an update is served, between two blocks), and a turn
+  is counted from the block after the daemon's previous reading (at most one block before its reading), so two daemons
+  polling at least once a block find a step a block made due at the same height and reach their turns at the heights
+  their draws give, however often each polls. An `Open` that falls due when an update is served is counted from the
+  block the daemon had read if it polls again before the next block, and from the next block if not: a daemon polling
+  once a block starts that count a block later than one polling several times a block about half the time, a bias
+  against the slower poller that no test or run here measures apart. Polling more often only notices a turn sooner, within the
   blocks between two readings: an operator polling less often than once a block notices some turns up to its poll
   interval late, and counts a turn from the block after its previous reading (at most one block back), which can be
   before the step fell due: reading every 1.5 blocks the two about cancel, reading every third block it notices late
@@ -214,13 +218,17 @@ two-hour cadence (§2).
   | G25: the default | 60 s | 165 / 285 s | 41 / 55 | 5.2M | 1.059 | 0.059 | 0.0550 | 0.577 |
   | G26: the default | 60 s | 145 / 255 s | 44 / 52 | 5.4M | 1.048 | 0.048 | 0.0484 | 0.583 |
 
-  Polling every 2 s against 6 s (G22) left honest-1's share where equal polls put it (G25, G26): honest-1 paid more
-  than half in each run where one replay served both daemons and no adversary ran (these, G6–G11), the same instance,
-  updates and keys repeating largely the same draws; with copies (G23) 0.498, beside the adversary (G24) 0.497.
-  The latency at window 8 is longer than G10's (105 / 157 s), a turn being a 10-s block rather than a round of about
-  6 s. With copies (G23) every abandoned job was left at its `Open`, opened before the other's `Open` was in a final
-  block; A3's adversary (G24), never deferring and polling every 2 s, sent almost every step, and the honest daemons' few
-  sends lost their races: A3's ratio 0.9529, outside its limit.
+  Polling every 2 s against 6 s (G22: 3.8 and, on average, 1.35 reads a block) left honest-1's share where equal polls
+  put it (G25, G26), in one run per setting with the fast poll on honest-1 (not swapped): honest-1 paid more than half
+  in each run where one replay served both daemons and no adversary ran (these, G6–G11), the same instance, updates and
+  keys repeating largely the same draws; with copies (G23) 0.498, beside the adversary (G24) 0.497. No run here reads
+  less often than once a block or at the example's 12 s. The latency at window 8 is longer than G10's (105 / 157 s), a
+  turn being a 10-s block rather than a round of about 6 s. With copies (G23) every abandoned job was left at its `Open`,
+  opened before the other's `Open` was in a final block: 5 in the same block, 1 ambiguous, and 4 (0.017 of the completed
+  jobs' gas) once the other's block was published, which a read of the newest block would have stopped (the daemon reads
+  final blocks); A3's ratio there counts refused steps only, and the duplicates show as abandoned gas (0.042). A3's
+  adversary (G24), never deferring and polling every 2 s, sent almost every step, and the honest daemons' few sends lost
+  their races: A3's ratio 0.9529, outside its limit.
 
   A longer window costs latency and saves gas: fewer races, and intermediate updates skipped (a later update's job
   covers them). G6 and G7 compare windows 8 and 30 at one reveal step over 106 updates each (A3's gate asks 100;

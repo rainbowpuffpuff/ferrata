@@ -1192,9 +1192,11 @@ impl Updater {
     /// due under `since` ([`Updater::due_clock`]: the block after its previous reading; `since`: an `Open`, or a step of a
     /// job this updater does not carry, the instance's state, as [`state_turn`] gives it; a step of a job it carries, the
     /// job), or the wait fixed for the turn (after this updater sent such a step there: a whole turn,
-    /// [`Updater::submit`]). Counted in blocks, two updaters find a step due at the same height (the block that made it
-    /// due, or the first after the update came) and reach their turns at the heights their draws give, however often each
-    /// reads: reading more often only notices a turn sooner, within the blocks between two readings (RFP-021 R.10).
+    /// [`Updater::submit`]). Counted in blocks, two updaters reading at least once a block find a step a block made due
+    /// at the same height and reach their turns at the heights their draws give, however often each reads: reading more
+    /// often only notices a turn sooner, within the blocks between two readings (RFP-021 R.10). An `Open` falls due when
+    /// the update comes, between blocks: one reading again within that block counts from it, one whose next reading
+    /// comes after the next block counts from that block (ADR 0049).
     fn defer(&mut self, jid: &Root, since: &Root, step: Step) -> bool {
         let first = self.due_clock();
         let (due, fixed) = *self.first_due.entry((*since, step)).or_insert((first, None));

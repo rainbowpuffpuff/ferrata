@@ -15,8 +15,9 @@ on chain ([ADR 0049](../../docs/decisions/0049-updater-turns-on-the-chains-heigh
 `5f8937d7…`); the commits after `860be342` change tests, comments and documents only. The machine paths in the logs are
 written `<repo>`.
 
-- `gate-g22`: honest-1 polling every 2 s, honest-2 every 6 s (`GATE_POLLS=2,6`; both read the chain at least once a
-  10-s block): RFP-021 R.10's first clause.
+- `gate-g22`: honest-1 polling every 2 s, honest-2 every 6 s (`GATE_POLLS=2,6`; a round took 2.7 s and 7.4 s, so
+  honest-1 read the chain 3.8 times a 10-s block and honest-2 1.35 times on average, in some minutes 0.75 times, from
+  `metrics-series-honest-*.txt`): RFP-021 R.10's first clause.
 - `gate-g23`: honest-2's beacon port serves a copy of every update, its signature slot moved by one slot
   (`GATE_COPIES=1`, `bench/perf/beacon_replay.py --copies`), so the two daemons are never served the same bytes and a
   job one opens is found by the other only from its `Open` on chain: RFP-021 R.9's several instances.
@@ -25,22 +26,29 @@ written `<repo>`.
 - `gate-g25` and `gate-g26`: the default (both honest daemons polling every 4 s), so the window-8 figures are not one run
   (`gate-g10`, the earlier updater, the third).
 
-**R.10.** Polling three times as often did not change who pays: in `gate-g22` honest-1, polling every 2 s, paid 0.575 of
-the honest fees and honest-2, every 6 s, 0.425; with both polling every 4 s honest-1 paid 0.577 (`gate-g25`) and 0.583
-(`gate-g26`). Honest-1 paid more than half in each run at this size where one replay served both daemons the same bytes
+**R.10.** Polling three times as often left the shares where equal polls left them, in one run per setting: in
+`gate-g22` honest-1, polling every 2 s, paid 0.575 of the honest fees and honest-2, every 6 s, 0.425; with both polling
+every 4 s honest-1 paid 0.577 (`gate-g25`) and 0.583 (`gate-g26`). The fast poll went to honest-1 and no run swapped
+the polls, so these runs do not separate the faster poller from honest-1's own lead. Honest-1 paid more than half in each run at this size where one replay served both daemons the same bytes
 and no adversary ran, before this updater too (G6–G11: 0.521–0.617; here 0.575, 0.577, 0.583), whatever the polls; with
 copies (`gate-g23`) 0.498, beside the adversary (`gate-g24`) 0.497. Those runs share one instance, one sequence of
 updates and the daemons' two keys, so they repeat largely the same draws of `H(key, job, step)`; no run varied the keys. Under the earlier updater a daemon that never
-deferred, polling every 2 s against 4, applied 93 of 99 steps (G2). Every revealed finality update was covered in every
+deferred, polling every 2 s against 4, applied 93 of 99 steps (G2: no deferral and the faster poll at once, so not a
+like-for-like before; in process the earlier clock gave the faster reader 0.847, `lez/updater/results/gate-polls.txt`). Every revealed finality update was covered in every
 run. Latency at window 8 grew with the turns in blocks: medians 145–165 s and p90 255–286 s without the adversary
 (G10, rounds of about 6 s: 105 / 157 s).
 
-**R.9.** No step was applied twice in any run, and every honest refused step shared its block with the same step of the
-same job, applied (or is a `Finish` beside another job's, exit 82). In `gate-g23` the two daemons were never served the
+**R.9.** No step was applied twice in any run (the program refuses a step already applied, so that checks the program),
+and every honest refused step shared its block with the same step of the same job, applied (or is a `Finish` beside
+another job's, exit 82): no honest daemon sent a step another had applied in an earlier block. In `gate-g23` the two daemons were never served the
 same bytes: each learned the other's copies from their `Open`s on chain and joined their jobs; the 10 jobs abandoned
 there were each left at its `Open` alone, opened before the other's `Open` was in a final block (5 in the same block, 4
 in a block published but not yet final, 1 within a second of it: a copy is learned only from a final block), so all gas
-was 1.042 times the completed jobs', as in the default runs (1.059, 1.048). With A3's adversary (`gate-g24`), which
+was 1.042 times the completed jobs', as in the default runs (1.059, 1.048). `gate_abandoned.py` classes the 4 sent
+after the other's block was published as ones a read of the newest block would have stopped (8,753,887 execution gas,
+0.017 of the completed jobs'): the updater reads final blocks only. A3's ratio for `gate-g23` (0.0001) counts refused
+steps only: with copies a duplicate `Open` opens a job of its own, applied and then abandoned, so the duplicates show as
+the 21,817,948 abandoned gas (honest waste 0.042), not as refused steps. With A3's adversary (`gate-g24`), which
 never defers, waits for no one and polls every 2 s, the adversary sent 304 of the 337 applied steps and 105 of the 106
 `Open`s; each honest daemon applied 16–17 steps and lost 29 races in a block, so A3's ratio of honest refused to applied
 gas is **0.9529**, outside A3's limit (G2, the earlier updater over 30 updates: 1.31), while all the daemons' gas was

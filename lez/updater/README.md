@@ -207,7 +207,9 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    follower's last block, final on Bedrock), read once a round just after the instance's state (`read_clock`; ADR 0049,
    RFP-021 R.10). Every party reading the chain reads the same heights and none can bring a block sooner, so an updater
    that reads more often reaches no turn sooner: it only notices a turn sooner, within the blocks between two of its
-   readings. A turn that starts at a reading is counted from the block after the updater's previous reading, the first
+   readings (for a step a block makes due; an `Open` falls due when an update is served, between blocks, and an
+   updater reading once a block starts its count for it a block later than one reading several times a block about
+   half the time: ADR 0049). A turn that starts at a reading is counted from the block after the updater's previous reading, the first
    at which what it now finds due can have become due, but at most one block before the reading (`due_clock`): one
    reading every two blocks does not also lose the block between its readings to the start of the count, and one back
    after a long gap waits its draw like any other (`tests/turns.rs`; in process, honest

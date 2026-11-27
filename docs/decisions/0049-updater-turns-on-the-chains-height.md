@@ -54,9 +54,13 @@ has come and no other party's step is on chain. The program and its image id are
 
 ## Rationale and trade-offs
 
-Two updaters that read the chain at least once a block find a step due at the same height (the block that applied the
-previous step, or the first they read after the update was served) and reach their turns at the heights their draws
-give, however often each reads: the faster one notices its turn sooner only within the block it comes in. An updater
+Two updaters that read the chain at least once a block find a step that a block makes due (the block that applied the
+previous step) due at the same height and reach their turns at the heights their draws give, however often each
+reads: the faster one notices its turn sooner only within the block it comes in. An `Open` falls due when an update
+is served, between two blocks: an updater that reads again before the next block counts from the block it had read,
+one whose next reading comes after the next block counts from that block, so one reading once a block starts its count
+for an `Open` a block later than one reading several times a block about half the time. That bias runs against the
+slower reader and is not measured apart (no test or run isolates it). An updater
 that reads less often than once a block notices its turns late, by up to its reading interval, and is credited at most
 one block for the start of its count: the edge the faster party keeps is bounded by the slower party's interval, not
 multiplied by the window. In process (`lez/updater/results/gate-polls.txt`) updaters reading three times and once a
