@@ -4,13 +4,15 @@ pragma solidity ^0.8.26;
 import {Script} from "forge-std/Script.sol";
 
 import {FerrataVault} from "../src/FerrataVault.sol";
+import {TestToken} from "./TestToken.sol";
 
 /// @notice The Sepolia stages of the crown run (e2e/crown/README.md) after the deployment (script/deploy.sh,
-///         FERRATA_MODE=B): one function per transaction, so that every limit is the node's estimate for exactly that
-///         transaction (e2e/crown/sepolia.sh sends each with --skip-simulation and the node-priced margin).
+///         FERRATA_MODE=B): one function per stage (an ERC-20 deposit broadcasts mint, approve and deposit), so every
+///         transaction's limit is the node's estimate (e2e/crown/sepolia.sh uses --skip-simulation and price margin).
 ///
-///         deposit(j)          ETH deposit j of the run: msg.value = denomination + mint fee + relay fee of fee
-///                             schedule 0 (no change is ever announced in the run); skipped if done
+///         deposit(j)          deposit j of the run: absent deposits[j].token means ETH and msg.value is the
+///                             denomination + mint fee + relay fee of schedule 0. For the test ERC-20, mint that total,
+///                             approve it exactly, then deposit(token, ...). Skipped if done; ERC-20 takes three txs.
 ///         submit()            submitCandidate with the rule (B) checkpoint journal and its Groth16 seal
 ///         finalizeAttested()  once the candidate's wait W = deltaAtSubmit is over (rule B: turnSeconds = 0)
 ///         release(i)          release i, once its burn root is final and the release delay is over; skipped if paid
@@ -35,12 +37,19 @@ contract Crown is Script {
         return string.concat(".", list, "[", vm.toString(i), "].", field);
     }
 
-    /// @notice What deposit j sends: the denomination plus the mint and relay fees of schedule 0.
+    /// @notice What deposit j escrows: the denomination plus the mint and relay fees of schedule 0. An absent token
+    ///         is native ETH, as in every crown.json written before ERC-20 selection was added.
     function depositValue(uint256 j) public view returns (uint8 denom, uint256 total) {
+        address token = _depositToken(j);
         denom = uint8(vm.parseJsonUint(json, _at("deposits", j, "denomIndex")));
-        (,,,, uint256[] memory denoms) = vault.tokenConfig(ETH);
-        (uint256 mintFee, uint256 relayFee,,) = vault.fees(ETH, 0, denom);
+        (,,,, uint256[] memory denoms) = vault.tokenConfig(token);
+        (uint256 mintFee, uint256 relayFee,,) = vault.fees(token, 0, denom);
         total = denoms[denom] + mintFee + relayFee;
+    }
+
+    function _depositToken(uint256 j) internal view returns (address) {
+        string memory key = _at("deposits", j, "token");
+        return vm.keyExistsJson(json, key) ? vm.parseJsonAddress(json, key) : ETH;
     }
 
     function deposit(uint256 j) external {
@@ -48,11 +57,22 @@ contract Crown is Script {
         address sender = msg.sender;
         if (vault.depositCount(sender) > j) return; // already made (an interrupted stage started again)
         require(vault.depositCount(sender) == j, "an earlier deposit of the run is missing");
+        address token = _depositToken(j);
         (uint8 denom, uint256 total) = depositValue(j);
         bytes32 commitment = vm.parseJsonBytes32(json, _at("deposits", j, "commitment"));
         uint256 leaf = vault.nextLeafIndex();
-        vm.broadcast();
-        vault.depositETH{value: total}(denom, commitment, uint64(j));
+        if (token == ETH) {
+            vm.broadcast();
+            vault.depositETH{value: total}(denom, commitment, uint64(j));
+        } else {
+            TestToken erc20 = TestToken(token);
+            vm.broadcast();
+            erc20.mint(sender, total);
+            vm.broadcast();
+            erc20.approve(address(vault), total);
+            vm.broadcast();
+            vault.deposit(token, denom, commitment, uint64(j));
+        }
         require(vault.nextLeafIndex() == leaf + 1, "no leaf appended");
     }
 

@@ -1,0 +1,48 @@
+{
+  "network": "local anvil, no fork, chain id 11155111 (STAND-IN: not finalized by any beacon chain)",
+  "block": 14,
+  "block_hash": "0x231ff9196c2761b057365c0e241db375c71d770debfa0a3e2161219deffb8e1e",
+  "anvil_block_hash": "0x231ff9196c2761b057365c0e241db375c71d770debfa0a3e2161219deffb8e1e",
+  "state_root_patched": false,
+  "timestamp": 1795742189,
+  "state_root": "0x0045afdbf935495d12f25a054817d7c1aed7dccab6a2661445e42c72c353988b",
+  "storage": [
+    {
+      "address": "0xcca3a68498f6b37176d67d530b917428c6ffb420",
+      "slots": [
+        {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "value": "0x1580b9279e7890bec15e930cc9abca7afd13b8740ffcaacbb8c4390d88e114bb"
+        },
+        {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000001",
+          "value": "0x0000000000000000000000000000000000000000000000000000000000000002"
+        },
+        {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000002",
+          "value": "0x7175c8485e6fb05d72df5718dfd6d1c379dfa843be6ba261821c3c31c045b72e"
+        },
+        {
+          "slot": "0x4d2972305647babac9062730d6c83cf173939db372bfddb99ca341f90c5da60e",
+          "value": "0x2e1818b6c9a8bf47a85cd76b6d82b95c66dffb76f9d5fffa0f46bd09f09d9f6e"
+        },
+        {
+          "slot": "0x8a855184ab416fc2496756a7ebf8fc355cdb80538a6102af301a0cefb4674c27",
+          "value": "0x4d96902e10ee610096c4cacb44f78dabe01e1116bcbb928c5564ae861429cd67"
+        },
+        {
+          "slot": "0xd4df50eee2bfc30f360fed83842d67e03939b83cfe56bcd5dac2b2df6067414d",
+          "value": "0x0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      ]
+    }
+  ],
+  "deposits": {
+    "vault": "0xcca3a68498f6b37176d67d530b917428c6ffb420",
+    "from_block": 0,
+    "event": "Deposit(address,uint64,uint64,address,uint256,bytes32)",
+    "topic": "0x83d2d1c34c8825843c9af84bec80378e997084e8c1d6d5a3c2a6e758fe05538e",
+    "count": 2
+  },
+  "updates": []
+}
