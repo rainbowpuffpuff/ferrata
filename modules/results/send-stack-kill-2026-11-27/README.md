@@ -35,7 +35,7 @@ but its record could not be fetched: the box's spend ledger reached its cap firs
 | M1 | the monitor's `cancelCandidate` trapped before the node; every module host SIGKILLed | after the restart the restarted `tx_sender_module` burnt the lost request's number (0), so its new cancel (1) waited behind a gap; the monitor filled the gap the plain way at 0 (`gapFill`), and the module's cancel then reverted (`UnknownCandidate`), changing nothing | one successful cancel, the candidate gone, at most one reverted extra call, the watcher's nonces 0–1 without a gap, nothing queued |
 
 At the end: the relayer's 7 transactions for 7 effects, nonces 0–6 without a gap, every receipt successful, every job
-in `done/`, nothing in flight or queued, the vault's final state the second checkpoint's.
+in `done/`, the inbox empty, no in-flight record after K5, the vault's final state the second checkpoint's.
 
 **What run 1 found (fixed before this run).** With every module host killed (K1), the relayer stayed blocked after the
 restart, its record kept (nothing sent twice, nothing sent at all): `custody`'s re-import was answered "this key is
