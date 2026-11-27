@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Run every target in parallel with libFuzzer's fork mode, then minimize each corpus into
-# fuzz/corpus/<target>. Usage (from fuzz/): ./run.sh <seconds> <workers per target> <out dir>
+# fuzz/corpus/<target>. Usage (from fuzz/): ./run.sh <seconds> <workers per target> <out dir> [targets]
 # Expects `cargo fuzz build -a -s none` (RUSTFLAGS=-Coverflow-checks=on) and fuzz/seeds/.
 set -u
 SECS=${1:-600}; JOBS=${2:-4}; OUT=${3:-run}
 BIN=target/x86_64-unknown-linux-gnu/release
-TARGETS="rlp mpt exec ssz witness merkle lc"
+TARGETS=${4:-"rlp mpt exec ssz witness merkle lc bls"}
 mkdir -p "$OUT/logs" "$OUT/artifacts" corpus-work
 for t in $TARGETS; do
   mkdir -p "corpus-work/$t" "$OUT/artifacts/$t" "seeds/$t"
