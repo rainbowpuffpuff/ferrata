@@ -40,7 +40,7 @@ Private actions proven against the newest commitment-set root: 80 of 80.
 
 ## Receipts
 
-- Ethereum gas used, deposits by leaf index (universe A): [140703, 101025, 81125, 101147, 81125, 81247, 81247, 101269, 81125, 81247, 81247, 81369, 81247, 81369, 81369, 101391, 81125, 81247, 81247, 81369]; the same in universe B (other commitments, public destinations): True
+- Ethereum gas used, deposits by leaf index (universe A): [140664, 100986, 81086, 101108, 81086, 81208, 81208, 101230, 81086, 81208, 81208, 81330, 81208, 81330, 81330, 101352, 81086, 81208, 81208, 81330]; the same in universe B (other commitments, public destinations): True
 - Ethereum gas used, releases: distinct values [83597, 108597] (NOut of the release statement), [83597, 108597] (naive)
 - execution gas by position, minus the first: private claims [0, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360]; plaintext claims [0, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360, 4360]; burns [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; releases (Ethereum) [0, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000]
 - LEZ claims: the same gas steps by position in both universes (users in different orders): yes
@@ -56,8 +56,8 @@ What the collectors recorded about each proof (not public: proving time, the che
 
 | step | receipt kind | proof bytes | transaction bytes | seal words | proving time, s (min / median / max; sum) | journal = the message's frame | claim = ok(circuit, journal) | seal outputs = claim digest |
 |---|---|---|---|---|---|---|---|---|
-| claim, private (default) | fake | 4,501 | 8,889 | - | 0.9 / 0.9 / 0.9; 18 | 20 of 20 | 20 of 20 | - |
-| burn, private holding | fake | 3,985 | 7,857 | - | 0.5 / 0.5 / 0.6; 11 | 20 of 20 | 20 of 20 | - |
+| claim, private (default) | fake | 4,501 | 8,889 | - | 1.2 / 1.3 / 1.3; 25 | 20 of 20 | 20 of 20 | - |
+| burn, private holding | fake | 3,985 | 7,857 | - | 0.7 / 0.9 / 0.9; 17 | 20 of 20 | 20 of 20 | - |
 | release, NOut of the release statement | - | - | - | - | - | - | - | - |
 | release, naive NOut = burnId | - | - | - | - | - | - | - | - |
 
