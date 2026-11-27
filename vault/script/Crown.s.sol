@@ -37,7 +37,8 @@ contract Crown is Script {
         return string.concat(".", list, "[", vm.toString(i), "].", field);
     }
 
-    /// @notice What deposit j escrows: the denomination plus the mint and relay fees of schedule 0. An absent token
+    /// @notice What deposit j pays: the denomination plus the mint and relay fees of schedule 0 (the vault escrows the
+    ///         denomination and the relay fee and credits the mint fee to the fee recipient: ADR 0046). An absent token
     ///         is native ETH, as in every crown.json written before ERC-20 selection was added.
     function depositValue(uint256 j) public view returns (uint8 denom, uint256 total) {
         address token = _depositToken(j);

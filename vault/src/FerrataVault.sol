@@ -19,8 +19,9 @@ import {IRiscZeroVerifier} from "./interfaces/IRiscZeroVerifier.sol";
 ///      its wait W = delta + (t - 1) * turnSeconds later, and a second proof that echoes the beacon. Rule (B): one
 ///      proof of t final-tier attestations, final once W = delta has passed unless a watcher cancels it. Releases
 ///      pay out against a RISC Zero proof of a burn under an accepted root.
-///      Fees (D13): a deposit pays its denomination plus the mint and relay fees of the fee schedule in force. The
-///      mint fee is credited to `feeRecipient` at once; the denomination and relay fee are escrowed. A release pays
+///      Fees (D13, ADR 0046): a deposit pays its denomination plus the mint fee of the fee schedule in force and the
+///      token's relay fee (fixed at registration; each schedule carries a copy for publication). The mint fee is
+///      credited to `feeRecipient` at once; the denomination and relay fee are escrowed. A release pays
 ///      the denomination less the relay, burn and checkpoint fees in force. Fee schedules and the registry
 ///      entry are published at SHA-256 storage slots that the LEZ side attests.
 ///      There is no upgradeability, no settable verifier and no token rescue function. The only delegatecall is into
@@ -670,8 +671,8 @@ contract FerrataVault is ReentrancyGuardTransient {
     // Deposit side
     // ------------------------------------------------------------------------------------------------------------
 
-    /// @notice Takes `denominations(token)[denomIndex]` of an ERC-20 plus the mint and relay fees of the fee schedule
-    ///         in force (D13), escrows the denomination and relay fee, credits the mint fee to `feeRecipient`, and
+    /// @notice Takes `denominations(token)[denomIndex]` of an ERC-20 plus the mint fee of the fee schedule in force
+    ///         and the token's fixed relay fee (D13, ADR 0046), escrows the denomination and relay fee, credits the mint fee to `feeRecipient`, and
     ///         appends a leaf (which binds the denomination) to the deposit tree. Caps count the whole amount taken.
     /// @param commitment Hiding commitment to the LEZ destination. Opaque to the vault, non-zero, may repeat.
     /// @param index Must equal `depositCount[msg.sender]`, so every deposit has a unique (depositor, index) pair.
@@ -691,8 +692,8 @@ contract FerrataVault is ReentrancyGuardTransient {
         _recordDeposit(token, amount, total, mintFee, commitment, index);
     }
 
-    /// @notice Takes native ETH; `msg.value` must equal `denominations(ETH)[denomIndex]` plus the mint and relay fees
-    ///         in force, exactly. The denomination and relay fee are escrowed and the mint fee credited as above.
+    /// @notice Takes native ETH; `msg.value` must equal `denominations(ETH)[denomIndex]` plus the mint fee in force and
+    ///         the fixed relay fee, exactly. The denomination and relay fee are escrowed and the mint fee credited as above.
     function depositETH(uint8 denomIndex, bytes32 commitment, uint64 index) external payable nonReentrant {
         (uint256 amount, uint256 total, uint256 mintFee) = _checkDeposit(ETH, denomIndex, commitment, index);
         if (msg.value != total) revert WrongEthAmount();
