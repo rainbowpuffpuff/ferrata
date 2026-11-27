@@ -708,7 +708,7 @@ fn set_endpoints(params: &Value) -> Result<Value, String> {
             let eth_back = patch_endpoint(*chain_id, &eth_cur).map_or_else(|e| format!(" (putting it back failed: {e})"), |_| String::new());
             let seq_back = if seq_switched {
                 c.post("module.set_endpoints", json!({ "sequencer": seq_cur }))
-                    .map_or_else(|e| format!(" (putting it back failed: {e})"), |_| String::new())
+                    .map_or_else(|e| format!(" (putting the chain service back failed: {e})"), |_| String::new())
             } else {
                 String::new()
             };

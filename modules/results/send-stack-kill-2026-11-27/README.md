@@ -19,10 +19,11 @@ anvil's own published test accounts, as anvil always does). That each fault fire
 with 7 module hosts killed, K2 with the relayer's host alone, K3 with its transaction in anvil's pool (`txpool 0x1`) and
 the daemon and 13 hosts killed, K4's round ended on the endpoint's error, K5 with one late forward.
 
-Checks added after this run, from the two review rounds (not in this record): every fault must fire and the hosts meant
-must die as hard checks, K3's transaction broadcast and pending, K4's outage seen by the proxy, K5's late fault fired, a
-round still running or unread at the end of its wait a failure, at most one reverted extra monitor call, nothing in
-flight or queued for the relayer at the end, K2's expected payment corrected. Run 3, with most of them, was started on
+Checks added after this run, from the review rounds (not in this record): every fault must fire and the hosts meant
+must die as hard checks, K3's transaction broadcast (its hash in the in-flight record) and pending, K4's outage seen by
+the proxy, K5's late fault fired and its late forward accepted by the node, a relayer round or the monitor still running
+or unread at the end of its wait a failure, at most one reverted extra monitor call, nothing in flight or queued for the
+relayer at the end, K2's expected payment corrected. Run 3, with most of them, was started on
 the box, but its container was replaced before it finished, and it was not repeated (the box's spend ledger had
 reached its cap).
 
