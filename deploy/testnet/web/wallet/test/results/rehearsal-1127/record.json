@@ -3,8 +3,8 @@
  "failed": 0,
  "numbers": {
   "faucet_id_only_refusal": "Error: The transaction reverts when simulated and would still pay its fee, so it was not sent: Program violated execution rules: A delivery named Actor { accoun",
-  "faucet_seconds": 32.8,
-  "send1_seconds_to_block": 3.3,
+  "faucet_seconds": 32.5,
+  "send1_seconds_to_block": 3.4,
   "send1_fee_atomic": 4352,
   "revert_fee_atomic": 804088
  },
@@ -177,12 +177,12 @@
   {
    "check": "Activity lists the faucet's credit, the send and the return",
    "ok": true,
-   "detail": "Received \u00b7 block 29 \u00b7 11/27/2026, 9:40:48 PM \u00b7 reverted (fee charged, nothing moved)\n\u00b15 LGO\nfrom <id2> \u00b7 <hash5>\nReceived \u00b7 block 27 \u00b7 11/27/2026, 9:40:44 PM\n+0.5 LGO\nfrom <id2> \u00b7 <hash4>\nSent \u00b7 block 25 \u00b7 11/27/2026, 9:40:40 PM\n\u22121.25 LGO\nto <id2> \u00b7 <hash3>\nReceived \u00b7 block 8 \u00b7 11/27/2026, 9:40:06 P"
+   "detail": "Received \u00b7 block 29 \u00b7 11/27/2026, 9:45:07 PM \u00b7 reverted (fee charged, nothing moved)\n\u00b15 LGO\nfrom <id2> \u00b7 <hash5>\nReceived \u00b7 block 27 \u00b7 11/27/2026, 9:45:03 PM\n+0.5 LGO\nfrom <id2> \u00b7 <hash4>\nSent \u00b7 block 25 \u00b7 11/27/2026, 9:44:59 PM\n\u22121.25 LGO\nto <id2> \u00b7 <hash3>\nReceived \u00b7 block 7 \u00b7 11/27/2026, 9:44:23 P"
   },
   {
    "check": "Activity marks the reverted transfer reverted, and only it (its block's reverted list)",
    "ok": true,
-   "detail": "Received \u00b7 block 29 \u00b7 11/27/2026, 9:40:48 PM \u00b7 reverted (fee charged, nothing moved)\n\u00b15 LGO\nfrom <id2> \u00b7 <hash5>\nReceived \u00b7 block 27 \u00b7 11/27/2026, 9:40:44 PM\n+0.5 LGO\nfrom <id2> \u00b7 <hash4>\nSent \u00b7 block 25 \u00b7 11/27/2026, 9:40:40 PM\n\u22121.25 LGO\nto <id2> \u00b7 <hash3>\nReceived \u00b7 block 8 \u00b7 11/27/2026, 9:40:06 P"
+   "detail": "Received \u00b7 block 29 \u00b7 11/27/2026, 9:45:07 PM \u00b7 reverted (fee charged, nothing moved)\n\u00b15 LGO\nfrom <id2> \u00b7 <hash5>\nReceived \u00b7 block 27 \u00b7 11/27/2026, 9:45:03 PM\n+0.5 LGO\nfrom <id2> \u00b7 <hash4>\nSent \u00b7 block 25 \u00b7 11/27/2026, 9:44:59 PM\n\u22121.25 LGO\nto <id2> \u00b7 <hash3>\nReceived \u00b7 block 7 \u00b7 11/27/2026, 9:44:23 P"
   },
   {
    "check": "Lock forgets the keys (unlock screen)",
@@ -212,7 +212,7 @@
   {
    "check": "network info names the head and the privacy circuit",
    "ok": true,
-   "detail": "RPC\nhttp://127.0.0.1:18650/rpc\nHead block\n31\nBase fees\nexecution 8, storage 8 per unit\nChannel (zone id)\n<hash8>\nPrivacy circuit\n<hash9>\nLEZ version\nv0.4.0-rc2/rc3 (privacy circuit 631f0c96\u2026)"
+   "detail": "RPC\nhttp://127.0.0.1:18650/rpc\nHead block\n32\nBase fees\nexecution 8, storage 8 per unit\nChannel (zone id)\n<hash8>\nPrivacy circuit\n<hash9>\nLEZ version\nv0.4.0-rc2/rc3 (privacy circuit 631f0c96\u2026)"
   },
   {
    "check": "importing the phrase gives the same first account",
@@ -267,12 +267,12 @@
   {
    "check": "bridge: C in the review equals SPEC-v2's C recomputed from the phrase (public destination: this account)",
    "ok": true,
-   "detail": "('0xb9dedf574e8e8a5846e94bfcc1573ef3b7e1e6f5612da19a130769e37eaa9e86', '0xb9dedf574e8e8a5846e94bfcc1573ef3b7e1e6f5612da19a130769e37eaa9e86')"
+   "detail": "('0x756eabb7be46abb27420f4ca11d06999ba5e34b91a844b325548ba5cf150a502', '0x756eabb7be46abb27420f4ca11d06999ba5e34b91a844b325548ba5cf150a502')"
   },
   {
    "check": "bridge: the browser wallet's deposit is mined and its Deposit event checked by the page",
    "ok": true,
-   "detail": "Deposited: leaf 0 in block 12 (0x656db80ebb6b7cd1fcd6574ffab4b6ddf04a75eff9dc8bbdad43e27a468f3499). Next: the claim on LEZ, once the zone imports the vault's deposits."
+   "detail": "Deposited: leaf 0 in block 12 (0xdd059b49334b0eb6e7ad405c4c5205b21ef22ef557b138845141b57542082ab8). Next: the claim on LEZ, once the zone imports the vault's deposits."
   },
   {
    "check": "bridge: anvil's vault logged exactly that C for this depositor",
@@ -292,17 +292,17 @@
   {
    "check": "bridge: a deposit to this wallet's private account commits to it (kind 0x01, j = 1)",
    "ok": true,
-   "detail": "('0x24bcaa64d345bbcbf12670762be7d482855021db3f6d946b87505b2361c212fe', '0x24bcaa64d345bbcbf12670762be7d482855021db3f6d946b87505b2361c212fe')"
+   "detail": "('0xa91297d82198325d4a850a255c502e21d6a0b51dfdc425f808e2cb67c171bae6', '0xa91297d82198325d4a850a255c502e21d6a0b51dfdc425f808e2cb67c171bae6')"
   },
   {
    "check": "bridge: the private-destination deposit is mined (leaf 1)",
    "ok": true,
-   "detail": "Deposited: leaf 1 in block 13 (0x9e28eeee9997e172fa106fd79ad55b134bf624786c5bcde79a7fcfc8b682a0ad). Next: the claim on LEZ, once the zone imports the vault's deposits."
+   "detail": "Deposited: leaf 1 in block 13 (0xb78f164bfa28695ce66fff1e63c7c61dbb01882a516847bc2beca6dd5ef13bd2). Next: the claim on LEZ, once the zone imports the vault's deposits."
   },
   {
    "check": "bridge: both deposits are kept (encrypted) in the wallet's list",
    "ok": true,
-   "detail": "0.1 ETH \u2192 private LEZ account HaZJQbPG\u2026 \u00b7 deposited \u00b7 leaf 1\nj = 1\nC 0x24bcaa64d345bbcbf12670762be7d482855021db3f6d946b87505b2361c212fe \u00b7 0x9e28eeee9997e172fa106fd79ad55b134bf624786c5bcde79a7fcfc8b682a0ad \u00b7 claim privately with the ferrata tool (same phrase): a private claim needs a proof made with "
+   "detail": "0.1 ETH \u2192 private LEZ account 46x2RPs8\u2026 \u00b7 deposited \u00b7 leaf 1\nj = 1\nC 0xa91297d82198325d4a850a255c502e21d6a0b51dfdc425f808e2cb67c171bae6 \u00b7 0xb78f164bfa28695ce66fff1e63c7c61dbb01882a516847bc2beca6dd5ef13bd2 \u00b7 claim privately with the ferrata tool (same phrase): a private claim needs a proof made with "
   },
   {
    "check": "every request the page made went to its own origin",
