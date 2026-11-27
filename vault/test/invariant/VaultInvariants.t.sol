@@ -60,7 +60,7 @@ contract VaultInvariants is VaultTestBase {
         handler.finalizePending(0);
         vm.warp(block.timestamp + REVOKE_WINDOW + 1);
 
-        bytes4[] memory selectors = new bytes4[](26);
+        bytes4[] memory selectors = new bytes4[](27);
         selectors[0] = VaultHandler.deposit.selector;
         selectors[1] = VaultHandler.submitCandidate.selector;
         selectors[2] = VaultHandler.finalizePending.selector;
@@ -87,6 +87,7 @@ contract VaultInvariants is VaultTestBase {
         selectors[23] = VaultHandler.burn.selector;
         selectors[24] = VaultHandler.announceFees.selector;
         selectors[25] = VaultHandler.applyFees.selector;
+        selectors[26] = VaultHandler.collectLezFees.selector;
         targetContract(address(handler));
         targetSelector(StdInvariant.FuzzSelector({addr: address(handler), selectors: selectors}));
     }
@@ -99,14 +100,18 @@ contract VaultInvariants is VaultTestBase {
         }
     }
 
-    /// @notice D13 / proposal §B4 (Security #6): the wrapped supply on LEZ equals escrow less unminted deposits and
-    ///         unreleased burns. Claims mint one denomination and its fixed relay fee; the deposit's schedule-dependent
-    ///         mint fee was credited on Ethereum and is not wrapped supply. Burns take one denomination.
+    /// @notice D13 / ADR 0048 (Security #6): wrapped LEZ supply equals escrow less unminted deposits (denomination +
+    ///         relay fee each), unreleased burns and protocol fees accrued but not yet collected on LEZ. Claims mint
+    ///         denomination + relay; burns take one denomination; fee collection mints the collected-total delta.
     function invariant_supplyIsEscrowLessUnmintedDepositsAndUnreleasedBurns() public view {
         address[] memory tokens = handler.tokens();
         for (uint256 i = 0; i < tokens.length; i++) {
             address t = tokens[i];
-            assertEq(handler.ghostSupply(t), vault.escrowed(t) - handler.ghostUnminted(t) - handler.ghostUnreleased(t));
+            assertEq(
+                handler.ghostSupply(t),
+                vault.escrowed(t) - handler.ghostUnminted(t) - handler.ghostUnreleased(t)
+                    - (vault.lezFees(t) - handler.ghostCollected(t))
+            );
         }
     }
 
@@ -133,14 +138,15 @@ contract VaultInvariants is VaultTestBase {
         assertEq(handler.ghostRefundsOfClaimedLeaves(), 0);
     }
 
-    /// @notice Per token, the cumulative feeRecipient and totalOwed credit deltas at deposits equal the ghost sum of
-    ///         the mint fee in force for every successful deposit, independent of later release credits and withdrawals.
-    function invariant_depositMintFeeCreditsMatchTheInForceSchedules() public view {
+    /// @notice Per token, `lezFees` equals the ghost sum of the in-force mint and burn fees of every successful deposit
+    ///         and release. LEZ can collect any prefix of that total but never more, and Ethereum's feeRecipient gets 0.
+    function invariant_lezFeesMatchTheInForceSchedulesAndCollections() public view {
         address[] memory tokens = handler.tokens();
         for (uint256 i = 0; i < tokens.length; i++) {
             address t = tokens[i];
-            assertEq(handler.ghostMintFeeCredits(t), handler.ghostDepositMintFees(t));
-            assertEq(handler.ghostMintFeeTotalOwed(t), handler.ghostDepositMintFees(t));
+            assertEq(vault.lezFees(t), handler.ghostLezFees(t));
+            assertLe(handler.ghostCollected(t), vault.lezFees(t));
+            assertEq(vault.owed(feeRecipient, t), 0);
         }
     }
 
@@ -308,6 +314,7 @@ contract VaultInvariants is VaultTestBase {
         console2.log("LEZ claims", claims);
         console2.log("LEZ burns", burns);
         console2.log("fee changes in force", feeChanges);
+        console2.log("LEZ fee collections", handler.ghostLezFeeCollectionCalls());
         (uint256 pauses, uint256 roleChanges) = handler.roleSummary();
         console2.log("watcher pauses", pauses);
         console2.log("role changes", roleChanges);

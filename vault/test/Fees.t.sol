@@ -7,14 +7,14 @@ import {FerrataVault} from "../src/FerrataVault.sol";
 import {IRiscZeroVerifier} from "../src/interfaces/IRiscZeroVerifier.sol";
 
 import {ToggleRecipient} from "./mocks/MockRecipients.sol";
-import {MockERC20} from "./mocks/MockTokens.sol";
+import {MockERC20, MockTokenBase} from "./mocks/MockTokens.sol";
 import {ReferenceMerkle} from "./utils/ReferenceMerkle.sol";
 import {VaultTestBase} from "./utils/VaultTestBase.sol";
 
-/// @notice v5, D13 fees (proposal §B4, amended for F.13): a deposit pays its denomination plus the mint and relay
-///         fees of the schedule in force, credits the mint fee to the fee recipient through `owed`, and escrows the
-///         denomination and relay fee; a release pays the denomination less the relay, burn and checkpoint fees, the
-///         burn fee credited to the fee recipient and the checkpoint fee to the root's prover. Protocol fees start at
+/// @notice v5, D13 fees (ADR 0048): a deposit pays and escrows its denomination plus the mint and relay fees of the
+///         schedule in force and accrues the mint fee in `lezFees`; a release pays the denomination less the relay,
+///         burn and checkpoint fees, accrues the burn fee in `lezFees` and credits only the checkpoint fee on Ethereum.
+///         Protocol fees start at
 ///         zero under a 1% ceiling and change seven days after announcement. Expected amounts and published hashes are
 ///         worked out here from the written rules (and the hashes from bridge-wire's byte layout), not read back from
 ///         the vault.
@@ -123,6 +123,10 @@ contract FeesTest is VaultTestBase {
             m = bytes.concat(m, bytes32(p.relayFees[i]));
         }
         return sha256(m);
+    }
+
+    function _lezFeesSlot(address token) internal pure returns (bytes32) {
+        return sha256(bytes.concat(bytes("ferrata/vault/lezfees/v1"), bytes20(token)));
     }
 
     function _published(uint64 index) internal view returns (bytes32) {
@@ -301,7 +305,7 @@ contract FeesTest is VaultTestBase {
     }
 
     /// @notice One fee of each kind per denomination; each at most 1% of its denomination (the limit and one past
-    ///         it); mint fees in whole LEZ units, burn and checkpoint fees in any base unit.
+    ///         it); mint and burn fees in whole LEZ units, checkpoint fees in any base unit.
     function test_announce_feeRules() public {
         uint256[] memory one = new uint256[](1);
         vm.startPrank(admin);
@@ -320,13 +324,15 @@ contract FeesTest is VaultTestBase {
         vault.announceFees(FEE_TOKEN, _two(0, 0), _two(0, 0), _two(0, D1 / 100 + 1));
         vm.expectRevert(FerrataVault.FeeNotMultipleOfLezUnit.selector);
         vault.announceFees(FEE_TOKEN, _two(1e12 + 1, 0), _two(0, 0), _two(0, 0));
+        vm.expectRevert(FerrataVault.FeeNotMultipleOfLezUnit.selector);
+        vault.announceFees(FEE_TOKEN, _two(0, 0), _two(1e12 + 1, 0), _two(0, 0));
 
         uint64 at = uint64(block.timestamp);
         vm.expectEmit(true, true, true, true, address(vault));
         emit FerrataVault.FeesAnnounced(
-            FEE_TOKEN, 1, at, at + 7 days, _two(D0 / 100, D1 / 100), _two(1, D1 / 100), _two(3, D1 / 100)
+            FEE_TOKEN, 1, at, at + 7 days, _two(D0 / 100, D1 / 100), _two(1e12, D1 / 100), _two(3, D1 / 100)
         );
-        vault.announceFees(FEE_TOKEN, _two(D0 / 100, D1 / 100), _two(1, D1 / 100), _two(3, D1 / 100));
+        vault.announceFees(FEE_TOKEN, _two(D0 / 100, D1 / 100), _two(1e12, D1 / 100), _two(3, D1 / 100));
         vm.stopPrank();
         (uint64 current, uint64 pendingAt) = vault.feeState(FEE_TOKEN);
         assertEq(current, 0);
@@ -337,7 +343,7 @@ contract FeesTest is VaultTestBase {
         public
     {
         uint256 mintFee = bound(mintUnits, 0, 2e4) * 1e12; // up to 2% of D0, in whole LEZ units
-        burnFee = bound(burnFee, 0, 2e16);
+        burnFee = bound(burnFee, 0, 2e4) * 1e12;
         checkpointFee = bound(checkpointFee, 0, 2e16);
         bool allowed = mintFee <= D0 / 100 && burnFee <= D0 / 100 && checkpointFee <= D0 / 100;
         vm.prank(admin);
@@ -371,9 +377,11 @@ contract FeesTest is VaultTestBase {
         vm.prank(alice);
         vault.deposit(FEE_TOKEN, 0, keccak256("leaf 1"), 1); // leaf 1, the first under schedule 1
         assertEq(t.balanceOf(address(vault)), 2 * D0 + 2 * RELAY0 + 1e16);
-        assertEq(vault.escrowed(FEE_TOKEN), 2 * D0 + 2 * RELAY0);
-        assertEq(vault.owed(feeRecipient, FEE_TOKEN), 1e16);
-        assertEq(vault.totalOwed(FEE_TOKEN), 1e16);
+        assertEq(vault.escrowed(FEE_TOKEN), 2 * D0 + 2 * RELAY0 + 1e16);
+        assertEq(vault.lezFees(FEE_TOKEN), 1e16);
+        assertEq(uint256(vm.load(address(vault), _lezFeesSlot(FEE_TOKEN))), 1e16);
+        assertEq(vault.owed(feeRecipient, FEE_TOKEN), 0);
+        assertEq(vault.totalOwed(FEE_TOKEN), 0);
         assertEq(_published(1), h);
         uint64 pendingAt;
         (current, pendingAt) = vault.feeState(FEE_TOKEN);
@@ -447,7 +455,7 @@ contract FeesTest is VaultTestBase {
         _announce(_two(1e16, 0), _two(0, 0), _two(0, 0));
         _depositExactly(alice, 0, D0 + RELAY0); // leaf 0
         vm.warp(at + 7 days + 5);
-        _announce(_two(2e16 / 2, 0), _two(5, 0), _two(0, 0));
+        _announce(_two(2e16 / 2, 0), _two(5e12, 0), _two(0, 0));
         (uint64 current, uint64 pendingAt) = vault.feeState(FEE_TOKEN);
         assertEq(current, 1);
         assertEq(pendingAt, at + 7 days + 5 + FEE_NOTICE);
@@ -461,7 +469,7 @@ contract FeesTest is VaultTestBase {
     /// @notice Anyone puts a due change in force; before it is due, and once it is in force, the call does nothing.
     function test_applyFees_isPermissionlessAndActsOnlyWhenDue() public {
         uint64 at = uint64(block.timestamp);
-        _announce(_two(0, 0), _two(7, 0), _two(0, 0));
+        _announce(_two(0, 0), _two(7e12, 0), _two(0, 0));
         vm.warp(at + 7 days - 1);
         vm.prank(bob);
         vault.applyFees(FEE_TOKEN);
@@ -476,7 +484,8 @@ contract FeesTest is VaultTestBase {
         (current,) = vault.feeState(FEE_TOKEN);
         assertEq(current, 1);
         assertEq(
-            _published(1), _scheduleHash(FEE_TOKEN, 1, [uint64(0), at, at + 7 days], _two(0, 0), _two(7, 0), _two(0, 0))
+            _published(1),
+            _scheduleHash(FEE_TOKEN, 1, [uint64(0), at, at + 7 days], _two(0, 0), _two(7e12, 0), _two(0, 0))
         );
         vm.recordLogs();
         vault.applyFees(FEE_TOKEN);
@@ -487,8 +496,8 @@ contract FeesTest is VaultTestBase {
 
     // ---- refunds after fee changes ---------------------------------------------------------------------------------
 
-    /// @notice Deposits under schedules 0, 1 and 2, among other tokens' leaves, are refunded exactly their escrow:
-    ///         denomination + fixed relay fee. Every mint fee was credited at deposit and stays owed to feeRecipient.
+    /// @notice Deposits under schedules 0, 1 and 2, among other tokens' leaves, are refunded exactly denomination +
+    ///         fixed relay fee. Every mint fee stays escrowed and accrued for the fee recipient on LEZ.
     function test_feeChange_refundsExcludeMintFeesPaidUnderDifferentSchedules() public {
         uint64 at = uint64(block.timestamp);
         _depositExactly(alice, 1, D1 + RELAY1); // leaf 0: schedule 0
@@ -520,9 +529,10 @@ contract FeesTest is VaultTestBase {
             assertEq(t.balanceOf(who) - before, expected[i]);
             assertGe(t.balanceOf(address(vault)), vault.escrowed(FEE_TOKEN) + vault.totalOwed(FEE_TOKEN));
         }
-        assertEq(vault.escrowed(FEE_TOKEN), 0);
-        assertEq(vault.totalOwed(FEE_TOKEN), 14e16);
-        assertEq(t.balanceOf(address(vault)), vault.totalOwed(FEE_TOKEN));
+        assertEq(vault.escrowed(FEE_TOKEN), 14e16);
+        assertEq(vault.lezFees(FEE_TOKEN), 14e16);
+        assertEq(vault.totalOwed(FEE_TOKEN), 0);
+        assertEq(t.balanceOf(address(vault)), vault.escrowed(FEE_TOKEN));
     }
 
     /// @notice Four schedules do not change the refund rule: each leaf returns the same fixed relay fee plus its
@@ -554,12 +564,13 @@ contract FeesTest is VaultTestBase {
             assertEq(t.balanceOf(who) - before, D1 + RELAY1);
             assertEq(t.balanceOf(address(vault)), vault.escrowed(FEE_TOKEN) + vault.totalOwed(FEE_TOKEN));
         }
-        assertEq(vault.escrowed(FEE_TOKEN), 0);
-        assertEq(vault.totalOwed(FEE_TOKEN), 15e16);
-        assertEq(t.balanceOf(address(vault)), vault.totalOwed(FEE_TOKEN));
+        assertEq(vault.escrowed(FEE_TOKEN), 15e16);
+        assertEq(vault.lezFees(FEE_TOKEN), 15e16);
+        assertEq(vault.totalOwed(FEE_TOKEN), 0);
+        assertEq(t.balanceOf(address(vault)), vault.escrowed(FEE_TOKEN));
     }
 
-    // ---- mint fees are collected on Ethereum at deposit ------------------------------------------------------------
+    // ---- protocol fees accrue for the fee recipient on LEZ ---------------------------------------------------------
 
     uint256 internal constant MINT0 = 1e16;
     uint256 internal constant ETH_MINT1 = 1e15;
@@ -571,11 +582,12 @@ contract FeesTest is VaultTestBase {
         uint256 owed;
         uint256 payerOwed;
         uint256 totalOwed;
+        uint256 lezFees;
         uint256 feeRecipientBalance;
     }
 
-    /// @dev One independently calculated deposit: payer debit, whole-vault balance delta, escrow and pull-payment
-    ///      ledger deltas, no credit to the payer, and exactly the expected Deposit and OwedCredited events.
+    /// @dev One independently calculated deposit: payer debit, whole-vault balance and escrow deltas, LEZ accrual,
+    ///      no Ethereum protocol-fee credit, and exactly the expected Deposit and LezFeesAccrued events.
     function _assertDeposit(
         address who,
         address token,
@@ -588,10 +600,9 @@ contract FeesTest is VaultTestBase {
         if (token == ETH) {
             vm.deal(who, who.balance + total);
         } else {
-            require(token == FEE_TOKEN, "helper supports the fee token and ETH");
-            t.mint(who, total);
+            MockTokenBase(token).mint(who, total);
             vm.prank(who);
-            t.approve(address(vault), total);
+            MockTokenBase(token).approve(address(vault), total);
         }
         uint64 index = vault.depositCount(who);
         uint64 leafIndex = vault.nextLeafIndex();
@@ -603,12 +614,13 @@ contract FeesTest is VaultTestBase {
             owed: vault.owed(feeRecipient, token),
             payerOwed: vault.owed(who, token),
             totalOwed: vault.totalOwed(token),
+            lezFees: vault.lezFees(token),
             feeRecipientBalance: _balance(token, feeRecipient)
         });
 
         if (mintFee != 0) {
-            vm.expectEmit(true, true, true, true, address(vault));
-            emit FerrataVault.OwedCredited(feeRecipient, token, mintFee);
+            vm.expectEmit(true, false, false, true, address(vault));
+            emit FerrataVault.LezFeesAccrued(token, mintFee, before.lezFees + mintFee);
         }
         vm.expectEmit(true, true, true, true, address(vault));
         emit FerrataVault.Deposit(who, index, leafIndex, token, denomination, commitment);
@@ -620,37 +632,35 @@ contract FeesTest is VaultTestBase {
             vault.deposit(token, denomIndex, commitment, index);
         }
 
-        _assertMintCreditEventCount(mintFee);
-        _assertDepositEffects(who, token, denomination, relayFee, mintFee, total, before);
+        _assertNoOwedCreditEvent();
+        _assertDepositEffects(who, token, mintFee, total, before);
     }
 
-    function _assertMintCreditEventCount(uint256 mintFee) internal {
-        uint256 credits;
+    function _assertNoOwedCreditEvent() internal {
         Vm.Log[] memory logs = vm.getRecordedLogs();
         for (uint256 i = 0; i < logs.length; i++) {
-            if (logs[i].emitter == address(vault) && logs[i].topics[0] == FerrataVault.OwedCredited.selector) {
-                credits++;
+            if (logs[i].emitter == address(vault)) {
+                assertTrue(logs[i].topics[0] != FerrataVault.OwedCredited.selector, "no Ethereum fee credit");
             }
         }
-        assertEq(credits, mintFee == 0 ? 0 : 1, "one credit only for a nonzero mint fee");
     }
 
     function _assertDepositEffects(
         address who,
         address token,
-        uint256 denomination,
-        uint256 relayFee,
         uint256 mintFee,
         uint256 total,
         DepositSnapshot memory before
     ) internal view {
         assertEq(before.payer - _balance(token, who), total, "payer debit");
         assertEq(_balance(token, address(vault)) - before.vaultBalance, total, "vault balance delta");
-        assertEq(vault.escrowed(token) - before.escrow, denomination + relayFee, "escrow excludes mint fee");
-        assertEq(vault.owed(feeRecipient, token) - before.owed, mintFee, "feeRecipient credit");
-        assertEq(vault.totalOwed(token) - before.totalOwed, mintFee, "totalOwed delta");
+        assertEq(vault.escrowed(token) - before.escrow, total, "escrow includes mint fee");
+        assertEq(vault.owed(feeRecipient, token), before.owed, "no feeRecipient credit");
+        assertEq(vault.totalOwed(token), before.totalOwed, "totalOwed unchanged");
         assertEq(vault.owed(who, token), before.payerOwed, "never credit the depositor");
         assertEq(_balance(token, feeRecipient), before.feeRecipientBalance, "no push payment");
+        assertEq(vault.lezFees(token) - before.lezFees, mintFee, "LEZ mint fee accrual");
+        assertEq(uint256(vm.load(address(vault), _lezFeesSlot(token))), vault.lezFees(token), "published total");
         assertEq(_balance(token, address(vault)), vault.escrowed(token) + vault.totalOwed(token));
     }
 
@@ -659,8 +669,8 @@ contract FeesTest is VaultTestBase {
         vault.announceFees(ETH, _threeAt1(mintFee), _three(0), _three(0));
     }
 
-    /// @notice ERC-20 under schedule 0 emits no fee credit. A pending change does not apply early; at its due second
-    ///         the debit grows by its mint fee, while escrow still grows by denomination + relay only.
+    /// @notice ERC-20 under schedule 0 accrues no fee. A pending change does not apply early; at its due second the
+    ///         debit and escrow grow by the whole total and `lezFees` grows by exactly its mint fee.
     function test_deposit_erc20BeforeAndAfterAnnouncedMintFeeChange() public {
         uint64 announcedAt = uint64(block.timestamp);
         _assertDeposit(alice, FEE_TOKEN, 0, D0, RELAY0, 0);
@@ -683,41 +693,41 @@ contract FeesTest is VaultTestBase {
         _assertDeposit(alice, ETH, 1, 1 ether, relayFee, ETH_MINT1);
     }
 
-    function test_deposit_feeRecipientClaimsAccumulatedErc20MintFees() public {
+    function test_deposit_accumulatedErc20MintFeesAreNotWithdrawableOnEthereum() public {
         _announce(_two(MINT0, 0), _two(0, 0), _two(0, 0));
         vm.warp(block.timestamp + FEE_NOTICE);
         _assertDeposit(alice, FEE_TOKEN, 0, D0, RELAY0, MINT0);
         _assertDeposit(bob, FEE_TOKEN, 0, D0, RELAY0, MINT0);
 
-        vm.expectEmit(true, true, true, true, address(vault));
-        emit FerrataVault.OwedClaimed(feeRecipient, FEE_TOKEN, 2 * MINT0);
-        vm.prank(feeRecipient);
-        vault.claimOwed(FEE_TOKEN);
-        assertEq(t.balanceOf(feeRecipient), 2 * MINT0);
+        assertEq(vault.lezFees(FEE_TOKEN), 2 * MINT0);
         assertEq(vault.owed(feeRecipient, FEE_TOKEN), 0);
+        vm.prank(feeRecipient);
+        vm.expectRevert(FerrataVault.NothingOwed.selector);
+        vault.claimOwed(FEE_TOKEN);
+        assertEq(t.balanceOf(feeRecipient), 0);
         assertEq(vault.totalOwed(FEE_TOKEN), 0);
         assertEq(t.balanceOf(address(vault)), vault.escrowed(FEE_TOKEN));
     }
 
-    function test_deposit_feeRecipientClaimsAccumulatedEthMintFees() public {
+    function test_deposit_accumulatedEthMintFeesAreNotWithdrawableOnEthereum() public {
         uint256 relayFee = 1 ether / 500;
         _announceEthMintFee(ETH_MINT1);
         vm.warp(block.timestamp + FEE_NOTICE);
         _assertDeposit(alice, ETH, 1, 1 ether, relayFee, ETH_MINT1);
         _assertDeposit(bob, ETH, 1, 1 ether, relayFee, ETH_MINT1);
 
-        vm.expectEmit(true, true, true, true, address(vault));
-        emit FerrataVault.OwedClaimed(feeRecipient, ETH, 2 * ETH_MINT1);
-        vm.prank(feeRecipient);
-        vault.claimOwed(ETH);
-        assertEq(feeRecipient.balance, 2 * ETH_MINT1);
+        assertEq(vault.lezFees(ETH), 2 * ETH_MINT1);
         assertEq(vault.owed(feeRecipient, ETH), 0);
+        vm.prank(feeRecipient);
+        vm.expectRevert(FerrataVault.NothingOwed.selector);
+        vault.claimOwed(ETH);
+        assertEq(feeRecipient.balance, 0);
         assertEq(vault.totalOwed(ETH), 0);
         assertEq(address(vault).balance, vault.escrowed(ETH));
     }
 
-    /// @notice Collection never pushes ETH: even a fee recipient reverting on every receive cannot block or tax a
-    ///         deposit. It can open its receiver later and withdraw the accumulated mint fee itself.
+    /// @notice Accrual never pushes or credits ETH: even a fee recipient reverting on every receive cannot block or
+    ///         tax a deposit, and opening its receiver later gives it nothing to claim on Ethereum.
     function test_deposit_revertingEthFeeRecipientDoesNotBlockDeposit() public {
         ToggleRecipient rejectingFeeRecipient = new ToggleRecipient();
         FerrataVault.Deployment memory d = _deployment(IRiscZeroVerifier(address(estop)), LEZ_CONFIG_ID);
@@ -735,19 +745,21 @@ contract FeesTest is VaultTestBase {
         vm.prank(alice);
         v.depositETH{value: total}(1, keccak256("unblocked"), 0);
         assertEq(address(rejectingFeeRecipient).balance, 0);
-        assertEq(v.owed(address(rejectingFeeRecipient), ETH), ETH_MINT1);
-        assertEq(v.totalOwed(ETH), ETH_MINT1);
-        assertEq(v.escrowed(ETH), 1 ether + relayFee);
+        assertEq(v.owed(address(rejectingFeeRecipient), ETH), 0);
+        assertEq(v.totalOwed(ETH), 0);
+        assertEq(v.lezFees(ETH), ETH_MINT1);
+        assertEq(v.escrowed(ETH), total);
         assertEq(address(v).balance, total);
 
         rejectingFeeRecipient.setOpen(true);
+        vm.expectRevert(FerrataVault.NothingOwed.selector);
         rejectingFeeRecipient.claim(address(v), ETH);
-        assertEq(address(rejectingFeeRecipient).balance, ETH_MINT1);
+        assertEq(address(rejectingFeeRecipient).balance, 0);
         assertEq(address(v).balance, v.escrowed(ETH));
     }
 
     /// @notice An ETH leaf from each side of a schedule change returns denomination + fixed relay fee only; the
-    ///         mint-fee liability remains fully backed after all escrows have been refunded.
+    ///         escrowed mint fee and its LEZ accrual remain after all denomination/relay escrows have been refunded.
     function test_refund_ethAcrossSchedulesExcludesMintFeeAndKeepsFeeLedgerBacked() public {
         uint256 relayFee = 1 ether / 500;
         bytes32[2] memory commitments = [keccak256("eth refund 0"), keccak256("eth refund 1")];
@@ -757,7 +769,8 @@ contract FeesTest is VaultTestBase {
         vm.warp(block.timestamp + FEE_NOTICE);
         _deposit(bob, ETH, 1, commitments[1]);
         leaves.push(_leafHash(1, bob, ETH, 1 ether, commitments[1]));
-        assertEq(vault.totalOwed(ETH), ETH_MINT1);
+        assertEq(vault.totalOwed(ETH), 0);
+        assertEq(vault.lezFees(ETH), ETH_MINT1);
 
         vm.prank(freezer);
         vault.retire();
@@ -777,8 +790,9 @@ contract FeesTest is VaultTestBase {
             assertEq(depositors[i].balance - before, 1 ether + relayFee);
             assertGe(address(vault).balance, vault.escrowed(ETH) + vault.totalOwed(ETH));
         }
-        assertEq(vault.escrowed(ETH), 0);
-        assertEq(vault.totalOwed(ETH), ETH_MINT1);
+        assertEq(vault.escrowed(ETH), ETH_MINT1);
+        assertEq(vault.totalOwed(ETH), 0);
+        assertEq(vault.lezFees(ETH), ETH_MINT1);
         assertEq(address(vault).balance, ETH_MINT1);
     }
 
@@ -791,8 +805,8 @@ contract FeesTest is VaultTestBase {
     }
 
     /// @notice Rule (A): the recipient gets the denomination less the relay, burn and checkpoint fees; the relayer is
-    ///         paid the relay fee; the burn fee is credited to the fee recipient and the checkpoint fee to the account
-    ///         that finalised the root (here this contract), each claims it.
+    ///         paid the relay fee; the burn fee stays escrowed and accrues for LEZ, while only the checkpoint fee is
+    ///         credited on Ethereum to the account that finalised the root (here this contract).
     function test_release_paysTheDenominationLessItsFees() public {
         _scheduleOneWithReleaseFees();
         _depositExactly(alice, 0, D0 + RELAY0);
@@ -801,8 +815,8 @@ contract FeesTest is VaultTestBase {
         FerrataVault.ReleaseRequest memory r = _request(FEE_TOKEN, 0, recipient, ROOT, keccak256("n1"));
         r.relayFee = RELAY0;
         _proveRelease(_releaseJournal(r));
-        vm.expectEmit(true, true, true, true, address(vault));
-        emit FerrataVault.OwedCredited(feeRecipient, FEE_TOKEN, 3e15);
+        vm.expectEmit(true, false, false, true, address(vault));
+        emit FerrataVault.LezFeesAccrued(FEE_TOKEN, 3e15, 3e15);
         vm.expectEmit(true, true, true, true, address(vault));
         emit FerrataVault.OwedCredited(address(this), FEE_TOKEN, 4e15);
         vm.prank(relayer);
@@ -810,18 +824,21 @@ contract FeesTest is VaultTestBase {
 
         assertEq(t.balanceOf(recipient), D0 - RELAY0 - 3e15 - 4e15);
         assertEq(t.balanceOf(relayer), RELAY0);
-        assertEq(vault.owed(feeRecipient, FEE_TOKEN), 3e15);
+        assertEq(vault.owed(feeRecipient, FEE_TOKEN), 0);
         assertEq(vault.owed(address(this), FEE_TOKEN), 4e15);
-        assertEq(vault.totalOwed(FEE_TOKEN), 7e15);
-        assertEq(vault.escrowed(FEE_TOKEN), RELAY0); // the deposit's relay fee, for its claim
-        assertEq(t.balanceOf(address(vault)), RELAY0 + 7e15);
+        assertEq(vault.totalOwed(FEE_TOKEN), 4e15);
+        assertEq(vault.lezFees(FEE_TOKEN), 3e15);
+        assertEq(vault.escrowed(FEE_TOKEN), RELAY0 + 3e15); // relay escrow plus the LEZ burn fee
+        assertEq(t.balanceOf(address(vault)), RELAY0 + 3e15 + 4e15);
 
         vm.prank(feeRecipient);
+        vm.expectRevert(FerrataVault.NothingOwed.selector);
         vault.claimOwed(FEE_TOKEN);
+        assertEq(t.balanceOf(feeRecipient), 0);
         vault.claimOwed(FEE_TOKEN);
-        assertEq(t.balanceOf(feeRecipient), 3e15);
         assertEq(t.balanceOf(address(this)), 4e15);
         assertEq(vault.totalOwed(FEE_TOKEN), 0);
+        assertEq(vault.escrowed(FEE_TOKEN), RELAY0 + 3e15);
     }
 
     /// @notice Without a relay fee (the user submits), only the burn and checkpoint fees are taken.
@@ -849,7 +866,7 @@ contract FeesTest is VaultTestBase {
         );
     }
 
-    /// @notice With no burn fee and no checkpoint fee in force, a release credits nothing.
+    /// @notice With no burn fee and no checkpoint fee in force, a release neither credits nor accrues anything.
     function test_release_zeroFeesCreditNothing() public {
         _announce(_two(0, 0), _two(0, 0), _two(0, 0));
         vm.warp(block.timestamp + FEE_NOTICE);
@@ -860,8 +877,10 @@ contract FeesTest is VaultTestBase {
         Vm.Log[] memory logs = vm.getRecordedLogs();
         for (uint256 i = 0; i < logs.length; i++) {
             assertTrue(logs[i].topics[0] != FerrataVault.OwedCredited.selector);
+            assertTrue(logs[i].topics[0] != FerrataVault.LezFeesAccrued.selector);
         }
         assertEq(vault.totalOwed(FEE_TOKEN), 0);
+        assertEq(vault.lezFees(FEE_TOKEN), 0);
         assertEq(t.balanceOf(recipient), D0);
     }
 
@@ -966,10 +985,94 @@ contract FeesTest is VaultTestBase {
         assertEq(vb.owed(feeRecipient, FEE_TOKEN), 0);
     }
 
+    /// @notice A release on each side of a burn-fee change keeps every payout rule, while escrow decreases by the
+    ///         denomination less the burn fee and `lezFees` grows by exactly that fee.
+    function test_release_beforeAndAfterAnnouncedBurnFeeChange() public {
+        _depositExactly(alice, 0, D0 + RELAY0);
+        _depositExactly(bob, 0, D0 + RELAY0);
+        _acceptRoot(ROOT);
+        FerrataVault.ReleaseRequest memory beforeChange = _request(FEE_TOKEN, 0, bob, ROOT, keccak256("schedule 0"));
+        beforeChange.relayFee = RELAY0;
+        uint256 bobBefore = t.balanceOf(bob);
+        uint256 relayerBefore = t.balanceOf(relayer);
+        uint256 escrow = vault.escrowed(FEE_TOKEN);
+        _release(beforeChange);
+        assertEq(t.balanceOf(bob) - bobBefore, D0 - RELAY0 - CHECKPOINT0);
+        assertEq(t.balanceOf(relayer) - relayerBefore, RELAY0);
+        assertEq(vault.owed(address(this), FEE_TOKEN), CHECKPOINT0);
+        assertEq(escrow - vault.escrowed(FEE_TOKEN), D0);
+        assertEq(vault.lezFees(FEE_TOKEN), 0);
+
+        _announce(_two(0, 0), _two(3e15, 0), _two(4e15, 0));
+        vm.warp(block.timestamp + FEE_NOTICE);
+        _depositExactly(alice, 0, D0 + RELAY0);
+        FerrataVault.ReleaseRequest memory afterChange = _request(FEE_TOKEN, 0, bob, ROOT, keccak256("schedule 1"));
+        afterChange.relayFee = RELAY0;
+        bobBefore = t.balanceOf(bob);
+        relayerBefore = t.balanceOf(relayer);
+        uint256 proverBefore = vault.owed(address(this), FEE_TOKEN);
+        escrow = vault.escrowed(FEE_TOKEN);
+        _proveRelease(_releaseJournal(afterChange));
+        vm.expectEmit(true, false, false, true, address(vault));
+        emit FerrataVault.LezFeesAccrued(FEE_TOKEN, 3e15, 3e15);
+        vm.prank(relayer);
+        vault.release(afterChange, SEAL);
+        assertEq(t.balanceOf(bob) - bobBefore, D0 - RELAY0 - 3e15 - 4e15);
+        assertEq(t.balanceOf(relayer) - relayerBefore, RELAY0);
+        assertEq(vault.owed(address(this), FEE_TOKEN) - proverBefore, 4e15);
+        assertEq(vault.owed(feeRecipient, FEE_TOKEN), 0);
+        assertEq(escrow - vault.escrowed(FEE_TOKEN), D0 - 3e15);
+        assertEq(vault.lezFees(FEE_TOKEN), 3e15);
+        assertEq(uint256(vm.load(address(vault), _lezFeesSlot(FEE_TOKEN))), 3e15);
+    }
+
+    /// @notice Either protocol fee, and then both, can be zero independently. Only nonzero fees grow the LEZ total.
+    function test_fees_adminCanSetEitherProtocolFeeToZero() public {
+        uint256 burnFee = 3e15;
+        _announce(_two(MINT0, 0), _two(0, 0), _two(0, 0));
+        vm.warp(block.timestamp + FEE_NOTICE);
+        _assertDeposit(alice, FEE_TOKEN, 0, D0, RELAY0, MINT0);
+        _acceptRoot(ROOT);
+        _release(0, recipient, 0, keccak256("zero burn"));
+        assertEq(vault.lezFees(FEE_TOKEN), MINT0);
+
+        _announce(_two(0, 0), _two(burnFee, 0), _two(0, 0));
+        vm.warp(block.timestamp + FEE_NOTICE);
+        _assertDeposit(alice, FEE_TOKEN, 0, D0, RELAY0, 0);
+        assertEq(vault.lezFees(FEE_TOKEN), MINT0);
+        _release(0, recipient, 0, keccak256("zero mint"));
+        assertEq(vault.lezFees(FEE_TOKEN), MINT0 + burnFee);
+
+        _announce(_two(0, 0), _two(0, 0), _two(0, 0));
+        vm.warp(block.timestamp + FEE_NOTICE);
+        _assertDeposit(alice, FEE_TOKEN, 0, D0, RELAY0, 0);
+        _release(0, recipient, 0, keccak256("both zero"));
+        assertEq(vault.lezFees(FEE_TOKEN), MINT0 + burnFee);
+        assertEq(vault.owed(feeRecipient, FEE_TOKEN), 0);
+    }
+
+    /// @notice The USDT-style token (no boolean transfer return) follows the same mint and burn accrual rules.
+    function test_fees_usdtStyleTokenAccruesBothProtocolFees() public {
+        uint256 mintFee = 1e6;
+        uint256 burnFee = 2e6;
+        uint256 checkpointFee = 3e6;
+        vm.prank(admin);
+        vault.announceFees(address(usdt), _threeAt1(mintFee), _threeAt1(burnFee), _threeAt1(checkpointFee));
+        vm.warp(block.timestamp + FEE_NOTICE);
+        _assertDeposit(alice, address(usdt), 1, 1000e6, 2e6, mintFee);
+        _acceptRoot(ROOT);
+        _release(_request(address(usdt), 1, recipient, ROOT, keccak256("usdt")));
+        assertEq(usdt.balanceOf(recipient), 1000e6 - burnFee - checkpointFee);
+        assertEq(vault.lezFees(address(usdt)), mintFee + burnFee);
+        assertEq(vault.escrowed(address(usdt)), 2e6 + mintFee + burnFee);
+        assertEq(vault.owed(address(this), address(usdt)), checkpointFee);
+        assertEq(vault.owed(feeRecipient, address(usdt)), 0);
+        assertEq(uint256(vm.load(address(vault), _lezFeesSlot(address(usdt)))), mintFee + burnFee);
+    }
+
     // ---- caps count the whole amount paid ---------------------------------------------------------------------------
 
-    /// @notice The deposit buckets still count denomination + mint fee + relay fee even though only denomination +
-    ///         relay fee is escrowed and the mint fee is owed to the fee recipient.
+    /// @notice The deposit buckets count denomination + mint fee + relay fee, exactly the whole escrowed payment.
     function test_caps_depositBucketsCountTheWholePaymentIncludingMintFee() public {
         _announce(_two(1e16, 0), _two(0, 0), _two(0, 0));
         vm.warp(block.timestamp + FEE_NOTICE);
@@ -1001,18 +1104,18 @@ contract FeesTest is VaultTestBase {
         (,, uint256 globalLeft) = vault.globalCap(FerrataVault.Direction.Deposit);
         assertEq(available, 0);
         assertEq(globalLeft, 0);
-        assertEq(vault.escrowed(FEE_TOKEN), D0 + RELAY0);
-        assertEq(vault.totalOwed(FEE_TOKEN), 1e16);
+        assertEq(vault.escrowed(FEE_TOKEN), D0 + RELAY0 + 1e16);
+        assertEq(vault.lezFees(FEE_TOKEN), 1e16);
+        assertEq(vault.totalOwed(FEE_TOKEN), 0);
     }
 
     // ---- the arithmetic over the whole fee range ------------------------------------------------------------------
 
-    /// @notice Any schedule within the ceiling: the deposit pays denomination + mint + relay but escrows only
-    ///         denomination + relay, credits mint to feeRecipient, and the release
-    ///         pays the denomination less burn, checkpoint and (if named) relay, the parts adding up to it.
+    /// @notice Any schedule within the ceiling: the deposit pays and escrows denomination + mint + relay; the release
+    ///         pays the denomination less burn, checkpoint and (if named) relay, and the accrued total is mint + burn.
     function testFuzz_feeArithmetic(uint256 mintUnits, uint256 burnFee, uint256 checkpointFee, bool withRelay) public {
         uint256 mintFee = bound(mintUnits, 0, D1 / 100 / 1e12) * 1e12;
-        burnFee = bound(burnFee, 0, D1 / 100);
+        burnFee = bound(burnFee, 0, D1 / 100 / 1e12) * 1e12;
         checkpointFee = bound(checkpointFee, 0, D1 / 100);
         _announce(_two(0, mintFee), _two(0, burnFee), _two(0, checkpointFee));
         vm.warp(block.timestamp + FEE_NOTICE);
@@ -1022,9 +1125,45 @@ contract FeesTest is VaultTestBase {
         uint256 relayPaid = withRelay ? RELAY1 : 0;
         assertEq(t.balanceOf(recipient), D1 - burnFee - checkpointFee - relayPaid);
         assertEq(t.balanceOf(relayer), relayPaid);
-        assertEq(vault.owed(feeRecipient, FEE_TOKEN), mintFee + burnFee);
+        assertEq(vault.owed(feeRecipient, FEE_TOKEN), 0);
         assertEq(vault.owed(address(this), FEE_TOKEN), checkpointFee);
-        assertEq(vault.escrowed(FEE_TOKEN), RELAY1); // the claim mints only the relay fee besides the denomination
+        assertEq(vault.lezFees(FEE_TOKEN), mintFee + burnFee);
+        assertEq(vault.escrowed(FEE_TOKEN), RELAY1 + mintFee + burnFee);
         assertEq(t.balanceOf(address(vault)), vault.escrowed(FEE_TOKEN) + vault.totalOwed(FEE_TOKEN));
+    }
+
+    /// @notice Random in-ceiling schedules and deposit/release sequences: the only-growing total is exactly the sum
+    ///         of every successful deposit's mint fee and every successful release's burn fee.
+    function testFuzz_lezFees_randomSchedulesAndDepositReleaseSequences(uint256 seed) public {
+        _acceptRoot(ROOT);
+        uint256 expectedLezFees;
+        uint256 expectedEscrow;
+        for (uint256 round = 0; round < 3; round++) {
+            uint256 roundSeed = uint256(keccak256(abi.encode(seed, round)));
+            uint256 mintFee = bound(uint256(keccak256(abi.encode(roundSeed, "mint"))), 0, D1 / 100 / 1e12) * 1e12;
+            uint256 burnFee = bound(uint256(keccak256(abi.encode(roundSeed, "burn"))), 0, D1 / 100 / 1e12) * 1e12;
+            uint256 checkpointFee = bound(uint256(keccak256(abi.encode(roundSeed, "checkpoint"))), 0, D1 / 100);
+            _announce(_two(0, mintFee), _two(0, burnFee), _two(0, checkpointFee));
+            vm.warp(block.timestamp + FEE_NOTICE);
+
+            uint256 deposits = 1 + uint256(keccak256(abi.encode(roundSeed, "deposits"))) % 3;
+            uint256 releases = uint256(keccak256(abi.encode(roundSeed, "releases"))) % (deposits + 1);
+            for (uint256 i = 0; i < deposits; i++) {
+                address who = ((roundSeed >> i) & 1) == 0 ? alice : bob;
+                _assertDeposit(who, FEE_TOKEN, 1, D1, RELAY1, mintFee);
+                expectedLezFees += mintFee;
+                expectedEscrow += D1 + RELAY1 + mintFee;
+            }
+            for (uint256 i = 0; i < releases; i++) {
+                bool withRelay = ((roundSeed >> (16 + i)) & 1) != 0;
+                _release(1, recipient, withRelay ? RELAY1 : 0, keccak256(abi.encode("sequence", seed, round, i)));
+                expectedLezFees += burnFee;
+                expectedEscrow -= D1 - burnFee;
+            }
+            assertEq(vault.lezFees(FEE_TOKEN), expectedLezFees);
+            assertEq(vault.escrowed(FEE_TOKEN), expectedEscrow);
+            assertEq(vault.owed(feeRecipient, FEE_TOKEN), 0);
+            assertEq(uint256(vm.load(address(vault), _lezFeesSlot(FEE_TOKEN))), expectedLezFees);
+        }
     }
 }

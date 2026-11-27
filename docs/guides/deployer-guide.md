@@ -288,7 +288,7 @@ stop and its owner (renounced or not), tokens with their caps and fee schedules,
   deposit keeps its leaf's schedule. On LEZ, `ImportFees` appends it once in force (attested), and
   `ImportFees(j, None)` attests that schedule `j` does not exist yet at a count, extending `known_until`.
   Protocol fees start at zero under an immutable 1% ceiling ([`vault/README.md`](../../vault/README.md),
-  "Fees (v5, D13; ADR 0048)"); either fee may be set to zero by a later announcement. Under ADR 0048 the vault escrows
+  "Fees (v5, D13)"; ADR 0048); either fee may be set to zero by a later announcement. Under ADR 0048 the vault escrows
   each deposit's mint fee and each release's burn fee and counts them in `lezFees(token)`; anyone collects them on LEZ
   (`ferrata-relayer ... collect-fees --token <token>`: the bridge program's `CollectFees`), which mints them, in the
   wrapped token, to the configuration's fee recipient (`Controls::fee_recipient`, set at `Init`). The vault's

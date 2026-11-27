@@ -101,7 +101,7 @@ Call `depositETH(denomIndex, C, j)` or `deposit(token, denomIndex, C, j)` on the
 - the amount is exactly one registered denomination of the token (at most eight per token; the
   default registers three). You pay denomination + registered mint fee + relay fee; the vault escrows all of it
   and counts the mint fee for the fee recipient on LEZ, so your LEZ balance will be a whole
-  denomination ([`vault/README.md`](../../vault/README.md), "Fees (v5, D13; ADR 0048)");
+  denomination ([`vault/README.md`](../../vault/README.md), "Fees (v5, D13)"; ADR 0048);
 - `j` must equal `depositCount[you]`: your deposits are numbered 0, 1, 2, … and that pair
   `(you, j)` is public;
 - `C = H("ferrata/C/v1" ‖ s ‖ kind ‖ dest)` with `s = HMAC(kAuth, "ferrata/s/v1" ‖ evmChainId ‖ vault

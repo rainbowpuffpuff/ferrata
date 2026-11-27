@@ -196,8 +196,8 @@ pending candidate; a finalisation does not. The assumptions are stated below.
 - a leaf at or above the boundary, below `nextLeafIndex`, not refunded before, with a 32-step path to the current
   `depositRoot`.
 
-It pays the depositor named in the leaf the denomination plus its registered relay fee, not the mint fee: that was earned
-at the deposit and stays in escrow, counted in `lezFees`, for the fee recipient on LEZ (ADR 0048).
+It pays the depositor named in the leaf the denomination plus its registered relay fee, not the mint fee. The mint fee
+stays escrowed and accrued in `lezFees` for collection on LEZ.
 
 ### Releases and pull payments
 
@@ -217,44 +217,42 @@ requires:
 If `relayer` is `address(0)`, the fee goes to `msg.sender`.
 
 Any payout that fails (recipient, relayer, or a refunded depositor) is credited to `owed[payee][token]`. Release
-checkpoint fees are credited there directly, without attempting a push. The release still
+checkpoint fees are credited there directly, without attempting a push. Deposit mint fees and release burn fees instead
+stay escrowed and accrue in `lezFees`; they are not withdrawable with `claimOwed`. The release still
 completes and the nullifier is used. Only the payee can withdraw, with `claimOwed(token)`, and only to itself. ETH is
 sent with a `call` that copies no return data, so a hostile recipient cannot run the vault out of gas with a huge
 revert.
 
-### Fees (v5, D13; ADR 0048)
+### Fees (v5, D13)
 
 Every fee is a fixed amount per token and denomination, at most 1% of that denomination (a constant ceiling, each
 fee on its own), in the token itself:
 - the **relay fee**, registered with the token and write-once (as in v4). A deposit escrows it and the claim on LEZ
   pays it to the relayer; a release pays it to its relayer when the proof names it (0 or exactly the registered fee);
-- the **mint fee** (protocol), paid with a deposit in whole LEZ units, escrowed and added to `lezFees(token)`: minted
-  on LEZ, in the wrapped token, to the configuration's fee recipient by the bridge program's `CollectFees`;
-- the **burn fee** (protocol), in whole LEZ units, kept from a release, escrowed and added to `lezFees(token)`, minted
-  on LEZ the same way;
+- the **mint fee** (protocol), paid with a deposit in whole LEZ units, kept in escrow and added to `lezFees(token)`;
+- the **burn fee** (protocol), kept from a release in whole LEZ units, left in escrow and added to `lezFees(token)`;
 - the **checkpoint fee**, kept from a release and credited to the prover of the checkpoint that accepted the root
   the release is proven against: the sender of its candidate (`submitCandidate`, whose proof the vault verified),
   under both rules, not the sender of the finalisation (review 2026-11-11 M-2).
 
-A deposit pays the denomination plus the mint and relay fees of the schedule in force and escrows all of it. Its leaf
-and its `Deposit` event keep the denomination. A nonzero mint fee is added to `lezFees(token)` (emitting
-`LezFeesAccrued(token, amount, total)`). A release pays the denomination less the relay fee its proof names and the
-burn and checkpoint fees of the schedule in force at the release; the escrow falls by the denomination less the burn
-fee, which is added to `lezFees(token)`. Checkpoint fees are credited to `owed` and claimed with `claimOwed`, never
-pushed, so no prover can make releases costly. `lezFees(token)` is one cumulative, only-growing total per token at the
-SHA-256 slot `sha256("ferrata/vault/lezfees/v1" ‖ token)`, which the bridge program attests to mint what it has not
-minted yet ([ADR 0048](../docs/decisions/0048-protocol-fees-minted-on-lez.md)); no claim or burn on LEZ carries a fee
-value. A refund returns the denomination + registered relay fee; the deposit's mint fee stays in escrow (it is in
-`lezFees`). The immutable `feeRecipient` is credited nothing since ADR 0048 (kept so the deployment parameters do not
-change). The caps count what moves: a deposit's whole payment (mint fee included), a release's denomination, a
-refund's escrow.
+A deposit pays and escrows the denomination plus the mint and relay fees of the schedule in force. Its leaf and its
+`Deposit` event keep the denomination. A nonzero mint fee grows `lezFees(token)` (emitting
+`LezFeesAccrued(token, amount, total)`), an only-growing per-token total at the SHA-256 slot below. A release pays the
+denomination less the relay fee its proof names and the burn and checkpoint fees in force. It decreases escrow by
+denomination − burn fee, grows `lezFees` by the burn fee, and credits the checkpoint fee to the prover through `owed`.
+The paired LEZ fee-collection instruction attests `lezFees` and mints its not-yet-minted delta in the wrapped token to
+the configured LEZ fee recipient; claims and burns carry no fee value. The immutable Ethereum `feeRecipient` remains
+in the deployment parameters and ABI but is credited no protocol fee (ADR 0048). A refund returns denomination +
+registered relay fee and leaves the mint fee escrowed and accrued. The caps count what moves: a deposit's whole
+payment (mint fee included), a release's denomination, a refund's escrow. Ethereum balances satisfy
+`balance == escrowed + totalOwed + donations`, where `totalOwed` now covers checkpoint fees and failed push payouts.
 
 **Schedules.** Registration sets schedule 0: no mint or burn fee (protocol fees start at zero) and the checkpoint
 fees given. The admin announces schedule `current + 1` with `announceFees(token, mintFees, burnFees, checkpointFees)`.
 It takes effect seven days of Ethereum time later, at the token's first deposit or release from then on or at
 anyone's `applyFees(token)`, and applies to the deposits from the leaf count at that moment (`fromLeaf`, published
-for the LEZ mirror; no vault path reads a leaf's schedule: the mint fee is escrowed and counted in `lezFees` at the
-deposit and a refund returns the denomination and the registered relay fee). One change can be pending per token: a new announcement replaces it and
+for the LEZ mirror; no claim reads a leaf's schedule: the mint fee accrues at the deposit and
+a refund returns the denomination and the registered relay fee). One change can be pending per token: a new announcement replaces it and
 restarts the seven days, announcing the fees in force withdraws it, and a change already due is put in force before
 a new announcement is recorded. `feeState(token)` and `fees(token, index, denomIndex)` read them.
 
@@ -264,10 +262,12 @@ slot 0: at `sha256("ferrata/vault/registry/v1" ‖ token)` the hash `sha256("fer
 lezDefinition ‖ decimals:u8 ‖ lezUnit ‖ unitWeight ‖ k:u8 ‖ denominations[k] ‖ relayFees[k])`, and at
 `sha256("ferrata/vault/fees/v1" ‖ token ‖ index:u64)` the hash `sha256("ferrata/fees/v1" ‖ token ‖ index:u64 ‖
 fromLeaf:u64 ‖ announcedAt:u64 ‖ effectiveAt:u64 ‖ k:u8 ‖ mintFees[k] ‖ burnFees[k] ‖ checkpointFees[k])`, zero until
-the schedule is in force (u256 words unless marked). These are the encodings of `lez/bridge-wire` on the branch
-`bridge-complete` (49eb610, work in progress), and the vault refuses what that code refuses: a fee above 1%, mint
-relay and burn fees that are not whole LEZ units, a mint or burn fee in schedule 0, a `lezUnit` above 10^decimals, a
-largest denomination whose double does not fit in 128 bits. If the LEZ side changes them, `_publishEntry` and
+the schedule is in force (u256 words unless marked). Since ADR 0048 the raw cumulative protocol-fee total for each
+token is at `sha256("ferrata/vault/lezfees/v1" ‖ token)`; it starts at zero, only grows, and is also returned by
+`lezFees(token)`. The registry and schedule hashes are the encodings of `lez/bridge-wire` on the branch
+`bridge-complete` (49eb610, work in progress), and the vault refuses what that code refuses: a fee above 1%, mint,
+burn and relay fees that are not whole LEZ units (checkpoint fees need not be), a mint or burn fee in schedule 0, a
+`lezUnit` above 10^decimals, a largest denomination whose double does not fit in 128 bits. If the LEZ side changes them, `_publishEntry` and
 `_publishSchedule` in `FerrataRegistry` are the one place to follow. `test/Fees.t.sol` pins known answers of both.
 
 ### Verifier and stop
@@ -287,8 +287,8 @@ with a burn root of their choice and release against it with fresh nullifiers. T
 deployment. Each statement is the code's, and each is checked by `test/BrokenVerifier.t.sol` (seven steps with their
 numbers, rules A and B) and `test/invariant/BrokenVerifierInvariants.t.sol` (eight invariants, rules A and B):
 
-- **Per-token escrow.** A release of a token debits `escrowed[token]` and is refused above it, so what leaves in a
-  token never exceeds what was deposited in it, and no token pays from another's escrow. Within a token nothing
+- **Per-token escrow.** A release of a token debits `escrowed[token]` by its denomination less the burn fee and is
+  refused above escrow, so what leaves in a token never exceeds what was deposited in it, and no token pays from another's escrow. Within a token nothing
   says whose deposits go: a forgery takes any depositor's escrow of that token.
 - **The caps, over every window.** Releases and refunds both consume the token's release bucket and the global one
   (value units), so in any window `[t1, t2]` they pay at most `capacity + refill × (t2 − t1)` of a capped token, and
@@ -464,8 +464,8 @@ has to agree on each):
 - **Which fees change by announcement.** The mint and burn fees (protocol fees, zero at registration) and the
   checkpoint fee (set at registration). The relay fee stays write-once.
 - **The 1% ceiling** applies to each fee on its own, not to their sum.
-- **Units.** Mint, burn and relay fees are whole LEZ units (all three are minted on LEZ); checkpoint fees may be any
-  base unit.
+- **Units.** Mint, burn and relay fees are whole LEZ units in the registry and published schedule encoding; checkpoint
+  fees may be any base unit. Mint and burn fees accrue for collection on LEZ, never as a per-claim amount (ADR 0048).
 - **"Seven days of Ethereum time after they are announced"** is a lower bound: the change takes effect at the token's
   first deposit or release, or anyone's `applyFees`, at or after announcement + 7 days; `fromLeaf` is the leaf count
   then, and the published `effectiveAt` is that block's time.
@@ -479,20 +479,18 @@ has to agree on each):
   fee without proving, and under (A) a copied seal redirected it (review 2026-11-11 M-2). Still open: copying a
   pending `submitCandidate` from the mempool takes the credit; closing it needs the prover's address in the checkpoint
   journal (a new checkpoint program).
-- **Who receives the protocol fees**: since ADR 0048 the LEZ configuration's fee recipient (`Controls::fee_recipient`,
-  fixed at `Init` and committed by `configId`), in the wrapped token, through `CollectFees`; the vault's immutable
-  `feeRecipient` is credited nothing. Checkpoint fees are credited to the prover, never pushed.
+- **Who receives the protocol fees**: the LEZ configuration's fee recipient receives their accrued deltas in the
+  wrapped token on LEZ. The immutable Ethereum `feeRecipient` remains in the deployment ABI but is credited nothing;
+  checkpoint fees are credited to the prover on Ethereum.
 - **Relay fee**: a release's stays 0 or the registered fee (v4); a deposit always escrows it, since the claim on LEZ
   pays it.
-- **Where the protocol fees are collected (F.13; ADR 0046, then ADR 0048).** The mint fee at the deposit and the burn
-  fee at the release, both escrowed and counted in `lezFees`, so no claim or burn has a schedule-dependent value and a
-  claim names no schedule range; the paired LEZ program mints a claim's denomination + relay fee only, and the fees in
-  totals (`CollectFees`). Under ADR 0046 the vault credited both to `feeRecipient` on Ethereum instead.
-- **A refund returns the denomination and its registered relay fee**, not the mint fee earned at the deposit (it stays
-  in escrow for the fee recipient on LEZ); the caps count a deposit's whole payment, a release's denomination, and a
-  refund's escrow.
-- **Schedule 0** starts at the leaf count at registration. **Events**: `Release` is unchanged, fee credits are
-  `OwedCredited`, and `Refund.amount` is the total refunded.
+- **Where protocol fees are collected (F.13 amendment).** Mint fees accrue at deposit and burn fees at release in the
+  cumulative, attested `lezFees` slot. A separate permissionless LEZ instruction collects its delta, so claims and
+  burns have no schedule-dependent fee value. See ADR 0048.
+- **A refund returns the leaf's escrow** (denomination and its registered relay fee), not the mint fee collected at
+  deposit; the caps count a deposit's whole payment, a release's denomination, and a refund's escrow.
+- **Schedule 0** starts at the leaf count at registration. **Events**: `Release` is unchanged, checkpoint-fee and
+  failed-payout credits are `OwedCredited`, protocol-fee growth is `LezFeesAccrued`, and `Refund.amount` is the total refunded.
 - **Encodings and checks** of the registry entry and the schedules: those of `lez/bridge-wire` at 49eb610 ("Fees").
 
 Kept from v2:
@@ -548,8 +546,8 @@ New in v4:
   make a release revert whenever a newer root matured between proving and inclusion.
 - **The stop's owner is renounced by the deployment, not checked by the vault**; the vault checks only that the
   stop answers `paused()` and is not tripped.
-- **D13's fees are built** as "Fees (v5, D13; ADR 0048)" above describes: deposits escrow the whole payment and count
-  the mint fee in `lezFees`, releases pay less the relay, burn and checkpoint fees and count the burn fee in `lezFees`, the checkpoint fee goes to
+- **D13's fees are built** as "Fees (v5, D13)" above describes: deposits escrow denomination + mint + relay fees,
+  releases pay less the relay, burn and checkpoint fees, both protocol fees accrue for LEZ, and the checkpoint fee goes to
   the candidate's prover (review
   M-2), schedules take effect seven days after announcement. As D13 specifies, a release pays the outbound fees in
   force at the release, so a fee announced after a burn applies to it (review L-2, not fixed:
@@ -854,8 +852,8 @@ the table above and drives real candidate → beacon → finalisation sequences 
 | `Freeze.t.sol` | All 32 combinations of the five freezes; every freeze lapses after `maxFreeze`; renewal; a lost key cannot lock the vault |
 | `Admin.t.sol` | Constructor checks, including `turnSeconds` and `minReleaseDelay`; the v3 domain tag; write-once registry; relay-fee ceiling (fuzzed); role separation; two-step handovers (v4: the admin's own; the freeze authority changes only through `proposeRoles`) |
 | `Caps.t.sol`, `Merkle.t.sol`, `Privacy.t.sol`, `TreeVectors.t.sol`, `GasScenarios.t.sol` | Rate limits; slots 0, 1 and 2 and tree algebra; LEZ-side data never appears in calldata, events or storage writes; vectors; gas |
-| `Fees.t.sol` (v5) | D13's fees, 31 tests: registration publishes the registry entry and schedule 0 at their slots (known answers, recomputed byte by byte) and emits them; the fee rules (1% ceiling, LEZ units, schedule 0 without mint or burn fee, twice the largest denomination in 128 bits); `announceFees` only by the admin and only for a registered token (fuzzed ceiling); a change in force seven days after its announcement and not a second earlier; ETH and ERC-20 deposits on both sides of a change with exact debit, escrow, `owed`, `totalOwed` and event checks; zero-fee deposits emitting no credit; `claimOwed` paying accumulated mint fees; a reverting fee recipient not blocking deposits; refunds across schedules returning only denomination + relay and leaving the fee ledger backed; releases paying the denomination less the relay, burn and checkpoint fees, with and without a relay fee, putting a due change in force, crediting nothing for zero fees, the checkpoint fee credited to the candidate's prover and never pushed, under rule (B) to the prover and not to the sender of `finalizeAttested` (review 2026-11-11 M-2); deposit buckets counting the whole payment including the mint fee; fuzzed fee arithmetic |
-| `invariant/` | 15 invariants over 256 runs × 100 calls, on a rule (A) vault (`VaultInvariants`) and on a rule (B) vault (`VaultInvariantsB`), listed below |
+| `Fees.t.sol` (v5, ADR 0048) | D13's fees, 35 tests: registration publishes the registry entry and schedule 0 at their slots (known answers, recomputed byte by byte) and emits them; the fee rules (1% ceiling, mint/burn LEZ units, schedule 0 without protocol fees); `announceFees` only by the admin and only for a registered token (fuzzed ceiling); changes in force seven days later; ETH, ERC-20 and USDT-style deposits and releases with exact debit, whole-payment escrow, `lezFees`, published-slot and event checks; no protocol-fee credit to the Ethereum feeRecipient; releases paying unchanged recipient/relayer/prover amounts and retaining burn fees; either or both protocol fees zero; refunds across schedules returning only denomination + relay and leaving mint fees escrowed; caps; randomized in-ceiling fee schedules and deposit/release sequences |
+| `invariant/` | 16 invariants over 256 runs × 100 calls, on a rule (A) vault (`VaultInvariants`) and on a rule (B) vault (`VaultInvariantsB`), listed below |
 | `invariant/BrokenVerifier*` | The vault under a verifier that accepts every seal: an attacker forges checkpoints and releases at the earliest second while deposits go on and the freeze authority, a watcher and anyone with a junk proof of exploit sometimes react; 8 invariants on rules (A) and (B) ("Under a broken verifier") |
 | `BrokenVerifier.t.sol` | The same attack in seven steps with their numbers, rules (A) and (B) |
 | `ModeB.t.sol` (v4) | Rule (B): the constructor (turnSeconds 0 under B, non-zero under A); a candidate records no beacon and keeps its journal digest; final at its wait and not a second before, whatever its t; every journal word (the 11 the caller can change, and echoNonce) must be the candidate's; `recordBeacon` and `finalize` are rule (A) only, `finalizeAttested` rule (B) only; a watcher cancels within the wait and the same proof waits again in full; revocation, a competing finalisation, a pending duplicate, the checkpoint freeze, the verifier stop; monotonicity and the leaf bound; a Δ raise only for later candidates; the program's image id pinned; a release against a rule (B) root |
@@ -875,9 +873,9 @@ It finalises under the vault's rule (`finalizeAttested` under rule (B)). It also
 releases (some to payees that cannot receive), claims, replays nullifiers and refunds, donates, moves time, and
 changes freezes, caps and delays; watchers pause and cancel, and the admin's role proposals are applied on time
 and early; since v5 it also announces and applies fees, and models the LEZ side's supply (claims of settled
-deposits, burns, releases of burns). Its 15 invariants:
+deposits, burns, releases of burns and collection of any available part of `lezFees`). Its 16 invariants:
 - `balance == escrowed + totalOwed + donations` (an equality, so value stranded in the vault fails it too), and
-  `escrowed == deposits − releases − refunds`, for every token;
+  `escrowed == whole deposits − net release debits − refunds`, for every token;
 - `totalOwed` equals the sum over all payees;
 - a used nullifier or refunded leaf is never paid again;
 - `finalState` is genesis or a state that went through `finalize`, and it is the newest non-revoked checkpoint's
@@ -893,11 +891,10 @@ deposits, burns, releases of burns). Its 15 invariants:
 - (v4) the freeze authority and the watchers are the handler's model, changed only by a proposal applied after its
   14 days, and `checkpointsFrozenUntil` is the model's (watcher pauses reach 12 h ahead and never shorten a freeze);
 - (v4) no candidate is finalised before its wait, and under rule (B) no beacon is ever recorded;
-- (v5, amended for F.13 by ADR 0048) supply: for every token, the wrapped supply on LEZ (the handler's model: a claim
-  mints one denomination and its fixed relay fee, a burn takes one denomination, a collection mints fees up to
-  `lezFees`) equals the escrow less the deposits not yet minted, the burns not yet released and the fees not yet
-  collected; `lezFees` equals the ghost sum of the in-force mint fees of all successful deposits and the in-force burn
-  fees of all releases, and what is collected never exceeds it;
+- (v5, ADR 0048) supply: for every token, wrapped LEZ supply (claims mint denomination + relay, burns take one
+  denomination, fee collection mints its delta) equals escrow less unminted deposits, unreleased burns and
+  `lezFees − collected`; `lezFees` equals the ghost sum of all in-force mint and burn fees, `collected ≤ lezFees`, and
+  the Ethereum feeRecipient is owed nothing;
 - (v5) every deposit's escrow and whole payment, every release paid and credited, every refund returned exactly what
   the fee model says; every published schedule hash is the model's preimage; no claimed deposit is refunded.
 
