@@ -669,6 +669,8 @@ jobs:
         run: python3 -I deploy/testnet/tests/test_gateway_gasdrop.py
       - name: A site deploy's plan and its all-or-nothing install (deploy/testnet/tests/test_site_delta.py)
         run: python3 -I deploy/testnet/tests/test_site_delta.py
+      - name: The local server's host layout serves nothing outside its bundle (deploy/testnet/web/wallet/test/test_serve_site.py)
+        run: python3 -I deploy/testnet/web/wallet/test/test_serve_site.py
       # RFP-022 F.7 on the test network (deploy/testnet/MULTIKEY.md): the zone's configurations for 1 + N sequencers on one
       # host, and the checkpoint builder taking t(n) attestations of one tip from the host's attestors (one key: as before).
       - name: The test network's further sequencer keys and t-of-n checkpoints (deploy/testnet/tests/test_zone_keys.py, test_checkpoint_attestors.py)

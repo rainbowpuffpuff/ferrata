@@ -51,6 +51,8 @@ machine that saves only some directories between runs, point `WALLET_WORK` at on
   `eth_gasPrice`, rounded up to the gwei) with the Sepolia ETH it needs, refused before any signature when the
   balance falls short; a name typed as the burn's recipient refused with its reason. In the page, each button holds
   one request at a time, and the review shows the addresses EIP-55 checksummed.
+- `test/test_serve_site.py`: `serve.py --site` serves the bundle at `/` and the wallet at `/wallet/`, and nothing
+  outside the bundle (`..`, an encoded `..`, a symlink out, a file type it does not serve), in CI's `links` job.
 - `test/testers_path.py` (`box.sh testers`): what a visitor does, in headless Chromium against a local rc3 sequencer
   and anvil, with the pages laid out as the host serves them (`serve.py --site BUILD_DIR`: the build page at `/`, the
   wallet at `/wallet/`): the build page's reviewer link to the testers' page, its link to the wallet, a new wallet,
