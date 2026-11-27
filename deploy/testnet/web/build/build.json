@@ -1,12 +1,12 @@
 {
- "commit": "ad5553dd1ed5301fe33b570a4d5f0a8f70c208ea",
+ "commit": "5fb3edac0a3b6192526deed3830b20575cf32fa6",
  "date": "2026-11-27",
  "dirty": false,
- "statuses_from": "ad5553dd1ed5301fe33b570a4d5f0a8f70c208ea",
+ "statuses_from": "5fb3edac0a3b6192526deed3830b20575cf32fa6",
  "hard": {
   "RFP-021": {
-   "shown": 50,
-   "in part": 5,
+   "shown": 49,
+   "in part": 6,
    "not yet": 1,
    "waits on Logos": 3,
    "total": 59
