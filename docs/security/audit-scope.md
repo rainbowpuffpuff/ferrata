@@ -112,10 +112,10 @@ Message entry points are the complete `Message` enum at `lez/wire/src/lib.rs:181
 | lez/guests/program/src/main.rs | Rust | 458 | 98 | 37 | 593 | LEZ light-client actor shell and inclusion attestations; LEZ R0BF ferrata_lez (docs/image-ids.md:46); main dispatches Message |
 | lez/wire/src/lib.rs | Rust | 852 | 412 | 105 | 1369 | attestation actors, messages, state and attestation requests; linked into ferrata_lez and ferrata_bridge_f13; defines Message for ferrata_lez |
 | vault/src/FerrataRegistry.sol | Solidity | 457 | 90 | 40 | 587 | vault token, fee, cap, role and storage-proof library; FerrataRegistry library; linked into FerrataVault; publishListing external; other functions called by the vault |
-| vault/src/FerrataVault.sol | Solidity | 1056 | 338 | 156 | 1550 | escrow, deposits, checkpoints, releases, roles and failsafes; FerrataVault EVM bytecode; constructor, receive, fallback and public/external functions |
+| vault/src/FerrataVault.sol | Solidity | 1057 | 340 | 156 | 1553 | escrow, deposits, checkpoints, releases, roles and failsafes; FerrataVault EVM bytecode; constructor, receive, fallback and public/external functions |
 | vault/src/interfaces/IEmergencyStop.sol | Solidity | 4 | 3 | 1 | 8 | interfaces to the externally deployed verifier and emergency stop; interface only; no independent deployed bytecode; verify and paused interface declarations |
 | vault/src/interfaces/IRiscZeroVerifier.sol | Solidity | 4 | 4 | 1 | 9 | interfaces to the externally deployed verifier and emergency stop; interface only; no independent deployed bytecode; verify and paused interface declarations |
-| **TOTAL (61 files)** | | **13458** | **4024** | **1493** | **18975** | |
+| **TOTAL (61 files)** | | **13459** | **4026** | **1493** | **18978** | |
 
 The entry surfaces to trace end to end are:
 
