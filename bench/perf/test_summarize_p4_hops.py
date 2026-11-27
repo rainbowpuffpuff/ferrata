@@ -40,7 +40,8 @@ def main() -> None:
         run = next(work.glob("*/claim-hops*-pad/run-1/run.json"))
         good = json.loads(run.read_text())
         for change, expect in (
-            (lambda r: r.update(settle_exit=101), "| no (exit 101) |"),
+            (lambda r: r.update(settle_exit=101), "| no (prove exit 0, settle exit 101) |"),
+            (lambda r: r.update(exit_code=101), "| no (prove exit 101, settle exit 0) |"),
             (lambda r: r["tamper"][0].update(settle_exit=0), "| 0 |"),
         ):
             bad = copy.deepcopy(good)
@@ -50,6 +51,13 @@ def main() -> None:
         run.write_text(json.dumps(good))
         gz = run.parent / "prove.log.gz"
         text = gzip.decompress(gz.read_bytes()).decode(errors="replace")
+        # A log whose binary was asked for other hops than its job's is shown as such.
+        lines = text.splitlines()
+        hops = int(run.parent.parent.name.split("hops")[1].split("-")[0])
+        lines[0] = lines[0].replace(f"; hops {hops};", f"; hops {hops % 5 + 1};")
+        gz.write_bytes(gzip.compress("\n".join(lines).encode()))
+        assert "the log asked" in summarize(work), "a log asking for other hops must be flagged"
+        gz.write_bytes(gzip.compress(text.encode()))
         gz.write_bytes(gzip.compress("\n".join(l for l in text.splitlines() if "REAL PROOF" not in l).encode()))
         assert "no proof" in summarize(work), "a run without its proof line must show no proof"
     print(f"test_summarize_p4_hops: {len(rows)} runs summarized as committed; parser and tamper cases ok")

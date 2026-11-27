@@ -21,6 +21,8 @@ GIB = 1 << 30
 # prove_vault_claim's line (harness/src/bin/prove_vault_claim.rs), with grouped numbers
 CLAIM = re.compile(r"^REAL PROOF, receipt verified at settlement: execute_and_prove ([\d.]+) s \(prove \+ settle ([\d.]+) s\); "
                    r"receipt ([\d,]+) bytes; transaction ([\d,]+) bytes$")
+# prove_vault_claim's first line: what the binary was asked to prove
+HEADER = re.compile(r"; hops (\d+); shape (\w+)$")
 JOB = re.compile(r"^claim-hops(\d+)-pad$")
 
 
@@ -52,8 +54,10 @@ def runs(root: pathlib.Path) -> list:
             text = log.read_text(errors="replace") if log.exists() else \
                 gzip.decompress((rd / "prove.log.gz").read_bytes()).decode(errors="replace")
             proofs = parse_log(normalize(text), "private claim")["proofs"]
+            first = HEADER.search(text.splitlines()[0]) if text else None
+            asked = (int(first.group(1)), first.group(2)) if first else None
             out.append({"hops": int(k.group(1)), "tag": d.parent.name, "cpus": cpus, "mem_mib": mem,
-                        "machine": short(machine(c)), "run": r, "proofs": proofs})
+                        "machine": short(machine(c)), "run": r, "proofs": proofs, "asked": asked})
     return out
 
 
@@ -67,7 +71,10 @@ def table(rows: list) -> str:
         for p in x["proofs"] or [None]:
             rss = int(r["gnu_time"].get("max_rss_kib", 0)) * 1024 / GIB
             cg = r["sampled"]["max"].get("cgroup_current_bytes", 0) / GIB
-            settled = "yes" if r.get("settle_exit") == 0 else f"no (exit {r.get('settle_exit')})"
+            settled = "yes" if r.get("settle_exit") == 0 and r.get("exit_code") == 0 else \
+                f"no (prove exit {r.get('exit_code')}, settle exit {r.get('settle_exit')})"
+            if x["asked"] != (x["hops"], "wallet"):
+                settled += f"; the log asked {x['asked']}, not ({x['hops']}, 'wallet')"
             tamper = ", ".join(str(t["settle_exit"]) for t in r.get("tamper", [])) or "not run"
             if p is None:
                 lines.append(f"| {x['hops']} | {x['cpus']:g} vCPU, {x['mem_mib'] // 1024} GiB ({x['machine']}) | no proof "
