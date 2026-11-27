@@ -764,6 +764,11 @@ pub async fn claim_row<L: Ledger>(
         bail!("refusing the plaintext path without --i-accept-plaintext-links-deposit: it links this mint to its deposit for everyone; claim privately (the default) instead");
     }
     let sent = if confirm(out, o.send, o.yes)? {
+        if private {
+            // The binary that will prove the claim must be the program the zone runs: checked before a relayer is
+            // asked for a gas drop, which a refused proof would waste.
+            ledger.check_bridge_binary(ctx.program).await?;
+        }
         if let Some(g) = drop {
             let ask = lez::GasDropAsk {
                 claim: claim_input(ctx, &plan)?,
@@ -1078,6 +1083,10 @@ pub async fn burn<L: Ledger>(
         bail!("refusing to burn from a public account without --i-accept-public-account: the holder, its balance and the burn are public on LEZ; burn from a private account (the default) instead");
     }
     let sent = if confirm(out, o.send, o.yes)? {
+        if !o.public {
+            // A private burn's binary must be the program the zone runs: checked before its counter is reserved.
+            ledger.check_bridge_binary(ctx.program).await?;
+        }
         // Journalled before the burn is proven and sent: a run killed from here on leaves its counter reserved.
         if let Some(j) = &journal {
             reserve(j)?;

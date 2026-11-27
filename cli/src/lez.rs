@@ -153,6 +153,13 @@ pub trait Ledger {
         let _ = program;
         Ok(None)
     }
+    /// Refuses, before anything is proven, journalled or asked of a relayer, a private call's program binary that is
+    /// not the program the zone runs at `program` (the sequencer would refuse the proof). Nothing to check without a
+    /// loader (an in-process zone runs this tree's program).
+    async fn check_bridge_binary(&self, program: AccountId) -> Result<()> {
+        let _ = program;
+        Ok(())
+    }
     /// Sign and send `call`; returns the transaction hash (hex).
     async fn submit(&mut self, call: &LezCall) -> Result<String>;
     /// The wallet's own view of its private account `id`, decrypted from the zone (LEZ's wallet
@@ -756,6 +763,21 @@ pub struct Sequencer {
 
 #[cfg(feature = "lez-wallet")]
 impl Sequencer {
+    /// The bridge program's binary (`--bridge-program`) for a private call, loaded and checked against the image the
+    /// zone's loader names for `program`.
+    async fn bridge_binary(&self, program: AccountId) -> Result<lee::program::Program> {
+        let path = self.bridge_program.as_ref().ok_or_else(|| {
+            anyhow!("a private claim or burn needs --bridge-program (the bridge program's binary) to prove its execution")
+        })?;
+        let bytes = std::fs::read(path).with_context(|| format!("reading {}", path.display()))?;
+        let binary = lee::program::Program::new(std::borrow::Cow::Owned(bytes))
+            .map_err(|e| anyhow!("the bridge program does not load: {e}"))?;
+        if let Some(zone) = self.bridge_image(program).await? {
+            check_program_binary(path, &deployed::program_id_bytes(&binary.id()), &zone)?;
+        }
+        Ok(binary)
+    }
+
     /// The largest native credit pending to `id` in this wallet, and whether it is sealed, after a sync.
     async fn pending_credit(&mut self, id: AccountId) -> Result<Option<(u128, bool)>> {
         self.wallet.sync_to_latest_block().await.map_err(|e| anyhow!("syncing the LEZ wallet with the zone: {e}"))?;
@@ -897,6 +919,10 @@ impl Ledger for Sequencer {
         Ok(account.map(|a| a.data.actor_state(actor.program_account_id).to_vec()).unwrap_or_default())
     }
 
+    async fn check_bridge_binary(&self, program: AccountId) -> Result<()> {
+        self.bridge_binary(program).await.map(|_| ())
+    }
+
     async fn bridge_image(&self, program: AccountId) -> Result<Option<[u8; 32]>> {
         let state = self.actor_state(Actor::new(program, lee_core::program::PROGRAM_LOADER_ACCOUNT_ID)).await?;
         match deployed::loader_header_image_id(&state) {
@@ -922,19 +948,11 @@ impl Ledger for Sequencer {
                 .sync_to_latest_block()
                 .await
                 .map_err(|e| anyhow!("syncing the LEZ wallet with the zone before a private transaction: {e}"))?;
-            let path = self.bridge_program.as_ref().ok_or_else(|| {
-                anyhow!("a private claim or burn needs --bridge-program (the bridge program's binary) to prove its execution")
-            })?;
-            let bytes = std::fs::read(path).with_context(|| format!("reading {}", path.display()))?;
             let program = call.mentions[0].actor().program_account_id;
-            let binary = lee::program::Program::new(std::borrow::Cow::Owned(bytes))
-                .map_err(|e| anyhow!("the bridge program does not load: {e}"))?;
             // A proof of another program's execution is refused by the sequencer: check the binary against the image
             // the zone's loader names for the bridge account before proving (the test network runs ferrata_bridge_b1,
-            // this tree builds ferrata_bridge_f13).
-            if let Some(zone) = self.bridge_image(program).await? {
-                check_program_binary(path, &deployed::program_id_bytes(&binary.id()), &zone)?;
-            }
+            // this tree builds ferrata_bridge_f13). The flows check it earlier too, before a gas drop or a journal.
+            let binary = self.bridge_binary(program).await?;
             let catalog =
                 lee::privacy_preserving_transaction::circuit::ProgramCatalog::from([(program, binary)]);
             if let Some(payer) = self.private_fee_payer {
