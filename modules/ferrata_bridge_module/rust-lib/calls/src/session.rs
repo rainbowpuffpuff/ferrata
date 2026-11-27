@@ -516,7 +516,9 @@ fn recheck_eth(s: &Value, anchor: Option<&(u64, String)>) -> Result<Value, Strin
 }
 
 /// `set_endpoints {eth_rpc?, sequencer?}`, the view's "Apply and test" (RFP-022 U.9), through the modules that hold the
-/// connections: the LEZ sequencer is the chain service's; the Ethereum RPC is Logos Core's eth_rpc_module's endpoint for
+/// connections: the LEZ sequencer is the chain service's, and also `lez_core`'s wallet's while the session's LEZ goes
+/// through it (`crate::lez::switch_sequencer`: switched after the chain service's, both or neither); the Ethereum RPC is
+/// Logos Core's eth_rpc_module's endpoint for
 /// the session's chain when the session reads Ethereum through it (`eth`), else the chain service's. Every endpoint
 /// given that is not the one in use is read first without switching (the chain service's `module.set_endpoints` dry
 /// run; `eth_rpc_module.raw_rpc_url`). Only when all of them answer for this deployment does anything switch, and an
@@ -545,15 +547,13 @@ fn set_endpoints(params: &Value) -> Result<Value, String> {
         }
     }
     let eth_cur = owner.endpoint(&svc)?;
-    let kept = |why: &str| format!("not switched: {why}. Kept: Ethereum RPC {eth_cur} ({}), LEZ sequencer {seq_cur} ({SEQUENCER_OWNER})", owner.label());
+    // LEZ through Logos Core's lez_core: its wallet holds a connection of its own, to the sequencer its wallet config
+    // names; switched with the chain service's (`crate::lez::switch_sequencer`) and put back with it.
+    let lez_on = crate::lez::active();
+    let seq_owner = if lez_on { format!("{SEQUENCER_OWNER} and lez_core's wallet") } else { SEQUENCER_OWNER.to_string() };
+    let kept = |why: &str| format!("not switched: {why}. Kept: Ethereum RPC {eth_cur} ({}), LEZ sequencer {seq_cur} ({seq_owner})", owner.label());
     let eth_new = eth_want.filter(|u| *u != eth_cur);
     let seq_new = seq_want.filter(|u| *u != seq_cur);
-    if seq_new.is_some() && crate::lez::active() {
-        return Err(kept(
-            "the session's LEZ goes through Logos Core's lez_core, whose wallet holds its own connection (the sequencer its \
-             wallet config names): turn that path off first (wallet {\"method\": \"lez\", \"params\": {\"via\": \"plain\"}})",
-        ));
-    }
     let svc_eth = if matches!(owner, EthOwner::Service) { eth_new.clone() } else { None };
 
     // 1. Every new endpoint read, nothing switched.
@@ -602,6 +602,31 @@ fn set_endpoints(params: &Value) -> Result<Value, String> {
         seq_switched = r["switched"]["sequencer"] == true;
         checks["chain_service_in_use"] = r["in_use"].clone();
     }
+    // lez_core's wallet opened again on a copy of its config naming the new sequencer, and read back through it; if it
+    // does not take it, the chain service's endpoints are put back too (both or neither).
+    let mut lez_prev = None;
+    if let (Some(u), true) = (&seq_new, lez_on) {
+        match crate::lez::switch_sequencer(u) {
+            Ok((v, prev)) => {
+                checks["lez_core"] = v;
+                lez_prev = Some(prev);
+            }
+            Err(e) => {
+                let back = if seq_switched || svc_eth.is_some() {
+                    let eth_back = svc_eth.as_ref().map(|_| eth_cur.clone());
+                    c.post("module.set_endpoints", json!({ "sequencer": seq_cur, "eth_rpc": eth_back }))
+                        .map_or_else(|e| format!(" (putting the chain service back failed: {e})"), |_| String::new())
+                } else {
+                    String::new()
+                };
+                return Err(format!(
+                    "not switched: lez_core's wallet did not take the LEZ sequencer {u}: {e}. Put back: LEZ sequencer {seq_cur} \
+                     ({seq_owner}){back}, Ethereum RPC {eth_cur} ({})",
+                    owner.label()
+                ));
+            }
+        }
+    }
     if let (Some(u), EthOwner::Module { chain_id }) = (&eth_new, &owner) {
         let undo = |why: String| -> String {
             let eth_back = patch_endpoint(*chain_id, &eth_cur).map_or_else(|e| format!(" (putting it back failed: {e})"), |_| String::new());
@@ -611,7 +636,10 @@ fn set_endpoints(params: &Value) -> Result<Value, String> {
             } else {
                 String::new()
             };
-            format!("not switched: {why}. Put back: Ethereum RPC {eth_cur} ({}){eth_back}, LEZ sequencer {seq_cur}{seq_back}", owner.label())
+            let lez_back = lez_prev.as_ref().map_or_else(String::new, |p| {
+                crate::lez::put_back(p).map_or_else(|e| format!(" (putting lez_core's wallet back failed: {e})"), |()| String::new())
+            });
+            format!("not switched: {why}. Put back: Ethereum RPC {eth_cur} ({}){eth_back}, LEZ sequencer {seq_cur} ({seq_owner}){seq_back}{lez_back}", owner.label())
         };
         if let Err(e) = patch_endpoint(*chain_id, u) {
             return Err(undo(format!("eth_rpc_module did not take {u}: {e}")));
@@ -643,7 +671,8 @@ fn set_endpoints(params: &Value) -> Result<Value, String> {
         "sequencer": seq_now,
         "switched": { "eth_rpc": eth_new.is_some(), "sequencer": seq_new.is_some() },
         "before": { "eth_rpc": eth_cur, "sequencer": seq_cur },
-        "via": { "eth_rpc": owner.label(), "sequencer": SEQUENCER_OWNER },
+        "via": { "eth_rpc": owner.label(), "sequencer": seq_owner },
+        "lez_core_sequencer": crate::lez::sequencer(),
         "checks": checks,
     }))
 }
@@ -1108,7 +1137,8 @@ impl Chain {
                                sequencer.as_str().unwrap_or("?"), self.s["chain_id"], eth_rpc.as_str().unwrap_or("?")),
             "endpoints": {
                 "eth_rpc": { "url": eth_rpc, "via": owner.label(), "error": eth_error },
-                "sequencer": { "url": sequencer, "via": if self.network() { "the network's gateway (its /rpc), read and sent to by the module" } else { SEQUENCER_OWNER } },
+                "sequencer": { "url": sequencer, "via": if self.network() { "the network's gateway (its /rpc), read and sent to by the module" } else { SEQUENCER_OWNER },
+                               "lez_core": crate::lez::sequencer() },
             },
             "private_proofs": match self.s["proofs"].as_str() {
                 Some("real") => "real: LEZ's wallet proves each private transaction on the CPU; the sequencer verifies it",
