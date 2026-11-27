@@ -78,6 +78,6 @@ on, and each says what is not built.
   `just deploy-testnet`).
 - [reviews/](reviews/): the agents' reviews of the core, the vault and the guests, and the security review of
   11 November 2026 with its tool outputs. None is an audit.
-- [security/](security/): dated security notes; 21 November 2026: RISC Zero's Groth16 advisories and the Sepolia vaults.
+- [security/](security/): dated security notes; 21 November 2026: RISC Zero's Groth16 advisories and the Sepolia vaults; 27 November 2026: the [internal review of the Ethereum half](security/internal-review-2026-11-27.md) (not an audit) and [what happens if LEZ's receipt check is unsound](security/lez-receipt-unsound.md) (Security #9).
 - [history-rewrite.md](history-rewrite.md): why commit ids changed on 15 November 2026, with the table from old to
   new.
