@@ -215,6 +215,26 @@ jobs:
           eval "$vars"
           cargo test --locked --lib attest
           RISC0_DEV_MODE=1 cargo test --locked --test attest_faults -- --nocapture
+      # Every CLI library test, without the module filters above (deposits, privacy, codes, units, seed, scan, flow, lez
+      # and logos_send included), and the wallet crate's own tests. The build above has already compiled this workspace.
+      - name: The CLI library, unfiltered, and ferrata-wallet
+        timeout-minutes: 30
+        working-directory: cli
+        run: |
+          export RISC0_HOME="$HOME/risc0-home-lez"
+          cargo test --locked --lib
+          cargo test --locked -p ferrata-wallet
+      # The checkpoint and attestor core and the attestor CLI's tests, at the core crates' declared Rust 1.88 minimum.
+      # install-risc0.sh installs the guest compiler under ~/.risc0, not as a rustup toolchain callable as cargo +1.88;
+      # select its cargo, rustc and rustdoc together (the default host rustdoc cannot read its development build's rlibs).
+      - name: The checkpoint core, attestor core and ferrata-attestor tests
+        timeout-minutes: 30
+        working-directory: checkpoint
+        run: |
+          export R0_RUST="$HOME/.risc0/toolchains/v1.88.0-rust-x86_64-unknown-linux-gnu"
+          export PATH="$R0_RUST/bin:$PATH"
+          export RUSTC="$R0_RUST/bin/rustc" RUSTDOC="$R0_RUST/bin/rustdoc_tool_binary"
+          cargo test --locked -p checkpoint-core -p attestor-core -p ferrata-attestor
 
   # The LEZ suites (scripts/ci/lez-harness.sh): the attestation and bridge programs through LEZ v0.4.0-rc1's state
   # machine and fee settlement in the harness, every non-feature-gated target of lez/harness and lez/updater (lib unit
@@ -377,6 +397,11 @@ jobs:
       - name: The wire crates (logic, the vectors the JS library shares, the IDL's vectors)
         working-directory: lez
         run: cargo test -p ferrata-lez-msg-wire -p ferrata-lez-msg-v2-wire --locked
+      # The bridge wire includes idl_vectors.rs, which compares the attestation, bridge and PDA vectors committed under
+      # idl/vectors byte for byte with what the wire encodes. wire-class covers the second build's nullifier classes.
+      - name: The attestation and bridge wire and vector tests
+        working-directory: lez
+        run: cargo test --locked -p ferrata-lez-bridge-wire -p ferrata-lez-wire-class
       - name: Both programs in LEZ's state machine, dev mode
         working-directory: lez
         timeout-minutes: 60
@@ -393,6 +418,13 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Cache the upstream sources (LEZ v0.4.0-rc1 1806e87, Logos Blockchain d480efc6)
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ github.workspace }}/../upstream
+          key: upstream-lez-1806e87-e3edf47-logos-blockchain-d480efc6
+      - name: Fetch the upstream sources (the attestation monitor's lee_core)
+        run: scripts/fetch-upstream.sh
       - uses: dtolnay/rust-toolchain@2b28c52cef68d77e9a4de0b428559db37728c04f # 1.93.0
       - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1
         with:
@@ -420,6 +452,11 @@ jobs:
       - name: The watcher's sends through tx_sender_module, its fallback and gap fill (monitor/tests/logos-fallback.sh)
         working-directory: monitor
         run: MONITOR_LF_OUT="$RUNNER_TEMP/logos-fallback" bash tests/logos-fallback.sh
+      # The attestation-side watcher: its four unit tests and 28 integration tests use recorded answers and loopback
+      # providers; its path dependency on LEZ's lee_core comes from the pinned sources fetched above.
+      - name: The attestation monitor's stall, weak-subjectivity and divergence tests
+        working-directory: monitor/attest
+        run: cargo test --locked
 
   # The vault's Foundry suites (vault/README.md): unit, fuzz and invariant tests with the mock verifier, and
   # test/real/ with RISC Zero's real Groth16 verifier and committed real proofs. PrivacySuite is left out: it replays
@@ -443,9 +480,17 @@ jobs:
         run: '[ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0'
       - name: The libraries are the trees vault/lib.lock pins (scripts/vault_libs.py)
         run: python3 -I scripts/vault_libs.py check
+      # bridge/evm-verify has its own foundry.lock: forge-std v1.10.0 and risc0-ethereum v3.0.0. Its vendored v2 vault
+      # also reads the vault's OpenZeppelin v5.4.0 tree installed above; no Rust or proving toolchain is needed.
+      - name: The v2 verifier's libraries (bridge/evm-verify/foundry.lock)
+        working-directory: bridge/evm-verify
+        run: '[ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 risc0/risc0-ethereum@v3.0.0'
       - name: forge test
         working-directory: vault
         run: forge test --no-match-contract PrivacySuite
+      - name: The v2 vault and RISC Zero verifier (bridge/evm-verify)
+        working-directory: bridge/evm-verify
+        run: forge test
       # e2e/seqnet deploys the vault through these functions in every mode; DeployVault once refused them unnoticed.
       - name: e2e/seqnet's vault deployment (e2e/seqnet/vault.sh, on anvil)
         run: bash e2e/seqnet/test-vault-deploy.sh
@@ -504,23 +549,36 @@ jobs:
         run: scripts/fetch-upstream.sh
       - name: Every module's staged crate resolves with its committed Cargo.lock
         run: scripts/ci/modules-resolve.sh
-      # RFP-021 R.5: ferrata_attest_module's own Ethereum reads (fetch_log_proof, and eth_getProof behind build_attest_tx
+      # The calls crates' own tests, all targets, against the sources the step above staged. The two integration suites
+      # previously run below are included here; the packages also cover their pure unit and documentation tests.
+      - name: The attestor module's calls crate, all targets
+        working-directory: modules/ferrata_attestor_module/rust-lib/calls
+        run: cargo test --locked
+      - name: The monitor module's calls crate, all targets
+        working-directory: modules/ferrata_monitor_module/rust-lib/calls
+        run: cargo test --locked
+      - name: The relayer module's calls crate, all targets
+        working-directory: modules/ferrata_relayer_module/rust-lib/calls
+        run: cargo test --locked
+      # RFP-021 R.5 includes the module's own Ethereum reads (fetch_log_proof, and eth_getProof behind build_attest_tx
       # and dry_run_attest) against a scripted endpoint on 127.0.0.1 that refuses, holds, cuts or errors: each an error
-      # within its bound, each answered once the endpoint is back. Uses the crates the step above staged. Local only.
-      - name: The attestation module's Ethereum reads against a failing endpoint (RFP-021 R.5)
-        working-directory: modules/ferrata_attest_module/rust-lib
-        run: cargo test --locked -p ferrata-attest-calls --test failing_endpoint -- --nocapture
+      # within its bound, each answered once the endpoint is back. Local only.
+      - name: The attestation module's calls crate, all targets (including RFP-021 R.5 failing endpoints)
+        working-directory: modules/ferrata_attest_module/rust-lib/calls
+        run: cargo test --locked
       - name: System libraries (libpcsclite for LEZ's wallet crates, protoc)
         run: sudo apt-get update -qq && sudo apt-get install -y -qq libpcsclite-dev protobuf-compiler
       - name: cli/'s library compiles as ferrata_relayer_module builds it (without lez-wallet)
         run: cd cli && cargo +1.98.1 check --locked --no-default-features --lib
-      # All bridge-calls targets on loopback: the unit suites; RFP-022 U.9 endpoint switching through each connection
-      # owner, put back after a failed reading; and the terminal network session (RFP-022 U.6): balances and faucet,
-      # plaintext claim/public burn approve-then-confirm, and release hand-off. No public network. The live endpoint
-      # run inside Logos Core remains e2e/endpoints/run.sh (build box).
-      - name: The bridge module's calls, endpoint switching and terminal network session (RFP-022 U.6, U.9)
-        working-directory: modules/ferrata_bridge_module/rust-lib
-        run: cargo test --locked -p ferrata-bridge-calls -- --nocapture
+      # All targets of the bridge module's calls crate, against stand-ins on 127.0.0.1 (no public network): the unit
+      # suites; RFP-022 U.9's set_endpoints (the mini-app's "Apply and test") through the modules that hold the
+      # connections (a chain service, eth_rpc_module, lez_core): switched only after the new endpoint answered for the
+      # deployment, both kept on a refusal, put back after a failed reading; and the terminal network session (RFP-022
+      # U.6): balances and faucet, plaintext claim and public burn approve-then-confirm, the release hand-off. The live
+      # run inside Logos Core is e2e/endpoints/run.sh (build box).
+      - name: The bridge module's calls crate, all targets (RFP-022 U.6's terminal session, U.9's endpoint switching)
+        working-directory: modules/ferrata_bridge_module/rust-lib/calls
+        run: cargo test --locked -- --nocapture
 
   links:
     runs-on: ubuntu-latest
