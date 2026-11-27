@@ -13,7 +13,11 @@ program are prototypes, not audited ([`vault/README.md`](../../vault/README.md);
 `ferrata` ([`cli/README.md`](../../cli/README.md); prototype, run only against a local chain or a test
 deployment), and as a mini-app on a devnet ([`modules/ferrata_bridge_ui`](../../modules/ferrata_bridge_ui/README.md));
 there is no wallet integration yet. The steps below were exercised by tests, harnesses and scripts, and each
-section says where. Labels:
+section says where. **Since ADR 0046 (27 November 2026)** this tree's `ferrata`, module and relayer build claims for the bridge
+program of ADR 0046 (`ferrata_bridge_f13`: the mint fee is paid on Ethereum at the deposit, a claim names no fee
+schedule), which is not deployed; the test network runs B1's program, which refuses them. Against the test network use
+the binaries [`deploy/testnet/install-bridge.sh`](../../deploy/testnet/install-bridge.sh) pins (built before ADR 0046);
+the owner's procedure for the new program and vault is [`deploy/testnet/F13-REDEPLOY.md`](../../deploy/testnet/F13-REDEPLOY.md). Labels:
 **measured** (a run in the repository, with where it ran), **derived**, **estimated**, **not built**
 ([`docs/design/bridge.md`](../design/bridge.md), opening section).
 
