@@ -1263,10 +1263,15 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
             steps.push(row_json(&o));
         } else {
             let (_, fee1) = stage.slot(&fee_slot(&ETH, 1))?;
-            ensure!(fee1 == [0; 32], "{}: ETH has a schedule 1; the run expects none", stage.label);
-            let message = BridgeMessage::ImportFees { config_id: cid, token: ETH, index: 1, schedule: None, record_slot: slot, proof: stage.vault_proof(&fees_slots(&ETH, 1))? };
-            let o = send(live, &format!("bridge ImportFees: ETH schedule 1 absent at n={n}"), vec![mention(config_pda), mention(header_pda), mention(token_pda)], &message, payer).await?.expect_applied()?;
-            steps.push(row_json(&o));
+            if fee1 == [0; 32] {
+                let message = BridgeMessage::ImportFees { config_id: cid, token: ETH, index: 1, schedule: None, record_slot: slot, proof: stage.vault_proof(&fees_slots(&ETH, 1))? };
+                let o = send(live, &format!("bridge ImportFees: ETH schedule 1 absent at n={n}"), vec![mention(config_pda), mention(header_pda), mention(token_pda)], &message, payer).await?.expect_applied()?;
+                steps.push(row_json(&o));
+            } else {
+                // ADR 0046: no claim reads the fee schedules (the vault took each deposit's mint fee), so a schedule 1
+                // announced in the run (e2e/f13/hook.sh) is left unimported; the claims under it go on.
+                println!("[crown-b] {}: ETH has a schedule 1; not imported (ADR 0046: no claim reads a schedule)", stage.label);
+            }
         }
         if let Some(BridgeState::Token(t)) = bridge_state(live, token_pda).await? {
             println!("[crown-b] token(cid, ETH): {} schedule(s), known until leaf {}", t.schedules.len(), t.known_until);
