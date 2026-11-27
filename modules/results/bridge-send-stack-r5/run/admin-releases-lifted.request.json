@@ -1,0 +1,1 @@
+{"action":"set_releases_frozen","vault":"0x712516e61c8b383df4a63cfe83d7701bce54b03e","eth":{"via":"eth_rpc_module","chain_id":11155111},"params":{"frozen":false},"send":{"via":"tx_sender_module","from":"0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc","chain_id":11155111}}
