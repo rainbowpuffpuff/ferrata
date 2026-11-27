@@ -708,6 +708,158 @@ class TestGate100(unittest.TestCase):
             self.assertEqual(folded.count(needle), 1, needle)
 
 
+class TestGateJoin(unittest.TestCase):
+    """`lez/results/perf-gate-sequencer-join.md` (RFP-021 R.9 and R.10 with join or wait, `policy.join_wait_rounds`):
+    a hand-written header, then `bench/perf/summarize_gate.py`'s output on the runs with join or wait, then
+    `bench/perf/gate_abandoned.py`'s on G6, G7 (before it) and them, byte for byte. The runs are the ones the header
+    describes (each `machine.txt`, `done.txt`, `reveals.tsv`, two daemons; one updater build for both runs of a pair,
+    named by the header); A3's two figures are recomputed from the journals; the abandoned jobs, and whether the later
+    `Open` of each pair was sent before the other job's block was published, are recomputed here from the journals,
+    the daemons' logs and the sequencer's log, independently of gate_abandoned.py; the policy's own counters in each
+    daemon's last `/metrics`; the operator guide's rows."""
+
+    RUNS = (("gate-g8", 8), ("gate-g9", 30), ("gate-g10", 8), ("gate-g11", 30))
+    FINAL = ("gate-g10", "gate-g11")
+    BEFORE = ("gate-g6", "gate-g7")
+    DOC = "lez/results/perf-gate-sequencer-join.md"
+
+    @classmethod
+    def setUpClass(cls):
+        dirs = [f"bench/perf/results/{name}" for name, _ in cls.RUNS]
+        run = lambda script, ds: subprocess.run([sys.executable, "-I", script, *ds], cwd=ROOT, capture_output=True,
+                                                encoding="utf-8", check=True).stdout
+        cls.out = run("bench/perf/summarize_gate.py", dirs)
+        cls.abandoned_out = run("bench/perf/gate_abandoned.py",
+                                [f"bench/perf/results/{n}" for n in cls.BEFORE] + dirs)
+        cls.doc = rd(cls.DOC)
+        tail = cls.out + cls.abandoned_out
+        head = cls.doc[: len(cls.doc) - len(tail)] if cls.doc.endswith(tail) else ""
+        cls.header = " ".join(head.split())
+        sys.path.insert(0, str(ROOT / "bench" / "perf"))
+        import contextlib
+        import io
+        import summarize_gate
+        with contextlib.redirect_stdout(io.StringIO()):
+            cls.keys = {name: summarize_gate.summarize(ROOT / d) for (name, _), d in zip(cls.RUNS, dirs)}
+
+    def has(self, needle, count=1):
+        n = self.header.count(needle)
+        self.assertEqual(n, count, f"{self.DOC}'s header states '{needle}' {n} time(s), not {count}")
+
+    @staticmethod
+    def journal(name):
+        rows = []
+        for d in ("honest-1", "honest-2"):
+            for line in rd(f"bench/perf/results/{name}/state-{d}/journal.tsv").splitlines():
+                f = line.split("\t")
+                if len(f) >= 13:
+                    rows.append(dict(daemon=d, step=f[1], job=f[2], slot=int(f[3]), status=f[4], gas=int(f[6] or 0),
+                                     fee=int(f[8] or 0), block=int(f[9]), t=unix(f[10]), label=f[11],
+                                     hash=f[12].split(" ")[0]))
+        return rows
+
+    def test_the_record_is_its_header_then_the_generators_output(self):
+        self.assertTrue(self.out.startswith("## Run `gate-g8`"))
+        self.assertTrue(self.abandoned_out.startswith("### Abandoned jobs of `gate-g6`"))
+        self.assertTrue(self.doc.endswith(self.out + self.abandoned_out))
+        self.assertTrue(self.header.startswith("# RFP-021 R.9 with join or wait"))
+        self.assertNotIn("## Run", self.header)
+
+    def test_the_runs_are_the_ones_described(self):
+        shas = {}
+        for name, window in self.RUNS:
+            run = f"bench/perf/results/{name}"
+            machine = rd(f"{run}/machine.txt")
+            self.assertIn(f"\nGATE_ENTRIES=106 GATE_STEP=60 GATE_WINDOW={window} GATE_POLL=4 GATE_ADVERSARY=0\n", machine)
+            self.assertIn("\nFAKETIME=-5d ", machine)
+            self.assertEqual(rd(f"{run}/done.txt"), "done=1\n")
+            kinds = [line.split("\t")[2] for line in rd(f"{run}/reveals.tsv").splitlines()[1:]]
+            self.assertEqual((len(kinds), kinds.count("finality"), kinds.count("period")), (106, 96, 10))
+            self.assertEqual(sorted(p.name for p in (ROOT / run).glob("state-*")), ["state-honest-1", "state-honest-2"])
+            sha = re.search(r"ferrata-updater sha256 ([0-9a-f]{64})", machine).group(1)
+            self.assertIn(f"updater sha256 {sha};", rd(f"{run}/hook.log"))
+            for d in ("honest-1", "honest-2"):
+                self.assertIn("ferrata_updater_waits_for_other_jobs_total{", rd(f"{run}/metrics-{d}.txt"), "a build with it")
+            shas[name] = sha
+        self.assertEqual(shas["gate-g8"], shas["gate-g9"], "one build for the first pair")
+        self.assertEqual(shas["gate-g10"], shas["gate-g11"], "one build for the second pair")
+        self.has(f"updater sha256 `{shas['gate-g8'][:8]}…`")
+        self.has(f"updater sha256 `{shas['gate-g10'][:8]}…`")
+
+    def test_a3s_figures_from_the_journals(self):
+        for name, window in self.RUNS:
+            rows = self.journal(name)
+            applied = sum(r["gas"] for r in rows if r["status"] == "applied")
+            refused = sum(r["gas"] for r in rows if r["status"] == "refused")
+            fees = {d: sum(r["fee"] for r in rows if r["daemon"] == d and r["status"] in ("applied", "refused"))
+                    for d in ("honest-1", "honest-2")}
+            ratio, share = refused / applied, fees["honest-1"] / sum(fees.values())
+            self.assertEqual((f"{ratio:.4f}", f"{share:.3f}"),
+                             (f"{self.keys[name]['r9']:.4f}", f"{self.keys[name]['share']:.3f}"))
+            done = [(r["job"], r["step"], r["label"]) for r in rows if r["status"] == "applied"]
+            self.assertEqual(len(done), len(set(done)), f"{name}: a step applied twice")
+
+    def test_abandoned_jobs_and_when_their_opens_were_sent(self):
+        """Recomputed here, not by gate_abandoned.py: a job with an applied step that never completed, overtaken by the
+        first job to complete at or after its first applied step; the later of the two `Open`s sent (its settlement time
+        less the delay its daemon logged) at least one second before the earlier `Open`'s block was published, or in
+        one block with it. In the runs of the final build, every abandoned job is so: no `Open` was sent once the other
+        job's block was published."""
+        import gzip
+        counts = {}
+        for name in self.BEFORE + tuple(n for n, _ in self.RUNS):
+            run = ROOT / "bench/perf/results" / name
+            rows = self.journal(name)
+            delay = {}
+            for d in ("honest-1", "honest-2"):
+                for line in (run / f"daemon-{d}.log").read_text().splitlines():
+                    m = re.match(r"\[updater\] .* \+\s*([\d.]+)s ([0-9a-f]{64})$", line)
+                    if m:
+                        delay[m.group(2)] = float(m.group(1))
+            published = {}
+            for line in gzip.decompress((run / "sequencer.log.gz").read_bytes()).decode("utf-8", "replace").splitlines():
+                m = re.match(r"\[(\S+Z) INFO\s+sequencer_core\] Publishing block (\d+) ", line)
+                if m:
+                    published.setdefault(int(m.group(2)), unix(m.group(1)))
+            last = lambda r: r["step"] == "finish" or r["label"].endswith("init adopt 2/2")
+            applied = [r for r in rows if r["status"] == "applied"]
+            done = {r["job"]: r["block"] for r in applied if last(r)}
+            first = {}
+            for r in applied:
+                first[r["job"]] = min(first.get(r["job"], r["block"]), r["block"])
+            opens = {r["job"]: r for r in applied if r["step"] == "open"}
+            unavoidable = avoidable = 0
+            for j, b in first.items():
+                if j in done:
+                    continue
+                over = min(((ob, k) for k, ob in done.items() if ob >= b), default=None)
+                if over is None:
+                    continue
+                oj, ok = opens[j], opens[over[1]]
+                early, late = sorted((oj, ok), key=lambda r: (r["block"], r["t"]))
+                sent = late["t"] - delay[late["hash"]]
+                if oj["block"] == ok["block"] or sent + 1 <= published[early["block"]]:
+                    unavoidable += 1
+                else:
+                    avoidable += 1
+            counts[name] = (unavoidable, avoidable)
+        for name in self.FINAL:
+            self.assertEqual(counts[name][1], 0, f"{name}: an Open sent once the other job's block was published")
+        self.assertEqual({n: counts[n][1] for n in self.BEFORE}, {"gate-g6": 23, "gate-g7": 15})
+        for name, (u, a) in counts.items():
+            self.assertIn(f"`{name}`: {u + a} abandoned jobs", self.abandoned_out)
+
+    def test_the_policy_acted_and_no_wait_reached_its_cap(self):
+        for name in self.FINAL:
+            waits, capped = 0, 0
+            for d in ("honest-1", "honest-2"):
+                m = rd(f"bench/perf/results/{name}/metrics-{d}.txt")
+                waits += int(re.search(r"^ferrata_updater_waits_for_other_jobs_total\{[^}]*\} (\d+)$", m, re.M).group(1))
+                capped += int(re.search(r"^ferrata_updater_join_waits_capped_total\{[^}]*\} (\d+)$", m, re.M).group(1))
+            self.assertGreater(waits, 0, name)
+            self.assertEqual(capped, 0, name)
+
+
 def g(n):
     """A gas figure as the generator prints it (bench/perf/summarize_gate.py's `g`)."""
     return f"{int(round(n)):,}"

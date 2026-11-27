@@ -23,6 +23,16 @@ its kind there waits a whole turn: m4reset, no new turn; m7, a fresh one); u2, L
 that cannot fetch the committees counts towards `down`); u3, L-U3 (a refusal whose re-reads fail is judged once the
 chain reads again); u5, L-U5 (holds for good outlive HOLD_ROUNDS and restarts); u4f, L-U4f (an IPv6 client counts by
 its /64); u6, L-U6 (the bound tests fail for a reader that takes an answer whole and then refuses it).
+
+Join or wait (`policy.join_wait_rounds`, RFP-021 R.9, 27 November 2026): j1 (no step waits for, or joins, another job:
+`tests/join_wait.rs`; j1gate the same, the in-process gate with overlapping updates abandoning jobs again); j2 (of two
+jobs with as many steps, the newer update's leads); j3 (a job that stops moving holds the updater back for good); j4 (no
+cap on a state); j5 (a job this updater opened and left holds it back); j6 (a carrier does not ask its sources, so it
+does not find a newer job that leads its own); j7 (a copy of the chosen update open on the store is waited for, not
+joined); j8 (only an `Open` waits: a step of a job behind another is sent); after the first review round: j9 (a job
+whose account fails to read is taken for no job, so the updater sends: it used to fail the round), j10 (updaters
+released together all send at once), j11 (a new copy of one update counts as a move), j12 (the copy behind is
+joined), j13 (the cap not started again on a new state of the instance).
 """
 import os
 import signal
@@ -70,6 +80,43 @@ MUTANTS = {
     "m7": ([(U, SENT, ".remove(&(state_digest(&action.store_seen), action.step));\n"
                       "                    let _ = whole;")],
            ["--test", "redating", "newest_only"]),
+    "j1": ([(U, "        if wait == 0 {\n            return Ok(None);\n        }\n        if job.is_some() {",
+             "        if wait == 0 || wait > 0 {\n            return Ok(None);\n        }\n        if job.is_some() {")],
+           ["--test", "join_wait"]),
+    "j1gate": ([(U, "        if wait == 0 {\n            return Ok(None);\n        }\n        if job.is_some() {",
+                 "        if wait == 0 || wait > 0 {\n            return Ok(None);\n        }\n        if job.is_some() {")],
+               ["--test", "recorded", "gate_overlapping_updates_join_or_wait"]),
+    "j2": ([(U, "pub fn leads(a: &(u32, Rank, Root), b: &(u32, Rank, Root)) -> bool {\n    a > b",
+             "pub fn leads(a: &(u32, Rank, Root), b: &(u32, Rank, Root)) -> bool {\n    (a.0, Reverse(a.1), a.2) > (b.0, Reverse(b.1), b.2)")],
+           ["--test", "join_wait"]),
+    "j3": ([(U, "            if still >= wait {", "            if still >= u64::MAX {")],
+           ["--test", "join_wait", "a_stalled_job"]),
+    "j4": ([(U, "        if round.saturating_sub(started.0) >= cap {", "        if round.saturating_sub(started.0) >= u64::MAX {")],
+           ["--test", "join_wait", "a_new_job_each_round"]),
+    "j5": ([(U, "self.own_moves.get(&k.jid) == Some(&steps) {", "self.own_moves.get(&k.jid) == Some(&u32::MAX) {")],
+           ["--test", "recorded", "own_job_is_finished_when_the_source_moves_on"]),
+    "j6": ([(U, "        if self.learned == self.round {\n            return;\n        }",
+             "        if self.learned == self.round || self.round > 0 {\n            return;\n        }")],
+           ["--test", "join_wait", "a_carrier_"]),
+    "j7": ([(U, "            if joinable && k.lands == own_lands && !self.joining {",
+             "            if joinable && k.lands != own_lands && !self.joining {")],
+           ["--test", "join_wait", "a_copy_of_the_chosen_update"]),
+    "j8": ([(U, "        match self.join_or_wait(ledger, &chosen, job.as_ref(), step, state, store)? {",
+             "        match if job.is_none() { self.join_or_wait(ledger, &chosen, job.as_ref(), step, state, store)? } else { None } {")],
+           ["--test", "join_wait"]),
+    "j9": ([(U, "                Err(_) => out.push((k, None)),", "                Err(_) => {}")],
+           ["--test", "join_wait", "an_unreadable_job"]),
+    "j10": ([(U, "                self.first_due.insert((since, step), (self.round, None));", "                let _ = since;")],
+            ["--test", "join_wait", "updaters_released_together"]),
+    "j11": ([(U, "            let e = most.entry(k.lands).or_default();", "            let e = most.entry((false, k.jid)).or_default();"),
+             (U, "            let still = round.saturating_sub(self.rivals.1.get(&k.lands).map_or(round, |e| e.1));",
+              "            let still = round.saturating_sub(self.rivals.1.get(&(false, k.jid)).map_or(round, |e| e.1));")],
+            ["--test", "join_wait", "new_copies_of_one_update"]),
+    "j12": ([(U, "                if join.as_ref().is_none_or(|j| leads(&me, &(j.1, j.0.rank, j.0.jid))) {",
+              "                if join.as_ref().is_none_or(|j| !leads(&me, &(j.1, j.0.rank, j.0.jid))) {")],
+            ["--test", "join_wait", "of_two_copies_open"]),
+    "j13": ([(U, "            self.passed.clear();\n            self.wait_start = None;", "            self.passed.clear();")],
+            ["--test", "join_wait", "a_new_job_each_round"]),
     "u2": ([(U, "self.ensure_committees(&store)?;",
              "if let Err(e) = self.ensure_committees(&store) {\n            return Ok(Plan::Stuck(format!(\"{e:#}\")));\n        }")],
            ["--test", "health", "committees_no_source_serves"]),

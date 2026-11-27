@@ -6,6 +6,8 @@
 
 use std::{fs, path::PathBuf};
 
+use sha2::Digest as _;
+
 use ferrata_core::{witness::CompactStore, Root};
 use ferrata_lez_wire::Config;
 use ferrata_updater::{
@@ -312,22 +314,62 @@ impl Rng {
     }
 }
 
-/// The A3 done gate on recorded data: two honest updaters and one adversarial updater follow
-/// mainnet and Sepolia on one LEZ chain while the record replays one update at a time (every
-/// recorded update is the newest once). Each round is a block: every updater plans against the
-/// state the previous block left, then the block's transactions settle in a shuffled order (so
-/// two updaters that send the same step in one block collide, as on a sequencer). The adversary
-/// races every due step a third of the time without waiting its turn, and opens a job for a
-/// forged update and replays an applied one each time a new update appears.
-#[test]
-fn gate_two_honest_one_adversary() {
-    let recs = [rec("mainnet"), rec("sepolia")];
+/// The A3 done gate's chain (`run_gate`): every transaction an updater sent, as it settled.
+struct Sent {
+    chain: usize,
+    /// The round (each round is a block).
+    block: usize,
+    /// 0 and 1: the honest updaters; 2: the adversary.
+    daemon: usize,
+    job: Root,
+    step: Step,
+    /// It is its job's last step (`Finish`, or the initialization's last `Adopt` part).
+    last: bool,
+    applied: bool,
+    gas: u64,
+}
+
+/// What `run_gate` runs.
+struct GateOpts {
+    chains: Vec<&'static str>,
+    adversary: bool,
+    salt: String,
+    seed: Option<u64>,
+    /// `None`: Ethereum moves on once both honest updaters have nothing left to do on a chain (A3's gate: every
+    /// recorded update is the newest once); `Some(k)`: a new recorded update every `k` rounds whatever the updaters do
+    /// (as the sequencer gate's replay: jobs overlap).
+    reveal_every: Option<usize>,
+    /// The honest updaters' `policy.join_wait_rounds` (`None`: the default).
+    honest_join_wait: Option<u64>,
+    /// honest-1 alone (honest-2 never plans): what one updater pays on the same schedule.
+    solo: bool,
+}
+
+struct GateRun {
+    rounds: usize,
+    lines: Vec<String>,
+    ratio: f64,
+    share1: f64,
+    share2: f64,
+    sent: Vec<Sent>,
+    /// Per chain, per recorded finality update: the first round the sources served it and the round whose block first
+    /// left the instance at a finalized slot at least as far (`None`: not covered).
+    latency: Vec<Vec<(usize, Option<usize>)>>,
+}
+
+/// Two honest updaters and (`opts.adversary`) one adversarial updater follow the recorded chains on one LEZ chain while
+/// the record replays one update at a time. Each round is a block: every updater plans against the state the previous
+/// block left, then the block's transactions settle in a shuffled order (so two updaters that send the same step in one
+/// block collide, as on a sequencer). The adversary races every due step a third of the time without waiting its turn,
+/// does not wait for other parties' jobs (`join_wait_rounds = 0`), and opens a job for a forged update and replays an
+/// applied one each time a new update appears.
+fn run_gate(opts: &GateOpts) -> GateRun {
+    let recs: Vec<Rec> = opts.chains.iter().map(|n| rec(n)).collect();
     let (h1, h2, adv) = (key(0x31), key(0x32), key(0x33));
     let mut l = HarnessLedger::new(&[h1.clone(), h2.clone(), adv.clone()]);
     let clocks: Vec<Clock> = recs.iter().map(|_| Clock::new(1)).collect();
-    // GATE_SALT: other names for the honest updaters, so another draw of their deferral waits
-    // (a wait is a hash of the updater's name and key, the job and the step).
-    let salt = std::env::var("GATE_SALT").unwrap_or_default();
+    let salt = &opts.salt;
+    let honest = Policy { join_wait_rounds: opts.honest_join_wait, ..policy(8) };
     // Per chain: [H1, H2, A].
     let mut ups: Vec<Vec<Updater>> = recs
         .iter()
@@ -339,25 +381,30 @@ fn gate_two_honest_one_adversary() {
                     h1.clone(),
                     vec![r.honest("a", c), r.honest("b", c), r.faulty("liar", c, Fault::BadSignature)],
                     None,
-                    policy(8),
+                    honest.clone(),
                 ),
                 r.updater(
                     &format!("honest-2{salt}"),
                     h2.clone(),
                     vec![r.honest("b", c), r.honest("c", c), Box::new(r.source("stale", c, 3))],
                     None,
-                    policy(8),
+                    honest.clone(),
                 ),
-                r.updater("adversary", adv.clone(), vec![r.honest("a", c)], None, policy(1)),
+                r.updater(
+                    "adversary",
+                    adv.clone(),
+                    vec![r.honest("a", c)],
+                    None,
+                    Policy { join_wait_rounds: Some(0), ..policy(1) },
+                ),
             ]
         })
         .collect();
-    // GATE_SEED: another order of every block's transactions (and of the adversary's races).
-    let seed = std::env::var("GATE_SEED").ok().and_then(|v| v.parse::<u64>().ok());
-    let mut rng = Rng(seed.unwrap_or(0x9e37_79b9_7f4a_7c15));
-    // GATE_ADVERSARY=0: the two honest updaters alone (a baseline for what deferral costs).
-    let adversary = std::env::var("GATE_ADVERSARY").ok().as_deref() != Some("0");
+    let mut rng = Rng(opts.seed.unwrap_or(0x9e37_79b9_7f4a_7c15));
+    let adversary = opts.adversary;
     let mut junk_due = vec![false; recs.len()];
+    let mut sent = Vec::new();
+    let mut latency: Vec<Vec<(usize, Option<usize>)>> = recs.iter().map(|_| Vec::new()).collect();
     let mut rounds = 0;
     loop {
         rounds += 1;
@@ -372,6 +419,9 @@ fn gate_two_honest_one_adversary() {
         let mut idle = vec![true; recs.len()];
         for (c, chain) in ups.iter_mut().enumerate() {
             for (d, u) in chain.iter_mut().enumerate() {
+                if opts.solo && d == 1 {
+                    continue;
+                }
                 let plan = u.plan(&l).unwrap();
                 match plan {
                     Plan::Send(a) => {
@@ -423,49 +473,107 @@ fn gate_two_honest_one_adversary() {
             let u = &mut ups[c][d];
             match (action, junk) {
                 (Some(a), _) => {
-                    u.submit(&mut l, &a, false).unwrap();
+                    if let Some(out) = u.submit(&mut l, &a, false).unwrap() {
+                        let parts = recs[c].config.adoption_parts;
+                        let last = a.step == Step::Finish
+                            || (matches!(a.step, Step::Adopt(p) if p + 1 == parts) && a.tx.actors.len() > 1);
+                        sent.push(Sent {
+                            chain: c,
+                            block: rounds,
+                            daemon: d,
+                            job: a.job_id,
+                            step: a.step,
+                            last,
+                            applied: out.applied,
+                            gas: out.gas_exec + out.gas_stor,
+                        });
+                    }
                 }
                 (None, Some(tx)) => {
-                    l.submit(&adv, &tx, 4_800_000, 1_000_000_000).unwrap();
+                    let out = l.submit(&adv, &tx, 4_800_000, 1_000_000_000).unwrap();
+                    // A junk job is never finished: named by its account.
+                    let job: Root = sha2::Sha256::digest(format!("{:?}", tx.actors.get(1)).as_bytes()).into();
+                    sent.push(Sent {
+                        chain: c,
+                        block: rounds,
+                        daemon: 2,
+                        job,
+                        step: Step::Open,
+                        last: false,
+                        applied: out.applied,
+                        gas: out.gas_exec + out.gas_stor,
+                    });
                 }
                 _ => {}
             }
         }
-        // Ethereum moves on once both honest updaters have nothing left to do on a chain.
+        // What each instance holds after the block: the revealed finality updates it now covers.
+        for (c, r) in recs.iter().enumerate() {
+            if let Some(s) = ups[c][0].inst.store(&l).unwrap() {
+                for (i, (_, covered)) in latency[c].iter_mut().enumerate() {
+                    if covered.is_none() && s.finalized.slot >= r.entries[i].finalized_slot {
+                        *covered = Some(rounds);
+                    }
+                }
+            }
+        }
+        // Ethereum moves on: once both honest updaters have nothing left to do on a chain, or every `reveal_every`
+        // rounds.
         let mut done = true;
         for c in 0..recs.len() {
-            if !(idle[c] && clocks[c].now() >= recs[c].entries.len()) {
+            let at_end = clocks[c].now() >= recs[c].entries.len();
+            if !(idle[c] && at_end) {
                 done = false;
             }
-            if idle[c] && clocks[c].now() < recs[c].entries.len() {
+            let due = match opts.reveal_every {
+                None => idle[c],
+                Some(k) => rounds.is_multiple_of(k),
+            };
+            if due && !at_end {
                 clocks[c].set(clocks[c].now() + 1);
                 junk_due[c] = true;
+            }
+            // Entries served from the next round on (the first entry from round 1).
+            while latency[c].len() < clocks[c].now() {
+                let at = if latency[c].is_empty() { 1 } else { rounds + 1 };
+                latency[c].push((at, None));
             }
         }
         if done {
             break;
         }
     }
-    // Every recorded update applied exactly once, and the instance where the lab's ended.
+    // Every recorded update's effect reached, and the instance where the lab's ended.
     let mut lines = vec![format!(
         "gate\trounds\t{rounds}\tseed\t{}\tadversary\t{adversary}\tsalt\t{salt}",
-        seed.map_or("default".into(), |s| s.to_string())
+        opts.seed.map_or("default".into(), |s| s.to_string())
     )];
-    let mut total_updates = 0;
+    if let Some(k) = opts.reveal_every {
+        lines[0] += &format!("\treveal every\t{k}\thonest join_wait_rounds\t{:?}", opts.honest_join_wait);
+    }
+    if opts.solo {
+        lines[0] += "\thonest-1 alone";
+    }
     for (c, r) in recs.iter().enumerate() {
         let s = store(&ups[c][0], &l);
         let jobs = applied(&ups[c][0], &l);
         assert_eq!(s.finalized.slot, r.last_finalized().0, "{}", r.name);
-        assert_eq!(jobs, 1 + r.entries.len() as u64, "{}: the activation and every recorded update, each once", r.name);
-        total_updates += r.entries.len();
+        if opts.reveal_every.is_none() {
+            assert_eq!(
+                jobs,
+                1 + r.entries.len() as u64,
+                "{}: the activation and every recorded update, each once",
+                r.name
+            );
+        }
         lines.push(format!(
             "{}\tupdates applied\t{}\tjobs (with Init)\t{jobs}\tfinalized slot\t{}",
             r.name,
-            r.entries.len(),
+            jobs - 1,
             s.finalized.slot
         ));
     }
-    // Per daemon, across both chains.
+    // Per daemon, across the chains.
     let sum = |d: usize, f: &dyn Fn(&Updater) -> u128| ups.iter().map(|chain| f(&chain[d])).sum::<u128>();
     let gas_ok = |d: usize| sum(d, &|u| u.metrics.gas_applied as u128);
     let gas_bad = |d: usize| sum(d, &|u| u.metrics.gas_refused as u128);
@@ -490,11 +598,191 @@ fn gate_two_honest_one_adversary() {
     let ratio = honest_bad as f64 / honest_ok as f64;
     lines.push(format!("honest refused gas / applied gas\t{ratio:.4}\t(gate <= 0.10)"));
     lines.push(format!("honest-1 share of honest fees\t{share1:.4}\thonest-2\t{share2:.4}\t(gate 0.35-0.65 each)"));
+    let total_updates: usize = recs.iter().map(|r| r.entries.len()).sum();
     lines.push(format!(
         "updates\t{total_updates}\tadversary junk Opens\t{adv_junk}\tledger transactions\t{}",
         l.log.len()
     ));
-    let text = lines.join("\n") + "\n";
+    let waits = |d: usize| ups.iter().map(|ch| ch[d].metrics.job_waits).sum::<u64>();
+    let joined = |d: usize| ups.iter().map(|ch| ch[d].metrics.jobs_joined).sum::<u64>();
+    let passed =
+        |d: usize| ups.iter().map(|ch| ch[d].metrics.stalled_jobs_passed + ch[d].metrics.wait_caps).sum::<u64>();
+    lines.push(format!(
+        "join or wait\thonest-1 rounds waited\t{}\tjoined\t{}\twaits ended by a stall or the cap\t{}\thonest-2 rounds waited\t{}\tjoined\t{}\twaits ended by a stall or the cap\t{}",
+        waits(0),
+        joined(0),
+        passed(0),
+        waits(1),
+        joined(1),
+        passed(1)
+    ));
+    let latency: Vec<Vec<(usize, Option<usize>)>> = latency
+        .into_iter()
+        .zip(&recs)
+        .map(|(v, r)| v.into_iter().zip(&r.entries).filter(|(_, e)| !e.period_update).map(|(x, _)| x).collect())
+        .collect();
+    GateRun { rounds, lines, ratio, share1, share2, sent, latency }
+}
+
+/// The jobs of a gate run (`run_gate`): a job is completed when its last step is applied; a job with an applied step
+/// that never completed is abandoned when another job completed at or after its first applied step (it moved the store
+/// the job began on, which a job id binds, so the job's remaining steps could no longer apply), as
+/// `bench/perf/summarize_gate.py` counts them on the sequencer.
+struct Fates {
+    /// Per daemon, execution and storage gas: of applied steps of completed jobs, of abandoned jobs, of refused steps
+    /// (the adversary's include its junk `Open`s, sent outside its updater).
+    gas: [(u64, u64, u64); 3],
+    abandoned: Vec<Abandoned>,
+    completed: usize,
+    /// Jobs with an applied step that neither completed nor were overtaken (in flight at the end), and their gas.
+    unfinished: (usize, u64),
+}
+
+struct Abandoned {
+    chain: usize,
+    /// The daemon whose `Open` of it was applied (for a job without one, the first to apply a step of it).
+    opener: usize,
+    /// Its applied steps.
+    steps: usize,
+    /// The round of its `Open`.
+    open: Option<usize>,
+    /// The job that overtook it (the first to complete at or after its first applied step), and that job's `Open` round.
+    over: Root,
+    over_open: Option<usize>,
+}
+
+fn fates(sent: &[Sent]) -> Fates {
+    use std::collections::BTreeMap;
+    let mut jobs: BTreeMap<(usize, Root), Vec<&Sent>> = BTreeMap::new();
+    for s in sent.iter().filter(|s| s.applied) {
+        jobs.entry((s.chain, s.job)).or_default().push(s);
+    }
+    let done: BTreeMap<(usize, Root), usize> =
+        jobs.iter().filter_map(|(k, v)| v.iter().find(|s| s.last).map(|s| (*k, s.block))).collect();
+    let open_round =
+        |k: &(usize, Root)| jobs.get(k).and_then(|v| v.iter().find(|s| s.step == Step::Open)).map(|s| s.block);
+    let mut gas = [(0u64, 0u64, 0u64); 3];
+    let mut abandoned = Vec::new();
+    let mut unfinished = (0usize, 0u64);
+    for (k, v) in &jobs {
+        if done.contains_key(k) {
+            for s in v {
+                gas[s.daemon].0 += s.gas;
+            }
+            continue;
+        }
+        let first = v.iter().map(|s| s.block).min().expect("an applied step");
+        let over = done.iter().filter(|(j, b)| j.0 == k.0 && **b >= first).min_by_key(|(_, b)| **b);
+        let Some((oj, _)) = over else {
+            unfinished.0 += 1;
+            unfinished.1 += v.iter().map(|s| s.gas).sum::<u64>();
+            continue;
+        };
+        for s in v {
+            gas[s.daemon].1 += s.gas;
+        }
+        let opener = v.iter().find(|s| s.step == Step::Open).map_or(v[0].daemon, |s| s.daemon);
+        abandoned.push(Abandoned {
+            chain: k.0,
+            opener,
+            steps: v.len(),
+            open: open_round(k),
+            over: oj.1,
+            over_open: open_round(oj),
+        });
+    }
+    for s in sent.iter().filter(|s| !s.applied) {
+        gas[s.daemon].2 += s.gas;
+    }
+    Fates { gas, abandoned, completed: done.len(), unfinished }
+}
+
+impl Fates {
+    /// The honest updaters' abandoned jobs, and those opened in the same block as the job that overtook them (each
+    /// planned against a state without the other: neither could read the other's job).
+    fn honest(&self) -> (Vec<&Abandoned>, usize) {
+        let h: Vec<&Abandoned> = self.abandoned.iter().filter(|a| a.opener < 2).collect();
+        let same = h.iter().filter(|a| a.open.is_some() && a.open == a.over_open).count();
+        (h, same)
+    }
+
+    fn lines(&self) -> Vec<String> {
+        let (h, same) = self.honest();
+        let hgas: u64 = self.gas[0].1 + self.gas[1].1;
+        let hdone: u64 = self.gas[0].0 + self.gas[1].0;
+        let open_only = h.iter().filter(|a| a.steps == 1).count();
+        let mut out = vec![format!(
+            "jobs\tcompleted\t{}\tabandoned (applied steps, never completed, overtaken)\t{}\tof them opened by an honest updater\t{}\topened in the block of the job that overtook it\t{same}\twith their Open alone applied\t{open_only}",
+            self.completed,
+            self.abandoned.len(),
+            h.len()
+        )];
+        for (d, name) in ["honest-1", "honest-2", "adversary (refused: its junk Opens too)"].iter().enumerate() {
+            let (a, b, c) = self.gas[d];
+            out.push(format!(
+                "{name}\texecution and storage gas in completed jobs\t{a}\tin abandoned jobs\t{b}\ton refused steps\t{c}"
+            ));
+        }
+        out.push(format!("unfinished jobs (in flight at the end)\t{}\tgas\t{}", self.unfinished.0, self.unfinished.1));
+        out.push(format!(
+            "honest gas in abandoned jobs / in completed jobs\t{:.4}",
+            if hdone == 0 { 0.0 } else { hgas as f64 / hdone as f64 }
+        ));
+        out
+    }
+}
+
+/// The median (of an even count, the mean of the middle two, as Python's `statistics.median`) and the value at index
+/// round(0.9 (n - 1)) of the sorted values (halves to even, as `bench/perf/summarize_gate.py`'s `pct`).
+fn median_p90(v: &mut [usize]) -> (f64, usize) {
+    v.sort_unstable();
+    let n = v.len();
+    if n == 0 {
+        return (0.0, 0);
+    }
+    let med = if n % 2 == 1 { v[n / 2] as f64 } else { (v[n / 2 - 1] + v[n / 2]) as f64 / 2.0 };
+    let x = 0.9 * (n - 1) as f64;
+    let i = if (x - x.floor() - 0.5).abs() < 1e-9 && (x.floor() as usize) % 2 == 0 { x.floor() } else { x.round() };
+    (med, v[i as usize])
+}
+
+fn gate_lines(run: &GateRun, f: &Fates) -> String {
+    let mut lines = run.lines.clone();
+    lines.extend(f.lines());
+    let mut lat: Vec<usize> = run.latency.iter().flatten().filter_map(|(a, b)| b.map(|b| b - a)).collect();
+    let covered = lat.len();
+    let total = run.latency.iter().map(|v| v.len()).sum::<usize>();
+    let (med, p90) = median_p90(&mut lat);
+    lines.push(format!(
+        "latency (rounds from the first round a finality update is served to the round whose block leaves the instance at least as fresh, inclusive)\tcovered\t{covered}\tof\t{total}\tmedian\t{med:.1}\tp90\t{p90}"
+    ));
+    lines.join("\n") + "\n"
+}
+
+/// The A3 done gate on recorded data (`run_gate`): every recorded update is the newest once, two honest updaters and
+/// the adversary. Each update is applied exactly once; the honest updaters' gas on refused steps is at most 10% of their
+/// gas on applied steps, and each pays 35–65% of the honest fees. Abandoned jobs (an applied step, never completed,
+/// overtaken) are counted too (RFP-021 R.9).
+#[test]
+fn gate_two_honest_one_adversary() {
+    // GATE_SALT: other names for the honest updaters, so another draw of their deferral waits (a wait is a hash of the
+    // updater's name and key, the job and the step). GATE_SEED: another order of every block's transactions (and of
+    // the adversary's races). GATE_ADVERSARY=0: the two honest updaters alone (a baseline for what deferral costs).
+    let salt = std::env::var("GATE_SALT").unwrap_or_default();
+    let seed = std::env::var("GATE_SEED").ok().and_then(|v| v.parse::<u64>().ok());
+    let adversary = std::env::var("GATE_ADVERSARY").ok().as_deref() != Some("0");
+    let opts = GateOpts {
+        chains: vec!["mainnet", "sepolia"],
+        adversary,
+        salt: salt.clone(),
+        seed,
+        reveal_every: None,
+        honest_join_wait: None,
+        solo: false,
+    };
+    let run = run_gate(&opts);
+    let f = fates(&run.sent);
+    let text = gate_lines(&run, &f);
     println!("{text}");
     let out = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("results");
     fs::create_dir_all(&out).unwrap();
@@ -505,8 +793,91 @@ fn gate_two_honest_one_adversary() {
         (Some(s), true, _) => format!("gate-seed-{s}.txt"),
     };
     fs::write(out.join(name), &text).unwrap();
+    let (ratio, share1, share2) = (run.ratio, run.share1, run.share2);
     assert!(ratio <= 0.10, "honest refused gas {ratio:.4} of applied");
     assert!((0.35..=0.65).contains(&share1) && (0.35..=0.65).contains(&share2), "shares {share1:.3} {share2:.3}");
+    // Every honest job abandoned was opened in the block of the job that overtook it (neither updater could read the
+    // other's job when it sent its Open), or overtaken by a job the adversary (which waits for no one) opened. In the
+    // default run none is abandoned: Ethereum moves on only when both honest updaters are idle.
+    let (h, same) = f.honest();
+    let pushed_by_adversary = |a: &Abandoned| {
+        run.sent
+            .iter()
+            .any(|s| s.chain == a.chain && s.job == a.over && s.applied && s.daemon == 2 && s.step == Step::Open)
+    };
+    let explained = h.iter().filter(|a| (a.open.is_some() && a.open == a.over_open) || pushed_by_adversary(a)).count();
+    assert_eq!(
+        explained,
+        h.len(),
+        "honest abandoned jobs neither opened in the block of the job that overtook them nor overtaken by a job the \
+         adversary opened: {} of {} ({same} in the same block)",
+        h.len() - explained,
+        h.len()
+    );
+}
+
+/// RFP-021 R.9 with overlapping jobs (updates revealed faster than two updaters apply them, as in the sequencer gate's
+/// replay): the two honest updaters alone on the recorded mainnet chain, a new update every 6 rounds whatever they do,
+/// with join or wait (the default) and without it (`join_wait_rounds = 0`, the updater before it). In this chain every
+/// transaction of a block is readable in the next round (no finality delay, unlike a sequencer), and both updaters are
+/// served the same bytes, so two `Open`s in one block are of one job (one refused), never of two: without join or wait
+/// every abandoned job was opened once the job that overtook it could be read; with it none is abandoned (the residue
+/// of two jobs opened in one block is constructed in `tests/join_wait.rs`). R.9's own measure, the gas the two updaters
+/// spend (applied steps of completed and abandoned jobs, refused steps) per job completed, is held to at most 10% (A3's
+/// allowance) above what honest-1 alone spends on the same schedule. The instance ends where the record does, and A3's
+/// two limits hold. The three runs' figures go to `results/gate-overlap.txt`.
+#[test]
+fn gate_overlapping_updates_join_or_wait() {
+    let mut text = String::new();
+    let mut runs = Vec::new();
+    for (join_wait, solo) in [(None, false), (Some(0), false), (None, true)] {
+        let opts = GateOpts {
+            chains: vec!["mainnet"],
+            adversary: false,
+            salt: String::new(),
+            seed: None,
+            reveal_every: Some(6),
+            honest_join_wait: join_wait,
+            solo,
+        };
+        let run = run_gate(&opts);
+        let f = fates(&run.sent);
+        text += &gate_lines(&run, &f);
+        // R.9's measure: what the updaters spent (applied steps of completed and abandoned jobs, refused steps) per job
+        // completed, against one updater alone on the same schedule.
+        let spent: u64 = (0..2).map(|d| f.gas[d].0 + f.gas[d].1 + f.gas[d].2).sum();
+        text += &format!(
+            "honest execution and storage gas, all of it, per job completed\t{}\t({spent} / {})\n\n",
+            spent / f.completed as u64,
+            f.completed
+        );
+        let per_job = spent / f.completed as u64;
+        runs.push((run, f, per_job));
+    }
+    println!("{text}");
+    let (on, f_on, per_on) = &runs[0];
+    let (_, f_off, per_off) = &runs[1];
+    let (_, _, per_solo) = &runs[2];
+    assert!(
+        *per_on as f64 <= *per_solo as f64 * 1.10,
+        "two updaters with join or wait pay per job completed at most 10% (A3's allowance) more than one alone: {per_on} against {per_solo}"
+    );
+    assert!(per_off > per_on, "without join or wait they pay more: {per_off} against {per_on}");
+    let (h, _) = f_on.honest();
+    assert!(h.is_empty() && f_on.abandoned.is_empty(), "with join or wait, no job abandoned: {}", h.len());
+    assert!(on.ratio <= 0.10, "A3's ratio {:.4}", on.ratio);
+    assert!((0.35..=0.65).contains(&on.share1), "shares {:.3} {:.3}", on.share1, on.share2);
+    let (h_off, same_off) = f_off.honest();
+    let gas = |f: &Fates| f.gas[0].1 + f.gas[1].1;
+    assert!(gas(f_on) < gas(f_off), "join or wait abandons less: {} against {}", gas(f_on), gas(f_off));
+    assert!(
+        !h_off.is_empty() && same_off == 0,
+        "without it, honest jobs abandoned, each opened after the other was readable"
+    );
+    // Written once the assertions hold (a mutant's run leaves the record as it was).
+    let out = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("results");
+    fs::create_dir_all(&out).unwrap();
+    fs::write(out.join("gate-overlap.txt"), &text).unwrap();
 }
 
 /// A beacon node on loopback serving a recorded chain over the beacon API (SSZ, the `updates`

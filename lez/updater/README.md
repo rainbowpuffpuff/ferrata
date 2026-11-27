@@ -141,6 +141,27 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    refusal for good, by the program or out of gas, leaves it at once).
    With `finish_own_jobs = false` each round takes the best update, and a job left behind keeps the
    steps already paid for it.
+   **Join or wait** (`policy.join_wait_rounds`, RFP-021 R.9; `tests/join_wait.rs`). A job finishes only on the store
+   it began on, so of two jobs open on one store the steps of the one that does not finish are paid for nothing (on a
+   running sequencer, gate runs G6 and G7 of 26 November: 23 and 15 jobs abandoned, 127.0M and 72.7M execution gas).
+   Just before sending a step (its turn come, item 8), the updater reads which jobs are open on the instance's store
+   among those of the updates it knows (the updates its sources served that the program's checks accepted, at most
+   `MAX_KNOWN` = 64, and the jobs it carries; a job's account is found by its id, so a job of an update it was never
+   served cannot be found: two updaters with sources serving different copies of an update do not see each other's
+   jobs), and how many steps the chain holds of each. On the sequencer backend a read is checked against the follower of
+   the final blocks, so the account of a job whose `Open` is in a block served but not yet final fails to read, and the
+   round sends nothing: such a job is in effect seen once its block is served. Another job *leads* this one when it has more
+   steps applied, or as many and its update ranks lower (as a rule the older update, so the job opened first: the party
+   that opened the other saw that update first), then by job id; any open job leads an `Open`. A leading job that leaves
+   the store as this one would (the same finalized header and adoption: a copy of the same update) is joined, its next
+   step sent instead. One that leaves it elsewhere is waited for while it moves (more of its steps applied, or jobs of
+   its kind first read, within `join_wait_rounds` rounds; unset, `2 × defer_window + 10`, 26 at the default window), then
+   passed. On one state of the instance the updater waits at most `JOIN_WAIT_CAP × join_wait_rounds` rounds (78 at the
+   defaults) however the jobs move: a party that opens a new job each round delays it at most that long. A job this
+   updater moved last and does not carry (it opened it and left it) holds it back no longer, so with
+   `finish_own_jobs = false` it opens the newer update's job as before. A carrier asks its sources in each round it
+   does not otherwise ask them, so it finds a newer job that leads its own. Metrics `_waits_for_other_jobs_total`,
+   `_jobs_joined_total`, `_stalled_jobs_passed_total`, `_join_waits_capped_total`; `join_wait_rounds = 0` turns it off.
 8. **Deferral.** Each (job, step) is sent by the updater whose wait, `H(key, job, step) mod defer_window` rounds after
    it first saw the step due, runs out first; the others find the step done and skip it. Two honest updaters collide on
    a job's step only when their turns for it end in the same round. A step of a job this updater carries (it sent a step
@@ -159,7 +180,10 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    defaults, `defer_window` 8 and two parts; measured 66 rounds with the strongest attacker known in
    `tests/redating.rs`, and 67 with every slot of the period searched in an independent review run, not reproduced by a
    committed test; 16 to 26 with the openers,
-   30 with the started slots). The turns start again whenever the state changes, and anyone may change it by applying a
+   30 with the started slots). Join or wait (item 7) adds waits of its own, at most `JOIN_WAIT_CAP × join_wait_rounds`
+   rounds on a state (78 at the defaults; the code implies no tighter bound for the two together than the sum, 68 + 78);
+   with it the tests measured 36 rounds with the strongest attacker, 16 to 25 with the openers and 30 with the started
+   slots, the updater joining the copies the attacker took furthest. The turns start again whenever the state changes, and anyone may change it by applying a
    real update: a party that applies older real updates itself starts a new state with each, and new turns ("Not built,
    not tested"). The key is the updater's name and its payer's account, both public: a source can pick copies whose
    steps wait longest, but not past these turns. After a step is sent, a fresh turn whose wait is drawn from each
@@ -347,7 +371,9 @@ over whole: that bound limits parsing, not memory); a provider's message reaches
 `_failing_sends`, `_failed_rounds`, `_past_weak_subjectivity` (1: the instance or its checkpoint is
 past its weak-subjectivity period), `_sources_head_slot`, `_rounds_without_progress`,
 `_gas_total{result}`, `_fee_total{result}`, `_budget_remaining`, `_transport_errors_total`,
-`_retries_total`, `_deferrals_total`, `_steps_done_by_others_total`, `_jobs_finished_total`,
+`_retries_total`, `_deferrals_total`, `_steps_done_by_others_total`, `_jobs_finished_total`, join or wait's
+`_waits_for_other_jobs_total` (rounds a step whose turn had come waited for another job), `_jobs_joined_total`,
+`_stalled_jobs_passed_total` and `_join_waits_capped_total`,
 `_finalized_slot`, `_period`, `_health` (0 ok, 1 degraded, 2 down), and per source
 `_source_requests_total`, `_source_errors_total`, `_source_refused_total`, `_source_lagging`,
 `_source_available`, `_source_demoted`, `_source_finalized_slot`, `_source_confirmed_total` and
