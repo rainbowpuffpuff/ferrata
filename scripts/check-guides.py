@@ -22,6 +22,11 @@ Checks:
      submitted, the last checkpoint finalised or the end of the last checkpoint freeze or watchers' pause, whichever
      is latest); and no guide, trust document, decision record, vault README or LEZ bridge note words it in a way
      the vault does not count (finalisations only, or "time under a freeze not counting").
+  6. Counts a terminal user relies on, against what the code declares: how many methods each Logos module's trait
+     has, where a document states a number (modules/README.md's overview and table, the user guide's §13, the
+     consumer guide's §13); the web wallet's README against the `test(` declarations of its Node test files, and
+     against the arguments `test/fork_bridge.py` requires; the mini-app's README against the run its RESULTS.md
+     records.
 """
 import json
 import re
@@ -262,6 +267,141 @@ def ui_block():
     return "\n".join(out)
 
 
+# ---- 6. counts a terminal user relies on, against what the code declares -------------------------------------------
+
+# The six modules and where each one's trait is: the builder derives the `.lidl` from it (`codegen.rust.trait`).
+MODULES = {name: f"modules/{name}/rust-lib/src/lib.rs" for name in (
+    "ferrata_attest_module", "ferrata_bridge_module", "ferrata_attestor_module", "ferrata_monitor_module",
+    "ferrata_relayer_module", "ferrata_updater_module")}
+# Where a document states how many methods a module has: (path, module, the sentence's shape, whose group is the
+# number). When the shape no longer matches, the sentence was reworded and the check says so (it does not pass
+# silently: a number no reader can check is the drift this check is for).
+METHOD_COUNTS = (
+    ("modules/README.md", "ferrata_attest_module", r"`ferrata_attest_module` \((\w+) methods"),
+    ("modules/README.md", "ferrata_bridge_module", r"`ferrata_bridge_module` \((\w+):"),
+    ("docs/guides/consumer-guide.md", "ferrata_attest_module", r"core module \((\w+) methods"),
+    ("docs/guides/user-guide.md", "ferrata_bridge_module", r"(\w+) methods a Logos ui module or a client calls"),
+    ("docs/guides/user-guide.md", "ferrata_bridge_module", r"The (\w+) methods natively"),
+)
+# The web wallet's README, its Node test files, and the fork test whose arguments it must name in full.
+WALLET_README = "deploy/testnet/web/wallet/README.md"
+WALLET_TESTS = "deploy/testnet/web/wallet/test"
+FORK_BRIDGE = "deploy/testnet/web/wallet/test/fork_bridge.py"
+# The mini-app's README and the record of the run its box test last made.
+UI_README = "modules/ferrata_bridge_ui/README.md"
+UI_RESULTS = "modules/ferrata_bridge_ui/RESULTS.md"
+
+NUMBER_WORDS = {w: n for n, w in enumerate(
+    "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen "
+    "seventeen eighteen nineteen twenty".split(), start=0)}
+
+
+def number_of(word):
+    """A number as a document writes it (a word or digits), or None when it is neither."""
+    return NUMBER_WORDS.get(word.lower()) if not word.isdigit() else int(word)
+
+
+def trait_methods(src):
+    """The method names of a module's trait: every `fn NAME(…)` of its `pub trait … { … }` block, without the
+    builder's lifecycle hooks (the `fn on_…(…) {}` with a default body, which no caller calls). None when the
+    file has no such block."""
+    m = re.search(r"^pub trait \w+[^{]*\{(.*?)^\}", src, re.S | re.M)
+    if not m:
+        return None
+    out = []
+    for line in m.group(1).split("\n"):
+        f = re.match(r"\s*fn (\w+)\(", line)
+        if f and not line.rstrip().endswith("{}"):
+            out.append(f.group(1))
+    return out
+
+
+def method_count_findings(texts, module_methods):
+    """`texts`: path -> content; `module_methods`: module -> the trait's method names (None: unreadable).
+    Every stated count is the trait's; every shape still finds its number."""
+    out = []
+    for path, module, shape in METHOD_COUNTS:
+        methods = module_methods.get(module)
+        if methods is None:
+            out.append(f"{MODULES[module]}: no `pub trait` block to count the methods of")
+            continue
+        n = len(methods)
+        m = re.search(shape, texts.get(path, ""))
+        said = number_of(m.group(1)) if m else None
+        if said is None:
+            out.append(f"{path}: no method count of {module} where this check looks ({shape!r}); either the "
+                       f"sentence was reworded or the count is no longer a number: update both together")
+        elif said != n:
+            out.append(f"{path}: says {m.group(1)} methods of {module}, its trait has {n} "
+                       f"({', '.join(module_methods[module])})")
+    return out
+
+
+def method_list_findings(readme, module_methods):
+    """modules/README.md's table of modules names every method of each module's trait."""
+    out = []
+    for module, methods in module_methods.items():
+        if methods is None:
+            continue
+        row = re.search(rf"^\| `{module}` \|[^|]+\|(.*)\|$", readme, re.M)
+        if not row:
+            out.append(f"modules/README.md: no table row for {module}")
+            continue
+        for name in methods:
+            if not re.search(rf"\b{name}\b", row.group(1)):
+                out.append(f"modules/README.md: {module}'s trait has `{name}`, its table row does not name it")
+    return out
+
+
+def wallet_test_count_findings(readme, test_texts):
+    """The README's `node --test test/*.test.mjs  # N:` against the `test(` declarations of those files, and
+    every argument `fork_bridge.py` requires named in its bullet."""
+    out = []
+    declared = sum(len(re.findall(r"^(?:async )?(?:test|it)\(", text, re.M)) for text in test_texts.values())
+    m = re.search(r"node --test test/\*\.test\.mjs\s+#\s*(\d+):", readme)
+    if m is None:
+        out.append(f"{WALLET_README}: no `node --test test/*.test.mjs  # N:` line to hold the test count")
+    elif int(m.group(1)) != declared:
+        out.append(f"{WALLET_README}: says {m.group(1)} Node tests, the files declare {declared} "
+                   f"(`test(` in {len(test_texts)} files)")
+    out += fork_bridge_args_findings(readme)
+    return out
+
+
+def fork_bridge_args_findings(readme, script=None):
+    """`fork_bridge.py`'s required arguments, each named in the README's bullet about it (a reader who runs the
+    command from the README must not meet an argument it never names)."""
+    script = (ROOT / FORK_BRIDGE).read_text() if script is None else script
+    required = re.findall(r'add_argument\("(--[a-z-]+)", required=True\)', script)
+    bullet = re.search(r"- `test/fork_bridge\.py`:(.*?)(?=\n- |\n\n)", readme, re.S)
+    out = []
+    if bullet is None:
+        return [f"{WALLET_README}: no bullet for `test/fork_bridge.py`"]
+    text = re.sub(r"\s+", " ", bullet.group(1))
+    for arg in required:
+        if arg not in text:
+            out.append(f"{WALLET_README}: `test/fork_bridge.py` requires {arg}, its bullet does not name it")
+    return out
+
+
+def ui_count_findings(readme, results):
+    """The mini-app's README states the pass count its RESULTS.md records for `box-test.sh` (its newest section)."""
+    out = []
+    recorded = re.search(r"ran the view's (\d+) test functions, \*\*(\d+) passed", results)
+    stated = re.search(r"the view's (\d+) test\s+functions pass, (\d+) of (\d+)", readme)
+    if recorded is None or recorded.group(1) != recorded.group(2):
+        out.append(f"{UI_RESULTS}: this check can no longer read the run's count "
+                   f"('ran the view's N test functions, **N passed'); update scripts/check-guides.py")
+    if stated is None:
+        out.append(f"{UI_README}: no 'the view's N test functions pass, N of N' to hold the recorded count")
+    elif recorded is not None:
+        n = recorded.group(1)
+        if not (stated.group(1) == stated.group(2) == stated.group(3) == n):
+            out.append(f"{UI_README}: says {stated.group(2)} of {stated.group(3)}, "
+                       f"{UI_RESULTS} records {n} of {n}")
+    return out
+
+
 # ---- generated blocks ----------------------------------------------------------------------------------------------
 
 def sync_block(path, tag, block, write):
@@ -308,6 +448,22 @@ def main():
         finding(f)
     rule_docs = docs + sorted((ROOT / "docs/decisions").glob("*.md")) + [ROOT / p for p in RETIREMENT_DOCS]
     for f in retirement_findings({str(d.relative_to(ROOT)): d.read_text() for d in rule_docs}):
+        finding(f)
+
+    # 6. counts a terminal user relies on, against what the code declares
+    module_methods = {}
+    for module, path in MODULES.items():
+        module_methods[module] = trait_methods((ROOT / path).read_text())
+    texts = {path: (ROOT / path).read_text() for path in dict.fromkeys(p for p, _, _ in METHOD_COUNTS)}
+    for f in method_count_findings(texts, module_methods):
+        finding(f)
+    for f in method_list_findings((ROOT / "modules/README.md").read_text(), module_methods):
+        finding(f)
+    tests = sorted((ROOT / WALLET_TESTS).glob("*.test.mjs"))
+    for f in wallet_test_count_findings((ROOT / WALLET_README).read_text(),
+                                        {str(t.relative_to(ROOT)): t.read_text() for t in tests}):
+        finding(f)
+    for f in ui_count_findings((ROOT / UI_README).read_text(), (ROOT / UI_RESULTS).read_text()):
         finding(f)
 
     for f in FINDINGS:
