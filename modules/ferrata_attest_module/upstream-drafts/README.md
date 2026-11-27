@@ -19,10 +19,12 @@ the same check as a method of `beacon_api_module` itself:
   own slot (`/eth/v1/beacon/headers/{slot}`), at or below its finalized slot (`/eth/v1/beacon/headers/finalized`), on the
   expected chain (`/eth/v1/beacon/genesis`: `genesis_validators_root` and `genesis_time`; `/eth/v1/config/spec`:
   `DEPOSIT_CHAIN_ID`). A provider agrees, disagrees or is unavailable (not counted); the checkpoint passes when at least
-  `min_providers` (default 3) agree on distinct hosts and none disagrees.
+  `min_providers` (default 3, at least 1) agree on distinct hosts (host and port) and none disagrees; a provider that
+  knows the root but gives no slot for it disagrees (its slot and finality cannot be checked).
 - `src/checkpoint.rs` (new, the check), `src/glue.rs` (the method), `src/lib.rs` (the module and `CheckpointExpect`),
   `src/beacon.rs` (`get_path`, a GET of a JSON document with 404 as `None`; `Plan::client` made crate-visible),
-  `src/tests.rs` (three tests on providers served on loopback, in the crate's own test style).
+  `src/tests.rs` (tests on providers served on loopback, in the crate's own test style: three on 21 November, two
+  more and an ignored live one on 27 November).
 - What it leaves to the caller: the instance's own parts (its configuration, the instance id, the bootstrap's committee
   branch and `KeyValidate`), which need the instance's wire format; `ferrata_attest_module.verify_checkpoint` does those.
 - Plain-http providers (27 November 2026): asked like the others, and a disagreement from one still fails the check,
@@ -44,10 +46,12 @@ the generated scaffold), which this test does not run.
 **Result** (Modal build box, 27 November 2026), with plain-http agreement not counted by default: the patch applies to
 `aca138e` and, with `git apply --check`, to the module's head of that day, `d0ac27d` (its only change since `aca138e`
 is `docs/specs.md`); `cargo test --no-default-features` in `rust-lib/` (the SDK's source linked as
-`logos-rust-sdk-src`): **33 passed**, the crate's 29 and 4 new, the fourth
+`logos-rust-sdk-src`): **34 passed**, the crate's 29 and 5 new: the fourth,
 `verify_checkpoint_counts_no_plain_http_agreement_by_default` (three agreeing plain-http providers: `failed`, 0
-counted, each `agrees` with `counted: false`; a disagreeing plain-http provider fails the check even when no agreement
-is needed). The other three tests set `allow_plain_http`, as their providers are loopback http servers. A fifth,
+counted, each `agrees` with `counted: false`), and the fifth, `verify_checkpoint_needs_a_slot_and_at_least_one_provider`
+(a provider that knows the root but gives no slot disagrees, so three good ones beside it do not pass the root;
+`min_providers: 0` is taken as 1). These changes followed an internal review of that evening. The other three tests set
+`allow_plain_http`, as their providers are loopback http servers. A sixth,
 `verify_checkpoint_live`, is ignored by default (CI does not reach the network): it asks the providers named in
 `BEACON_LIVE_PROVIDERS` about `BEACON_LIVE_ROOT`.
 

@@ -34,10 +34,10 @@ index 19e5320..a9f46a1 100644
      get_with_fork(client, base, path, timeout).map(|(_, body)| body)
 diff --git a/rust-lib/src/checkpoint.rs b/rust-lib/src/checkpoint.rs
 new file mode 100644
-index 0000000..d8fbb20
+index 0000000..1478ca6
 --- /dev/null
 +++ b/rust-lib/src/checkpoint.rs
-@@ -0,0 +1,165 @@
+@@ -0,0 +1,170 @@
 +//! `verify_checkpoint`: check a light client's trusted checkpoint (a block root) against this chain's providers before
 +//! relying on it. The answers of the providers are not trusted one by one: each is asked, pinned (no failover), whether
 +//! the root is a canonical block, the canonical block at its own slot, at or below what it has finalized, on the chain
@@ -63,7 +63,7 @@ index 0000000..d8fbb20
 +    pub genesis_validators_root: Option<String>,
 +    pub genesis_time: Option<u64>,
 +    pub deposit_chain_id: Option<u64>,
-+    /// Agreeing providers on distinct hosts needed (default 3).
++    /// Agreeing providers on distinct hosts (host and port) needed (default 3, at least 1).
 +    pub min_providers: Option<usize>,
 +    /// Count the agreement of plain-http providers too (default false). As for `finalized_header`, a checkpoint root
 +    /// is a trust anchor: over plain http an on-path attacker could answer for the provider, so by default such a
@@ -107,7 +107,8 @@ index 0000000..d8fbb20
 +        let genesis_time = expect.genesis_time.or(known.map(|n| n.genesis_time));
 +        let deposit_chain_id = expect.deposit_chain_id.or(Some(self.chain_id));
 +        let gvr = expect.genesis_validators_root.as_deref().map(norm);
-+        let needed = expect.min_providers.unwrap_or(3);
++        // At least one agreeing provider, whatever the caller asks: zero would pass a root nobody confirmed.
++        let needed = expect.min_providers.unwrap_or(3).max(1);
 +        let allow_plain_http = expect.allow_plain_http.unwrap_or(false);
 +        let client = match self.client() {
 +            Ok(c) => c,
@@ -131,6 +132,10 @@ index 0000000..d8fbb20
 +                        j.disagree.push("not canonical".into());
 +                    }
 +                    j.slot = num(&d["header"]["message"]["slot"]);
++                    if j.slot.is_none() && j.disagree.is_empty() {
++                        // Without the root's slot the slot and finality checks cannot run: not an agreement.
++                        j.disagree.push("gives no slot for the root".into());
++                    }
 +                }
 +                Ok(None) => j.disagree.push("does not know the root".into()),
 +                Err(e) => j.unavailable.push(format!("headers/{{root}}: {e}")),
@@ -261,10 +266,10 @@ index 495b6ff..1e40569 100644
  #[cfg(test)]
  mod tests;
 diff --git a/rust-lib/src/tests.rs b/rust-lib/src/tests.rs
-index 4a78087..3d2e7f2 100644
+index 4a78087..49c3055 100644
 --- a/rust-lib/src/tests.rs
 +++ b/rust-lib/src/tests.rs
-@@ -404,3 +404,133 @@ fn only_proxy_rs_builds_a_client() {
+@@ -404,3 +404,156 @@ fn only_proxy_rs_builds_a_client() {
          assert!(!text.contains("Client::builder") && !text.contains("Client::new"), "{}", path.display());
      }
  }
@@ -369,12 +374,35 @@ index 4a78087..3d2e7f2 100644
 +    for x in v["providers"].as_array().unwrap() {
 +        assert_eq!((x["verdict"].as_str(), x["counted"].as_bool()), (Some("agrees"), Some(false)), "{x:#}");
 +    }
-+    // A plain-http provider's disagreement still fails the check, even when its agreement would not count.
-+    let bad = cp_provider(CP_SLOT + 6240, true, 1_655_733_600);
-+    let mut list: Vec<Provider> = s.iter().enumerate().map(|(i, x)| provider(&format!("p{i}"), &x.base)).collect();
-+    list.push(provider("bad", &bad.base));
-+    let v = plan(11_155_111, list).verify_checkpoint(&CP_ROOT[..66], &crate::CheckpointExpect { min_providers: Some(0), ..strict });
++}
++
++#[test]
++fn verify_checkpoint_needs_a_slot_and_at_least_one_provider() {
++    let root = &CP_ROOT[..66];
++    // A provider that knows the root but gives no slot for it cannot be asked about the slot or finality: it
++    // disagrees, so three good providers beside it do not pass the root.
++    let no_slot = serve(move |path| {
++        if path.starts_with("/eth/v1/beacon/headers/0x") {
++            (200, json!({ "data": { "root": &CP_ROOT[..66], "canonical": true, "header": { "message": {} } } }).to_string(), 0)
++        } else if path == "/eth/v1/beacon/genesis" {
++            (200, json!({ "data": { "genesis_validators_root": SEPOLIA_GVR, "genesis_time": "1655733600" } }).to_string(), 0)
++        } else if path == "/eth/v1/config/spec" {
++            (200, json!({ "data": { "DEPOSIT_CHAIN_ID": "11155111" } }).to_string(), 0)
++        } else {
++            (404, "{}".into(), 0)
++        }
++    });
++    let good: Vec<Server> = (0..3).map(|_| cp_provider(CP_SLOT + 6240, false, 1_655_733_600)).collect();
++    let mut list: Vec<Provider> = good.iter().enumerate().map(|(i, x)| provider(&format!("g{i}"), &x.base)).collect();
++    list.push(provider("no-slot", &no_slot.base));
++    let v = plan(11_155_111, list).verify_checkpoint(root, &cp_expect());
 +    assert_eq!(v["verdict"], "failed", "{v:#}");
++    let n = v["providers"].as_array().unwrap().iter().find(|x| x["id"] == "no-slot").unwrap().clone();
++    assert_eq!(n["verdict"], "disagrees", "{n:#}");
++    // `min_providers: 0` is taken as 1: with no provider answering, nothing passes.
++    let down = vec![provider("down", "http://127.0.0.1:9")];
++    let v = plan(11_155_111, down).verify_checkpoint(root, &crate::CheckpointExpect { min_providers: Some(0), ..cp_expect() });
++    assert_eq!((v["verdict"].as_str(), v["needed"].as_u64()), (Some("failed"), Some(1)), "{v:#}");
 +}
 +
 +/// Against public providers, not in CI (`#[ignore]`): `BEACON_LIVE_PROVIDERS` (`id=https://…`, comma-separated) asked

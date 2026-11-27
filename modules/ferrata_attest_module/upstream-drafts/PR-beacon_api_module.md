@@ -27,7 +27,9 @@ Every enabled provider of the chain is asked, pinned (no failover), and judged o
   says otherwise).
 
 A provider agrees, disagrees or is unavailable (not counted). The verdict is `ok` when at least `min_providers`
-(default 3) agree on distinct hosts, none disagrees, and the agreeing ones put the root at the same slot.
+(default 3, at least 1) agree on distinct hosts (host and port), none disagrees, and the agreeing ones put the root at
+the same slot. A provider that knows the root but gives no slot for it disagrees: its slot and finality cannot be
+checked.
 `expect_json`: `{ genesis_validators_root?, genesis_time?, deposit_chain_id?, min_providers?, allow_plain_http? }`.
 Reply: `{ ok, chainId, root, verdict, agreeing, needed, slot, providers: [{ id, endpoint, verdict, counted, slot,
 finalized_slot, disagree, unavailable }] }`.
@@ -43,11 +45,12 @@ the caller's, as they depend on the light client's format.
 
 Changes: `rust-lib/src/checkpoint.rs` (new: the check), `src/glue.rs` (the method), `src/lib.rs` (the module and
 `CheckpointExpect`), `src/beacon.rs` (`get_path`: a GET of a JSON document with 404 as `None`; `Plan::client` made
-crate-visible), `src/tests.rs` (four tests on providers served on loopback, in the crate's test style, and an ignored live one: three agreeing;
-another block at the slot, not finalized, another genesis, each one bad provider among three good ones; two ids of one
-endpoint counted once and an unreachable provider not counted; plain-http agreement not counted by default).
+crate-visible), `src/tests.rs` (five tests on providers served on loopback, in the crate's test style, and an ignored live one: three
+agreeing; another block at the slot, not finalized, another genesis, each one bad provider among three good ones; two
+ids of one endpoint counted once and an unreachable provider not counted; plain-http agreement not counted by default;
+a provider without the root's slot disagrees and `min_providers: 0` is taken as 1).
 
-Tested: `cargo test --no-default-features` in `rust-lib/`, 33 passed (29 existing, 4 new) and one ignored,
+Tested: `cargo test --no-default-features` in `rust-lib/`, 34 passed (29 existing, 5 new) and one ignored,
 `verify_checkpoint_live`, which asks the providers named in the environment (`BEACON_LIVE_PROVIDERS`, `BEACON_LIVE_ROOT`,
 `BEACON_LIVE_GVR`); run on 27 November 2026 against three https Sepolia providers of three operators and the
 plain-http Nimbus one: `ok`, 3 counted, Nimbus asked and not counted. Not tested here: the module builder's build of
