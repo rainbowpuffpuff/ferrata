@@ -692,6 +692,7 @@ note = "burns from a public holding (a signed top-level call) and from a private
 id = "RFP-022 F.7"
 tests = [
   { path = "vault/test/Checkpoint.t.sol", kind = "test", ci = "vault" },
+  { path = "vault/test/CrownDeposit.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/real/ZoneBridge.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/real/RuleBMulti.t.sol", kind = "test", ci = "vault" },
   { path = "e2e/runs/zone-rc3-four-keys/README.md", kind = "record" },
