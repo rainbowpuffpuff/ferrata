@@ -156,7 +156,8 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    open on the instance's store among those of the updates it knows, and how many steps the chain holds of each. It
    knows the updates its sources served that the program's checks accepted (at most `MAX_KNOWN` = 64, and of one kind,
    copies of one update, `KNOWN_PER_KIND` = 4, the earliest signed of each kind and those whose jobs it found open kept)
-   and the updates of the jobs it carries, and, once a round, the updates of the jobs other parties opened, read from
+   and the updates of the jobs it carries, and, in each round it checks for other jobs (just before it would send a step
+   whose turn has come), the updates of the jobs other parties opened, read from
    their `Open`s on chain (`Ledger::messages_to`; the sequencer backend: the blocks its follower holds, final on Bedrock;
    [ADR 0048](../../docs/decisions/0048-updater-turns-on-the-chains-height.md)): an `Open` carries the update in the
    program's compact encoding, from which the bytes a source would serve are rebuilt
@@ -186,7 +187,7 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    defaults) after it first waited there,
    however the jobs move, and does not wait again on that state. When a wait ends (nothing left to wait for, or the
    cap) the step's turn starts again, once per wait, so that updaters released together do not all send in one round;
-   so join or wait adds at most `JOIN_WAIT_CAP × join_wait_rounds + defer_window - 1` rounds on a state (85 at the
+   so join or wait adds at most `JOIN_WAIT_CAP × join_wait_rounds + defer_window - 1` turns on a state (85 at the
    defaults) to the turns of item 8. Past `stall_rounds` (58 at the defaults) `/health` reports the instance not
    moving, so under such a wait it can say `degraded`, and `down` past twice that. A job this updater moved last and
    does not carry (it opened it and left it) holds it back no longer, so with `finish_own_jobs = false` it opens the
@@ -211,23 +212,24 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    rounds still (holds after a refusal, the breaker, demoted sources): it decides nothing between updaters whose steps
    land. Two honest updaters collide on a job's step only when their turns for it end in the same block (or before one
    can read the other's step: the reads are of final blocks). A step of a job this updater carries (it sent a step
-   of it, item 7) counts from the first round that step was due. An `Open`, and a step of a job it does not carry, count
+   of it, item 7) counts from where that step was first found due. An `Open`, and a step of a job it does not carry, count
    from the first round a step of that kind was due on the instance's state, whatever job it is for; after it sends a
-   step there, the next of that kind waits `defer_window - 1` rounds. A job's id hashes `signature_slot`, which a source
+   step there, the next of that kind waits `defer_window - 1` turns. A job's id hashes `signature_slot`, which a source
    can change at will; any beacon node can build another real update of the period from each of its blocks; and anyone
    may open a job and send its steps. Counted by the job, a source serving a new copy each round, or opening each copy
    itself (two internal reviews' findings M1), had this updater count again each round. Now each kind of
-   step has one turn per state, at most `defer_window - 1` rounds, whatever the sources serve and others send; a source
+   step has one turn per state, at most `defer_window - 1` turns, whatever the sources serve and others send; a source
    can only present jobs at another step, each kind's turn running once. So, on each state of the instance, this
-   updater's first step goes out within `K × (defer_window - 1)` rounds of the first round one was due there (`K = 3 +
+   updater's first step goes out within `K × (defer_window - 1)` turns of where one was first found due there (`K = 3 +
    adoption_parts` kinds: `Open`, `Miller`, the adoption's parts, `Finish`), and the job it then carries takes each of
-   its other steps within `defer_window` rounds: an update adopting the next committee is applied at most `K ×
-   (defer_window - 1) + 1 + (K - 1) × defer_window` rounds after the first round it was due on that state (68 at the
-   defaults, `defer_window` 8 and two parts; measured 66 rounds with the strongest attacker known in
+   its other steps within `defer_window` turns: an update adopting the next committee is applied at most `K ×
+   (defer_window - 1) + 1 + (K - 1) × defer_window` turns after it was first found due on that state (68 at the
+   defaults, `defer_window` 8 and two parts; measured, in tests whose ledger gives no height (a turn is a round there),
+   66 rounds with the strongest attacker known in
    `tests/redating.rs`, and 67 with every slot of the period searched in an independent review run, not reproduced by a
    committed test; 16 to 26 with the openers,
    30 with the started slots). Join or wait (item 7) adds waits of its own, at most `JOIN_WAIT_CAP × join_wait_rounds +
-   defer_window - 1` rounds on a state (85 at the defaults; the code implies no tighter bound for the two together than
+   defer_window - 1` turns on a state (85 at the defaults; the code implies no tighter bound for the two together than
    the sum, 68 + 85 = 153); with it the tests measured 36 rounds with the strongest attacker, 23 to 26 with the openers
    and 30 with the started slots, the updater joining the copies the attacker took furthest. The turns start again whenever the state changes, and anyone may change it by applying a
    real update: a party that applies older real updates itself starts a new state with each, and new turns ("Not built,

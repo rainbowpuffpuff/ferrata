@@ -7,6 +7,7 @@ repository's `.scratch/` (git-ignored)."""
 import csv
 import importlib.util
 import json
+import os
 import signal
 import socket
 import struct
@@ -69,6 +70,24 @@ class CopyUpdateTests(unittest.TestCase):
                 struct.pack_into("<Q", restored, self.replay.signature_offset(kind), signature)
                 self.assertEqual(bytes(restored), original, "bytes other than signature_slot changed")
 
+    def test_the_replayed_updates_all_have_a_copy(self):
+        """The sequencer gate replays the first 106 recorded updates: each one's copy differs (no entry falls back to
+        its original bytes), so a run with GATE_COPIES=1 serves honest-2 a copy of every update."""
+        paths = sorted((RECORD / "updates").glob("*.electra.ssz"))[:106]
+        self.assertEqual(len(paths), 106)
+        for path in paths:
+            kind = path.name.split(".")[1]
+            original = path.read_bytes()
+            changed, sig = self.replay.copy_update(kind, original)
+            self.assertNotEqual(changed, original, path.name)
+            self.assertNotEqual(sig, self.replay.slots(kind, original)[2], path.name)
+
+    def test_copies_must_name_served_ports(self):
+        r = subprocess.run([sys.executable, "-I", str(HERE / "beacon_replay.py"), "--dir", str(RECORD), "--ports", "1,2",
+                            "--copies", "3", "--stats", "x.json"], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("every --copies port must also be in --ports", r.stderr)
+
 
 class BeaconReplayHTTPTests(unittest.TestCase):
     @classmethod
@@ -84,6 +103,8 @@ class BeaconReplayHTTPTests(unittest.TestCase):
                 s.bind(("127.0.0.1", 0))
             return [s.getsockname()[1] for s in sockets]
         except OSError as exc:
+            if os.environ.get("CI"):
+                raise
             self.skipTest(f"cannot bind a loopback port in this sandbox: {exc}")
         finally:
             for s in sockets:
@@ -205,7 +226,11 @@ class GateHookDefaultTests(unittest.TestCase):
             'COPIES="${GATE_COPIES:-0}"',
             'ADV_POLL="${GATE_ADV_POLL:-$(( POLL > 1 ? POLL / 2 : 1 ))}"',
             'polls=("$POLL1" "$POLL2"); joins=("" "")',
-            'polls+=("$ADV_POLL"); joins+=("join_wait_rounds = 0")',
+            'windows+=(1); polls+=("$ADV_POLL"); joins+=("join_wait_rounds = 0")',
+            # honest-2's beacon port (9601 + 1) serves the copies, passed to the replay.
+            'copy_args=(); if [ "$COPIES" = 1 ]; then copy_args=(--copies 9602); fi',
+            'python3 -I "$HERE/beacon_replay.py" --dir "$REC" --ports "$ports" "${copy_args[@]}" --start 1',
+            'names=(honest-1 honest-2)',
         ):
             self.assertIn(fragment, text)
         # An empty entry of `joins` (an honest daemon) adds no line to its configuration; the adversary's adds one.

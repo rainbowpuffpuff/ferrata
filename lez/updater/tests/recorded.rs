@@ -982,28 +982,46 @@ fn gate_overlapping_updates_join_or_wait() {
 }
 
 /// RFP-021 R.10's first clause, that cost does not fall systematically on whichever party reacts fastest: honest-1 reads
-/// the chain every round, honest-2 every third round, a new recorded mainnet update every 12 rounds whatever they do (as
-/// the sequencer gate's replay: an update every 60 s over 10-s blocks gives one every 6 blocks). With a block every
-/// three rounds (honest-2 reads once a block, honest-1 three times) and the turns counted on the chain's height
-/// (`Ledger::height`, the updater now), each honest updater pays 35-65% of the honest fees (A3's limits) and A3's ratio
-/// holds; counted in each updater's own rounds (the updater before), the one reading three times as often waits a third
-/// as long and pays more than 65%. Then two more cases: a block every two rounds (honest-2 reads every 1.5 blocks, so it
-/// notices some of its turns a block late), and A3's whole gate (both recorded chains, every update the newest once, the
-/// adversary racing a third of the steps due in each block and waiting for no one) with the pair reading once and three
-/// times a block: A3's limits hold in both. The runs' figures go to `results/gate-polls.txt`.
+/// the chain every round, honest-2 every third round, a new recorded mainnet update every 12 rounds whatever they do
+/// (one every 4 blocks at a block every three rounds; the sequencer gate's replay reveals one every 6 blocks). With a
+/// block every three rounds (honest-2 reads once a block, honest-1 three times) and the turns counted on the chain's
+/// height (`Ledger::height`, the updater now), each honest updater pays 35-65% of the honest fees (A3's limits) and A3's
+/// ratio holds; counted in each updater's own rounds (the updater before), the one reading three times as often waits a
+/// third as long and pays more than 65%. Then: a block every two rounds (honest-2 reads every 1.5 blocks); A3's whole
+/// gate (both recorded chains, every update the newest once, the adversary racing a third of the steps due in each block
+/// and waiting for no one) with the pair reading once and three times a block: A3's limits hold in both. Last, honest-2
+/// reading every third block (every sixth round, a block every two): it notices its turns up to three blocks late and
+/// pays less than honest-1, the residual the operator guide §3.4 states (an operator should read the chain at least once
+/// a block). `GATE_POLL_SALT` names the updaters otherwise (another draw of every wait). The runs' figures go to
+/// `results/gate-polls.txt` (`gate-polls-salt-SALT.txt`).
 #[test]
 fn gate_poll_speeds_share_the_cost() {
+    let salt = std::env::var("GATE_POLL_SALT").unwrap_or_default();
     let mut text = String::new();
     let mut runs = Vec::new();
-    for (heights, block_every, a3) in [(true, 3, false), (false, 3, false), (true, 2, false), (true, 3, true)] {
+    // (heights, reads, a block every, A3's whole gate)
+    for (heights, polls, block_every, a3) in [
+        (true, [1, 3], 3, false),
+        (false, [1, 3], 3, false),
+        (true, [1, 3], 2, false),
+        (true, [1, 3], 3, true),
+        (true, [1, 6], 2, false),
+    ] {
         let opts = if a3 {
-            GateOpts { polls: [1, 3], block_every, heights, ..GateOpts::a3(vec!["mainnet", "sepolia"], true) }
+            GateOpts {
+                polls,
+                block_every,
+                heights,
+                salt: salt.clone(),
+                ..GateOpts::a3(vec!["mainnet", "sepolia"], true)
+            }
         } else {
             GateOpts {
                 reveal_every: Some(12),
-                polls: [1, 3],
+                polls,
                 block_every,
                 heights,
+                salt: salt.clone(),
                 ..GateOpts::a3(vec!["mainnet"], false)
             }
         };
@@ -1033,9 +1051,11 @@ fn gate_poll_speeds_share_the_cost() {
         rounds.share1,
         blocks.share1
     );
+    assert!(runs[4].share2 < runs[4].share1, "a reader every third block pays less: {:.3}", runs[4].share2);
     let out = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("results");
     fs::create_dir_all(&out).unwrap();
-    fs::write(out.join("gate-polls.txt"), text.trim_end().to_string() + "\n").unwrap();
+    let name = if salt.is_empty() { "gate-polls.txt".to_string() } else { format!("gate-polls-salt-{salt}.txt") };
+    fs::write(out.join(name), text.trim_end().to_string() + "\n").unwrap();
 }
 
 /// RFP-021 R.9 when the updaters' sources serve different copies of each update (honest-2's sources serve every update
