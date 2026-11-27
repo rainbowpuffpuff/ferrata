@@ -37,7 +37,7 @@ PY
 }
 T="$HERE/target/at-$REV"
 {
-  echo "# idl/spel-v2/run-at.sh: SPEL PR #301 at $REV (LEZ $(grep -o 'tag = "[^"]*"' "$SPEL/spel-cli/Cargo.toml" | head -1)) on Ferrata $(git -C "$REPO" rev-parse --short=8 HEAD 2>/dev/null || echo '(tree not named)')"
+  echo "# idl/spel-v2/run-at.sh: SPEL PR #301 at $REV (LEZ $(grep -o 'tag = "[^"]*"' "$SPEL/spel-cli/Cargo.toml" | head -1)) on Ferrata ${FERRATA_REV:-$(git -C "$REPO" rev-parse --short=8 HEAD 2>/dev/null || echo '(tree not named)')}"
   echo "## 1. SPEL as $REV has it"
 } > "$LOG"
 crate "$T/as-is" "$SPEL"

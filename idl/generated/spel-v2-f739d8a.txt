@@ -1,4 +1,4 @@
-# idl/spel-v2/run-at.sh: SPEL PR #301 at f739d8a (LEZ tag = "v0.4.0-rc3") on Ferrata (tree not named)
+# idl/spel-v2/run-at.sh: SPEL PR #301 at f739d8a (LEZ tag = "v0.4.0-rc3") on Ferrata 39096179 (branch t-021; the box's copy has no .git, so the script could not name it)
 ## 1. SPEL as f739d8a has it
 ferrata_attestation: generate_idl(lez/wire, message Message, states ["InstanceState", "RecordState", "JobState", "Attestation"])
   generated: IDL version "2", 15 messages, 18 types
