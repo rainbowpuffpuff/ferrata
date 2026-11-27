@@ -3,7 +3,8 @@
 # .github/workflows/lez-full.yml; docs/guides/ci.md): the attestation and bridge
 # programs driven through LEZ v0.4.0-rc1's state machine and fee settlement in the harness, every target of
 # `lez/harness` and `lez/updater` that `cargo test -p` runs without an optional feature (lib unit tests, bin unit
-# tests, integration test binaries including red-team suites, doc-tests), and the privacy suite end to end
+# tests, integration test binaries including red-team suites, doc-tests), updater-gate's daemon process demo, and the
+# privacy suite end to end
 # (scripts/privacy/run.sh: the LEZ half, the vault's PrivacySuite, the adversary) with its gate
 # (scripts/privacy/check-results.py: the differential gate, chance-level pairing, nothing hidden found, recovery from
 # the seed, the published tables reproduced). The guests run in RISC Zero dev mode: executed in the zkVM, no proof.

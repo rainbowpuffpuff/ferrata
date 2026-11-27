@@ -194,7 +194,7 @@ note = "advance, config and the attestations of a finalized Sepolia block, every
 id = "RFP-021 U.3"
 tests = [
   { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "lez-harness" },
-  { path = "lez/updater/dev/demo.sh", kind = "test", ci = "box", run = "lez/updater/dev/demo.sh" },
+  { path = "lez/updater/dev/demo.sh", kind = "test", ci = "lez-harness", run = "cd lez && RISC0_DEV_MODE=1 updater/dev/demo.sh OUT" },
   { path = "modules/scripts/test_live_testnet.py", kind = "test", ci = "links" },
   { path = "modules/results/live-testnet-2026-11-23/README.md", kind = "record" },
   { path = "lez/updater/README.md", kind = "document" },
@@ -498,7 +498,7 @@ tests = [
 id = "RFP-021 S.5"
 tests = [
   { path = "lez/harness/src/bin/ferrata-attest.rs", kind = "test", ci = "box", run = "cd lez && cargo build -p harness --locked --bin ferrata-attest && RISC0_DEV_MODE=1 target/debug/ferrata-attest status --then slot --send ..." },
-  { path = "lez/updater/dev/demo.sh", kind = "test", ci = "box", run = "lez/updater/dev/demo.sh" },
+  { path = "lez/updater/dev/demo.sh", kind = "test", ci = "lez-harness", run = "cd lez && RISC0_DEV_MODE=1 updater/dev/demo.sh OUT" },
 ]
 note = "the four documents are first drafts here: lez/ATTEST-CLI.md, docs/guides/operator-guide.md, docs/guides/consumer-guide.md, lez/updater/README.md; the journeys they describe are exercised by the CLI (row 56) and the updater demo (row 81); final with check-guides.py on the branch. No CI test in this tree: the documents are first drafts here; on branch rfp-docs-final scripts/check-guides.py (links job) keeps the final guides in step with the code (entry below)"
 

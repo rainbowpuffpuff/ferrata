@@ -109,6 +109,8 @@ check("trace: lez-harness runs lez/harness/tests/public_path.rs (through scripts
       runs("lez-harness", "lez/harness/tests/public_path.rs"))
 check("trace: lez-harness runs lez/updater/tests/recorded.rs (updater-gate shard)",
       runs("lez-harness", "lez/updater/tests/recorded.rs"))
+check("trace: lez-harness runs the updater daemon process demo (updater-gate shard)",
+      runs("lez-harness", "lez/updater/dev/demo.sh"))
 check("trace: lez-harness runs lez/updater/tests/refusals.rs (updater-privacy shard)",
       runs("lez-harness", "lez/updater/tests/refusals.rs"))
 check("trace: lez-harness runs vault/test/PrivacySuite.t.sol (updater-privacy shard via scripts/privacy/run.sh)",
@@ -267,7 +269,7 @@ for sname in shard_map["shards"]:
             planned_cargos.append((step["cwd"], step["argv"]))
 traced_cargos = [
     (c.cwd, c.argv) for c in ci_model.trace(jobs["lez-harness"], tracked)
-    if c.argv and c.argv[0] == "cargo" and "--no-run" not in c.argv
+    if c.argv and c.argv[0] == "cargo" and "test" in c.argv and "--no-run" not in c.argv
     and "scripts/privacy/run.sh" not in c.origin
 ]
 check("trace: lez-harness traced cargo commands equal check-lez-shards.py build_shard_plan across all shards",

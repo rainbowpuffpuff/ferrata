@@ -21,7 +21,8 @@
 #   build       the guests from the committed tree (its LEZ v0.4.0-rc1 manifests: the images of docs/image-ids.md,
 #               which the run checks), then LEZ $LEZ_TAG's sequencer_service with its `standalone` feature (its mock
 #               Bedrock actor: no Logos Blockchain node) and the live driver against $LEZ_TAG
-#               (lez/scripts/lez-select.sh; the manifests are put back afterwards), the native archives the build
+#               (lez/scripts/lez-select.sh; the manifests are put back afterwards), the updater's sequencer backend and
+#               ferrata-day1 against $LEZ_TAG with --release --locked, the native archives the build
 #               scripts link taken from scripts/fetch_native.py (pinned sha256) and checked after the build
 #               (fetch_native.py check-build on cargo's JSON messages). LEZ_TAG: FERRATA_CI_LEZ_TAG,
 #               default v0.4.0-rc3, the tag of the test network's deployment kit (lez/testnet04/).
@@ -226,6 +227,11 @@ stage_build() {
     env FERRATA_LIVE_CARGO_MESSAGES="$messages" bash "$REPO/lez/live/run.sh" build-standalone
   run_logged "build: the live driver against LEZ $LEZ_TAG" \
     env FERRATA_LIVE_CARGO_MESSAGES="$messages" bash "$REPO/lez/live/run.sh" build-driver
+  # Both binaries of the updater's own workspace, against the same selected LEZ tag. Sharing the
+  # driver's target directory reuses its LEZ dependency build; ferrata-day1 is the day-one kit's CLI.
+  run_logged "build: the updater's sequencer backend and ferrata-day1 against LEZ $LEZ_TAG" \
+    env CARGO_TARGET_DIR="$FERRATA_LIVE_TMP/target" \
+    bash -c 'cd "$1/lez/updater/sequencer" && cargo +1.98.1 build --release --locked --bin ferrata-updater --bin ferrata-day1' _ "$REPO"
   run_logged "build: the native code linked only from the checked archives (scripts/fetch_native.py check-build)" \
     python3 -I "$REPO/scripts/fetch_native.py" check-build "$messages" --target-dir "$FERRATA_LIVE_TMP/target"
   restore_selection

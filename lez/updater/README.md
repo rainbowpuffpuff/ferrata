@@ -49,6 +49,14 @@ e2e/crown.sh updater crown-NAME --bin PATH/ferrata-updater --minutes N [--restar
 e2e/crown.sh updater-status crown-NAME; e2e/crown.sh updater-stop crown-NAME; e2e/crown.sh updater-fetch crown-NAME DIR
 ```
 
+CI runs the process demo in `lez-harness`'s `updater-gate` shard: from `lez/`, `RISC0_DEV_MODE=1
+updater/dev/demo.sh target/updater-demo`, using recorded data and a loopback listener with no public endpoint
+configured. The demo fails unless `/health` is HTTP 200 with status `ok`, `/metrics` is populated, the unknown route is
+HTTP 404 and SIGTERM exits
+0. The `sequencer-attest` build stage (LEZ v0.4.0-rc3) compiles both this workspace's `ferrata-updater` and
+`ferrata-day1` with `cargo +1.98.1 build --release --locked`; it builds the sequencer backend but does not run that
+backend against the job's sequencer.
+
 One file configures everything: `ferrata-updater.example.toml` lists every field with its
 default. In short:
 

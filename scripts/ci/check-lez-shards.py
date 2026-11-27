@@ -542,10 +542,11 @@ def check_shards(
     if not isinstance(shards, dict) or not shards:
         return ["shard map has no `shards` object"], {}
 
-    bool_keys = {"harness_lib", "harness_bins", "harness_doc", "updater_lib", "updater_bins", "updater_doc", "privacy"}
+    bool_keys = {"harness_lib", "harness_bins", "harness_doc", "updater_lib", "updater_bins", "updater_doc", "updater_demo", "privacy"}
     list_keys = {"harness_tests", "harness_splits", "updater_tests", "updater_splits"}
     allowed_shard_keys = bool_keys | list_keys
     privacy_shards = []
+    updater_demo_shards = []
     for sname, spec in shards.items():
         if not SHARD_NAME_RE.match(sname):
             problems.append(f"invalid shard name {sname!r}")
@@ -565,9 +566,15 @@ def check_shards(
             problems.append(f"shard {sname!r} runs nothing (empty shard)")
         if spec.get("privacy") is True:
             privacy_shards.append(sname)
+        if spec.get("updater_demo") is True:
+            updater_demo_shards.append(sname)
 
     if len(privacy_shards) != 1:
         problems.append(f"expected exactly 1 shard with `privacy: true`, found {len(privacy_shards)} ({privacy_shards})")
+    if len(updater_demo_shards) != 1:
+        problems.append(
+            f"expected exactly 1 shard with `updater_demo: true`, found {len(updater_demo_shards)} ({updater_demo_shards})"
+        )
 
     harness_bins = discover_test_binaries(harness_dir, set())
     updater_bins = discover_test_binaries(updater_dir, {"harness"})
@@ -663,6 +670,7 @@ def build_shard_plan(
     u_doc = bool(spec.get("updater_doc"))
     u_tests = list(spec.get("updater_tests") or [])
     u_splits = list(spec.get("updater_splits") or [])
+    updater_demo = bool(spec.get("updater_demo"))
     privacy = bool(spec.get("privacy"))
 
     if build_only:
@@ -747,6 +755,9 @@ def build_shard_plan(
             for name in split["names"]:
                 argv += ["--skip", name]
         cmds.append({"cwd": "lez", "dev_mode": True, "argv": argv})
+
+    if updater_demo:
+        cmds.append({"cwd": "lez", "dev_mode": True, "argv": ["bash", "updater/dev/demo.sh", "target/updater-demo"]})
 
     if privacy:
         run_sh = f"{repo_prefix}scripts/privacy/run.sh"

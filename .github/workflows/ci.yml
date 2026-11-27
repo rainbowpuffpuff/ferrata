@@ -239,7 +239,8 @@ jobs:
   # The LEZ suites (scripts/ci/lez-harness.sh): the attestation and bridge programs through LEZ v0.4.0-rc1's state
   # machine and fee settlement in the harness, every non-feature-gated target of lez/harness and lez/updater (lib unit
   # tests, bin unit tests, doc-tests, integration test binaries including red-team suites and recorded updater tests),
-  # and the privacy suite end to end with its gate (scripts/privacy/run.sh, scripts/privacy/check-results.py), with the
+  # updater-gate's daemon process demo, and the privacy suite end to end with its gate (scripts/privacy/run.sh,
+  # scripts/privacy/check-results.py), with the
   # guests in RISC Zero dev mode. Split across a 6-shard matrix (scripts/ci/lez-harness-shards.json; checked by
   # scripts/ci/check-lez-shards.py here and in `links`) so each shard builds and runs only its own targets; the
   # daily/manual unsharded backstop runs in `.github/workflows/lez-full.yml`. The target directory is not cached: GitHub
