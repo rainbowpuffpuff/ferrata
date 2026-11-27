@@ -19,7 +19,7 @@
 #                            (c) start the updater daemon (lez/updater, the public job path) following Sepolia,
 #                            detached, with its own key; (d) one attestation of the live Sepolia vault 0x04eE…e44c's
 #                            slots 0 and 1 under the instance's newest record; (e) with FERRATA_DAY1_BRIDGE=1, the
-#                            bridge program (image 0x2ba8dc18…, since ADR 0048; ADR 0046's 0xffb47f6e… and B1's 0x847a4336… before) and the owner-side Sepolia step for its vault, prepared
+#                            bridge program (image 0x62199ab6…, since ADR 0048; ADR 0046's 0xffb47f6e… and B1's 0x847a4336… before) and the owner-side Sepolia step for its vault, prepared
 #                            (not sent). Every transaction is signed once and kept beside the keys
 #                            (KEYS/tx/<stage>/NN.tx); after a restart the same bytes are sent again, never a new
 #                            transaction that could apply beside them. The deployments are guarded by the chain too
@@ -55,8 +55,8 @@ VAULT="0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c"      # FerrataVault v5 on Sep
 VAULT_SLOTS="0,1"                                       # depositRoot, nextLeafIndex
 PROGRAM_SHA256="ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9"   # docs/image-ids.md
 PROGRAM_IMAGE="816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df"
-BRIDGE_SHA256="9cd9d3573562cb5a8452e413ee17b402bbf963d753e2c55294708a23c29d2aed"   # docs/image-ids.md ferrata_bridge_lezfee (since ADR 0048, 27 Nov 2026; ADR 0046's and B1's before)
-BRIDGE_IMAGE="2ba8dc18461fc8a62895fcf370855dcb1427d84f888659a7d52102af4ed817fb"
+BRIDGE_SHA256="57b0c84b9775021b39fcfd92649fe68684d9e5d6bf2c65518699a4efb649c118"   # docs/image-ids.md ferrata_bridge_lezfee (since ADR 0048, 27 Nov 2026; ADR 0046's and B1's before)
+BRIDGE_IMAGE="62199ab6ea60ef8587dd6b6b768daba4933d0315ab8b3f0da929cd3cf4d39a3e"
 FETCH_PY="$REPO/lez-v03/scripts/fetch.py"               # public beacon and execution APIs, generic User-Agent
 T04="${FERRATA_DAY1_HOME:-$BESIDE/tmp/testnet04}"           # the day-one kit's own folder (tests use one of theirs)
 TOOL_DIR="${FERRATA_DAY1_BIN:-$T04/bin}"

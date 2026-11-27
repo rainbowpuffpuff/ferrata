@@ -430,7 +430,7 @@ node writes, not a transaction's cost).
 
 **Met.** In-process harness, the bridge program the live runs deployed (image `ccde6171…`, the same built at any path
 from `f13faee2`: [`image-ids.md`](image-ids.md); since milestone B1 this tree's is `847a4336…` (ADR 0032; B1's first build `ac1fb59b…` was within −5,272 and +4,718),
-its records in `lez/results/b1/`, execution gas within −9,799 and +4,718 of these, the burns now hashing no note; since ADR 0046 `ffb47f6e…` (`ferrata_bridge_f13`, never deployed), whose claims name no fee schedule: 24 bytes shorter, the privacy suite's plaintext claims 261,007 execution gas and 2,029 storage gas, its private claims 552,814: `privacy/generated/summary.md`; since ADR 0048 this tree's is `2ba8dc18…` (`ferrata_bridge_lezfee`, not deployed), whose claims are encoded as ADR 0046's), synthetic vault storage (tables
+its records in `lez/results/b1/`, execution gas within −9,799 and +4,718 of these, the burns now hashing no note; since ADR 0046 `ffb47f6e…` (`ferrata_bridge_f13`, never deployed), whose claims name no fee schedule: 24 bytes shorter, the privacy suite's plaintext claims 261,007 execution gas and 2,029 storage gas, its private claims 552,814: `privacy/generated/summary.md`; since ADR 0048 this tree's is `62199ab6…` (`ferrata_bridge_lezfee`, not deployed), whose claims are encoded as ADR 0046's), synthetic vault storage (tables
 `lez/results/bridge-*.md`, recorded on 12 November 2026):
 
 | Claim | Handlers (cycles each) | Execution gas | Storage gas |

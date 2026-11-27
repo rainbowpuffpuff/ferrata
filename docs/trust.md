@@ -636,7 +636,7 @@ built, and the test or recorded run that shows the mitigation.
   the ones the live run `crown-live-3` deployed: its vault's image ids equal this tree's rebuilt ones (6 of 6 at
   `f13faee2`, [`guides/verify.md`](guides/verify.md) §2; since milestone B1 the bridge program was B1's
   (`847a4336…`, the one our test network runs), ADR 0046's was `ferrata_bridge_f13` (`ffb47f6e…`, never deployed), and
-  since ADR 0048 this tree's is `ferrata_bridge_lezfee` (`2ba8dc18…`), which no deployed vault pins; crown-live-3's rebuilds from `f13faee2`: [`image-ids.md`](image-ids.md)).
+  since ADR 0048 this tree's is `ferrata_bridge_lezfee` (`62199ab6…`), which no deployed vault pins; crown-live-3's rebuilds from `f13faee2`: [`image-ids.md`](image-ids.md)).
 
 ## 6. Failure classes, what is lost, what bounds it (Security #9)
 

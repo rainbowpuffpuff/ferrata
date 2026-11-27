@@ -175,7 +175,7 @@ export FERRATA_SEED=$HOME/ferrata.seed FERRATA_LEZ_WALLET=$HOME/ferrata-lez FERR
 
 **Which bridge program the network runs.** Our test network runs `ferrata_bridge_b1` (`0x847a4336…7515`), the bridge
 program from before [ADR 0046](decisions/0046-mint-fee-at-deposit.md); this tree builds the program of
-[ADR 0048](decisions/0048-protocol-fees-minted-on-lez.md) (`ferrata_bridge_lezfee`, `0x2ba8dc18…17fb`), whose claims
+[ADR 0048](decisions/0048-protocol-fees-minted-on-lez.md) (`ferrata_bridge_lezfee`, `0x62199ab6…9a3e`), whose claims
 name no fee schedule (as since ADR 0046) and whose `CollectFees` mints the protocol fees on LEZ, and the network is not
 redeployed with it ([`deploy/testnet/F13-REDEPLOY.md`](../deploy/testnet/F13-REDEPLOY.md) is the owner's procedure, not run). The two
 programs read their claims differently: B1's `Claim` and `ClaimPrivately` carry a fee-schedule range (24 bytes) that

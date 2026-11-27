@@ -47,7 +47,7 @@
 # LEZ bundle (bundle-crown-live-3.tar.zst, sha256 0013bab1...: sequencer_service, the node, r0vm, the final programs
 # ferrata_lez.bin 0x816d1fef... and ferrata_bridge.bin 0xccde6171...) and the final R0BF programs (r0bf/checkpoint_b.bin
 # 0xf8116722..., r0bf/release.bin 0xb64900bc...), docs/image-ids.md. Since milestone B1 the bundle's ferrata_bridge.bin
-# must be the program of lez/guests/bridge (0x2ba8dc18..., sha256 9cd9d357..., docs/image-ids.md ferrata_bridge_lezfee), which drive.sh checks:
+# must be the program of lez/guests/bridge (0x62199ab6..., sha256 57b0c84b..., docs/image-ids.md ferrata_bridge_lezfee), which drive.sh checks:
 # the CLI of this tree keys its accounts by the configuration and no longer talks to the 0xccde6171... program.
 #
 # R0VM31: an r0vm 3.1.0 for the tools built with risc0-zkvm 3.1 (ferrata-e2e, realblocks-crown: checkpoint/ and bridge/
