@@ -118,7 +118,6 @@ fn attack_claim(
     let d = att.deposits[leaf].clone();
     let n = att.count();
     let witness = att.vault.witness(&d, n);
-    let range = w.range(&att.cid, &ETH, d.leaf_index);
     let root = root_actor(program, &att.cid, n);
     let nullifier = nullifier_of(program, &att.cid, CHAIN_ID, &att.vault.address, &att.nullifier(leaf));
     let mut actors = vec![root];
@@ -130,7 +129,7 @@ fn attack_claim(
         actors.push(fee_actor);
     }
     let evidence = targets.iter().map(|seed| PublicAccountEvidence::Pda { program, seed: *seed }).collect();
-    let message = BridgeMessage::Claim { config_id: att.cid, leaf_count: n, witness, range, relayer };
+    let message = BridgeMessage::Claim { config_id: att.cid, leaf_count: n, witness, relayer };
     w.submit(label, root, &message, actors, evidence)
 }
 

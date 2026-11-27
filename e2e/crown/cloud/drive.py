@@ -387,7 +387,7 @@ def prepare_inputs() -> None:
     got_lez = {os.path.basename(x["program"]): x["image_id"] for x in (json.loads(l) for l in lines if l.startswith("{"))}
     if got_lez != want_lez:
         die(f"the LEZ bundle's programs {got_lez} are not the ones this tree's crown-driver speaks {want_lez} "
-            "(docs/image-ids.md `ferrata_lez`, `ferrata_bridge_b1`): an input set built before milestone B1; build one "
+            "(docs/image-ids.md `ferrata_lez`, `ferrata_bridge_f13`): an input set built before ADR 0046; build one "
             "from this tree (e2e/crown/README.md, \"Since milestone B1\") or run the earlier programs from f13faee2")
     say(f"inputs (set {INPUT_SET}: {_SET['lez']}): LEZ bundle sha256 {got[:16]}..., programs "
         + ", ".join(f"{r} ({FILES[r]}) {v[:10]}..." for r, v in got_ids.items()))
@@ -395,7 +395,7 @@ def prepare_inputs() -> None:
 
 def tree_lez_programs() -> dict:
     """{bundle file: image id} of the LEZ programs this tree's crown-driver speaks, from docs/image-ids.md: the
-    attestation program `ferrata_lez` and, since milestone B1, the bridge program `ferrata_bridge_b1` (the row
+    attestation program `ferrata_lez` and, since milestone B1, the bridge program `ferrata_bridge_f13` (since ADR 0046; the row
     `ferrata_bridge` is the live runs' program, at f13faee2)."""
     rows: dict = {}
     for line in open(f"{REPO}/docs/image-ids.md", encoding="utf-8"):
@@ -404,7 +404,7 @@ def tree_lez_programs() -> dict:
             if m.group(1) in rows:
                 die(f"docs/image-ids.md names {m.group(1)} twice")
             rows[m.group(1)] = m.group(2)
-    return {"ferrata_lez.bin": rows["ferrata_lez"], "ferrata_bridge.bin": rows["ferrata_bridge_b1"]}
+    return {"ferrata_lez.bin": rows["ferrata_lez"], "ferrata_bridge.bin": rows["ferrata_bridge_f13"]}
 
 
 def driver(*a: str) -> str:

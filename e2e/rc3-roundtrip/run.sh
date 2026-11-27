@@ -112,8 +112,16 @@ fi
 # ---- the round trip -----------------------------------------------------------------------------------------------
 say "the round trip: scripts/ci/sequencer-roundtrip.sh run check summary, FERRATA_CI_LEZ_TAG=v0.4.0-rc3"
 rc=0
-FERRATA_CI_LEZ_TAG=v0.4.0-rc3 FERRATA_CI_ROUNDTRIP_TMP="$T/ci" RISC0_HOME_LEZ="$LH" \
-  bash scripts/ci/sequencer-roundtrip.sh "e2e/runs/$NAME" run check summary || rc=$?
+# FERRATA_RC3_RT_HOOK (a hook under this tree, e2e/f13/hook.sh) runs that hook instead of CI's, with the stages of
+# FERRATA_RC3_RT_STAGES (default: run check summary; another hook's records need `run summary`, CI's check being CI's).
+HOOK_ARG=()
+if [ -n "${FERRATA_RC3_RT_HOOK:-}" ]; then
+  [ -f "$SRC/$FERRATA_RC3_RT_HOOK" ] || die "no hook $FERRATA_RC3_RT_HOOK in the copy"
+  HOOK_ARG=(FERRATA_CI_RT_HOOK="$SRC/$FERRATA_RC3_RT_HOOK")
+fi
+read -r -a STAGES <<< "${FERRATA_RC3_RT_STAGES:-run check summary}"
+env "${HOOK_ARG[@]}" FERRATA_CI_LEZ_TAG=v0.4.0-rc3 FERRATA_CI_ROUNDTRIP_TMP="$T/ci" RISC0_HOME_LEZ="$LH" \
+  bash scripts/ci/sequencer-roundtrip.sh "e2e/runs/$NAME" "${STAGES[@]}" || rc=$?
 mkdir -p "$REPO/e2e/runs"
 rm -rf "$REPO/e2e/runs/$NAME" && cp -r "e2e/runs/$NAME" "$REPO/e2e/runs/$NAME"
 cp "$T/tools.sha256" "$REPO/e2e/runs/$NAME/tools.sha256"

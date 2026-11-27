@@ -272,7 +272,10 @@ claim mints the denomination to the user and the fees to the fee recipient and t
 A burn of one denomination releases it less the registered burn, relay and checkpoint fees;
 the checkpoint fee goes to whoever finalised the root used. LEZ balances stay whole
 denominations. Default cap per token and day: the smaller of 10% of escrow and a
-deployer-set ceiling.
+deployer-set ceiling. **Amended for F.13 by ADR 0046 (26 November 2026):** the depositor
+still pays denomination + mint + relay and caps count that whole payment, but the vault credits
+the mint fee on Ethereum and escrows only denomination + relay. The claim names no schedule
+range and mints only those two amounts; refunds exclude the collected mint fee.
 
 ## D14. Changes of 22 November 2026 (the security reviews H-1 and H1; ADR 0032)
 

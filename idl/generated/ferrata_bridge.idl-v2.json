@@ -1,7 +1,7 @@
 {
   "messages": [
     {
-      "docs": "Variant 0. At the holder's own actor, as a top-level call or the root of a private\nexecution: debit one denomination (from its own state, or else from `holder(account)`, to\nwhich it forwards the note) and send the note to `token(cid, token)`, which admits it (the\ndenomination, the burn freezes and caps) and records it once at `burn(cid, H(note))`.",
+      "docs": "Variant 0. At the holder's own actor, as a top-level call or the root of a private\nexecution: debit one denomination (from its own state, or else from `holder(cid, account)`, to\nwhich it forwards the note) and send the note to `token(cid, token)`, which admits it (the\ndenomination, the burn freezes and caps) and records it once at `burn(cid, r)`: a second note with a used tag\nis refused.",
       "fields": [
         {
           "name": "config_id",
@@ -187,12 +187,6 @@
           }
         },
         {
-          "name": "range",
-          "type": {
-            "defined": "ScheduleRange"
-          }
-        },
-        {
           "name": "relayer",
           "type": {
             "option": {
@@ -230,12 +224,6 @@
           }
         },
         {
-          "name": "range",
-          "type": {
-            "defined": "ScheduleRange"
-          }
-        },
-        {
           "name": "relayer",
           "type": {
             "option": {
@@ -269,7 +257,7 @@
       "tag": 8
     },
     {
-      "docs": "Variant 9. `token(cid, token)` → `nullifier(chain, vault, N)`: spend `N` once; mint the\ndenomination to `mint_to` (a public account) if given, and each fee to its account.",
+      "docs": "Variant 9. `token(cid, token)` → `nullifier(cid, chain, vault, N)`: spend `N` once; mint the\ndenomination to `mint_to` (a public account) if given, and each fee to its account.",
       "fields": [
         {
           "name": "nullifier",
@@ -343,7 +331,7 @@
       "tag": 9
     },
     {
-      "docs": "Variant 10. `nullifier(chain, vault, N)` → `holder(holder)`: credit `amount` of `token`.",
+      "docs": "Variant 10. `nullifier(cid, chain, vault, N)` → `holder(cid, holder)`: credit `amount` of `token`.",
       "fields": [
         {
           "name": "nullifier",
@@ -542,7 +530,7 @@
       "tag": 14
     },
     {
-      "docs": "Variant 15. A claimant (the root of a plaintext claim, or a private claimant) →\n`token(cid, token)` after verifying the deposit: the denomination, the fee schedule of the\nrange, the mint freezes and caps; then `Admit` to `config(cid)` and `Spend`.",
+      "docs": "Variant 15. A claimant (the root of a plaintext claim, or a private claimant) →\n`token(cid, token)` after verifying the deposit: the denomination, its fixed relay fee, the\nmint freezes and caps; then `Admit` to `config(cid)` and `Spend`. No schedule field is\npresent, so the public boundary does not reveal when the deposit was made.",
       "fields": [
         {
           "name": "config_id",
@@ -574,12 +562,6 @@
         {
           "name": "amount",
           "type": "u128"
-        },
-        {
-          "name": "range",
-          "type": {
-            "defined": "ScheduleRange"
-          }
         },
         {
           "name": "leaf_count",
@@ -937,7 +919,7 @@
       "tag": 25
     },
     {
-      "docs": "A holder, at its own actor (a call it authorised): move `amount` of its claimed balance\n(its own state first, else `holder(account)`) through `token(cid, token)` (a multiple of\nthe token's LEZ unit) to `holder(to)`. From a private account, only the boundary delivery\nto the token is public: not the sender.",
+      "docs": "A holder, at its own actor (a call it authorised): move `amount` of its claimed balance\n(its own state first, else `holder(cid, account)`) through `token(cid, token)` (a multiple of\nthe token's LEZ unit) to `holder(to)`. From a private account, only the boundary delivery\nto the token is public: not the sender.",
       "fields": [
         {
           "name": "config_id",
@@ -975,7 +957,7 @@
       "tag": 26
     },
     {
-      "docs": "`token(cid, token)` → `holder(to)` only: credit a transfer.",
+      "docs": "`token(cid, token)` → `holder(cid, to)` only: credit a transfer.",
       "fields": [
         {
           "name": "config_id",
@@ -1011,6 +993,94 @@
       ],
       "name": "Credit",
       "tag": 27
+    },
+    {
+      "docs": "Variant 28. The admin, like `SetCap`: the inbound finality depth beyond Ethereum finality, in beacon slots\n(at most [`MAX_INBOUND_DEPTH_SLOTS`]; [`Roles::inbound_depth_slots`]). Applies to imports from then on.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "slots",
+          "type": "u64"
+        }
+      ],
+      "name": "SetDepth",
+      "tag": 28
+    },
+    {
+      "docs": "Variant 29. Anyone, at `config(cid)`: attest the vault's [`listing_slot`] of `token` under the record at\n`record_slot`, then `SetListing` at `token(cid, token)` (F.10: the LEZ registry follows the vault's delisting\nand relisting).",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "record_slot",
+          "type": "u64"
+        },
+        {
+          "name": "proof",
+          "type": {
+            "defined": "VaultProof"
+          }
+        }
+      ],
+      "name": "AttestListing",
+      "tag": 29
+    },
+    {
+      "docs": "Variant 30. `config(cid)` → `token(cid, token)` only: the attested listing, kept if its record is newer than\nthe one the token holds.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "delisted",
+          "type": "bool"
+        },
+        {
+          "name": "record_slot",
+          "type": "u64"
+        }
+      ],
+      "name": "SetListing",
+      "tag": 30
     }
   ],
   "name": "ferrata_bridge",
@@ -1368,7 +1438,7 @@
           }
         },
         {
-          "docs": "Receives the mint fees (and the relay fee of a claim that names no relayer).",
+          "docs": "Receives the vault's mint fees at deposit; on LEZ receives the relay fee of a claim that\nnames no relayer.",
           "name": "fee_recipient",
           "type": {
             "array": [
@@ -1464,7 +1534,7 @@
           "type": "u64"
         },
         {
-          "docs": "Minted on LEZ to the fee recipient by a claim (D13).",
+          "docs": "Credited to the fee recipient by the vault at deposit (F.13); retained in the mirrored\nschedule, but never read by a claim.",
           "name": "mint_fees",
           "type": {
             "vec": "u128"
@@ -1822,6 +1892,24 @@
             }
           ],
           "name": "Retired"
+        },
+        {
+          "fields": [
+            {
+              "name": "token",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "record_slot",
+              "type": "u64"
+            }
+          ],
+          "name": "Listing"
         }
       ]
     },
@@ -1844,12 +1932,6 @@
           "name": "witness",
           "type": {
             "defined": "ClaimWitness"
-          }
-        },
-        {
-          "name": "range",
-          "type": {
-            "defined": "ScheduleRange"
           }
         },
         {
@@ -1972,6 +2054,16 @@
           "docs": "The freeze authority approved `Sunset` by `Cosigned`; anyone may then send it.",
           "name": "sunset_approved",
           "type": "bool"
+        },
+        {
+          "docs": "The inbound finality depth beyond Ethereum finality, in beacon slots (F.12): `ImportRoot` under the record at\nslot `s` is refused (`FROZEN`) until the configuration's clock has read a record at slot `s + depth` or later.\n0 at `Init` (Ethereum finality: every record is of a finalized header), at most\n[`MAX_INBOUND_DEPTH_SLOTS`]; set by the admin (`SetDepth`), for imports from then on only.",
+          "name": "inbound_depth_slots",
+          "type": "u64"
+        },
+        {
+          "docs": "The newest record slot the configuration's clock has read (`Tick`, `Freeze`, `Pause`, `ProposeRoles`,\n`ApplyRoles` at `config(cid)`): the finalized tip that [`Roles::inbound_depth_slots`] is measured against.",
+          "name": "tip_slot",
+          "type": "u64"
         }
       ],
       "kind": "struct",
@@ -2026,24 +2118,6 @@
       ],
       "kind": "struct",
       "name": "RootState"
-    },
-    {
-      "fields": [
-        {
-          "name": "index",
-          "type": "u64"
-        },
-        {
-          "name": "from_leaf",
-          "type": "u64"
-        },
-        {
-          "name": "until_leaf",
-          "type": "u64"
-        }
-      ],
-      "kind": "struct",
-      "name": "ScheduleRange"
     },
     {
       "fields": [
@@ -2260,6 +2334,16 @@
               "defined": "PendingTime"
             }
           }
+        },
+        {
+          "docs": "The vault refuses deposits of the token (delisted), as attested under the record at `listing_slot` (F.10).\nClaims of its deposits, its burns and its transfers are not affected: delisting stops new deposits only, on\nthe vault, and no valid claim or burn is invalidated by it (R.4).",
+          "name": "delisted",
+          "type": "bool"
+        },
+        {
+          "docs": "The record slot of the newest listing attested (the registration's record at first).",
+          "name": "listing_slot",
+          "type": "u64"
         }
       ],
       "kind": "struct",

@@ -197,7 +197,7 @@ jq '.cases[0] | {bridge_seed, config_id, i, evm_chain_id, vault, recipient, toke
 call ferrata_bridge_module burn bridge_burn
 harness bridge "$(jq -r .message "$out/rep/bridge_burn.json")" > "$out/rep/decode_burn.json"
 jq '.claim | {bridge_seed, evm_chain_id, vault, depositor, j, leaf_index, token, amount, kind, dest, leaves, root,
-              config_id: ("0x" + ("c1" * 32)), relayer: ("0x" + ("e2" * 32)), range: {index: 0, from_leaf: 0, until_leaf: 1000}}' \
+              config_id: ("0x" + ("c1" * 32)), relayer: ("0x" + ("e2" * 32))}' \
   "$VECTORS/inbound-v2.json" | req bridge_claim
 call ferrata_bridge_module claim bridge_claim
 harness bridge "$(jq -r .message "$out/rep/bridge_claim.json")" > "$out/rep/decode_claim.json"

@@ -43,7 +43,7 @@ use serde_json::{json, Value};
 use wallet::{AccountIdentity, AccountMention, DeclaredFee, DryRunReport, ExecutionFailureKind, PendingMessage, WalletCore};
 
 use super::{
-    bridge_state, deployment_accounts, fee_recipient, h, holder_pda, holder_state, range_for, witness_to, Chain, Identity,
+    bridge_state, deployment_accounts, fee_recipient, h, holder_pda, holder_state, witness_to, Chain, Identity,
     BRIDGE, ETH,
 };
 use crate::{
@@ -215,13 +215,11 @@ async fn claim_parts(live: &Live, bridge_bin: &GuestBinary, chain: &Chain, ident
         }
     }
     let root = *roots.last().expect("two roots");
-    let range = range_for(live, token_pda, LEAF).await?;
     let relayer = relayer_id();
     let message = BridgeMessage::ClaimPrivately {
         config_id: cid,
         leaf_count: LEAF_COUNT,
         witness: w.clone(),
-        range,
         relayer: Some(*relayer.value()),
     };
     let publics = vec![root_pda, token_pda, config_pda, n_pda, holder_pda(bridge, &cid, fee_recipient()), holder_pda(bridge, &cid, relayer)];

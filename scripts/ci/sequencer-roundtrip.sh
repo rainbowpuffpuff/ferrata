@@ -196,7 +196,8 @@ stage_run() {
   # Public Sepolia RPCs, tried in this order (three attempts each, 30 s apart); anvil forks the one that answered.
   export CI_RT_SEPOLIA_RPCS="${FERRATA_CI_SEPOLIA_RPCS:-https://ethereum-sepolia-rpc.publicnode.com https://rpc.sepolia.ethpandaops.io}"
   export FERRATA_LIVE_BEDROCK=mock FERRATA_LIVE_BLOCK_TIME=3s FERRATA_LIVE_PHASES=hook
-  export FERRATA_LIVE_HOOK="$REPO/scripts/ci/sequencer-roundtrip-hook.sh" FERRATA_LIVE_OUT="$OUT/zone"
+  # FERRATA_CI_RT_HOOK: another hook on the same tools and records (e2e/f13/hook.sh); CI runs its own.
+  export FERRATA_LIVE_HOOK="${FERRATA_CI_RT_HOOK:-$REPO/scripts/ci/sequencer-roundtrip-hook.sh}" FERRATA_LIVE_OUT="$OUT/zone"
   export FERRATA_PROGRAM_BIN="$TOOLS/ferrata_lez.bin" FERRATA_SCRIPTED_BIN="$TOOLS/scripted.bin"
   say "== run: LEZ $LEZ_TAG's sequencer (standalone: its mock Bedrock, no Logos Blockchain node), blocks every 3 s; the round trip in its hook"
   run_logged "run: LEZ sequencer (standalone) + scripts/ci/sequencer-roundtrip-hook.sh" bash "$REPO/lez/live/run.sh" run

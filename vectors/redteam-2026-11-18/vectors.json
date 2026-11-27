@@ -30,13 +30,13 @@
   "lc": 110,
   "attest": 63,
   "consumer": 15,
-  "bridge": 118,
+  "bridge": 116,
   "vault": 16,
   "checkpoint": 12,
   "bridge-core": 6,
-  "total": 340,
+  "total": 338,
   "controls": 55,
-  "adversarial": 285
+  "adversarial": 283
  },
  "vectors": [
   {
@@ -5199,54 +5199,6 @@
    },
    "spec": [
     "lez/bridge-wire/src/lib.rs code NOT_FOUND: '… or no imported root (a claim)'"
-   ],
-   "notes": ""
-  },
-  {
-   "id": "BR-CLM-15",
-   "area": "bridge",
-   "target": "bridge:Claim",
-   "kind": "adversarial",
-   "title": "fee schedule range that does not cover the leaf",
-   "setup": "B-BR: configuration A paired with vault V on the attestation instance, token T registered (denominations d0<d1<d2), root(A, n) imported; deposits with known (s, kind, dest)",
-   "mutation": "range = {index 0, from_leaf 0, until_leaf i} for leaf i",
-   "expect": {
-    "outcome": "refused",
-    "codes": [
-     {
-      "name": "bridge:LEAF_NOT_IMPORTED",
-      "number": 248
-     }
-    ]
-   },
-   "spec": [
-    "lez/bridge-wire/src/lib.rs code LEAF_NOT_IMPORTED: '… or outside the fee schedule range the claim names'"
-   ],
-   "notes": ""
-  },
-  {
-   "id": "BR-CLM-16",
-   "area": "bridge",
-   "target": "bridge:Claim",
-   "kind": "adversarial",
-   "title": "fee schedule range beyond the imported schedules",
-   "setup": "B-BR: configuration A paired with vault V on the attestation instance, token T registered (denominations d0<d1<d2), root(A, n) imported; deposits with known (s, kind, dest)",
-   "mutation": "range = {index 5, …} (schedule 5 never imported)",
-   "expect": {
-    "outcome": "refused",
-    "codes": [
-     {
-      "name": "bridge:LEAF_NOT_IMPORTED",
-      "number": 248
-     },
-     {
-      "name": "bridge:NOT_REGISTERED",
-      "number": 251
-     }
-    ]
-   },
-   "spec": [
-    "lez/bridge-wire/src/lib.rs code LEAF_NOT_IMPORTED: '… or beyond the leaves the imported fee schedules cover'"
    ],
    "notes": ""
   },

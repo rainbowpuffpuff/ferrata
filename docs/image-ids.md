@@ -6,15 +6,17 @@
 > recorded runs pin, are in [Superseded](#superseded-the-ids-the-november-vaults-and-the-recorded-runs-pin). The Sepolia vault of 23 November 2026 (`0x1949…2787`, EVIDENCE row 232) pins the 3.1 rows
 > `checkpoint_b_0_3_5_31` (rule (B)), `checkpoint_0_3_5_31` (rule (A)) and `release_31`.
 
-> **Milestone B1 (branch `rfp-bridge-hardening`, 21 November 2026).** In this tree `lez/guests/bridge` builds the bridge
-> program of [the B1 section](#the-bridge-program-since-milestone-b1-every-account-keyed-by-the-configuration) below,
-> listed in the first table as `ferrata_bridge_b1` (`0x847a4336…7515` since 22 November 2026, ADR 0032: a burn's tag used once;
-> B1's first build was `0xac1fb59b…442e`). The `ferrata_bridge` row ([Superseded](#superseded-the-ids-the-november-vaults-and-the-recorded-runs-pin)) stays the
+> **ADR 0046 (RFP-022 F.13, 27 November 2026).** In this tree `lez/guests/bridge` builds the bridge program of
+> [its section](#the-bridge-program-since-adr-0046-a-claim-names-no-fee-schedule) below, listed in the first table as
+> `ferrata_bridge_f13` (`0xffb47f6e…7675`): a claim names no fee schedule and mints no mint fee. Milestone B1's program
+> (`ferrata_bridge_b1`, `0x847a4336…7515` since 22 November 2026, ADR 0032: a burn's tag used once; B1's first build was
+> `0xac1fb59b…442e`), which the test network deployed, is under
+> [Superseded](#superseded-the-ids-the-november-vaults-and-the-recorded-runs-pin), as is the `ferrata_bridge` row, the
 > program the live runs of November 2026 deployed (`crown-live-3`, `crown-live-4`, the LEZ sequencers we ran), which those
-> deployments keep; its source is at commit `f13faee2`, which rebuilds it. The tools resolve the two by name:
+> deployments keep; its source is at commit `f13faee2`, which rebuilds it. The tools resolve them by name:
 > `scripts/verify-sepolia.py` holds the live vaults to `ferrata_bridge` and a run of B1's program to `ferrata_bridge_b1`;
 > `scripts/reproduce-image-ids.sh compare` and `scripts/privacy/real.sh` expect this tree's build to be
-> `ferrata_bridge_b1` (the crown run's other five programs and the other 13 guests are unchanged).
+> `ferrata_bridge_f13` (the crown run's other five programs and the other 13 guests are unchanged).
 
 
 The first table: the 14 guests this tree builds. The LEZ programs' rows are the build of 12 November 2026 described
@@ -42,7 +44,7 @@ live run, `crown-live-1`, ran programs built at the maintainer's checkout path (
 | Program | Image id | sha256 of the binary | Bytes | sha256 of the user ELF |
 |---|---|---|---:|---|
 | attestation program (`lez/guests/program`): `ferrata_lez` | `0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df` | `ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9` | 627,064 | `468754dd15a24c73eaa256aecd1c683531b17286f5db2592590b804fb086bedc` |
-| bridge program since B1 (`lez/guests/bridge`): `ferrata_bridge_b1` | `0x847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515` | `537cbe7a4c6900419b54e556b9741a9e37d86adf53f5e65683aa2b22c8e9a036` | 607,448 | `6cbe0aa504ddec7d05189165a5bb6873896e99cc35f6677d91fb35220edbde9f` |
+| bridge program since ADR 0046 (`lez/guests/bridge`): `ferrata_bridge_f13` | `0xffb47f6eaec6ef13f49505e5e80209f73d38ea53792e77656994f8069dde7675` | `c84fe2dbbc008c1a94c096fb6c598eb1580da2996b6b1e54ae807d0041e08fdc` | 602,908 | `0031067774303f8f86182df9500d3ddd00c4946874a2565e641416cbd5fe5877` |
 | reference consumer (`lez/guests/consumer`): `ferrata_consumer` | `0x8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96` | `d02e4aa394f73702fec3e9983f32e8c9743dbaa1a41d2d705fc06f1b63e94ca5` | 471,408 | `a403d4b2eca1ae9c205cbb87222a57f381ec512810403cf899d9036560eed754` |
 | second consumer (`lez/guests/holdings`): `ferrata_holdings` | `0xa79e3f5c4496f2707ab6f55a980efb00dd80aaf562b51f5a504349e9a97c5591` | `504a67c071a103b5d99de10163ae97f925151b09b59c49048e50f3d315b710c5` | 307,504 | `74f7215ac2641e2772f78ac994b62bd52c9807970df947514a272e03505e4deb` |
 | attestation program, software Keccak (cycle comparison): `ferrata_lez_keccak_soft` | `0xefe9c58caa0eacd4c837815d7dbb3c003011b478f9cc5b85fca083b6f0a5cb3e` | `727c5cda08f88274128e873badafd441b9112a5885a407ca6e829f9b53bc1995` | 630,292 | `025acb90bc29fd32472a59a3aeb3eb1330d1e9b446b40e2e695f3e1db3cb6004` |
@@ -131,7 +133,19 @@ then `compare`: the 13 other guests of the first table and the crown run's other
 gives the same id. It ships with the RISC Zero 3.1 rebuild (phase 2,
 [`design/risc0-3.1-migration.md`](design/risc0-3.1-migration.md)), whose LEZ guests all move again.
 
-Its row is in the first table (`ferrata_bridge_b1`): this tree builds it.
+Its row is under [Superseded](#superseded-the-ids-the-november-vaults-and-the-recorded-runs-pin) since ADR 0046 (`ferrata_bridge_b1`): the test network runs it; this tree builds the program of the next section.
+
+## The bridge program since ADR 0046: a claim names no fee schedule
+
+`lez/guests/bridge` since [ADR 0046](decisions/0046-mint-fee-at-deposit.md) (RFP-022 F.13): `Claim`, `ClaimPrivately` and
+`Issue` carry no fee schedule range, and a claim mints the denomination and the token's fixed relay fee only (the vault
+credits the mint fee to the fee recipient at the deposit). Its row is in the first table (`ferrata_bridge_f13`): this
+tree builds it. **Not deployed: no vault pins it.** A deployment pairs it with a vault of ADR 0046's rule, whose
+`configId` commits to this image id; the test network's B1 program (`ferrata_bridge_b1`, under Superseded) keeps its
+vault. Built on 27 November 2026 on the Modal build box by `scripts/reproduce-image-ids.sh build` in a fresh copy of the
+tree (no earlier build output), then `compare`: 19 of the 20 guests it builds equal their recorded ids, the bridge
+program alone differs (`0x847a4336…7515` before, B1's); the release, claim and gas-drop guests and the checkpoint
+programs are unchanged (none embeds the bridge program's id: it reaches them as the configuration's `bridgeImageId`).
 
 ## The attestation program with statement classes; not deployed
 
@@ -223,13 +237,16 @@ Rows this tree no longer builds, kept under their names because deployments and 
 guests under RISC Zero 3.0.5 (the build of 12 November 2026 described above; for zones on Logos Blockchain
 0.3.5-rc.1, the build of 18 November 2026), which the four Sepolia vaults of November 2026 (capped at zero, [security
 note](security/risc0-groth16-advisory-2026-11-21/README.md)) and the recorded runs verify, and the bridge program
-before B1, which the live runs deployed on LEZ (`crown-live-3`, `crown-live-4`). Each rebuilds from the tree before
-its change: `3d984678` for the 3.0.5 rows (before RISC Zero 3.1), `f13faee2` for `ferrata_bridge` (before B1).
+before B1, which the live runs deployed on LEZ (`crown-live-3`, `crown-live-4`), and the bridge program since B1, which
+the test network deployed (`ferrata_bridge_b1`; its claim names a fee schedule range, ADR 0046). Each rebuilds from the
+tree before its change: `3d984678` for the 3.0.5 rows (before RISC Zero 3.1), `f13faee2` for `ferrata_bridge` (before
+B1), `40e8d799` for `ferrata_bridge_b1` (before ADR 0046).
 `scripts/verify-sepolia.py` holds a recorded run to these rows by name; `scripts/reproduce/compare_ids.py` compares
 this tree's build with the first table.
 
 | Program | Image id | sha256 of the binary | Bytes | sha256 of the user ELF |
 |---|---|---|---:|---|
+| bridge program since B1 (`lez/guests/bridge` before ADR 0046, at `40e8d799`; the test network's): `ferrata_bridge_b1` | `0x847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515` | `537cbe7a4c6900419b54e556b9741a9e37d86adf53f5e65683aa2b22c8e9a036` | 607,448 | `6cbe0aa504ddec7d05189165a5bb6873896e99cc35f6677d91fb35220edbde9f` |
 | bridge program (`lez/guests/bridge` before B1, at `f13faee2`; the live runs'): `ferrata_bridge` | `0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd` | `11d832482ff0a26c8f283edda1a35b262274c066734895c62f696394dcab6070` | 592,840 | `6d038fd3628c9ba97f8d1ec2c35326696dcb92867eab7894f6f703e901d8604b` |
 | checkpoint, rule (A) (`checkpoint/guests/checkpoint`): `checkpoint` | `0xb9c1e6a834879f6be79d09d728523565846018629b82f66986eb58fab4f52c84` | `e9e800e9a8d823587ce4060ce1c0205277d31b02beebd6f9e398beb940b9a3ce` | 443,220 | `c173a69697be26ab254d87d6ac92d51e9c97f570839f1df03dea9c3a5dcbf1c1` |
 | checkpoint, rule (B) (`checkpoint/guests/checkpoint-b`): `checkpoint_b` | `0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e` | `7b5c3735635ff116ea2f2a0a1eae8929dd716ce57a7839368df683b5ad500e3b` | 445,120 | `e6c39a2e4ccbf065cb0da63de1d39df01d90ab1c171e9c4bdbc867049f690d0f` |

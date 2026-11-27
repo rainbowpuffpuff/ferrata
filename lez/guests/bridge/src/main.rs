@@ -21,10 +21,11 @@
 //! * **Claim.** `Claim` at `root(cid, n)` (plaintext) or `ClaimPrivately` at the claimant's own
 //!   actor (meant to run privately; it reads the root and verifies inside its own execution)
 //!   verify the deposit with the bridge core and send `Issue` to `token(cid, token)`, which checks
-//!   the denomination and the fee schedule, applies the token's mint freeze and bucket, has
+//!   the denomination and its fixed relay fee, applies the token's mint freeze and bucket, has
 //!   `config(cid)` apply the global ones (`Admit`), and sends `Spend` to
 //!   `nullifier(cid, chain, vault, N)`: it spends `N` once and mints the denomination to a public
-//!   destination (a private destination credits itself) and the fees to their accounts. A mint
+//!   destination (a private destination credits itself) and the relay fee to its account. The vault
+//!   already credited the mint fee on Ethereum at deposit, so no claim field names a fee schedule. A mint
 //!   writes only at `holder(cid, account)`, a PDA whose seed names the account: never at the account a
 //!   claim names, which could be another actor's address (security review C-1).
 //! * **Burn.** `Burn` at the holder's own actor, as a top-level call or a private root only, debits
@@ -46,19 +47,19 @@
 //! transaction with that program's code, so nothing is written without an attestation.
 
 use ferrata_lez_bridge_wire::{
+    Address, BridgeConfig, BridgeMessage, BridgeState, BurnRecord, CapParams, ClaimWitness, Claimed, ConfigState,
+    CosignedAction, DestKind, FeeSchedule, Gate, HolderState, ImportProof, MAX_WATCHERS, Note, NullifierState,
+    PROPOSAL_RECORD_AGE_MS, PairingProof, Pending, PendingClaim, PendingImport, PendingTime, ROLE_TIMELOCK_MS,
+    RoleProposal, Roles, Root, RootState, SLOT_RETIRED, TimeRecord, Timed, TokenEntry, TokenState, VaultProof,
     burn_actor, burn_seed, check_fees, check_import, check_listing, check_pairing, check_register, check_retired, code,
     config_actor, fees_slots, holder_actor, holder_seed, import_request, listing_slot, nullifier_actor, nullifier_seed,
     own_actor, pairing_request, record_time, register_slots, root_actor, root_seed, token_actor, token_seed, u128_of,
-    vault_request, verify_claim, Address, BridgeConfig, BridgeMessage, BridgeState,
-    BurnRecord, CapParams, ClaimWitness, Claimed, ConfigState, CosignedAction, DestKind, FeeSchedule, Gate,
-    HolderState, ImportProof, Note, NullifierState, PairingProof, Pending, PendingClaim, PendingImport, PendingTime,
-    RoleProposal, Roles, Root, RootState, ScheduleRange, TimeRecord, Timed, TokenEntry, TokenState, VaultProof,
-    MAX_WATCHERS, PROPOSAL_RECORD_AGE_MS, ROLE_TIMELOCK_MS, SLOT_RETIRED,
+    vault_request, verify_claim,
 };
-use ferrata_lez_wire::{attest::Attestation, header_actor, Message as AttestMessage};
+use ferrata_lez_wire::{Message as AttestMessage, attest::Attestation, header_actor};
 use lee_core::{
     account::AccountId,
-    program::{read_input_frame, ReceiveInput, Response, StateReply, SyncMessage, ValidityWindow},
+    program::{ReceiveInput, Response, StateReply, SyncMessage, ValidityWindow, read_input_frame},
 };
 use risc0_zkvm::guest::env;
 
@@ -150,11 +151,11 @@ fn handle(input: &ReceiveInput) -> Result<Response, Refusal> {
         }
         BridgeMessage::Echo { .. } => Ok(Response::keep_state()),
         BridgeMessage::Init { config, record_slot, proof } => init(input, program, state, config, record_slot, &proof),
-        BridgeMessage::Claim { config_id, leaf_count, witness, range, relayer } => {
-            claim(input, program, state, config_id, leaf_count, witness, range, relayer)
+        BridgeMessage::Claim { config_id, leaf_count, witness, relayer } => {
+            claim(input, program, state, config_id, leaf_count, witness, relayer)
         }
-        BridgeMessage::ClaimPrivately { config_id, leaf_count, witness, range, relayer } => {
-            let pending = PendingClaim { config_id, leaf_count, witness, range, relayer };
+        BridgeMessage::ClaimPrivately { config_id, leaf_count, witness, relayer } => {
+            let pending = PendingClaim { config_id, leaf_count, witness, relayer };
             claim_privately(input, program, state, pending)
         }
         BridgeMessage::Read => {
@@ -213,9 +214,9 @@ fn handle(input: &ReceiveInput) -> Result<Response, Refusal> {
         BridgeMessage::ExtendFees { config_id, token, index, schedule, count } => {
             extend_fees(input, program, state, config_id, token, index, schedule, count)
         }
-        BridgeMessage::Issue { config_id, token, nullifier, amount, range, leaf_count, mint_to, relayer } => {
+        BridgeMessage::Issue { config_id, token, nullifier, amount, leaf_count, mint_to, relayer } => {
             let claim = Issued { config_id, token, nullifier, amount, leaf_count, mint_to, relayer };
-            issue(input, program, state, claim, range)
+            issue(input, program, state, claim)
         }
         BridgeMessage::Admit { config_id, token, mints, value } => {
             admit(input, program, state, config_id, token, mints, value)
@@ -528,7 +529,6 @@ fn issue_message(
     root: &RootState,
     token: Address,
     claimed: &Claimed,
-    range: ScheduleRange,
     mint_to: Option<Root>,
     relayer: Option<Root>,
 ) -> SyncMessage {
@@ -537,7 +537,6 @@ fn issue_message(
         token,
         nullifier: claimed.nullifier,
         amount: claimed.amount,
-        range,
         leaf_count: root.leaf_count,
         mint_to,
         relayer,
@@ -555,7 +554,6 @@ fn claim(
     config_id: Root,
     leaf_count: u64,
     witness: ClaimWitness,
-    range: ScheduleRange,
     relayer: Option<Root>,
 ) -> Result<Response, Refusal> {
     if input.receiver != root_actor(program, &config_id, leaf_count) {
@@ -566,11 +564,11 @@ fn claim(
         Some(BridgeState::Root(root)) => root,
         Some(_) => return Err(code::BAD_STATE),
     };
-    let claimed = verify_claim(&root, &witness, &range)?;
+    let claimed = verify_claim(&root, &witness)?;
     if claimed.kind != DestKind::Public {
         return Err(code::WRONG_DESTINATION);
     }
-    let issue = issue_message(program, &root, witness.token, &claimed, range, Some(witness.dest), relayer);
+    let issue = issue_message(program, &root, witness.token, &claimed, Some(witness.dest), relayer);
     Ok(Response::keep_state().send(issue))
 }
 
@@ -609,7 +607,7 @@ fn claim_reply(input: &ReceiveInput, program: AccountId, state: &BridgeState) ->
         return Err(code::BAD_STATE);
     };
     let witness = &pending.witness;
-    let claimed = verify_claim(&root, witness, &pending.range)?;
+    let claimed = verify_claim(&root, witness)?;
     let mut holder = HolderState { holdings: holdings.clone(), pending: None };
     let mint_to = match claimed.kind {
         // Executed as the destination account itself: the mint is this private state.
@@ -622,19 +620,19 @@ fn claim_reply(input: &ReceiveInput, program: AccountId, state: &BridgeState) ->
         }
         DestKind::Public => Some(witness.dest),
     };
-    let issue = issue_message(program, &root, witness.token, &claimed, pending.range, mint_to, pending.relayer);
+    let issue = issue_message(program, &root, witness.token, &claimed, mint_to, pending.relayer);
     Ok(set(BridgeState::Holder(holder)).send(issue))
 }
 
 /// At `token(cid, token)`, from an actor of this program after a verified claim: the denomination,
-/// the fees of the claimed schedule range, the token's mint freeze and bucket; then the global
-/// ones at `config(cid)` and the spend at the nullifier.
+/// its fixed relay fee, the token's mint freeze and bucket; then the global ones at `config(cid)`
+/// and the spend at the nullifier. The vault took the mint fee at deposit, so this mints no mint fee
+/// and reads no schedule.
 fn issue(
     input: &ReceiveInput,
     program: AccountId,
     state: Option<BridgeState>,
     claim: Issued,
-    range: ScheduleRange,
 ) -> Result<Response, Refusal> {
     if !input.from_own_program() {
         return Err(code::WRONG_SENDER);
@@ -644,15 +642,12 @@ fn issue(
         return Err(code::WRONG_SENDER);
     }
     let mut state = token_state(state)?;
-    let (mint_fee, relay_fee) = state.fees_for(claim.amount, &range)?;
-    let minted = claim.amount.checked_add(mint_fee).and_then(|m| m.checked_add(relay_fee)).ok_or(code::BAD_STATE)?;
+    let relay_fee = state.relay_fee_for(claim.amount)?;
+    let minted = claim.amount.checked_add(relay_fee).ok_or(code::BAD_STATE)?;
     let value = state.entry.value(minted).ok_or(code::BAD_STATE)?;
     state.gate.admit(true, value)?;
     let fee_recipient = state.controls.fee_recipient;
     let mut fees = Vec::new();
-    if mint_fee > 0 {
-        fees.push((fee_recipient, mint_fee));
-    }
     if relay_fee > 0 {
         fees.push((claim.relayer.unwrap_or(fee_recipient), relay_fee));
     }

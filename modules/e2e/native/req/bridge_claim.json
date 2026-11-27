@@ -18,10 +18,4 @@
   ],
   "root": "0xfbff87727dacd07304897fd522396cd6f656ea53b8f024853734c31feb3127f6",
   "config_id": "0xc1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
-  "relayer": "0xe2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2",
-  "range": {
-    "index": 0,
-    "from_leaf": 0,
-    "until_leaf": 1000
-  }
-}
+  "relayer": "0xe2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2"}

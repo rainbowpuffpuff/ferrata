@@ -1,0 +1,20 @@
+$ ferrata --seed <work>/user/seed.txt --eth-rpc http://127.0.0.1:18547 --chain-id 11155111 --vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 --from-block 12220225 --sequencer http://127.0.0.1:3040 --lez-wallet <work>/user/lez-wallet --lez-password-file <work>/user/lez.pass --bridge-account 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d claim --plaintext --i-accept-plaintext-links-deposit --payer 0x8a7162a5acc0f2c0beab5a9d07dfab129e7dc9b18cd9c14b3090fe2cc40154b0 --relayer 0xc0fe2bd986326ba82ec6cafdde255e0a7ea70054f7def10080914cb173acc9bc --leaf 0
+
+claim on LEZ (configuration 0x3be8f71ad9d2b61c67e99d045de817fc67e91023e7af45c68693a7eaca844c96):
+  deposit      0.001 ETH (1000000000000000 base units, 18 decimals) to your public account /0, under root(cid, 2)
+  would send   Claim in a public transaction (the witness in the clear) to the bridge program 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d
+  nullifier N  0x1ef6c9eca7f955040411311da365e1164bcd0e8ad71b505964101816270ec91e
+  anonymity    1: a plaintext claim names its deposit
+  relay fee    0.000002 ETH (2000000000000 base units, 18 decimals) minted here (paid with the deposit on Ethereum); the LEZ fee is paid by the payer account, in public
+  delay        9 h after the deposit: from Ethereum block 12222934 (now 12222935), passed
+what becomes public (Plaintext claim (LEZ)):
+  public on Ethereum: nothing
+  public on LEZ:      the whole witness: the leaf index, the depositor, j, the secret s and the destination; the nullifier N; the denomination; which imported root was read; the destination and its balance
+  stays private:      nothing
+privacy of these choices: High: a direct link is public
+  !! Plaintext claim: names on LEZ which deposit paid which account.
+  !! Public destination: the account and its new balance are public.
+  !  Self-submitted: the account paying the LEZ fee is linked to the claim.
+WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
+public: PLAINTEXT CLAIM: the whole witness is public — which deposit (leaf, depositor, j), the secret s, the destination; anyone can link this mint to the Ethereum deposit
+not sent: a dry run (add --send --yes to sign and send)

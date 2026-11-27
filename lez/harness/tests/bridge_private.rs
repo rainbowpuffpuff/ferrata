@@ -7,13 +7,13 @@
 use std::{fs, path::PathBuf};
 
 use ferrata_lez_bridge_wire::{
-    own_actor, root_actor, token_actor, BridgeMessage, BridgeState, HolderState, Holding, NullifierState, ScheduleRange,
+    own_actor, root_actor, token_actor, BridgeMessage, BridgeState, HolderState, Holding, NullifierState,
 };
 use harness::{
     attest::render_executed,
     bridge::{
         catalog, fee_recipient, private_claim_transitions, private_keys, private_post_state, relayer, World, CHAIN_ID,
-        DENOMINATIONS, ETH, MINT_FEES_1, RELAY_FEES,
+        DENOMINATIONS, ETH, RELAY_FEES,
     },
     private::{describe_public_outputs, PrivateAccount},
     settle::LeeTransaction,
@@ -87,13 +87,12 @@ fn a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_re
             token: ETH,
             nullifier: n,
             amount: DENOMINATIONS[1],
-            range: ScheduleRange { index: 0, from_leaf: 0, until_leaf: 6 },
             leaf_count: 8,
             mint_to: None,
             relayer: Some(*relayer().value()),
         },
-        "Issue carries N, the token, the denomination, the root read, the fee schedule's range (not the leaf \
-         index) and the relayer; no destination and no time"
+        "Issue carries N, the token, the denomination, the root read and the relayer; no schedule, \
+         destination or time"
     );
     assert_eq!(outgoing[2].0, fee_inbox, "the fee transfer");
     assert!(matches!(borsh::from_slice(&outgoing[2].1), Ok(native_token::Message::Credit(_))));
@@ -112,7 +111,7 @@ fn a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_re
     );
     assert!(w.holder(&cid, account.id()).is_none(), "no public holder state at the private account");
     assert_eq!(w.balance(relayer(), &cid), RELAY_FEES[1], "the relay fee, minted publicly");
-    assert_eq!(w.balance(fee_recipient(), &cid), 0, "leaf 5 is under schedule 0: no mint fee");
+    assert_eq!(w.balance(fee_recipient(), &cid), 0, "no mint fee is minted on LEZ");
     // Private state: the chain holds the commitment of the account with its 1 ETH holding.
     let holder =
         HolderState { holdings: vec![Holding { config_id: cid, token: ETH, amount: DENOMINATIONS[1] }], pending: None };
@@ -206,7 +205,7 @@ fn a_private_claim_to_a_public_destination_and_the_refusals() {
         .expect("settles");
     assert!(run.charge.revert.is_none());
     assert_eq!(w.balance(w.chain.payer, &cid), DENOMINATIONS[2], "10 ETH minted to the public destination");
-    assert_eq!(w.balance(fee_recipient(), &cid), MINT_FEES_1[2], "leaf 6 is under schedule 1: its mint fee");
+    assert_eq!(w.balance(fee_recipient(), &cid), 0, "even a changed schedule mints no fee on LEZ");
     let bytes = borsh::to_vec(&LeeTransaction::PrivacyPreserving(run.tx.clone())).unwrap();
     assert!(!occurs(&bytes, &deposit.leaf()) && !occurs(&bytes, &deposit.s), "which deposit paid it is hidden");
     assert!(occurs(&bytes, w.chain.payer.value()), "the public destination is visible");

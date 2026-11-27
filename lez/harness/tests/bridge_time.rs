@@ -133,7 +133,7 @@ fn freezes_and_caps_follow_attested_time_only() {
     run(&mut reports, r, None);
     let leaf6 = w.vault_a.witness(&w.payer_deposit.clone(), 8);
     let vector = w.vault_a.witness(&w.vector.clone(), 5);
-    let r = w.claim("Claim leaf 6 (10.06 ETH of the 11)", &cid_a, 8, &va, leaf6);
+    let r = w.claim("Claim leaf 6 (10.01 ETH of the 11)", &cid_a, 8, &va, leaf6);
     run(&mut reports, r, None);
     w.time = honest + YEAR_MS;
     let r = w.tick("A block stamped a year ahead: Tick ETH (A) with the newest record", &cid_a, Some(ETH), newest);
@@ -142,7 +142,7 @@ fn freezes_and_caps_follow_attested_time_only() {
     run(&mut reports, r, None);
     assert_eq!(w.token_state(&cid_a, &ETH).unwrap().gate.now_ms, t0, "monotone: an older record moves nothing");
     let r = w.claim(
-        "Claim leaf 2 (1.001 ETH) in that block: 0.94 ETH left, nothing refilled",
+        "Claim leaf 2 (1.001 ETH) in that block: 0.99 ETH left, nothing refilled",
         &cid_a,
         5,
         &va,
@@ -157,7 +157,7 @@ fn freezes_and_caps_follow_attested_time_only() {
     run(&mut reports, r, None);
     let r = w.claim("Claim leaf 2 after it: 0.1 ETH refilled", &cid_a, 5, &va, vector);
     run(&mut reports, r, None);
-    assert_eq!(w.token_state(&cid_a, &ETH).unwrap().gate.mint.level, 940_000_000 + 100_000_000 - 1_001_000_000);
+    assert_eq!(w.token_state(&cid_a, &ETH).unwrap().gate.mint.level, 990_000_000 + 100_000_000 - 1_001_000_000);
     let month = w.finalize((t0 + MAX_FREEZE_MS) / 1000);
     let r = w.tick("Tick B: a record 30 days after the freeze's start", &cid_b, None, month);
     run(&mut reports, r, None);
