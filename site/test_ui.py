@@ -278,6 +278,9 @@ def main():
         paths = (("requirements", "#requirements"), ("verify", "/docs/VERIFY.md"), ("testers", "testers/"), ("runs", "#runs"))
         for width, js in [(w, True) for w in WIDTHS] + [(390, False), (1450, False)]:
             rp = page(width=width, height=900, js=js)
+            # The pinned docs/VERIFY.md on GitHub, answered here so the click is followed offline
+            rp.route("https://github.com/rainbowpuffpuff/ferrata/blob/**",
+                     lambda r: r.fulfill(status=200, content_type="text/html", body="<title>docs/VERIFY.md</title>"))
             rp.goto(base, wait_until="load")
             links = rp.locator(".hero .paths a.path")
             keys = [links.nth(i).get_attribute("data-path") for i in range(links.count())]
@@ -300,6 +303,12 @@ def main():
                     box = rp.locator(want).bounding_box()
                     check(rp.url.endswith(want) and box and -2 <= box["y"] < 900,
                           f"{width} px js={js}: reviewer link {key} does not bring {want} into view")
+                    rp.goto(base, wait_until="load")
+                elif key == "verify":
+                    link.click()
+                    rp.wait_for_load_state("load")
+                    check(rp.url == href and rp.title() == "docs/VERIFY.md",
+                          f"{width} px js={js}: the reviewer link to docs/VERIFY.md leads to {rp.url}")
                     rp.goto(base, wait_until="load")
             rp.locator(".hero .paths a[data-path=testers]").click()
             rp.wait_for_load_state("load")
