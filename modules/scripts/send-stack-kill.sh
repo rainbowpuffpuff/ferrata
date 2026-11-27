@@ -14,6 +14,9 @@
 #       SIGKILLed, a block mined, Logos Core started again: a second checkpoint
 #   K4  the endpoint down for a whole round (every call 503 or cut, the relayer's reads and Logos Core's), then up:
 #       the second checkpoint's finalizeAttested
+#   M1  ferrata_monitor_module (holding the watcher key too, its fallback) against a wrong candidate: its cancelCandidate's
+#       broadcast trapped before the node, every module host SIGKILLed, the modules loaded again, the monitor started
+#       again: the candidate cancelled once (a second cancel, if the module sent one, reverts: it changes nothing)
 #
 # After each, from the chain: every transaction of the relayer's account (nonce, call, status), each effect counted
 # (one each), and at the end the account's nonces 0..n-1 without a gap, every receipt status 1, no in-flight record
@@ -22,14 +25,14 @@
 #
 #   STACK=DIR FERRATA_LGX=DIR modules/scripts/send-stack-kill.sh OUT
 #     STACK: send-stack.sh build's OUT (lgx-<name>/ for the five stack modules, logos/bin/logosctl);
-#     FERRATA_LGX: check.sh's OUT (lgx-ferrata_relayer_module/)
+#     FERRATA_LGX: check.sh's OUT (lgx-ferrata_relayer_module/, lgx-ferrata_monitor_module/)
 # Box only (Nix-built modules, Foundry 1.3.6, a 1 GiB stack). Keys are fresh anvil-only keys, kept in OUT/run/keys.
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../.." && pwd)
 OUT=$(mkdir -p "${1:?OUT}" && cd "$1" && pwd)
 : "${STACK:?STACK: send-stack.sh build OUT (lgx-*/, logos/)}"
-: "${FERRATA_LGX:?FERRATA_LGX: check.sh OUT (lgx-ferrata_relayer_module/)}"
+: "${FERRATA_LGX:?FERRATA_LGX: check.sh OUT (lgx-ferrata_relayer_module/, lgx-ferrata_monitor_module/)}"
 LOGOSCTL=${LOGOSCTL:-$STACK/logos/bin/logosctl}
 export PATH="$HOME/.foundry/bin:$PATH" FOUNDRY_DISABLE_NIGHTLY_WARNING=1
 if [ "$(ulimit -s)" = unlimited ]; then ulimit -s 1048576; fi
@@ -72,16 +75,17 @@ trap cleanup EXIT
 mapfile -t accts < <(cast rpc --rpc-url "$up" eth_accounts | jq -r '.[]')
 deployer=${accts[0]} admin=${accts[1]} prover=${accts[2]} anyone=${accts[3]} fees=${accts[4]} recipient=${accts[5]} freezer=${accts[6]}
 RELAYER_KEY=$(cast wallet new | awk '/Private key/ {print $3}'); relayer=$(cast wallet address --private-key "$RELAYER_KEY")
+WATCHER_KEY=$(cast wallet new | awk '/Private key/ {print $3}'); watcher=$(cast wallet address --private-key "$WATCHER_KEY")
 pw="$R/keys/password"
-( umask 077; echo "$RELAYER_KEY" > "$R/keys/relayer.key"; echo "ferrata devnet only" > "$pw" )
-unset RELAYER_KEY
-cast rpc --rpc-url "$up" anvil_setBalance "$relayer" 0x56bc75e2d63100000 > /dev/null # 100 ETH, local
+( umask 077; echo "$RELAYER_KEY" > "$R/keys/relayer.key"; echo "$WATCHER_KEY" > "$R/keys/watcher.key"; echo "ferrata devnet only" > "$pw" )
+unset RELAYER_KEY WATCHER_KEY
+for a in "$relayer" "$watcher"; do cast rpc --rpc-url "$up" anvil_setBalance "$a" 0x56bc75e2d63100000 > /dev/null; done # 100 ETH, local
 label() { cast keccak "ferrata/send-stack-kill/$1"; }
 zero=0x0000000000000000000000000000000000000000000000000000000000000000 eth=0x0000000000000000000000000000000000000000
 genesis=$(label genesis)
 ( cd "$repo/vault" && { [ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 \
     OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0; } && forge build --quiet \
-  && FIXTURE_MODE_A=false FIXTURE_GENESIS=$genesis FIXTURE_ADMIN=$admin FIXTURE_FREEZER=$freezer FIXTURE_WATCHER=$anyone \
+  && FIXTURE_MODE_A=false FIXTURE_GENESIS=$genesis FIXTURE_ADMIN=$admin FIXTURE_FREEZER=$freezer FIXTURE_WATCHER=$watcher \
     FIXTURE_FEES=$fees forge script script/MonitorFixture.s.sol:MonitorFixture --rpc-url "$up" --slow --broadcast --unlocked \
     --sender "$deployer" ) > "$R/forge.log" 2>&1 || { tail -n 30 "$R/forge.log"; exit 1; }
 vault=$(cast to-check-sum-address "$(jq -r '.transactions[] | select(.contractName=="FerrataVault") | .contractAddress' \
@@ -97,12 +101,12 @@ cast send --unlocked --from "$anyone" --rpc-url "$up" --value $((denom + relay_f
   0 "$(label commitment/0)" 0 > "$R/deposit.log" 2>&1
 check devnet-deposit 1 "$(grep -c '^status *1' "$R/deposit.log")"
 jq -n --arg rpc "$rpc" --arg vault "$vault" --arg cid "$cid" --argjson deployBlock "$deploy_block" --arg relayer "$relayer" \
-  --arg recipient "$recipient" --arg anvil "$(anvil --version | head -n 1)" \
+  --arg watcher "$watcher" --arg recipient "$recipient" --arg anvil "$(anvil --version | head -n 1)" \
   '{chainId: 31337, rpcThroughProxy: $rpc, vault: $vault, lezConfigId: $cid, deployBlock: $deployBlock, relayer: $relayer,
-    recipient: $recipient, anvil: $anvil}' > "$R/devnet.json"
+    watcher: $watcher, recipient: $recipient, anvil: $anvil}' > "$R/devnet.json"
 
 # ---- Logos Core ------------------------------------------------------------------------------------------------
-MODS_ALL="eth_rpc_module fee_module keystore_module signer_manager_module tx_sender_module ferrata_relayer_module"
+MODS_ALL="eth_rpc_module fee_module keystore_module signer_manager_module tx_sender_module ferrata_relayer_module ferrata_monitor_module"
 # The processes of this session: the daemon (--config-dir S) and every module host (logos_host ... S/...).
 session_pids() {
   local p a
@@ -129,15 +133,17 @@ core_up() { # FIRST: install the packages too
   local d m
   if [ "${1:-}" = first ]; then
     for m in eth_rpc_module fee_module keystore_module signer_manager_module tx_sender_module; do ctl install "$STACK/lgx-$m"/*.lgx -y 2>&1 | tail -n 1; done
-    ctl install "$FERRATA_LGX/lgx-ferrata_relayer_module"/*.lgx -y 2>&1 | tail -n 1
+    for m in ferrata_relayer_module ferrata_monitor_module; do ctl install "$FERRATA_LGX/lgx-$m"/*.lgx -y 2>&1 | tail -n 1; done
   fi
-  for m in tx_sender_module ferrata_relayer_module; do ctl module load "$m" 2>&1 | tail -n 1; done
+  for m in tx_sender_module ferrata_relayer_module ferrata_monitor_module; do ctl module load "$m" 2>&1 | tail -n 1; done
   ctl module list --json > "$R/modules-$(date +%s%N).json" 2>&1
   c eth_rpc_module set_chain_config 31337 "{\"endpoint\":\"$rpc\",\"name\":\"anvil-behind-proxy\",\"testnet\":true}"
-  c keystore_module configure '{"approvers":["evm_signer_ui"],"custodians":["evm_keystore_ui","ferrata_relayer_module"],"managers":["signer_manager_module"]}'
-  c signer_manager_module configure '{"approvers":["evm_signer_ui"],"custodians":["evm_keystore_ui","ferrata_relayer_module"],"signers":["keystore_module"]}'
+  c keystore_module configure '{"approvers":["evm_signer_ui"],"custodians":["evm_keystore_ui","ferrata_relayer_module","ferrata_monitor_module"],"managers":["signer_manager_module"]}'
+  c signer_manager_module configure '{"approvers":["evm_signer_ui"],"custodians":["evm_keystore_ui","ferrata_relayer_module","ferrata_monitor_module"],"signers":["keystore_module"]}'
   c ferrata_relayer_module custody "{\"key_file\":\"$R/keys/relayer.key\",\"password_file\":\"$pw\",\"ttl_ms\":7200000}"
   CUSTODY=$(jq -r '.verdict // "?"' <<< "$LAST" 2>/dev/null)
+  c ferrata_monitor_module custody "{\"key_file\":\"$R/keys/watcher.key\",\"password_file\":\"$pw\",\"ttl_ms\":7200000}"
+  CUSTODY_M=$(jq -r '.verdict // "?"' <<< "$LAST" 2>/dev/null)
 }
 # Modules a kill left dead, loaded again (the daemon still runs).
 reload_hosts() {
@@ -181,20 +187,22 @@ wait_hit() { # SECS: until the proxy's one-shot fault fired
 # Every transaction of the relayer's account since the deployment: nonce, the vault method, status.
 art="$repo/vault/out/FerrataVault.sol/FerrataVault.json"
 jq '.methodIdentifiers | to_entries | map({key: ("0x" + .value), value: (.key | sub("\\(.*"; ""))}) | from_entries' "$art" > "$R/selectors.json"
-relayer_txs() {
-  local b h n from nonce input st; n=$(cast block-number --rpc-url "$up"); : > "$R/relayer-txs.jsonl"
+# txs_of ADDR FILE: every mined transaction of ADDR since the deployment, one JSON line each.
+txs_of() {
+  local who=$1 out=$2 b h n from nonce input st; n=$(cast block-number --rpc-url "$up"); : > "$out"
   for b in $(seq $((deploy_block + 1)) "$n"); do
     for h in $(cast block "$b" --json --rpc-url "$up" | jq -r '.transactions[]'); do
       from=$(cast tx "$h" from --rpc-url "$up")
-      [ "${from,,}" = "${relayer,,}" ] || continue
+      [ "${from,,}" = "${who,,}" ] || continue
       nonce=$(cast tx "$h" nonce --rpc-url "$up"); input=$(cast tx "$h" input --rpc-url "$up")
       st=$(cast receipt "$h" status --rpc-url "$up" 2>/dev/null | awk '{print $1}')
       jq -c -n --slurpfile s "$R/selectors.json" --arg h "$h" --argjson b "$b" --argjson n "$nonce" --arg sel "${input:0:10}" \
         --arg st "$st" '{nonce: $n, hash: $h, block: $b, call: ($s[0][$sel] // $sel), status: ($st | tonumber? // $st)}' \
-        >> "$R/relayer-txs.jsonl"
+        >> "$out"
     done
   done
 }
+relayer_txs() { txs_of "$relayer" "$R/relayer-txs.jsonl"; }
 count() { relayer_txs; jq -s --arg c "$1" '[.[] | select(.call == $c)] | length' "$R/relayer-txs.jsonl"; }
 all_txs() { relayer_txs; jq -s 'length' "$R/relayer-txs.jsonl"; }
 inflight() { [ -f "$STATE/inflight.json" ] && jq -c '{key, nonce, hash, request}' "$STATE/inflight.json" || echo none; }
@@ -282,6 +290,54 @@ note "K4: during the outage: $(jq -c '[.. | objects | select(.error? != null) | 
 echo pass > "$CTL"
 round K4b >> "$R/K4.log" 2>&1
 check K4-finalizeAttested-once 2 "$(count finalizeAttested)"
+
+# M1: the monitor against a wrong candidate, its cancel's broadcast trapped, every module host SIGKILLed.
+check monitor-custody ok "$CUSTODY_M"
+s3=$(label state/3)
+view="$R/node-view.json" blocks='{}'
+for i in $(seq 1 40); do blocks=$(jq -c --arg k "$i" --arg h "$(label "block/$i")" '. + {($k): $h}' <<< "$blocks"); done
+jq -n --argjson b "$blocks" --arg k1 "$(label key/1)" --arg k2 "$(label key/2)" --arg k3 "$(label key/3)" --arg k4 "$(label key/4)" \
+  '{node: "lez-honest", finalHeight: 40, finalBlocks: $b, keySets: [{fromBlock: 0, keys: [$k1, $k2, $k3, $k4], postingTimeframe: 900}]}' > "$view"
+MARGS=(--rpc "$rpc" --vault "$vault" --node "file:$view" --start-block "$deploy_block" --poll 1 --confirmations 0 --margin 120
+       --alert-level critical --max-polls 2 --state "$R/monitor-state.json" --send-via logos --from "$watcher" --key-file "$R/keys/watcher.key")
+mon_start() { # STEP
+  c ferrata_monitor_module start "$(jq -c -n --args '{args: $ARGS.positional}' -- "${MARGS[@]}" --alert-log "$R/$1-alerts.jsonl")"
+  printf '%s\n' "$LAST" > "$R/$1-start.json"
+}
+mon_wait() { # STEP
+  local st
+  for _ in $(seq 1200); do
+    st=$(ctl --timeout 60000 call ferrata_monitor_module status --json < /dev/null 2>/dev/null |
+      jq -c 'if (.result | type) == "string" then (.result | fromjson? // .result) else .result end' 2>/dev/null)
+    [ "$(jq -r '.running' <<< "$st" 2>/dev/null)" = true ] || break
+    sleep 0.5
+  done
+  printf '%s\n' "$st" > "$R/$1-status.json"
+}
+cancels() { txs_of "$watcher" "$R/watcher-txs.jsonl"; jq -s --argjson st "$1" '[.[] | select(.call == "cancelCandidate" and .status == $st)] | length' "$R/watcher-txs.jsonl"; }
+cast send --unlocked --from "$prover" --rpc-url "$up" "$vault" \
+  "submitCandidate((uint32,uint32,bytes32,bytes32,bytes32,uint64,uint64,bool,bytes32,uint64,bytes32,uint32,uint32),bytes)" \
+  "(3,2,$s2,$s3,$(label burn-root/3),3,0,false,$zero,30,$(label forged/30),4,3)" 0x > "$R/M1-submit.log" 2>&1
+check M1-wrong-candidate-submitted 1 "$(grep -c '^status *1' "$R/M1-submit.log")"
+rm -f "$CTL.hit"; echo "trap eth_sendRawTransaction" > "$CTL"
+mon_start M1a > "$R/M1.log" 2>&1
+if wait_hit 120; then
+  sleep 1
+  kill_pids $(host_pids $MODS_ALL)
+  note "M1: the monitor's cancel trapped at the proxy; every module host SIGKILLed"
+  check M1-nothing-left-before-restart 0 "$(cancels 1)"
+  echo pass > "$CTL"
+  reload_hosts $MODS_ALL >> "$R/M1.log" 2>&1
+  mon_start M1b >> "$R/M1.log" 2>&1; mon_wait M1b >> "$R/M1.log" 2>&1
+  note "M1: after the restart, the alerts: $(jq -s -c 'map({kind, via}) | .[0:6]' "$R/M1b-alerts.jsonl" 2>/dev/null)"
+else
+  note "M1: the trap never fired ($(cat "$CTL"))"; echo pass > "$CTL"; mon_wait M1a >> "$R/M1.log" 2>&1
+fi
+check M1-cancelled-once 1 "$(cancels 1)"
+note "M1: the watcher's transactions: $(jq -s -c 'map({nonce, call, status})' "$R/watcher-txs.jsonl")"
+check M1-candidate-gone "$zero" "$(cast call --rpc-url "$up" "$vault" 'candidates(bytes32)(bytes32,bytes32,uint64,uint32,uint48,uint32,uint64,address)' "$s3" | head -n 1)"
+check M1-watcher-nothing-queued "$(cast nonce --rpc-url "$up" "$watcher")" "$(cast nonce --block pending --rpc-url "$up" "$watcher")"
+check M1-watcher-nonces-without-gap "$(seq 0 $(( $(jq -s 'length' "$R/watcher-txs.jsonl") - 1 )) | paste -sd, -)" "$(jq -s -r 'map(.nonce) | sort | map(tostring) | join(",")' "$R/watcher-txs.jsonl")"
 
 # The whole account.
 relayer_txs
