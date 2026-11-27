@@ -868,7 +868,7 @@ async fn invariants(p: &DynProvider, zone: &HarnessLedger, side: &mut Side, user
     let unreleased: u128 = side.unreleased.values().sum();
     // ADR 0048: the protocol fees the vault escrowed for the fee recipient (`lezFees`) less what LEZ has minted of them.
     let lez_fees = eth::view(p, side.vault, IFees::lezFeesCall { token: Address::ZERO }, None).await?.to::<u128>();
-    let collected = zone.world.fees_state(&side.ctx.cid, &[0; 20]).map_or(0, |f| f.collected);
+    let collected = zone.world.fees_state(&side.ctx.cid, &[0; 20]).map_or(0, |f| f.collected_u128());
     ensure!(collected <= lez_fees, "{}: LEZ minted {collected} of fees, above the vault's total {lez_fees}", side.name);
     let uncollected = lez_fees - collected;
     ensure!(
@@ -1643,7 +1643,7 @@ async fn fee_schedules_over_both_halves() -> Result<()> {
     a.minted += minted_fees_2;
     let r = zone.world.collect_fees("A: CollectFees under the older record", &cid, [0; 20], b, u128::MAX, &a.vault.into_array());
     ensure!(r.exit_code == Some(247), "an older record's smaller total is refused (247): {:?}", r.exit_code);
-    let collected = zone.world.fees_state(&cid, &[0; 20]).map_or(0, |f| f.collected);
+    let collected = zone.world.fees_state(&cid, &[0; 20]).map_or(0, |f| f.collected_u128());
     ensure!(collected == mint_total + burn_total, "fees(cid, ETH) counts both collections: {collected}");
     invariants(&p, &zone, &mut a, &user).await?;
     let escrow_end = eth::view(&p, a.vault, IVault::escrowedCall { token: eth_token }, None).await?;

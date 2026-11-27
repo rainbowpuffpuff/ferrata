@@ -518,7 +518,7 @@ B_TYPES = [
         v("AttestListing", f("config_id", ROOT32), f("token", ADDRESS), f("record_slot", U64), f("proof", d("VaultProof"))),
         v("SetListing", f("config_id", ROOT32), f("token", ADDRESS), f("delisted", BOOL), f("record_slot", U64)),
         v("CollectFees", f("config_id", ROOT32), f("token", ADDRESS), f("record_slot", U64), f("limit", U128), f("proof", d("VaultProof"))),
-        v("AccrueFees", f("config_id", ROOT32), f("token", ADDRESS), f("total", U128), f("limit", U128)),
+        v("AccrueFees", f("config_id", ROOT32), f("token", ADDRESS), f("total", ROOT32), f("limit", U128)),
         v("MintFees", f("config_id", ROOT32), f("token", ADDRESS), f("amount", U128)),
         docs="Every message the bridge program handles (ferrata_lez_bridge_wire::BridgeMessage).",
     ),
@@ -580,8 +580,8 @@ B_TYPES = [
         "FeesState",
         f("config_id", ROOT32),
         f("token", ADDRESS),
-        f("collected", U128),
-        docs="fees(cid, token) (ADR 0048): the protocol fees of token minted to the fee recipient so far, in base units; written only by AccrueFees from config(cid).",
+        f("collected", ROOT32),
+        docs="fees(cid, token) (ADR 0048): the protocol fees of token minted to the fee recipient so far, in base units, a 256-bit big-endian word; written only by AccrueFees from config(cid).",
     ),
 ]
 

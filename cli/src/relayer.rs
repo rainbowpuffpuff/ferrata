@@ -1248,6 +1248,17 @@ async fn newest_record<L: crate::lez::Ledger>(
     p: &DynProvider,
     config: &ferrata_lez_bridge_wire::BridgeConfig,
 ) -> Result<std::result::Result<RecordAt, String>> {
+    record_block(ledger, p, config, None).await
+}
+
+/// [`newest_record`], or the record at `at` (an earlier finalized slot of the instance, one the zone holds a record
+/// of) when given.
+async fn record_block<L: crate::lez::Ledger>(
+    ledger: &L,
+    p: &DynProvider,
+    config: &ferrata_lez_bridge_wire::BridgeConfig,
+    at: Option<u64>,
+) -> Result<std::result::Result<RecordAt, String>> {
     use borsh::BorshDeserialize as _;
     use ferrata_core::witness::ExecutionSummary;
     let waiting = |reason: String| -> Result<std::result::Result<RecordAt, String>> { Ok(Err(reason)) };
@@ -1257,7 +1268,10 @@ async fn newest_record<L: crate::lez::Ledger>(
     if !instance.active {
         return waiting("the configuration's instance is not active yet".into());
     }
-    let slot = instance.finalized_slot;
+    let slot = at.unwrap_or(instance.finalized_slot);
+    if slot > instance.finalized_slot {
+        bail!("the record slot {slot} is past the instance's finalized slot {}", instance.finalized_slot);
+    }
     let bytes =
         ledger.actor_state(ferrata_lez_wire::header_actor(config.attestation, &config.instance_id, slot)).await?;
     if bytes.is_empty() {
@@ -1417,9 +1431,10 @@ pub struct PlannedCollection {
     pub record_slot: u64,
     pub block_number: u64,
     pub block_hash: Hash,
-    /// The vault's protocol-fee total of the token at that block, what LEZ minted of it before, and what this call mints.
-    pub total: u128,
-    pub collected: u128,
+    /// The vault's protocol-fee total of the token at that block and what LEZ minted of it before (256-bit words, as the
+    /// vault and `fees(cid, token)` hold them), and what this call mints.
+    pub total: Hash,
+    pub collected: Hash,
     pub amount: u128,
     /// The `fees(cid, token)` state the dry run says the collection writes.
     pub writes: ferrata_lez_bridge_wire::FeesState,
@@ -1445,12 +1460,14 @@ fn proof_entry_key(answer: &serde_json::Value, key: &Hash) -> Result<(Vec<Vec<u8
 /// the zone holds it. Refused before anything is built on a zone that runs B1's program (it has no `CollectFees`), for a
 /// token the configuration has not registered, or when the dry run refuses; `Waiting` when the newest record's total is
 /// minted already.
+#[allow(clippy::too_many_arguments)]
 pub async fn plan_fee_collection<L: crate::lez::Ledger>(
     ledger: &L,
     p: &DynProvider,
     ctx: &crate::lez::Context,
     token: ferrata_lez_bridge_wire::Address,
     limit: u128,
+    record_slot: Option<u64>,
 ) -> Result<FeeCollection> {
     use ferrata_lez_bridge_wire::{code, config_actor, fees_actor, token_actor, BridgeState, ConfigState};
     use ferrata_wallet::deployed::BridgeProgram;
@@ -1464,32 +1481,47 @@ pub async fn plan_fee_collection<L: crate::lez::Ledger>(
              deploy/testnet/F13-REDEPLOY.md)"
         );
     }
-    let config = match crate::lez::read(ledger, config_actor(ctx.program, &ctx.cid)).await? {
-        Some(BridgeState::Config(ConfigState::Ready { config, .. })) => config,
+    let (config, roles) = match crate::lez::read(ledger, config_actor(ctx.program, &ctx.cid)).await? {
+        Some(BridgeState::Config(ConfigState::Ready { config, roles, .. })) => (config, roles),
         Some(BridgeState::Config(ConfigState::Pairing { .. })) => {
             return waiting("the configuration is pairing (Init is outstanding)".into())
         }
         None => return waiting("the zone holds no config(cid): the configuration is not initialised".into()),
         Some(other) => bail!("config(cid) holds another state: {other:?}"),
     };
-    match crate::lez::read(ledger, token_actor(ctx.program, &ctx.cid, &token)).await? {
-        Some(BridgeState::Token(_)) => {}
+    let lez_unit = match crate::lez::read(ledger, token_actor(ctx.program, &ctx.cid, &token)).await? {
+        Some(BridgeState::Token(t)) => t.entry.lez_unit,
         None => bail!(
             "refused before anything was built: token {} is not registered under this configuration (code {} on LEZ)",
             hx(&token),
             code::NOT_REGISTERED
         ),
         Some(other) => bail!("token(cid, token) holds another state: {other:?}"),
-    }
+    };
     let current = match crate::lez::read(ledger, fees_actor(ctx.program, &ctx.cid, &token)).await? {
         None => None,
-        Some(BridgeState::Fees(f)) => Some(f),
+        // As `AccrueFees` checks: the account is this configuration's and this token's.
+        Some(BridgeState::Fees(f)) if f.config_id == ctx.cid && f.token == token => Some(f),
         Some(other) => bail!("fees(cid, token) holds another state: {other:?}"),
     };
-    let RecordAt { slot, record, block_number, block_hash, rlp_header, tag } = match newest_record(ledger, p, &config).await? {
-        Ok(at) => at,
-        Err(reason) => return waiting(reason),
-    };
+    let RecordAt { slot, record, block_number, block_hash, rlp_header, tag } =
+        match record_block(ledger, p, &config, record_slot).await? {
+            Ok(at) => at,
+            Err(reason) => return waiting(reason),
+        };
+    // F.12, as the program checks it: the record lies at least the admin's inbound depth behind the newest record the
+    // configuration's clock has read. With a depth, the newest record never does: an earlier one is named with
+    // `--record-slot`, and the clock moved on with `Tick` if it has not read a record deep enough past it.
+    if roles.deep_enough(slot).is_err() {
+        return waiting(format!(
+            "the configuration's inbound depth is {} slots and its clock's newest record is at slot {}: header(id, {slot}) \
+             is not deep enough (name an earlier record with --record-slot, at most slot {}, and let the clock read a \
+             newer one with Tick if needed)",
+            roles.inbound_depth_slots,
+            roles.tip_slot,
+            roles.tip_slot.saturating_sub(roles.inbound_depth_slots)
+        ));
+    }
     let key = ferrata_lez_bridge_wire::lez_fees_slot(&token);
     let answer: serde_json::Value = p
         .raw_request("eth_getProof".into(), (hx(&ctx.vault), [hx(&key)], tag))
@@ -1498,14 +1530,15 @@ pub async fn plan_fee_collection<L: crate::lez::Ledger>(
     let account = nodes(&answer["accountProof"])?;
     let (slot_nodes, _value) = proof_entry_key(&answer, &key)?;
     let proof = fees::fees_proof(account, slot_nodes, rlp_header);
-    let collected = current.map_or(0, |f| f.collected);
+    let collected = current.map_or([0u8; 32], |f| f.collected);
     let (total, amount, writes) =
         match fees::dry_run_collect(&ctx.cid, &config, &record, slot, &token, limit, &proof, current.as_ref()) {
             Ok(x) => x,
             Err(c) if c == code::ALREADY_WRITTEN => {
                 return waiting(format!(
-                    "nothing to collect: the vault's fee total of {} at block {block_number} (header(id, {slot})) is minted already ({collected})",
-                    hx(&token)
+                    "nothing to collect: the vault's fee total of {} at block {block_number} (header(id, {slot})) is minted already ({})",
+                    hx(&token),
+                    U256::from_be_bytes(collected)
                 ))
             }
             Err(c) => {
@@ -1517,6 +1550,13 @@ pub async fn plan_fee_collection<L: crate::lez::Ledger>(
                 )))
             }
         };
+    // `MintFees` mints whole LEZ units only (240 otherwise): a limit that cuts a unit is refused here, before sending.
+    if amount % lez_unit != 0 {
+        return Err(anyhow!(crate::codes::program_refusal(
+            u32::from(code::BAD_MESSAGE),
+            format!("refused before sending: {amount} base units is not a whole number of the token's LEZ unit {lez_unit} (choose a --limit that is)")
+        )));
+    }
     let c = fees::collect_call(ctx.program, &ctx.cid, &config, slot, token, limit, proof);
     let call = crate::lez::LezCall {
         what: c.what,

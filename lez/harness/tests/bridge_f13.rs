@@ -172,26 +172,26 @@ fn a_collection_mints_the_attested_total_once() {
     let first = fees_block(&mut w, cid, &vault, ETH, x);
     ok(&w.collect_fees("CollectFees: the vault's total X", &cid, ETH, first, u128::MAX, &vault.address));
     assert_eq!(w.balance(fee_recipient(), &cid), x, "the fee recipient is credited the total");
-    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected, x);
+    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected_u128(), x);
 
     refused(
         &w.collect_fees("CollectFees: the same record again", &cid, ETH, first, u128::MAX, &vault.address),
         code::ALREADY_WRITTEN,
     );
     assert_eq!(w.balance(fee_recipient(), &cid), x, "nothing more is minted");
-    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected, x);
+    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected_u128(), x);
 
     let later = fees_block(&mut w, cid, &vault, ETH, x + y);
     ok(&w.collect_fees("CollectFees: a later record, X + Y", &cid, ETH, later, u128::MAX, &vault.address));
     assert_eq!(w.balance(fee_recipient(), &cid), x + y, "only the growth is minted");
-    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected, x + y);
+    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected_u128(), x + y);
 
     refused(
         &w.collect_fees("CollectFees: the older record (X)", &cid, ETH, first, u128::MAX, &vault.address),
         code::IMPORT_MISMATCH,
     );
     assert_eq!(w.balance(fee_recipient(), &cid), x + y, "an older record mints nothing");
-    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected, x + y);
+    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected_u128(), x + y);
 }
 
 /// A limit below what is due mints only the limit; the next collection mints the rest.
@@ -203,10 +203,10 @@ fn a_limit_splits_a_collection() {
     let block = fees_block(&mut w, cid, &vault, ETH, total);
     ok(&w.collect_fees("CollectFees with a limit below the total", &cid, ETH, block, MINT_FEES_1[1], &vault.address));
     assert_eq!(w.balance(fee_recipient(), &cid), MINT_FEES_1[1]);
-    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected, MINT_FEES_1[1]);
+    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected_u128(), MINT_FEES_1[1]);
     ok(&w.collect_fees("CollectFees again: the rest", &cid, ETH, block, u128::MAX, &vault.address));
     assert_eq!(w.balance(fee_recipient(), &cid), total);
-    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected, total);
+    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected_u128(), total);
     refused(
         &w.collect_fees("CollectFees a third time: nothing due", &cid, ETH, block, u128::MAX, &vault.address),
         code::ALREADY_WRITTEN,
@@ -242,7 +242,7 @@ fn a_mint_freeze_stops_a_collection_until_it_ends() {
     ok(&w.role("Freeze (freeze authority): unfreeze ETH (A) mints", FREEZE_SEED, &freeze(0), eth_actor));
     ok(&w.collect_fees("CollectFees after the freeze ends", &cid, ETH, block, u128::MAX, &vault.address));
     assert_eq!(w.balance(fee_recipient(), &cid), MINT_FEES_1[1]);
-    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected, MINT_FEES_1[1]);
+    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected_u128(), MINT_FEES_1[1]);
 }
 
 /// A token mint bucket below what is due refuses the collection (255) with nothing minted or
@@ -276,13 +276,13 @@ fn a_token_bucket_below_what_is_due_refuses_and_a_limit_within_it_succeeds() {
         &vault.address,
     ));
     assert_eq!(w.balance(fee_recipient(), &cid), DENOMINATIONS[1]);
-    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected, DENOMINATIONS[1]);
+    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected_u128(), DENOMINATIONS[1]);
     refused(
         &w.collect_fees("CollectFees of the rest: the bucket is empty", &cid, ETH, block, u128::MAX, &vault.address),
         code::CAPPED,
     );
     assert_eq!(w.balance(fee_recipient(), &cid), DENOMINATIONS[1]);
-    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected, DENOMINATIONS[1]);
+    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected_u128(), DENOMINATIONS[1]);
 }
 
 /// A total that is not a multiple of the LEZ unit is refused at `MintFees` (240) and the whole
@@ -345,7 +345,7 @@ fn nobody_but_the_program_can_accrue_or_mint_fees() {
     ok(&w.collect_fees("CollectFees: the vault's total", &cid, ETH, block, u128::MAX, &vault.address));
     let fees = fees_actor(w.program, &cid, &ETH);
     let eth_actor = token_actor(w.program, &cid, &ETH);
-    let accrue = BridgeMessage::AccrueFees { config_id: cid, token: ETH, total: 2 * MINT_FEES_1[1], limit: u128::MAX };
+    let accrue = BridgeMessage::AccrueFees { config_id: cid, token: ETH, total: word_of_u128(2 * MINT_FEES_1[1]), limit: u128::MAX };
     refused(
         &w.send("AccrueFees as a user's top-level call at fees(A, ETH)", fees, &accrue, vec![fees]),
         code::WRONG_SENDER,
@@ -356,7 +356,7 @@ fn nobody_but_the_program_can_accrue_or_mint_fees() {
         code::WRONG_SENDER,
     );
     assert_eq!(w.balance(fee_recipient(), &cid), MINT_FEES_1[1], "nothing changed");
-    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected, MINT_FEES_1[1]);
+    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected_u128(), MINT_FEES_1[1]);
 }
 
 /// F.16: a collection under configuration B leaves configuration A's fees and fee recipient
@@ -369,16 +369,16 @@ fn a_collection_stays_within_its_configuration() {
     let block_b = fees_block(&mut w, cid_b, &vault_b, ETH, MINT_FEES_1[1]);
     ok(&w.collect_fees("CollectFees under B", &cid_b, ETH, block_b, u128::MAX, &vault_b.address));
     assert_eq!(w.balance(fee_recipient(), &cid_b), MINT_FEES_1[1]);
-    assert_eq!(w.fees_state(&cid_b, &ETH).unwrap().collected, MINT_FEES_1[1]);
+    assert_eq!(w.fees_state(&cid_b, &ETH).unwrap().collected_u128(), MINT_FEES_1[1]);
     assert_eq!(w.balance(fee_recipient(), &cid_a), 0, "A's fee recipient is untouched");
     assert!(w.fees_state(&cid_a, &ETH).is_none(), "A's fees account is untouched");
 
     let block_a = fees_block(&mut w, cid_a, &vault_a, ETH, 2 * MINT_FEES_1[1]);
     ok(&w.collect_fees("CollectFees under A", &cid_a, ETH, block_a, u128::MAX, &vault_a.address));
     assert_eq!(w.balance(fee_recipient(), &cid_a), 2 * MINT_FEES_1[1]);
-    assert_eq!(w.fees_state(&cid_a, &ETH).unwrap().collected, 2 * MINT_FEES_1[1]);
+    assert_eq!(w.fees_state(&cid_a, &ETH).unwrap().collected_u128(), 2 * MINT_FEES_1[1]);
     assert_eq!(w.balance(fee_recipient(), &cid_b), MINT_FEES_1[1], "B's fee recipient is untouched");
-    assert_eq!(w.fees_state(&cid_b, &ETH).unwrap().collected, MINT_FEES_1[1]);
+    assert_eq!(w.fees_state(&cid_b, &ETH).unwrap().collected_u128(), MINT_FEES_1[1]);
 }
 
 /// The F.13 privacy point end to end: two claims of 1 ETH on both sides of a fee change mint the
@@ -416,7 +416,7 @@ fn claims_stay_uniform_and_one_collection_names_no_user() {
     let block = fees_block(&mut w, cid, &vault, ETH, MINT_FEES_1[1]);
     ok(&w.collect_fees("CollectFees: the vault's escrowed mint fees", &cid, ETH, block, u128::MAX, &vault.address));
     assert_eq!(w.balance(fee_recipient(), &cid), MINT_FEES_1[1], "the schedule 1 mint fee, and nothing else");
-    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected, MINT_FEES_1[1]);
+    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected_u128(), MINT_FEES_1[1]);
 
     // The collection's transaction names no claim, deposit or leaf: its root message is a
     // CollectFees, and nothing but its five fields decodes from its bytes.
@@ -461,7 +461,7 @@ fn a_collection_waits_for_the_admins_inbound_depth() {
     ok(&w.tick("Tick A: a record 64 slots past the fees block", &cid, None, deep));
     ok(&w.collect_fees("CollectFees under the same record, now deep enough", &cid, ETH, block, u128::MAX, &vault.address));
     assert_eq!(w.balance(fee_recipient(), &cid), MINT_FEES_1[1]);
-    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected, MINT_FEES_1[1]);
+    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected_u128(), MINT_FEES_1[1]);
 }
 
 /// A collection imports no root, so `Sunset` does not stop it (ADR 0048): the fees the vault escrowed are still minted
@@ -477,5 +477,36 @@ fn a_collection_still_mints_after_sunset() {
     refused(&w.import("ImportRoot A after Sunset", &cid, block, vault.root(n), n, &vault.address), code::FROZEN);
     ok(&w.collect_fees("CollectFees A after Sunset", &cid, ETH, block, u128::MAX, &vault.address));
     assert_eq!(w.balance(fee_recipient(), &cid), MINT_FEES_1[1]);
-    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected, MINT_FEES_1[1]);
+    assert_eq!(w.fees_state(&cid, &ETH).unwrap().collected_u128(), MINT_FEES_1[1]);
+}
+
+/// The configuration's mint freeze (a `Freeze` with no token) stops a collection too: `MintFees` has `config(cid)` apply
+/// the global freezes and buckets (`Admit`), as a claim's `Issue` does; nothing is minted or counted until it ends.
+#[test]
+fn the_configurations_mint_freeze_stops_a_collection() {
+    let mut w = World::with_roots();
+    let (cid, vault) = (w.cid_a, w.vault_a.clone());
+    let block = fees_block(&mut w, cid, &vault, ETH, MINT_FEES_1[1]);
+    let at = config_actor(w.program, &cid);
+    let later = w.finalize(w.blocks[2].time_ms() / 1000 + 60);
+    let t = w.blocks[later].time_ms();
+    let record = w.blocks[later].time_record();
+    let freeze = |until_ms: u64| BridgeMessage::Freeze {
+        config_id: cid,
+        token: None,
+        mints: true,
+        burns: false,
+        until_ms,
+        record: record.clone(),
+    };
+    ok(&w.role("Freeze (freeze authority): A's mints for an hour", FREEZE_SEED, &freeze(t + HOUR_MS), at));
+    refused(
+        &w.collect_fees("CollectFees while the configuration's mints are frozen", &cid, ETH, block, u128::MAX, &vault.address),
+        code::FROZEN,
+    );
+    assert!(w.fees_state(&cid, &ETH).is_none(), "nothing is counted under the global freeze");
+    assert_eq!(w.balance(fee_recipient(), &cid), 0, "nothing is minted under the global freeze");
+    ok(&w.role("Freeze (freeze authority): unfreeze A's mints", FREEZE_SEED, &freeze(0), at));
+    ok(&w.collect_fees("CollectFees after the global freeze ends", &cid, ETH, block, u128::MAX, &vault.address));
+    assert_eq!(w.balance(fee_recipient(), &cid), MINT_FEES_1[1]);
 }

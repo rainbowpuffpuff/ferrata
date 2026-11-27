@@ -495,18 +495,22 @@ the cloud").
    On a rule (A) vault the daemon does not finalise (that needs the beacon proof, the prover's job).
 
 **Protocol fees on LEZ** (RFP-022 F.13, [ADR 0048](../decisions/0048-protocol-fees-minted-on-lez.md); prototype).
-`ferrata-relayer … collect-fees [--token ADDR] [--limit N]` (one shot, with `--sequencer` or `--lez-devnet` and
-`--bridge-account`): under the newest record of the configuration's light-client instance (its block checked against
-the Ethereum endpoint, as for a root import), it reads the vault's `lezFees(token)` with `eth_getProof`, dry-runs the
+`ferrata-relayer … collect-fees [--token ADDR] [--limit N] [--record-slot S]` (one shot, with `--sequencer` or
+`--lez-devnet` and `--bridge-account`): under the newest record of the configuration's light-client instance, or the
+record at slot `S` (its block checked against the Ethereum endpoint, as for a root import; with an inbound depth
+(`SetDepth`) the record must lie that many slots behind the newest one the configuration's clock has read, as for an
+import, and the newest never does, so name an earlier one), it reads the vault's `lezFees(token)` with `eth_getProof`, dry-runs the
 bridge program's `CollectFees` natively (the attestation program's evaluation, `check_lez_fees`, `FeesState::accrue`
 against `fees(cid, token)` as the zone holds it) and sends it from the relayer's LEZ account: the program mints the
 part of that total it has not minted yet (at most `--limit`, to stay within the token's mint bucket), in the wrapped
 token, to the configuration's fee recipient. Anyone may send it; it mints only to that recipient and names no user's
 transaction. It logs `lez-fees-collected` (the record, the block, the vault's total, what was minted before and now, the
 transaction, the fee recipient's holding before and after), `lez-fee-collection-waiting` (no record yet, or the total
-under the newest record is minted already: nothing sent) or `lez-fee-collection-unconfirmed`; it refuses before
-building anything on a zone that runs B1's program (no `CollectFees`) or for a token the configuration has not
-registered. Rehearsed on anvil and a local LEZ v0.4.0-rc3 sequencer by `e2e/f13/hook.sh`.
+under the newest record is minted already, or the record is not deep enough: nothing sent) or
+`lez-fee-collection-unconfirmed`; it refuses before building anything on a zone that runs B1's program (no
+`CollectFees`) or for a token the configuration has not registered, and before sending a `--limit` that is not a whole
+number of the token's LEZ unit. The count and the vault's total are 256-bit (a token's fees over a deployment's life are
+not bounded by 2^128); each collection mints at most 2^128 − 1. Rehearsed on anvil and a local LEZ v0.4.0-rc3 sequencer by `e2e/f13/hook.sh`.
 
 Logs are one JSON object per line (`start`, `root-imported`, `root-import-waiting`, `root-import-refused`,
 `root-import-failed`, `root-import-closed`, `job-done`, `job-refused`, `candidate-waiting`, `finalized`,

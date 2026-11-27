@@ -10,7 +10,7 @@
 use ferrata_bridge_core::Hash;
 use ferrata_lez_bridge_wire::{
     self as bw, config_actor, config_seed, fees_actor, fees_seed, holder_actor, holder_seed, token_actor, token_seed,
-    Address, BridgeConfig, BridgeMessage, FeesState, VaultProof,
+    Address, BridgeConfig, BridgeMessage, FeesState, VaultProof, Word,
 };
 use ferrata_lez_wire::{attest, header_actor, RecordState};
 use lee_core::account::AccountId;
@@ -82,14 +82,14 @@ pub fn dry_run_collect(
     limit: u128,
     proof: &VaultProof,
     current: Option<&FeesState>,
-) -> Result<(u128, u128, FeesState), u8> {
+) -> Result<(Word, u128, FeesState), u8> {
     let request = bw::vault_request(config, &[bw::lez_fees_slot(token)], proof)?;
     let recorded = record.header()?;
     let bound = if request.instance_id == record.root_id { &record.root_id } else { &record.instance_id };
     let attestation = attest::evaluate(bound, record.chain_id, &recorded, &request)?;
     let total = bw::check_lez_fees(config, token, record_slot, &attestation)?;
-    let fees = current.copied().unwrap_or(FeesState { config_id: *cid, token: *token, collected: 0 });
-    let (amount, after) = fees.accrue(total, limit)?;
+    let fees = current.copied().unwrap_or(FeesState::new(*cid, *token));
+    let (amount, after) = fees.accrue(&total, limit)?;
     Ok((total, amount, after))
 }
 

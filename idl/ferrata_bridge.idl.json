@@ -3543,7 +3543,12 @@
         },
         {
           "name": "total",
-          "type": "u128"
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
         },
         {
           "name": "limit",
@@ -5569,7 +5574,12 @@
             },
             {
               "name": "total",
-              "type": "u128"
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
             },
             {
               "name": "limit",
@@ -6118,11 +6128,16 @@
         },
         {
           "name": "collected",
-          "type": "u128"
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
         }
       ],
       "docs": [
-        "fees(cid, token) (ADR 0048): the protocol fees of token minted to the fee recipient so far, in base units; written only by AccrueFees from config(cid)."
+        "fees(cid, token) (ADR 0048): the protocol fees of token minted to the fee recipient so far, in base units, a 256-bit big-endian word; written only by AccrueFees from config(cid)."
       ]
     }
   ],
@@ -6140,7 +6155,7 @@
     {
       "code": 242,
       "name": "FROZEN",
-      "msg": "Mints or burns frozen (of the token, or of the whole configuration), or an import after `Sunset`, or a role proposal applied before its 14 days of attested time, or an import under a record less than the configuration's inbound depth behind its clock's."
+      "msg": "Mints or burns frozen (of the token, or of the whole configuration), or an import after `Sunset`, or a role proposal applied before its 14 days of attested time, or an import or a fee collection under a record less than the configuration's inbound depth behind its clock's."
     },
     {
       "code": 243,
@@ -6165,7 +6180,7 @@
     {
       "code": 247,
       "name": "IMPORT_MISMATCH",
-      "msg": "The attested facts are not the vault's slots holding what the message says (the root and count, the registry entry, a fee schedule, a schedule out of order), or are of another instance, chain or record; a vault whose `retired` flag is not set; a listing word other than 0 or 1, or a listing record no newer than the one the token holds; a `CollectFees` total below what is already minted (an older record) or above 2^128."
+      "msg": "The attested facts are not the vault's slots holding what the message says (the root and count, the registry entry, a fee schedule, a schedule out of order), or are of another instance, chain or record; a vault whose `retired` flag is not set; a listing word other than 0 or 1, or a listing record no newer than the one the token holds; a `CollectFees` total below what is already minted (an older record)."
     },
     {
       "code": 248,

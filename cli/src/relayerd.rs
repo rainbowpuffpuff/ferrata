@@ -221,9 +221,14 @@ pub enum Command {
         /// The token (ETH: the zero address).
         #[arg(long, default_value = "0x0000000000000000000000000000000000000000")]
         token: Address,
-        /// Mint at most this many base units (default: all that is due), e.g. to stay within the token's mint bucket.
+        /// Mint at most this many base units (default: all that is due), e.g. to stay within the token's mint bucket; a
+        /// whole number of the token's LEZ unit.
         #[arg(long)]
         limit: Option<u128>,
+        /// The record to read the vault under (default: the instance's newest): with an inbound depth, a record at
+        /// least that many slots behind the newest one the configuration's clock has read.
+        #[arg(long)]
+        record_slot: Option<u64>,
     },
 }
 
@@ -1477,20 +1482,22 @@ pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Op
                 }),
             );
         }
-        Command::CollectFees { token, limit } => {
+        Command::CollectFees { token, limit, record_slot } => {
             let Some((zone, ctx)) = d.zone.as_mut() else {
                 bail!("collect-fees needs a zone: --sequencer, or --lez-devnet for the devnet")
             };
             let token = token.into_array();
-            match relayer::plan_fee_collection(&*zone, &d.p, ctx, token, limit.unwrap_or(u128::MAX)).await? {
+            match relayer::plan_fee_collection(&*zone, &d.p, ctx, token, limit.unwrap_or(u128::MAX), record_slot).await? {
                 relayer::FeeCollection::Waiting { reason } => {
                     log(&sink, "lez-fee-collection-waiting", json!({ "token": hx(&token), "reason": reason }));
                 }
                 relayer::FeeCollection::Planned(plan) => {
                     let mut fields = json!({
                         "token": hx(&token), "recordSlot": plan.record_slot, "block": plan.block_number,
-                        "blockHash": hx(&plan.block_hash), "vaultTotal": plan.total.to_string(),
-                        "collectedBefore": plan.collected.to_string(), "amount": plan.amount.to_string(),
+                        "blockHash": hx(&plan.block_hash),
+                        "vaultTotal": alloy::primitives::U256::from_be_bytes(plan.total).to_string(),
+                        "collectedBefore": alloy::primitives::U256::from_be_bytes(plan.collected).to_string(),
+                        "amount": plan.amount.to_string(),
                         "accounts": plan.call.mentions.len(),
                     });
                     // The fee recipient's holding of the token under this configuration, at its holder(cid, account).

@@ -56,7 +56,7 @@ use ferrata_lez_bridge_wire::{
     CosignedAction, DestKind, FeeSchedule, FeesState, Gate, HolderState, ImportProof, MAX_WATCHERS, Note,
     NullifierState, PROPOSAL_RECORD_AGE_MS, PairingProof, Pending, PendingClaim, PendingImport, PendingTime,
     ROLE_TIMELOCK_MS, RoleProposal, Roles, Root, RootState, SLOT_RETIRED, TimeRecord, Timed, TokenEntry, TokenState,
-    VaultProof, burn_actor, burn_seed, check_fees, check_import, check_lez_fees, check_listing, check_pairing,
+    VaultProof, Word, burn_actor, burn_seed, check_fees, check_import, check_lez_fees, check_listing, check_pairing,
     check_register, check_retired, code, config_actor, fees_actor, fees_seed, fees_slots, holder_actor, holder_seed,
     import_request, lez_fees_slot, listing_slot, nullifier_actor, nullifier_seed, own_actor, pairing_request,
     record_time, register_slots, root_actor, root_seed, token_actor, token_seed, u128_of, vault_request, verify_claim,
@@ -800,7 +800,7 @@ fn accrue_fees(
     state: Option<BridgeState>,
     config_id: Root,
     token: Address,
-    total: u128,
+    total: Word,
     limit: u128,
 ) -> Result<Response, Refusal> {
     if input.from != Some(config_actor(program, &config_id)) {
@@ -810,11 +810,11 @@ fn accrue_fees(
         return Err(code::WRONG_SENDER);
     }
     let fees = match state {
-        None => FeesState { config_id, token, collected: 0 },
+        None => FeesState::new(config_id, token),
         Some(BridgeState::Fees(fees)) if fees.config_id == config_id && fees.token == token => fees,
         Some(_) => return Err(code::BAD_STATE),
     };
-    let (amount, fees) = fees.accrue(total, limit)?;
+    let (amount, fees) = fees.accrue(&total, limit)?;
     let mint = BridgeMessage::MintFees { config_id, token, amount };
     // With the token's seed, as every message to `token(cid, token)` carries one: a token the configuration never
     // registered is then refused by `MintFees` itself (`NOT_REGISTERED`), not left unadmitted by LEZ.

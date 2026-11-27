@@ -171,6 +171,33 @@ pub fn word_of_u128(n: u128) -> Word {
     w
 }
 
+/// `a - b` of two 256-bit big-endian words, `None` if `b > a`.
+pub fn word_sub(a: &Word, b: &Word) -> Option<Word> {
+    let (a_hi, a_lo) = halves(a);
+    let (b_hi, b_lo) = halves(b);
+    let (lo, borrow) = a_lo.overflowing_sub(b_lo);
+    let hi = a_hi.checked_sub(b_hi)?.checked_sub(u128::from(borrow))?;
+    Some(join(hi, lo))
+}
+
+/// `a + n` of a 256-bit big-endian word and a `u128`, `None` above 2^256 - 1.
+pub fn word_add_u128(a: &Word, n: u128) -> Option<Word> {
+    let (hi, lo) = halves(a);
+    let (lo, carry) = lo.overflowing_add(n);
+    Some(join(hi.checked_add(u128::from(carry))?, lo))
+}
+
+fn halves(w: &Word) -> (u128, u128) {
+    (u128::from_be_bytes(w[..16].try_into().expect("16 bytes")), u128::from_be_bytes(w[16..].try_into().expect("16 bytes")))
+}
+
+fn join(hi: u128, lo: u128) -> Word {
+    let mut w = [0u8; 32];
+    w[..16].copy_from_slice(&hi.to_be_bytes());
+    w[16..].copy_from_slice(&lo.to_be_bytes());
+    w
+}
+
 // ---------------------------------------------------------------------------------------------
 // Bounds (proposal §B4, D13)
 // ---------------------------------------------------------------------------------------------
@@ -1106,9 +1133,9 @@ pub enum BridgeMessage {
     /// `fees(cid, token)`, which mints at most `limit` of what is not minted yet to the fee recipient. No user's
     /// transaction is involved: the amount is a total over every deposit and release up to that record.
     CollectFees { config_id: Root, token: Address, record_slot: u64, limit: u128, proof: VaultProof },
-    /// Variant 32. `config(cid)` → `fees(cid, token)` only: the attested total; `fees(cid, token)` keeps the new count
-    /// and sends `MintFees` for the difference (at most `limit`).
-    AccrueFees { config_id: Root, token: Address, total: u128, limit: u128 },
+    /// Variant 32. `config(cid)` → `fees(cid, token)` only: the attested total (a 256-bit big-endian word, as the vault
+    /// holds it); `fees(cid, token)` keeps the new count and sends `MintFees` for the difference (at most `limit`).
+    AccrueFees { config_id: Root, token: Address, total: Word, limit: u128 },
     /// Variant 33. `fees(cid, token)` → `token(cid, token)` only: mint `amount` (a multiple of the LEZ unit) to the
     /// configuration's fee recipient, through the token's and the configuration's mint freezes and buckets.
     MintFees { config_id: Root, token: Address, amount: u128 },
@@ -1368,28 +1395,42 @@ pub struct BurnRecord {
 }
 
 /// `fees(cid, token)` (ADR 0048): the protocol fees of `token` minted to the fee recipient under `cid` so far, in base
-/// units. It only grows, and never above the vault's attested [`lez_fees_slot`] total.
+/// units, a 256-bit big-endian word as the vault's total is (a cumulative total over a deployment's life is not bounded
+/// by 2^128 even though each fee is: the review of 27 November 2026). It only grows, and never above the vault's
+/// attested [`lez_fees_slot`] total.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct FeesState {
     pub config_id: Root,
     pub token: Address,
-    pub collected: u128,
+    pub collected: Word,
 }
 
 impl FeesState {
-    /// What `AccrueFees` mints of an attested `total`: the part not minted yet, at most `limit`, and the count after
-    /// it. `IMPORT_MISMATCH` for a total below the count (an older record than one already used), `ALREADY_WRITTEN`
-    /// when nothing is left to mint, `BAD_MESSAGE` for a zero limit.
-    pub fn accrue(&self, total: u128, limit: u128) -> Result<(u128, FeesState), u8> {
+    /// The state before the first collection: nothing minted.
+    pub fn new(config_id: Root, token: Address) -> Self {
+        FeesState { config_id, token, collected: [0u8; 32] }
+    }
+
+    /// The count as a `u128`, for tests and displays of counts below 2^128 (panics above it).
+    pub fn collected_u128(&self) -> u128 {
+        u128_of(&self.collected).expect("a count below 2^128")
+    }
+
+    /// What `AccrueFees` mints of an attested `total`: the part not minted yet, at most `limit` (one mint is a `u128`,
+    /// as every LEZ amount), and the count after it. `IMPORT_MISMATCH` for a total below the count (an older record than
+    /// one already used), `ALREADY_WRITTEN` when nothing is left to mint, `BAD_MESSAGE` for a zero limit.
+    pub fn accrue(&self, total: &Word, limit: u128) -> Result<(u128, FeesState), u8> {
         if limit == 0 {
             return Err(code::BAD_MESSAGE);
         }
-        let due = total.checked_sub(self.collected).ok_or(code::IMPORT_MISMATCH)?;
-        if due == 0 {
+        let due = word_sub(total, &self.collected).ok_or(code::IMPORT_MISMATCH)?;
+        if due == [0u8; 32] {
             return Err(code::ALREADY_WRITTEN);
         }
-        let amount = due.min(limit);
-        Ok((amount, FeesState { collected: self.collected + amount, ..*self }))
+        let amount = u128_of(&due).map_or(limit, |d| d.min(limit));
+        // collected + amount <= total < 2^256: the addition cannot overflow.
+        let collected = word_add_u128(&self.collected, amount).ok_or(code::BAD_STATE)?;
+        Ok((amount, FeesState { collected, ..*self }))
     }
 }
 
@@ -1598,11 +1639,10 @@ pub fn check_listing(
 }
 
 /// The reply to `CollectFees` (ADR 0048): the vault's [`lez_fees_slot`] of `token` under the record at
-/// `record_slot`, the protocol fees it has escrowed for the fee recipient on LEZ; a total above 2^128 is
-/// `IMPORT_MISMATCH` (no vault reaches it: every fee is at most 1% of a denomination below 2^128).
-pub fn check_lez_fees(config: &BridgeConfig, token: &Address, record_slot: u64, attestation: &Attestation) -> Result<u128, u8> {
+/// `record_slot`, the protocol fees it has escrowed for the fee recipient on LEZ, as the 256-bit word the vault holds.
+pub fn check_lez_fees(config: &BridgeConfig, token: &Address, record_slot: u64, attestation: &Attestation) -> Result<Word, u8> {
     let [word] = vault_slots(config, record_slot, attestation, [lez_fees_slot(token)]).ok_or(code::IMPORT_MISMATCH)?;
-    u128_of(&word).ok_or(code::IMPORT_MISMATCH)
+    Ok(word)
 }
 
 /// The reply to `AttestRetired`: the vault's [`SLOT_RETIRED`] under the record at `record_slot`
@@ -1728,7 +1768,7 @@ pub mod code {
         /// and count, the registry entry, a fee schedule, a schedule out of order), or are of
         /// another instance, chain or record; a vault whose `retired` flag is not set; a listing
         /// word other than 0 or 1, or a listing record no newer than the one the token holds; a
-        /// `CollectFees` total below what is already minted (an older record) or above 2^128.
+        /// `CollectFees` total below what is already minted (an older record).
         IMPORT_MISMATCH = 247;
         /// A leaf index at or above the imported root's leaf count (a root not imported yet is
         /// `NOT_FOUND`).
@@ -1932,15 +1972,15 @@ mod tests {
         let bytes = borsh::to_vec(&collect).unwrap();
         assert_eq!(bytes[0], 31);
         assert_eq!(bytes.len(), 1 + 32 + 20 + 8 + 16 + 4 + 4);
-        let accrue = BridgeMessage::AccrueFees { config_id: [7; 32], token: [2; 20], total: 5, limit: 6 };
+        let accrue = BridgeMessage::AccrueFees { config_id: [7; 32], token: [2; 20], total: word_of_u128(5), limit: 6 };
         assert_eq!(borsh::to_vec(&accrue).unwrap()[0], 32);
         let mint = BridgeMessage::MintFees { config_id: [7; 32], token: [2; 20], amount: 5 };
         assert_eq!(borsh::to_vec(&mint).unwrap()[0], 33);
         let listing = BridgeMessage::SetListing { config_id: [7; 32], token: [2; 20], delisted: true, record_slot: 1 };
         assert_eq!(borsh::to_vec(&listing).unwrap()[0], 30);
-        let fees = BridgeState::Fees(FeesState { config_id: [7; 32], token: [2; 20], collected: 3 });
+        let fees = BridgeState::Fees(FeesState { config_id: [7; 32], token: [2; 20], collected: word_of_u128(3) });
         let encoded = borsh::to_vec(&fees).unwrap();
-        assert_eq!((encoded[0], encoded.len()), (6, 1 + 32 + 20 + 16));
+        assert_eq!((encoded[0], encoded.len()), (6, 1 + 32 + 20 + 32));
         assert_eq!(BridgeState::try_from_slice(&encoded).unwrap(), fees);
         let burn = BridgeState::Burn(BurnRecord {
             config_id: [7; 32],
@@ -1952,24 +1992,57 @@ mod tests {
     /// ADR 0048: what one `AccrueFees` mints of an attested total, and what it refuses.
     #[test]
     fn accrue_mints_the_rest_at_most_the_limit_and_refuses_an_older_total() {
-        let none = FeesState { config_id: [7; 32], token: [2; 20], collected: 0 };
-        let (amount, after) = none.accrue(30, u128::MAX).unwrap();
-        assert_eq!((amount, after.collected), (30, 30));
+        let w = word_of_u128;
+        let none = FeesState::new([7; 32], [2; 20]);
+        let (amount, after) = none.accrue(&w(30), u128::MAX).unwrap();
+        assert_eq!((amount, after.collected), (30, w(30)));
         assert_eq!(after.config_id, [7; 32]);
         assert_eq!(after.token, [2; 20]);
         // A limit splits a collection (a mint bucket smaller than what is due): the rest stays for the next one.
-        let (amount, part) = none.accrue(30, 10).unwrap();
-        assert_eq!((amount, part.collected), (10, 10));
-        let (amount, rest) = part.accrue(30, u128::MAX).unwrap();
-        assert_eq!((amount, rest.collected), (20, 30));
+        let (amount, part) = none.accrue(&w(30), 10).unwrap();
+        assert_eq!((amount, part.collected), (10, w(10)));
+        let (amount, rest) = part.accrue(&w(30), u128::MAX).unwrap();
+        assert_eq!((amount, rest.collected), (20, w(30)));
         // Nothing new: the total is minted already.
-        assert_eq!(rest.accrue(30, u128::MAX), Err(code::ALREADY_WRITTEN));
+        assert_eq!(rest.accrue(&w(30), u128::MAX), Err(code::ALREADY_WRITTEN));
         // An older record (a smaller total) is refused, never minted twice.
-        assert_eq!(rest.accrue(29, u128::MAX), Err(code::IMPORT_MISMATCH));
-        assert_eq!(none.accrue(30, 0), Err(code::BAD_MESSAGE));
+        assert_eq!(rest.accrue(&w(29), u128::MAX), Err(code::IMPORT_MISMATCH));
+        assert_eq!(none.accrue(&w(30), 0), Err(code::BAD_MESSAGE));
         // A total that grew mints exactly the growth.
-        let (amount, later) = rest.accrue(45, u128::MAX).unwrap();
-        assert_eq!((amount, later.collected), (15, 45));
+        let (amount, later) = rest.accrue(&w(45), u128::MAX).unwrap();
+        assert_eq!((amount, later.collected), (15, w(45)));
+    }
+
+    /// The review of 27 November 2026: a token's cumulative fee total may pass 2^128 (each fee is at most 1% of a
+    /// denomination below 2^127, but there is no bound on their number), and collections go on across it: the count is
+    /// a 256-bit word, each mint at most the limit.
+    #[test]
+    fn collections_go_on_past_two_to_the_128() {
+        let max = u128::MAX;
+        let mut above = word_of_u128(max);
+        above = word_add_u128(&above, 1).unwrap();
+        assert_eq!(above[15], 1, "2^128");
+        assert_eq!(u128_of(&above), None);
+        let start = FeesState::new([7; 32], [2; 20]);
+        // Up to exactly 2^128 - 1: one mint of it all.
+        let (amount, at_max) = start.accrue(&word_of_u128(max), max).unwrap();
+        assert_eq!((amount, at_max.collected), (max, word_of_u128(max)));
+        // One past it: the rest, 1.
+        let (amount, past) = at_max.accrue(&above, max).unwrap();
+        assert_eq!((amount, past.collected), (1, above));
+        // A due above 2^128 is minted at most the limit at a time, the count passing 2^128 on the way.
+        let total = word_add_u128(&above, 5).unwrap();
+        let (amount, part) = start.accrue(&total, max).unwrap();
+        assert_eq!((amount, part.collected), (max, word_of_u128(max)));
+        let (amount, done) = part.accrue(&total, max).unwrap();
+        assert_eq!(amount, 6);
+        assert_eq!(done.collected, total);
+        assert_eq!(done.accrue(&total, max), Err(code::ALREADY_WRITTEN));
+        assert_eq!(done.accrue(&above, max), Err(code::IMPORT_MISMATCH));
+        // The arithmetic itself.
+        assert_eq!(word_sub(&above, &word_of_u128(1)), Some(word_of_u128(max)));
+        assert_eq!(word_sub(&word_of_u128(1), &above), None);
+        assert_eq!(word_add_u128(&[0xff; 32], 1), None);
     }
 
     /// ADR 0048: burn fees are minted on LEZ like mint fees, so a schedule whose burn fee is not a multiple of the LEZ

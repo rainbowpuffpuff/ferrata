@@ -616,7 +616,7 @@ fn bridge_vectors() -> Vec<Vector> {
             limit: 5_000_000_000_000,
             proof: bw::VaultProof { account: vec![vec![0xf8, 0x52]], slots: vec![vec![vec![0xe3, 0x02]]] },
         },
-        AccrueFees { config_id: r(60), token: a(40), total: 7_000_000_000_000, limit: u128::MAX },
+        AccrueFees { config_id: r(60), token: a(40), total: bw::word_of_u128(7_000_000_000_000), limit: u128::MAX },
         MintFees { config_id: r(60), token: a(40), amount: 7_000_000_000_000 },
     ];
     let mut out: Vec<Vector> = Vec::new();
@@ -711,7 +711,7 @@ fn bridge_vectors() -> Vec<Vector> {
             then: bw::Timed::Freeze { mints: false, burns: true, until_ms: 9 },
         }))),
         bw::BridgeState::Token(bw::TokenState { delisted: true, listing_slot: 11_547_320, ..token_state(None) }),
-        bw::BridgeState::Fees(bw::FeesState { config_id: r(60), token: a(40), collected: 7_000_000_000_000 }),
+        bw::BridgeState::Fees(bw::FeesState { config_id: r(60), token: a(40), collected: bw::word_of_u128(7_000_000_000_000) }),
     ];
     let mut seen = std::collections::BTreeMap::<&str, u32>::new();
     for s in &states {
