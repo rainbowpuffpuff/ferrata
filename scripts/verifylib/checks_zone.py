@@ -415,9 +415,15 @@ def zone_checkpoint(ctx):
         tip_block = next((row for row in rows if int(row["block"]) == 164), {})
         for name, got, want in (
                 ("word 0, the checkpoint domain", words[0].hex(), CHECKPOINT_DOMAIN.hex()),
-                ("words 1-3, chain, vault, configuration", (_uint(words[1]), _address(words[2]), words[3].hex()),
+                ("words 1-3, chain, vault, configuration (the run's)",
+                 (_uint(words[1]), _address(words[2]), words[3].hex()),
                  (int(identity["chainId"]), _hex32(identity["vault"]), _hex32(params["lezConfigId"]))),
-                ("words 4-5, the floors", (_uint(words[4]), _uint(words[5])), (params["nMin"], params["tMin"])),
+                ("words 1-3, chain, vault, configuration (the checkpoint record's)",
+                 (_uint(words[1]), _address(words[2]), words[3].hex()),
+                 (int(meta["evm_chain_id"]), _hex32(meta["vault"]), _hex32(meta["lez_config_id"]))),
+                ("words 4-5, the floors (the run's)", (_uint(words[4]), _uint(words[5])), (params["nMin"], params["tMin"])),
+                ("words 4-5, the floors (the checkpoint record's)", (_uint(words[4]), _uint(words[5])),
+                 (int(meta["n_min"]), int(meta["t_min"]))),
                 ("word 6, the parent state (the vault's genesis)", words[6].hex(), _hex32(params["genesisState"])),
                 ("word 6, the parent state (the record's)", words[6].hex(), _hex32(meta["parent_state"])),
                 ("word 7, the new state", words[7].hex(), _hex32(meta["new_state"])),
@@ -425,12 +431,16 @@ def zone_checkpoint(ctx):
                 ("words 9-10, burns and imported leaves", (_uint(words[9]), _uint(words[10])),
                  (burn_count, imported_leaves)),
                 ("word 11, sunset", _uint(words[11]), int(bool(meta["sunset"]))),
+                ("word 12, the echo nonce (zero under rule (B), checkpoint-core's rule_b.rs)", _uint(words[12]), 0),
                 ("words 13-14, the tip (the collector's)", (_uint(words[13]), words[14].hex()),
                  (int(attestor["tip_id"]), _hex32(attestor["tip_hash"]))),
                 ("words 13-14, the tip (the checkpoint record's)", (_uint(words[13]), words[14].hex()),
                  (int(meta["tip"]), _hex32(meta["tip_hash"]))),
                 ("word 14, the tip's hash (blocks.tsv's block 164)", words[14].hex(), _hex32(tip_block.get("hash", ""))),
-                ("words 15-16, n and t", (_uint(words[15]), _uint(words[16])), (attestor["n"], attestor["t"]))):
+                ("words 15-16, n and t (the collector's)", (_uint(words[15]), _uint(words[16])),
+                 (attestor["n"], attestor["t"])),
+                ("words 15-16, n and t (the checkpoint record's)", (_uint(words[15]), _uint(words[16])),
+                 (int(meta["n"]), int(meta["t"])))):
             _same(problems, meta_rel, f"the proven journal's {name}", got, want)
     # the three attestations used, as attestor-core encodes them, are in the guest's input; the one left out is not
     guest_input = ctx.path(f"{CHECKPOINT}/zone-28-164.input").read_bytes()

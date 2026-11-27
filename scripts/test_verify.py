@@ -256,6 +256,7 @@ class EvidenceRows(TamperCase):
         """Review round 2 (M3, L6): a digit put before a figure, and each figure only one guard reads, altered alone."""
         cases = (
             ("docs/EVIDENCE.md", "672 updates applied", "1672 updates applied", "EVIDENCE row 271"),
+            ("docs/EVIDENCE.md", "as of LEZ block 25,776 (", "as of LEZ block 25,776.5 (", "EVIDENCE row 271"),
             ("docs/EVIDENCE.md", ", 0 over 1 h", ", 10 over 1 h", "EVIDENCE row 271"),
             ("docs/EVIDENCE.md", "224 updates on each full UTC day", "225 updates on each full UTC day", "EVIDENCE row 271"),
             ("docs/EVIDENCE.md", "1 min 23 s", "1 min 24 s", "EVIDENCE row 271"),

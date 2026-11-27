@@ -46,14 +46,14 @@ def _duration(seconds: float) -> str:
 
 
 def _states(problems: list, where: str, line: str | None, fragments) -> None:
-    """Each fragment in the line as a whole figure: no digit, comma or point just before it, nor a digit or a
-    thousands group just after it when it ends with a digit (so "672 updates" is not found in "1672 updates", "0 over"
-    not in "10 over", "25" not in "25,776")."""
+    """Each fragment in the line as a whole figure: no digit, comma or point just before it, nor a digit, a thousands
+    group or a decimal part just after it when it ends with a digit (so "672 updates" is not found in "1672 updates",
+    "0 over" not in "10 over", "25" not in "25,776", "25,776" not in "25,776.5"; a sentence's full stop is fine)."""
     if line is None:
         problems.append(f"{where}: not found")
         return
     for fragment in fragments:
-        pattern = r"(?<![\d,.])" + re.escape(fragment) + (r"(?!\d|,\d)" if fragment[-1:].isdigit() else "")
+        pattern = r"(?<![\d,.])" + re.escape(fragment) + (r"(?!\d|[.,]\d)" if fragment[-1:].isdigit() else "")
         if not re.search(pattern, line):
             problems.append(f"{where}: does not state {fragment!r}")
 

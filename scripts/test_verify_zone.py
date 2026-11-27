@@ -462,6 +462,36 @@ class ZoneBridgeVerifyTamperTests(unittest.TestCase):
         self._assert_fails_multi("zone-rc3-multi-checkpoint", [
             (f"{RUN}/checkpoint/burns.json", '"origin": "PrivateToPublic"', '"origin": "PublicRoot"', 1)], "origins")
 
+    def test_17_the_checkpoint_record_against_its_journal(self):
+        """Review round 3, M1: each field of the checkpoint record that names a journal word, changed alone."""
+        import json as _json
+        for field, value in (("evm_chain_id", 1), ("vault", "0x" + "12" * 20), ("lez_config_id", "0x" + "ab" * 32),
+                             ("n_min", 1), ("t_min", 1), ("n", 5), ("t", 4)):
+            def edit(root: Path, field=field, value=value) -> None:
+                rel = root / RUN / "checkpoint/zone-28-164.json"
+                d = _json.loads(rel.read_text())
+                d[field] = value
+                rel.write_text(_json.dumps(d, indent=2))
+            with self.subTest(field=field):
+                self._assert_fails_edit("zone-rc3-multi-checkpoint", edit, "the checkpoint record's")
+
+    def test_18_the_echo_nonce_word(self):
+        """Journal word 12 (rule (B)'s echo nonce, zero) made nonzero in both copies of the journal and the record's hash:
+        only that guard of zone-rc3-multi-checkpoint can see it (the Groth16 check of the proofs would, separately)."""
+        import hashlib as _hashlib
+        import json as _json
+
+        def edit(root: Path) -> None:
+            meta_rel = root / RUN / "checkpoint/zone-28-164.json"
+            d = _json.loads(meta_rel.read_text())
+            journal = bytearray(bytes.fromhex(d["journal"].removeprefix("0x")))
+            journal[12 * 32 + 31] = 1
+            d["journal"] = journal.hex() if not d["journal"].startswith("0x") else "0x" + journal.hex()
+            d["journal_sha256"] = _hashlib.sha256(bytes(journal)).hexdigest()
+            meta_rel.write_text(_json.dumps(d, indent=2))
+            (root / RUN / "checkpoint/receipts/journal.hex").write_text(bytes(journal).hex() + "\n")
+        self._assert_fails_edit("zone-rc3-multi-checkpoint", edit, "word 12")
+
     def test_04_ids_inputs_and_evidence_metadata(self):
         self.assertEqual(set(self.checks), set(CHECK_IDS))
         for cid, check in self.checks.items():
