@@ -1,0 +1,56 @@
+{
+  "attestation": {
+    "account": "0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c",
+    "imageId": "0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df"
+  },
+  "attestationRootId": "0x54ea93a75e9f02e2e96d88f1046d72db41af24ea589f1ce2c8050cabbdb8e5c7",
+  "bedrockGenesisId": "0x19383c41772ed9e87c929c6985a69b5c33894e347a89de255879acd37ff7d2ed",
+  "bridge": {
+    "header": "0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d",
+    "imageId": "0x847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515"
+  },
+  "chain": "stand-in",
+  "channel": {
+    "configTipHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "id": "0x0101010101010101010101010101010101010101010101010101010101010101",
+    "keys": [
+      "0x9a3d7252b6ca75597fa02817d036dd27e8ad7f40ceb371c8d62edbf301c7e2bd"
+    ],
+    "postingTimeframe": 0
+  },
+  "controls": {
+    "admin": "0x10debe6ffb247286bd4c509e61204d54f926d169fb474b2490f30b001dbbd68f",
+    "borsh": "0x10debe6ffb247286bd4c509e61204d54f926d169fb474b2490f30b001dbbd68f1223c5f1b21f554d1bd16d6a0aec44560337c5f18ae5fe2c7fe3693f0aaf5dad15145aee2e6c9c57d2847b8ca2e100937f11ee76fdfd75fcb588488aa206454700a3e111000000000000000000000000910d000000000000000000000000000000ac23fc060000000000000000000000574c050000000000000000000000000000ac23fc060000000000000000000000574c0500000000000000000000000000",
+    "feeRecipient": "0x15145aee2e6c9c57d2847b8ca2e100937f11ee76fdfd75fcb588488aa2064547",
+    "floor": {
+      "capacity": "300000000",
+      "refillPerSecond": "3473"
+    },
+    "freezeAuthority": "0x1223c5f1b21f554d1bd16d6a0aec44560337c5f18ae5fe2c7fe3693f0aaf5dad",
+    "globalCap": {
+      "capacity": "30000000000",
+      "refillPerSecond": "347223"
+    },
+    "tokenCap": {
+      "capacity": "30000000000",
+      "refillPerSecond": "347223"
+    }
+  },
+  "eth": {
+    "entryHash": "0x898160360b5b4aab318e281b88c160e31bf1f284aba2a0c877c3033809b2ce30",
+    "feeSlot0": "0x9aa0b42bfab58f5661a89501a520051162e6336036c5c42663bd4f8f1ac012ce",
+    "feeSlot1": "0x07dbb398239016a117a7e00064fdec5830d1a809cdc146e8228b3d0ed733d432",
+    "registrySlot": "0x2f7d2fc425649f0a2184f57eb1355c97d45240e80cf9b2fa1972b849a0d0433c"
+  },
+  "evmChainId": 11155111,
+  "instance": {
+    "checkpoint": "0x11177775bfa85480911762b1e1590f89017cf2477faddd3701bbb825c4d98245",
+    "id": "0xabd362ebd8091508211f8c37dfd4c8e77d7ee313248579c5399aecf726b13c4a"
+  },
+  "label": "STAND-IN rehearsal (beacon committee held by the driver; not Sepolia)",
+  "salt": "0xd517e0c5b0b71b40bf7d61ec4bd02cc71e68a8b6b87acd1a629b9b64c990caf6",
+  "tip": {
+    "hash": "0x2eb084d131807589aec08803a87360867283b4cdbd5d3342f321e11e5cb4e3d6",
+    "id": 19
+  }
+}

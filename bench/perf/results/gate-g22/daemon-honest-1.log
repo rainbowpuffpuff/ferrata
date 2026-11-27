@@ -1,0 +1,493 @@
+2026-11-22T18:06:45Z [sequencer] http://127.0.0.1:13041: head block 20, following to block 19 (final on Bedrock: true) in 8.7 s; payer 6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV balance 10000000000000; records in <repo>/../tmp/perf-gate/w-g22/zone/gate/honest-1/state/ledger
+2026-11-22T18:06:45Z [honest-1 mainnet] instance 0x2fb72006428ae094f21dbbc4e15c0e22e02a927f93dcf92b22b63c1f8b6b707f of program A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX (checkpoint 0x4baa732e5dbdbe97932abcf62c7caccc1cba8e9c14118d153aea629e25a4abff); payer 6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV; ledger sequencer
+2026-11-22T18:06:45Z [honest-1] /health and /metrics on http://127.0.0.1:9701
+2026-11-22T18:07:24Z [honest-1 mainnet] round 20: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:07:26Z [honest-1 mainnet] round 21: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:07:28Z [honest-1 mainnet] round 22: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:08:24Z [honest-1 mainnet] round 49: the sequencer and the follower disagree on the state of 4VP93BptTdWa1ujcHBiozkMXU1AUnDbTJjDvoZj2J212@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:08:26Z [honest-1 mainnet] round 50: the sequencer and the follower disagree on the state of 4VP93BptTdWa1ujcHBiozkMXU1AUnDbTJjDvoZj2J212@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:08:28Z [honest-1 mainnet] round 51: the sequencer and the follower disagree on the state of 4VP93BptTdWa1ujcHBiozkMXU1AUnDbTJjDvoZj2J212@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+[updater] mainnet init adopt 2/2                                     applied        gas   3485575 block   33 + 11.0s a0b90964e25fe053cbda0799e5b9d102936132314886694a08e0653e6c328c34
+2026-11-22T18:09:01Z [honest-1 mainnet] mainnet init adopt 2/2 applied (exit None, gas 3510683, fee 28085464, block 33)
+2026-11-22T18:09:09Z [honest-1 mainnet] job 0x996406f8ba2da632: finalized slot 15622144 root 0x7c279a5e7aee53514ad2ce373139ff36b50e26563ff53134e46cf57b57382433 (attested slot 15622208, signature slot 15622209, 511 of 512 signers; adopts the next committee), served or confirmed by replay
+[updater] mainnet fin 15622144 Open                                  applied        gas   2184856 block   35 + 11.5s 16b441a7718093a215e8c97dca6725b6b44ce9cf0cdd3a7497672db4bcbf9517
+2026-11-22T18:09:21Z [honest-1 mainnet] mainnet fin 15622144 Open applied (exit None, gas 2188091, fee 17504728, block 35)
+2026-11-22T18:09:51Z [honest-1 mainnet] job 0x996406f8ba2da632 (finalized slot 15622144) is open: its miller first
+[updater] mainnet fin 15622144 Miller                                applied        gas   3313372 block   39 + 10.4s d7c070670eb5ce1bd24025e677da06134bf500671e7195d22f552175adf2ac30
+2026-11-22T18:10:01Z [honest-1 mainnet] mainnet fin 15622144 Miller applied (exit None, gas 3313771, fee 26510168, block 39)
+2026-11-22T18:10:54Z [honest-1 mainnet] round 103: the sequencer and the follower disagree on the state of 2CRkNewfzxD4U5hsSrfQ7yXJ9Wd8sEx7eSVSaXH9jozb@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:10:56Z [honest-1 mainnet] round 104: the sequencer and the follower disagree on the state of 2CRkNewfzxD4U5hsSrfQ7yXJ9Wd8sEx7eSVSaXH9jozb@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:10:58Z [honest-1 mainnet] round 105: the sequencer and the follower disagree on the state of 2CRkNewfzxD4U5hsSrfQ7yXJ9Wd8sEx7eSVSaXH9jozb@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:11:40Z [honest-1 mainnet] job 0x996406f8ba2da632 (finalized slot 15622144) is open: its adopt1 first
+[updater] mainnet fin 15622144 adopt 2/2                             applied        gas   3418189 block   50 + 10.7s 57de57f783b73dd9613f5caf9925c6ba3c4134f9c78f8a8f27cbe911f90284f1
+2026-11-22T18:11:51Z [honest-1 mainnet] mainnet fin 15622144 adopt 2/2 applied (exit None, gas 3443169, fee 27545352, block 50)
+2026-11-22T18:11:53Z [honest-1 mainnet] job 0x996406f8ba2da632 (finalized slot 15622144) is open: its finish first
+[updater] mainnet fin 15622144 Finish                                applied        gas   3699098 block   51 +  7.7s da8d5100118820a63c43e52b4ff599d9504e4870a2950d123cf152ab96fb65c6
+2026-11-22T18:12:01Z [honest-1 mainnet] mainnet fin 15622144 Finish applied (exit None, gas 3699561, fee 29596488, block 51)
+2026-11-22T18:12:30Z [honest-1 mainnet] job 0x20bc171267d15366: finalized slot 15628192 root 0xc68e661314646fd28692ab0dfd7cf886fce91981727bed385116c34dacf5cb18 (attested slot 15628258, signature slot 15628259, 510 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15628192 Open                                  refused   207 (JobExists) gas   2189187 block   55 + 11.7s 5a861204fe1471ae4d1c3a5e54a75e924ea3cd89943abd2725dbd13ebce9ee56
+2026-11-22T18:12:42Z [honest-1 mainnet] mainnet fin 15628192 Open refused (exit Some(207), gas 2192726, fee 17541808, block 55): the program's exit 207: 5a861204fe1471ae4d1c3a5e54a75e924ea3cd89943abd2725dbd13ebce9ee56 nonce 5, gas limit 4800000, max fee 1000000000; the step was done or moot afterwards (another party's transaction came first)
+2026-11-22T18:12:59Z [honest-1 mainnet] job 0x20bc171267d15366 (finalized slot 15628192) is open: its miller first
+[updater] mainnet fin 15628192 Miller                                applied        gas   3308048 block   58 + 11.7s 8985045d19d3c0a015031929f0ef809fa8871e87c22feeb2574ce47cbdbc5232
+2026-11-22T18:13:11Z [honest-1 mainnet] mainnet fin 15628192 Miller applied (exit None, gas 3308447, fee 26467576, block 58)
+2026-11-22T18:13:25Z [honest-1 mainnet] round 153: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:13:27Z [honest-1 mainnet] round 154: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:13:29Z [honest-1 mainnet] round 155: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:13:32Z [honest-1 mainnet] job 0x0b66c30ce61ff812: finalized slot 15628800 root 0xa1404d47180c18d674f7627be29be0e2893a74187e31bfc1ce79470ac9c71a93 (attested slot 15628868, signature slot 15628869, 510 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15628800 Open                                  applied        gas   2195276 block   61 +  8.4s e280c875a3e107ecfb189fcab6fbb061c48d821aff40fad5b12d63e626081d12
+2026-11-22T18:13:41Z [honest-1 mainnet] mainnet fin 15628800 Open applied (exit None, gas 2198808, fee 17590464, block 61)
+2026-11-22T18:14:50Z [honest-1 mainnet] job 0x0b66c30ce61ff812 (finalized slot 15628800) is open: its miller first
+[updater] mainnet fin 15628800 Miller                                applied        gas   3308048 block   69 + 10.2s a66624af96c628d64c7c56a78ed1f5f7c47ce4a04c7dcbf445ebfebe0fd8c276
+2026-11-22T18:15:01Z [honest-1 mainnet] mainnet fin 15628800 Miller applied (exit None, gas 3308447, fee 26467576, block 69)
+2026-11-22T18:15:09Z [honest-1 mainnet] job 0x0b66c30ce61ff812 (finalized slot 15628800) is open: its finish first
+[updater] mainnet fin 15628800 Finish                                applied        gas   3726482 block   71 + 12.1s a1c6c7dc4f5bc5f8caef3681aae0f8da9258fd43d64729fb6adac41adcd9ec2f
+2026-11-22T18:15:21Z [honest-1 mainnet] mainnet fin 15628800 Finish applied (exit None, gas 3727009, fee 29816072, block 71)
+2026-11-22T18:15:30Z [honest-1 mainnet] job 0x62a05e3ce8f17ac2: finalized slot 15630016 root 0xa579bb84e40ddd7e5f1a48d5103c16cde56c9058f8da2a596000581c620ca952 (attested slot 15630081, signature slot 15630082, 510 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15630016 Open                                  refused   207 (JobExists) gas   2187065 block   73 + 11.7s 6cb176c14c04948b702954f88bed5b0d5ab9c953de0b80069d0e53dbf1de0306
+2026-11-22T18:15:42Z [honest-1 mainnet] mainnet fin 15630016 Open refused (exit Some(207), gas 2190590, fee 17524720, block 73): the program's exit 207: 6cb176c14c04948b702954f88bed5b0d5ab9c953de0b80069d0e53dbf1de0306 nonce 10, gas limit 4800000, max fee 1000000000; the step was done or moot afterwards (another party's transaction came first)
+2026-11-22T18:15:50Z [honest-1 mainnet] job 0x62a05e3ce8f17ac2 (finalized slot 15630016) is open: its miller first
+[updater] mainnet fin 15630016 Miller                                applied        gas   3308048 block   75 + 10.4s bd9d7dfb20a917db344c1deba835f14f91450004d6b485f06f61198eeaedf064
+2026-11-22T18:16:01Z [honest-1 mainnet] mainnet fin 15630016 Miller applied (exit None, gas 3308447, fee 26467576, block 75)
+2026-11-22T18:17:01Z [honest-1 mainnet] job 0x62a05e3ce8f17ac2 (finalized slot 15630016) is open: its finish first
+[updater] mainnet fin 15630016 Finish                                applied        gas   3726482 block   82 + 10.4s b71b6a1579d08a2185ee748dbd8f8a923e8b2957edceb0370d3413c2345e9894
+2026-11-22T18:17:11Z [honest-1 mainnet] mainnet fin 15630016 Finish applied (exit None, gas 3727009, fee 29816072, block 82)
+2026-11-22T18:17:35Z [honest-1 mainnet] job 0x58db685ed5e0044e: finalized slot 15630720 root 0x6668f903ff936abe7be11a6cac2421d0e74a374849f6de5a76029c6661411895 (attested slot 15630809, signature slot 15630810, 511 of 512 signers; advances; rotates the committees; adopts the next committee), served or confirmed by replay
+[updater] mainnet fin 15630720 Open                                  applied        gas   2185227 block   86 + 17.2s 50e74f86baa16926892bba267ab081592d06bfe4fcdc4e35a1803ced1c57f9b5
+2026-11-22T18:17:52Z [honest-1 mainnet] mainnet fin 15630720 Open applied (exit None, gas 2188424, fee 17507392, block 86)
+2026-11-22T18:18:20Z [honest-1 mainnet] job 0x58db685ed5e0044e (finalized slot 15630720) is open: its miller first
+[updater] mainnet fin 15630720 Miller                                applied        gas   3313372 block   90 + 10.4s 1730df83354a81a9de0ac9678741a6b1c93c6f346c5382555c7beb683af17e7f
+2026-11-22T18:18:31Z [honest-1 mainnet] mainnet fin 15630720 Miller applied (exit None, gas 3313771, fee 26510168, block 90)
+2026-11-22T18:18:33Z [honest-1 mainnet] job 0x58db685ed5e0044e (finalized slot 15630720) is open: its adopt0 first
+[updater] mainnet fin 15630720 adopt 1/2                             applied        gas   3410995 block   91 +  8.1s bc565ea4be675e4e88807b4fe0da38d49df23bf66cfa887d21790ebf7e67d6df
+2026-11-22T18:18:41Z [honest-1 mainnet] mainnet fin 15630720 adopt 1/2 applied (exit None, gas 3435975, fee 27487800, block 91)
+2026-11-22T18:19:00Z [honest-1 mainnet] job 0x58db685ed5e0044e (finalized slot 15630720) is open: its adopt1 first
+[updater] mainnet fin 15630720 adopt 2/2                             applied        gas   3418189 block   94 + 10.5s 66fdddd06a82b6d5428bd77d1eeb5a123a1aeae3389f90f60ab526746e870835
+2026-11-22T18:19:11Z [honest-1 mainnet] mainnet fin 15630720 adopt 2/2 applied (exit None, gas 3443169, fee 27545352, block 94)
+2026-11-22T18:20:00Z [honest-1 mainnet] job 0x58db685ed5e0044e (finalized slot 15630720) is open: its finish first
+[updater] mainnet fin 15630720 Finish                                applied        gas   3736661 block  100 + 11.0s 0f0bc9f5d95f8eb73d6cba0379af237facd41450bab6b6ab0eba945a77b378b1
+2026-11-22T18:20:11Z [honest-1 mainnet] mainnet fin 15630720 Finish applied (exit None, gas 3737188, fee 29897504, block 100)
+2026-11-22T18:21:20Z [honest-1 mainnet] job 0x8e49ea976db84bc6: finalized slot 15632416 root 0x93e7c0ee64dbc4e3279f3dcd634bf427076cc2015e0a7b84c95dee92acbd1122 (attested slot 15632480, signature slot 15632481, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15632416 Open                                  applied        gas   2167144 block  108 + 11.9s 638cb498fb54e6f78feefb65ff13fdf146facad14079ab5c58ccaadd57e45bdd
+2026-11-22T18:21:32Z [honest-1 mainnet] mainnet fin 15632416 Open applied (exit None, gas 2170279, fee 17362232, block 108)
+2026-11-22T18:22:10Z [honest-1 mainnet] job 0x8e49ea976db84bc6 (finalized slot 15632416) is open: its miller first
+[updater] mainnet fin 15632416 Miller                                applied        gas   3308048 block  113 + 10.5s 20e6a3ac2e78622579d681c0c301636bfa481d3696b915ac6756ae82130576c2
+2026-11-22T18:22:21Z [honest-1 mainnet] mainnet fin 15632416 Miller applied (exit None, gas 3308447, fee 26467576, block 113)
+2026-11-22T18:22:40Z [honest-1 mainnet] job 0x8e49ea976db84bc6 (finalized slot 15632416) is open: its finish first
+[updater] mainnet fin 15632416 Finish                                applied        gas   3726482 block  116 + 11.3s 3177069403987a7145d07238a55317cf4951f0e4b2d9e4887f1146e6e78be259
+2026-11-22T18:22:51Z [honest-1 mainnet] mainnet fin 15632416 Finish applied (exit None, gas 3727009, fee 29816072, block 116)
+2026-11-22T18:22:54Z [honest-1 mainnet] job 0x2f16ebfa1414b91c: finalized slot 15633600 root 0x290ad3ca53f6deee93baad716a2255faec8d8aa4048b5d61ab5ed6b880f9a48d (attested slot 15633664, signature slot 15633665, 512 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15633600 Open                                  applied        gas   2140431 block  118 + 16.9s 37fb38a68ab0cfcc1ff5d69738c6cf37a712b30be677f5d49d4acc480c75604f
+2026-11-22T18:23:11Z [honest-1 mainnet] mainnet fin 15633600 Open applied (exit None, gas 2143202, fee 17145616, block 118)
+2026-11-22T18:23:24Z [honest-1 mainnet] round 352: the sequencer and the follower disagree on the state of CrLWP33cnZxzssJJ3Qaa8PbCVmWRUzqbTJ9cVW3Zth9K@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:23:26Z [honest-1 mainnet] round 353: the sequencer and the follower disagree on the state of CrLWP33cnZxzssJJ3Qaa8PbCVmWRUzqbTJ9cVW3Zth9K@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:23:28Z [honest-1 mainnet] round 354: the sequencer and the follower disagree on the state of CrLWP33cnZxzssJJ3Qaa8PbCVmWRUzqbTJ9cVW3Zth9K@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:23:31Z [honest-1 mainnet] job 0x2f16ebfa1414b91c (finalized slot 15633600) is open: its finish first
+[updater] mainnet fin 15633600 Finish                                applied        gas   3726482 block  121 +  9.6s fd1ac9761d726ce040ee2cf2d0c2ddaba12c7d066bd19e39a4fd0bc69931a2f0
+2026-11-22T18:23:41Z [honest-1 mainnet] mainnet fin 15633600 Finish applied (exit None, gas 3727009, fee 29816072, block 121)
+2026-11-22T18:23:43Z [honest-1 mainnet] job 0x2ab81b888acdc0be: finalized slot 15634208 root 0x71515eac280839cbfb2e0daf7ee2c411ccd55a2269a224493f59f727337932d7 (attested slot 15634274, signature slot 15634275, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15634208 Open                                  applied        gas   2168889 block  122 +  7.8s 5f602e9df8cc565eeafc4b4c1248ad92880eefedb60c17fcfb0bcbf229ed7e8f
+2026-11-22T18:23:51Z [honest-1 mainnet] mainnet fin 15634208 Open applied (exit None, gas 2172044, fee 17376352, block 122)
+2026-11-22T18:23:59Z [honest-1 mainnet] job 0x2ab81b888acdc0be (finalized slot 15634208) is open: its miller first
+[updater] mainnet fin 15634208 Miller                                applied        gas   3308048 block  124 + 11.4s 439ecf5ae6a25a8440e869bd715b26b4de3571ca65df546ca4c9b498e9af50d8
+2026-11-22T18:24:11Z [honest-1 mainnet] mainnet fin 15634208 Miller applied (exit None, gas 3308447, fee 26467576, block 124)
+2026-11-22T18:24:49Z [honest-1 mainnet] job 0x2ab81b888acdc0be (finalized slot 15634208) is open: its finish first
+[updater] mainnet fin 15634208 Finish                                applied        gas   3726482 block  129 + 11.8s 5cd9975827be5dd517b26537e55e6b3ce58ecba8a1d154896cc25cb6ca730d46
+2026-11-22T18:25:01Z [honest-1 mainnet] mainnet fin 15634208 Finish applied (exit None, gas 3727009, fee 29816072, block 129)
+2026-11-22T18:25:20Z [honest-1 mainnet] job 0x94bab6e726533a67: finalized slot 15634816 root 0x5d9c52b8da2904e86da1461afeab23979c4c61da306435993f50567c8ab7a256 (attested slot 15634881, signature slot 15634882, 510 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15634816 Open                                  applied        gas   2195947 block  132 + 10.8s 468aa181468ced47fdb022505a1bbd75f4584e05629e6d6c075fca70bf757cf2
+2026-11-22T18:25:31Z [honest-1 mainnet] mainnet fin 15634816 Open applied (exit None, gas 2199486, fee 17595888, block 132)
+2026-11-22T18:26:30Z [honest-1 mainnet] job 0x94bab6e726533a67 (finalized slot 15634816) is open: its miller first
+[updater] mainnet fin 15634816 Miller                                applied        gas   3308048 block  139 + 10.5s cc6f2598f576f4eb97bfbd28c8d30509180ae844dbdd0cf3bab895cb043744e5
+2026-11-22T18:26:41Z [honest-1 mainnet] mainnet fin 15634816 Miller applied (exit None, gas 3308447, fee 26467576, block 139)
+2026-11-22T18:27:40Z [honest-1 mainnet] job 0x94bab6e726533a67 (finalized slot 15634816) is open: its finish first
+[updater] mainnet fin 15634816 Finish                                applied        gas   3726482 block  146 + 10.7s a155a14b62827c7cb5ca04f02a1de007bc18df6e980acc1c734809b1c7901358
+2026-11-22T18:27:51Z [honest-1 mainnet] mainnet fin 15634816 Finish applied (exit None, gas 3727009, fee 29816072, block 146)
+2026-11-22T18:28:10Z [honest-1 mainnet] job 0xc6c48870f47d5552: finalized slot 15636608 root 0x276e98c284bf8da042458c722a12a693450e0173ddfeb5b02592802ead0051d2 (attested slot 15636674, signature slot 15636675, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15636608 Open                                  applied        gas   2167991 block  149 + 10.5s 0840107d9b553e66ff76ddae46936dc21e172349e14342c99b65dde96962a052
+2026-11-22T18:28:21Z [honest-1 mainnet] mainnet fin 15636608 Open applied (exit None, gas 2171132, fee 17369056, block 149)
+2026-11-22T18:28:23Z [honest-1 mainnet] job 0xc6c48870f47d5552 (finalized slot 15636608) is open: its miller first
+[updater] mainnet fin 15636608 Miller                                applied        gas   3308048 block  150 +  7.7s 7024bdbd25b8d1b5ebb2ea6f55be9afe638ea5f8120d141eaac712a1cd0bbd63
+2026-11-22T18:28:31Z [honest-1 mainnet] mainnet fin 15636608 Miller applied (exit None, gas 3308447, fee 26467576, block 150)
+2026-11-22T18:29:01Z [honest-1 mainnet] job 0xc6c48870f47d5552 (finalized slot 15636608) is open: its finish first
+[updater] mainnet fin 15636608 Finish                                applied        gas   3726482 block  154 + 10.4s 703cd6a1a861c58d9c13ac2f98d1688f65817504f9247a97914ead0cd4d05965
+2026-11-22T18:29:11Z [honest-1 mainnet] mainnet fin 15636608 Finish applied (exit None, gas 3727009, fee 29816072, block 154)
+2026-11-22T18:29:36Z [honest-1 mainnet] job 0x6de3cbaab5810cad: finalized slot 15637792 root 0x65e11343796519f098ca5d4ad0eeb82a93b9fa6d15d15a89399a6193b90b7937 (attested slot 15637856, signature slot 15637857, 512 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15637792 Open                                  applied        gas   2140607 block  158 + 15.7s 4da75b774351fa93b3ac05fdf8774cb5a423bbaf4e7e94c080bdfc5949d677cd
+2026-11-22T18:29:52Z [honest-1 mainnet] mainnet fin 15637792 Open applied (exit None, gas 2143378, fee 17147024, block 158)
+2026-11-22T18:29:54Z [honest-1 mainnet] job 0x6de3cbaab5810cad (finalized slot 15637792) is open: its miller first
+[updater] mainnet fin 15637792 Miller                                applied        gas   3308048 block  160 + 16.8s 9f3e11bb05e10ea687547a3cf86251cd07b7c88a1ee6cb3c6f489dde56556d25
+2026-11-22T18:30:11Z [honest-1 mainnet] mainnet fin 15637792 Miller applied (exit None, gas 3308447, fee 26467576, block 160)
+2026-11-22T18:30:19Z [honest-1 mainnet] job 0x6de3cbaab5810cad (finalized slot 15637792) is open: its finish first
+[updater] mainnet fin 15637792 Finish                                applied        gas   3726482 block  162 + 11.8s a123503f06738d71c9d755652afe20b47894c9e170863a0e85b6ec8266caccd3
+2026-11-22T18:30:31Z [honest-1 mainnet] mainnet fin 15637792 Finish applied (exit None, gas 3727009, fee 29816072, block 162)
+2026-11-22T18:31:21Z [honest-1 mainnet] job 0x8e0754ad11579324: finalized slot 15638400 root 0x7772c484f01081086282f5d9633d5f82fcd2ad03832d63166d0e30f7b10fe599 (attested slot 15638471, signature slot 15638472, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15638400 Open                                  applied        gas   2166589 block  168 + 10.2s 52defb581c757967f29d8200e296e0eb1c44e166fd5b2433ebd496d80573264e
+2026-11-22T18:31:31Z [honest-1 mainnet] mainnet fin 15638400 Open applied (exit None, gas 2169725, fee 17357800, block 168)
+2026-11-22T18:32:01Z [honest-1 mainnet] job 0x8e0754ad11579324 (finalized slot 15638400) is open: its miller first
+[updater] mainnet fin 15638400 Miller                                applied        gas   3308048 block  172 +  9.5s 03a5b9e24c4e8ea5af42db8887e8bec808ee97c9ff5f028506b48c9e7ebc261e
+2026-11-22T18:32:11Z [honest-1 mainnet] mainnet fin 15638400 Miller applied (exit None, gas 3308447, fee 26467576, block 172)
+2026-11-22T18:32:30Z [honest-1 mainnet] job 0x8e0754ad11579324 (finalized slot 15638400) is open: its finish first
+[updater] mainnet fin 15638400 Finish                                applied        gas   3726482 block  175 + 10.9s 9af228350b533c82f0e8d4d9cedf3a232cf3594e1c040da9ab832dd10a37ffc1
+2026-11-22T18:32:41Z [honest-1 mainnet] mainnet fin 15638400 Finish applied (exit None, gas 3727009, fee 29816072, block 175)
+2026-11-22T18:33:44Z [honest-1 mainnet] round 559: the sequencer and the follower disagree on the state of ENQ3TmxLFc5ft1akuzaFTD8cUTngurY1LL8HUHxpYPuG@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:33:47Z [honest-1 mainnet] round 560: the sequencer and the follower disagree on the state of ENQ3TmxLFc5ft1akuzaFTD8cUTngurY1LL8HUHxpYPuG@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:33:49Z [honest-1 mainnet] round 561: the sequencer and the follower disagree on the state of ENQ3TmxLFc5ft1akuzaFTD8cUTngurY1LL8HUHxpYPuG@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+[updater] mainnet fin 15639616 Miller                                applied        gas   3308048 block  183 +  9.1s 8cbb49a330594e04ff182c64959931516d6e62b124c723b14fa2d0c9574b250e
+2026-11-22T18:34:01Z [honest-1 mainnet] mainnet fin 15639616 Miller applied (exit None, gas 3308447, fee 26467576, block 183)
+2026-11-22T18:34:45Z [honest-1 mainnet] round 582: the sequencer and the follower disagree on the state of ENQ3TmxLFc5ft1akuzaFTD8cUTngurY1LL8HUHxpYPuG@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:34:47Z [honest-1 mainnet] round 583: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:34:49Z [honest-1 mainnet] round 584: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:35:31Z [honest-1 mainnet] job 0xfde73fdd291f62cf: finalized slot 15638592 root 0x3323d1442d6ecb25b2f46c4894cd179defbe794eccddb33d2b5e579c3e323112 (attested slot 15638676, signature slot 15638677, 509 of 512 signers; adopts the next committee), served or confirmed by replay
+[updater] mainnet fin 15638592 Open                                  applied        gas   2239209 block  193 + 10.0s 35ebb060d9dee639022e72468d523fcabebed59349ea34ecf7cb75a0975b2755
+2026-11-22T18:35:41Z [honest-1 mainnet] mainnet fin 15638592 Open applied (exit None, gas 2243212, fee 17945696, block 193)
+2026-11-22T18:35:44Z [honest-1 mainnet] round 604: the sequencer and the follower disagree on the state of 5uvT4dYmKUmVWSwsJy1dvfAMHkq4J9oA8fyCF7S5r1mU@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:35:46Z [honest-1 mainnet] round 605: the sequencer and the follower disagree on the state of 5uvT4dYmKUmVWSwsJy1dvfAMHkq4J9oA8fyCF7S5r1mU@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:35:49Z [honest-1 mainnet] round 606: the sequencer and the follower disagree on the state of 5uvT4dYmKUmVWSwsJy1dvfAMHkq4J9oA8fyCF7S5r1mU@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:36:14Z [honest-1 mainnet] round 617: the sequencer and the follower disagree on the state of 5uvT4dYmKUmVWSwsJy1dvfAMHkq4J9oA8fyCF7S5r1mU@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:36:16Z [honest-1 mainnet] round 618: the sequencer and the follower disagree on the state of 5uvT4dYmKUmVWSwsJy1dvfAMHkq4J9oA8fyCF7S5r1mU@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:36:19Z [honest-1 mainnet] round 619: the sequencer and the follower disagree on the state of 5uvT4dYmKUmVWSwsJy1dvfAMHkq4J9oA8fyCF7S5r1mU@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:36:30Z [honest-1 mainnet] job 0xfde73fdd291f62cf (finalized slot 15638592) is open: its adopt1 first
+[updater] mainnet fin 15638592 adopt 2/2                             applied        gas   3418189 block  199 + 10.3s e8640ae081ed400521189f291e4b9f862f9e36c7f3dfc8b4cab57f3bb3e82cf8
+2026-11-22T18:36:41Z [honest-1 mainnet] mainnet fin 15638592 adopt 2/2 applied (exit None, gas 3443169, fee 27545352, block 199)
+2026-11-22T18:37:12Z [honest-1 mainnet] job 0xfde73fdd291f62cf (finalized slot 15638592) is open: its finish first
+[updater] mainnet fin 15638592 Finish                                applied        gas   3699098 block  203 +  9.0s 1c9f4da40cb048f568373e68f4e6aadd91073bccf568dd616cfd89bb56222237
+2026-11-22T18:37:21Z [honest-1 mainnet] mainnet fin 15638592 Finish applied (exit None, gas 3699561, fee 29596488, block 203)
+2026-11-22T18:38:01Z [honest-1 mainnet] not sent: job 0xc956a2a9f2bc4075 (finalized slot 15641408, 2 step(s) applied, last moved 0 block(s) ago), open on this store, leads job 0x1dbbc47d2a193b7e (finalized slot 15642016, 0 step(s) applied): waiting for it (at most 26 block(s) after it last moves)
+2026-11-22T18:38:37Z [honest-1 mainnet] round 672: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:38:39Z [honest-1 mainnet] round 673: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:39:20Z [honest-1 mainnet] job 0x480107af3d7dc16b: finalized slot 15642592 root 0xe3a59a5c0c411f9609c7d94efa141fff449dee1843fbef1f57566cdef5b61db9 (attested slot 15642659, signature slot 15642660, 509 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15642592 Open                                  applied        gas   2222687 block  216 + 10.7s cd0808d906f2051c2f28369d9da9e5d34b1774790e4c3fae9c28b7c7340762a3
+2026-11-22T18:39:31Z [honest-1 mainnet] mainnet fin 15642592 Open applied (exit None, gas 2226615, fee 17812920, block 216)
+2026-11-22T18:39:50Z [honest-1 mainnet] job 0x480107af3d7dc16b (finalized slot 15642592) is open: its miller first
+[updater] mainnet fin 15642592 Miller                                applied        gas   3308048 block  219 + 10.2s 671be5b5cd0ccf52d481dea2725e472d4aa32d7c8cfaf3fdc47641b38381e8df
+2026-11-22T18:40:01Z [honest-1 mainnet] mainnet fin 15642592 Miller applied (exit None, gas 3308447, fee 26467576, block 219)
+2026-11-22T18:40:09Z [honest-1 mainnet] job 0x480107af3d7dc16b (finalized slot 15642592) is open: its finish first
+[updater] mainnet fin 15642592 Finish                                applied        gas   3726482 block  221 + 12.2s 95d511dc6d68d98217c6257d39cc44a797eec027f578916f71dc0e7cb8f9b50e
+2026-11-22T18:40:21Z [honest-1 mainnet] mainnet fin 15642592 Finish applied (exit None, gas 3727009, fee 29816072, block 221)
+2026-11-22T18:40:24Z [honest-1 mainnet] round 706: the sequencer and the follower disagree on the state of BDgPMNGNsvsrqy4RKdFBJYqcnjmd9afP9U74zMxSitQN@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:40:26Z [honest-1 mainnet] round 707: the sequencer and the follower disagree on the state of BDgPMNGNsvsrqy4RKdFBJYqcnjmd9afP9U74zMxSitQN@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:40:28Z [honest-1 mainnet] round 708: the sequencer and the follower disagree on the state of BDgPMNGNsvsrqy4RKdFBJYqcnjmd9afP9U74zMxSitQN@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:41:00Z [honest-1 mainnet] not sent: job 0xc27e106c35c0ca62 (finalized slot 15643200, 2 step(s) applied, last moved 0 block(s) ago), open on this store, leads job 0x27f4cdaeae313877 (finalized slot 15643808, 0 step(s) applied): waiting for it (at most 26 block(s) after it last moves)
+2026-11-22T18:41:27Z [honest-1 mainnet] round 734: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:41:29Z [honest-1 mainnet] round 735: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:41:40Z [honest-1 mainnet] job 0x9a420aaed704446c: finalized slot 15644416 root 0x03e8af37d1a83e25ca960767dd09ae68702fb73198f482371a05d82097eadf34 (attested slot 15644482, signature slot 15644483, 508 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15644416 Open                                  applied        gas   2249783 block  230 + 10.6s de334cb8aeffd7b5cb6f1e386a8b9ec3345fc383868272bc6c6215d3e150e8ae
+2026-11-22T18:41:51Z [honest-1 mainnet] mainnet fin 15644416 Open applied (exit None, gas 2254093, fee 18032744, block 230)
+2026-11-22T18:42:39Z [honest-1 mainnet] job 0x9a420aaed704446c (finalized slot 15644416) is open: its miller first
+[updater] mainnet fin 15644416 Miller                                applied        gas   3308048 block  236 + 11.4s 0b3e5a4f087928b42ee02cf808de2aa351ff29bd099365bfbb044ca67afe2a57
+2026-11-22T18:42:51Z [honest-1 mainnet] mainnet fin 15644416 Miller applied (exit None, gas 3308447, fee 26467576, block 236)
+2026-11-22T18:44:01Z [honest-1 mainnet] job 0x9a420aaed704446c (finalized slot 15644416) is open: its finish first
+[updater] mainnet fin 15644416 Finish                                applied        gas   3726482 block  244 + 10.5s 075fa5a300244548147f2528f815f25db58b55a5f0f38161c0e1817671f8395d
+2026-11-22T18:44:11Z [honest-1 mainnet] mainnet fin 15644416 Finish applied (exit None, gas 3727009, fee 29816072, block 244)
+2026-11-22T18:44:55Z [honest-1 mainnet] round 817: the sequencer and the follower disagree on the state of BFjpWPgPx8SfyMwMUrUF2rEvFqgqfhe985hKHqK3955L@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:44:57Z [honest-1 mainnet] round 818: the sequencer and the follower disagree on the state of BFjpWPgPx8SfyMwMUrUF2rEvFqgqfhe985hKHqK3955L@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:44:59Z [honest-1 mainnet] round 819: the sequencer and the follower disagree on the state of BFjpWPgPx8SfyMwMUrUF2rEvFqgqfhe985hKHqK3955L@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:45:36Z [honest-1 mainnet] not sent: job 0xec1cfcb59901abe0 (finalized slot 15646208, 1 step(s) applied, last moved 0 block(s) ago), open on this store, leads job 0x86db19b47e69152a (finalized slot 15646720, 0 step(s) applied): waiting for it (at most 26 block(s) after it last moves)
+2026-11-22T18:46:35Z [honest-1 mainnet] round 863: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:46:37Z [honest-1 mainnet] round 864: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:46:39Z [honest-1 mainnet] round 865: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:47:20Z [honest-1 mainnet] job 0x43c69e36945d2e05: finalized slot 15646816 root 0x1c6c996f0cd99e0a345390cbe0ff21df2fd42f167de961a13053ad9eb7bcf912 (attested slot 15646881, signature slot 15646882, 512 of 512 signers; advances; rotates the committees), served or confirmed by replay
+[updater] mainnet fin 15646816 Open                                  applied        gas   2140873 block  264 + 10.7s 7618ae0709969fbe170dc8eff269a79c960520a41fc77a8ebb00d576d8ba7732
+2026-11-22T18:47:31Z [honest-1 mainnet] mainnet fin 15646816 Open applied (exit None, gas 2143644, fee 17149152, block 264)
+2026-11-22T18:48:39Z [honest-1 mainnet] job 0x43c69e36945d2e05 (finalized slot 15646816) is open: its miller first
+[updater] mainnet fin 15646816 Miller                                applied        gas   3308048 block  272 + 11.5s 7e2c0e9f71172ee8e8d10ab63b849b09a78df442c80b983a1ae89c25d43ee654
+2026-11-22T18:48:51Z [honest-1 mainnet] mainnet fin 15646816 Miller applied (exit None, gas 3308447, fee 26467576, block 272)
+2026-11-22T18:49:21Z [honest-1 mainnet] job 0x43c69e36945d2e05 (finalized slot 15646816) is open: its finish first
+[updater] mainnet fin 15646816 Finish                                applied        gas   3725955 block  276 + 10.5s 964cac188436c05dc38751507f870ec44b1b5f7043e9d3015a956ec9aecb6087
+2026-11-22T18:49:31Z [honest-1 mainnet] mainnet fin 15646816 Finish applied (exit None, gas 3726482, fee 29811856, block 276)
+2026-11-22T18:50:25Z [honest-1 mainnet] round 955: the sequencer and the follower disagree on the state of 3NQinB6oDH7wTKcfnFMFyHNLmur2kwHjonTbuJXTc2Yk@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:50:27Z [honest-1 mainnet] round 956: the sequencer and the follower disagree on the state of 3NQinB6oDH7wTKcfnFMFyHNLmur2kwHjonTbuJXTc2Yk@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:50:29Z [honest-1 mainnet] round 957: the sequencer and the follower disagree on the state of 3NQinB6oDH7wTKcfnFMFyHNLmur2kwHjonTbuJXTc2Yk@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:50:45Z [honest-1 mainnet] round 964: the sequencer and the follower disagree on the state of 3NQinB6oDH7wTKcfnFMFyHNLmur2kwHjonTbuJXTc2Yk@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:50:47Z [honest-1 mainnet] round 965: the sequencer and the follower disagree on the state of 3NQinB6oDH7wTKcfnFMFyHNLmur2kwHjonTbuJXTc2Yk@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:50:49Z [honest-1 mainnet] round 966: the sequencer and the follower disagree on the state of 3NQinB6oDH7wTKcfnFMFyHNLmur2kwHjonTbuJXTc2Yk@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+[updater] mainnet fin 15646720 adopt 1/2                             applied        gas   3410995 block  285 +  8.9s 067ccaf7367088eb7cfe22aeed91ef1da8b88c8b6587abfc56a5b14f90ab986f
+2026-11-22T18:51:00Z [honest-1 mainnet] mainnet fin 15646720 adopt 1/2 applied (exit None, gas 3435975, fee 27487800, block 285)
+2026-11-22T18:51:44Z [honest-1 mainnet] round 987: the sequencer and the follower disagree on the state of 3NQinB6oDH7wTKcfnFMFyHNLmur2kwHjonTbuJXTc2Yk@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:51:46Z [honest-1 mainnet] round 988: the sequencer and the follower disagree on the state of 3NQinB6oDH7wTKcfnFMFyHNLmur2kwHjonTbuJXTc2Yk@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:51:48Z [honest-1 mainnet] round 989: the sequencer and the follower disagree on the state of 3NQinB6oDH7wTKcfnFMFyHNLmur2kwHjonTbuJXTc2Yk@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:52:30Z [honest-1 mainnet] job 0x08015edce7e7e575 (finalized slot 15646720) is open: its finish first
+[updater] mainnet fin 15646720 Finish                                applied        gas   3699098 block  295 + 10.7s 2f81a46e7587aed08f8ee97d00cbae270e2fb6174bf7cadd46171762e668f676
+2026-11-22T18:52:41Z [honest-1 mainnet] mainnet fin 15646720 Finish applied (exit None, gas 3699561, fee 29596488, block 295)
+2026-11-22T18:53:25Z [honest-1 mainnet] round 1029: the sequencer and the follower disagree on the state of Bqfvn8f9Y2V7PVxmtqg4Rb3XfKFyPcqr4a1buom8UY8j@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:53:27Z [honest-1 mainnet] round 1030: the sequencer and the follower disagree on the state of Bqfvn8f9Y2V7PVxmtqg4Rb3XfKFyPcqr4a1buom8UY8j@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:53:29Z [honest-1 mainnet] round 1031: the sequencer and the follower disagree on the state of Bqfvn8f9Y2V7PVxmtqg4Rb3XfKFyPcqr4a1buom8UY8j@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:53:36Z [honest-1 mainnet] not sent: job 0x5615b51aad11261f (finalized slot 15650400, 1 step(s) applied, last moved 0 block(s) ago), open on this store, leads job 0xde60d94cf0b07288 (finalized slot 15651008, 0 step(s) applied): waiting for it (at most 26 block(s) after it last moves)
+2026-11-22T18:54:55Z [honest-1 mainnet] round 1071: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:54:57Z [honest-1 mainnet] round 1072: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:54:59Z [honest-1 mainnet] round 1073: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T18:55:29Z [honest-1 mainnet] job 0x3636d3eb32ac903a: finalized slot 15651616 root 0xd66fff0ae1038334f91ce5adb63cccd2e0c8e80930035543b00c399c080258c4 (attested slot 15651681, signature slot 15651682, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15651616 Open                                  applied        gas   2168506 block  313 + 11.5s 5709ee5878228903da8fdea07d98f91501cd0aa88a5e972da2bcf11c5ad1de9c
+2026-11-22T18:55:41Z [honest-1 mainnet] mainnet fin 15651616 Open applied (exit None, gas 2171658, fee 17373264, block 313)
+2026-11-22T18:55:49Z [honest-1 mainnet] job 0x3636d3eb32ac903a (finalized slot 15651616) is open: its miller first
+[updater] mainnet fin 15651616 Miller                                applied        gas   3308048 block  315 + 11.4s 53946c1f49be0a121be2a0921902382e8961c9dd3303c0d1d5e6a4ad34668f2b
+2026-11-22T18:56:01Z [honest-1 mainnet] mainnet fin 15651616 Miller applied (exit None, gas 3308447, fee 26467576, block 315)
+2026-11-22T18:56:49Z [honest-1 mainnet] job 0x3636d3eb32ac903a (finalized slot 15651616) is open: its finish first
+[updater] mainnet fin 15651616 Finish                                applied        gas   3726482 block  321 + 12.0s 89d3a62a25dcac01fe902e3c6769d529967526e2db2dbcd8fa3b729c8d7d0501
+2026-11-22T18:57:01Z [honest-1 mainnet] mainnet fin 15651616 Finish applied (exit None, gas 3727009, fee 29816072, block 321)
+2026-11-22T18:57:39Z [honest-1 mainnet] job 0x06f75b78c202c37c: finalized slot 15653408 root 0x5fc508988dbfeae1559777fb0cfa3df1ba51d27f9385db4036661851c7e338db (attested slot 15653473, signature slot 15653474, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15653408 Open                                  refused   207 (JobExists) gas   2162064 block  326 + 12.3s ae1b6caf62635dbaf89a4fe938ed20086ddafdd6d6e402e1b0e140f6773ff852
+2026-11-22T18:57:52Z [honest-1 mainnet] mainnet fin 15653408 Open refused (exit Some(207), gas 2165219, fee 17321752, block 326): the program's exit 207: ae1b6caf62635dbaf89a4fe938ed20086ddafdd6d6e402e1b0e140f6773ff852 nonce 56, gas limit 4800000, max fee 1000000000; the step was done or moot afterwards (another party's transaction came first)
+2026-11-22T18:58:19Z [honest-1 mainnet] job 0x06f75b78c202c37c (finalized slot 15653408) is open: its miller first
+[updater] mainnet fin 15653408 Miller                                applied        gas   3308048 block  330 + 11.8s c2b6a416b5ae421060d21002da42347f7a4fe77fe8631b36a9df7995ef464250
+2026-11-22T18:58:31Z [honest-1 mainnet] mainnet fin 15653408 Miller applied (exit None, gas 3308447, fee 26467576, block 330)
+2026-11-22T18:58:33Z [honest-1 mainnet] job 0x06f75b78c202c37c (finalized slot 15653408) is open: its finish first
+[updater] mainnet fin 15653408 Finish                                applied        gas   3726482 block  331 +  8.5s 4b6b35387083804c6bf54b9bf912f6641039bb937747e4cdca3417360241a55a
+2026-11-22T18:58:41Z [honest-1 mainnet] mainnet fin 15653408 Finish applied (exit None, gas 3727009, fee 29816072, block 331)
+2026-11-22T18:58:50Z [honest-1 mainnet] job 0xf886f259739f82dc: finalized slot 15654016 root 0x3f8fbc0286ad56299d62956a6664bfeed2f667d4eb7fb5c0a06c7c22e716e9de (attested slot 15654081, signature slot 15654082, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15654016 Open                                  applied        gas   2168248 block  333 + 10.8s 37a0a531a29b9823de9fe2f621f2e3e01dc4530d05ab267d2916f43cf05fc5c3
+2026-11-22T18:59:01Z [honest-1 mainnet] mainnet fin 15654016 Open applied (exit None, gas 2171409, fee 17371272, block 333)
+2026-11-22T18:59:31Z [honest-1 mainnet] job 0xf886f259739f82dc (finalized slot 15654016) is open: its miller first
+[updater] mainnet fin 15654016 Miller                                applied        gas   3308048 block  337 + 10.3s a97364d3ebe61dbda0509913f695daf50b9c54d7accb375f4c6bd08c5569ee2d
+2026-11-22T18:59:41Z [honest-1 mainnet] mainnet fin 15654016 Miller applied (exit None, gas 3308447, fee 26467576, block 337)
+2026-11-22T19:00:00Z [honest-1 mainnet] job 0xf886f259739f82dc (finalized slot 15654016) is open: its finish first
+[updater] mainnet fin 15654016 Finish                                applied        gas   3726482 block  340 + 11.1s 72f71dc4b3bfd7a8acf0dba178163137aa87dd02eaf7899d3875c234aa81d386
+2026-11-22T19:00:11Z [honest-1 mainnet] mainnet fin 15654016 Finish applied (exit None, gas 3727009, fee 29816072, block 340)
+2026-11-22T19:00:41Z [honest-1 mainnet] job 0x4935a20fe478b639: finalized slot 15654944 root 0x0f9fe57817f7dca99e588579ee93b345a2e1029ab8b8356f7afe9bb2c662465c (attested slot 15655016, signature slot 15655017, 509 of 512 signers; advances; rotates the committees; adopts the next committee), served or confirmed by replay
+[updater] mainnet fin 15654944 Open                                  applied        gas   2238758 block  344 + 10.0s f6d130d0250894e3816b6a69112d74380038ed70b1afc8162f595db061697dd5
+2026-11-22T19:00:51Z [honest-1 mainnet] mainnet fin 15654944 Open applied (exit None, gas 2242733, fee 17941864, block 344)
+2026-11-22T19:01:19Z [honest-1 mainnet] job 0x4935a20fe478b639 (finalized slot 15654944) is open: its miller first
+[updater] mainnet fin 15654944 Miller                                applied        gas   3313372 block  348 + 11.5s 95adbf761a3aad0a9dce0d9820ec91861294fc23264702d37b5c6dcfbed87d41
+2026-11-22T19:01:31Z [honest-1 mainnet] mainnet fin 15654944 Miller applied (exit None, gas 3313771, fee 26510168, block 348)
+2026-11-22T19:02:39Z [honest-1 mainnet] job 0x4935a20fe478b639 (finalized slot 15654944) is open: its adopt0 first
+[updater] mainnet fin 15654944 adopt 1/2                             applied        gas   3410995 block  356 + 11.4s 8af1629a753c0f3ca1cb112beaa3adf74157857ee37f1e02aca34ceb2e7c4059
+2026-11-22T19:02:51Z [honest-1 mainnet] mainnet fin 15654944 adopt 1/2 applied (exit None, gas 3435975, fee 27487800, block 356)
+2026-11-22T19:03:59Z [honest-1 mainnet] job 0x4935a20fe478b639 (finalized slot 15654944) is open: its adopt1 first
+[updater] mainnet fin 15654944 adopt 2/2                             applied        gas   3418189 block  364 + 11.4s 8dd2ec5ba06f373019f433d1f6a3d137b3d8faa92cfb6c5bdfd8504487053c6b
+2026-11-22T19:04:11Z [honest-1 mainnet] mainnet fin 15654944 adopt 2/2 applied (exit None, gas 3443169, fee 27545352, block 364)
+2026-11-22T19:04:30Z [honest-1 mainnet] job 0x4935a20fe478b639 (finalized slot 15654944) is open: its finish first
+[updater] mainnet fin 15654944 Finish                                applied        gas   3736661 block  367 + 10.9s 6707d1f4b7e4c09ae63ca70e7d6063589d1c915b8ee935e6c8ff92830d6dfa84
+2026-11-22T19:04:41Z [honest-1 mainnet] mainnet fin 15654944 Finish applied (exit None, gas 3737188, fee 29897504, block 367)
+2026-11-22T19:05:30Z [honest-1 mainnet] job 0x0db6dc265e8be219: finalized slot 15656992 root 0x7adb8ddf0bd4c0f5e2cb9fa42628e1e92745ead855a114d31464c14c2fdbae31 (attested slot 15657069, signature slot 15657070, 509 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15656992 Open                                  applied        gas   2222312 block  373 + 10.8s 1855292d67d78f2b0bc2c5882553bba14d1f024c3755edd7364452272d336355
+2026-11-22T19:05:41Z [honest-1 mainnet] mainnet fin 15656992 Open applied (exit None, gas 2226221, fee 17809768, block 373)
+2026-11-22T19:05:49Z [honest-1 mainnet] job 0x0db6dc265e8be219 (finalized slot 15656992) is open: its miller first
+[updater] mainnet fin 15656992 Miller                                applied        gas   3308048 block  375 + 11.3s 89454e4fabd274b937ffd7854a32dc32ba6d4f460bbd33e638a864397533ab29
+2026-11-22T19:06:01Z [honest-1 mainnet] mainnet fin 15656992 Miller applied (exit None, gas 3308447, fee 26467576, block 375)
+2026-11-22T19:06:09Z [honest-1 mainnet] job 0x0db6dc265e8be219 (finalized slot 15656992) is open: its finish first
+[updater] mainnet fin 15656992 Finish                                applied        gas   3726482 block  377 + 12.2s 0cefabc54d04be2541c602e0a571b7a228b6a9f6b9a5ed9348fb634defad0248
+2026-11-22T19:06:21Z [honest-1 mainnet] mainnet fin 15656992 Finish applied (exit None, gas 3727009, fee 29816072, block 377)
+2026-11-22T19:06:34Z [honest-1 mainnet] round 1310: the sequencer and the follower disagree on the state of J6ZUUURpkrqmxWr1MEe5TS9rQRpZKLpvL2h4wBQPKidW@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:06:36Z [honest-1 mainnet] not sent: job 0xc3892de7547761f2 (finalized slot 15657600, its account not readable now (a transaction of it not final yet)), open on this store, leads job 0x071fa1928cf5cad5 (finalized slot 15658208, 0 step(s) applied): waiting for it (at most 26 block(s) after it last moves)
+2026-11-22T19:08:15Z [honest-1 mainnet] round 1356: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:08:17Z [honest-1 mainnet] round 1357: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:08:19Z [honest-1 mainnet] round 1358: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:08:44Z [honest-1 mainnet] round 1369: the sequencer and the follower disagree on the state of 6T9nrpiwG5FukGgvaPPCWjLJauFW81Bk4vr9NTMQo5g3@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:08:46Z [honest-1 mainnet] round 1370: the sequencer and the follower disagree on the state of 6T9nrpiwG5FukGgvaPPCWjLJauFW81Bk4vr9NTMQo5g3@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:08:48Z [honest-1 mainnet] round 1371: the sequencer and the follower disagree on the state of 6T9nrpiwG5FukGgvaPPCWjLJauFW81Bk4vr9NTMQo5g3@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:09:36Z [honest-1 mainnet] not sent: job 0xc109040b1f873520 (finalized slot 15659392, 1 step(s) applied, last moved 0 block(s) ago), open on this store, leads job 0x8437dbe775142a5d (finalized slot 15660000, 0 step(s) applied): waiting for it (at most 26 block(s) after it last moves)
+2026-11-22T19:10:55Z [honest-1 mainnet] round 1429: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:10:57Z [honest-1 mainnet] round 1430: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:10:59Z [honest-1 mainnet] round 1431: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:11:29Z [honest-1 mainnet] job 0xadc7962bc19ce3d0: finalized slot 15660608 root 0x8b726927a313e5b1b24c1d210cd19a51f0db9f09c883a9a468b38124a7d4fd12 (attested slot 15660673, signature slot 15660674, 509 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15660608 Open                                  applied        gas   2221897 block  409 + 12.6s 8b2468d0382c13d055c878383a11e2a15802a953d63166f6c47be1d6d4224928
+2026-11-22T19:11:42Z [honest-1 mainnet] mainnet fin 15660608 Open applied (exit None, gas 2225813, fee 17806504, block 409)
+2026-11-22T19:12:05Z [honest-1 mainnet] round 1456: the sequencer and the follower disagree on the state of 2dvuh8wLXbQXsfDKg7g4GkxZPHyTc728f4YL4Qfrvi12@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:12:07Z [honest-1 mainnet] round 1457: the sequencer and the follower disagree on the state of 2dvuh8wLXbQXsfDKg7g4GkxZPHyTc728f4YL4Qfrvi12@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:12:09Z [honest-1 mainnet] round 1458: the sequencer and the follower disagree on the state of 2dvuh8wLXbQXsfDKg7g4GkxZPHyTc728f4YL4Qfrvi12@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:12:25Z [honest-1 mainnet] round 1465: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:12:27Z [honest-1 mainnet] round 1466: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:12:29Z [honest-1 mainnet] round 1467: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:13:10Z [honest-1 mainnet] job 0xe6f4cb277ae9eebc: finalized slot 15661792 root 0x01dc920809185ab6eb8ab2a6ff9eb9d9725870a84de4c40761035f3902830292 (attested slot 15661858, signature slot 15661859, 509 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15661792 Open                                  applied        gas   2222746 block  419 + 10.5s dacf75c930f301ac0a661f53cf65cc743eb7269f8873fe7da10e0409133c56bc
+2026-11-22T19:13:21Z [honest-1 mainnet] mainnet fin 15661792 Open applied (exit None, gas 2226672, fee 17813376, block 419)
+2026-11-22T19:13:25Z [honest-1 mainnet] round 1488: the sequencer and the follower disagree on the state of GZqk6qEYKUBxXRqyp6xKbbk5Zqhbqy5VUk88fP5KPu2E@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:13:27Z [honest-1 mainnet] round 1489: the sequencer and the follower disagree on the state of GZqk6qEYKUBxXRqyp6xKbbk5Zqhbqy5VUk88fP5KPu2E@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:13:29Z [honest-1 mainnet] round 1490: the sequencer and the follower disagree on the state of GZqk6qEYKUBxXRqyp6xKbbk5Zqhbqy5VUk88fP5KPu2E@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:13:51Z [honest-1 mainnet] job 0xe6f4cb277ae9eebc (finalized slot 15661792) is open: its finish first
+[updater] mainnet fin 15661792 Finish                                applied        gas   3726482 block  423 + 10.1s 899e5bf1d75c763518ff130a40d7a80828920480f69507254d22734890049be3
+2026-11-22T19:14:01Z [honest-1 mainnet] mainnet fin 15661792 Finish applied (exit None, gas 3727009, fee 29816072, block 423)
+2026-11-22T19:14:05Z [honest-1 mainnet] round 1502: the sequencer and the follower disagree on the state of 67Rikgqg358DCZa39SUVTBStpKrG5QuHAh2pZHr7UUQJ@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:14:07Z [honest-1 mainnet] round 1503: the sequencer and the follower disagree on the state of 67Rikgqg358DCZa39SUVTBStpKrG5QuHAh2pZHr7UUQJ@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:14:09Z [honest-1 mainnet] round 1504: the sequencer and the follower disagree on the state of 67Rikgqg358DCZa39SUVTBStpKrG5QuHAh2pZHr7UUQJ@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:15:11Z [honest-1 mainnet] not sent: job 0x075189e517b049d0 (finalized slot 15662400, 1 step(s) applied, last moved 0 block(s) ago), open on this store, leads job 0xf1ca8669e3823f52 (finalized slot 15663008, 0 step(s) applied): waiting for it (at most 26 block(s) after it last moves)
+2026-11-22T19:15:45Z [honest-1 mainnet] round 1549: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:15:47Z [honest-1 mainnet] round 1550: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:15:49Z [honest-1 mainnet] round 1551: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:16:36Z [honest-1 mainnet] job 0x4ef3dab430ccd1d6: finalized slot 15663616 root 0x87db181139babf7a8ea8635eeaa6d3333f52f5a1344e4137708d52384f456d58 (attested slot 15663680, signature slot 15663681, 506 of 512 signers; advances; rotates the committees), served or confirmed by replay
+[updater] mainnet fin 15663616 Open                                  refused   207 (JobExists) gas   2296970 block  440 + 17.3s 0acba9e08bd434005bae22f274412c31558fe1f6a023c87d39c2b1c1ae4ed80d
+2026-11-22T19:16:54Z [honest-1 mainnet] mainnet fin 15663616 Open refused (exit Some(207), gas 2302047, fee 18416376, block 440): the program's exit 207: 0acba9e08bd434005bae22f274412c31558fe1f6a023c87d39c2b1c1ae4ed80d nonce 73, gas limit 4800000, max fee 1000000000; the step was done or moot afterwards (another party's transaction came first)
+2026-11-22T19:17:11Z [honest-1 mainnet] job 0x4ef3dab430ccd1d6 (finalized slot 15663616) is open: its miller first
+[updater] mainnet fin 15663616 Miller                                applied        gas   3308048 block  443 + 10.4s 54b624683d88e1aba5c39ff3551e381365d58a166811f0ee387c318572f825b5
+2026-11-22T19:17:21Z [honest-1 mainnet] mainnet fin 15663616 Miller applied (exit None, gas 3308447, fee 26467576, block 443)
+2026-11-22T19:17:45Z [honest-1 mainnet] round 1591: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:17:47Z [honest-1 mainnet] round 1592: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:17:49Z [honest-1 mainnet] round 1593: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:18:39Z [honest-1 mainnet] job 0x8452fb9f85929268: finalized slot 15663232 root 0x5bd5c7450adb03520cb650f2e2cd3b336f90b5c394843a618326fbaae34a0273 (attested slot 15663315, signature slot 15663316, 511 of 512 signers; adopts the next committee), served or confirmed by replay
+[updater] mainnet fin 15663232 Open                                  applied        gas   2184836 block  452 + 11.7s f7b0c3f0c0ad936978b3e00cf9334592f16bc97b45a6d745a8be15b9cea5ef82
+2026-11-22T19:18:51Z [honest-1 mainnet] mainnet fin 15663232 Open applied (exit None, gas 2188071, fee 17504568, block 452)
+2026-11-22T19:19:04Z [honest-1 mainnet] round 1622: the sequencer and the follower disagree on the state of BZMknFLFzrCgtQD8QdJSg3Cxzj3v1rvcKmxtk94bLexU@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:19:06Z [honest-1 mainnet] round 1623: the sequencer and the follower disagree on the state of BZMknFLFzrCgtQD8QdJSg3Cxzj3v1rvcKmxtk94bLexU@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:19:08Z [honest-1 mainnet] round 1624: the sequencer and the follower disagree on the state of BZMknFLFzrCgtQD8QdJSg3Cxzj3v1rvcKmxtk94bLexU@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:19:20Z [honest-1 mainnet] job 0x8452fb9f85929268 (finalized slot 15663232) is open: its adopt0 first
+[updater] mainnet fin 15663232 adopt 1/2                             applied        gas   3410995 block  456 + 10.7s 70cfd3aa4c4d897efcb33224d3a297db2eef8609848fd877d1cd9c3ce38fc10c
+2026-11-22T19:19:31Z [honest-1 mainnet] mainnet fin 15663232 adopt 1/2 applied (exit None, gas 3435975, fee 27487800, block 456)
+2026-11-22T19:19:54Z [honest-1 mainnet] round 1640: the sequencer and the follower disagree on the state of BZMknFLFzrCgtQD8QdJSg3Cxzj3v1rvcKmxtk94bLexU@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:19:56Z [honest-1 mainnet] round 1641: the sequencer and the follower disagree on the state of BZMknFLFzrCgtQD8QdJSg3Cxzj3v1rvcKmxtk94bLexU@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:19:58Z [honest-1 mainnet] round 1642: the sequencer and the follower disagree on the state of BZMknFLFzrCgtQD8QdJSg3Cxzj3v1rvcKmxtk94bLexU@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:20:14Z [honest-1 mainnet] round 1649: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:20:16Z [honest-1 mainnet] round 1650: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:20:18Z [honest-1 mainnet] round 1651: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:20:30Z [honest-1 mainnet] job 0xefbbeb94bad4502c: finalized slot 15665408 root 0x96df9511e4274b0b7f70858f4dbd9badfb228cf0001435486f97cadcfe545ebf (attested slot 15665474, signature slot 15665475, 509 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15665408 Open                                  applied        gas   2223342 block  463 + 10.6s 004be93839dad7b27c8da876b807b4e7e1f3cd127334db0487514af26dbfe86d
+2026-11-22T19:20:41Z [honest-1 mainnet] mainnet fin 15665408 Open applied (exit None, gas 2227265, fee 17818120, block 463)
+2026-11-22T19:20:43Z [honest-1 mainnet] job 0xefbbeb94bad4502c (finalized slot 15665408) is open: its miller first
+[updater] mainnet fin 15665408 Miller                                applied        gas   3308048 block  464 +  7.9s bc3b24424b5378ed93eb7155382580780a915f3075b1e2d6fc80d01463e43b1b
+2026-11-22T19:20:51Z [honest-1 mainnet] mainnet fin 15665408 Miller applied (exit None, gas 3308447, fee 26467576, block 464)
+2026-11-22T19:22:01Z [honest-1 mainnet] job 0xefbbeb94bad4502c (finalized slot 15665408) is open: its finish first
+[updater] mainnet fin 15665408 Finish                                applied        gas   3726482 block  472 + 10.2s e8e17f959e4f699c86124c599a57dd5810ee472a6ea40bdfad43b27f8f97d09a
+2026-11-22T19:22:11Z [honest-1 mainnet] mainnet fin 15665408 Finish applied (exit None, gas 3727009, fee 29816072, block 472)
+2026-11-22T19:23:10Z [honest-1 mainnet] not sent: job 0x31ed8d4fe7902c5b (finalized slot 15666592, 1 step(s) applied, last moved 0 block(s) ago), open on this store, leads job 0xb898b7785a5abc70 (finalized slot 15667200, 0 step(s) applied): waiting for it (at most 26 block(s) after it last moves)
+2026-11-22T19:24:05Z [honest-1 mainnet] round 1743: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:24:07Z [honest-1 mainnet] round 1744: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:24:09Z [honest-1 mainnet] round 1745: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:24:35Z [honest-1 mainnet] job 0x82c76687e7fdc515: finalized slot 15668415 root 0x36382c7d6bb95a348db48228591875df08a4840c079e65b61903150a2a083130 (attested slot 15668482, signature slot 15668483, 509 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15668415 Open                                  applied        gas   2222465 block  488 + 15.6s 2126bb09c5ed5351413a7663421b4424bb7c217d44d2d0186a11b653a8f6f69e
+2026-11-22T19:24:51Z [honest-1 mainnet] mainnet fin 15668415 Open applied (exit None, gas 2226391, fee 17811128, block 488)
+2026-11-22T19:25:25Z [honest-1 mainnet] round 1773: the sequencer and the follower disagree on the state of CsmjCXPE7K6KjsnP9A28RsvCsiXj8sQTLsNmsfrRsueH@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:25:27Z [honest-1 mainnet] round 1774: the sequencer and the follower disagree on the state of CsmjCXPE7K6KjsnP9A28RsvCsiXj8sQTLsNmsfrRsueH@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:25:29Z [honest-1 mainnet] round 1775: the sequencer and the follower disagree on the state of CsmjCXPE7K6KjsnP9A28RsvCsiXj8sQTLsNmsfrRsueH@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:25:55Z [honest-1 mainnet] round 1787: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:25:57Z [honest-1 mainnet] round 1788: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:25:59Z [honest-1 mainnet] round 1789: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:26:51Z [honest-1 mainnet] job 0xfe62e37f099be8f8: finalized slot 15669600 root 0x7c4eeeb8272943df764f0f73790552ec13c923cafab311303a288d4594586422 (attested slot 15669671, signature slot 15669672, 510 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15669600 Open                                  applied        gas   2195092 block  501 + 10.9s 60caaa813510243e1a457ab19b6c5e36814cc1c2594b7a3b605d181ed1b5d5f4
+2026-11-22T19:27:02Z [honest-1 mainnet] mainnet fin 15669600 Open applied (exit None, gas 2198620, fee 17588960, block 501)
+2026-11-22T19:27:04Z [honest-1 mainnet] job 0xfe62e37f099be8f8 (finalized slot 15669600) is open: its miller first
+[updater] mainnet fin 15669600 Miller                                applied        gas   3308048 block  503 + 16.9s 69a578c4838a502de9ab598cec5fd1c7e1f65edb02446e87f860f1e6acebd67f
+2026-11-22T19:27:21Z [honest-1 mainnet] mainnet fin 15669600 Miller applied (exit None, gas 3308447, fee 26467576, block 503)
+2026-11-22T19:27:45Z [honest-1 mainnet] round 1825: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:27:47Z [honest-1 mainnet] round 1826: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:27:49Z [honest-1 mainnet] round 1827: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:27:52Z [honest-1 mainnet] job 0xe1bba5f47d061f1a: finalized slot 15670208 root 0x0b565097b2ad676813586a00fd7f2307788b805f38a03a5ce8fa4123151f54ca (attested slot 15670274, signature slot 15670275, 509 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15670208 Open                                  applied        gas   2222990 block  507 +  8.9s 975c7800599fb4c3479254c5d033261c431661716bb9d850d1d422b723f15cbd
+2026-11-22T19:28:01Z [honest-1 mainnet] mainnet fin 15670208 Open applied (exit None, gas 2226913, fee 17815304, block 507)
+2026-11-22T19:28:31Z [honest-1 mainnet] job 0xe1bba5f47d061f1a (finalized slot 15670208) is open: its miller first
+[updater] mainnet fin 15670208 Miller                                applied        gas   3308048 block  511 + 11.5s 9b5d354bfcbef025c3e8dc77e342d699ae04cd99887b8f5a694ea0da5e10ef5d
+2026-11-22T19:28:43Z [honest-1 mainnet] mainnet fin 15670208 Miller applied (exit None, gas 3308447, fee 26467576, block 511)
+2026-11-22T19:29:21Z [honest-1 mainnet] job 0xe1bba5f47d061f1a (finalized slot 15670208) is open: its finish first
+[updater] mainnet fin 15670208 Finish                                applied        gas   3726482 block  516 +  9.8s 58fa06db6478d517e9f91bd4d4be2c0bc26204d8a45e6a24f914b176ff7c213c
+2026-11-22T19:29:31Z [honest-1 mainnet] mainnet fin 15670208 Finish applied (exit None, gas 3727009, fee 29816072, block 516)
+2026-11-22T19:29:44Z [honest-1 mainnet] round 1865: the sequencer and the follower disagree on the state of 8dD2DgbXrobcdC61b6QMntXFcg4PTxzDNGHbSjAT3Mj4@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:29:46Z [honest-1 mainnet] round 1866: the sequencer and the follower disagree on the state of 8dD2DgbXrobcdC61b6QMntXFcg4PTxzDNGHbSjAT3Mj4@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:29:48Z [honest-1 mainnet] round 1867: the sequencer and the follower disagree on the state of 8dD2DgbXrobcdC61b6QMntXFcg4PTxzDNGHbSjAT3Mj4@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:30:05Z [honest-1 mainnet] round 1874: the sequencer and the follower disagree on the state of 8dD2DgbXrobcdC61b6QMntXFcg4PTxzDNGHbSjAT3Mj4@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:30:07Z [honest-1 mainnet] round 1875: the sequencer and the follower disagree on the state of 8dD2DgbXrobcdC61b6QMntXFcg4PTxzDNGHbSjAT3Mj4@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:30:09Z [honest-1 mainnet] round 1876: the sequencer and the follower disagree on the state of 8dD2DgbXrobcdC61b6QMntXFcg4PTxzDNGHbSjAT3Mj4@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:30:24Z [honest-1 mainnet] round 1883: the sequencer and the follower disagree on the state of 8dD2DgbXrobcdC61b6QMntXFcg4PTxzDNGHbSjAT3Mj4@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:30:26Z [honest-1 mainnet] round 1884: the sequencer and the follower disagree on the state of 8dD2DgbXrobcdC61b6QMntXFcg4PTxzDNGHbSjAT3Mj4@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:30:28Z [honest-1 mainnet] round 1885: the sequencer and the follower disagree on the state of 8dD2DgbXrobcdC61b6QMntXFcg4PTxzDNGHbSjAT3Mj4@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:30:36Z [honest-1 mainnet] not sent: job 0x0821590cd5dd9220 (finalized slot 15671296, 3 step(s) applied, last moved 0 block(s) ago), open on this store, leads job 0xc4966f8339644a12 (finalized slot 15671392, 0 step(s) applied): waiting for it (at most 26 block(s) after it last moves)
+2026-11-22T19:32:25Z [honest-1 mainnet] round 1939: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:32:27Z [honest-1 mainnet] round 1940: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:32:29Z [honest-1 mainnet] round 1941: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:32:44Z [honest-1 mainnet] round 1948: the sequencer and the follower disagree on the state of 4UgtwinwxtAMkRd6NVvdcUbGpBPtbw1knb8WrGPZEvGM@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:32:46Z [honest-1 mainnet] round 1949: the sequencer and the follower disagree on the state of 4UgtwinwxtAMkRd6NVvdcUbGpBPtbw1knb8WrGPZEvGM@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:32:48Z [honest-1 mainnet] round 1950: the sequencer and the follower disagree on the state of 4UgtwinwxtAMkRd6NVvdcUbGpBPtbw1knb8WrGPZEvGM@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+[updater] mainnet fin 15672512 Miller                                applied        gas   3309621 block  538 + 10.8s dcdb44c48102b5ed7c5b3a9971cb220477e2579fb8d69bc288170a6dcf090a6c
+2026-11-22T19:33:11Z [honest-1 mainnet] mainnet fin 15672512 Miller applied (exit None, gas 3310020, fee 26480160, block 538)
+2026-11-22T19:33:30Z [honest-1 mainnet] job 0xd76ff82a5883beb5 (finalized slot 15672512) is open: its finish first
+[updater] mainnet fin 15672512 Finish                                applied        gas   3729346 block  541 + 10.8s 194a5e73ac1efb8c51fa504099bc9fd1a3f703475227f8d33639d5b6809868da
+2026-11-22T19:33:41Z [honest-1 mainnet] mainnet fin 15672512 Finish applied (exit None, gas 3729873, fee 29838984, block 541)
+2026-11-22T19:33:44Z [honest-1 mainnet] round 1965: the sequencer and the follower disagree on the state of 4byJ4wyjBK7p8q25at4C872y8rEwVZm77YyqyxCXQQLg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:33:46Z [honest-1 mainnet] round 1966: the sequencer and the follower disagree on the state of 4byJ4wyjBK7p8q25at4C872y8rEwVZm77YyqyxCXQQLg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:33:48Z [honest-1 mainnet] round 1967: the sequencer and the follower disagree on the state of 4byJ4wyjBK7p8q25at4C872y8rEwVZm77YyqyxCXQQLg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+[updater] mainnet fin 15672608 Miller                                applied        gas   3308048 block  546 +  9.8s 666a5b99f7646cf20c5673e78d634da7cde067b30006790038f2c99074952ad2
+2026-11-22T19:34:31Z [honest-1 mainnet] mainnet fin 15672608 Miller applied (exit None, gas 3308447, fee 26467576, block 546)
+2026-11-22T19:34:39Z [honest-1 mainnet] job 0x2938e1f37fd3a775 (finalized slot 15672608) is open: its finish first
+[updater] mainnet fin 15672608 Finish                                applied        gas   3726482 block  548 + 12.0s 3c0d935d9bcec11a1762fa1a0533a84b08c5f91dea15c150aac1ecb9f1059736
+2026-11-22T19:34:51Z [honest-1 mainnet] mainnet fin 15672608 Finish applied (exit None, gas 3727009, fee 29816072, block 548)
+2026-11-22T19:35:21Z [honest-1 mainnet] job 0xafa7cefee3330b5d: finalized slot 15673216 root 0x52920cbb0203d6305e608a20948bb6ad6438766d56d8c6666ae0026f9fe11f9c (attested slot 15673281, signature slot 15673282, 510 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15673216 Open                                  applied        gas   2195371 block  552 +  9.8s 6237591463a2a79c011dd062e6b1233ddc865724e654a1d9d77295c03f002b45
+2026-11-22T19:35:31Z [honest-1 mainnet] mainnet fin 15673216 Open applied (exit None, gas 2198915, fee 17591320, block 552)
+2026-11-22T19:36:39Z [honest-1 mainnet] job 0xafa7cefee3330b5d (finalized slot 15673216) is open: its miller first
+[updater] mainnet fin 15673216 Miller                                applied        gas   3308048 block  560 + 11.9s 37cfc28bffa322c804a7ecbfefab58e4afe611f8f3e47fe522be538c97ae505e
+2026-11-22T19:36:51Z [honest-1 mainnet] mainnet fin 15673216 Miller applied (exit None, gas 3308447, fee 26467576, block 560)
+2026-11-22T19:38:00Z [honest-1 mainnet] job 0xafa7cefee3330b5d (finalized slot 15673216) is open: its finish first
+[updater] mainnet fin 15673216 Finish                                applied        gas   3726482 block  568 + 10.4s b5c5af36ced5a2d3df0b36c8ee995ca87a1d18a275a6095ea89840f170e3faac
+2026-11-22T19:38:11Z [honest-1 mainnet] mainnet fin 15673216 Finish applied (exit None, gas 3727009, fee 29816072, block 568)
+2026-11-22T19:38:36Z [honest-1 mainnet] job 0x2983856c4a91fd58: finalized slot 15675616 root 0xb94a4659a7035dc1e5990fceddd7adf61eeb12a812d24acfd3f19222858c24d8 (attested slot 15675680, signature slot 15675681, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15675616 Open                                  applied        gas   2168773 block  572 + 14.6s 2be9e08d79b431a50ce16c32fec58234468ef06d94c590d35ab8dd87851d6b40
+2026-11-22T19:38:51Z [honest-1 mainnet] mainnet fin 15675616 Open applied (exit None, gas 2171929, fee 17375432, block 572)
+2026-11-22T19:38:53Z [honest-1 mainnet] job 0x2983856c4a91fd58 (finalized slot 15675616) is open: its miller first
+[updater] mainnet fin 15675616 Miller                                applied        gas   3308048 block  573 +  7.6s 68bd712a22c41e3eb88a5063bd21a6a49bf381aacce8951af627af698bf64b89
+2026-11-22T19:39:01Z [honest-1 mainnet] mainnet fin 15675616 Miller applied (exit None, gas 3308447, fee 26467576, block 573)
+2026-11-22T19:39:19Z [honest-1 mainnet] job 0x2983856c4a91fd58 (finalized slot 15675616) is open: its finish first
+[updater] mainnet fin 15675616 Finish                                applied        gas   3726482 block  576 + 11.5s aa34e74c749c6b16a7dd3c34bcd037b06b3eb90e472927a5dac3e25dbd7f98cf
+2026-11-22T19:39:31Z [honest-1 mainnet] mainnet fin 15675616 Finish applied (exit None, gas 3727009, fee 29816072, block 576)
+2026-11-22T19:39:50Z [honest-1 mainnet] job 0x056067154b9c6c27: finalized slot 15676192 root 0x16da880c940396e5bb93e3e0ca9ced49115d2e8e2f57dc7de6fa7bf652f8e55d (attested slot 15676256, signature slot 15676257, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15676192 Open                                  applied        gas   2168773 block  579 + 10.9s 1c7d2b9673563f163894deee1d688e25b55f9fbaad5537945693ec0847c2c0d8
+2026-11-22T19:40:01Z [honest-1 mainnet] mainnet fin 15676192 Open applied (exit None, gas 2171929, fee 17375432, block 579)
+2026-11-22T19:40:14Z [honest-1 mainnet] round 2102: the sequencer and the follower disagree on the state of 2Pp64eUw2tk6eauy7GUbLDgbUgznna9nCY6Lq3KWtYMq@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:40:16Z [honest-1 mainnet] round 2103: the sequencer and the follower disagree on the state of 2Pp64eUw2tk6eauy7GUbLDgbUgznna9nCY6Lq3KWtYMq@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:40:18Z [honest-1 mainnet] round 2104: the sequencer and the follower disagree on the state of 2Pp64eUw2tk6eauy7GUbLDgbUgznna9nCY6Lq3KWtYMq@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:40:35Z [honest-1 mainnet] round 2111: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:40:37Z [honest-1 mainnet] round 2112: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:40:39Z [honest-1 mainnet] round 2113: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:41:01Z [honest-1 mainnet] job 0x98a58c55235bdb3f: finalized slot 15676800 root 0x4429b5f5dce1aac353a9704ada837ee010a105c38de4cf1be58d84e02e13d9e7 (attested slot 15676864, signature slot 15676865, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15676800 Open                                  applied        gas   2168829 block  586 +  9.7s b3e4c5a1f941e643e6a16e466f7b95b15f6f3410a4223d0392d1e1b312b5383c
+2026-11-22T19:41:11Z [honest-1 mainnet] mainnet fin 15676800 Open applied (exit None, gas 2171984, fee 17375872, block 586)
+2026-11-22T19:41:15Z [honest-1 mainnet] round 2125: the sequencer and the follower disagree on the state of 61kmWx5bfNR7NUv2tUetdcLfjaqdwpZeZQQm6sC7jJ51@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:41:17Z [honest-1 mainnet] round 2126: the sequencer and the follower disagree on the state of 61kmWx5bfNR7NUv2tUetdcLfjaqdwpZeZQQm6sC7jJ51@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:41:19Z [honest-1 mainnet] round 2127: the sequencer and the follower disagree on the state of 61kmWx5bfNR7NUv2tUetdcLfjaqdwpZeZQQm6sC7jJ51@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:42:25Z [honest-1 mainnet] round 2158: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:42:27Z [honest-1 mainnet] round 2159: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:42:29Z [honest-1 mainnet] round 2160: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:42:41Z [honest-1 mainnet] job 0x5be0db97cb93e8a6: finalized slot 15678016 root 0xdc3a5492c7de9d09431145f38dc3023e4b4de218a9147b71a130a33f49b5b1f1 (attested slot 15678080, signature slot 15678081, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15678016 Open                                  applied        gas   2168535 block  596 +  9.8s 1ea8d35b519bff6dd1558a6d9e2ef2a913b649cbf86803afd96efcd5d47bee01
+2026-11-22T19:42:51Z [honest-1 mainnet] mainnet fin 15678016 Open applied (exit None, gas 2171687, fee 17373496, block 596)
+2026-11-22T19:43:14Z [honest-1 mainnet] round 2176: the sequencer and the follower disagree on the state of 6CBhxjsuUjMbD6cGT6oXQibKMmTnkhWkBqxFBKoA2R13@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:43:16Z [honest-1 mainnet] round 2177: the sequencer and the follower disagree on the state of 6CBhxjsuUjMbD6cGT6oXQibKMmTnkhWkBqxFBKoA2R13@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:43:18Z [honest-1 mainnet] round 2178: the sequencer and the follower disagree on the state of 6CBhxjsuUjMbD6cGT6oXQibKMmTnkhWkBqxFBKoA2R13@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:43:44Z [honest-1 mainnet] round 2190: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:43:46Z [honest-1 mainnet] round 2191: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:43:48Z [honest-1 mainnet] round 2192: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:43:52Z [honest-1 mainnet] job 0xc975153d118182d6: finalized slot 15678592 root 0x71c28b2aef186f76eb0f5fb460b38181fa953cb11b95f04e01e42313f5ede2e5 (attested slot 15678659, signature slot 15678660, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15678592 Open                                  applied        gas   2168829 block  603 +  8.8s d2b359fff3fe0fea0753c451486f42b5254349bd4c2b9320b2e23c469e81028e
+2026-11-22T19:44:01Z [honest-1 mainnet] mainnet fin 15678592 Open applied (exit None, gas 2171984, fee 17375872, block 603)
+2026-11-22T19:45:10Z [honest-1 mainnet] job 0xc975153d118182d6 (finalized slot 15678592) is open: its miller first
+[updater] mainnet fin 15678592 Miller                                applied        gas   3308048 block  611 + 10.5s 3abde390a8040e6991f6d4c04d294a39dd51bc08a5a7ca0e1629b9dca66437d0
+2026-11-22T19:45:21Z [honest-1 mainnet] mainnet fin 15678592 Miller applied (exit None, gas 3308447, fee 26467576, block 611)
+2026-11-22T19:45:23Z [honest-1 mainnet] job 0xc975153d118182d6 (finalized slot 15678592) is open: its finish first
+[updater] mainnet fin 15678592 Finish                                applied        gas   3726482 block  612 +  8.1s d0fef66c43a696186829135156ddeb17e6e5195c3cafea3b5611fa1bdf3d6385
+2026-11-22T19:45:31Z [honest-1 mainnet] mainnet fin 15678592 Finish applied (exit None, gas 3727009, fee 29816072, block 612)
+2026-11-22T19:45:54Z [honest-1 mainnet] round 2238: the sequencer and the follower disagree on the state of BRAXR5J6NfNRHSjLkAyqV9bSZBSfKzXYTW2DYzMEtC4n@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:45:56Z [honest-1 mainnet] round 2239: the sequencer and the follower disagree on the state of BRAXR5J6NfNRHSjLkAyqV9bSZBSfKzXYTW2DYzMEtC4n@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:45:58Z [honest-1 mainnet] round 2240: the sequencer and the follower disagree on the state of BRAXR5J6NfNRHSjLkAyqV9bSZBSfKzXYTW2DYzMEtC4n@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+[updater] mainnet fin 15679520 Miller                                refused   81 (StepError::Phase) gas     22888 block  617 + 10.5s 5463e7699124fd59e12acaeade230a17790e352968b46f56b3efb54c0ce6e7a4
+2026-11-22T19:46:21Z [honest-1 mainnet] mainnet fin 15679520 Miller refused (exit Some(81), gas 23287, fee 186296, block 617): the program's exit 81: 5463e7699124fd59e12acaeade230a17790e352968b46f56b3efb54c0ce6e7a4 nonce 102, gas limit 4800000, max fee 1000000000; the step was done or moot afterwards (another party's transaction came first)
+2026-11-22T19:46:34Z [honest-1 mainnet] round 2251: the sequencer and the follower disagree on the state of BRAXR5J6NfNRHSjLkAyqV9bSZBSfKzXYTW2DYzMEtC4n@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:46:36Z [honest-1 mainnet] round 2252: the sequencer and the follower disagree on the state of BRAXR5J6NfNRHSjLkAyqV9bSZBSfKzXYTW2DYzMEtC4n@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:46:38Z [honest-1 mainnet] round 2253: the sequencer and the follower disagree on the state of BRAXR5J6NfNRHSjLkAyqV9bSZBSfKzXYTW2DYzMEtC4n@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:47:14Z [honest-1 mainnet] round 2269: the sequencer and the follower disagree on the state of BRAXR5J6NfNRHSjLkAyqV9bSZBSfKzXYTW2DYzMEtC4n@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:47:16Z [honest-1 mainnet] round 2270: the sequencer and the follower disagree on the state of BRAXR5J6NfNRHSjLkAyqV9bSZBSfKzXYTW2DYzMEtC4n@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:47:18Z [honest-1 mainnet] round 2271: the sequencer and the follower disagree on the state of BRAXR5J6NfNRHSjLkAyqV9bSZBSfKzXYTW2DYzMEtC4n@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:47:49Z [honest-1 mainnet] job 0x53613169fd35521a (finalized slot 15679520) is open: its finish first
+[updater] mainnet fin 15679520 Finish                                applied        gas   3736661 block  627 + 11.8s c1c3659248aafd358c7631ab9620bd99550439875599053a241cdf427cfdb4c7
+2026-11-22T19:48:01Z [honest-1 mainnet] mainnet fin 15679520 Finish applied (exit None, gas 3737188, fee 29897504, block 627)
+2026-11-22T19:48:35Z [honest-1 mainnet] job 0xe75c2f239cd62ac2: finalized slot 15680992 root 0xa3a9a901c97e73b0fcf97e1a05e0c8300ad581c1a8481b2f6970d04bd7767422 (attested slot 15681056, signature slot 15681057, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15680992 Open                                  applied        gas   2169191 block  632 + 16.2s 3a48e9993bf25c8c7df750fb6099ca08f305e12d87fe67d122496fdcc27561e4
+2026-11-22T19:48:51Z [honest-1 mainnet] mainnet fin 15680992 Open applied (exit None, gas 2172346, fee 17378768, block 632)
+2026-11-22T19:48:53Z [honest-1 mainnet] job 0xe75c2f239cd62ac2 (finalized slot 15680992) is open: its miller first
+[updater] mainnet fin 15680992 Miller                                applied        gas   3308048 block  633 +  7.9s 3aef417bfb74f1bdf8e6d570d6a4ee5f7aaf862a3f73ff6be860fe1267a2dc10
+2026-11-22T19:49:01Z [honest-1 mainnet] mainnet fin 15680992 Miller applied (exit None, gas 3308447, fee 26467576, block 633)
+2026-11-22T19:49:25Z [honest-1 mainnet] round 2313: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:49:27Z [honest-1 mainnet] round 2314: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:49:29Z [honest-1 mainnet] round 2315: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:49:54Z [honest-1 mainnet] round 2326: the sequencer and the follower disagree on the state of Ey2knP8fyucY5JzD6Y9Yb1zaXZrmFSRjFnSgvc9cqC2y@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:49:56Z [honest-1 mainnet] round 2327: the sequencer and the follower disagree on the state of Ey2knP8fyucY5JzD6Y9Yb1zaXZrmFSRjFnSgvc9cqC2y@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:49:59Z [honest-1 mainnet] round 2328: the sequencer and the follower disagree on the state of Ey2knP8fyucY5JzD6Y9Yb1zaXZrmFSRjFnSgvc9cqC2y@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:50:36Z [honest-1 mainnet] not sent: job 0x725dd70c3017ba8c (finalized slot 15681600, 1 step(s) applied, last moved 0 block(s) ago), open on this store, leads job 0xeee898631059b703 (finalized slot 15682208, 0 step(s) applied): waiting for it (at most 26 block(s) after it last moves)
+2026-11-22T19:52:05Z [honest-1 mainnet] round 2386: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:52:07Z [honest-1 mainnet] round 2387: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:52:09Z [honest-1 mainnet] round 2388: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:52:29Z [honest-1 mainnet] job 0x24b2a38ed263f7ed: finalized slot 15682816 root 0x5ac5efad603912692d2a3a69459834316cf5ff9520b43a1cca870a1b879accb8 (attested slot 15682880, signature slot 15682881, 510 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15682816 Open                                  applied        gas   2195658 block  655 + 11.6s c45fcb395b1511621b5cca8373fe6609ad6f8c4de3a41c2c944c129566332f83
+2026-11-22T19:52:41Z [honest-1 mainnet] mainnet fin 15682816 Open applied (exit None, gas 2199200, fee 17593600, block 655)
+2026-11-22T19:52:54Z [honest-1 mainnet] round 2403: the sequencer and the follower disagree on the state of Fvs1HWWPXAt6jd3Vh3y5gNvGZmfpzGBg5zJF4JyWD6EV@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:52:56Z [honest-1 mainnet] round 2404: the sequencer and the follower disagree on the state of Fvs1HWWPXAt6jd3Vh3y5gNvGZmfpzGBg5zJF4JyWD6EV@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:52:58Z [honest-1 mainnet] round 2405: the sequencer and the follower disagree on the state of Fvs1HWWPXAt6jd3Vh3y5gNvGZmfpzGBg5zJF4JyWD6EV@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:53:35Z [honest-1 mainnet] round 2421: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:53:37Z [honest-1 mainnet] round 2422: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:53:39Z [honest-1 mainnet] round 2423: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-22T19:54:19Z [honest-1 mainnet] stopped at round 2441: {"chain":"mainnet","daemon":"honest-1","failed_rounds":0,"failing_sends":0,"finalized_slot":15682816,"held":[],"last_applied_utc":"2026-11-22T19:52:41Z","last_error":"the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX","last_failure":"","last_plan":"up-to-date","paused_until_round":0,"period":1914,"reasons":[],"round":2441,"rounds_without_progress":17,"sources_head_slot":15682816,"status":"ok","updated_utc":"2026-11-22T19:54:19Z"}

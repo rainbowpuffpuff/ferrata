@@ -202,6 +202,25 @@ two-hour cadence (§2).
   | G10: 106 updates, join or wait | 8 (5.8–6.1 s) | 60 s | 105 / 157 s | 65 / 31 | 7.7M | 1.088 | 0.088 | 0.0853 | 0.541 |
   | G11: 106 updates, join or wait | 30 (4.6–4.7 s) | 60 s | 326 / 595 s | 21 / 75 | 3.2M | 1.036 | 0.036 | 0.0358 | 0.577 |
 
+  With the turns on the chain's height (ADR 0049; 27 November 2026, one build, commit `860be342`;
+  [`perf-gate-sequencer-r910.md`](../../lez/results/perf-gate-sequencer-r910.md)): window 8 blocks of 10 s, 106 updates
+  revealed every 60 s, both honest daemons polling every 4 s unless the run says otherwise.
+
+  | run | reveal step | latency median / p90 | updates covered: own job / a later one | execution gas per revealed update | total / completed-job gas | honest waste: refused and abandoned / completed | A3's ratio: refused / applied | honest-1's fee share |
+  |---|---:|---|---|---:|---:|---:|---:|---:|
+  | G22: honest-1 every 2 s, honest-2 every 6 s | 60 s | 156 / 265 s | 43 / 53 | 5.3M | 1.037 | 0.037 | 0.0331 | 0.575 |
+  | G23: honest-2 served copies | 60 s | 161 / 286 s | 42 / 54 | 5.1M | 1.042 | 0.042 | 0.0001 | 0.498 |
+  | G24: with A3's adversary | 60 s | 35 / 45 s | 96 / 0 | 10.9M | 1.107 | 0.953 | 0.9529 | 0.497 |
+  | G25: the default | 60 s | 165 / 285 s | 41 / 55 | 5.2M | 1.059 | 0.059 | 0.0550 | 0.577 |
+  | G26: the default | 60 s | 145 / 255 s | 44 / 52 | 5.4M | 1.048 | 0.048 | 0.0484 | 0.583 |
+
+  Polling every 2 s against 6 s (G22) left honest-1's share where equal polls put it (G25, G26): honest-1 has paid more
+  than half in every run, these and G6–G11, with the same instance, updates and keys repeating largely the same draws.
+  The latency at window 8 is longer than G10's (105 / 157 s), a turn being a 10-s block rather than a round of about
+  6 s. With copies (G23) every abandoned job was left at its `Open`, opened before the other's `Open` was in a final
+  block; A3's adversary (G24), never deferring and polling every 2 s, sent almost every step, and the honest daemons' few
+  sends lost their races: A3's ratio 0.9529, outside its limit.
+
   A longer window costs latency and saves gas: fewer races, and intermediate updates skipped (a later update's job
   covers them). G6 and G7 compare windows 8 and 30 at one reveal step over 106 updates each (A3's gate asks 100;
   each run on its own box's build of the same sources): the median latency grows from 105 to 275 s, the execution gas

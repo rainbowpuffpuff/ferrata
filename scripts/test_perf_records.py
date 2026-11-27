@@ -903,6 +903,190 @@ class TestGateJoin(unittest.TestCase):
             self.assertEqual(guide.count(row), 1, row)
 
 
+class TestGateR910(unittest.TestCase):
+    """`lez/results/perf-gate-sequencer-r910.md` (RFP-021 R.9 and R.10 with the turns on the chain's height, ADR 0048):
+    a hand-written header, then `bench/perf/summarize_gate.py`'s output on the five runs, then
+    `bench/perf/gate_abandoned.py`'s, byte for byte. The runs are the ones the header describes, all on one build
+    (each `machine.txt`, `done.txt`, `reveals.tsv`, the daemons' configurations): `gate-g22` honest daemons polling
+    every 2 s and 6 s, `gate-g23` honest-2 served copies of every update (its signature slot moved by one), `gate-g24`
+    A3's adversary beside the two honest daemons, `gate-g25` and `gate-g26` the default. A3's two figures and limits,
+    the steps applied twice, every honest refused step's twin, the abandoned jobs, the turn clock (each daemon's last
+    `/metrics`) and the updates learned from the chain are recomputed here from the raw files."""
+
+    RUNS = ("gate-g22", "gate-g23", "gate-g24", "gate-g25", "gate-g26")
+    DOC = "lez/results/perf-gate-sequencer-r910.md"
+    BUILD = "860be342"
+    SETTINGS = {
+        "gate-g22": "GATE_ADVERSARY=0 GATE_POLLS=2,6 GATE_COPIES=0 GATE_ADV_POLL=2",
+        "gate-g23": "GATE_ADVERSARY=0 GATE_POLLS=4,4 GATE_COPIES=1 GATE_ADV_POLL=2",
+        "gate-g24": "GATE_ADVERSARY=1 GATE_POLLS=4,4 GATE_COPIES=0 GATE_ADV_POLL=2",
+        "gate-g25": "GATE_ADVERSARY=0 GATE_POLLS=4,4 GATE_COPIES=0 GATE_ADV_POLL=2",
+        "gate-g26": "GATE_ADVERSARY=0 GATE_POLLS=4,4 GATE_COPIES=0 GATE_ADV_POLL=2",
+    }
+
+    @classmethod
+    def setUpClass(cls):
+        dirs = [f"bench/perf/results/{name}" for name in cls.RUNS]
+        run = lambda script, ds: subprocess.run([sys.executable, "-I", script, *ds], cwd=ROOT, capture_output=True,
+                                                encoding="utf-8", check=True).stdout
+        cls.out = run("bench/perf/summarize_gate.py", dirs)
+        cls.abandoned_out = run("bench/perf/gate_abandoned.py", dirs)
+        cls.doc = rd(cls.DOC)
+        tail = cls.out + cls.abandoned_out
+        head = cls.doc[: len(cls.doc) - len(tail)] if cls.doc.endswith(tail) else ""
+        cls.header = " ".join(head.split())
+        sys.path.insert(0, str(ROOT / "bench" / "perf"))
+        import contextlib
+        import io
+        import summarize_gate
+        with contextlib.redirect_stdout(io.StringIO()):
+            cls.keys = {name: summarize_gate.summarize(ROOT / d) for name, d in zip(cls.RUNS, dirs)}
+        cls.journals = {name: cls.journal(name) for name in cls.RUNS}
+
+    def has(self, needle, count=1):
+        n = self.header.count(needle)
+        self.assertEqual(n, count, f"{self.DOC}'s header states '{needle}' {n} time(s), not {count}")
+
+    @staticmethod
+    def daemons(name):
+        return sorted(p.name[len("state-"):] for p in (ROOT / "bench/perf/results" / name).glob("state-*"))
+
+    @classmethod
+    def journal(cls, name):
+        rows = []
+        for d in cls.daemons(name):
+            for line in rd(f"bench/perf/results/{name}/state-{d}/journal.tsv").splitlines():
+                f = line.split("\t")
+                if len(f) >= 13:
+                    rows.append(dict(daemon=d, step=f[1], job=f[2], slot=int(f[3]), status=f[4], exit=f[5],
+                                     gas=int(f[6] or 0), fee=int(f[8] or 0), block=int(f[9]), t=unix(f[10]),
+                                     label=f[11], hash=f[12].split(" ")[0]))
+        return rows
+
+    def sha(self, name):
+        return re.search(r"ferrata-updater sha256 ([0-9a-f]{64})", rd(f"bench/perf/results/{name}/machine.txt")).group(1)
+
+    def metric(self, name, daemon, key):
+        m = rd(f"bench/perf/results/{name}/metrics-{daemon}.txt")
+        return int(re.search(rf"^ferrata_updater_{key}\{{[^}}]*\}} (\d+)$", m, re.M).group(1))
+
+    def test_the_record_is_its_header_then_the_generators_output(self):
+        self.assertTrue(self.out.startswith("## Run `gate-g22`"))
+        self.assertTrue(self.abandoned_out.startswith("### Abandoned jobs of `gate-g22`"))
+        self.assertTrue(self.doc.endswith(self.out + self.abandoned_out))
+        self.assertTrue(self.header.startswith("# RFP-021 R.9 and R.10 with the turns on the chain's height"))
+        self.assertNotIn("## Run", self.header)
+
+    def test_the_runs_are_the_ones_described(self):
+        for name in self.RUNS:
+            run = f"bench/perf/results/{name}"
+            machine = rd(f"{run}/machine.txt")
+            self.assertIn(f"\nGATE_ENTRIES=106 GATE_STEP=60 GATE_WINDOW=8 GATE_POLL=4 {self.SETTINGS[name]}\n", machine)
+            self.assertIn("\nFAKETIME=-5d ", machine)
+            self.assertIn("FAKETIME_DONT_FAKE_MONOTONIC=1)", machine)
+            self.assertEqual(rd(f"{run}/done.txt"), "done=1\n")
+            kinds = [line.split("\t")[2] for line in rd(f"{run}/reveals.tsv").splitlines()[1:]]
+            self.assertEqual((len(kinds), kinds.count("finality"), kinds.count("period")), (106, 96, 10))
+            want = ["honest-1", "honest-2"] + (["adversary"] if name == "gate-g24" else [])
+            self.assertEqual(self.daemons(name), sorted(want))
+            self.assertIn(f"updater sha256 {self.sha(name)};", rd(f"{run}/hook.log"))
+        shas = {self.sha(n) for n in self.RUNS}
+        self.assertEqual(len(shas), 1, "one build for the five runs")
+        self.has(f"(commit `{self.BUILD}`, updater sha256 `{shas.pop()[:8]}…`)")
+        polls = {d: re.search(r"poll_secs = (\d+)", rd(f"bench/perf/results/gate-g22/updater-{d}.toml")).group(1)
+                 for d in ("honest-1", "honest-2")}
+        self.assertEqual(polls, {"honest-1": "2", "honest-2": "6"})
+        adv = rd("bench/perf/results/gate-g24/updater-adversary.toml")
+        for line in ("defer_window = 1", "join_wait_rounds = 0", "poll_secs = 2"):
+            self.assertIn(f"\n{line}\n", adv)
+        for d in ("honest-1", "honest-2"):
+            self.assertNotIn("join_wait_rounds", rd(f"bench/perf/results/gate-g24/updater-{d}.toml"))
+
+    def test_the_reveals_are_the_recorded_updates_and_the_copies(self):
+        import beacon_replay
+        expect, copies = [], []
+        for i, p in enumerate(sorted((ROOT / "lez/lab/results/record/net/mainnet/updates").glob("*.ssz"))[:106], 1):
+            kind = p.name.split(".")[1]
+            expect.append([str(i), p.name, kind, *map(str, beacon_replay.slots(kind, p.read_bytes()))])
+            copies.append(str(beacon_replay.copy_update(kind, p.read_bytes())[1]))
+        for name in self.RUNS:
+            rows = [line.split("\t") for line in rd(f"bench/perf/results/{name}/reveals.tsv").splitlines()[1:]]
+            self.assertEqual([r[:6] for r in rows], expect, name)
+            self.assertEqual([r[8] for r in rows], copies, name)
+            self.assertTrue(all(r[8] != r[5] for r in rows), "every update has a copy")
+
+    def test_a3s_figures_limits_and_steps_from_the_journals(self):
+        for name in self.RUNS:
+            rows = self.journals[name]
+            honest = [r for r in rows if r["daemon"] != "adversary"]
+            applied = sum(r["gas"] for r in honest if r["status"] == "applied")
+            refused = sum(r["gas"] for r in honest if r["status"] == "refused")
+            fees = {d: sum(r["fee"] for r in honest if r["daemon"] == d and r["status"] in ("applied", "refused"))
+                    for d in ("honest-1", "honest-2")}
+            ratio, share = refused / applied, fees["honest-1"] / sum(fees.values())
+            self.assertEqual((f"{ratio:.4f}", f"{share:.3f}"),
+                             (f"{self.keys[name]['r9']:.4f}", f"{self.keys[name]['share']:.3f}"), name)
+            done = [(r["job"], r["step"], r["label"]) for r in rows if r["status"] == "applied"]
+            self.assertEqual(len(done), len(set(done)), f"{name}: a step applied twice")
+            twins = {(r["job"], r["step"], r["block"]) for r in rows if r["status"] == "applied"}
+            finishes = {(r["job"], r["block"]) for r in rows if r["status"] == "applied" and r["step"] == "finish"}
+            for r in (r for r in honest if r["status"] == "refused"):
+                if (r["job"], r["step"], r["block"]) in twins:
+                    continue
+                self.assertEqual((r["step"], r["exit"]), ("finish", "82"), f"{name}: a refused step without its twin: {r}")
+                self.assertTrue(any(b == r["block"] and j != r["job"] for j, b in finishes), r)
+
+    def test_the_turns_counted_the_chains_height(self):
+        for name in self.RUNS:
+            for d in self.daemons(name):
+                self.assertEqual(self.metric(name, d, "turn_clock_is_height"), 1, f"{name} {d}")
+                self.assertGreater(self.metric(name, d, "turn_clock"), 100, f"{name} {d}")
+
+    def test_the_copies_were_learned_from_the_chain(self):
+        learned = {d: self.metric("gate-g23", d, "updates_from_chain_total") for d in ("honest-1", "honest-2")}
+        self.assertGreater(learned["honest-1"], 0)
+        self.assertGreater(learned["honest-2"], 0)
+        for name in ("gate-g22", "gate-g24", "gate-g25", "gate-g26"):
+            for d in ("honest-1", "honest-2"):
+                self.assertEqual(self.metric(name, d, "updates_from_chain_total"), 0, f"{name} {d}: one replay, one copy")
+
+    def test_the_headers_figures(self):
+        """Each figure the header states, rebuilt here from the records (summarize_gate's keys, the journals, the last
+        `/metrics`), with A3's two limits asserted on the journals' own figures."""
+        what = {"gate-g22": "honest-1 polling every 2 s, honest-2 every 6 s", "gate-g23": "honest-2 served copies",
+                "gate-g24": "with A3's adversary", "gate-g25": "the default", "gate-g26": "the default"}
+        for name in self.RUNS:
+            k = self.keys[name]
+            if name == "gate-g24":
+                # A3's adversary on a sequencer: the honest daemons' ratio is outside A3's limit, as the header states.
+                self.assertGreater(k["r9"], 0.10, name)
+            else:
+                self.assertLessEqual(k["r9"], 0.10, name)
+            self.assertTrue(0.35 <= k["share"] <= 0.65, f"{name}: {k['share']:.3f}")
+            self.has(f"`{name}` ({what[name]}) **{k['r9']:.4f}** and honest-1's share **{k['share']:.3f}**")
+            self.has(f"`{name}` {k['lat_med']:.0f} / {k['lat_p90']:.0f} s ({k['own'] + k['later']} of 96 covered)")
+            self.assertEqual(k["own"] + k["later"], 96, name)
+            self.has(f"`{name}` {k['mult']:.3f} ({k['abandoned']} job(s) abandoned)")
+            opens = [sum(1 for r in self.journals[name] if r["daemon"] == d and r["step"] == "open" and r["status"] == "applied")
+                     for d in ("honest-1", "honest-2")]
+            self.has(f"`{name}` {opens[0]} / {opens[1]}")
+        self.has(f"in `gate-g23` honest-1 learned {self.metric('gate-g23', 'honest-1', 'updates_from_chain_total')} updates "
+                 f"from honest-2's `Open`s and honest-2 {self.metric('gate-g23', 'honest-2', 'updates_from_chain_total')} "
+                 f"from honest-1's")
+
+    def test_the_operator_guides_rows(self):
+        guide = rd("docs/guides/operator-guide.md")
+        what = {"gate-g22": "honest-1 every 2 s, honest-2 every 6 s", "gate-g23": "honest-2 served copies",
+                "gate-g24": "with A3's adversary", "gate-g25": "the default", "gate-g26": "the default"}
+        for name in self.RUNS:
+            k = self.keys[name]
+            gas = f"{k['total_gas'] / k['revealed'] / 1e6:.1f}M"
+            row = (f"| {name[5:].upper()}: {what[name]} | {k['reveal_step']:.0f} s | {k['lat_med']:.0f} / "
+                   f"{k['lat_p90']:.0f} s | {k['own']} / {k['later']} | {gas} | {k['mult']:.3f} | {k['waste']:.3f} | "
+                   f"{k['r9']:.4f} | {k['share']:.3f} |")
+            self.assertEqual(guide.count(row), 1, row)
+
+
 def g(n):
     """A gas figure as the generator prints it (bench/perf/summarize_gate.py's `g`)."""
     return f"{int(round(n)):,}"
