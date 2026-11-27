@@ -1,0 +1,7 @@
+checkpoint input, journal and burns re-derived from the recorded node answers and attestations: equal
+{"bytes":448132,"image_id":"0x8917f58e76aa805dedc04fc5e2b70404f5078b66b271ec44aaa0c78d9f5eaf04","program":"R0BF-3.1/checkpoint_b_0_3_5.bin","sha256":"86eaa5502bffbb85d8661e18d24ae83a797cab5e2cdc4db70c01b6a7ae20bbdc"}
+{"bytes":230360,"image_id":"0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd","program":"R0BF-3.1/release.bin","sha256":"d0fdcac9fa71ee87d22014ccfbb90f4ac543ae2559838d85a9dd0315c7cae2ac"}
+checkpoint: proven on the GPU (receipts/prover.json); its journal is the native one; its seal is checked by RISC Zero's verifier (stage vault)
+release-private-1: proven on the GPU (prover.json); its journal is the statement's; its seal is checked by the vault stage
+release-public-0: proven on the GPU (prover.json); its journal is the statement's; its seal is checked by the vault stage
+crown.json: the candidate's seal = the verified receipt's
