@@ -1,8 +1,8 @@
 # Randomised runs over both real halves (`cli/tests/both_halves.rs`, RFP-022 Sec.6 and F.8)
 
-Bridge program image `9d02d54d56b026079e94c8d9b12db69f3a96b7acccd11283f68e5bc343bfa321`; checkpoint (rule B) `0xdafa6ab9a26841681fd071b8e4cdfae514371f82902426dc9fb1e2c80d29cda0`; release `0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd`. The vault on anvil (chain id 1), the bridge program in LEZ v0.4.0-rc1's state machine, the two guests executed in RISC Zero dev mode; the mock verifier accepts only the journals the guests committed. 51 s in all.
+Bridge program image `9d02d54d56b026079e94c8d9b12db69f3a96b7acccd11283f68e5bc343bfa321`; checkpoint (rule B) `0xdafa6ab9a26841681fd071b8e4cdfae514371f82902426dc9fb1e2c80d29cda0`; release `0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd`. The vault on anvil (chain id 1), the bridge program in LEZ v0.4.0-rc1's state machine, the two guests executed in RISC Zero dev mode; the mock verifier accepts only the journals the guests committed. 58 s in all.
 
-After every step: vault balance == escrowed + owed; zone supply == minted - burnt; supply <= escrowed; and supply + unminted deposits + unreleased burns == escrowed.
+After every step: vault balance == escrowed + owed; zone supply == minted - burnt; supply <= escrowed; and supply + unminted deposits + unreleased burns + fees escrowed for LEZ not yet collected (none here: every deposit and release is under schedule 0) == escrowed.
 
 | seed | steps | deposits | imports | claims | claims capped (of them claimed later) | burns | releases | forgeries refused | unminted at the end | unreleased at the end | invariant checks |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|

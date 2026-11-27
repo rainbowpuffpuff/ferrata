@@ -9,4 +9,4 @@
 - B: deposit d0 imported and claimed under B's configuration; burn 0 under B
 - Sec.9: A's emergency stop tripped: the proven release of burn 1 and the refund of d4 refused; A's escrow 1101200000000000000 wei stays (burn 1 unreleased, d4 unrefunded; the books still balance); B goes on (d1 claimed)
 
-Invariant checks: A 6 times, B 2 times (vault balance == escrowed + owed; supply == minted - burnt; supply + unminted + unreleased == escrowed). Forgeries refused: 9. 20 s in all.
+Invariant checks: A 6 times, B 2 times (vault balance == escrowed + owed; supply == minted - burnt; supply + unminted + unreleased + uncollected fees == escrowed, the last none here). Forgeries refused: 9. 22 s in all.
