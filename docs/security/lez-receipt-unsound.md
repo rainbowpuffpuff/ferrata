@@ -65,7 +65,7 @@ The freeze authority, on the first sign (an advisory, or wrapped supply on LEZ a
 5. Renew every freeze before its `maxFreeze` (30 days by default) runs out; a lapse reopens releases.
 
 `test_lezUnsound_theRunbookHoldsEveryPositionWhileRenewed` runs these steps and checks every position below, and that
-a freeze renewed on day 29 still holds on day 31.
+every freeze renewed on day 29 (releases, checkpoints, deposits) still holds on day 31.
 
 ## 4. Each position
 

@@ -204,7 +204,10 @@ def r8_phase_split(ctx):
     reason = _row_text(ctx.path(STATUS).read_text(), "RFP-022", "R.8")
     # The row's LEZ sentence names the zkVM LEZ verifies private transactions with; the row also names 3.1.0 for the
     # Ethereum side, so only that phrase says which is LEZ's (review round 2: a row naming another version passed).
-    said = re.search(r"LEZ verifies private transactions with risc0-zkvm (\d+\.\d+\.\d+)", reason)
+    said = re.search(r"LEZ verifies private transactions with risc0-zkvm (\d+\.\d+\.\d+)(.*?)(?:;|\.\s|\.$|$)", reason)
+    # The rest of that sentence qualifies it: on 3.0.x it must say "until" and "phase 2" there, not just somewhere in
+    # the row (final review round: "... 3.0.5, forever; phase 2 is complete" passed).
+    qualifier = said.group(2) if said else ""
     if len(versions) != 1:
         problems.append(f"the LEZ-linked lockfiles disagree: {lez}")
     elif not said:
@@ -212,7 +215,7 @@ def r8_phase_split(ctx):
     elif said.group(1) != versions[0]:
         problems.append(f"the LEZ-linked lockfiles lock risc0-zkvm {versions[0]}, but R.8's row says LEZ verifies "
                         f"private transactions with {said.group(1)}: the row is stale")
-    elif versions[0].startswith("3.0.") and "phase 2" not in reason:
+    elif versions[0].startswith("3.0.") and ("until" not in qualifier or "phase 2" not in qualifier):
         problems.append(f"R.8's row does not say that LEZ is on risc0-zkvm {versions[0]} until phase 2")
     else:
         lines.append(f"R.8's row says LEZ verifies private transactions with risc0-zkvm {versions[0]}, as the "

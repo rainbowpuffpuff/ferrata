@@ -189,6 +189,7 @@ contract LezReceiptUnsoundTest is VaultTestBase {
         // Detection. The freeze authority's runbook.
         vm.startPrank(freezer);
         vault.setTokenReleasesFrozen(ETH, true);
+        vault.setDepositsFrozen(true);
         vault.retire();
         vm.stopPrank();
         _sunset(2); // LEZ imported leaves 0 and 1 before its Sunset: the honest count
@@ -222,15 +223,23 @@ contract LezReceiptUnsoundTest is VaultTestBase {
         _refund(unimported);
         assertEq(bob.balance - bobBefore, 1 ether + _relayFee(ETH, ONE), "refunded whole");
 
-        // Renewed on day 29, the freeze still holds on day 31; the burns are still pending.
+        // Every freeze renewed on day 29 still holds on day 31: releases, checkpoints and deposits; the burns pending.
         vm.warp(block.timestamp + 26 days);
-        vm.prank(freezer);
+        vm.startPrank(freezer);
         vault.setTokenReleasesFrozen(ETH, true);
+        vault.setCheckpointsFrozen(true);
+        vault.setDepositsFrozen(true);
+        vm.stopPrank();
         vm.warp(block.timestamp + 2 days);
         _releaseExpecting(
             _request(ETH, ONE, alice, root, HONEST_0),
             abi.encodeWithSelector(FerrataVault.TokenReleasesAreFrozen.selector)
         );
+        FerrataVault.Checkpoint memory day31 = _nextCheckpoint(vault, keccak256("a root on day 31"), 2, true);
+        _proveCheckpoint(_checkpointJournal(vault, LEZ_CONFIG_ID, day31));
+        vm.expectRevert(FerrataVault.CheckpointsAreFrozen.selector);
+        vault.submitCandidate(day31, SEAL);
+        assertGt(vault.depositsFrozenUntil(), block.timestamp, "the deposit freeze, renewed, still holds");
         assertFalse(vault.nullifierUsed(HONEST_0), "the honest burn is still pending");
         assertFalse(vault.nullifierUsed(FORGED_0), "and so is the forged one");
     }

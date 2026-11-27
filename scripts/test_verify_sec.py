@@ -161,6 +161,12 @@ class SecChecks(unittest.TestCase):
         self._fails(SPLIT, lambda r: self._row(r, "phase 2", "phase two"),
                     "R.8's row does not say that LEZ is on risc0-zkvm 3.0.5 until phase 2")
 
+    def test_the_row_says_phase_2_is_complete_while_lez_is_on_3_0(self):
+        """Final review round: 'phase 2' elsewhere in the row passed; the LEZ sentence itself must say until phase 2."""
+        self._fails(SPLIT, lambda r: self._row(r, "until a LEZ tag on risc0 3.1 (phase 2, Logos)",
+                                               "forever; phase 2 is complete"),
+                    "R.8's row does not say that LEZ is on risc0-zkvm 3.0.5 until phase 2")
+
     def test_lez_moved_and_the_row_follows_passes(self):
         """The row rewritten for LEZ on 3.1 (phase 2 done, no 3.0.x named) passes."""
         with tempfile.TemporaryDirectory(prefix="split-follows-", dir=SCRATCH) as td:
