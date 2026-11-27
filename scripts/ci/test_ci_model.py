@@ -96,8 +96,8 @@ check("trace: roundtrip runs cli/tests/roundtrip_b.rs (through e2e/ci/run.sh, in
       runs("roundtrip", "cli/tests/roundtrip_b.rs"))
 check("trace: roundtrip runs cli/tests/e2e.rs (through cli/tests/e2e.sh, which sets FERRATA_E2E)",
       runs("roundtrip", "cli/tests/e2e.rs"))
-check("trace: roundtrip does not run cli/src/privacy.rs's unit tests (only --test targets)",
-      not runs("roundtrip", "cli/src/privacy.rs"))
+check("trace: roundtrip runs cli/src/privacy.rs's unit tests (the unfiltered --lib suite)",
+      runs("roundtrip", "cli/src/privacy.rs"))
 check("trace: vault runs vault/test/Migration.t.sol", runs("vault", "vault/test/Migration.t.sol"))
 check("trace: vault runs VaultInvariantsB.t.sol (its invariants inherited)",
       runs("vault", "vault/test/invariant/VaultInvariantsB.t.sol"))
@@ -515,8 +515,8 @@ check("checker: an unknown kind is refused", rc == 1 and "is none of test, recor
 rc, out = run_checker(real, "--list")
 check("checker: the real map, RFP-022: 66 of 68 hard rows with a test CI runs",
       "RFP-022: 68 hard rows; 66 with a test CI runs; 2 without one" in out)
-check("checker: the real map, RFP-021: 55 of 59 hard rows with a test CI runs",
-      "RFP-021: 59 hard rows; 55 with a test CI runs; 4 without one" in out)
+check("checker: the real map, RFP-021: 56 of 59 hard rows with a test CI runs",
+      "RFP-021: 59 hard rows; 56 with a test CI runs; 3 without one" in out)
 listed = re.findall(r"^    (RFP-02[12] (?:VS|Sec|Priv|F|U|R|P|S)\.\d+): (\S+)$", out, re.M)
 rows022 = [rid for rid, _ in listed if rid.startswith("RFP-022 ")]
 check("checker: --list gives every hard row its status", len(listed) == 59 + 68 and len(rows022) == 68)
