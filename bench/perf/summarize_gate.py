@@ -256,6 +256,21 @@ def summarize(run):
     if per_round:
         key.update(round_s=(min(per_round), max(per_round)), cpu_share=(min(shares), max(shares)),
                    rpc=(min(ups), max(ups), min(downs), max(downs)))
+    # Runs made with the per-daemon settings (GATE_POLLS, GATE_COPIES: machine.txt names them): who opened the jobs and
+    # how many updates each daemon learned from the other's Opens (the records of earlier runs stay as generated).
+    per_daemon = "GATE_POLLS=" in (run / "machine.txt").read_text()
+    if per_daemon:
+        print("\nPer-daemon applied Opens, fee share, and updates learned on chain:")
+    honest_fees = sum(tot[n]["af"] + tot[n]["bf"] for n in honest)
+    for n in names if per_daemon else []:
+        opens = sum(r["step"] == "open" and r["status"] == "applied" for r in J[n])
+        paid = tot[n]["af"] + tot[n]["bf"]
+        share = f"{paid / honest_fees:.3f}" if honest_fees else "?"
+        mt = (run / f"metrics-{n}.txt").read_text() if (run / f"metrics-{n}.txt").exists() else ""
+        learned = re.search(r"^ferrata_updater_updates_from_chain_total(?:\{[^}]*\})? (\d+)", mt, re.M)
+        extra = f"; updates learned from other parties' Opens: {learned.group(1)}" if learned else ""
+        excluded = " (the adversary's numerator is excluded from the honest total)" if n not in honest else ""
+        print(f"- {n}: {opens} applied Opens; fees / honest fees = {share}{excluded}{extra}.")
     print("\nBeacon bytes are the replay's own count (each response's body plus 200 bytes), per port; sequencer RPC bytes are "
           "counted by a proxy in front of each daemon.")
     print()

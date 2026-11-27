@@ -482,8 +482,9 @@ fn a_copy_of_the_chosen_update_open_on_the_store_is_joined() {
     assert_eq!(run.jobs(), vec![(j1, 2, true)], "U1's job: b sent its Miller and Finish");
 }
 
-/// `a` carries U1's job (its `Open` alone applied); `b`, which never saw U1 served, opened U2's job and sent its
-/// `Miller`. `a`, about to send U1's `Miller`, has asked its sources what they serve now (a carrier does so in each
+/// `a` carries U1's job (its `Open` alone applied); `b`, which never saw U1 served and could not read `a`'s `Open` (its
+/// backend gives no transactions then, `serve_messages = false`: as when that `Open` is not yet in a block it reads),
+/// opened U2's job and sent its `Miller`. `a`, about to send U1's `Miller`, has asked its sources what they serve now (a carrier does so in each
 /// round), finds U2's job, which leads its own (more steps applied), and waits; U2's job finishes, U1's is abandoned
 /// with its `Open` alone.
 #[test]
@@ -502,11 +503,13 @@ fn a_carrier_finds_a_newer_job_that_leads_its_own_and_waits() {
         p => panic!("a: {}", show(&p)),
     };
     fx.clock.set(c + 2);
+    l.serve_messages = false;
     let j2 = match run.tick(&mut b, &mut l) {
         Plan::Send(x) if x.step == Step::Open => x.job_id,
         p => panic!("b's Open: {}", show(&p)),
     };
     assert!(matches!(run.tick(&mut b, &mut l), Plan::Send(ref x) if x.step == Step::Miller && x.job_id == j2));
+    l.serve_messages = true;
     let p = run.tick(&mut a, &mut l);
     println!("a, U1's job with its Open applied, U2's with its Miller: {}", show(&p));
     assert!(matches!(p, Plan::Deferred(Step::Miller)), "{}", show(&p));
@@ -518,10 +521,11 @@ fn a_carrier_finds_a_newer_job_that_leads_its_own_and_waits() {
     assert_eq!(finalized(&a, &l), fx.entries[c + 1].finalized_slot, "U2 applied");
 }
 
-/// `a` carries U1's job, its `Open` alone applied; `b`, which never saw U1 served, opened U2's job: as many steps. U2 is
-/// the update both are served, and its job, applied, leaves U1 superseded, so U2's job leads ([`leads`]): `a`, which
-/// knows both, waits; `b`, which cannot find `a`'s job, carries on; U1's job is abandoned with its `Open` alone and no
-/// job is paid for U1 again.
+/// `a` carries U1's job, its `Open` alone applied; `b`, which never saw U1 served and could not read `a`'s `Open` then
+/// (`serve_messages = false`), opened U2's job: as many steps. U2 is the update both are served, and its job, applied,
+/// leaves U1 superseded, so U2's job leads ([`leads`]): `a`, which knows both, waits; `b`, which now learns U1 from
+/// `a`'s `Open` and finds U1's job behind its own, carries on; U1's job is abandoned with its `Open` alone and no job is
+/// paid for U1 again.
 #[test]
 fn a_carrier_yields_to_a_newer_job_with_as_many_steps() {
     let fx = Fx::load();
@@ -538,7 +542,9 @@ fn a_carrier_yields_to_a_newer_job_with_as_many_steps() {
         p => panic!("a: {}", show(&p)),
     };
     fx.clock.set(c + 2);
+    l.serve_messages = false;
     assert!(matches!(run.tick(&mut b, &mut l), Plan::Send(ref x) if x.step == Step::Open));
+    l.serve_messages = true;
     let p = run.tick(&mut a, &mut l);
     println!("a, U1's job and U2's each with its Open applied: {}", show(&p));
     assert!(matches!(p, Plan::Deferred(Step::Miller)), "{}", show(&p));

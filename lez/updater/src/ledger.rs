@@ -118,6 +118,8 @@ mod harness_ledger {
         pub log: Vec<(AccountId, String, TxOutcome)>,
         /// (block, root actor, message) of every transaction the chain applied (`Ledger::messages_to`).
         pub applied: Vec<(u64, Actor, Vec<u8>)>,
+        /// Whether `Ledger::messages_to` gives them (default); off, it gives none, as a backend that does not say.
+        pub serve_messages: bool,
     }
 
     impl HarnessLedger {
@@ -134,7 +136,16 @@ mod harness_ledger {
                 .with_public_accounts(accounts)
                 .with_named_programs([(programs::fee_account_id(), programs::fee())])
                 .with_genesis_programs([(harness::ferrata_program(), true)]);
-            Self { state, block_id: 2, fail_next: 0, now: None, height: None, log: Vec::new(), applied: Vec::new() }
+            Self {
+                state,
+                block_id: 2,
+                fail_next: 0,
+                now: None,
+                height: None,
+                log: Vec::new(),
+                applied: Vec::new(),
+                serve_messages: true,
+            }
         }
 
         /// The Ferrata program's account.
@@ -165,6 +176,9 @@ mod harness_ledger {
         }
 
         fn messages_to(&self, root: Actor, after: u64) -> Result<Option<(Vec<Vec<u8>>, u64)>> {
+            if !self.serve_messages {
+                return Ok(None);
+            }
             let messages =
                 self.applied.iter().filter(|(b, r, _)| *b > after && *r == root).map(|(_, _, m)| m.clone()).collect();
             Ok(Some((messages, self.block_id.saturating_sub(1).max(after))))

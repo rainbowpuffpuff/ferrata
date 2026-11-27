@@ -628,6 +628,12 @@ pub struct Updater {
     learned: u64,
     /// This round's reading of the turn clock ([`Updater::read_clock`]): the chain's height, or the round.
     clock: u64,
+    /// The last reading of the turn clock, and the round it was first read in: a height that stops moving stops the
+    /// turns, so `/health` counts the rounds it has not moved for too.
+    last_clock: Option<u64>,
+    /// The reading before this round's ([`Updater::due_clock`]).
+    prev_clock: Option<u64>,
+    clock_moved_round: u64,
     /// `policy.join_wait_rounds`: the newest block whose `Open`s were read ([`Updater::learn_from_chain`]), and the last
     /// round they were read in.
     chain_seen: u64,
@@ -702,6 +708,9 @@ impl Updater {
             in_wait: false,
             learned: 0,
             clock: 0,
+            last_clock: None,
+            prev_clock: None,
+            clock_moved_round: 0,
             chain_seen: 0,
             chain_read: 0,
             own_moves: BTreeMap::new(),
@@ -1160,15 +1169,16 @@ impl Updater {
     // ---- a round --------------------------------------------------------------------------
 
     /// Whether this updater waits its turn to send `step` of job `jid` (`policy.defer_window`): `H(tag, jid, step) mod
-    /// defer_window` turns of the clock ([`Updater::read_clock`]: the chain's blocks) from the first reading at which it
-    /// found the step due under `since` (an `Open`, or a step of a job this updater does not carry: the instance's state,
-    /// as [`state_turn`] gives it; a step of a job it carries: the job), or the wait fixed for the turn (after this
-    /// updater sent such a step there: a whole turn, [`Updater::submit`]). Counted in blocks, two updaters that read the
-    /// chain at least once a block find a step due at the same height (the block that made it due, or the first they
-    /// read after the update came) and reach their turns at the heights their draws give, however often each reads:
-    /// reading more often only notices a turn sooner within the block it comes in (RFP-021 R.10).
+    /// defer_window` turns of the clock ([`Updater::read_clock`]: the chain's blocks) from where it first found the step
+    /// due under `since` ([`Updater::due_clock`]: the block after its previous reading; `since`: an `Open`, or a step of a
+    /// job this updater does not carry, the instance's state, as [`state_turn`] gives it; a step of a job it carries, the
+    /// job), or the wait fixed for the turn (after this updater sent such a step there: a whole turn,
+    /// [`Updater::submit`]). Counted in blocks, two updaters find a step due at the same height (the block that made it
+    /// due, or the first after the update came) and reach their turns at the heights their draws give, however often each
+    /// reads: reading more often only notices a turn sooner, within the blocks between two readings (RFP-021 R.10).
     fn defer(&mut self, jid: &Root, since: &Root, step: Step) -> bool {
-        let (due, fixed) = *self.first_due.entry((*since, step)).or_insert((self.clock, None));
+        let first = self.due_clock();
+        let (due, fixed) = *self.first_due.entry((*since, step)).or_insert((first, None));
         let wait = fixed.unwrap_or_else(|| {
             let mut h = Sha256::new();
             h.update(self.tag);
@@ -1188,15 +1198,41 @@ impl Updater {
     /// of the chain's newest block the backend's reads reflect ([`Ledger::height`]), which every party reading the chain
     /// reads alike and none can hasten (RFP-021 R.10: an updater polling more often than another reaches no turn
     /// sooner); this updater's round where the backend gives none (the wait then counts its own rounds, as before).
-    /// Read just after the instance's state, so that it is the height that state is of.
+    /// Read just after the instance's state, so that it is the height that state is of. The kind is the first reading's,
+    /// kept (a backend that stops giving its height leaves the clock where it was, and `/health` counts the rounds it has
+    /// not moved for; one that starts giving it later is not followed, so turns never mix rounds and blocks), and the
+    /// clock never goes back (a height lower than one read before, as from a follower restored from an older state,
+    /// leaves it where it was: turns that had elapsed stay elapsed).
     fn read_clock(&mut self, ledger: &dyn Ledger) {
-        let (clock, height) = match ledger.height() {
-            Some(h) => (h, true),
-            None => (self.round, false),
+        let first = self.last_clock.is_none();
+        let (clock, height) = match (ledger.height(), first || self.metrics.turn_clock_height) {
+            (Some(h), true) => {
+                if h < self.clock {
+                    self.log(&format!("the chain's height went back from {} to {h}: the turns keep {}", self.clock, self.clock));
+                }
+                (h.max(self.clock), true)
+            }
+            (None, true) if !first => (self.clock, true),
+            _ => (self.round, false),
         };
+        self.prev_clock = self.last_clock;
         self.clock = clock;
+        if self.last_clock != Some(clock) {
+            self.last_clock = Some(clock);
+            self.clock_moved_round = self.round;
+        }
         self.metrics.turn_clock = clock;
         self.metrics.turn_clock_height = height;
+    }
+
+    /// Where a turn that starts at this reading is counted from: the block after this updater's previous reading, the
+    /// first at which what it now finds due can have become due (a block applying a step, or an update served, since it
+    /// last read the chain); this reading's where there was none, or where it read the chain in the same block or the one
+    /// before. An updater reading once a block or more often counts from the height it reads (the block that made the
+    /// step due); one reading less often does not lose the blocks between its readings to the anchor, only to noticing
+    /// its turn (RFP-021 R.10).
+    fn due_clock(&self) -> u64 {
+        self.prev_clock.map_or(self.clock, |p| p.saturating_add(1).min(self.clock))
     }
 
     /// What the turn clock counts, for the log and `/health`.
@@ -2007,6 +2043,9 @@ impl Updater {
             }
             let still = round.saturating_sub(self.rivals.1.get(&k.lands).map_or(round, |e| e.1));
             if still >= wait {
+                if self.passed.len() >= MAX_KNOWN * 4 {
+                    self.passed.clear();
+                }
                 if self.passed.insert(k.jid) {
                     self.metrics.stalled_jobs_passed += 1;
                     self.log(&format!(
@@ -2762,16 +2801,23 @@ impl Updater {
             ));
         }
         let behind = self.metrics.sources_head.saturating_sub(self.metrics.finalized_slot);
-        // Counted on the turn clock, as the deferral the alarm leaves room for is.
+        // Counted on the turn clock, as the deferral the alarm leaves room for is; and, on the chain's height, the rounds
+        // it has not moved for: a height that stops (a follower that no longer gets final blocks) stops every turn.
         let still = self.metrics.turn_clock.saturating_sub(self.metrics.progress_clock);
+        let frozen =
+            if self.metrics.turn_clock_height { self.round.saturating_sub(self.clock_moved_round) } else { 0 };
         let left_behind = self.metrics.progress_round > 0 && behind > self.policy.max_lag_slots;
-        if left_behind && still >= self.stall_rounds() {
+        if left_behind && still.max(frozen) >= self.stall_rounds() {
+            let how = if still >= self.stall_rounds() {
+                format!("{still} {}", self.clock_unit())
+            } else {
+                format!("{frozen} rounds, the chain's height ({}) not moving", self.metrics.turn_clock)
+            };
             why.push(format!(
-                "no progress: the instance's finalized slot {} has not moved for {still} {} while the sources serve \
-                 updates {behind} slots past it{}",
+                "no progress: the instance's finalized slot {} has not moved for {how} while the sources serve updates \
+                 {behind} slots past it{}",
                 self.metrics.finalized_slot,
-                self.clock_unit(),
-                if still >= self.stall_down_rounds() { "" } else { " (down after twice as many)" }
+                if still.max(frozen) >= self.stall_down_rounds() { "" } else { " (down after twice as many)" }
             ));
         }
         let plan = &self.metrics.last_plan;
@@ -2789,7 +2835,7 @@ impl Updater {
             || self.metrics.failing_sends >= DOWN_AFTER_FAILED_SENDS
             || self.metrics.failed_rounds >= DOWN_AFTER_FAILED_ROUNDS
             || self.expired.is_some()
-            || (left_behind && still >= self.stall_down_rounds());
+            || (left_behind && still.max(frozen) >= self.stall_down_rounds());
         let status = if down {
             "down"
         } else if why.is_empty() {

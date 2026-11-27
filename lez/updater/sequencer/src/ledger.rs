@@ -82,7 +82,9 @@ impl Ledger for SequencerLedger {
     }
 
     /// From the blocks the follower holds (final on Bedrock): each public transaction to `root` that the block did not
-    /// revert (a block's last two transactions are its fee and clock transactions, never a program's).
+    /// revert (a block's last two transactions are its fee and clock transactions, never a program's: the follower's
+    /// own settlement, `../../live/driver/src/follower.rs` `apply`, takes the others as the user transactions). Every
+    /// block since the follower's start is held, so the first read after a start goes back to it.
     fn messages_to(&self, root: Actor, after: u64) -> Result<Option<(Vec<Vec<u8>>, u64)>> {
         let live = self.live.borrow();
         let follower = &live.follower;

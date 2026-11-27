@@ -15,8 +15,8 @@ use ferrata_lez_wire::Config;
 // The decoding of served updates and the job planning are ferrata-advance's, shared with
 // ferrata_attest_module (`advance`).
 pub use ferrata_advance::{
-    decode_committee, decode_finality_update, decode_update, layout_for, plan_job, served_layout, signer_witness,
-    signing_committee,
+    decode_committee, decode_finality_update, decode_update, encode_finality_update, encode_update, layout_for,
+    plan_job, served_layout, served_update_of_open, signer_witness, signing_committee,
 };
 
 pub fn root(hex_str: &str) -> Result<Root> {
