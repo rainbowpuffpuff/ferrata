@@ -67,7 +67,10 @@ Reading the chain's `Open`s costs a scan of the new blocks each round and a nati
 party can now make an updater wait for its job without serving it the update, within the same bounds as before (the
 job must move the store, and waits end after `join_wait_rounds` blocks without a move and `JOIN_WAIT_CAP` times that on
 a state). An `Open` encoded in a layout above the one served is not learned (its job unseen, as before); a period update's
-`Open` whose full committee the updater holds nowhere yet waits in a bounded queue until it does. A turn that starts at
+`Open` whose full committee the updater holds nowhere yet waits in a bounded queue until it does. The queue is judged 64
+`Open`s a round, oldest first, and a send is not held for what it still holds, so after a restart over a long history,
+or under a flood of `Open`s, a step can go out before a leading job queued behind them is learned (lez/updater/README.md
+item 7 lists these limits). A turn that starts at
 a reading is credited at most the one block before it (the block after the previous reading, when that is the one
 before), so an updater reading every two blocks loses no block to the start of its count and one back after a long gap
 waits its draw.

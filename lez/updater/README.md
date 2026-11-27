@@ -170,7 +170,11 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    goes back to the follower's start); a learned update whose job is open is marked open before it is remembered, so a
    batch of copies cannot push the leading one out of `known` (at most twice `MAX_KNOWN` entries in all); a period
    update's `Open` whose full committee the updater holds nowhere yet stays queued until it does or the update no
-   longer moves the store; an `Open` encoded in a layout above the one served is not learned. `/health` says
+   longer moves the store; an `Open` encoded in a layout above the one served is not learned. Limits (a review's, not
+   fixed): a send is not held for `Open`s still queued, which are judged oldest first, moot ones included, and dropped
+   unjudged beyond 256: after a restart over a long history, or under a flood of `Open`s, a step can go out before a
+   leading job queued behind them is learned; past twice `MAX_KNOWN` entries an open job's update can be pushed out
+   before its job is read; a learned job is joined only in a round in which the sources serve a useful update. `/health` says
    `degraded` after five rounds in a row in which the instance's transactions could not be read
    (`_transactions_unread_rounds`, `_opens_dropped_total`). On the sequencer backend a read is checked against the follower of the final blocks, so the
    account of a job a block not yet final changed fails to read ("the sequencer and the follower disagree"): such a job
