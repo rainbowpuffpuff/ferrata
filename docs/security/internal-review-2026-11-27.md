@@ -25,7 +25,7 @@ where it could be, by a test that fails on `50b396a8`. Earlier reviews were not 
 (F-1 … F-9) and the red team of 18 November. Line numbers are at this branch's tip unless a commit is named
 (`vault/src/FerrataVault.sol` is three lines longer than at `50b396a8` after line 690, from S-1's fix).
 
-**Result.** No critical or high finding. Four findings fixed and two in part, each fix with a test that fails on
+**Result.** No critical or high finding. Four findings fixed and two in part, each change with a test that fails on
 `50b396a8` and passes after it: one medium (the monitor's nonce), five low (the vault, the deployment default, the
 verifier check, and in part the monitor's command environment and `admin.sh`). Three
 fee-code findings go to the fee rewrite (ADR 0048, branch `f13-lez`) unchanged. The rest are documented below with
@@ -41,7 +41,7 @@ the reason they were not fixed tonight.
 | S-3 | Low | verifier check | `check-verifier.sh` trusted `SELECTOR()`: a fake verifier, a fake stop, an owned or tripped stop all passed | **fixed** (`68b3e124`) |
 | F-1 | Low | vault, fee code | A cancelled or revoked candidate's public seal can be resubmitted by anyone, who then takes its checkpoint fees | for the fee rewrite |
 | V-1 | Low | vault | A token the admin registers with a large `unitWeight` can use the shared global release bucket up, floor or not | documented |
-| C-4 | Low | monitor | The watcher key in `--key-env` is inherited by every `sh -c` child; node and alert commands have no timeout | **key fixed** (`b1be13ab`); timeouts open |
+| C-4 | Low | monitor | The watcher key in `--key-env` is inherited by every `sh -c` child; node and alert commands have no timeout | **in part** (`b1be13ab`): not inherited; `/proc` and timeouts open |
 | C-5 | Low | `deploy.sh` | A Hoodi or Holesky RPC is routed through the Sepolia proxy | open |
 | C-6 | Low | `admin.sh` | No chain or code check (an action on an empty address reports success); `--password` on argv; global caps shown as ETH | **code check fixed** (`17c95788`); the rest open |
 | C-7 | Low | relayer | No replacement of a stuck transaction; a job is booked at the first receipt | open |
@@ -112,6 +112,10 @@ register a token of a given kind, or a deployer to misconfigure, is ranked by wh
   (before, 0.1 ETH). Under a forged proof, caps can then slow ETH releases no further than that; the release freezes
   stop them outright (ADR 0033's runbook, which rests on the freezes, not the caps). A floor per token, in a later
   vault, would remove the coupling; until then the deployer chooses with `releaseFloorDailyValue`.
+- **Follow-up (final review round).** The script now refuses, before the vault and its immutable floor exist, token
+  ceilings the floor would refuse at registration (`_capsAdmitTheFloor`; `test_S2_aCeilingBelowTheFloorIsRefusedBeforeTheVault`),
+  and `vault/script/params/sepolia-31.json` pins the floor the live 3.1 vault was deployed with (300,000,000), so
+  re-running that deployment's final check still matches its record.
 - **Test.** `vault/test/DeployDefaults.t.sol` `test_S2_atTheLowestCapsTheFloorAllowsEveryExitStillPasses`: the admin
   sets every release bucket as low as the floor allows, each token's largest exit must fit, a 10,000-token release
   goes through, and so does the refund of a 0.1 ETH leaf after retirement and a sunset checkpoint (on `50b396a8`:
@@ -181,12 +185,14 @@ candidate recorded (`FerrataRegistry.releaseFeesAndPayouts`).
   (`FerrataRegistry.sol:68`, `:448`; `FerrataVault.sol:1486-1497`). Needs a malicious admin and its own token on LEZ.
   Fix needs a design decision (per-token reservations of the floor, or a weight bound against it); written into
   `vault/README.md`'s note on the floor.
-- **C-4 (Low), monitor; the key fixed, the timeouts open.** `monitor/src/cli.rs:114-116` read `--key-env` and left
-  the variable set; `alert.rs` and `node.rs` ran `sh -c` with the environment inherited, so an alert or node command
-  saw the watcher key. Fixed: every command runs through `alert::shell`, without the variables `cli::signer` hid;
-  `monitor/tests/child_env.rs` fails on `50b396a8` (the alert command saw the key) and passes now, a control variable
-  still reaching the commands. Open: neither command has a timeout, so a hung one stops the poll loop without an
-  alert.
+- **C-4 (Low), monitor; in part.** `monitor/src/cli.rs:114-116` read `--key-env` and left the variable set;
+  `alert.rs` and `node.rs` ran `sh -c` with the environment inherited, so an alert or node command saw the watcher
+  key. Changed: every command runs through `alert::shell`, without the variables `cli::signer` hid, so the key is no
+  longer in a command's own environment; `monitor/tests/child_env.rs` fails on `50b396a8` (the alert command saw the
+  key) and passes now, a control variable still reaching the commands. Not changed (final review round): a command
+  running as the monitor's user can still read the monitor's `/proc/<pid>/environ`, which keeps the environment the
+  monitor started with; `monitor/README.md` now says to prefer `--key-file` or the keystore where those commands are
+  not fully trusted. Open too: neither command has a timeout, so a hung one stops the poll loop without an alert.
 - **C-5 (Low), `vault/script/deploy.sh:52-59`.** The chain id is read from the RPC but the network proxy is always
   `pubnet_up sepolia`, so a Hoodi or Holesky deployment would be routed to Sepolia's endpoints (by reading
   `scripts/pubnet.py`; not run). Fix: map the chain id to its network, refuse others.

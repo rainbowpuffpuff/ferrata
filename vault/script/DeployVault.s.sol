@@ -143,6 +143,13 @@ contract DeployVault is Script {
                 address(RiscZeroVerifierEmergencyStop(r.stop).verifier()) == r.groth16,
                 "DeployVault: the recorded stop wraps another verifier"
             );
+            if (!uncapped) {
+                require(
+                    _capsAdmitTheFloor([_ethParams(), _tokenParams()], _daily(_releaseFloorDaily())),
+                    "DeployVault: a token's daily release cap is below the release floor (ethDailyCap, tokenDailyCap, "
+                    "releaseFloorDailyValue): the floor is immutable, so this is refused before the vault"
+                );
+            }
             _checkExpectedVault();
             _checkLibraryCode(r.registry);
             r.vault = _create(r, s, abi.encodePacked(_linkedVaultCode(r.registry), abi.encode(_deployment(r.stop))));
@@ -284,6 +291,32 @@ contract DeployVault is Script {
         uint256 eth = _largestExit(_ethParams());
         uint256 token = _largestExit(_tokenParams());
         return _paramOr(".releaseFloorDailyValue", eth > token ? eth : token);
+    }
+
+    /// @dev Whether every token's release bucket admits the floor, in value units as the registry converts them
+    ///      (FerrataRegistry.checkReleaseFloor): registration refuses a bucket below the floor, so checking first keeps a
+    ///      vault, whose floor is immutable, from being deployed with ceilings it then cannot register (final review
+    ///      round of 27 November 2026).
+    function _capsAdmitTheFloor(FerrataVault.TokenParams[2] memory ps, FerrataVault.CapParams memory floor)
+        internal
+        pure
+        returns (bool)
+    {
+        for (uint256 i = 0; i < 2; i++) {
+            FerrataVault.CapParams memory c = ps[i].releaseCap;
+            if (c.capacity == UNLIMITED) continue;
+            if (
+                _valueOf(c.capacity, ps[i].lezUnit, ps[i].unitWeight) < floor.capacity
+                    || _valueOf(c.refillPerSecond, ps[i].lezUnit, ps[i].unitWeight) < floor.refillPerSecond
+            ) return false;
+        }
+        return true;
+    }
+
+    /// @dev amount * weight / unit, saturating: the registry's `_toValue`.
+    function _valueOf(uint256 amount, uint256 unit, uint256 weight) internal pure returns (uint256) {
+        if (amount > type(uint256).max / weight) return type(uint256).max;
+        return amount * weight / unit;
     }
 
     /// @dev A token's largest exit in value units: its largest denomination and that denomination's relay fee, which a

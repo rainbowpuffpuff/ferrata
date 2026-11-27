@@ -1,7 +1,9 @@
-//! The watcher key given by `--key-env` reaches no command the monitor runs (internal review of 27 November 2026,
-//! docs/security/internal-review-2026-11-27.md, C-4): the monitor read the variable and left it set, and every alert
-//! command (`--alert-cmd`) and node command (`--node cmd:…`) ran under `sh -c` with the environment inherited, so any
-//! of them could read the key that cancels, pauses and revokes. A control variable still reaches them.
+//! The watcher key given by `--key-env` is not inherited by any command the monitor runs (internal review of
+//! 27 November 2026, docs/security/internal-review-2026-11-27.md, C-4): the monitor read the variable and left it set,
+//! and every alert command (`--alert-cmd`) and node command (`--node cmd:…`) ran under `sh -c` with the environment
+//! inherited, so any of them could read the key that cancels, pauses and revokes. A control variable still reaches
+//! them. (A command running as the monitor's user can still read the monitor's `/proc/<pid>/environ`; the README says
+//! to prefer `--key-file` or the keystore where that matters.)
 
 use clap::Parser;
 use ferrata_monitor::alert::{Alerts, Level};

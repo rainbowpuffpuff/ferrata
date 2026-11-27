@@ -27,6 +27,18 @@ contract DeployVaultExposed is DeployVault {
         return _tokenParams();
     }
 
+    function capsAdmitTheFloor_(FerrataVault.TokenParams[2] memory ps, FerrataVault.CapParams memory floor)
+        external
+        pure
+        returns (bool)
+    {
+        return _capsAdmitTheFloor(ps, floor);
+    }
+
+    function floor_() external view returns (FerrataVault.CapParams memory) {
+        return _daily(_releaseFloorDaily());
+    }
+
     /// @dev What `_init` read from the environment, set by the tests instead (vm.setEnv is process-wide and tests run
     ///      in parallel).
     function set_(FerrataVault.Mode m, bool uncapped_, uint256 deltaGiven_) external {
@@ -215,6 +227,26 @@ contract DeployDefaultsTest is VaultTestBase {
         uint256 before = bob.balance;
         deployed.refund(1, bob, ETH, 2, commitment, path);
         assertEq(bob.balance - before, 0.1 ether + _relayFeesOf(deployed, ETH)[2], "refunded whole under the lowest caps");
+    }
+
+    /// @notice The script's pre-flight (final review round): the default ceilings admit the default floor, and a params
+    ///         file whose ETH ceiling is below it (1 ETH a day against the 10,000-token exit's 10,025,000,000 value
+    ///         units, about 3.34 ETH) is refused before the vault, whose floor is immutable, exists.
+    function test_S2_aCeilingBelowTheFloorIsRefusedBeforeTheVault() public {
+        _script(FerrataVault.Mode.B, false, 0);
+        FerrataVault.CapParams memory floor = script.floor_();
+        FerrataVault.TokenParams[2] memory ps = [script.ethParams_(), script.tokenParams_()];
+        assertTrue(script.capsAdmitTheFloor_(ps, floor), "the defaults admit the floor");
+        ps[0].releaseCap = FerrataVault.CapParams({capacity: 1 ether, refillPerSecond: uint256(1 ether) / 1 days});
+        assertFalse(script.capsAdmitTheFloor_(ps, floor), "1 ETH a day is below the floor");
+        ps[0].releaseCap = FerrataVault.CapParams({capacity: 4 ether, refillPerSecond: uint256(4 ether) / 1 days});
+        assertTrue(script.capsAdmitTheFloor_(ps, floor), "4 ETH a day admits it");
+        // The same verdict as the vault's registration: 1 ETH a day is refused there with CapBelowFloor.
+        deployed = new FerrataVault(script.deployment_(address(estop)));
+        FerrataVault.TokenParams memory low = script.ethParams_();
+        low.releaseCap = FerrataVault.CapParams({capacity: 1 ether, refillPerSecond: uint256(1 ether) / 1 days});
+        vm.expectRevert(FerrataVault.CapBelowFloor.selector);
+        deployed.registerToken(ETH, low);
     }
 
     /// @notice F.12: by default the vault waits the design's Δ for its rule, as floor and initial value.
