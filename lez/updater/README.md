@@ -189,7 +189,8 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    cap) the step's turn starts again, once per wait, so that updaters released together do not all send in one round;
    so join or wait adds at most `JOIN_WAIT_CAP × join_wait_rounds + defer_window - 1` turns on a state (85 at the
    defaults) to the turns of item 8. Past `stall_rounds` (58 at the defaults) `/health` reports the instance not
-   moving, so under such a wait it can say `degraded`, and `down` past twice that. A job this updater moved last and
+   moving, so under such a wait it can say `degraded`, and `down` past twice that (116: under the strongest attacker
+   the sum of the two bounds, 153 turns, passes it, and `/health` says `down`: nothing has moved for that long). A job this updater moved last and
    does not carry (it opened it and left it) holds it back no longer, so with `finish_own_jobs = false` it opens the
    newer update's job as before; this, the jobs passed and the cap are kept in memory only, so after a restart a job
    this updater left is waited for once more, and every job open on the store counts as just read. A carrier asks its

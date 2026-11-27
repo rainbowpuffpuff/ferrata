@@ -4,7 +4,9 @@
 [daemon]
 name = "updater-1"                  # in logs and metrics
 state_dir = "state"                 # committee cache and journal, one subdirectory per chain
-poll_secs = 12                      # seconds between rounds (a beacon slot)
+poll_secs = 12                      # seconds between rounds (a beacon slot); the turns count the chain's blocks, so a
+                                    # daemon reading less often than once a block notices some late: at most the chain's
+                                    # block interval (LEZ: 10 s) keeps the cost spread (operator guide section 3.4)
 listen = "127.0.0.1:9464"           # /health (JSON; 503 when an instance is down or no round refreshed it) and /metrics
 ledger = "sequencer"                # "sequencer": a LEZ sequencer ([sequencer]; the build of sequencer/); "harness": dev mode
 
