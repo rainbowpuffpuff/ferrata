@@ -1577,7 +1577,7 @@ pub async fn plan_fee_collection<L: crate::lez::Ledger>(
         if let Err(c) = g.admit(true, value) {
             return waiting(format!(
                 "{scope} mint gate refuses {amount} base units now (code {c}): nothing is sent; a bucket refills with \
-                 attested time, or a smaller --limit fits it"
+                 attested time, or a smaller --limit fits it (an amount above the bucket's capacity needs one)"
             ));
         }
     }

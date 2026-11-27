@@ -77,8 +77,8 @@ the new account state are appended, so every message and account the B1 program 
 
 **The clients.** `ferrata_wallet::fees` builds and dry-runs `CollectFees`; `ferrata-relayer collect-fees` sends it
 under the configuration's newest record, or the one `--record-slot` names (with an inbound depth the newest record is
-never deep enough: the relayer waits, and an earlier one is named; the record's block is checked against the Ethereum
-endpoint, as for a root import), and refuses before sending on a B1 zone (B1 has no such
+never deep enough: the relayer reports it waiting, sends nothing and exits, and the operator names an earlier one; the
+record's block is checked against the Ethereum endpoint, as for a root import), and refuses before sending on a B1 zone (B1 has no such
 instruction), for a token not registered, and for an amount that is not whole LEZ units; with nothing due it sends
 nothing. This tree's program is `ferrata_bridge_lezfee` (`docs/image-ids.md`). `ferrata` and the relayer read which
 program a zone runs (the image id its program loader names for the bridge account; the chain service, as `ferrata`
@@ -106,7 +106,9 @@ Conservation: per token, the vault's escrow less the wrapped supply on LEZ is th
 relay fee each), the unreleased burns and the fees escrowed but not yet collected (`lezFees − collected`), never
 negative, since a collection mints at most the attested total and the count never goes back. The fee mint passes the
 mint freeze (F.14) and the mint buckets (F.11) as any mint does; `limit` splits a collection that a bucket would
-refuse. Costs: the fee recipient is paid only when someone collects (anyone may; the fee recipient has the reason to);
+refuse. Since anyone may collect, anyone may spend bucket room on the fees not collected yet at a moment of their
+choosing, delaying claims until the buckets refill: bounded by those fees (at most 1% of what was deposited and
+released since the last collection), a delay, never a loss. Costs: the fee recipient is paid only when someone collects (anyone may; the fee recipient has the reason to);
 one more instruction and one more account kind; the vault, the bridge program (its image id moves) and the clients
 change, so a deployment needs a new vault and a new LEZ configuration, never an upgrade in place; the both-halves
 scenario and the end-to-end runs are made again.

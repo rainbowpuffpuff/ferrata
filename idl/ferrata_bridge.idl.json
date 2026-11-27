@@ -3363,7 +3363,7 @@
           "name": "fees",
           "writable": true,
           "signer": false,
-          "init": true,
+          "init": false,
           "visibility": [
             "public"
           ],
@@ -3384,7 +3384,7 @@
             ]
           },
           "docs": [
-            "fees(cid, token), created by the collection (the program derives its seed)"
+            "fees(cid, token): created by the first collection (the program derives its seed), rewritten by every later one"
           ]
         },
         {
