@@ -7,7 +7,7 @@
 //! channel's key, the last final block T0 (the checkpoint's parent tip), the zone's genesis id and
 //! the configuration's identity. Session B, after the deposits and their captures exist, applies
 //! the captures' updates and finality updates and runs the bridge: Init (the reciprocal pairing),
-//! Register ETH (the vault's registry entry and fee schedule 0), ImportFees (schedule 1 absent at
+//! Register of the selected token (the vault's registry entry and fee schedule 0), ImportFees (schedule 1 absent at
 //! the second record), ImportRoot n=1 and n=2, Claim of deposit 0 (public), ClaimPrivately of
 //! deposit 1 (real proof), Burn public and Burn private (real proof), and writes the burn notes.
 //!
@@ -83,6 +83,73 @@ pub const ETH_RELAY_FEES: [u128; 3] = [2_000_000_000_000, 20_000_000_000_000, 20
 pub const ETH_CHECKPOINT_FEES: [u128; 3] = [1_000_000_000_000, 10_000_000_000_000, 100_000_000_000_000];
 pub const ETH_LEZ_UNIT: u128 = 1_000_000_000_000;
 pub const ETH_UNIT_WEIGHT: u128 = 3000;
+/// The 6-decimal TestToken's registry values (`DeployVault.s.sol` `_tokenParams`). Its address is supplied by
+/// `--token-address`: CREATE deploys it afresh in every crown run.
+pub const TEST_TOKEN_DENOMINATIONS: [u128; 3] = [100_000_000, 1_000_000_000, 10_000_000_000];
+pub const TEST_TOKEN_RELAY_FEES: [u128; 3] = [250_000, 2_500_000, 25_000_000];
+pub const TEST_TOKEN_CHECKPOINT_FEES: [u128; 3] = [100_000, 1_000_000, 10_000_000];
+
+/// The asset moved by a crown run. ETH stays the default; `test-token` takes its run-specific address separately.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct BridgeToken {
+    pub name: &'static str,
+    pub address: [u8; 20],
+}
+
+impl BridgeToken {
+    pub fn eth() -> Self {
+        Self { name: "eth", address: ETH }
+    }
+
+    pub fn test_token(address: [u8; 20]) -> Result<Self> {
+        ensure!(address != ETH, "--token-address for test-token is the zero (ETH) address");
+        Ok(Self { name: "test-token", address })
+    }
+
+    pub fn is_eth(&self) -> bool {
+        *self == Self::eth()
+    }
+
+    /// The registry entry exactly as `DeployVault.s.sol` registers the selected asset.
+    pub fn entry(&self) -> TokenEntry {
+        if self.is_eth() {
+            return eth_entry();
+        }
+        TokenEntry {
+            token: self.address,
+            lez_definition: [0; 32],
+            decimals: 6,
+            lez_unit: 1,
+            unit_weight: 1,
+            denominations: TEST_TOKEN_DENOMINATIONS.to_vec(),
+            relay_fees: TEST_TOKEN_RELAY_FEES.to_vec(),
+        }
+    }
+
+    /// Schedule 0 as the vault publishes it at registration (zero mint/burn fees).
+    pub fn schedule_zero(&self, t: u64) -> FeeSchedule {
+        if self.is_eth() {
+            return eth_schedule_zero(t);
+        }
+        FeeSchedule {
+            index: 0,
+            from_leaf: 0,
+            announced_at: t,
+            effective_at: t,
+            mint_fees: vec![0; 3],
+            burn_fees: vec![0; 3],
+            checkpoint_fees: TEST_TOKEN_CHECKPOINT_FEES.to_vec(),
+        }
+    }
+
+    pub fn label(&self) -> &'static str {
+        if self.is_eth() { "ETH" } else { self.name }
+    }
+
+    pub fn denomination_zero_label(&self) -> &'static str {
+        if self.is_eth() { "0.001 ETH" } else { "100 TUSD" }
+    }
+}
 /// The depositor's bridge seed (`bridge/e2e`'s test value; the inbound plan; `e2e/crown/identity.py`).
 pub const BRIDGE_SEED_LABEL: &[u8] = b"e2e: user bridge seed (test value)";
 /// The release recipient written into the burn notes: the run's deployer.
@@ -179,19 +246,21 @@ fn now_ms() -> u64 {
 /// (`keys::derived_key`): anyone who reads the label has it, so a label is for a local zone or a recorded run, never
 /// for a configuration that holds value.
 ///
-/// Caps (RFP-022 Sec.4, as `vault/script/DeployVault.s.sol` deploys the vault): by default per token and day 100 times
-/// ETH's largest denomination in value units, refilled over a day, the global cap the same (one token), and an
-/// immutable floor of one largest denomination a day. `FERRATA_UNCAPPED=1` gives the unlimited caps and zero floor of
-/// the live runs of November 2026, whose configuration ids commit to those (e2e/crown/README.md "Identity of the
-/// configuration"). `CROWN_TOKEN_CAP` and `CROWN_GLOBAL_CAP` set the mint and burn buckets' capacity in value units
-/// instead of either default, refilled over a day (capacity / 86,400 a second, at least 1; unset or empty: the
+/// Caps (RFP-022 Sec.4, as `vault/script/DeployVault.s.sol` deploys the vault): by default per selected token and
+/// day 100 times its largest denomination in value units, refilled over a day, the global cap the same (one token),
+/// and an immutable floor of one largest denomination a day. For the test token the floor is thus 10,000 TUSD
+/// (10,000,000,000 base/value units) and each bucket holds 1,000,000 TUSD (10^12 units): four 100 TUSD claims/burns
+/// consume 4 * 100,000,000 units, well inside either bucket. `FERRATA_UNCAPPED=1` gives the unlimited caps and zero
+/// floor of the live runs of November 2026, whose configuration ids commit to those (e2e/crown/README.md "Identity of
+/// the configuration"). `CROWN_TOKEN_CAP` and `CROWN_GLOBAL_CAP` set the mint and burn buckets' capacity in value
+/// units instead of either default, refilled over a day (capacity / 86,400 a second, at least 1; unset or empty: the
 /// default; anything but a whole number is refused). All of them enter `controls`, so `salt` and `configId`: every
-/// call of one configuration (`config-id`, then `crown-b`) must see the same values.
-pub fn try_controls() -> Result<Controls> {
+/// call of one configuration (`config-id`, then `crown-b`) must see the same values and the same `--token`.
+pub fn try_controls_for(selected: &BridgeToken) -> Result<Controls> {
     let (floor, default_cap) = if std::env::var("FERRATA_UNCAPPED").is_ok_and(|v| v == "1") {
         (CapParams { capacity: 0, refill_per_second: 0 }, CapParams { capacity: UNLIMITED, refill_per_second: 0 })
     } else {
-        let e = eth_entry();
+        let e = selected.entry();
         let largest = *e.denominations.last().expect("a denomination");
         let daily = |v: u128| CapParams { capacity: v, refill_per_second: v.div_ceil(86_400) };
         (daily(e.value(largest).expect("fits")), daily(e.value(100 * largest).expect("fits")))
@@ -234,9 +303,18 @@ pub fn try_controls() -> Result<Controls> {
     })
 }
 
-/// [`try_controls`], which `main` runs first, so that a wrong setting stops the driver before it does anything.
+/// [`try_controls_for`], which `main` runs first, so that a wrong setting stops the driver before it does anything.
+pub fn controls_for(selected: &BridgeToken) -> Controls {
+    try_controls_for(selected).unwrap_or_else(|e| panic!("{e:#}"))
+}
+
+/// The original ETH-only entry points used by the separate gas-drop workflow and its helpers.
+pub fn try_controls() -> Result<Controls> {
+    try_controls_for(&BridgeToken::eth())
+}
+
 pub fn controls() -> Controls {
-    try_controls().unwrap_or_else(|e| panic!("{e:#}"))
+    controls_for(&BridgeToken::eth())
 }
 
 /// Two fresh keys from the operating system's randomness, for the configuration's admin and freeze authority:
@@ -344,7 +422,7 @@ pub struct Identity {
 }
 
 impl Identity {
-    pub fn bridge_config(&self, vault: [u8; 20]) -> BridgeConfig {
+    pub fn bridge_config_for(&self, vault: [u8; 20], selected: &BridgeToken) -> BridgeConfig {
         BridgeConfig {
             bedrock_genesis_id: self.bedrock_genesis_id,
             channel_id: self.channel_id,
@@ -353,14 +431,18 @@ impl Identity {
             instance_id: self.instance_id,
             evm_chain_id: SEPOLIA_CHAIN_ID,
             vault,
-            controls: controls(),
+            controls: controls_for(selected),
         }
+    }
+
+    pub fn bridge_config(&self, vault: [u8; 20]) -> BridgeConfig {
+        self.bridge_config_for(vault, &BridgeToken::eth())
     }
 
     /// The 261-byte preimage of `configId`, written out by hand (e2e/crown/README.md), and checked
     /// against the bridge core's.
-    pub fn config_preimage(&self, vault: [u8; 20]) -> Result<Vec<u8>> {
-        let config = self.bridge_config(vault);
+    pub fn config_preimage_for(&self, vault: [u8; 20], selected: &BridgeToken) -> Result<Vec<u8>> {
+        let config = self.bridge_config_for(vault, selected);
         let mut p = b"ferrata/config/v1".to_vec();
         p.extend_from_slice(&self.bedrock_genesis_id);
         p.extend_from_slice(&self.channel_id);
@@ -375,10 +457,14 @@ impl Identity {
         Ok(p)
     }
 
-    pub fn config_json(&self, vault: [u8; 20]) -> Value {
-        let config = self.bridge_config(vault);
-        let preimage = self.config_preimage(vault).map(|p| h(&p)).unwrap_or_else(|e| format!("ERROR: {e}"));
-        let c = controls();
+    pub fn config_preimage(&self, vault: [u8; 20]) -> Result<Vec<u8>> {
+        self.config_preimage_for(vault, &BridgeToken::eth())
+    }
+
+    pub fn config_json_for(&self, vault: [u8; 20], selected: &BridgeToken) -> Value {
+        let config = self.bridge_config_for(vault, selected);
+        let preimage = self.config_preimage_for(vault, selected).map(|p| h(&p)).unwrap_or_else(|e| format!("ERROR: {e}"));
+        let c = controls_for(selected);
         let cap = |p: &CapParams| json!({ "capacity": p.capacity.to_string(), "refillPerSecond": p.refill_per_second.to_string() });
         json!({
             "vault": h(&vault),
@@ -391,9 +477,13 @@ impl Identity {
         })
     }
 
-    pub fn to_json(&self, vault: Option<[u8; 20]>) -> Value {
-        let sample = self.bridge_config([0; 20]);
-        let c = controls();
+    pub fn config_json(&self, vault: [u8; 20]) -> Value {
+        self.config_json_for(vault, &BridgeToken::eth())
+    }
+
+    pub fn to_json_for(&self, vault: Option<[u8; 20]>, selected: &BridgeToken) -> Value {
+        let sample = self.bridge_config_for([0; 20], selected);
+        let c = controls_for(selected);
         let cap = |p: &CapParams| json!({ "capacity": p.capacity.to_string(), "refillPerSecond": p.refill_per_second.to_string() });
         let mut out = json!({
             "label": self.label,
@@ -422,11 +512,25 @@ impl Identity {
                 "entryHash": h(&eth_entry().hash()),
             },
         });
+        if !selected.is_eth() {
+            out["token"] = json!({
+                "name": selected.name,
+                "address": h(&selected.address),
+                "registrySlot": h(&registry_slot(&selected.address)),
+                "feeSlot0": h(&fee_slot(&selected.address, 0)),
+                "feeSlot1": h(&fee_slot(&selected.address, 1)),
+                "entryHash": h(&selected.entry().hash()),
+            });
+        }
         if let Some(v) = vault {
             out["vault"] = json!(h(&v));
-            out["configId"] = json!(h(&self.bridge_config(v).id(self.bridge_header)));
+            out["configId"] = json!(h(&self.bridge_config_for(v, selected).id(self.bridge_header)));
         }
         out
+    }
+
+    pub fn to_json(&self, vault: Option<[u8; 20]>) -> Value {
+        self.to_json_for(vault, &BridgeToken::eth())
     }
 
     pub fn load(path: &Path) -> Result<Self> {
@@ -463,19 +567,23 @@ impl Identity {
 }
 
 /// The vault slots a capture must prove (every one the session attests).
-pub fn capture_slots() -> Value {
+pub fn capture_slots_for(selected: &BridgeToken) -> Value {
     let mut slots = vec![
         json!({ "slot": h(&SLOT_ROOT), "what": "depositRoot (slot 0)" }),
         json!({ "slot": h(&SLOT_COUNT), "what": "nextLeafIndex (slot 1)" }),
         json!({ "slot": h(&SLOT_CONFIG_ID), "what": "storedLezConfigId (slot 2)" }),
     ];
-    let names = ["registry entry of ETH", "fee schedule 0 of ETH", "fee schedule 1 of ETH"];
-    for (s, what) in register_slots(&ETH)[..3].iter().zip(names) {
+    let names = ["registry entry", "fee schedule 0", "fee schedule 1"].map(|what| format!("{what} of {}", selected.label()));
+    for (s, what) in register_slots(&selected.address)[..3].iter().zip(names) {
         slots.push(json!({ "slot": h(s), "what": what }));
     }
     json!({ "slots": slots, "fetch_attest_fixture_storage": format!(
         "{{vault}}:0=depositRoot(),1=nextLeafIndex(),2=storedLezConfigId(),{},{},{}",
-        h(&registry_slot(&ETH)), h(&fee_slot(&ETH, 0)), h(&fee_slot(&ETH, 1))) })
+        h(&registry_slot(&selected.address)), h(&fee_slot(&selected.address, 0)), h(&fee_slot(&selected.address, 1))) })
+}
+
+pub fn capture_slots() -> Value {
+    capture_slots_for(&BridgeToken::eth())
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -898,29 +1006,38 @@ pub fn witness_to(vault: &[u8; 20], deposits: &[DepositLog], leaf: u64, kind: De
 }
 
 /// The wallet's `i`-th burn note under `cid` for `recipient` on Ethereum, and its `sOut`.
-pub fn burn_note(cid: &Root, vault: &[u8; 20], i: u64, recipient: &[u8; 20], amount: u128) -> (Note, Root) {
+pub fn burn_note_for(token: &BridgeToken, cid: &Root, vault: &[u8; 20], i: u64, recipient: &[u8; 20], amount: u128) -> (Note, Root) {
     let keys = bridge_keys();
     let r = burn_tag(&keys.view, cid, i);
     let s_out = burn_secret(&keys.auth, cid, &r);
     let c_out = burn_commitment(&s_out, &chain_id_u256(SEPOLIA_CHAIN_ID), vault, recipient);
     let memo = xor_memo(&keys.view, &r, recipient);
     let amount = word_of_u128(amount);
-    let mac = burn_mac_v2(&keys.view, &r, &memo, &ETH, &amount, &c_out);
-    (Note { r, memo, mac, token: ETH, amount, c_out }, s_out)
+    let mac = burn_mac_v2(&keys.view, &r, &memo, &token.address, &amount, &c_out);
+    (Note { r, memo, mac, token: token.address, amount, c_out }, s_out)
 }
 
-/// The time of ETH's schedule 0: the one that makes its hash the value the vault holds at fee
+pub fn burn_note(cid: &Root, vault: &[u8; 20], i: u64, recipient: &[u8; 20], amount: u128) -> (Note, Root) {
+    burn_note_for(&BridgeToken::eth(), cid, vault, i, recipient, amount)
+}
+
+/// The time of the selected token's schedule 0: the one that makes its hash the value the vault holds at fee
 /// slot 0 (searched in the 30 days before the capture's block).
-pub fn find_fees_at(stage: &Stage) -> Result<u64> {
-    let (_, want) = stage.slot(&fee_slot(&ETH, 0))?;
-    ensure!(want != [0; 32], "{}: the vault's fee slot 0 of ETH is empty (ETH not registered?)", stage.label);
+pub fn find_fees_at_for(stage: &Stage, selected: &BridgeToken) -> Result<u64> {
+    let token = &selected.address;
+    let (_, want) = stage.slot(&fee_slot(token, 0))?;
+    ensure!(want != [0; 32], "{}: the vault's fee slot 0 of {} is empty (not registered?)", stage.label, selected.label());
     let to = stage.timestamp;
     for t in (to.saturating_sub(FEES_AT_SEARCH_SECONDS)..=to).rev() {
-        if eth_schedule_zero(t).hash(&ETH) == want {
+        if selected.schedule_zero(t).hash(token) == want {
             return Ok(t);
         }
     }
-    bail!("{}: no time in the 30 days before block {} gives ETH's schedule 0 hash {} (other fees?)", stage.label, stage.block, h(&want))
+    bail!("{}: no time in the 30 days before block {} gives {}'s schedule 0 hash {} (other fees?)", stage.label, stage.block, selected.label(), h(&want))
+}
+
+pub fn find_fees_at(stage: &Stage) -> Result<u64> {
+    find_fees_at_for(stage, &BridgeToken::eth())
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -942,7 +1059,7 @@ fn native_apply(native: &mut Native, config: &Config, update: &LightClientUpdate
 /// whether the next session's transactions fall inside the weak-subjectivity period the program bounds them by
 /// (without `identity`: session A's, bounded by the bootstrap's slot; with it: session B's, by the finalized header
 /// session A left).
-pub fn check(chain: &Chain, program: &GuestBinary, bridge: &GuestBinary, identity: Option<&Identity>, operator_only: bool) -> Result<()> {
+pub fn check_for(chain: &Chain, program: &GuestBinary, bridge: &GuestBinary, identity: Option<&Identity>, operator_only: bool, selected: &BridgeToken) -> Result<()> {
     use ferrata_core::witness::HeaderRecord;
     use ferrata_lez_bridge_wire::{import_request, pairing_request, vault_request};
     use ferrata_lez_wire::attest::evaluate;
@@ -1012,15 +1129,16 @@ pub fn check(chain: &Chain, program: &GuestBinary, bridge: &GuestBinary, identit
                 witness(&stage.vault, &stage.deposits, leaf)?;
             }
         }
-        let entry_ok = stage.slot(&registry_slot(&ETH)).map(|(_, v)| v == eth_entry().hash()).unwrap_or(false);
-        let fees_at = find_fees_at(stage).ok();
+        let entry_ok = stage.slot(&registry_slot(&selected.address)).map(|(_, v)| v == selected.entry().hash()).unwrap_or(false);
+        let fees_at = find_fees_at_for(stage, selected).ok();
         println!(
-            "[check] {}: finalized slot {} binds block {} (timestamp {}); {} deposit(s) open to the run; ETH entry {}; schedule 0 time {:?}",
+            "[check] {}: finalized slot {} binds block {} (timestamp {}); {} deposit(s) open to the run; {} entry {}; schedule 0 time {:?}",
             stage.label,
             core.finalized_header.beacon.slot,
             stage.block,
             stage.timestamp,
             stage.deposits.len(),
+            selected.label(),
             if entry_ok { "matches the vault" } else { "DOES NOT match the vault" },
             fees_at
         );
@@ -1044,7 +1162,7 @@ pub fn check(chain: &Chain, program: &GuestBinary, bridge: &GuestBinary, identit
                 instance_id: inst_id,
                 checkpoint: chain.checkpoint,
             };
-            let config = placeholder.bridge_config(stage.vault);
+            let config = placeholder.bridge_config_for(stage.vault, selected);
             let account = with_header(stage.header_rlp.clone(), stage.account.clone());
             let import = import_request(&config, &ImportProof { account, root_slot: stage.slot(&SLOT_ROOT)?.0, count_slot: stage.slot(&SLOT_COUNT)?.0 });
             evaluate(&inst_id, chain.config.chain_id, &record, &import).map_err(|c| anyhow!("{}: import refused natively ({c})", stage.label))?;
@@ -1053,7 +1171,7 @@ pub fn check(chain: &Chain, program: &GuestBinary, bridge: &GuestBinary, identit
         if let Some(identity) = identity {
             ensure!(identity.instance_id == inst_id, "session A's instance is not this chain's");
             ensure!(identity.attestation == attest && identity.bridge_header == bridge_header, "session A's programs are not these");
-            let config = identity.bridge_config(stage.vault);
+            let config = identity.bridge_config_for(stage.vault, selected);
             let cid = config.id(bridge_header);
             ensure!(stage.slot(&SLOT_CONFIG_ID)?.1 == cid, "{}: the vault's slot 2 is not configId 0x{}", stage.label, hex::encode(cid));
             let account = with_header(stage.header_rlp.clone(), stage.account.clone());
@@ -1061,13 +1179,17 @@ pub fn check(chain: &Chain, program: &GuestBinary, bridge: &GuestBinary, identit
             evaluate(&inst_id, chain.config.chain_id, &record, &pairing).map_err(|c| anyhow!("{}: pairing refused natively ({c})", stage.label))?;
             let import = import_request(&config, &ImportProof { account, root_slot: stage.slot(&SLOT_ROOT)?.0, count_slot: stage.slot(&SLOT_COUNT)?.0 });
             evaluate(&inst_id, chain.config.chain_id, &record, &import).map_err(|c| anyhow!("{}: import refused natively ({c})", stage.label))?;
-            let reg = register_slots(&ETH);
+            let reg = register_slots(&selected.address);
             let request = vault_request(&config, &reg, &stage.vault_proof(&reg)?).map_err(|c| anyhow!("register request: {c}"))?;
             evaluate(&inst_id, chain.config.chain_id, &record, &request).map_err(|c| anyhow!("{}: register request refused natively ({c})", stage.label))?;
             println!("[check] {}: configId 0x{} in slot 2; pairing, import and register requests accepted natively", stage.label, hex::encode(cid));
         }
     }
     Ok(())
+}
+
+pub fn check(chain: &Chain, program: &GuestBinary, bridge: &GuestBinary, identity: Option<&Identity>, operator_only: bool) -> Result<()> {
+    check_for(chain, program, bridge, identity, operator_only, &BridgeToken::eth())
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1104,12 +1226,16 @@ fn holder_pda(bridge: AccountId, cid: &Root, account: AccountId) -> Pda {
 
 /// The fee schedule range a wallet names for a claim of `leaf`: the schedule it falls under and
 /// the widest range the token's state allows (as the harness's `range`).
-async fn range_for(live: &Live, token: Pda, leaf: u64) -> Result<ScheduleRange> {
-    let Some(BridgeState::Token(t)) = bridge_state(live, token).await? else { bail!("token(cid, ETH) is not registered") };
+async fn range_for_token(live: &Live, token: Pda, leaf: u64, selected: &BridgeToken) -> Result<ScheduleRange> {
+    let Some(BridgeState::Token(t)) = bridge_state(live, token).await? else { bail!("token(cid, {}) is not registered", selected.label()) };
     let j = t.schedules.iter().rposition(|s| s.from_leaf <= leaf).unwrap_or(0);
     let until = t.schedules.get(j + 1).map_or(t.known_until, |s| s.from_leaf);
     ensure!(leaf < until, "leaf {leaf} is beyond the token's known schedules (known until {})", t.known_until);
     Ok(ScheduleRange { index: j as u64, from_leaf: t.schedules[j].from_leaf, until_leaf: until })
+}
+
+async fn range_for(live: &Live, token: Pda, leaf: u64) -> Result<ScheduleRange> {
+    range_for_token(live, token, leaf, &BridgeToken::eth()).await
 }
 
 fn row_json(o: &Outcome) -> Value {
@@ -1117,6 +1243,7 @@ fn row_json(o: &Outcome) -> Value {
 }
 
 pub struct SessionA {
+    pub token: BridgeToken,
     pub channel: PathBuf,
     pub genesis: PathBuf,
     pub identity_out: PathBuf,
@@ -1178,15 +1305,16 @@ pub async fn session_a(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
         checkpoint: chain.checkpoint,
     };
     if let Some(v) = a.vault {
-        identity.config_preimage(v)?;
+        identity.config_preimage_for(v, &a.token)?;
     }
-    let out = identity.to_json(a.vault);
+    let out = identity.to_json_for(a.vault, &a.token);
     fs::write(&a.identity_out, serde_json::to_string_pretty(&out)? + "\n")?;
     println!("[crown-a] T0 = block {tip_id} 0x{}; identity written to {}", hex::encode(tip_hash), a.identity_out.display());
     live.save()
 }
 
 pub struct SessionB {
+    pub token: BridgeToken,
     pub identity: Identity,
     /// A claim's time is now + this (seconds; default -30): the including block's timestamp must lie in
     /// [t, t + 10 min), so a slow prover needs a positive offset (about its proof time minus a few minutes).
@@ -1227,13 +1355,13 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
     scenario::check_store(live, &world).await.context("the instance is not where session A left it")?;
 
     let vault = chain.stages[0].vault;
-    let config = id.bridge_config(vault);
+    let config = id.bridge_config_for(vault, &b.token);
     let cid = config.id(bridge);
-    id.config_preimage(vault)?;
+    id.config_preimage_for(vault, &b.token)?;
     println!("[crown-b] {}: vault 0x{}, configId 0x{}, instance 0x{}", chain.name, hex::encode(vault), hex::encode(cid), hex::encode(world.inst.id));
     let chain_id = SEPOLIA_CHAIN_ID;
     let config_pda = Pda { program: bridge, seed: config_seed(&cid) };
-    let token_pda = Pda { program: bridge, seed: token_seed(&cid, &ETH) };
+    let token_pda = Pda { program: bridge, seed: token_seed(&cid, &b.token.address) };
     let mut steps: Vec<Value> = Vec::new();
     let mut claims: Vec<Value> = Vec::new();
     let mut notes: Vec<Value> = Vec::new();
@@ -1260,25 +1388,26 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
             steps.push(row_json(&o));
             ensure!(matches!(bridge_state(live, config_pda).await?, Some(BridgeState::Config(ConfigState::Ready { .. }))), "config(cid) is not ready");
 
-            let entry = eth_entry();
-            ensure!(stage.slot(&registry_slot(&ETH))?.1 == entry.hash(), "{}: the vault's ETH registry entry is not DeployVault v5's", stage.label);
-            let t = match b.eth_fees_at { Some(t) => t, None => find_fees_at(stage)? };
-            let schedule = eth_schedule_zero(t);
-            ensure!(stage.slot(&fee_slot(&ETH, 0))?.1 == schedule.hash(&ETH), "{}: ETH's schedule 0 at {t} is not the vault's", stage.label);
-            println!("[crown-b] ETH schedule 0 announced and effective at {t}");
-            let reg = register_slots(&ETH);
+            let entry = b.token.entry();
+            ensure!(stage.slot(&registry_slot(&b.token.address))?.1 == entry.hash(), "{}: the vault's {} registry entry is not DeployVault v5's", stage.label, b.token.label());
+            let t = match b.eth_fees_at { Some(t) => t, None => find_fees_at_for(stage, &b.token)? };
+            let schedule = b.token.schedule_zero(t);
+            ensure!(stage.slot(&fee_slot(&b.token.address, 0))?.1 == schedule.hash(&b.token.address), "{}: {}'s schedule 0 at {t} is not the vault's", stage.label, b.token.label());
+            println!("[crown-b] {} schedule 0 announced and effective at {t}", b.token.label());
+            let reg = register_slots(&b.token.address);
             let message = BridgeMessage::Register { config_id: cid, entry, schedule, record_slot: slot, proof: stage.vault_proof(&reg)? };
-            let o = send(live, "bridge Register ETH (registry entry, schedules 0 and 1, leaf count)", vec![mention(config_pda), mention(header_pda), mention(token_pda)], &message, payer).await?.expect_applied()?;
+            let step = format!("bridge Register {} (registry entry, schedules 0 and 1, leaf count)", b.token.label());
+            let o = send(live, &step, vec![mention(config_pda), mention(header_pda), mention(token_pda)], &message, payer).await?.expect_applied()?;
             steps.push(row_json(&o));
         } else {
-            let (_, fee1) = stage.slot(&fee_slot(&ETH, 1))?;
-            ensure!(fee1 == [0; 32], "{}: ETH has a schedule 1; the run expects none", stage.label);
-            let message = BridgeMessage::ImportFees { config_id: cid, token: ETH, index: 1, schedule: None, record_slot: slot, proof: stage.vault_proof(&fees_slots(&ETH, 1))? };
-            let o = send(live, &format!("bridge ImportFees: ETH schedule 1 absent at n={n}"), vec![mention(config_pda), mention(header_pda), mention(token_pda)], &message, payer).await?.expect_applied()?;
+            let (_, fee1) = stage.slot(&fee_slot(&b.token.address, 1))?;
+            ensure!(fee1 == [0; 32], "{}: {} has a schedule 1; the run expects none", stage.label, b.token.label());
+            let message = BridgeMessage::ImportFees { config_id: cid, token: b.token.address, index: 1, schedule: None, record_slot: slot, proof: stage.vault_proof(&fees_slots(&b.token.address, 1))? };
+            let o = send(live, &format!("bridge ImportFees: {} schedule 1 absent at n={n}", b.token.label()), vec![mention(config_pda), mention(header_pda), mention(token_pda)], &message, payer).await?.expect_applied()?;
             steps.push(row_json(&o));
         }
         if let Some(BridgeState::Token(t)) = bridge_state(live, token_pda).await? {
-            println!("[crown-b] token(cid, ETH): {} schedule(s), known until leaf {}", t.schedules.len(), t.known_until);
+            println!("[crown-b] token(cid, {}): {} schedule(s), known until leaf {}", b.token.label(), t.schedules.len(), t.known_until);
         }
 
         let root_pda = Pda { program: bridge, seed: root_seed(&cid, n) };
@@ -1306,8 +1435,9 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
         if k == 0 {
             // Claim of deposit 0 (public), relay fee to the fee recipient (no relayer).
             let (w, nullifier, kind) = witness(&vault, &stage.deposits, 0)?;
+            ensure!(w.token == b.token.address, "deposit 0 is not the selected token");
             ensure!(kind == DestKind::Public, "deposit 0 is the public one");
-            let range = range_for(live, token_pda, 0).await?;
+            let range = range_for_token(live, token_pda, 0, &b.token).await?;
             let n_pda = Pda { program: bridge, seed: nullifier_seed(&cid, chain_id, &vault, &nullifier) };
             let dest = AccountId::new(w.dest);
             let message = BridgeMessage::Claim { config_id: cid, leaf_count: n, witness: w, range, relayer: None };
@@ -1320,8 +1450,9 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
             // The private claim of deposit 1, then the two burns.
             let mut session = PrivateSession::open(live, bridge_bin, &b.private).await?;
             let (w, nullifier, kind) = witness(&vault, &stage.deposits, 1)?;
+            ensure!(w.token == b.token.address, "deposit 1 is not the selected token");
             ensure!(kind == DestKind::Private && w.dest == *session.me.value(), "deposit 1 is the private one, to the wallet's private account");
-            let range = range_for(live, token_pda, 1).await?;
+            let range = range_for_token(live, token_pda, 1, &b.token).await?;
             let n_pda = Pda { program: bridge, seed: nullifier_seed(&cid, chain_id, &vault, &nullifier) };
             let message = BridgeMessage::ClaimPrivately { config_id: cid, leaf_count: n, witness: w, range, relayer: None };
             let publics = vec![mention(root_pda), mention(token_pda), mention(config_pda), mention(n_pda), mention(holder_pda(bridge, &cid, fee_recipient()))];
@@ -1334,9 +1465,9 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
             ensure!(matches!(bridge_state(live, n_pda).await?, Some(BridgeState::Nullifier(_))), "the nullifier is not spent after the private claim");
             claims.push(json!({ "leaf": 1, "kind": "private", "nullifier": h(&nullifier), "block": o.row.block, "tx": o.row.tx_hash }));
 
-            // Burn public: one denomination of public test account 0, note 0.
-            let amount = ETH_DENOMINATIONS[0];
-            let (note, s_out) = burn_note(&cid, &vault, 0, &b.recipient, amount);
+            // Burn public: denomination 0 of public test account 0, note 0.
+            let amount = b.token.entry().denominations[0];
+            let (note, s_out) = burn_note_for(&b.token, &cid, &vault, 0, &b.recipient, amount);
             let burn_pda = Pda { program: bridge, seed: burn_seed(&cid, &note.r) };
             let mentions = vec![
                 AccountIdentity::Public(holder0).select_program_actor_state(bridge),
@@ -1345,17 +1476,19 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
                 mention(config_pda),
                 mention(burn_pda),
             ];
-            let o = send(live, "bridge Burn (public): 0.001 ETH of public test account 0, note 0", mentions, &BridgeMessage::burn(cid, &note), payer).await?.expect_applied()?;
+            let step = format!("bridge Burn (public): {} of public test account 0, note 0", b.token.denomination_zero_label());
+            let o = send(live, &step, mentions, &BridgeMessage::burn(cid, &note), payer).await?.expect_applied()?;
             steps.push(row_json(&o));
             ensure!(matches!(bridge_state(live, burn_pda).await?, Some(BridgeState::Burn(_))), "the public burn is not recorded");
             notes.push(note_json(0, "public", &cid, &vault, &note, &s_out, &b.recipient, &burn_pda, &o));
 
-            // Burn private: one denomination of private test account 0, note 1.
-            session.refresh(live, bridge).await?;
-            let (note, s_out) = burn_note(&cid, &vault, 1, &b.recipient, amount);
+            // Burn private: denomination 0 of private test account 0, note 1.
+            session.refresh(live, bridge, &b.token).await?;
+            let (note, s_out) = burn_note_for(&b.token, &cid, &vault, 1, &b.recipient, amount);
             let burn_pda = Pda { program: bridge, seed: burn_seed(&cid, &note.r) };
             let publics = vec![mention(token_pda), mention(config_pda), mention(burn_pda)];
-            let o = session.send(live, "bridge Burn (private): 0.001 ETH of private test account 0, note 1", publics, &BridgeMessage::burn(cid, &note), "burn").await?;
+            let step = format!("bridge Burn (private): {} of private test account 0, note 1", b.token.denomination_zero_label());
+            let o = session.send(live, &step, publics, &BridgeMessage::burn(cid, &note), "burn").await?;
             steps.push(row_json(&o));
             ensure!(matches!(bridge_state(live, burn_pda).await?, Some(BridgeState::Burn(_))), "the private burn is not recorded");
             notes.push(note_json(1, "private", &cid, &vault, &note, &s_out, &b.recipient, &burn_pda, &o));
@@ -1366,7 +1499,7 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
     live.sync().await?;
     let tip = live.follower.blocks.last().ok_or_else(|| anyhow!("no block followed"))?;
     let (t1, t1_hash) = (tip.header.block_id, tip.header.hash.0);
-    let session = json!({
+    let mut session = json!({
         "label": id.label,
         "chain": id.chain,
         "tipT0": { "id": id.tip_id, "hash": h(&id.tip_hash) },
@@ -1378,6 +1511,9 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
         "steps": steps,
         "claims": claims,
     });
+    if !b.token.is_eth() {
+        session["token"] = json!({ "name": b.token.name, "address": h(&b.token.address), "denomIndex": 0 });
+    }
     fs::write(&b.session_out, serde_json::to_string_pretty(&session)? + "\n")?;
     fs::write(&b.notes_out, serde_json::to_string_pretty(&notes)? + "\n")?;
     println!("[crown-b] blocks {}..={t1} (T1 0x{}); {} burn note(s) written to {}", id.tip_id + 1, hex::encode(t1_hash), notes.len(), b.notes_out.display());
@@ -1388,7 +1524,7 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
 fn note_json(i: u64, kind: &str, cid: &Root, vault: &[u8; 20], note: &Note, s_out: &Root, recipient: &[u8; 20], burn: &Pda, o: &Outcome) -> Value {
     json!({
         "i": i, "kind": kind, "configId": h(cid), "evmChainId": SEPOLIA_CHAIN_ID, "vault": h(vault),
-        "token": h(&note.token), "denomIndex": 0, "amount": ETH_DENOMINATIONS[0].to_string(),
+        "token": h(&note.token), "denomIndex": 0, "amount": u128::from_be_bytes(note.amount[16..].try_into().expect("u128 amount")).to_string(),
         "r": h(&note.r), "memo": h(&note.memo), "mac": h(&note.mac), "cOut": h(&note.c_out), "noteHash": h(&note.hash()),
         "burnAccount": h(burn.account().value()), "sOut": h(s_out), "nOut": h(&nf_out_v2(s_out)), "recipient": h(recipient),
         "block": o.row.block, "tx": o.row.tx_hash,
@@ -1481,7 +1617,7 @@ impl PrivateSession {
 
     /// Follow the chain to the head so that the wallet holds its account's state after the
     /// last private transaction (it follows its account's nullifiers).
-    async fn refresh(&mut self, live: &mut Live, bridge: AccountId) -> Result<()> {
+    async fn refresh(&mut self, live: &mut Live, bridge: AccountId, selected: &BridgeToken) -> Result<()> {
         live.sync().await?;
         let height = live.follower.height();
         self.wallet.sync_to_block(height).await?;
@@ -1496,9 +1632,11 @@ impl PrivateSession {
             }
         };
         println!("[crown-b] private test account 0 after the claim (wallet's view at block {height}): {holding:?}");
+        let amount = selected.entry().denominations[0];
         ensure!(
-            holding.is_some_and(|h| h.holdings.iter().any(|x| x.token == ETH && x.amount >= ETH_DENOMINATIONS[0])),
-            "the wallet does not see the claimed 0.001 ETH on its private account"
+            holding.is_some_and(|h| h.holdings.iter().any(|x| x.token == selected.address && x.amount >= amount)),
+            "the wallet does not see the claimed {} on its private account",
+            selected.denomination_zero_label()
         );
         Ok(())
     }
@@ -1533,6 +1671,54 @@ mod tests {
         assert_eq!(c.token_cap, CapParams { capacity: 30_000_000_000, refill_per_second: 347_223 });
         assert_eq!(c.global_cap, c.token_cap);
         assert_ne!(c.token_cap.capacity, UNLIMITED);
+    }
+
+    /// TestToken: independently reconstruct FerrataRegistry._publishEntry/_publishSchedule's SHA-256 preimages
+    /// (rather than using TokenEntry::hash/FeeSchedule::hash), with DeployVault._tokenParams' literal values.
+    #[test]
+    fn test_token_entry_and_schedule_zero_match_the_vault_publication_rule() {
+        let selected = BridgeToken::test_token([0x11; 20]).unwrap();
+        let word = |v: u128| -> [u8; 32] {
+            let mut w = [0u8; 32];
+            w[16..].copy_from_slice(&v.to_be_bytes());
+            w
+        };
+        let mut entry_preimage = b"ferrata/registry/v1".to_vec();
+        entry_preimage.extend_from_slice(&[0x11; 20]);
+        entry_preimage.extend_from_slice(&[0; 32]); // params.json tokenLezDefinition
+        entry_preimage.push(6);
+        for v in [1, 1] {
+            entry_preimage.extend_from_slice(&word(v));
+        }
+        entry_preimage.push(3);
+        for v in [100_000_000, 1_000_000_000, 10_000_000_000, 250_000, 2_500_000, 25_000_000] {
+            entry_preimage.extend_from_slice(&word(v));
+        }
+        assert_eq!(selected.entry().hash(), sha256(&entry_preimage));
+
+        let t = 1_763_000_123;
+        let mut schedule_preimage = b"ferrata/fees/v1".to_vec();
+        schedule_preimage.extend_from_slice(&[0x11; 20]);
+        for v in [0, 0, t, t] {
+            schedule_preimage.extend_from_slice(&v.to_be_bytes());
+        }
+        schedule_preimage.push(3);
+        for v in [0, 0, 0, 0, 0, 0, 100_000, 1_000_000, 10_000_000] {
+            schedule_preimage.extend_from_slice(&word(v));
+        }
+        assert_eq!(selected.schedule_zero(t).hash(&selected.address), sha256(&schedule_preimage));
+    }
+
+    #[test]
+    fn test_token_caps_cover_both_claims_and_burns() {
+        let c = controls_for(&BridgeToken::test_token([0x11; 20]).unwrap());
+        assert_eq!(c.check(), Ok(()));
+        assert_eq!(c.floor, CapParams { capacity: 10_000_000_000, refill_per_second: 115_741 });
+        assert_eq!(c.token_cap, CapParams { capacity: 1_000_000_000_000, refill_per_second: 11_574_075 });
+        assert_eq!(c.global_cap, c.token_cap);
+        let one = BridgeToken::test_token([0x11; 20]).unwrap().entry().value(100_000_000).unwrap();
+        assert_eq!(one, 100_000_000);
+        assert!(2 * one <= c.floor.capacity && 4 * one <= c.token_cap.capacity);
     }
 
     /// The bridge program this driver speaks is docs/image-ids.md's `ferrata_bridge_b1`; the live runs' program, and

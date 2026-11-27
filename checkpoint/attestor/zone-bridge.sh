@@ -47,7 +47,8 @@
 # checkpoint_b.bin, checkpoint.bin, release.bin, ids.jsonl of docs/image-ids.md), ZB_DRIVER, ZB_TMP (box scratch),
 # ZB_ROUND_S (60), ZB_LEAVE_OUT (the attestor left out; default the last; `none`: all of them), ZB_ROTATE,
 # ZB_ROTATE_RUN_S, ZB_FIXTURE, ZB_RELEASES_PROVE (0: stage releases writes the statements and runs them in the
-# executor, not the prover); for the stages after `zone`: ZB_CHECKPOINT_B (the rule (B) program's name in ZB_PROGRAMS,
+# executor, not the prover), ZB_TOKEN (eth by default; test-token selects the deployment's TUSD); for stages after `zone`:
+# ZB_CHECKPOINT_B (the rule (B) program's name in ZB_PROGRAMS,
 # default checkpoint_b; checkpoint_b_0_3_5 for a zone on Logos Blockchain 0.3.5-rc.1, whose `zone` stage is
 # lez/live/hooks/return-leg.sh), ZB_N_MIN and ZB_T_MIN (the vault's floors, default 4 and 3).
 #
@@ -85,6 +86,10 @@ FUND=2e03b2eff5a45478e7e79668d2a146cf2c5c7925bce927f2b1c67f2ab4fc0d26   # the de
 PORT=18080; API="http://127.0.0.1:$PORT"; R=http://127.0.0.1:8545
 INTERVAL=10; TICK_MIN=1; TICK_MAX=6; TICK_AFTER=3; MAX_STARTS=4          # crown session.sh's phase rule
 CHAIN_ID=11155111                                                       # crown-driver's SEPOLIA_CHAIN_ID
+SELECTED_TOKEN="${ZB_TOKEN:-eth}"
+case "$SELECTED_TOKEN" in eth|test-token) ;; *) echo "ZB_TOKEN must be eth or test-token"; exit 2 ;; esac
+# The default ETH fixture name is historical; ERC-20's default is the suite written with this change.
+if [ "$SELECTED_TOKEN" = test-token ]; then FIXTURE_DEFAULT=zone-bridge-rc3-erc20; else FIXTURE_DEFAULT=zone-bridge; fi
 export FOUNDRY_DISABLE_NIGHTLY_WARNING=1 PATH="$HOME/.foundry/bin:$PATH"
 log() { echo "[$(date -u +%H:%M:%S)] $*" | tee -a "$RUN/logs/zone-bridge.log"; }
 die() { log "STOP: $*"; exit 1; }
@@ -93,6 +98,10 @@ die() { log "STOP: $*"; exit 1; }
 scrub() { sed -e "s#$W/#work/#g" -e "s#$T/#tmp/#g" -e "s#$REPO/##g" -e "s#$SPIKE/tmp/[^/][^/]*/#tmp/#g" -e "s#$SPIKE/#spike/#g" -e "s#$HOME/#~/#g"; }
 id_of() { local v; v="$(jq -r --arg p "$1.bin" 'select(.program == $p or (.program | endswith("/" + $p))) | .image_id' "$PROGRAMS/ids.jsonl")"; [ -n "$v" ] || { echo "no $1 in $PROGRAMS/ids.jsonl" >&2; exit 1; }; echo "$v"; }
 hexfile() { tr -d ' \n' < "$1" | sed 's/^0x//'; }
+zero_address() { local a="${1,,}"; [ -z "$a" ] || [ "$a" = 0x0000000000000000000000000000000000000000 ]; }
+asset_balance() { # token owner: an ERC-20 balance in base units, ETH in wei
+  if zero_address "$1"; then cast balance "$2" --rpc-url "$R"; else cast call "$1" 'balanceOf(address)(uint256)' "$2" --rpc-url "$R"; fi
+}
 mkdir -p "$RUN/logs"
 
 stop_pid() { # pid name [seconds]: SIGTERM, then SIGKILL
@@ -432,36 +441,59 @@ stage_zone() {
   cast rpc anvil_setBalance "$DEPLOYER" 0x3635C9ADC5DEA00000 --rpc-url "$R" > /dev/null
   N="$(cast nonce "$DEPLOYER" --rpc-url "$R")"
   VAULT="$(cast compute-address "$DEPLOYER" --nonce $(( N + 3 )) | awk '{print $NF}')"   # verifier N, stop N+1, registry N+2
-  CID="$("$DRV" config-id --identity "$W/session-a.json" --vault "$VAULT" | jq -r .configId)"
+  local TOKEN_ADDR=0x0000000000000000000000000000000000000000 TOKEN_ARGS=(--token "$SELECTED_TOKEN")
+  if [ "$SELECTED_TOKEN" = test-token ]; then
+    TOKEN_ADDR="$(cast compute-address "$DEPLOYER" --nonce $(( N + 4 )) | awk '{print $NF}')"
+    TOKEN_ARGS+=(--token-address "$TOKEN_ADDR") # token N+4; stage deploy checks this against its actual record
+  fi
+  D+=("${TOKEN_ARGS[@]}")
+  CID="$("$DRV" config-id --identity "$W/session-a.json" --vault "$VAULT" "${TOKEN_ARGS[@]}" | jq -r .configId)"
   GS="$(python3 -I "$REPO/e2e/crown/identity.py" genesis-state --tip-id "$T0" --tip-hash "$T0H" --keys "$KEYS" \
         --posting-timeframe "$PT" --config-tip-hash "$CTH")"
   log "anvil (local, chain id $CHAIN_ID, no fork): deployer $DEPLOYER (impersonated) nonce $N; vault $VAULT; configId $CID; genesisState $GS"
   jq -n --arg v "$VAULT" --arg c "$CID" --arg g "$GS" --argjson ch "$CHAIN_ID" --arg d "$DEPLOYER" --arg f "$DIGEST" '{label:
     "STAND-IN Ethereum side: a local anvil (no fork, Sepolia chain id because crown-driver pins it), W and the release delay warped; the zone, its programs and proofs are real",
     chainId: $ch, vault: $v, configId: $c, genesisState: $g, delta: 3600, deployer: $d} + (if $f == "" then {} else {forkDigest: $f} end)' > "$RUN/identity.json"
+  if [ "$SELECTED_TOKEN" = test-token ]; then
+    jq --arg t "$TOKEN_ADDR" '. + {selectedToken: {name: "test-token", address: $t, denominations: [100000000,1000000000,10000000000],
+      relayFees: [250000,2500000,25000000], checkpointFees: [100000,1000000,10000000], lezUnit: 1, unitWeight: 1, decimals: 6}}' \
+      "$RUN/identity.json" > "$RUN/identity.json.tmp" && mv "$RUN/identity.json.tmp" "$RUN/identity.json"
+  fi
   jq -n --arg c "$CID" --arg g "$GS" --arg a "$(id_of "${ZB_CHECKPOINT_A:-checkpoint}")" --arg b "$(id_of "$CKB")" --arg r "$(id_of release)" \
     --arg z "$Z" --argjson nm "${ZB_N_MIN:-4}" --argjson tm "${ZB_T_MIN:-3}" --arg lez "$(basename "$LEZ")" \
     '{_source: ("zone-bridge (checkpoint/attestor/zone-bridge.sh): the zone of four sequencers (" + $lez + "), nMin \($nm), tMin \($tm)"),
     checkpointImageIdA: $a, checkpointImageIdB: $b, releaseImageId: $r, lezConfigId: $c, genesisState: $g, nMin: $nm, tMin: $tm,
     postingTimeframe: 0, ethLezDefinition: $z, tokenLezDefinition: $z}' > "$RUN/params.json"
+  if [ "$SELECTED_TOKEN" = test-token ]; then
+    jq --arg t "$TOKEN_ADDR" '. + {selectedToken: {name: "test-token", address: $t, registryDefinition: "tokenLezDefinition"}}' \
+      "$RUN/params.json" > "$RUN/params.json.tmp" && mv "$RUN/params.json.tmp" "$RUN/params.json"
+  fi
   local d0 d1 C0 C1 base slots sargs=()
   d0="$("$DRV" destinations | jq -r .public0)"; d1="$("$DRV" destinations | jq -r .private0)"
   C0="$(python3 -I "$REPO/e2e/crown/identity.py" commitment --chain-id "$CHAIN_ID" --vault "$VAULT" --depositor "$DEPLOYER" --j 0 --kind public --dest "$d0")"
   C1="$(python3 -I "$REPO/e2e/crown/identity.py" commitment --chain-id "$CHAIN_ID" --vault "$VAULT" --depositor "$DEPLOYER" --j 1 --kind private --dest "$d1")"
   jq -n --arg v "$VAULT" --arg c0 "$C0" --arg c1 "$C1" --argjson ch "$CHAIN_ID" '{chainId: $ch, vault: $v,
     deposits: [{j: 0, denomIndex: 0, commitment: $c0}, {j: 1, denomIndex: 0, commitment: $c1}]}' > "$RUN/crown.json"
+  if [ "$SELECTED_TOKEN" = test-token ]; then
+    jq --arg t "$TOKEN_ADDR" '.deposits |= map(. + {token: $t})' "$RUN/crown.json" > "$RUN/crown.json.tmp" && mv "$RUN/crown.json.tmp" "$RUN/crown.json"
+  fi
   base="$(cast block-number --rpc-url "$R")"
-  slots="$("$DRV" capture-slots | jq -r '.slots[].slot')"; for s in $slots; do sargs+=(--slot "$s"); done
+  slots="$("$DRV" capture-slots "${TOKEN_ARGS[@]}" | jq -r '.slots[].slot')"; for s in $slots; do sargs+=(--slot "$s"); done
   local S="$REPO/e2e/crown/sepolia.sh"
   export SEPOLIA_RPC_URL="$R" ETH_FROM="$DEPLOYER" FERRATA_UNLOCKED=1 FERRATA_NONCE_GAP=0
   "$S" "$RUN" deploy | tee -a "$RUN/logs/zone-bridge.log"
+  if [ "$SELECTED_TOKEN" = test-token ]; then
+    local RECORDED_TOKEN; RECORDED_TOKEN="$(jq -r .token "$RUN/deploy.json")"
+    [ "${RECORDED_TOKEN,,}" = "${TOKEN_ADDR,,}" ] || die "deployed token $RECORDED_TOKEN is not CREATE deployer nonce N+4 ($TOKEN_ADDR)"
+    TOKEN_ADDR="$RECORDED_TOKEN" # crown.json's deposits carry the deployment record's actual token address
+  fi
   "$S" "$RUN" deposit 0 | tee -a "$RUN/logs/zone-bridge.log"
   python3 -I "$REPO/lez/crown/capture-anvil.py" --rpc "$R" --vault "$VAULT" --from-block "$base" "${sargs[@]}" "$W/inputs/capture-1" | tee -a "$RUN/logs/zone-bridge.log"
   "$S" "$RUN" deposit 1 | tee -a "$RUN/logs/zone-bridge.log"
   python3 -I "$REPO/lez/crown/capture-anvil.py" --rpc "$R" --vault "$VAULT" --from-block "$base" "${sargs[@]}" "$W/inputs/capture-2" | tee -a "$RUN/logs/zone-bridge.log"
   "$S" "$RUN" status | tee -a "$RUN/logs/zone-bridge.log"
   cp -r "$W/inputs/capture-1" "$W/inputs/capture-2" "$RUN/lez/inputs/"
-  "$DRV" check --chain stand-in --program-bin "$B/program/ferrata_lez.bin" --bridge-bin "$B/program/ferrata_bridge.bin" \
+  "$DRV" check "${TOKEN_ARGS[@]}" --chain stand-in --program-bin "$B/program/ferrata_lez.bin" --bridge-bin "$B/program/ferrata_bridge.bin" \
     --capture "$W/inputs/capture-1" --capture "$W/inputs/capture-2" --identity "$W/session-a.json" > "$W/logs/driver-check.log" 2>&1 \
     || { tail -n 20 "$W/logs/driver-check.log" | scrub; die "crown-driver check of the captures"; }
   tail -n 3 "$W/logs/driver-check.log" | scrub | tee -a "$RUN/logs/zone-bridge.log"
@@ -753,14 +785,41 @@ stage_vault() {
   status="$(cast call "$VAULT" 'burnRootStatus(bytes32)(bool,uint256)' "$root" --rpc-url "$R" | head -n 1)"
   [ "$status" = true ] || die "the burn root is not accepted"
   for k in $(seq 0 $(( nrel - 1 ))); do
-    local rcpt nul before after used
+    local rcpt nul before after used release_token
     rcpt="$(jq -r ".releases[$k].recipient" "$RUN/crown.json")"; nul="$(jq -r ".releases[$k].nullifier" "$RUN/crown.json")"
-    before="$(cast balance "$rcpt" --rpc-url "$R")"
-    "$S" "$RUN" release "$k"
-    after="$(cast balance "$rcpt" --rpc-url "$R")"; used="$(cast call "$VAULT" 'nullifierUsed(bytes32)(bool)' "$nul" --rpc-url "$R")"
-    [ "$used" = true ] || die "release $k: the nullifier is not used"
-    log "release $k: recipient $rcpt +$(python3 -I -c "print($after - $before)") wei; nullifierUsed $used"
-    paid="$(jq -c --arg r "$rcpt" --arg n "$nul" --arg w "$(python3 -I -c "print($after - $before)")" '. + [{recipient: $r, nullifier: $n, paidWei: $w}]' <<< "$paid")"
+    release_token="$(jq -r ".releases[$k].token" "$RUN/crown.json")"
+    if zero_address "$release_token"; then
+      before="$(cast balance "$rcpt" --rpc-url "$R")"
+      "$S" "$RUN" release "$k"
+      after="$(cast balance "$rcpt" --rpc-url "$R")"; used="$(cast call "$VAULT" 'nullifierUsed(bytes32)(bool)' "$nul" --rpc-url "$R")"
+      [ "$used" = true ] || die "release $k: the nullifier is not used"
+      log "release $k: recipient $rcpt +$(python3 -I -c "print($after - $before)") wei; nullifierUsed $used"
+      paid="$(jq -c --arg r "$rcpt" --arg n "$nul" --arg w "$(python3 -I -c "print($after - $before)")" '. + [{recipient: $r, nullifier: $n, paidWei: $w}]' <<< "$paid")"
+    else
+      local relayer relay_fee relayer_before relayer_after recipient_delta relayer_delta expected_recipient expected_relayer fee_payee
+      relayer="$(jq -r ".releases[$k].relayer" "$RUN/crown.json")"; relay_fee="$(jq -r ".releases[$k].relayFee" "$RUN/crown.json")"
+      fee_payee="$relayer"; zero_address "$relayer" && fee_payee="$ETH_FROM" # FerrataVault: zero relayer means msg.sender
+      [ "$(jq -r ".releases[$k].denomIndex" "$RUN/crown.json")" = 0 ] || die "release $k: test-token must burn denomination 0"
+      relay_fee="$(python3 -I -c "print(int('$relay_fee', 0))")"
+      before="$(asset_balance "$release_token" "$rcpt")"; relayer_before="$(asset_balance "$release_token" "$fee_payee")"
+      "$S" "$RUN" release "$k"
+      after="$(asset_balance "$release_token" "$rcpt")"; relayer_after="$(asset_balance "$release_token" "$fee_payee")"
+      used="$(cast call "$VAULT" 'nullifierUsed(bytes32)(bool)' "$nul" --rpc-url "$R")"
+      [ "$used" = true ] || die "release $k: the nullifier is not used"
+      recipient_delta="$(python3 -I -c "print($after - $before)")"; relayer_delta="$(python3 -I -c "print($relayer_after - $relayer_before)")"
+      # Schedule 0: denomination 100e6, burn fee 0, checkpoint fee 100000. If relayer == recipient the two observed
+      # deltas are the same aggregate balance delta; account for the relay fee exactly once in that case.
+      expected_recipient=$(( 100000000 - 100000 - relay_fee )); expected_relayer="$relay_fee"
+      if [ "${fee_payee,,}" = "${rcpt,,}" ]; then
+        [ "$recipient_delta" = "$(( expected_recipient + expected_relayer ))" ] || die "release $k: recipient/relayer got $recipient_delta, expected $(( expected_recipient + expected_relayer ))"
+      else
+        [ "$recipient_delta" = "$expected_recipient" ] || die "release $k: recipient got $recipient_delta, expected $expected_recipient"
+        [ "$relayer_delta" = "$expected_relayer" ] || die "release $k: relayer got $relayer_delta, expected $expected_relayer"
+      fi
+      log "release $k: token $release_token recipient $rcpt +$recipient_delta base units; fee payee $fee_payee fee $relay_fee checked; nullifierUsed $used"
+      paid="$(jq -c --arg r "$rcpt" --arg n "$nul" --arg w "$recipient_delta" --arg t "$release_token" --arg rel "$relayer" --arg fee "$relay_fee" \
+        '. + [{recipient: $r, nullifier: $n, paidWei: $w, token: $t, relayer: $rel, relayFeeUnits: $fee}]' <<< "$paid")"
+    fi
   done
   # replays (nothing is paid twice): each release's and the checkpoint's mined calldata called again from its sender
   # (e2e/crown/sepolia.sh would skip a stage its journal holds, and Crown.s.sol one already on chain, so neither can
@@ -777,14 +836,21 @@ stage_vault() {
     log "$stage (transaction $h) called again: refused ($why)"
     replays="$(jq -c --arg w "$stage" --arg h "$h" --arg r "$why" '. + [{what: $w, transaction: $h, refused: $r}]' <<< "$replays")"
   done
-  jq -n --arg f "$final" --arg root "$root" --argjson paid "$paid" --arg bal "$(cast balance "$VAULT" --rpc-url "$R")" \
-    --argjson rp "$replays" '{finalState: $f, burnRoot: $root, burnRootAccepted: true, releases: $paid, replaysRefused: $rp, vaultBalanceWeiAfter: $bal}' > "$RUN/vault-checks.json"
+  local final_token; final_token="$(jq -r '.releases[0].token // 0' "$RUN/crown.json")"
+  if zero_address "$final_token"; then
+    jq -n --arg f "$final" --arg root "$root" --argjson paid "$paid" --arg bal "$(cast balance "$VAULT" --rpc-url "$R")" \
+      --argjson rp "$replays" '{finalState: $f, burnRoot: $root, burnRootAccepted: true, releases: $paid, replaysRefused: $rp, vaultBalanceWeiAfter: $bal}' > "$RUN/vault-checks.json"
+  else
+    jq -n --arg f "$final" --arg root "$root" --argjson paid "$paid" --arg bal "$(asset_balance "$final_token" "$VAULT")" --arg t "$final_token" \
+      --argjson rp "$replays" '{finalState: $f, burnRoot: $root, burnRootAccepted: true, releases: $paid, replaysRefused: $rp,
+      token: $t, vaultTokenBalanceAfter: $bal}' > "$RUN/vault-checks.json"
+  fi
   "$S" "$RUN" status | tee -a "$RUN/logs/zone-bridge.log"
 }
 
 # ---- fixture: what vault/test/real/ZoneBridge.t.sol reads ---------------------------------------------------------
 stage_fixture() {
-  local C="$RUN/checkpoint" n A="$RUN/lez/session-a/session-a.json" out="$REPO/vault/test/real/fixtures/${ZB_FIXTURE:-zone-bridge}.json"
+  local C="$RUN/checkpoint" n A="$RUN/lez/session-a/session-a.json" out="$REPO/vault/test/real/fixtures/${ZB_FIXTURE:-$FIXTURE_DEFAULT}.json"
   n="$(cname)"
   jq -n --slurpfile m "$C/$n.json" --slurpfile a "$A" --slurpfile cj "$RUN/crown.json" --slurpfile id "$RUN/identity.json" \
     --slurpfile vc "$RUN/vault-checks.json" --arg j "0x$(hexfile "$C/receipts/journal.hex")" --arg s "0x$(hexfile "$C/receipts/seal.hex")" \
@@ -797,6 +863,7 @@ stage_fixture() {
      depositor: $id[0].deployer, commitments: [$cj.deposits[].commitment],
      releaseCount: ($cj.releases | length),
      releases: [$cj.releases | to_entries[] | .value + {paidOnAnvil: ($vc.releases[.key].paidWei | tonumber)}]}
+    + (if ($cj.deposits[0].token // null) != null then {token: $cj.deposits[0].token} else {} end)
     + (if (($m.config_changes // []) | length) > 0 then {rotatedKeys: [$m.keys_after[] | "0x" + ltrimstr("0x")]} else {} end)' > "$out"
   [ "$(jq -r .journal "$out" | sed 's/^0x//')" = "$(jq -r .journal "$C/$n.json")" ] || die "fixture journal"
   echo "wrote $out"
