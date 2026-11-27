@@ -478,6 +478,35 @@ check("jobs: lez-harness-full runs unsharded in lez-full.yml on schedule and wor
       and "schedule" in LHF.triggers and "workflow_dispatch" in LHF.triggers
       and ci_model.step_guard(LHF, lhf_last) is None)
 
+# ── The just recipe mirrors CI's verify job ───────────────────────────────────────────────────────
+# Keep the compact static recipe model here beside the CI model: without running `just`, require each command of
+# ci-verify to be exactly the corresponding run: line in the workflow (uses: steps are runner setup, not recipes).
+recipes, current = {}, None
+for line in (ROOT / "justfile").read_text(encoding="utf-8").splitlines():
+    if line[:1] in (" ", "\t"):
+        if current is not None and line.strip() and not line.strip().startswith("#"):
+            recipes[current]["lines"].append(line.strip().removeprefix("@").lstrip())
+        continue
+    current = None
+    if not line or line.startswith(("#", "set ")) or ":=" in line:
+        continue
+    if line.endswith(":"):
+        name, _, params = line[:-1].partition(" ")
+        current = name
+        recipes[current] = {"params": params.split(), "lines": []}
+
+check("justfile: every recipe of the file is parsed (update this list when a recipe is added)",
+      set(recipes) == {"default", "bench", "bench-user", "m0", "release", "release-verify", "deploy-testnet",
+                       "halmos-long", "verify", "lez-read", "ci-commands", "ci-verify"})
+check("justfile: ci-verify takes no argument", not recipes["ci-verify"]["params"])
+verify_commands = [line.strip() for step in jobs["verify"].steps
+                   for line in str(step.get("run", "")).splitlines() if line.strip()]
+check("justfile: ci-verify runs exactly CI verify's commands in order", recipes["ci-verify"]["lines"] == verify_commands)
+check("justfile: ci-verify includes every check family's tamper tests",
+      all(any(f"scripts/{name}" in command for command in recipes["ci-verify"]["lines"])
+          for name in ("test_verify.py", "test_verify_lc.py", "test_verify_f13.py", "test_verify_f7.py")))
+
+
 # ── check-row-tests.py refuses false claims ────────────────────────────────────────────────────────
 checker = HERE / "check-row-tests.py"
 real = (HERE / "row-tests.toml").read_text(encoding="utf-8")

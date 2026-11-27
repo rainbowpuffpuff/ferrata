@@ -65,6 +65,17 @@ halmos-long:
 verify *args:
     python3 -I scripts/verify.py "$@"
 
+# CI's verify job, the reviewer's offline re-check and every check family's tamper tests (docs/VERIFY.md).
+# Needs Foundry and the vault's pinned libraries. As in CI, the final commands refuse any tree change left by a check.
+ci-verify:
+    (cd vault && { [ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0; })
+    python3 -I scripts/vault_libs.py check
+    (cd vault && forge build)
+    python3 -I scripts/verify.py --all --offline --strict
+    python3 -I scripts/test_verify.py && python3 -I scripts/test_verify_lc.py && python3 -I scripts/test_verify_f13.py && python3 -I scripts/test_verify_f7.py
+    git status --porcelain --untracked-files=all
+    test -z "$(git status --porcelain --untracked-files=all)"
+
 # Read our public LEZ test network (or --lez URL) from a terminal: head, block N, tx HASH, programs, instance ACCOUNT.
 lez-read *args:
     python3 -I scripts/lez-read.py "$@"
