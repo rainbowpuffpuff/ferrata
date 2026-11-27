@@ -35,7 +35,7 @@ The page's Content-Security-Policy allows scripts, styles and connections to its
 ## Tests
 
 ```sh
-node --test test/*.test.mjs                       # 55: LEZ's pinned vectors, recorded Attest messages, SPEC-v2 and IDL vectors, the PWA list, the review's findings, the bridge tab's plain words
+node --test test/*.test.mjs                       # 56: LEZ's pinned vectors, recorded Attest messages, SPEC-v2 and IDL vectors, the PWA list, the review's findings, the bridge tab's plain words
 bash test/box.sh build                            # LEZ rc3's sequencer + wallet CLI (LEZ's source beside the repository)
 bash test/box.sh e2e NAME                         # with Foundry and vault/lib present, the bridge steps too
 bash test/box.sh testers NAME                     # the host's layout (serve.py --site): the testers' path from the build page
@@ -47,9 +47,10 @@ machine that saves only some directories between runs, point `WALLET_WORK` at on
 - `test/ux.test.mjs`: the bridge tab against ethskills' frontend-ux, qa and wallets checklists (27 November 2026): a
   browser wallet's errors (declined, a request already waiting, not allowed, disconnected, no Sepolia ETH) and the
   vault's refusals by name (each held to its declaration in `vault/src/FerrataVault.sol`, wherever the wallet nests
-  the revert data) in plain words next to the action; the review's cost priced live (`eth_estimateGas`,
-  `eth_gasPrice`, rounded up to the gwei) with the Sepolia ETH it needs, refused before any signature when the
-  balance falls short; a name typed as the burn's recipient refused with its reason. In the page, each button holds
+  the revert data) in plain words next to the action, naming the token for an approval's refusal; the review's cost
+  priced live (`eth_estimateGas`, `eth_gasPrice`, rounded up to the gwei) with the Sepolia ETH it needs, refused
+  before any signature when the balance falls short (for ETH or an approved token that is the deposit itself; a token
+  that needs an approval first: the approval, the wallet pricing the deposit after it); a name typed as the burn's recipient refused with its reason. In the page, each button holds
   one request at a time, and the review shows the addresses EIP-55 checksummed.
 - `test/test_serve_site.py`: `serve.py --site` serves the bundle at `/` and the wallet at `/wallet/`, and nothing
   outside the bundle (`..`, an encoded `..`, a symlink out, a file type it does not serve), in CI's `links` job.

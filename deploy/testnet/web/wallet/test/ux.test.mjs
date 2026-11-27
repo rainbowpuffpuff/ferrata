@@ -73,6 +73,13 @@ test('one operation at a time over the deposit controls; each control put back, 
   assert.equal(await run(async () => 'again')(), 'again');   // released after the failure
 });
 
+test('a refusal names the contract that refused: the vault by default, the token for an approval', () => {
+  const allowance = { code: 3, message: 'execution reverted', data: '0xfb8f41b2' + '0'.repeat(192) };
+  assert.match(walletError(allowance), /^The vault refuses it \(ERC20InsufficientAllowance\)/);
+  assert.match(walletError({ ...allowance, subject: 'The token' }), /^The token refuses it \(ERC20InsufficientAllowance\)/);
+  assert.match(walletError({ code: 3, message: 'execution reverted: no', subject: 'The test token' }), /^The test token refuses it/);
+});
+
 test('every refusal the page names is declared where it says (the vault; OpenZeppelin\'s ERC-20 errors when vault/lib is there)', () => {
   const vault = readFileSync(join(REPO, 'vault/src/FerrataVault.sol'), 'utf8');
   const oz = join(REPO, 'vault/lib/openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol');
