@@ -383,7 +383,7 @@ collect_fees() {
 last() { grep -E '^\{' "$R/eth/$1.jsonl" | tail -n 1 | jq -r --arg k "$2" '.[$k] // empty'; }
 
 begin "mint fees collected"
-[ "$(collect_fees 17-collect-mint)" = fees-collected ] || die "the collection was not applied ($(tail -n 1 "$R/eth/17-collect-mint.jsonl" | cut -c1-300))"
+[ "$(collect_fees 17-collect-mint)" = lez-fees-collected ] || die "the collection was not applied ($(tail -n 1 "$R/eth/17-collect-mint.jsonl" | cut -c1-300))"
 [ "$(last 17-collect-mint vaultTotal)" = "$LF_2" ] || die "the collection read the vault's total $(last 17-collect-mint vaultTotal), not lezFees at capture 2 ($LF_2)"
 [ "$(last 17-collect-mint amount)" = "$M1" ] && [ "$(last 17-collect-mint collectedBefore)" = 0 ] || die "the collection minted $(last 17-collect-mint amount) after $(last 17-collect-mint collectedBefore), not the mint fee $M1 after 0"
 FR_LEZ="$(last 17-collect-mint feeRecipient)"; FR_1="$(last 17-collect-mint feeRecipientHoldingAfter)"
@@ -392,7 +392,7 @@ COLLECT1_TX="$(last 17-collect-mint tx)"
 ok "LEZ tx $COLLECT1_TX (CollectFees, sent from the user's public /0) applied under header(id, $(last 17-collect-mint recordSlot)) of block $(last 17-collect-mint block): the vault's lezFees $LF_2 attested, $M1 minted to the fee recipient $FR_LEZ on LEZ (holding 0 -> $FR_1)"
 
 begin "nothing more to collect"
-[ "$(collect_fees 18-collect-again)" = fee-collection-waiting ] || die "a second collection under the same record was not refused before sending ($(tail -n 1 "$R/eth/18-collect-again.jsonl" | cut -c1-300))"
+[ "$(collect_fees 18-collect-again)" = lez-fee-collection-waiting ] || die "a second collection under the same record was not refused before sending ($(tail -n 1 "$R/eth/18-collect-again.jsonl" | cut -c1-300))"
 last 18-collect-again reason | grep -q 'minted already' || die "the second collection waits for another reason: $(last 18-collect-again reason)"
 ok "nothing sent: $(last 18-collect-again reason | cut -c1-200)"
 
@@ -502,7 +502,7 @@ grep -q 'recorded (--updates-only' "$R/lez/crown-b-record-3.log" || die "crown-b
 ok "the stand-in committee finalized the fork's block $(jq -r .block "$W/capture-3/fixture.json") (after the release): $(grep -o 'header(id, [0-9]*) of block [0-9]*' "$R/lez/crown-b-record-3.log" | tail -n 1)"
 
 begin "burn fee collected"
-[ "$(collect_fees 19-collect-burn)" = fees-collected ] || die "the collection after the release was not applied ($(tail -n 1 "$R/eth/19-collect-burn.jsonl" | cut -c1-300))"
+[ "$(collect_fees 19-collect-burn)" = lez-fees-collected ] || die "the collection after the release was not applied ($(tail -n 1 "$R/eth/19-collect-burn.jsonl" | cut -c1-300))"
 [ "$(last 19-collect-burn vaultTotal)" = "$LF_R" ] || die "the collection read the vault's total $(last 19-collect-burn vaultTotal), not lezFees after the release ($LF_R)"
 [ "$(last 19-collect-burn amount)" = "$B1" ] && [ "$(last 19-collect-burn collectedBefore)" = "$M1" ] || die "the collection minted $(last 19-collect-burn amount) after $(last 19-collect-burn collectedBefore), not the burn fee $B1 after $M1"
 FR_2="$(last 19-collect-burn feeRecipientHoldingAfter)"

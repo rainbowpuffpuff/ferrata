@@ -1484,7 +1484,7 @@ pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Op
             let token = token.into_array();
             match relayer::plan_fee_collection(&*zone, &d.p, ctx, token, limit.unwrap_or(u128::MAX)).await? {
                 relayer::FeeCollection::Waiting { reason } => {
-                    log(&sink, "fee-collection-waiting", json!({ "token": hx(&token), "reason": reason }));
+                    log(&sink, "lez-fee-collection-waiting", json!({ "token": hx(&token), "reason": reason }));
                 }
                 relayer::FeeCollection::Planned(plan) => {
                     let mut fields = json!({
@@ -1514,7 +1514,7 @@ pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Op
                     fields["feeRecipient"] = json!(hx(&plan.fee_recipient));
                     fields["feeRecipientHoldingBefore"] = json!(before.to_string());
                     fields["feeRecipientHoldingAfter"] = json!(after.to_string());
-                    log(&sink, if applied { "fees-collected" } else { "fee-collection-unconfirmed" }, fields);
+                    log(&sink, if applied { "lez-fees-collected" } else { "lez-fee-collection-unconfirmed" }, fields);
                     ensure!(applied, "CollectFees sent ({tx}) but fees(cid, token) does not hold what the dry run wrote");
                 }
             }
