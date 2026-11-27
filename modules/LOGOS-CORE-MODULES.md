@@ -213,7 +213,15 @@ path, kept as the fallback and for native runs). Every reply that read Ethereum 
   `request_approval` then signs a covered request as it arrives, glue.rs 646–670), and waits until
   `tx_sender_module` has opened the account's history (it refuses a send with `unavailable` until then). Keystore PR
   #25 (open: "Tier A and D grants come from the access policy; configure is removed") would move the grant to the
-  access policy; the custody method stays the same.
+  access policy; the custody method stays the same. **After a restart of Logos Core** (measured on 27 Nov 2026,
+  `modules/scripts/send-stack-kill.sh`; run 1 met the locked wallet, run 2, the committed record
+  `modules/results/send-stack-kill-2026-11-27/`, unlocks before each custody): nothing stays unlocked (signer manager `on_context_ready`), the keystore
+  answers the re-import "this key is here already, in a locked wallet (…): unlock it in the Signer app first", and only
+  an approver may unlock a wallet (`signer_manager_module.unlock_wallet`: the Signer app, a person; `evm_signer_cli
+  unlock_wallet` headless), never a custodian. `custody` then answers `"verdict": "locked"` with that step and unlocks
+  nothing; once the wallet is unlocked the keystore writes the held key again and answers ok (`keystore.rs` 383-397),
+  and the same call unlocks the account for `tx_sender_module` again. An unattended
+  daemon on this route therefore needs its operator's unlock after every restart of Logos Core's signer stack.
 - **Ferrata's sends through it.** `monitor run --send-via logos --from ADDRESS` (`monitor/src/logos_send.rs`, the
   one `Chain::send`: `cancelCandidate`, `pauseCheckpoints`, `revokeFrom`) and `ferrata-relayer --send-via logos --from
   ADDRESS` (`cli/src/logos_send.rs`, the same file; the daemon's `submitCandidate`, `finalizeAttested`, `release`,

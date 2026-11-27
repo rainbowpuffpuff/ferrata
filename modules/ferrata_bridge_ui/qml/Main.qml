@@ -231,7 +231,11 @@ Rectangle {
     // The clock the delays are held against: the wall clock, moved on by the devnet's "let the delay
     // pass" (which also moves anvil's clock); in Logos it is the wall clock alone.
     property real clockOffset: 0
-    property bool relayerOn: true
+    // Whether a relayer pays the claim's LEZ fee. On every path of the module the claim names no relayer and no gas drop:
+    // the user's own account pays it, the private account that proves a private claim or a plaintext claim's public
+    // account (js/privacy.js OWN_FEE). Off, and its box disabled, until the module asks
+    // the network's gas-drop relayer as the `ferrata` tool does by default (RFP-022 U.05 stays in part until then).
+    property bool relayerOn: false
     property var heldUntil: ({})
     property string depositText: ""
     // The module refused a deposit while the person's earlier one is broadcast and not mined yet: the view offers to send
@@ -874,7 +878,7 @@ Rectangle {
                         PlainLabel { text: "(within the recovery window of 8 accounts)"; color: "#4a5563" }
                     }
                     CheckBox { objectName: "deposit.delay"; text: "Hold the claim for a random delay (recommended): " + delayHours + " h"; checked: delayOn; onClicked: delayOn = checked }
-                    CheckBox { objectName: "deposit.relayer"; text: "Claim through a permissionless relayer (recommended): it pays the LEZ fee"; checked: relayerOn; onClicked: relayerOn = checked }
+                    CheckBox { objectName: "deposit.relayer"; text: "Claim through a permissionless relayer that pays the LEZ fee: not in the mini-app yet (your own account pays it: the private one that proves a private claim, a plaintext claim's public one; the ferrata tool's gas drop does this)"; checked: relayerOn; enabled: false }
                 }
                 LeakList {
                     objectName: "deposit.leaks"; summaryName: "deposit.leaks.summary"
@@ -1307,7 +1311,7 @@ Rectangle {
                 objectName: "page.privacy"
                 spacing: 8
                 Heading { text: "What is public and what is private" }
-                Note { text: "The defaults are the recommended choices: fixed denominations, a private destination, a random delay before the claim, a permissionless relayer, a fresh recipient. What stays linkable even then: the token, the denomination and the time window; a public account's history; a recipient you reuse." + (logosEth() ? " On this path (Ethereum through Logos Core's send stack) the release is sent from your own release account, not by a relayer: that account is linked to the recipient on Ethereum." : "") }
+                Note { text: "The defaults are the recommended choices: fixed denominations, a private destination, a random delay before the claim, a relayer for the release where the path has one, a fresh recipient. Not yet in the mini-app: a relayer that pays the claim's LEZ fee (the ferrata tool's gas drop); here your own account pays it (the private one that proves a private claim, a plaintext claim's public one), which can link the claim to where its native LEZ came from. What stays linkable even then: the token, the denomination and the time window; a public account's history; a recipient you reuse." + (logosEth() ? " On this path (Ethereum through Logos Core's send stack) the release is sent from your own release account, not by a relayer: that account is linked to the recipient on Ethereum." : "") }
                 RowLayout { StepTable { step: "deposit" } StepTable { step: "claim" } }
                 RowLayout { StepTable { step: "burn" } StepTable { step: "release"; ownRelease: logosEth(); tableName: "privacy.steps.release" } }
                 Item { Layout.fillHeight: true }
@@ -1423,7 +1427,7 @@ Rectangle {
         var d = depositOf(claimLeaf);
         propose({
             title: claimMode === "private" ? "Private claim on LEZ" : "Plaintext claim on LEZ",
-            rows: [["Requested by", "Ferrata Bridge (ferrata_bridge_ui)"], ["Account", d ? d.kind + " LEZ account /" + d.account : "?"], ["Asset", "wrapped ETH"], ["Amount", d ? Fmt.eth(d.amount) : "?"], ["Destination", "the bridge program, configuration " + Fmt.short(info ? info.config_id : "")], ["Submitted by", relayerOn ? "a permissionless relayer" : "you"]],
+            rows: [["Requested by", "Ferrata Bridge (ferrata_bridge_ui)"], ["Account", d ? d.kind + " LEZ account /" + d.account : "?"], ["Asset", "wrapped ETH"], ["Amount", d ? Fmt.eth(d.amount) : "?"], ["Destination", "the bridge program, configuration " + Fmt.short(info ? info.config_id : "")], ["Submitted by", relayerOn ? "a permissionless relayer" : claimMode === "private" ? "you: your private account pays the LEZ fee" : "you: the claim's public account pays the LEZ fee"]],
             effects: claimMode === "private" ? ["Proves the claim in the LEZ wallet; spends the deposit's nullifier", "Mints the denomination to your account; does not say which deposit"] : ["Spends the deposit's nullifier in public", "Mints the denomination to your account, naming the deposit"]
         }, function () {
             step("claim", { leaf_index: claimLeaf, private: claimMode === "private" });

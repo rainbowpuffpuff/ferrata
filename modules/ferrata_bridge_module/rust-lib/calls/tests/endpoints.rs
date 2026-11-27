@@ -13,8 +13,9 @@
 //! block final on the endpoint in use differs, refused); a refused switch keeps both endpoints (two given, one bad:
 //! neither switches); the endpoint in use given again switches nothing and reads nothing new; an eth_rpc_module endpoint
 //! that fails the reading after the switch is put back, and the sequencer switched with it too; `info` names the
-//! endpoints in use and who holds each; refused while a job runs, and a sequencer change while `lez_core` holds the
-//! session's LEZ connection; a session opened again on another deployment drops the old one's Ethereum path, so a switch
+//! endpoints in use and who holds each; refused while a job runs; with the session's LEZ through `lez_core`, a sequencer
+//! change switches `lez_core`'s wallet too (opened again on a copy of its config) and both are put back when it reads
+//! nothing through the new one; a session opened again on another deployment drops the old one's Ethereum path, so a switch
 //! never writes another chain's record of eth_rpc_module (review M-1), and the same deployment opened again keeps it.
 //! The live test (two LEZ sequencers of one zone, two Sepolia RPCs, the view inside a headless Logos Core) is
 //! e2e/endpoints/run.sh.
@@ -86,7 +87,12 @@ fn serve(f: impl Fn(Value) -> Value + Send + 'static) -> String {
         for s in l.incoming() {
             let Ok(mut s) = s else { continue };
             let Some(body) = read_request(&mut s) else { continue };
-            let out = f(serde_json::from_slice(&body).unwrap_or(Value::Null)).to_string();
+            let v = f(serde_json::from_slice(&body).unwrap_or(Value::Null));
+            // `{"__drop": true}`: the connection closed with no answer (an answer lost on its way back).
+            if v.get("__drop") == Some(&Value::Bool(true)) {
+                continue;
+            }
+            let out = v.to_string();
             let _ = write!(
                 s,
                 "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{out}",
@@ -217,11 +223,38 @@ fn raw_rpc(chain_id: i64, method: &str, params: &str, _timeout_ms: u64) -> Resul
     .to_string())
 }
 
-fn lez_core(method: &str, _args: &str, _timeout_ms: u64) -> Result<String, String> {
+/// A sequencer the chain service accepts (its zone holds the configuration) from which `lez_core`'s wallet reads no
+/// block: its switch must be undone.
+const LEZ_DOWN: &str = "http://127.0.0.1:19302";
+
+/// `lez_core`'s wallet as the fake holds it: the config it was opened on and the sequencer that config names.
+static LEZ_WALLET: OnceLock<Mutex<(String, String)>> = OnceLock::new();
+/// A config `open` fails on (it answers 1 and keeps the wallet it had), when set.
+static OPEN_FAILS: OnceLock<Mutex<Option<String>>> = OnceLock::new();
+
+fn lez_wallet() -> (String, String) {
+    LEZ_WALLET.get_or_init(Mutex::default).lock().unwrap().clone()
+}
+
+/// `lez_core` as LEZ's wallet behaves behind it: `open` reads the wallet config it is given (its
+/// `sequencer.sequencer_addr`), `get_sequencer_addr` answers it as `url::Url` prints it, and the block height is read
+/// through it (none through [`LEZ_DOWN`]).
+fn lez_core(method: &str, args: &str, _timeout_ms: u64) -> Result<String, String> {
     Ok(match method {
-        "open" => "0".into(),
-        "get_sequencer_addr" => "127.0.0.1:3040".into(),
-        "get_current_block_height" => "7".into(),
+        "open" => {
+            let a: Value = serde_json::from_str(args).map_err(|e| e.to_string())?;
+            let config = a[0].as_str().ok_or("open: config")?.to_string();
+            if OPEN_FAILS.get_or_init(Mutex::default).lock().unwrap().as_deref() == Some(config.as_str()) {
+                return Ok("1".into());
+            }
+            let cfg: Value = serde_json::from_str(&std::fs::read_to_string(&config).map_err(|e| format!("{config}: {e}"))?)
+                .map_err(|e| e.to_string())?;
+            let seq = cfg["sequencer"]["sequencer_addr"].as_str().ok_or("open: no sequencer.sequencer_addr")?.to_string();
+            *LEZ_WALLET.get_or_init(Mutex::default).lock().unwrap() = (config, seq);
+            "0".into()
+        }
+        "get_sequencer_addr" => format!("{}/", lez_wallet().1),
+        "get_current_block_height" => if lez_wallet().1 == LEZ_DOWN { "0".into() } else { "7".into() },
         "list_accounts" => json!([{ "is_public": false, "account_id": PRIVATE0 }]).to_string(),
         m => return Err(format!("lez_core.{m}: not in this test")),
     })
@@ -238,6 +271,10 @@ struct Service {
     /// The sequencers whose zone holds the session's configuration, and the Ethereum RPCs of the deployment.
     good_seqs: HashSet<String>,
     good_eths: HashSet<String>,
+    /// The next `module.set_endpoints` (not a dry run) switches, then its answer is lost.
+    lose_next_switch: bool,
+    /// Sequencers the service refuses to switch to outside a dry run (one that stopped answering: a put-back to it).
+    refuse_switch_to: HashSet<String>,
 }
 
 fn chain_service(state: Arc<Mutex<Service>>) -> String {
@@ -270,6 +307,9 @@ fn chain_service(state: Arc<Mutex<Service>>) -> String {
                 if let Some(u) = eth.as_ref().filter(|u| !st.good_eths.contains(*u)) {
                     refused.push(format!("the Ethereum RPC {u}: not this deployment's"));
                 }
+                if let Some(u) = seq.as_ref().filter(|u| p["dry_run"] != true && st.refuse_switch_to.contains(*u)) {
+                    refused.push(format!("the LEZ sequencer {u}: it does not answer"));
+                }
                 if p["dry_run"] == true {
                     Ok(json!({ "dry_run": true, "refused": refused, "checks": {} }))
                 } else if !refused.is_empty() {
@@ -280,6 +320,9 @@ fn chain_service(state: Arc<Mutex<Service>>) -> String {
                     }
                     if let Some(u) = &eth {
                         st.eth = u.clone();
+                    }
+                    if std::mem::take(&mut st.lose_next_switch) {
+                        return json!({ "__drop": true });
                     }
                     Ok(json!({ "eth_rpc": st.eth, "sequencer": st.seq,
                                "switched": { "eth_rpc": eth.is_some(), "sequencer": seq.is_some() }, "in_use": {} }))
@@ -328,8 +371,10 @@ fn endpoints_switch_through_their_owners_and_stay_on_failure() {
         seq: seq_a.clone(),
         eth: e_a.clone(),
         set_calls: 0,
-        good_seqs: [seq_a.clone(), seq_b.clone()].into(),
+        good_seqs: [seq_a.clone(), seq_b.clone(), LEZ_DOWN.to_string()].into(),
         good_eths: [e_a.clone(), e_b.clone()].into(),
+        lose_next_switch: false,
+        refuse_switch_to: HashSet::new(),
     }));
     let svc = chain_service(state.clone());
     let in_service = |s: &Arc<Mutex<Service>>| {
@@ -420,18 +465,113 @@ fn endpoints_switch_through_their_owners_and_stay_on_failure() {
     }
     registry().required = false;
 
-    // LEZ through lez_core: its wallet holds its own connection, so a sequencer change is refused; Ethereum still switches.
+    // LEZ through lez_core: its wallet holds its own connection (the sequencer its wallet config names). A sequencer change
+    // switches the chain service's and lez_core's (its wallet opened again on a copy of the config naming the new one, then
+    // read through it), both or neither; the config in use is never written; Ethereum switches as before.
     ferrata_bridge_calls::set_lez_core(lez_core);
     let dir = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("u9-endpoints");
+    let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(dir.join("password"), "x\n").unwrap();
     std::fs::write(dir.join("bridge.bin"), b"not a program: never executed here").unwrap();
     let w = |f: &str| dir.join(f).to_string_lossy().into_owned();
+    let config_a = json!({ "sequencer": { "sequencer_addr": seq_a }, "seq_poll_timeout": "1s", "seq_tx_poll_max_blocks": 120,
+                           "seq_poll_max_retries": 2, "seq_block_poll_max_amount": 100, "gas_limit": 4_000_000 });
+    std::fs::write(dir.join("config.json"), config_a.to_string()).unwrap();
     let lez = json!({ "via": "lez_core", "wallet": { "config": w("config.json"), "storage": w("storage.json"), "password_file": w("password") },
                       "program_bin": w("bridge.bin") });
     ok("lez", lez.clone());
-    refused("set_endpoints", json!({ "sequencer": seq_b }), &["lez_core", "Kept"]);
-    assert_eq!(in_service(&state).1, seq_a);
+    assert_eq!(lez_wallet(), (w("config.json"), seq_a.clone()), "lez_core's wallet opened on the session's config");
+    let r = ok("set_endpoints", json!({ "sequencer": seq_b }));
+    assert_eq!(in_service(&state).1, seq_b, "the chain service switched: {r}");
+    let (copy, on) = lez_wallet();
+    assert_eq!(on, seq_b, "lez_core's wallet opened again on a config naming the new sequencer: {r}");
+    assert!(copy.contains(".seq-") && copy != w("config.json"), "a copy beside the config in use: {copy}");
+    let kept_cfg: Value = serde_json::from_str(&std::fs::read_to_string(dir.join("config.json")).unwrap()).unwrap();
+    assert_eq!(kept_cfg, config_a, "the config in use is not written");
+    let copied: Value = serde_json::from_str(&std::fs::read_to_string(&copy).unwrap()).unwrap();
+    assert_eq!(copied["gas_limit"], config_a["gas_limit"], "the copy keeps the config's other settings");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(std::fs::metadata(&copy).unwrap().permissions().mode() & 0o777, 0o600, "the copy is the owner's alone");
+    }
+    assert_eq!(r["checks"]["lez_core"]["read"]["sequencer"], json!(format!("{seq_b}/")), "{r}");
+    assert_eq!(r["checks"]["lez_core"]["read"]["head"], json!(7), "{r}");
+    assert_eq!(r["lez_core_sequencer"], json!(format!("{seq_b}/")), "{r}");
+    assert!(r["via"]["sequencer"].as_str().unwrap_or("").contains("lez_core"), "{r}");
+    let i = ok("info", json!({}));
+    assert_eq!(i["endpoints"]["sequencer"]["lez_core"], json!(format!("{seq_b}/")), "{i}");
+    // Refused by the chain service's reading (another zone's sequencer): neither switches.
+    refused("set_endpoints", json!({ "sequencer": seq_other }), &["not switched", &seq_other, &format!("LEZ sequencer {seq_b}"), "lez_core"]);
+    assert_eq!((in_service(&state).1, lez_wallet().1), (seq_b.clone(), seq_b.clone()), "a refused sequencer leaves both");
+    // The chain service takes it, lez_core's wallet reads no block through it: both put back on the sequencer in use.
+    refused("set_endpoints", json!({ "sequencer": LEZ_DOWN }), &["not switched", "lez_core's wallet did not take", LEZ_DOWN, "reads no block", "Put back", &seq_b]);
+    assert_eq!(in_service(&state).1, seq_b, "the chain service put back");
+    assert_eq!(lez_wallet(), (copy.clone(), seq_b.clone()), "lez_core's wallet opened again on the config it had");
+    // And back to the first sequencer, both.
+    ok("set_endpoints", json!({ "sequencer": seq_a }));
+    assert_eq!((in_service(&state).1, lez_wallet().1), (seq_a.clone(), seq_a.clone()));
+    assert_eq!(ok("lez_report", json!({}))["log"].as_array().unwrap().iter().filter(|e| e["kind"] == "switch").count(), 3, "three switches tried");
+    // The chain service's answer to the switch lost after it switched: read again and put back; lez_core not moved.
+    state.lock().unwrap().lose_next_switch = true;
+    refused("set_endpoints", json!({ "sequencer": seq_b }), &["not switched", "did not answer", "it had switched: put back", &format!("LEZ sequencer {seq_a}")]);
+    assert_eq!((in_service(&state).1, lez_wallet().1), (seq_a.clone(), seq_a.clone()), "both on the sequencer in use");
+    // Split already (the chain service on B, lez_core on A, as a lost answer with a failed put-back would leave them):
+    // the same request moves lez_core alone, and says it switched.
+    state.lock().unwrap().seq = seq_b.clone();
+    let r = ok("set_endpoints", json!({ "sequencer": seq_b }));
+    assert_eq!((in_service(&state).1, lez_wallet().1), (seq_b.clone(), seq_b.clone()), "healed: {r}");
+    assert_eq!(r["switched"]["sequencer"], true, "{r}");
+    // Through eth_rpc_module, a chain set to `required` whose reading fails after its switch: the Ethereum endpoint, the
+    // chain service's sequencer and lez_core's wallet all put back.
+    let e_before = registry().endpoints.get(&CHAIN).cloned().unwrap();
+    registry().required = true;
+    refused("set_endpoints", json!({ "eth_rpc": e_fork, "sequencer": seq_a }), &["not switched", "after the switch", "Put back"]);
+    registry().required = false;
+    assert_eq!(registry().endpoints.get(&CHAIN), Some(&e_before), "eth_rpc_module put back");
+    assert_eq!((in_service(&state).1, lez_wallet().1), (seq_b.clone(), seq_b.clone()), "the chain service and lez_core put back");
+    ok("set_endpoints", json!({ "sequencer": seq_a }));
+    assert_eq!((in_service(&state).1, lez_wallet().1), (seq_a.clone(), seq_a.clone()));
+    // lez_core's put-back fails too (the config in use cannot be opened again; the wallet stays on the copy it took): the
+    // refusal says where lez_core's wallet is, `info` too, and the same request later moves it back.
+    let (in_use, _) = lez_wallet();
+    *OPEN_FAILS.get_or_init(Mutex::default).lock().unwrap() = Some(in_use.clone());
+    refused("set_endpoints", json!({ "sequencer": LEZ_DOWN }), &["not switched", "reads no block", "is kept", "not put back", LEZ_DOWN]);
+    *OPEN_FAILS.get_or_init(Mutex::default).lock().unwrap() = None;
+    assert_eq!((in_service(&state).1, lez_wallet().1), (seq_a.clone(), LEZ_DOWN.to_string()), "the chain service put back, lez_core not");
+    let i = ok("info", json!({}));
+    assert_eq!(i["endpoints"]["sequencer"]["lez_core"], json!(format!("{LEZ_DOWN}/")), "info says where lez_core is: {i}");
+    // An undo from there: lez_core takes seq_b, the Ethereum RPC's reading fails after its switch, and lez_core's
+    // put-back reopens the config it left but reads no block through it: the record names that config again, not the
+    // copy for seq_b, so a later put-back goes where lez_core is.
+    let (cfg_down, _) = lez_wallet();
+    registry().required = true;
+    refused("set_endpoints", json!({ "eth_rpc": e_fork, "sequencer": seq_b }), &["not switched", "after the switch", "putting lez_core's wallet back failed", "reads no block"]);
+    registry().required = false;
+    assert_eq!(lez_wallet(), (cfg_down.clone(), LEZ_DOWN.to_string()), "lez_core reopened the config it left");
+    assert_eq!(in_service(&state).1, seq_a, "the chain service put back");
+    let w = ok("lez_report", json!({}));
+    assert_eq!(w["wallet"]["config"], json!(cfg_down), "the record names the config lez_core has open: {w}");
+    let r = ok("set_endpoints", json!({ "sequencer": seq_a }));
+    assert_eq!((in_service(&state).1, lez_wallet().1), (seq_a.clone(), seq_a.clone()), "healed by the same request: {r}");
+    // The endpoint in use given again with a bare `/` (the form `url::Url` prints): nothing new, nothing switched. (An
+    // upper-case scheme is refused by the endpoint check before any comparison.)
+    let r = ok("set_endpoints", json!({ "sequencer": format!("{seq_a}/") }));
+    assert_eq!(r["switched"], json!({ "eth_rpc": false, "sequencer": false }), "{r}");
+    // The chain service passes the dry run, then refuses the switch itself: "refused", not "did not answer".
+    state.lock().unwrap().refuse_switch_to.insert(seq_b.clone());
+    refused("set_endpoints", json!({ "sequencer": seq_b }), &["not switched", "the chain service refused the switch", "it had not switched"]);
+    state.lock().unwrap().refuse_switch_to.clear();
+    assert_eq!((in_service(&state).1, lez_wallet().1), (seq_a.clone(), seq_a.clone()));
+    // lez_core does not take the new sequencer and the chain service refuses its put-back (the old sequencer stopped
+    // answering): they end apart, and the refusal names where each is rather than "both on the old one".
+    state.lock().unwrap().refuse_switch_to.insert(seq_a.clone());
+    refused("set_endpoints", json!({ "sequencer": LEZ_DOWN }), &["not switched", "reads no block", "not put back: its LEZ sequencer is", LEZ_DOWN, &format!("lez_core's wallet on {seq_a}/")]);
+    state.lock().unwrap().refuse_switch_to.clear();
+    assert_eq!((in_service(&state).1, lez_wallet().1), (LEZ_DOWN.to_string(), seq_a.clone()), "apart, as the refusal says");
+    ok("set_endpoints", json!({ "sequencer": seq_a }));
+    assert_eq!((in_service(&state).1, lez_wallet().1), (seq_a.clone(), seq_a.clone()), "and together again");
     ok("set_endpoints", json!({ "eth_rpc": e_a }));
     assert_eq!(registry().endpoints.get(&CHAIN), Some(&e_a));
     ok("lez", json!({ "via": "plain" }));
@@ -454,6 +594,8 @@ fn endpoints_switch_through_their_owners_and_stay_on_failure() {
         set_calls: 0,
         good_seqs: [seq_a.clone()].into(),
         good_eths: [e_y.clone(), e_y2.clone()].into(),
+        lose_next_switch: false,
+        refuse_switch_to: HashSet::new(),
     }));
     let svc_y = chain_service(y.clone());
     let patched = registry().patched.len();

@@ -157,8 +157,8 @@ pub(crate) fn configure(params: &Value, private0: Option<String>) -> Result<Valu
     if has_private0 == Some(false) {
         return Err("lez_core's wallet does not hold the session's private account /0".into());
     }
-    let wallet = json!({ "config": config, "storage": storage, "sequencer": addr, "head": height.trim(),
-                         "private_accounts": ids.len(), "holds_private_0": has_private0 });
+    let wallet = json!({ "config": config, "storage": storage, "password_file": password_file, "sequencer": addr,
+                         "head": height.trim(), "private_accounts": ids.len(), "holds_private_0": has_private0 });
     let summary = json!({
         "via": "lez_core",
         "wallet": wallet,
@@ -407,6 +407,182 @@ pub(crate) fn probe(s: &Value) -> Result<Value, String> {
     Ok(json!({ "method": "send_generic_private_transaction_with_accounts", "accounts_json": [entry], "reply": serde_json::from_str::<Value>(&reply).unwrap_or(json!(reply)), "ms": ms }))
 }
 
+/// Where `lez_core`'s wallet was before [`switch_sequencer`]: what [`put_back`] opens again.
+pub(crate) struct Switched {
+    config: String,
+    sequencer: String,
+}
+
+/// A sequencer URL as LEZ's wallet prints it (`url::Url`: a `/` path on a bare origin) or as a person types it, compared
+/// without the case of its scheme and host (never of its user info, path or query) and without a bare `/` path.
+pub(crate) fn same_sequencer(a: &str, b: &str) -> bool {
+    fn norm(s: &str) -> String {
+        let s = s.trim();
+        let (scheme, rest) = s.split_once("://").map_or((String::new(), s), |(a, b)| (a.to_ascii_lowercase(), b));
+        let (auth, path) = rest.find(['/', '?', '#']).map_or((rest, ""), |i| (&rest[..i], &rest[i..]));
+        let auth = auth.rsplit_once('@').map_or_else(|| auth.to_ascii_lowercase(), |(u, h)| format!("{u}@{}", h.to_ascii_lowercase()));
+        format!("{scheme}://{auth}{}", if path == "/" { "" } else { path })
+    }
+    norm(a) == norm(b)
+}
+
+/// `lez_core`'s wallet opened on `config` (with the session's storage and password), then read back: the sequencer it
+/// names and its current block height. `Err` unless it names `want` and reads a block (height above 0).
+fn open_on(config: &str, want: &str) -> Result<Value, String> {
+    let (storage, password_file) = with(|l| (l.wallet["storage"].as_str().map(str::to_string), l.wallet["password_file"].as_str().map(str::to_string)))
+        .ok_or("the session's LEZ does not go through lez_core")?;
+    let storage = storage.ok_or("lez_core's wallet names no storage")?;
+    let password_file = password_file.ok_or("lez_core's wallet names no password file")?;
+    let password = std::fs::read_to_string(&password_file).map_err(|e| format!("{password_file}: {e}"))?;
+    let password = password.trim_end_matches(['\n', '\r']).to_string();
+    let (opened, ms_open) = call("open", &json!([config, storage, password, true]), READ_MS)?;
+    let (addr, ms_addr) = call("get_sequencer_addr", &json!([]), READ_MS)?;
+    let (height, ms_height) = call("get_current_block_height", &json!([]), READ_MS)?;
+    let calls = json!([{ "method": "open", "reply": opened, "ms": ms_open }, { "method": "get_sequencer_addr", "reply": addr, "ms": ms_addr },
+                       { "method": "get_current_block_height", "reply": height, "ms": ms_height }]);
+    let head = height.trim().parse::<u64>().unwrap_or(0);
+    if !same_sequencer(&addr, want) {
+        return Err(format!("lez_core's wallet names {:?} after opening {config}, not {want} (open answered {opened})", addr.trim()));
+    }
+    if head == 0 {
+        return Err(format!("lez_core's wallet reads no block from {want} (current block height {:?}; open answered {opened})", height.trim()));
+    }
+    Ok(json!({ "config": config, "sequencer": addr.trim(), "head": head, "calls": calls }))
+}
+
+/// `set_endpoints`' LEZ sequencer while the session's LEZ goes through `lez_core` (RFP-022 U.9). `lez_core`'s wallet
+/// holds its own connection, to the sequencer its wallet config names (`sequencer.sequencer_addr`), and `lez_core` has
+/// no method that sets it; so a copy of the config in use naming `sequencer` is written beside it
+/// (`<config>.seq-<16 hex of the URL's SHA-256>.json`, mode 0600; the config in use is never written), and `lez_core`
+/// opens the session's wallet again on that copy (`open`, the same storage and password, `force_rpc`). Kept only when
+/// `lez_core` then names `sequencer` (`get_sequencer_addr`) and reads a block through it; otherwise the config in use is
+/// opened again ([`put_back`]) and the reason returned, with whether that worked. The caller has read the sequencer
+/// first (its zone holds the session's configuration: the chain service's dry run).
+pub(crate) fn switch_sequencer(sequencer: &str) -> Result<(Value, Switched), String> {
+    let (config, prev_seq) = with(|l| (l.wallet["config"].as_str().map(str::to_string), l.wallet["sequencer"].as_str().unwrap_or("").to_string()))
+        .ok_or("the session's LEZ does not go through lez_core")?;
+    let config = config.ok_or("lez_core's wallet names no config")?;
+    let text = std::fs::read_to_string(&config).map_err(|e| format!("reading lez_core's wallet config {config}: {e}"))?;
+    let mut cfg: Value = serde_json::from_str(&text).map_err(|e| format!("lez_core's wallet config {config}: not JSON ({e})"))?;
+    if !cfg["sequencer"].is_object() {
+        return Err(format!("lez_core's wallet config {config} has no `sequencer` object"));
+    }
+    // A put-back reopens that config, so it expects the sequencer that config names (the record's may be unknown).
+    let own = cfg["sequencer"]["sequencer_addr"].as_str().map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+    let prev = Switched { config: config.clone(), sequencer: own.unwrap_or(prev_seq) };
+    cfg["sequencer"]["sequencer_addr"] = json!(sequencer.trim());
+    let copy = config_copy(&config, sequencer);
+    write_private(&copy, &serde_json::to_vec_pretty(&cfg).map_err(|e| e.to_string())?)?;
+    match open_on(&copy, sequencer) {
+        Ok(read) => {
+            with(|l| {
+                l.wallet["config"] = json!(copy);
+                l.wallet["sequencer"] = read["sequencer"].clone();
+                l.wallet["head"] = json!(read["head"].to_string());
+                l.log.push(json!({ "kind": "switch", "from": prev.sequencer, "to": sequencer, "read": read }));
+            });
+            Ok((json!({ "held_by": "lez_core", "config": copy, "from": prev.sequencer, "read": read }), prev))
+        }
+        Err(why) => {
+            let back = match put_back(&prev) {
+                // lez_core is back on its config: the copy this failed switch wrote is in nobody's use (it is never the
+                // config in use: `config_copy`), and goes.
+                Ok(()) => std::fs::remove_file(&copy).map_or_else(|e| format!("; its copy {copy} could not be removed: {e}"), |()| String::new()),
+                // lez_core may still have the copy open: kept, and named; when lez_core names the new sequencer, the copy is
+                // its config now (the next switch copies and puts back from it).
+                Err(e) => {
+                    with(|l| {
+                        if l.wallet["sequencer"].as_str().is_some_and(|n| same_sequencer(n, sequencer)) {
+                            l.wallet["config"] = json!(copy);
+                        }
+                    });
+                    format!("; putting lez_core back on {} failed: {e}; the copy {copy} is kept", prev.config)
+                }
+            };
+            log(json!({ "kind": "switch", "from": prev.sequencer, "to": sequencer, "error": why, "after": back }));
+            Err(format!("{why}{back}"))
+        }
+    }
+}
+
+/// After a put-back that failed: what `lez_core`'s wallet names now, recorded as the session's (null when it names
+/// none), so that `info`, the next switch and the refusal say where it is rather than where it was.
+fn resync() -> Option<String> {
+    // Unread is not "none": recorded as unknown, which no sequencer compares equal to, so the next request moves it.
+    let addr = match call("get_sequencer_addr", &json!([]), READ_MS) {
+        Ok((a, _)) => Some(a.trim().to_string()).filter(|a| !a.is_empty()),
+        Err(e) => Some(format!("unknown (lez_core did not answer: {e})")),
+    };
+    with(|l| {
+        l.wallet["sequencer"] = addr.clone().map_or(Value::Null, Value::from);
+        l.log.push(json!({ "kind": "resync", "sequencer": addr }));
+    });
+    addr
+}
+
+/// `lez_core`'s wallet opened again on the config it had before [`switch_sequencer`], and read back. When that fails,
+/// what it names now is recorded ([`resync`]) and named in the error.
+pub(crate) fn put_back(prev: &Switched) -> Result<(), String> {
+    let read = match open_on(&prev.config, &prev.sequencer) {
+        Ok(read) => read,
+        Err(e) => {
+            let now = resync();
+            // Back on the sequencer it left (the config opened, its read failing): that config is its config again, not
+            // the copy it left (an undo after a switch that was taken).
+            if now.as_deref().is_some_and(|n| same_sequencer(n, &prev.sequencer)) {
+                with(|l| l.wallet["config"] = json!(prev.config));
+            }
+            return Err(format!("{e} (lez_core's wallet now names {})", now.as_deref().unwrap_or("no sequencer")));
+        }
+    };
+    with(|l| {
+        l.wallet["config"] = json!(prev.config);
+        l.wallet["sequencer"] = read["sequencer"].clone();
+        l.wallet["head"] = json!(read["head"].to_string());
+        l.log.push(json!({ "kind": "put_back", "to": prev.sequencer, "read": read }));
+    });
+    Ok(())
+}
+
+/// The sequencer `lez_core`'s wallet names, when the session's LEZ goes through it.
+pub(crate) fn sequencer() -> Option<String> {
+    with(|l| l.wallet["sequencer"].as_str().map(str::to_string)).flatten()
+}
+
+/// The path of the copy of wallet config `config` that names `sequencer`: beside the config the session opened,
+/// `<stem>.seq-<first 16 hex of the URL's SHA-256>.json`, where `<stem>` is that config's file name without `.json` and
+/// without the `.seq-<16 hex>` of an earlier switch (so copies never nest; only the file name's own suffix is taken off).
+fn config_copy(config: &str, sequencer: &str) -> String {
+    let hash = hex(&ferrata_bridge_core::sha256(sequencer.trim().as_bytes()));
+    let tag: String = hash.trim_start_matches("0x").chars().take(16).collect();
+    let stem = config.strip_suffix(".json").unwrap_or(config);
+    let stem = match stem.rsplit_once(".seq-") {
+        Some((s, t)) if t.len() == 16 && t.bytes().all(|b| b.is_ascii_hexdigit()) => s,
+        _ => stem,
+    };
+    let copy = format!("{stem}.seq-{tag}.json");
+    // Never the config in use (one named like a copy for this sequencer): the put-back reads it.
+    if copy == config { format!("{stem}.seq-{tag}.again.json") } else { copy }
+}
+
+/// `bytes` to `path` (mode 0600 where the platform has modes), through a file beside it renamed over it.
+fn write_private(path: &str, bytes: &[u8]) -> Result<(), String> {
+    use std::io::Write as _;
+    let tmp = format!("{path}.part");
+    let _ = std::fs::remove_file(&tmp);
+    let mut o = std::fs::OpenOptions::new();
+    o.write(true).create_new(true);
+    #[cfg(unix)]
+    std::os::unix::fs::OpenOptionsExt::mode(&mut o, 0o600);
+    let mut f = o.open(&tmp).map_err(|e| format!("writing {tmp}: {e}"))?;
+    let done = f.write_all(bytes).and_then(|()| f.sync_all()).map_err(|e| format!("writing {tmp}: {e}"))
+        .and_then(|()| std::fs::rename(&tmp, path).map_err(|e| format!("renaming {tmp}: {e}")));
+    if done.is_err() {
+        let _ = std::fs::remove_file(&tmp);
+    }
+    done
+}
+
 /// `lez_core.poll_transaction_status(hash)`: whether LEZ's wallet finds it on the zone.
 pub(crate) fn poll(tx_hash: &str) -> Value {
     match call("poll_transaction_status", &json!([tx_hash.trim_start_matches("0x")]), READ_MS) {
@@ -446,6 +622,28 @@ pub(crate) fn report() -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_config_copy_sits_beside_the_config_and_never_nests() {
+        let a = config_copy("/w/lez-wallet/wallet_config.json", "http://127.0.0.1:19301");
+        assert!(a.starts_with("/w/lez-wallet/wallet_config.seq-") && a.ends_with(".json") && a.len() == "/w/lez-wallet/wallet_config.seq-0123456789abcdef.json".len(), "{a}");
+        // From a copy, the next copy replaces its suffix (no wallet_config.seq-x.seq-y.json).
+        let b = config_copy(&a, "http://127.0.0.1:19302");
+        assert!(b.starts_with("/w/lez-wallet/wallet_config.seq-") && b.matches(".seq-").count() == 1 && b != a, "{b}");
+        assert_eq!(config_copy(&b, "http://127.0.0.1:19301"), a, "the same sequencer, the same copy");
+        // A directory named like a suffix is not taken for one.
+        let c = config_copy("/w/x.seq-deadbeef00112233/wallet_config.json", "http://127.0.0.1:19301");
+        assert!(c.starts_with("/w/x.seq-deadbeef00112233/wallet_config.seq-"), "{c}");
+        let d = config_copy("/w/.seq-data/config", "http://127.0.0.1:19301");
+        assert!(d.starts_with("/w/.seq-data/config.seq-"), "{d}");
+        // A config in use named like the copy for the sequencer asked: the copy goes elsewhere, never over it.
+        assert_ne!(config_copy(&a, "http://127.0.0.1:19301"), a);
+        // Only the scheme and host are compared without case, and only a bare `/` path is dropped.
+        assert!(same_sequencer("http://127.0.0.1:19301/", "HTTP://127.0.0.1:19301") && !same_sequencer("http://127.0.0.1:19301/", "http://127.0.0.1:19302"));
+        assert!(same_sequencer("https://Gateway.Example/ZoneA", "https://gateway.example/ZoneA"));
+        assert!(!same_sequencer("https://gateway.example/ZoneA?Key=AbC", "https://gateway.example/zonea?key=abc"));
+        assert!(!same_sequencer("https://User:Pw@gateway.example/", "https://user:pw@gateway.example/"));
+    }
 
     #[test]
     fn bytes_are_the_sdk_canonical_form() {

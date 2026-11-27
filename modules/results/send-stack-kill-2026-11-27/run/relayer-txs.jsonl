@@ -1,0 +1,7 @@
+{"nonce":0,"hash":"0x659d310acd54b909170f5fa9ccc9d7d6a6ca012860a879c7cc9c5f2761864bc1","block":6,"call":"submitCandidate","status":1}
+{"nonce":1,"hash":"0xe362efa1a23a173c6489ceebb6ece9b4edbddeba08d714d5c700ab61bdb54df9","block":8,"call":"finalizeAttested","status":1}
+{"nonce":2,"hash":"0x028e9586ec4c682fe7cd213e3eafef0a56ae9fc95a9cc0fa0019c46bc70b362c","block":9,"call":"release","status":1}
+{"nonce":3,"hash":"0xbd0f48612b406064aceb04c53fc53231579bb1a82029f3b3523af90a7cc90cf9","block":10,"call":"claimOwed","status":1}
+{"nonce":4,"hash":"0xdf66b0f8f72e3f6bdd75caa43c2db53b58340e34c82a845743ea49f544c5e91f","block":11,"call":"submitCandidate","status":1}
+{"nonce":5,"hash":"0xce534a4e1d180d8d18a5b189264a3159d2e44a0a869e2462ee1a56a0285db00d","block":13,"call":"finalizeAttested","status":1}
+{"nonce":6,"hash":"0x79970738702387c21aa6655b5a772caf0593fd6c7abd6b749bf8ced7df3c0d8c","block":14,"call":"submitCandidate","status":1}

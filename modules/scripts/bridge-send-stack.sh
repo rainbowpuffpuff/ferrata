@@ -5,8 +5,14 @@
 # tx_sender_module, each approved by a person at Logos's headless approver evm_signer_cli (keys imported with
 # Logos's evm_keystore_cli into keystore_module; the module holds none); a refused approval; a frozen token's deposit
 # refused before anything is signed; a send forced to revert after its approval (its own gas limit too low), reported
-# as reverted; every other send with the margin over the stack's estimate (send.rs). Every effect read back with
-# Foundry's cast.
+# as reverted; every other send with the margin over the stack's estimate (send.rs). Step 10 sends the vault actions
+# left, each from the account that may send it: the global cap, delta raised, the admin role handed to the user and
+# back (each hand-over accepted by the pending admin), the four other freezes set and lifted, the watchers proposed and
+# applied by anyone after their 14-day time lock and step 3c's fees after their seven days (anvil's clock moved on),
+# and last the vault retired by its freeze authority. What the vault refuses on this fixture (delta out of its bounds,
+# a revocation with no checkpoint, roles applied early, retirement by anyone before retireOpensAt) is sent too: the
+# module must name the vault's error before anything is signed, the approver getting no request. Every effect read
+# back with Foundry's cast.
 #
 #   modules/scripts/bridge-send-stack.sh build OUT   the send stack and the two CLIs (send-stack.sh build, builder
 #                                                    5f74cdb grafted), ferrata_bridge_module's dev .lgx and logosctl
@@ -286,6 +292,150 @@ run() {
   cast rpc evm_mine --rpc-url $RPC > /dev/null; cast rpc evm_setAutomine true --rpc-url $RPC > /dev/null
   check "not mined in time: mined with the next block (cast receipt status 1)" "1" "$(cast receipt "$UH" status --rpc-url $RPC 2>/dev/null | awk '{print $1}')"
 
+  # 10. The vault actions the steps above leave out (admin.rs `vault_action`), each sent by the module through the send
+  # stack from the account that may send it and approved at evm_signer_cli (send_through: the keystore account is the
+  # request's send.from; the three imported keys share one password file); every effect read back with cast against
+  # the vault's own getters. The admin's from A1 (SEND1), the freeze authority's from A2 (SEND2), accept_admin from the
+  # pending admin, `anyone`'s from A3, the user (SEND3), except retire: only the freeze authority may retire before
+  # retireOpensAt(). Where the vault refuses on this fixture (raiseDelta out of its bounds; revokeFrom: no checkpoint is
+  # ever finalised here; applyRoles before its time lock; retire by anyone before retireOpensAt) the same request is
+  # sent straight to the module, which must name the vault's error from its eth_call before anything is signed: a valid
+  # check too, with no request then at the approver nor any send at tx_sender_module. The admin ends as A1 again;
+  # retire comes last.
+  local Z=0x0000000000000000000000000000000000000000 MAXF d0 fs0
+  local UNLIMITED=115792089237316195423570985008687907853269984665640564039457584007913129639935
+  MAXF=$(cast call $V 'maxFreeze()(uint256)' --rpc-url $RPC | awk '{print $1}') # 30 days on this fixture
+  vals() { awk '{print $1}' | paste -sd' ' -; } # cast's values on one line, without its [1e9] notes
+  block_time() { # a block's timestamp, in decimal
+    local t re='^(0x[0-9a-fA-F]+|[0-9]+)$'; t=$(cast block "$1" --field timestamp --rpc-url $RPC | awk '{print $1}')
+    [[ $t =~ $re ]] && echo $(( t ))
+  }
+  sender() { cast tx "$(jq -r .tx_hash "$1")" from --rpc-url $RPC | low; } # who sent a reply's transaction
+  # vault_send NAME ACTION PARAMS SEND: the action through the send stack, approved; the reply in $R/admin-NAME.json
+  # (so the receipts check after this step covers it too).
+  vault_send() { send_through "admin-$1" admin "{\"action\":\"$2\",\"vault\":\"$V\",\"eth\":$E,\"params\":$3,\"send\":$4}" approve "$PW"; }
+  # nothing_asked: "yes" when the approver shows no request and tx_sender_module holds no send.
+  nothing_asked() {
+    local st live; st=$(j evm_signer_cli status); live=$(j tx_sender_module live_sends)
+    jq -r -n --argjson st "$st" --argjson live "$live" 'if $st.pending_count == 0 and $st.rendered.handle == null and ($live.sends | length) == 0
+      then "yes" else "no: \($st.pending_count) pending at the approver, \($live.sends | length) sends at tx_sender_module" end' 2>/dev/null \
+      || echo "no: unreadable"
+  }
+  # refusal < REPLY: the vault error a reply names when the module refused it with eth_call before sending, else the reply.
+  refusal() {
+    local r n; r=$(cat); n=$(jq -r '.error // ""' <<< "$r" 2>/dev/null | sed -n 's/^refused: vault error \([A-Za-z]*\)() (checked with eth_call before sending.*/\1/p')
+    echo "${n:-not refused with eth_call: $(head -c 300 <<< "$r")}"
+  }
+  # vault_refused NAME ACTION PARAMS SEND: vault_send's request straight to the module ($R/refused-NAME.json): the vault
+  # error it names, then nothing_asked.
+  vault_refused() {
+    j ferrata_bridge_module admin "{\"action\":\"$2\",\"vault\":\"$V\",\"eth\":$E,\"params\":$3,\"send\":$4}" > "$R/refused-$1.json"
+    echo "$(refusal < "$R/refused-$1.json") $(nothing_asked)"
+  }
+  # deposit_refused NAME: the user's ETH deposit as in step 4 ($R/deposit-NAME.json): the vault error named, then nothing_asked.
+  deposit_refused() {
+    j ferrata_bridge_module deposit "{$DEP,\"token\":\"$ETH\",\"denom_index\":0,\"send\":$SEND3}" > "$R/deposit-$1.json"
+    echo "$(refusal < "$R/deposit-$1.json") $(nothing_asked)"
+  }
+  # since_block REPLY TIME: the reply's verdict and TIME (a time the vault stored) less its transaction's block time.
+  since_block() {
+    local b t=""; b=$(jq -r '.block // empty' "$1" 2>/dev/null); [ -n "$b" ] && t=$(block_time "$b")
+    if [[ $2 =~ ^[0-9]+$ && $t =~ ^[0-9]+$ ]]; then echo "$(jq -r .verdict "$1") $(( $2 - t ))"; else echo "$(jq -r .verdict "$1") [$2] at block time [$t]"; fi
+  }
+
+  # 10a. The admin's global cap (direction "release" = Direction.Release, 1: that bucket may not go below the
+  # deployment's release floor, 0 here) and delta, raised within its bounds (never down, at most MAX_DELTA, 30 days).
+  vault_send global-cap set_global_cap '{"direction":"release","capacity":"5000000000000","refill_per_second":"2000000"}' "$SEND1"
+  check "set_global_cap(release): settled, the global release bucket's capacity and refill (cast globalCap(1))" "settled 5000000000000 2000000" \
+    "$(jq -r .verdict "$R/admin-global-cap.json") $(cast call $V 'globalCap(uint8)(uint256,uint256,uint256)' 1 --rpc-url $RPC | head -2 | vals)"
+  check "set_global_cap(release): the global deposit bucket untouched, unlimited (cast globalCap(0))" "$UNLIMITED" \
+    "$(cast call $V 'globalCap(uint8)(uint256,uint256,uint256)' 0 --rpc-url $RPC | head -1 | vals)"
+  d0=$(cast call $V 'delta()(uint256)' --rpc-url $RPC | vals)
+  vault_send raise-delta raise_delta '{"delta":"1200"}' "$SEND1"
+  check "raise_delta(1200): settled, delta 600 -> 1200 (cast delta())" "600 settled 1200" \
+    "$d0 $(jq -r .verdict "$R/admin-raise-delta.json") $(cast call $V 'delta()(uint256)' --rpc-url $RPC | vals)"
+  check "raise_delta(900, below delta): refused before signing (DeltaCanOnlyRise), nothing at the approver" "DeltaCanOnlyRise yes" \
+    "$(vault_refused delta-lower raise_delta '{"delta":"900"}' "$SEND1")"
+  check "raise_delta(30 days + 1 s, above MAX_DELTA): refused before signing (DeltaTooLong), nothing at the approver" "DeltaTooLong yes" \
+    "$(vault_refused delta-too-long raise_delta '{"delta":"2592001"}' "$SEND1")"
+
+  # 10b. The admin role handed to the user (A3) and back, each hand-over accepted by the pending admin (acceptAdmin:
+  # the pending admin only, never the freeze authority).
+  vault_send transfer-admin transfer_admin "{\"new_admin\":\"$A3\"}" "$SEND1"
+  check "transfer_admin(A3) by the admin A1: settled, A3 pending, A1 still the admin (cast)" "settled $A3 $A1" \
+    "$(jq -r .verdict "$R/admin-transfer-admin.json") $(cast call $V 'pendingAdmin()(address)' --rpc-url $RPC | low) $(cast call $V 'admin()(address)' --rpc-url $RPC | low)"
+  vault_send accept-admin accept_admin '{}' "$SEND3"
+  check "accept_admin by the pending admin A3: settled, sent by A3, A3 the admin, none pending (cast)" "settled $A3 $A3 $Z" \
+    "$(jq -r .verdict "$R/admin-accept-admin.json") $(sender "$R/admin-accept-admin.json") $(cast call $V 'admin()(address)' --rpc-url $RPC | low) $(cast call $V 'pendingAdmin()(address)' --rpc-url $RPC | low)"
+  vault_send transfer-admin-back transfer_admin "{\"new_admin\":\"$A1\"}" "$SEND3"
+  check "transfer_admin(A1) by the admin A3: settled, sent by A3, A1 pending (cast)" "settled $A3 $A1" \
+    "$(jq -r .verdict "$R/admin-transfer-admin-back.json") $(sender "$R/admin-transfer-admin-back.json") $(cast call $V 'pendingAdmin()(address)' --rpc-url $RPC | low)"
+  vault_send accept-admin-back accept_admin '{}' "$SEND1"
+  check "accept_admin by the pending admin A1: settled, A1 the admin again, none pending (cast)" "settled $A1 $Z" \
+    "$(jq -r .verdict "$R/admin-accept-admin-back.json") $(cast call $V 'admin()(address)' --rpc-url $RPC | low) $(cast call $V 'pendingAdmin()(address)' --rpc-url $RPC | low)"
+
+  # 10c. The freeze authority's four other freezes, each set (until its block's time + maxFreeze) and lifted (0). The
+  # checkpoint freeze, lifted, keeps the time it ended (its block's), from which keyless retirement counts.
+  vault_send deposits-frozen set_deposits_frozen '{"frozen":true}' "$SEND2"
+  check "set_deposits_frozen(true): settled, frozen for maxFreeze from its block's time (cast depositsFrozenUntil())" "settled $MAXF" \
+    "$(since_block "$R/admin-deposits-frozen.json" "$(cast call $V 'depositsFrozenUntil()(uint256)' --rpc-url $RPC | vals)")"
+  check "set_deposits_frozen: the module refuses an ETH deposit before signing (DepositsAreFrozen), nothing at the approver" \
+    "DepositsAreFrozen yes" "$(deposit_refused all-frozen)"
+  vault_send deposits-lifted set_deposits_frozen '{"frozen":false}' "$SEND2"
+  check "set_deposits_frozen(false): settled, lifted (cast depositsFrozenUntil() 0)" "settled 0" \
+    "$(jq -r .verdict "$R/admin-deposits-lifted.json") $(cast call $V 'depositsFrozenUntil()(uint256)' --rpc-url $RPC | vals)"
+  vault_send releases-frozen set_releases_frozen '{"frozen":true}' "$SEND2"
+  check "set_releases_frozen(true): settled, frozen for maxFreeze from its block's time (cast releasesFrozenUntil())" "settled $MAXF" \
+    "$(since_block "$R/admin-releases-frozen.json" "$(cast call $V 'releasesFrozenUntil()(uint256)' --rpc-url $RPC | vals)")"
+  vault_send releases-lifted set_releases_frozen '{"frozen":false}' "$SEND2"
+  check "set_releases_frozen(false): settled, lifted (cast releasesFrozenUntil() 0)" "settled 0" \
+    "$(jq -r .verdict "$R/admin-releases-lifted.json") $(cast call $V 'releasesFrozenUntil()(uint256)' --rpc-url $RPC | vals)"
+  vault_send checkpoints-frozen set_checkpoints_frozen '{"frozen":true}' "$SEND2"
+  check "set_checkpoints_frozen(true): settled, frozen for maxFreeze from its block's time (cast checkpointsFrozenUntil())" "settled $MAXF" \
+    "$(since_block "$R/admin-checkpoints-frozen.json" "$(cast call $V 'checkpointsFrozenUntil()(uint256)' --rpc-url $RPC | vals)")"
+  vault_send checkpoints-lifted set_checkpoints_frozen '{"frozen":false}' "$SEND2"
+  check "set_checkpoints_frozen(false): settled, lifted at its block's time, not 0 (cast checkpointsFrozenUntil())" "settled 0" \
+    "$(since_block "$R/admin-checkpoints-lifted.json" "$(cast call $V 'checkpointsFrozenUntil()(uint256)' --rpc-url $RPC | vals)")"
+  vault_send token-releases-frozen set_token_releases_frozen "{\"token\":\"$T\",\"frozen\":true}" "$SEND2"
+  check "set_token_releases_frozen(token, true): settled, frozen for maxFreeze from its block's time (cast tokenReleasesFrozenUntil)" "settled $MAXF" \
+    "$(since_block "$R/admin-token-releases-frozen.json" "$(cast call $V 'tokenReleasesFrozenUntil(address)(uint256)' $T --rpc-url $RPC | vals)")"
+  vault_send token-releases-lifted set_token_releases_frozen "{\"token\":\"$T\",\"frozen\":false}" "$SEND2"
+  check "set_token_releases_frozen(token, false): settled, lifted (cast tokenReleasesFrozenUntil 0)" "settled 0" \
+    "$(jq -r .verdict "$R/admin-token-releases-lifted.json") $(cast call $V 'tokenReleasesFrozenUntil(address)(uint256)' $T --rpc-url $RPC | vals)"
+
+  # 10d. revoke_from: revokeFrom takes only a finalised checkpoint (index < checkpointCount(), not yet revoked, within
+  # revokeWindow of its finalisation) and this fixture finalises none, so the freeze authority's request for index 0 is
+  # refused before signing (with revokeFrom's own error: the call reached it).
+  check "revoke_from(0) with no checkpoint (cast checkpointCount() 0): refused before signing (UnknownCheckpoint), nothing at the approver" \
+    "0 UnknownCheckpoint yes" "$(cast call $V 'checkpointCount()(uint256)' --rpc-url $RPC | vals) $(vault_refused revoke-from revoke_from '{"index":0}' "$SEND2")"
+
+  # 10e. The admin proposes the watchers (A3 and two unused entries; freeze authority address(0): unchanged), in force
+  # ROLE_TIMELOCK (14 days) after the proposal; applying them sooner is refused. anvil's clock is then moved on 14 days
+  # and a minute (one block mined), and anyone (A3) applies them, and the fee schedule step 3c announced (due seven days
+  # after its announcement; no deposit of the token since has put it in force).
+  vault_send propose-roles propose_roles "{\"watchers\":[\"$A3\",\"$Z\",\"$Z\"],\"freeze_authority\":\"$Z\"}" "$SEND1"
+  check "propose_roles(watchers A3, 0, 0; freeze authority unchanged): settled, in force 14 days after its block's time (cast roleProposal())" \
+    "settled 1209600 $Z" "$(since_block "$R/admin-propose-roles.json" "$(cast call $V 'roleProposal()(address,uint256)' --rpc-url $RPC | sed -n 2p | vals)") $(cast call $V 'roleProposal()(address,uint256)' --rpc-url $RPC | head -1 | low)"
+  check "apply_roles before the time lock: refused before signing (TimelockNotOver), nothing at the approver" "TimelockNotOver yes" \
+    "$(vault_refused apply-roles-early apply_roles '{}' "$SEND3")"
+  cast rpc evm_increaseTime 1209660 --rpc-url $RPC > /dev/null; cast rpc evm_mine --rpc-url $RPC > /dev/null
+  vault_send apply-roles apply_roles '{}' "$SEND3"
+  check "apply_roles after the time lock, by anyone (A3): settled, sent by A3, watcher 0 A3, freeze authority still A2, none pending (cast)" \
+    "settled $A3 $A3 $A2 0" "$(jq -r .verdict "$R/admin-apply-roles.json") $(sender "$R/admin-apply-roles.json") $(cast call $V 'watchers(uint256)(address)' 0 --rpc-url $RPC | low) $(cast call $V 'freezeAuthority()(address)' --rpc-url $RPC | low) $(cast call $V 'roleProposal()(address,uint256)' --rpc-url $RPC | sed -n 2p | vals)"
+  fs0=$(cast call $V 'feeState(address)(uint64,uint64)' $T --rpc-url $RPC | head -1 | vals)
+  vault_send apply-fees apply_fees "{\"token\":\"$T\"}" "$SEND3"
+  check "apply_fees(token) after the seven days, by anyone (A3): settled, sent by A3, schedule 0 -> 1, none pending, mint fee 1000 (cast feeState, fees)" \
+    "0 settled $A3 1 0 1000" "$fs0 $(jq -r .verdict "$R/admin-apply-fees.json") $(sender "$R/admin-apply-fees.json") $(cast call $V 'feeState(address)(uint64,uint64)' $T --rpc-url $RPC | vals) $(cast call $V 'fees(address,uint256,uint8)(uint256,uint256,uint256,uint256)' $T 1 0 --rpc-url $RPC | head -1 | vals)"
+
+  # 10f. retire, last (deposits stop for good): the freeze authority may retire at any time, anyone else only from
+  # retireOpensAt() (here the checkpoint freeze's end above + delta + 30 days, still ahead after anvil's 14 days).
+  check "retire by anyone (A3) before retireOpensAt(): refused before signing (RetireNotOpen), nothing at the approver" "RetireNotOpen yes" \
+    "$(vault_refused retire-anyone retire '{}' "$SEND3")"
+  vault_send retire retire '{}' "$SEND2"
+  check "retire by the freeze authority A2: settled, sent by A2, retired (cast retired())" "settled $A2 true" \
+    "$(jq -r .verdict "$R/admin-retire.json") $(sender "$R/admin-retire.json") $(cast call $V 'retired()(bool)' --rpc-url $RPC)"
+  check "retire: the module refuses an ETH deposit before signing (VaultRetired), nothing at the approver" "VaultRetired yes" "$(deposit_refused retired)"
+
   # Every broadcast send's receipts read back by the module: all successful but the forced revert; and every call carried
   # a limit above its own estimate (or the caller's own).
   local bad=""
@@ -308,5 +458,5 @@ case "$MODE" in
   build) build ;;
   build-module) build_module ;;
   run) run ;;
-  *) sed -n '2,20p' "$0"; exit 2 ;;
+  *) sed -n '2,26p' "$0"; exit 2 ;;
 esac

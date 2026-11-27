@@ -1,0 +1,81 @@
+PASS	loaded: keystore_module	loaded	loaded
+PASS	loaded: signer_manager_module	loaded	loaded
+PASS	loaded: eth_rpc_module	loaded	loaded
+PASS	loaded: fee_module	loaded	loaded
+PASS	loaded: tx_sender_module	loaded	loaded
+PASS	loaded: evm_signer_cli	loaded	loaded
+PASS	loaded: evm_keystore_cli	loaded	loaded
+PASS	loaded: ferrata_bridge_module	loaded	loaded
+PASS	eth_rpc_module: anvil's chain id	true	true
+PASS	keystore_module holds 0x70997970c51812dc3a010c7d01b50e0d17dc79c8 (via evm_keystore_cli)	yes	yes
+PASS	keystore_module holds 0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc (via evm_keystore_cli)	yes	yes
+PASS	keystore_module holds 0x90f79bf6eb2c4f870365e785982e1f101e93b906 (via evm_keystore_cli)	yes	yes
+PASS	status through eth_rpc_module: the admin	0x70997970c51812dc3a010c7d01b50e0d17dc79c8	0x70997970c51812dc3a010c7d01b50e0d17dc79c8
+PASS	status: the freeze authority	0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc	0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc
+PASS	status: answered by eth_rpc_module	eth_rpc_module	eth_rpc_module
+PASS	status: the test token not registered yet	false	false
+PASS	pinned deployment: a deposit naming another vault is refused before anything is asked	yes	yes
+PASS	pinned deployment: no send reached tx_sender_module	0	0
+PASS	admin register_token: settled through tx_sender_module	settled	settled
+PASS	admin register_token: the vault holds the token (cast)	true	true
+PASS	admin register_token: sent by the admin (cast)	0x70997970c51812dc3a010c7d01b50e0d17dc79c8	0x70997970c51812dc3a010c7d01b50e0d17dc79c8
+PASS	admin register_token: the approver saw tx_sender_module's request	tx_sender_module	tx_sender_module
+PASS	admin set_token_cap: settled	settled	settled
+PASS	admin set_token_cap: cast reads it	2000000000000	2000000000000
+PASS	admin set_token_cap: sent with the estimate + 25% + 20000	yes	yes
+PASS	admin set_token_cap: the receipt's gas used below its limit (cast)	yes	yes
+PASS	forced revert: the module reports it reverted	reverted false	reverted false
+PASS	forced revert: the error names the call and its limit	yes	yes
+PASS	forced revert: the receipt's status is 0 (cast)	0	0
+PASS	forced revert: the cap is unchanged (cast)	2000000000000	2000000000000
+PASS	admin set_deposits_enabled(false): settled, deposits disabled (cast)	settled false	settled false
+PASS	delisted: the module refuses the ERC-20 deposit before signing	DepositsDisabled	DepositsDisabled
+PASS	admin set_deposits_enabled(true): settled, deposits enabled (cast)	settled true	settled true
+PASS	admin announce_fees: settled, a schedule pending (cast feeState: pending time > 0)	settled yes	settled yes
+PASS	admin set_release_delay(600): settled, the next checkpoints' delay (cast)	settled 600	settled 600
+PASS	deposit ETH: settled through tx_sender_module	settled	settled
+PASS	deposit ETH: leaf 0	0	0
+PASS	deposit ETH: the vault's Deposit commitment is the module's	0xb05689e5086dd4e18376ee2ae34f9b2a35e9fdadae9af79f89de7ab6a7b9de0f	0xb05689e5086dd4e18376ee2ae34f9b2a35e9fdadae9af79f89de7ab6a7b9de0f
+PASS	deposit ETH: the vault received the price	100100000000000000	100100000000000000
+PASS	deposit ETH: sent by the user	0x90f79bf6eb2c4f870365e785982e1f101e93b906	0x90f79bf6eb2c4f870365e785982e1f101e93b906
+PASS	deposit ERC-20: settled (approve + deposit, one approval)	settled 2	settled 2
+PASS	deposit ERC-20: the vault holds the price	1001000	1001000
+PASS	deposit ERC-20: leaf 1	1	1
+PASS	refused at the approver: the module reports it	rejected	rejected
+PASS	refused at the approver: no deposit	2	2
+PASS	freeze ETH deposits: settled, sent by the freeze authority	settled 0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc	settled 0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc
+PASS	frozen: the module refuses before anything is signed (the vault's error named)	TokenDepositsAreFrozen	TokenDepositsAreFrozen
+PASS	unfreeze: lifted (cast)	0	0
+PASS	deposit list through eth_rpc_module: 2 deposits, root = depositRoot	2 0x38b70901cec17e265554a76697091f4344a443b685ef75c52714771ade3e89e1	2 0x38b70901cec17e265554a76697091f4344a443b685ef75c52714771ade3e89e1
+PASS	the reads' route: eth_rpc_module, direct	eth_rpc_module direct	eth_rpc_module direct
+PASS	not mined in time: reported broadcast and not yet mined, not failed	unconfirmed true false	unconfirmed true false
+PASS	not mined in time: the text names the transaction and says not to send it again	yes	yes
+PASS	not mined in time: no receipt yet (eth_getTransactionReceipt null)	null	null
+PASS	not mined in time: mined with the next block (cast receipt status 1)	1	1
+PASS	set_global_cap(release): settled, the global release bucket's capacity and refill (cast globalCap(1))	settled 5000000000000 2000000	settled 5000000000000 2000000
+PASS	set_global_cap(release): the global deposit bucket untouched, unlimited (cast globalCap(0))	115792089237316195423570985008687907853269984665640564039457584007913129639935	115792089237316195423570985008687907853269984665640564039457584007913129639935
+PASS	raise_delta(1200): settled, delta 600 -> 1200 (cast delta())	600 settled 1200	600 settled 1200
+PASS	raise_delta(900, below delta): refused before signing (DeltaCanOnlyRise), nothing at the approver	DeltaCanOnlyRise yes	DeltaCanOnlyRise yes
+PASS	raise_delta(30 days + 1 s, above MAX_DELTA): refused before signing (DeltaTooLong), nothing at the approver	DeltaTooLong yes	DeltaTooLong yes
+PASS	transfer_admin(A3) by the admin A1: settled, A3 pending, A1 still the admin (cast)	settled 0x90f79bf6eb2c4f870365e785982e1f101e93b906 0x70997970c51812dc3a010c7d01b50e0d17dc79c8	settled 0x90f79bf6eb2c4f870365e785982e1f101e93b906 0x70997970c51812dc3a010c7d01b50e0d17dc79c8
+PASS	accept_admin by the pending admin A3: settled, sent by A3, A3 the admin, none pending (cast)	settled 0x90f79bf6eb2c4f870365e785982e1f101e93b906 0x90f79bf6eb2c4f870365e785982e1f101e93b906 0x0000000000000000000000000000000000000000	settled 0x90f79bf6eb2c4f870365e785982e1f101e93b906 0x90f79bf6eb2c4f870365e785982e1f101e93b906 0x0000000000000000000000000000000000000000
+PASS	transfer_admin(A1) by the admin A3: settled, sent by A3, A1 pending (cast)	settled 0x90f79bf6eb2c4f870365e785982e1f101e93b906 0x70997970c51812dc3a010c7d01b50e0d17dc79c8	settled 0x90f79bf6eb2c4f870365e785982e1f101e93b906 0x70997970c51812dc3a010c7d01b50e0d17dc79c8
+PASS	accept_admin by the pending admin A1: settled, A1 the admin again, none pending (cast)	settled 0x70997970c51812dc3a010c7d01b50e0d17dc79c8 0x0000000000000000000000000000000000000000	settled 0x70997970c51812dc3a010c7d01b50e0d17dc79c8 0x0000000000000000000000000000000000000000
+PASS	set_deposits_frozen(true): settled, frozen for maxFreeze from its block's time (cast depositsFrozenUntil())	settled 2592000	settled 2592000
+PASS	set_deposits_frozen: the module refuses an ETH deposit before signing (DepositsAreFrozen), nothing at the approver	DepositsAreFrozen yes	DepositsAreFrozen yes
+PASS	set_deposits_frozen(false): settled, lifted (cast depositsFrozenUntil() 0)	settled 0	settled 0
+PASS	set_releases_frozen(true): settled, frozen for maxFreeze from its block's time (cast releasesFrozenUntil())	settled 2592000	settled 2592000
+PASS	set_releases_frozen(false): settled, lifted (cast releasesFrozenUntil() 0)	settled 0	settled 0
+PASS	set_checkpoints_frozen(true): settled, frozen for maxFreeze from its block's time (cast checkpointsFrozenUntil())	settled 2592000	settled 2592000
+PASS	set_checkpoints_frozen(false): settled, lifted at its block's time, not 0 (cast checkpointsFrozenUntil())	settled 0	settled 0
+PASS	set_token_releases_frozen(token, true): settled, frozen for maxFreeze from its block's time (cast tokenReleasesFrozenUntil)	settled 2592000	settled 2592000
+PASS	set_token_releases_frozen(token, false): settled, lifted (cast tokenReleasesFrozenUntil 0)	settled 0	settled 0
+PASS	revoke_from(0) with no checkpoint (cast checkpointCount() 0): refused before signing (UnknownCheckpoint), nothing at the approver	0 UnknownCheckpoint yes	0 UnknownCheckpoint yes
+PASS	propose_roles(watchers A3, 0, 0; freeze authority unchanged): settled, in force 14 days after its block's time (cast roleProposal())	settled 1209600 0x0000000000000000000000000000000000000000	settled 1209600 0x0000000000000000000000000000000000000000
+PASS	apply_roles before the time lock: refused before signing (TimelockNotOver), nothing at the approver	TimelockNotOver yes	TimelockNotOver yes
+PASS	apply_roles after the time lock, by anyone (A3): settled, sent by A3, watcher 0 A3, freeze authority still A2, none pending (cast)	settled 0x90f79bf6eb2c4f870365e785982e1f101e93b906 0x90f79bf6eb2c4f870365e785982e1f101e93b906 0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc 0	settled 0x90f79bf6eb2c4f870365e785982e1f101e93b906 0x90f79bf6eb2c4f870365e785982e1f101e93b906 0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc 0
+PASS	apply_fees(token) after the seven days, by anyone (A3): settled, sent by A3, schedule 0 -> 1, none pending, mint fee 1000 (cast feeState, fees)	0 settled 0x90f79bf6eb2c4f870365e785982e1f101e93b906 1 0 1000	0 settled 0x90f79bf6eb2c4f870365e785982e1f101e93b906 1 0 1000
+PASS	retire by anyone (A3) before retireOpensAt(): refused before signing (RetireNotOpen), nothing at the approver	RetireNotOpen yes	RetireNotOpen yes
+PASS	retire by the freeze authority A2: settled, sent by A2, retired (cast retired())	settled 0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc true	settled 0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc true
+PASS	retire: the module refuses an ETH deposit before signing (VaultRetired), nothing at the approver	VaultRetired yes	VaultRetired yes
+PASS	every other send: every receipt successful, gas used below its limit		

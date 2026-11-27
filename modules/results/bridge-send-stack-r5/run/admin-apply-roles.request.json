@@ -1,0 +1,1 @@
+{"action":"apply_roles","vault":"0x712516e61c8b383df4a63cfe83d7701bce54b03e","eth":{"via":"eth_rpc_module","chain_id":11155111},"params":{},"send":{"via":"tx_sender_module","from":"0x90f79bf6eb2c4f870365e785982e1f101e93b906","chain_id":11155111}}

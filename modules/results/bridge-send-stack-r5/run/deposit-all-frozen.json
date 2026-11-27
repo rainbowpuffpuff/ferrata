@@ -1,0 +1,1 @@
+{"error":"refused: vault error DepositsAreFrozen() (checked with eth_call before sending; nothing was signed)","verdict":"invalid_request"}

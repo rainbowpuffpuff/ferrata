@@ -14,6 +14,10 @@
 //   network), Ethereum through eth_rpc_module: its endpoint for chain 11155111 switched between two public Sepolia RPCs
 //   and back; refusals (Hoodi's RPC, a closed port, a local sequencer whose zone lacks the configuration), each keeping
 //   the endpoints, read back from eth_rpc_module and the chain service.
+// test_3_lezcore (U9_LEZCORE given to run.sh: lez_core loaded beside the module): the local session's LEZ through Logos
+//   Core's lez_core (the user's LEZ wallet opened inside it), then "Apply and test" switches the chain service's sequencer
+//   and lez_core's wallet together (sequencer 1, then 2), a closed port refused with both kept, and back to sequencer 0;
+//   lez_core's sequencer read from the module's info and the chain service's from the service itself.
 import QtQuick
 import QtTest
 
@@ -162,6 +166,43 @@ Item {
                 compare(owner("chain 18701").sequencer, env("U9_LIVE_LEZ"), "the chain service kept its sequencer after: " + refusals[k][2]);
                 if (refusals[k][3] !== "") shot(refusals[k][3]);
             }
+        }
+
+        function test_3_lezcore() {
+            if (env("U9_LEZCORE_CONFIG") === "")
+                skip("U9_LEZCORE (lez_core's .lgx) not given to run.sh: the session's LEZ is not put through lez_core");
+            var r = wallet("open", { chain: env("U9_CHAIN_LOCAL") });
+            verify(r.ok, "the session on the local deployment: " + r.error);
+            r = wallet("lez", { via: "lez_core", program_bin: env("U9_LEZCORE_PROGRAM"),
+                                wallet: { config: env("U9_LEZCORE_CONFIG"), storage: env("U9_LEZCORE_STORAGE"), password_file: env("U9_LEZCORE_PASSWORD") } });
+            verify(r.ok, "lez_core opened the user's LEZ wallet: " + r.error);
+            compare(r.result.wallet.sequencer, env("U9_SEQ0") + "/", "lez_core's wallet on sequencer 0 (its config's)");
+            click("tab.settings");
+            wait(150);
+            var u = inUse();
+            compare(u.seq, env("U9_SEQ0"), "the sequencer in use");
+            compare(host.app.info.endpoints.sequencer.lez_core, env("U9_SEQ0") + "/", "info names lez_core's sequencer");
+            shot("10-lezcore-in-use");
+
+            var seqs = [env("U9_SEQ1"), env("U9_SEQ2")];
+            for (var i = 0; i < seqs.length; i++) {
+                var st = apply(u.eth, seqs[i]);
+                verify(has(st, "Switched the LEZ sequencer"), st);
+                compare(owner("chain 18700").sequencer, seqs[i], "the chain service reads LEZ through " + seqs[i]);
+                compare(host.app.info.endpoints.sequencer.lez_core, seqs[i] + "/", "lez_core's wallet reads LEZ through " + seqs[i]);
+                if (i === 0) shot("11-lezcore-switched-to-sequencer-1");
+            }
+            st = apply(u.eth, env("U9_SEQ_CLOSED"));
+            verify(has(st, "Not switched") && has(st, "Kept") && has(st, "lez_core"), st);
+            compare(owner("chain 18700").sequencer, env("U9_SEQ2"), "the chain service kept sequencer 2");
+            compare(host.app.info.endpoints.sequencer.lez_core, env("U9_SEQ2") + "/", "lez_core's wallet kept sequencer 2");
+            compare(el("settings.sequencer").text, env("U9_SEQ2"), "the field shows the sequencer kept");
+            shot("12-lezcore-refused-closed-sequencer");
+            st = apply(u.eth, env("U9_SEQ0"));
+            verify(has(st, "Switched the LEZ sequencer"), st);
+            compare(owner("chain 18700").sequencer, env("U9_SEQ0"));
+            compare(host.app.info.endpoints.sequencer.lez_core, env("U9_SEQ0") + "/", "and back, both");
+            shot("13-lezcore-back-on-sequencer-0");
         }
     }
 }

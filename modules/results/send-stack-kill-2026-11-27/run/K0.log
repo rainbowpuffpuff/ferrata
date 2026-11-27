@@ -1,0 +1,1 @@
+ferrata_relayer_module.start -> exit 0: {"args":["--eth-rpc","http://127.0.0.1:51088","--vault","0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0","--chain-id","31337","--from-block","3","--send-via","logos","--from","0x537A31E7FBa36F97aBb6f7A4522d55Bb8138FeB4","--state","../tmp/agents/t-mod/kill-

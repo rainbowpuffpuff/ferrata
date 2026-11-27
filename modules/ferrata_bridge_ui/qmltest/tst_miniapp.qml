@@ -131,8 +131,11 @@ Item {
         function test_04_deposit_private_by_default() {
             tab("deposit");
             verify(host.app.destKind === "private" && el("deposit.kind.private").checked, "private destination pre-selected");
-            verify(host.app.delayOn && host.app.relayerOn, "delay and relayer on by default");
-            verify(has(el("deposit.leaks.summary").text, "Minimal"), el("deposit.leaks.summary").text);
+            verify(host.app.delayOn, "the random delay on by default");
+            // No relayer pays the claim's LEZ fee in the mini-app yet (js/privacy.js OWN_FEE): the box is off and disabled,
+            // and the indicator says so ("Elevated", the fee-payer correlation), never "Minimal".
+            verify(!host.app.relayerOn && !el("deposit.relayer").enabled, "no relayer pays the claim's fee on this path");
+            verify(has(el("deposit.leaks.summary").text, "Elevated"), el("deposit.leaks.summary").text);
             shot("07-deposit-defaults");
             click("deposit.review");
             approve("Deposit", "08-deposit-approval");
@@ -187,7 +190,7 @@ Item {
             click("claim.pick.0");
             verify(host.app.claimMode === "private" && el("claim.mode.private").checked, "private claim pre-selected");
             verify(!el("claim.submit").enabled, "held by the random delay");
-            verify(has(el("claim.leaks.summary").text, "Minimal"), el("claim.leaks.summary").text);
+            verify(has(el("claim.leaks.summary").text, "Elevated"), el("claim.leaks.summary").text); // the fee payer (OWN_FEE)
             verify(el("claim.delay").visible, "the delay is explained");
             shot("14-claim-held-by-delay");
             click("claim.wait");

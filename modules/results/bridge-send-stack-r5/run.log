@@ -1,0 +1,84 @@
+vault 0x712516e61c8b383df4a63cfe83d7701bce54b03e token 0x59f2f1fcfe2474fd5f0b9ba1e73ca90b143eb8d0
+PASS loaded: keystore_module
+PASS loaded: signer_manager_module
+PASS loaded: eth_rpc_module
+PASS loaded: fee_module
+PASS loaded: tx_sender_module
+PASS loaded: evm_signer_cli
+PASS loaded: evm_keystore_cli
+PASS loaded: ferrata_bridge_module
+PASS eth_rpc_module: anvil's chain id
+PASS keystore_module holds 0x70997970c51812dc3a010c7d01b50e0d17dc79c8 (via evm_keystore_cli)
+PASS keystore_module holds 0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc (via evm_keystore_cli)
+PASS keystore_module holds 0x90f79bf6eb2c4f870365e785982e1f101e93b906 (via evm_keystore_cli)
+PASS status through eth_rpc_module: the admin
+PASS status: the freeze authority
+PASS status: answered by eth_rpc_module
+PASS status: the test token not registered yet
+PASS pinned deployment: a deposit naming another vault is refused before anything is asked
+PASS pinned deployment: no send reached tx_sender_module
+PASS admin register_token: settled through tx_sender_module
+PASS admin register_token: the vault holds the token (cast)
+PASS admin register_token: sent by the admin (cast)
+PASS admin register_token: the approver saw tx_sender_module's request
+PASS admin set_token_cap: settled
+PASS admin set_token_cap: cast reads it
+PASS admin set_token_cap: sent with the estimate + 25% + 20000
+PASS admin set_token_cap: the receipt's gas used below its limit (cast)
+PASS forced revert: the module reports it reverted
+PASS forced revert: the error names the call and its limit
+PASS forced revert: the receipt's status is 0 (cast)
+PASS forced revert: the cap is unchanged (cast)
+PASS admin set_deposits_enabled(false): settled, deposits disabled (cast)
+PASS delisted: the module refuses the ERC-20 deposit before signing
+PASS admin set_deposits_enabled(true): settled, deposits enabled (cast)
+PASS admin announce_fees: settled, a schedule pending (cast feeState: pending time > 0)
+PASS admin set_release_delay(600): settled, the next checkpoints' delay (cast)
+PASS deposit ETH: settled through tx_sender_module
+PASS deposit ETH: leaf 0
+PASS deposit ETH: the vault's Deposit commitment is the module's
+PASS deposit ETH: the vault received the price
+PASS deposit ETH: sent by the user
+PASS deposit ERC-20: settled (approve + deposit, one approval)
+PASS deposit ERC-20: the vault holds the price
+PASS deposit ERC-20: leaf 1
+PASS refused at the approver: the module reports it
+PASS refused at the approver: no deposit
+PASS freeze ETH deposits: settled, sent by the freeze authority
+PASS frozen: the module refuses before anything is signed (the vault's error named)
+PASS unfreeze: lifted (cast)
+PASS deposit list through eth_rpc_module: 2 deposits, root = depositRoot
+PASS the reads' route: eth_rpc_module, direct
+PASS not mined in time: reported broadcast and not yet mined, not failed
+PASS not mined in time: the text names the transaction and says not to send it again
+PASS not mined in time: no receipt yet (eth_getTransactionReceipt null)
+PASS not mined in time: mined with the next block (cast receipt status 1)
+PASS set_global_cap(release): settled, the global release bucket's capacity and refill (cast globalCap(1))
+PASS set_global_cap(release): the global deposit bucket untouched, unlimited (cast globalCap(0))
+PASS raise_delta(1200): settled, delta 600 -> 1200 (cast delta())
+PASS raise_delta(900, below delta): refused before signing (DeltaCanOnlyRise), nothing at the approver
+PASS raise_delta(30 days + 1 s, above MAX_DELTA): refused before signing (DeltaTooLong), nothing at the approver
+PASS transfer_admin(A3) by the admin A1: settled, A3 pending, A1 still the admin (cast)
+PASS accept_admin by the pending admin A3: settled, sent by A3, A3 the admin, none pending (cast)
+PASS transfer_admin(A1) by the admin A3: settled, sent by A3, A1 pending (cast)
+PASS accept_admin by the pending admin A1: settled, A1 the admin again, none pending (cast)
+PASS set_deposits_frozen(true): settled, frozen for maxFreeze from its block's time (cast depositsFrozenUntil())
+PASS set_deposits_frozen: the module refuses an ETH deposit before signing (DepositsAreFrozen), nothing at the approver
+PASS set_deposits_frozen(false): settled, lifted (cast depositsFrozenUntil() 0)
+PASS set_releases_frozen(true): settled, frozen for maxFreeze from its block's time (cast releasesFrozenUntil())
+PASS set_releases_frozen(false): settled, lifted (cast releasesFrozenUntil() 0)
+PASS set_checkpoints_frozen(true): settled, frozen for maxFreeze from its block's time (cast checkpointsFrozenUntil())
+PASS set_checkpoints_frozen(false): settled, lifted at its block's time, not 0 (cast checkpointsFrozenUntil())
+PASS set_token_releases_frozen(token, true): settled, frozen for maxFreeze from its block's time (cast tokenReleasesFrozenUntil)
+PASS set_token_releases_frozen(token, false): settled, lifted (cast tokenReleasesFrozenUntil 0)
+PASS revoke_from(0) with no checkpoint (cast checkpointCount() 0): refused before signing (UnknownCheckpoint), nothing at the approver
+PASS propose_roles(watchers A3, 0, 0; freeze authority unchanged): settled, in force 14 days after its block's time (cast roleProposal())
+PASS apply_roles before the time lock: refused before signing (TimelockNotOver), nothing at the approver
+PASS apply_roles after the time lock, by anyone (A3): settled, sent by A3, watcher 0 A3, freeze authority still A2, none pending (cast)
+PASS apply_fees(token) after the seven days, by anyone (A3): settled, sent by A3, schedule 0 -> 1, none pending, mint fee 1000 (cast feeState, fees)
+PASS retire by anyone (A3) before retireOpensAt(): refused before signing (RetireNotOpen), nothing at the approver
+PASS retire by the freeze authority A2: settled, sent by A2, retired (cast retired())
+PASS retire: the module refuses an ETH deposit before signing (VaultRetired), nothing at the approver
+PASS every other send: every receipt successful, gas used below its limit
+checks: 81 passed, 0 failed
+approver recoveries: 0
