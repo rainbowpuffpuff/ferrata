@@ -24,7 +24,8 @@ pin() { python3 -I -c 'import json, sys; print(json.load(open(sys.argv[1]))[sys.
 fail() { echo "FAIL  $*"; exit 1; }
 case "$sel" in
   0xe71e6620)
-    [ "$(cast codehash "$groth16" --rpc-url "$rpc")" = "$(pin groth16CodeHash)" ] ||
+    # keccak256 of eth_getCode, not `cast codehash` (which asks for eth_getProof, which not every endpoint serves).
+    [ "$(cast keccak "$(cast code "$groth16" --rpc-url "$rpc")")" = "$(pin groth16CodeHash)" ] ||
       fail "Groth16 verifier $groth16: selector 0xe71e6620 but not RISC Zero 3.1.0's code"
     code="$(cast code "$stop" --rpc-url "$rpc" | tr 'A-F' 'a-f')"
     wrapped="$(printf '%s' "${groth16#0x}" | tr 'A-F' 'a-f')"
