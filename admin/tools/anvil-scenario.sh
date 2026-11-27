@@ -306,6 +306,10 @@ assert "the vault's error name is decoded" grep -q "NotFreezeAuthority()" "$OUT_
 act "pause-checkpoints by the admin is refused (NotWatcher)" 1 \
   "${A[@]}" --from "$ADMIN" pause-checkpoints
 assert "the vault's error name is decoded" grep -q "NotWatcher()" "$OUT_DIR/step.out"
+act "an action at an address with no code is refused before its dry run (internal review C-6)" 1 \
+  bash vault/script/admin.sh --rpc-url "$RPC" --vault 0x000000000000000000000000000000000000dEaD --from "$FREEZE" \
+  set-releases-frozen true
+assert "it names the missing contract" grep -q "no contract at 0x000000000000000000000000000000000000dEaD" "$OUT_DIR/step.out"
 
 # A dry run sends nothing: the sender's nonce and the vault's state are unchanged.
 NONCE_BEFORE=$(cast nonce "$ADMIN" --rpc-url "$RPC")
