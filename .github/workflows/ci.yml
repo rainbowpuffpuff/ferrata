@@ -501,6 +501,11 @@ jobs:
       # test checks the version and fails loudly if it is ever older.
       - name: The admin actions from a terminal and the anvil scenario (vault/script/test-admin.sh)
         run: bash vault/script/test-admin.sh
+      # script/check-verifier.sh on a local anvil: the honest wiring passes; a fake verifier answering SELECTOR() and
+      # VERSION() like 3.1.0's, a fake stop, a stop that kept its owner and a tripped stop fail (internal review of
+      # 27 November 2026, S-3).
+      - name: The verifier check against fake wirings (vault/script/test-check-verifier-local.sh)
+        run: bash vault/script/test-check-verifier-local.sh
       # e2e/seqnet deploys the vault through these functions in every mode; DeployVault once refused them unnoticed.
       - name: e2e/seqnet's vault deployment (e2e/seqnet/vault.sh, on anvil)
         run: bash e2e/seqnet/test-vault-deploy.sh

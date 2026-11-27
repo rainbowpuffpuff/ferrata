@@ -3,6 +3,7 @@ pragma solidity ^0.8.26;
 
 import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
+import {IRiscZeroVerifier as IRiscZeroVerifierFull} from "risc0/IRiscZeroVerifier.sol";
 import {RiscZeroVerifierEmergencyStop} from "risc0/RiscZeroVerifierEmergencyStop.sol";
 import {ControlID} from "risc0/groth16/ControlID.sol";
 import {RiscZeroGroth16Verifier} from "risc0/groth16/RiscZeroGroth16Verifier.sol";
@@ -557,14 +558,23 @@ contract DeployVault is Script {
         );
     }
 
+    /// @dev The stop is RISC Zero's emergency stop around `groth16`, by its code, not only its getters: the code of
+    ///      `RiscZeroVerifierEmergencyStop(groth16, ·)` built here in the script's own simulation (never broadcast; its
+    ///      one immutable is the wrapped verifier, the owner is storage); renounced and not tripped (internal review of
+    ///      27 November 2026, S-3: a contract answering verifier(), owner() and paused() passed before).
+    function _checkStop(address stop, address groth16) internal {
+        address expected = address(new RiscZeroVerifierEmergencyStop(IRiscZeroVerifierFull(groth16), address(this)));
+        require(stop.codehash == expected.codehash, "check: the stop's code is not RISC Zero's emergency stop");
+        require(RiscZeroVerifierEmergencyStop(stop).owner() == address(0), "check: the stop still has an owner");
+        require(!RiscZeroVerifierEmergencyStop(stop).paused(), "check: the stop is tripped");
+        require(address(RiscZeroVerifierEmergencyStop(stop).verifier()) == groth16, "check: the stop wraps another verifier");
+    }
+
     /// @dev Everything the proposal and the registrations promise, read back from the chain.
     function _check(Record memory r) internal {
         _checkVerifier(r.groth16);
-        RiscZeroVerifierEmergencyStop stop = RiscZeroVerifierEmergencyStop(r.stop);
+        _checkStop(r.stop, r.groth16);
         FerrataVault vault = FerrataVault(payable(r.vault));
-        require(stop.owner() == address(0), "check: the stop still has an owner");
-        require(!stop.paused(), "check: the stop is tripped");
-        require(address(stop.verifier()) == r.groth16, "check: the stop wraps another verifier");
         require(address(vault.verifier()) == r.stop, "check: the vault's verifier is not the stop");
         require(vault.mode() == mode, "check: the vault's rule");
         require(vault.admin() == deployer, "check: admin");
