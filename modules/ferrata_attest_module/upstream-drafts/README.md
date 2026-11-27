@@ -25,6 +25,11 @@ the same check as a method of `beacon_api_module` itself:
   `src/tests.rs` (three tests on providers served on loopback, in the crate's own test style).
 - What it leaves to the caller: the instance's own parts (its configuration, the instance id, the bootstrap's committee
   branch and `KeyValidate`), which need the instance's wire format; `ferrata_attest_module.verify_checkpoint` does those.
+- Plain-http providers (27 November 2026): asked like the others, and a disagreement from one still fails the check,
+  but its agreement is not counted unless the caller sets `allow_plain_http`, as the module's own `finalized_header`
+  takes a root over https only (its `docs/specs.md`, "HTTPS-only enforcement on `finalized_header`": "Over plain HTTP,
+  an on-path attacker could substitute a forged root"). Each provider's entry in the reply says whether it was
+  `counted`.
 
 Tested: `cargo test --no-default-features` in the module's `rust-lib/` with the patch (results below).
 
@@ -35,3 +40,28 @@ case one bad provider among three good ones, called `disagrees`, the checkpoint 
 `verify_checkpoint_counts_hosts_and_skips_the_unavailable`: two ids for one endpoint count once, an unreachable provider
 is `unavailable` and not counted). The glue method (`src/glue.rs`) is compiled only by the module builder (it includes
 the generated scaffold), which this test does not run.
+
+**Result** (Modal build box, 27 November 2026), with plain-http agreement not counted by default: the patch applies to
+`aca138e` and, with `git apply --check`, to the module's head of that day, `d0ac27d` (its only change since `aca138e`
+is `docs/specs.md`); `cargo test --no-default-features` in `rust-lib/` (the SDK's source linked as
+`logos-rust-sdk-src`): **33 passed**, the crate's 29 and 4 new, the fourth
+`verify_checkpoint_counts_no_plain_http_agreement_by_default` (three agreeing plain-http providers: `failed`, 0
+counted, each `agrees` with `counted: false`; a disagreeing plain-http provider fails the check even when no agreement
+is needed). The other three tests set `allow_plain_http`, as their providers are loopback http servers.
+
+## What RFP-021 F.9 still lacks after `beacon_api_module` (27 November 2026)
+
+1. **Logos's module has no such method.** Nothing was sent upstream; the pull request's text is ready in
+   [`PR-beacon_api_module.md`](PR-beacon_api_module.md), for the owner to open (the patch above is its content).
+2. **The method has not run inside a Logos Core.** Its glue (`src/glue.rs`) is compiled only by the module builder,
+   which has not been run on the patched module: no `.lgx` of it was built, loaded or called with `logosctl`. What did
+   run in a headless Logos Core is our own module's `verify_checkpoint`, its beacon reads through
+   `beacon_api_module.raw_get` (EVIDENCE row 196).
+3. **The module's built-in providers cannot pass the check alone.** Version 0.2.0 seeds, for Sepolia, one https
+   provider (`lodestar`) and one plain-http (`nimbus-unstable`); for mainnet, one https (`lodestar`) and two plain-http
+   (`nimbus-testing`, `nimbus-unstable`, one operator); `rust-lib/src/beacon.rs`, `DEFAULT_PROVIDERS`. With the
+   default quorum of three agreeing https hosts, a caller must first add providers (`add_provider`), ideally of
+   distinct operators; the pull request's text says so, and the defaults are the module owners' to change.
+4. **The instance's own parts stay ours.** The configuration, the instance id, the bootstrap's committee branch and
+   `KeyValidate` need the attestation program's wire format, which an Ethereum module should not know:
+   `ferrata_attest_module.verify_checkpoint` does them, and calls this check for the root.

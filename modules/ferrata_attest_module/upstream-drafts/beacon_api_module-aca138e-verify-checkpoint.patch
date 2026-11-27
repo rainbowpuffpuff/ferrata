@@ -1,7 +1,8 @@
 diff --git a/rust-lib/src/beacon.rs b/rust-lib/src/beacon.rs
+index 19e5320..a9f46a1 100644
 --- a/rust-lib/src/beacon.rs
 +++ b/rust-lib/src/beacon.rs
-@@ -425,7 +425,7 @@
+@@ -425,7 +425,7 @@ impl Plan {
          first
      }
  
@@ -10,7 +11,7 @@ diff --git a/rust-lib/src/beacon.rs b/rust-lib/src/beacon.rs
          build_client(&self.cfg.proxy_config()).map_err(|e| BeaconError::Proxy(e.to_string()))
      }
  
-@@ -600,6 +600,20 @@
+@@ -600,6 +600,20 @@ impl Plan {
      }
  }
  
@@ -33,14 +34,16 @@ diff --git a/rust-lib/src/beacon.rs b/rust-lib/src/beacon.rs
      get_with_fork(client, base, path, timeout).map(|(_, body)| body)
 diff --git a/rust-lib/src/checkpoint.rs b/rust-lib/src/checkpoint.rs
 new file mode 100644
+index 0000000..d8fbb20
 --- /dev/null
 +++ b/rust-lib/src/checkpoint.rs
-@@ -0,0 +1,157 @@
+@@ -0,0 +1,165 @@
 +//! `verify_checkpoint`: check a light client's trusted checkpoint (a block root) against this chain's providers before
 +//! relying on it. The answers of the providers are not trusted one by one: each is asked, pinned (no failover), whether
 +//! the root is a canonical block, the canonical block at its own slot, at or below what it has finalized, on the chain
 +//! the caller expects (genesis, deposit chain id); the checkpoint passes when enough providers on distinct hosts agree and
-+//! none disagrees. A provider that cannot answer is not counted either way.
++//! none disagrees. A provider that cannot answer is not counted either way; a plain-http provider's agreement is not
++//! counted unless the caller allows it (`allow_plain_http`), as `finalized_header` takes a root over https only.
 +//!
 +//! This is the check a light client deployed elsewhere (for instance an Ethereum light client inside a LEZ program)
 +//! needs before anyone binds to it: an independent verification of its weak-subjectivity checkpoint against public
@@ -62,6 +65,10 @@ new file mode 100644
 +    pub deposit_chain_id: Option<u64>,
 +    /// Agreeing providers on distinct hosts needed (default 3).
 +    pub min_providers: Option<usize>,
++    /// Count the agreement of plain-http providers too (default false). As for `finalized_header`, a checkpoint root
++    /// is a trust anchor: over plain http an on-path attacker could answer for the provider, so by default such a
++    /// provider is still asked, and its disagreement still fails the check, but its agreement is not counted.
++    pub allow_plain_http: Option<bool>,
 +}
 +
 +fn norm(h: &str) -> String {
@@ -101,6 +108,7 @@ new file mode 100644
 +        let deposit_chain_id = expect.deposit_chain_id.or(Some(self.chain_id));
 +        let gvr = expect.genesis_validators_root.as_deref().map(norm);
 +        let needed = expect.min_providers.unwrap_or(3);
++        let allow_plain_http = expect.allow_plain_http.unwrap_or(false);
 +        let client = match self.client() {
 +            Ok(c) => c,
 +            Err(e) => return json!({ "ok": false, "error": e.to_string() }),
@@ -178,14 +186,16 @@ new file mode 100644
 +                j.agree = true;
 +                "agrees"
 +            };
-+            if j.agree {
++            let counted = j.agree && (p.https() || allow_plain_http);
++            if counted {
 +                agreeing_hosts.insert(host(&p.endpoint));
 +                if let Some(s) = j.slot {
 +                    slots.insert(s);
 +                }
 +            }
-+            providers.push(json!({ "id": p.id, "endpoint": p.endpoint, "verdict": verdict, "slot": j.slot,
-+                                   "finalized_slot": j.finalized_slot, "disagree": j.disagree, "unavailable": j.unavailable }));
++            providers.push(json!({ "id": p.id, "endpoint": p.endpoint, "verdict": verdict, "counted": counted,
++                                   "slot": j.slot, "finalized_slot": j.finalized_slot, "disagree": j.disagree,
++                                   "unavailable": j.unavailable }));
 +        }
 +        let ok = agreeing_hosts.len() >= needed && !any_disagree && slots.len() <= 1;
 +        json!({ "ok": true, "chainId": self.chain_id, "root": root, "verdict": if ok { "ok" } else { "failed" },
@@ -194,20 +204,21 @@ new file mode 100644
 +    }
 +}
 diff --git a/rust-lib/src/glue.rs b/rust-lib/src/glue.rs
+index d0fd24b..3e4c66d 100644
 --- a/rust-lib/src/glue.rs
 +++ b/rust-lib/src/glue.rs
-@@ -51,6 +51,10 @@
+@@ -51,6 +51,10 @@ pub trait BeaconApiModule: Send + Sync + 'static {
      fn finalized_header(&self, chain_id: i64) -> String;
      /// A GET under `/eth/v1/` or `/eth/v2/`, for diagnostics. `{ ok, provider, result }`.
      fn raw_get(&self, chain_id: i64, path: String, provider: String) -> String;
 +    /// Check a trusted checkpoint (a block root) against every enabled provider, each pinned: canonical, the canonical
 +    /// block at its slot, finalized there, on the expected chain (`expect_json`: `{ genesis_validators_root?,
-+    /// genesis_time?, deposit_chain_id?, min_providers? }`). `{ ok, verdict, agreeing, needed, slot, providers }`.
++    /// genesis_time?, deposit_chain_id?, min_providers?, allow_plain_http? }`). `{ ok, verdict, agreeing, needed, slot, providers }`.
 +    fn verify_checkpoint(&self, chain_id: i64, root: String, expect_json: String) -> String;
  
      fn on_context_ready(&self, _ctx: &RustModuleContext) {}
  }
-@@ -267,6 +271,21 @@
+@@ -267,6 +271,21 @@ impl BeaconApiModule for BeaconApiModuleImpl {
              Err(e) => e,
          }
      }
@@ -230,6 +241,7 @@ diff --git a/rust-lib/src/glue.rs b/rust-lib/src/glue.rs
  
  #[no_mangle]
 diff --git a/rust-lib/src/lib.rs b/rust-lib/src/lib.rs
+index 495b6ff..1e40569 100644
 --- a/rust-lib/src/lib.rs
 +++ b/rust-lib/src/lib.rs
 @@ -6,6 +6,7 @@
@@ -240,7 +252,7 @@ diff --git a/rust-lib/src/lib.rs b/rust-lib/src/lib.rs
  mod proxy;
  
  pub use beacon::{
-@@ -13,6 +14,7 @@
+@@ -13,6 +14,7 @@ pub use beacon::{
      BuiltinProvider, ChainConfig, ConfigSource, Fetched, Health, HealthBook, LcRequest, Network, Plan, Provider,
      DEFAULT_PROVIDERS, MAX_HEAD_LAG_SLOTS, NETWORKS,
  };
@@ -249,9 +261,10 @@ diff --git a/rust-lib/src/lib.rs b/rust-lib/src/lib.rs
  #[cfg(test)]
  mod tests;
 diff --git a/rust-lib/src/tests.rs b/rust-lib/src/tests.rs
+index 4a78087..553f3f1 100644
 --- a/rust-lib/src/tests.rs
 +++ b/rust-lib/src/tests.rs
-@@ -404,3 +404,85 @@
+@@ -404,3 +404,111 @@ fn only_proxy_rs_builds_a_client() {
          assert!(!text.contains("Client::builder") && !text.contains("Client::new"), "{}", path.display());
      }
  }
@@ -286,8 +299,13 @@ diff --git a/rust-lib/src/tests.rs b/rust-lib/src/tests.rs
 +    })
 +}
 +
++/// The providers here are loopback http servers: their agreement counts only with `allow_plain_http`.
 +fn cp_expect() -> crate::CheckpointExpect {
-+    crate::CheckpointExpect { genesis_validators_root: Some(SEPOLIA_GVR.into()), ..Default::default() }
++    crate::CheckpointExpect {
++        genesis_validators_root: Some(SEPOLIA_GVR.into()),
++        allow_plain_http: Some(true),
++        ..Default::default()
++    }
 +}
 +
 +#[test]
@@ -336,4 +354,25 @@ diff --git a/rust-lib/src/tests.rs b/rust-lib/src/tests.rs
 +    let v = plan(11_155_111, vec![provider("a", &a.base), provider("b", &b.base)])
 +        .verify_checkpoint(root, &crate::CheckpointExpect { min_providers: Some(2), ..cp_expect() });
 +    assert_eq!(v["verdict"], "ok", "{v:#}");
++}
++
++#[test]
++fn verify_checkpoint_counts_no_plain_http_agreement_by_default() {
++    // The same three agreeing providers as `verify_checkpoint_three_providers_agree`, over plain http: by default none
++    // is counted (an on-path attacker could answer for any of them), so the check fails with each one asked.
++    let s: Vec<Server> = (0..3).map(|_| cp_provider(CP_SLOT + 6240, false, 1_655_733_600)).collect();
++    let p = plan(11_155_111, s.iter().enumerate().map(|(i, x)| provider(&format!("p{i}"), &x.base)).collect());
++    let strict = crate::CheckpointExpect { allow_plain_http: None, ..cp_expect() };
++    let v = p.verify_checkpoint(&CP_ROOT[..66], &strict);
++    assert_eq!(v["verdict"], "failed", "{v:#}");
++    assert_eq!(v["agreeing"], 0);
++    for x in v["providers"].as_array().unwrap() {
++        assert_eq!((x["verdict"].as_str(), x["counted"].as_bool()), (Some("agrees"), Some(false)), "{x:#}");
++    }
++    // A plain-http provider's disagreement still fails the check, even when its agreement would not count.
++    let bad = cp_provider(CP_SLOT + 6240, true, 1_655_733_600);
++    let mut list: Vec<Provider> = s.iter().enumerate().map(|(i, x)| provider(&format!("p{i}"), &x.base)).collect();
++    list.push(provider("bad", &bad.base));
++    let v = plan(11_155_111, list).verify_checkpoint(&CP_ROOT[..66], &crate::CheckpointExpect { min_providers: Some(0), ..strict });
++    assert_eq!(v["verdict"], "failed", "{v:#}");
 +}
