@@ -69,7 +69,7 @@ The design notes specify these; there is no code for them here:
   reference consumer still pin an instance). The F.8 full-diff test (`docs/design/attestation.md` §6.5) is built
   (EVIDENCE row 152). Chains of
   EIP-2935 hops are built (up to 32 in one transaction on real Sepolia data, four on mainnet; EVIDENCE row 145);
-  a private consumer's proof carrying more than one hop is not measured.
+  a private consumer's proof carrying hops is measured at the x86-64 minimum's shape (at most 2 hops declared there, ADR 0056; EVIDENCE row 298), not on the Apple M1 or a laptop.
 - a cost for forging a light-client record ([`trust.md`](trust.md) §2.2, "What a forger loses", design only, added 18
   November 2026): bonded or restaked backing a consumer can require of a record (a co-signature slashed on Ethereum on
   proof that the header is not canonical), and anchoring to Ethereum's FFG finality instead of, or beside, the sync

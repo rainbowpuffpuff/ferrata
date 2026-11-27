@@ -37,6 +37,10 @@ states keep their common encoding. Plaintext claims of either layout can be deco
 is refused before a claim or burn is built, signed or sent. A private claim or burn must also use a guest binary whose
 image id equals the zone's, not merely a binary supplied under an expected filename.
 
+Amended 27 November 2026, at the merge with ADR 0048: this tree's program is now `ferrata_bridge_lezfee` (ADR 0048),
+whose claims keep ADR 0046's layout; the tools recognise B1 and it by image id, and refuse ADR 0046's own image
+(`ferrata_bridge_f13`, never deployed) like any other they do not know.
+
 ## Rationale and trade-offs
 
 The choice respects program immutability while keeping this tree's tools useful against both the deployed program and

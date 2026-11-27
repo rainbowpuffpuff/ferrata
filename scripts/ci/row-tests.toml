@@ -101,6 +101,7 @@ tests = [
   { path = "lez/results/stage1-refusals.md", kind = "record" },
   { path = "modules/scripts/check.sh", kind = "test", ci = "box", run = "modules/scripts/check.sh" },
   { path = "cli/results/attest-seq-r6/README.md", kind = "record" },
+  { path = "modules/ferrata_attest_module/upstream-drafts/results/verify-checkpoint-live-2026-11-27.json", kind = "record" },
 ]
 note = "parameters fixed at Init (refusals 18/203, 53 past the bound); verify_checkpoint is a method of ferrata_attest_module (EVIDENCE rows 59, 105), its beacon checks through beacon_api_module in a headless Logos Core, the check drafted as that module's method, not opened (row 196)"
 
@@ -209,6 +210,7 @@ tests = [
   { path = "idl/results/spel-check.txt", kind = "record" },
   { path = "idl/spel-v2/run.sh", kind = "test", ci = "box", run = "RECORDED=... bash idl/spel-v2/run.sh" },
   { path = "idl/generated/spel-v2.txt", kind = "record" },
+  { path = "idl/generated/spel-v2-f739d8a.txt", kind = "record" },
 ]
 note = "waits on Logos: SPEL's v0.4 line is an open pull request, not a release; its generator makes the attestation program's messages and types, 0 differences (EVIDENCE row 194). Shown instead: a hand-written IDL in SPEL's format that decodes every instruction (19 vectors for the attestation program), parsed and decoded by SPEL's own crate; the idl job decodes the committed vectors in CI and msg's bridge-wire tests require them to equal what the wire writes"
 
@@ -293,6 +295,8 @@ tests = [
   { path = "crates/ferrata-spectests/tests/bls_vectors.rs", kind = "test", ci = "test" },
   { path = "scripts/test_audit_scope.py", kind = "test", ci = "links", run = "python3 -I scripts/test_audit_scope.py" },
   { path = "docs/security/audit-scope.md", kind = "document" },
+  { path = "crates/ferrata-spectests/tests/fuzz_bls_corpus.rs", kind = "test", ci = "test" },
+  { path = "crates/ferrata-spectests/results/spec-vectors-v1.7.0-beta.5-2026-11-27.txt", kind = "record" },
 ]
 note = "BLS is blst (upstream audited; zkcrypto as a cross-check), 61 official vectors on both libraries; Merkle-Patricia and RLP checked against alloy-trie and alloy-rlp; the light-client logic is Ferrata's own transcription against the specification, checked on the program's step path against Helios 0.12.0, source unmodified, built with this repo's lockfile (bls12_381 0.8.0) on all 321 recorded real updates, 33 official vectors (96 two-way compared, 15 post-force_update checked one way), 467 field/edge/SSZ-framing mutations, 17 bootstrap/store mutations, 45 re-signed semantic edges, and 400 CI / 10,000 full random mutations, alongside 18 step-path-only wire/witness/job and 8 adoption key-root binding refusals; the audit's scope is written for an auditor (docs/security/audit-scope.md), its source inventory generated from the tree and held to the document in CI (scripts/test_audit_scope.py)"
 
@@ -330,7 +334,7 @@ tests = [
   { path = "lez/results/perf-gate-sequencer-join.md", kind = "record" },
   { path = "lez/results/perf-gate-sequencer-r910.md", kind = "record" },
 ]
-note = "A3's gate: two honest daemons and one adversary over 58 recorded updates in process, honest gas on refused steps 5.7-8.7% of applied (gate <= 10%), each update applied once (EVIDENCE row 80); on a running sequencer at A3's size, 106 updates, two honest daemons (rows 275, 276): without join or wait 23 and 15 jobs abandoned, with it (join_wait.rs; gate_overlapping_updates_join_or_wait in recorded.rs) one in four runs, all gas 1.022-1.088 times the completed jobs'; test_perf_records.py recomputes both records from the runs' journals. In part: daemons served different copies of an update not covered"
+note = "A3's gate: two honest daemons and one adversary over 58 recorded updates in process, honest gas on refused steps 5.7-8.7% of applied (gate <= 10%), each update applied once (EVIDENCE row 80); on a running sequencer at A3's size, 106 updates, two honest daemons (rows 275, 276): without join or wait 23 and 15 jobs abandoned, with it (join_wait.rs; gate_overlapping_updates_join_or_wait in recorded.rs) one in four runs, all gas 1.022-1.088 times the completed jobs'; test_perf_records.py recomputes both records from the runs' journals. Since ADR 0049 the jobs of copies an updater was never served are learned from their Opens on chain (copies.rs; G23 on a sequencer, EVIDENCE row 295: each daemon learned the other's copies and joined their jobs, all gas 1.042). In part: the re-read sees final blocks only, the learning is bounded, and A3's adversary at 100 updates on a sequencer gives the honest daemons 0.9529"
 [[row]]
 id = "RFP-021 R.10"
 tests = [
@@ -345,7 +349,7 @@ tests = [
   { path = "lez/results/perf-gate-sequencer-r910.md", kind = "record" },
   { path = "docs/guides/operator-guide.md", kind = "document" },
 ]
-note = "the in-process gate runs: honest-1's share of the honest fees 0.39-0.47 (gate 0.35-0.65) over 58 updates, deferral window 8 rounds; on a running sequencer at A3's size, 106 updates, six runs at windows 8 and 30 (EVIDENCE rows 275, 276): honest-1's share 0.521-0.617, all 96 finality updates covered, latency medians 105-341 s, in the operator guide's table (section 3.4, held to the records by test_perf_records.py)"
+note = "the in-process gate runs: honest-1's share of the honest fees 0.39-0.47 (gate 0.35-0.65) over 58 updates, deferral window 8 rounds; on a running sequencer at A3's size, 106 updates, six runs at windows 8 and 30 (EVIDENCE rows 275, 276): honest-1's share 0.521-0.617, all 96 finality updates covered, latency medians 105-341 s, in the operator guide's table (section 3.4, held to the records by test_perf_records.py). Since ADR 0049 the turns count the chain's height (turns.rs; gate_poll_speeds_share_the_cost in recorded.rs: 0.533 / 0.467 for readers three times and once a block, 0.847 / 0.153 in rounds); five more sequencer runs on one build, polls 2 s against 6 s 0.575 (EVIDENCE row 295). In part: a reader slower than once a block pays less (0.329 at every third block)"
 [[row]]
 id = "RFP-021 R.11"
 tests = [
@@ -403,8 +407,12 @@ tests = [
   { path = "lez/results/p4-macos/README.md", kind = "record" },
   { path = "lez/harness/tests/wallet_padding.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/p4-laptop-owner/README.md", kind = "record" },
+  { path = "lez/harness/tests/vault_claim_hops.rs", kind = "test", ci = "lez-harness" },
+  { path = "bench/perf/test_summarize_p4_hops.py", kind = "test", ci = "links" },
+  { path = "lez/results/p4-hops/README.md", kind = "record" },
+  { path = "docs/decisions/0056-user-proof-hop-limit.md", kind = "document" },
 ]
-note = "the private attestation proven at cloud containers held to the declared minimum (904.3 s at 8 CPUs), on an M1 Mac mini (857.4 s padded, EVIDENCE row 88) and on one L4; padded as the wallet pads them (wallet_padding.rs, row 38); on the owner's laptop, below the declared minimum (8 of its 16 threads), 4,596.7 s, settled (EVIDENCE row 264); hops inside the user's proof neither proven nor declared; device_workload.rs (CI, lez-harness) holds the work those proofs measured: the programs' private transitions in the record's segments and padded sizes (user cycles pinned at this tree's values, -652 to +625 from the record's), the claim's and burn's transactions at the recorded sizes to the byte, the wallet's padded shape; the attestation's transaction is 32 bytes larger than recorded (231,246 and 255,334 against 231,214 and 255,302), and LEZ's circuit's session cannot be measured in dev mode, so the recorded times stand for a transaction 32 bytes smaller"
+note = "the private attestation proven at cloud containers held to the declared minimum (904.3 s at 8 CPUs), on an M1 Mac mini (857.4 s padded, EVIDENCE row 88) and on one L4; padded as the wallet pads them (wallet_padding.rs, row 38); on the owner's laptop, below the declared minimum (8 of its 16 threads), 4,596.7 s, settled (EVIDENCE row 264); hops inside the user's proof: at most 2 declared at the x86-64 minimum, none on the M1 until measured (ADR 0056; the padded private claim proven through 1-5 hops at 16 and 8 CPUs, vault_claim_hops.rs in CI, EVIDENCE row 298); device_workload.rs (CI, lez-harness) holds the work those proofs measured: the programs' private transitions in the record's segments and padded sizes (user cycles pinned at this tree's values, -652 to +625 from the record's), the claim's and burn's transactions at the recorded sizes to the byte, the wallet's padded shape; the attestation's transaction is 32 bytes larger than recorded (231,246 and 255,334 against 231,214 and 255,302), and LEZ's circuit's session cannot be measured in dev mode, so the recorded times stand for a transaction 32 bytes smaller"
 
 [[row]]
 id = "RFP-021 P.5"
@@ -884,6 +892,7 @@ tests = [
   { path = "idl/spel-v2/run.sh", kind = "test", ci = "box", run = "RECORDED=... bash idl/spel-v2/run.sh" },
   { path = "idl/generated/spel-v2.txt", kind = "record" },
   { path = "idl/spel-v2/upstream-pr/PR.md", kind = "document" },
+  { path = "idl/generated/spel-v2-f739d8a.txt", kind = "record" },
 ]
 note = "waits on Logos: SPEL's v0.4 line is an open pull request; with our tuple patch its generator makes the bridge's messages and types, 0 differences (EVIDENCE row 194); the patch is ready as a pull request for SPEL's v0.4 line, not opened: 21 of 21 of SPEL's idl_gen suite with it, 14 before (row 270; in SPEL's tree at c90ca0b, git am the patch, then cargo test --locked -p spel-framework-core --features idl-gen,decode --test idl_gen: idl/spel-v2/upstream-pr/PR.md). Shown instead: the hand-written IDL decodes every instruction, type and variant of the bridge program (37 vectors), parsed and decoded by SPEL's own crate (EVIDENCE row 55); the idl job decodes the committed vectors in CI and msg's bridge-wire tests require them to equal what the wire writes"
 
