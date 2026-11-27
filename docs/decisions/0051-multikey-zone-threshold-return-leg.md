@@ -1,4 +1,4 @@
-# ADR 0049: Grow the test zone to several sequencer keys and require t-of-n attestations, without claiming independent operators
+# ADR 0051: Grow the test zone to several sequencer keys and require t-of-n attestations, without claiming independent operators
 
 - **Date:** 26 November 2026
 - **Status:** accepted; built and run on local four-sequencer zones; the test-network key-growth runbook not executed

@@ -1,4 +1,4 @@
-# ADR 0052: Run public-state evidence checks daily in a separate read-only workflow, not in the offline gate
+# ADR 0054: Run public-state evidence checks daily in a separate read-only workflow, not in the offline gate
 
 - **Date:** 26 November 2026
 - **Status:** accepted; built; scheduled daily and by hand

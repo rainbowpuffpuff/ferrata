@@ -1,4 +1,4 @@
-# ADR 0051: Shard the LEZ harness on every change and keep an unsharded daily backstop guarded by exact target coverage
+# ADR 0053: Shard the LEZ harness on every change and keep an unsharded daily backstop guarded by exact target coverage
 
 - **Date:** 23 November 2026
 - **Status:** accepted; run in CI

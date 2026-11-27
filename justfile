@@ -99,7 +99,7 @@ admin:
     node admin/dump.mjs --selftest
 
 # CI's links job: every documentation, record and tooling check of the repository that needs no toolchain
-# beyond Python, Node, bash and git (30 steps; see the workflow's comments for what each one checks).
+# beyond Python, Node, bash and git (31 steps; see the workflow's comments for what each one checks).
 links:
     python3 -I scripts/check-links.py README.md docs cli/README.md monitor/README.md lez/ATTEST-CLI.md lez/updater/README.md e2e/seqnet/README.md
     python3 -I scripts/check-guides.py
@@ -117,6 +117,7 @@ links:
     python3 -I lez/scripts/test_fetch_attest_fixture.py
     python3 -I scripts/test_perf_records.py
     python3 -I bench/perf/test_summarize_proofs.py
+    python3 -I bench/perf/test_summarize_p4_hops.py
     python3 -I modules/scripts/test_live_testnet.py
     python3 -I checkpoint/attestor/test_resources.py
     python3 -I scripts/test_audit_scope.py

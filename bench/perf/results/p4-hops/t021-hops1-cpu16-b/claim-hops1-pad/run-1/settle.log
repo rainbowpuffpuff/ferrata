@@ -1,0 +1,25 @@
+consumer image 8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96; program image 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df; mode: real proof (r0vm); hops 1; shape bare
+record: finalized slot 11556608, block 12112773; deposit 0 in block 12111477 (1296 blocks back), reached through 1 hop(s)
+SETTLED FROM tx-claim.borsh (receipt verified): receipt 239551 bytes, transaction 255976 bytes, settled in 0.4 s
+public_context.actors (4): consumer@rVyGzEDppgzz5PwLLnT376T7SUtpCwLT59R8W4kijRH, consumer@58WrKVWKnkRwvRKZUuNby11b1FeQt6REKywyM7AmLphH, ferrata@5tjA1H5ZJEJk8cqt7jhPWJiK9gYaesCkC83cw3UqQP3c, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (8 steps):
+  - PrivateToPublic from consumer@BfExnk2NvHhRayDyWsaHasZP14M7Nyvt9JDZUWFCaDnj to ferrata@5tjA1H5ZJEJk8cqt7jhPWJiK9gYaesCkC83cw3UqQP3c: Read (1 bytes)
+  - PublicToPrivate from ferrata@5tjA1H5ZJEJk8cqt7jhPWJiK9gYaesCkC83cw3UqQP3c to consumer@BfExnk2NvHhRayDyWsaHasZP14M7Nyvt9JDZUWFCaDnj: StateReply { state: 253 bytes } (257 bytes)
+  - PrivateToPublic from consumer@3AuM63vUtS2nyMCfNN7LDmUiU7wsQwYRMQ2oQBmVDRW5 to consumer@rVyGzEDppgzz5PwLLnT376T7SUtpCwLT59R8W4kijRH: 114 bytes (114 bytes, 1 PDA seed(s))
+  - EndPublicSubtree
+  - EndPrivateSubtree
+  - EndPublicSubtree
+  - PrivateToPublic from native@2i5xLXbRbQbQxnGtZsUZW6N6wbhQ7oVUEjwEsmHYChRK to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Disclosed { program: consumer, image_id: 8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96 }
+execution.private_actions (7): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (11256 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 1
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: None, to: None } }
+execution.fee: Some("refund_to None, fallback true")
+nonces: 0, admission evidence: 0
+
+settled: execution gas 456,847, storage gas 224,063, base fee 5,447,280

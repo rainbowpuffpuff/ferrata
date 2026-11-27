@@ -1,4 +1,4 @@
-# ADR 0050: Re-derive committed evidence offline through one registry, with independent seal checks and tamper tests
+# ADR 0052: Re-derive committed evidence offline through one registry, with independent seal checks and tamper tests
 
 - **Date:** 26 November 2026
 - **Status:** accepted; built and run in CI

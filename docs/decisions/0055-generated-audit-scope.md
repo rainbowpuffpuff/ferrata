@@ -1,4 +1,4 @@
-# ADR 0053: Generate the audit inventory from an explicit production allowlist, tracked files and lockfiles
+# ADR 0055: Generate the audit inventory from an explicit production allowlist, tracked files and lockfiles
 
 - **Date:** 26 November 2026
 - **Status:** accepted; built and checked in CI; no independent audit claimed

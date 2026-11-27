@@ -9,7 +9,7 @@
 # The runner (src/main.rs) is the one run.sh builds, copied into a scratch crate whose dependency points at the given
 # tree; where that head's GenOptions takes `message: Option<String>` and `states: Vec<String>` (from 79594580), the
 # copy's options are written that way, nothing else changed. Its Cargo.lock is resolved afresh (not --locked) and kept
-# beside the record. Writes idl/generated/spel-v2-<rev>.txt.
+# beside the record as at-<rev>/cargo-lock-resolved.txt. Writes idl/generated/spel-v2-<rev>.txt.
 set -euo pipefail
 REV="${1:?usage: run-at.sh REV (upstream/spel-REV beside the repository)}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -47,5 +47,5 @@ rm -rf "$SPEL-tuples"; cp -r "$SPEL" "$SPEL-tuples"
 patch -s -d "$SPEL-tuples" -p1 < "$HERE/patches/spel-c90ca0b-idl-gen-tuples.patch"
 crate "$T/tuples" "$SPEL-tuples"
 ( cd "$T/tuples" && CARGO_TARGET_DIR="$HERE/target" FERRATA_REPO="$REPO" cargo run -q -- "$OUT" --only ferrata_bridge ) 2>&1 | tee -a "$LOG"
-cp "$T/as-is/Cargo.lock" "$OUT/Cargo.lock" 2>/dev/null || true
+cp "$T/as-is/Cargo.lock" "$OUT/cargo-lock-resolved.txt" 2>/dev/null || true  # not *Cargo.lock: no manifest beside it
 echo "spel-v2 run at $REV: done" | tee -a "$LOG"

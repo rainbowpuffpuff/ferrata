@@ -238,9 +238,18 @@ transaction 255,366 B, each settled with the receipt verified and refused with o
 would run it in an 8-CPU, 16-GiB container: 1,110.8 s for the attestation, all three transactions settled, 50 minutes in
 all. On the owner's laptop, below the declared minimum (8 of its 16 threads, `low-power` profile, other work on the
 other cores, its swap full): **4,596.7 s**, 9.17 GiB, settled ([`perf-p4-laptop.md`](../lez/results/perf-p4-laptop.md),
-25 November 2026). **Gaps:** a laptop at the declared minimum (in a low-power profile about 30–39 min an attestation,
-*estimated*); a chain of hops (a 320-hop claim is estimated at about 58M accelerated user cycles; a limit of 5 hops
-is proposed from derived figures, not declared).
+25 November 2026). **Hops inside the user's proof** (a fact older than the record's block, reached through EIP-2935
+hops verified in the user's own proof; [`p4-hops`](../lez/results/p4-hops/README.md), 27 November 2026): the reference
+consumer's padded private claim through *K* hops, proven at 16 CPUs and 16 GiB in **926.6 s** (1 hop), **1,035.6 s**
+(2), **1,233.4 s** (3) and **1,511.3 s** (5), and at 8 CPUs in **2,031.7 s** (2) and **3,255.1 s** (5); r0vm peak
+9.19–9.20 GiB; each settled with the receipt verified and refused with one bit flipped; the transaction 255,976 B
+whatever *K* (one run each, on different CPUs). A hop costs 1.04–1.16M user cycles in the user's proof, the
+consumer hashing with software Keccak ([`vault-claim-hops.md`](../lez/results/vault-claim-hops.md)), not the
+0.18–0.23M accelerated cycles estimated before. **Declared** (ADR 0056): a user's proof carries at most 2 hops
+(16,382 blocks, about 2.3 days); an older fact is read under an older record, whose slot is public, or attested
+publicly. **Gaps:** a laptop at the declared minimum (in a low-power profile about 30–39 min an attestation,
+*estimated*); hops on the Apple M1 (at the 1.35–1.36 ratio of every earlier M1 proof, about 1,250–1,265 s at one hop
+and 1,400–1,410 s at two, above 20 min, *derived*) and on a laptop.
 
 ### P.5 End-to-end attestation latency
 
@@ -644,7 +653,7 @@ private transaction are LEZ's and not counted.
 
 User-side proofs on a laptop at the declared minimum (cloud containers at its shape, Mac minis and a GPU are
 measured, and the owner's laptop below it, 8 of its 16 threads: P.4 of both RFPs), and hops inside the user's proof
-(RFP-021 P.4: a limit of 5 hops proposed, not declared); `ferrata-attest` and `ferrata_attest_module` not measured,
+on the Apple M1 and on a laptop (RFP-021 P.4: measured at 16 and 8 CPUs, at most 2 hops declared, ADR 0056); `ferrata-attest` and `ferrata_attest_module` not measured,
 the §8 `monitor` not measured (RFP-021 P.6); the bridge's actions (RFP-022's program), the soft-requirement programs
 (`statements`, `rebate`) and the second consumer (`ferrata_holdings`) at different state sizes (programs of their own;
 every message of RFP-021's attestation program and of its reference consumer is measured, §P.9); A3's adversarial daemon at 100 updates on a sequencer (RFP-021 R.9; the two honest daemons at A3's size ran: EVIDENCE rows 275, 276); the importer's LEZ-side

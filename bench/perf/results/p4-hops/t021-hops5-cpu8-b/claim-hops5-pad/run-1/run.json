@@ -1,0 +1,69 @@
+{
+ "run": 1,
+ "exit_code": 0,
+ "wall_s": 3365.69,
+ "gnu_time": {
+  "user_s": "24804.84",
+  "sys_s": "30.33",
+  "cpu_percent": "737%",
+  "wall": "56:05.67",
+  "max_rss_kib": "9635384",
+  "exit_status": "0"
+ },
+ "proof_lines": [
+  "REAL PROOF, receipt verified at settlement: execute_and_prove 3255.1 s (prove + settle 3255.5 s); receipt 239,551 bytes; transaction 255,976 bytes"
+ ],
+ "sampled": {
+  "max": {
+   "cgroup_current_bytes": 9915838464,
+   "meminfo_used_kib": 9683664,
+   "rss_sum_kib": 9738712,
+   "r0vm_rss_kib": 9635384
+  },
+  "samples": 6709,
+  "period_s": 0.5,
+  "cpu_s_by_process_name": {
+   "prove_vault_cla": 5.2,
+   "r0vm": 24736.2
+  }
+ },
+ "cgroup_after": {
+  "cgroup.controllers": null,
+  "cpu.max": null,
+  "cpu.weight": null,
+  "cpuset.cpus.effective": null,
+  "memory.max": null,
+  "memory.high": null,
+  "memory.current": null,
+  "memory.peak": null,
+  "memory.swap.max": null,
+  "memory.events": null,
+  "memory/memory.limit_in_bytes": "17179869184",
+  "memory/memory.max_usage_in_bytes": null,
+  "memory/memory.usage_in_bytes": "70782976",
+  "cpu/cpu.cfs_quota_us": "800000",
+  "cpu/cpu.cfs_period_us": "100000",
+  "cpuset/cpuset.cpus": "0-7"
+ },
+ "txs": {
+  "tx-claim.borsh": {
+   "bytes": 255976,
+   "sha256": "8d32787b8bc3b5fd05a578ca66a70614740f38a420b704144fa3a51eb14b9a22"
+  }
+ },
+ "settle_exit": 0,
+ "settle_wall_s": 110.77,
+ "settle_lines": [
+  "SETTLED FROM tx-claim.borsh (receipt verified): receipt 239551 bytes, transaction 255976 bytes, settled in 0.4 s",
+  "settled: execution gas 456,847, storage gas 224,063, base fee 5,447,280"
+ ],
+ "tamper": [
+  {
+   "tx": "tx-claim.borsh",
+   "flipped_bit0_of_byte": 127988,
+   "settle_exit": 101,
+   "log_tail": "roof (r0vm); hops 1; shape bare\nrecord: finalized slot 11556608, block 12112773; deposit 0 in block 12111477 (1296 blocks back), reached through 1 hop(s)\n\nthread 'main' (5750) panicked at harness/src/bin/prove_vault_claim.rs:234:14:\nsettlement accepts the transaction: \"Invalid privacy preserving execution circuit proof\"\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"
+  }
+ ],
+ "finished_at_utc": "2026-11-27T18:50:54Z"
+}

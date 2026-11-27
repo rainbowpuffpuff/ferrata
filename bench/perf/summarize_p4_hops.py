@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """RFP-021 P.4, hops inside the user's proof: a table from what lez/results/p4-minimum/minimum.py wrote for its jobs
-claim-hopsK-pad (fetched to RESULTS/<tag>/<job>/: container.json, run-N/run.json, run-N/prove.log), parsed with that
+claim-hopsK-pad (fetched to RESULTS/<tag>/<job>/: container.json, run-N/run.json, run-N/prove.log or prove.log.gz),
+parsed with that
 pass's own helpers (lez/results/p4-minimum/summarize.py, summarize_scale.py). Usage:
   python3 -I bench/perf/summarize_p4_hops.py bench/perf/results/p4-hops > lez/results/p4-hops/table.md
   python3 -I bench/perf/summarize_p4_hops.py --test       # the parser on built-in lines"""
 
+import gzip
 import json
 import pathlib
 import re
@@ -46,7 +48,10 @@ def runs(root: pathlib.Path) -> list:
         mem = c.get("declared", {}).get("modal_memory_mib_request_and_limit")
         for rd in sorted(d.glob("run-*"), key=lambda p: int(p.name.split("-")[1])):
             r = json.load(open(rd / "run.json"))
-            proofs = parse_log(normalize(open(rd / "prove.log", errors="replace").read()), "private claim")["proofs"]
+            log = rd / "prove.log"
+            text = log.read_text(errors="replace") if log.exists() else \
+                gzip.decompress((rd / "prove.log.gz").read_bytes()).decode(errors="replace")
+            proofs = parse_log(normalize(text), "private claim")["proofs"]
             out.append({"hops": int(k.group(1)), "tag": d.parent.name, "cpus": cpus, "mem_mib": mem,
                         "machine": short(machine(c)), "run": r, "proofs": proofs})
     return out

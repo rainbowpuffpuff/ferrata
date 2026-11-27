@@ -1,4 +1,4 @@
-# ADR 0048: Keep the deployed B1 interface frozen; select B1 or the current claim layout by the zone's program image id
+# ADR 0050: Keep the deployed B1 interface frozen; select B1 or the current claim layout by the zone's program image id
 
 - **Date:** 27 November 2026
 - **Status:** accepted; built and run against B1 on a standalone rc3 sequencer; the test network still runs B1
