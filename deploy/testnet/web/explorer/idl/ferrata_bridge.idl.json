@@ -699,6 +699,12 @@
           }
         },
         {
+          "name": "range",
+          "type": {
+            "defined": "ScheduleRange"
+          }
+        },
+        {
           "name": "relayer",
           "type": {
             "option": {
@@ -894,6 +900,12 @@
           "name": "witness",
           "type": {
             "defined": "ClaimWitness"
+          }
+        },
+        {
+          "name": "range",
+          "type": {
+            "defined": "ScheduleRange"
           }
         },
         {
@@ -1735,6 +1747,12 @@
         {
           "name": "amount",
           "type": "u128"
+        },
+        {
+          "name": "range",
+          "type": {
+            "defined": "ScheduleRange"
+          }
         },
         {
           "name": "leaf_count",
@@ -3476,6 +3494,24 @@
       ]
     },
     {
+      "name": "ScheduleRange",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "index",
+          "type": "u64"
+        },
+        {
+          "name": "from_leaf",
+          "type": "u64"
+        },
+        {
+          "name": "until_leaf",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "CapParams",
       "kind": "struct",
       "fields": [
@@ -4329,6 +4365,12 @@
               }
             },
             {
+              "name": "range",
+              "type": {
+                "defined": "ScheduleRange"
+              }
+            },
+            {
               "name": "relayer",
               "type": {
                 "option": {
@@ -4361,6 +4403,12 @@
               "name": "witness",
               "type": {
                 "defined": "ClaimWitness"
+              }
+            },
+            {
+              "name": "range",
+              "type": {
+                "defined": "ScheduleRange"
               }
             },
             {
@@ -4684,6 +4732,12 @@
             {
               "name": "amount",
               "type": "u128"
+            },
+            {
+              "name": "range",
+              "type": {
+                "defined": "ScheduleRange"
+              }
             },
             {
               "name": "leaf_count",
@@ -5585,6 +5639,12 @@
           }
         },
         {
+          "name": "range",
+          "type": {
+            "defined": "ScheduleRange"
+          }
+        },
+        {
           "name": "relayer",
           "type": {
             "option": {
@@ -5685,7 +5745,7 @@
     {
       "code": 248,
       "name": "LEAF_NOT_IMPORTED",
-      "msg": "A leaf index at or above the imported root's leaf count (a root not imported yet is `NOT_FOUND`)."
+      "msg": "A leaf index at or above the imported root's leaf count, or outside the fee schedule range the claim names, or beyond the leaves the imported fee schedules cover."
     },
     {
       "code": 249,

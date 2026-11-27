@@ -25,7 +25,7 @@ scripts/fetch-upstream.sh
 scripts/reproduce-image-ids.sh build --out ../ids-f13            # every guest of this tree
 scripts/reproduce-image-ids.sh compare --out ../ids-f13          # 20 of 20 MATCH, ferrata_bridge as ferrata_bridge_f13
 sha256sum ../ids-f13/programs/ferrata_bridge.bin                 # c84fe2dbbc008c1a94c096fb6c598eb1580da2996b6b1e54ae807d0041e08fdc
-cd vault && forge test --no-match-contract PrivacySuite          # the vault of ADR 0046 (624 passed at this commit)
+cd vault && forge test --no-match-contract PrivacySuite          # the vault of ADR 0046 (636 passed, 11 skipped, at this commit)
 ```
 
 The rc3 tools (`deploy/testnet/cli-rc3/build.sh`, the crown driver with `lez/scripts/lez-select.sh v0.4.0-rc3`, the
