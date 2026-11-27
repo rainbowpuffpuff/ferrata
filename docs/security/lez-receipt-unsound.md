@@ -23,7 +23,8 @@ in the bridge program (`lez/guests/bridge/src/main.rs`):
 - `Mint` from a nullifier's actor (`:180-193`): wrapped tokens credited to any holder, without a deposit and outside
   the gate that applies LEZ's mint caps and freezes;
 - the burn record from a token's actor (`:758-765`): a burn note at `burn(cid, r)` that no holder paid for, outside
-  the burn caps and freezes; the checkpoint program reads it as any burn (`checkpoint/crates/checkpoint-core/src/rule.rs:110-113`);
+  the burn caps and freezes; the checkpoint program reads it as any burn
+  (`checkpoint/crates/checkpoint-core/src/rule.rs:110-113`);
 - `root(cid, n)` from the configuration's actor (`write_root`, `:443-459`): a deposit root of the forger's choosing,
   claimable on LEZ, which the checkpoint does not count (it counts `ImportRoot` messages only, `rule.rs:116-118`);
 - through the attestation program's records, which are in reach too (trust.md §5), a top-level `ImportRoot` of a
@@ -108,8 +109,8 @@ LEZ's `Sunset`, prevents for good.
 
 So the affected funds stay in the vault while the freezes are renewed; unimported deposits are refunded, unless the
 forger raised LEZ's imported count above the vault's tree first, in which case they stay in the vault with everything
-else; `owed` balances are paid to their payees; holders of wrapped tokens and burners in flight wait, and lose what the forged
-burns take if releases ever resume, or everything held in the old vault if it is replaced. The remedy is upstream:
+else; `owed` balances are paid to their payees; holders of wrapped tokens and burners in flight wait, and lose what the
+forged burns take if releases ever resume, or everything held in the old vault if it is replaced. The remedy is upstream:
 a LEZ whose receipt check is sound (a LEZ tag on RISC Zero 3.1, the migration's phase 2,
 [`docs/design/risc0-3.1-migration.md`](../design/risc0-3.1-migration.md)).
 
