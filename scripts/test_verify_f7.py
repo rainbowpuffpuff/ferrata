@@ -39,8 +39,11 @@ class F7VerifyTamperTests(unittest.TestCase):
     def setUpClass(cls):
         SCRATCH.mkdir(parents=True, exist_ok=True)
         cls.checks = {cid: REGISTRY[cid] for cid in (ERC20_ID, ROTATION_ID)}
-        if any(c.fn is None or c.rows or c.evidence for c in cls.checks.values()):
-            raise ValueError("F.7 checks must be Python quick checks with no status/evidence rows attached")
+        # Registered with the row they back and the EVIDENCE row of their run (the fold of 27 November 2026).
+        expected = {ERC20_ID: (279,), ROTATION_ID: (280,)}
+        if any(c.fn is None or tuple(c.rows) != ("RFP-022 F.7",) or tuple(c.evidence) != expected[cid]
+               for cid, c in cls.checks.items()):
+            raise ValueError("F.7 checks must be Python quick checks naming RFP-022 F.7 and their run's EVIDENCE row")
 
     def _copy(self, check, destination: Path) -> Path:
         for rel in sorted(set(check.inputs)):
