@@ -212,7 +212,7 @@ the role messages (`Sunset`, `Freeze`, `SetCap`, …) by the sender actor, which
 
 - **Journals and verifier.** The 17-word checkpoint journal and the 11-word release journal bind the domain, the chain
   id read at call time, the vault and the configuration; every word of both, flipped alone, is refused by RISC Zero's
-  verifier 3.1.0 on the real seals of two LEZ v0.4.0-rc3 runs (`ZoneBridgeRc3Multi.t.sol`, four new tests). Image ids
+  verifier 3.1.0 on the real seals of two LEZ v0.4.0-rc3 runs (`vault/test/real/Rc3JournalWords.t.sol`, four tests on each). Image ids
   immutable and distinct; rules kept apart by image and entry point; Groth16 malleability irrelevant (nothing is keyed
   on a seal); the selectors 0x73c457ba and 0xe71e6620 re-derived from the verifying keys (`verify r8-risc0-selectors`).
 - **Replay and roots.** Nullifiers global, set before any external call, never cleared; burn roots accepted only by a
@@ -250,7 +250,7 @@ the role messages (`Sunset`, `Freeze`, `SetCap`, …) by the sender actor, which
 ```bash
 cd vault && forge test --match-path 'test/{InternalReview,LezReceiptUnsound,DeployDefaults,DeployVaultChecks,VerifierCode}.t.sol'
 cd vault && forge test --match-path test/invariant/EntitlementInvariants.t.sol
-cd vault && forge test --match-path 'test/real/ZoneBridgeRc3{Multi,Rotation}.t.sol'
+cd vault && forge test --match-path test/real/Rc3JournalWords.t.sol
 bash vault/script/test-check-verifier-local.sh          # anvil
 cd monitor && cargo test --locked --test nonce          # anvil
 python3 -I scripts/verify.py r8-risc0-selectors r8-phase-split && python3 -I scripts/test_verify_sec.py
