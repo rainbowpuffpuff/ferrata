@@ -1869,6 +1869,8 @@ impl Updater {
                 self.log(&format!("the instance's transactions could not be read: {e:#}"));
             }
         }
+        // Those still waiting for a committee go to the back, behind the `Open`s read since: however many wait, every new
+        // `Open` is judged within a few rounds.
         let mut waiting = VecDeque::new();
         for _ in 0..MAX_LEARN_PER_ROUND {
             let Some(update) = self.pending_opens.pop_front() else { break };
@@ -1876,9 +1878,7 @@ impl Updater {
                 waiting.push_back(update);
             }
         }
-        while let Some(update) = waiting.pop_back() {
-            self.pending_opens.push_front(update);
-        }
+        self.pending_opens.extend(waiting);
     }
 
     /// One `Open`'s update (its compact encoding), judged on `store` ([`Updater::learn_from_chain`]): `false` when it is a
