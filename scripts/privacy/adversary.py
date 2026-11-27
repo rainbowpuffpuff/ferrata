@@ -676,7 +676,6 @@ DESCRIBE = [  # what a field is, for the rows the classes do not describe
     (r"^public_context\.actors\[\] \(other", "the per-record declared account"),
     (r"\.(out|in)\.(from|to)( \(members in every record\))?$", "a public end of a boundary message (where constant: the root, the token's account, the fee inbox)"),
     (r"Issue\.config_id$|Burn\.config_id$|Claim\.config_id$|ImportRoot\.config_id$", "configId (the bridge program, vault, chain)"),
-    (r"Issue\.range$|Claim\.range$", "the fee schedule's leaf range the claim names"),
     (r"Issue\.relayer$|Claim\.relayer$", "the relayer the claim names (relay fee minted to it publicly)"),
     (r"Issue\.leaf_count$|Claim\.leaf_count$", "the root read (its leaf count)"),
     (r"StateReply\.state$|message\.Read$", "the root read (its state, returned to the private part)"),

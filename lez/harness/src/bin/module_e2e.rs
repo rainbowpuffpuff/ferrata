@@ -139,7 +139,7 @@ fn bridge(message_hex: &str) -> Value {
             "config_id": h(config_id), "r": h(r), "memo": h(memo), "mac": h(mac),
             "token": h(token), "amount": h(amount), "c_out": h(c_out),
         }),
-        BridgeMessage::Claim { config_id, leaf_count, witness, range, relayer } => json!({
+        BridgeMessage::Claim { config_id, leaf_count, witness, relayer } => json!({
             "variant": "Claim",
             "config_id": h(config_id),
             "leaf_count": leaf_count,
@@ -150,9 +150,7 @@ fn bridge(message_hex: &str) -> Value {
             "path_len": witness.path.len(),
             "kind": witness.kind,
             "dest": h(&witness.dest),
-            "range": [range.index, range.from_leaf, range.until_leaf],
             "relayer": relayer.map(|r| h(&r)),
-            "range_covers_leaf": range.covers(witness.leaf_index).is_ok(),
         }),
         other => {
             json!({ "variant": format!("{other:?}").split([' ', '{', '(']).next().unwrap_or("?").to_string() })

@@ -17,7 +17,7 @@ use ferrata_lez_wire::{attest::evaluate, RecordState, CODE_BLOCKS};
 use harness::{
     bridge::{
         config, controls, eth_entry, eth_schedule_one, fee_recipient, registry_slots, relayer, render, Block, Deposit,
-        Vault, VaultSlots, World, CHAIN_ID, DENOMINATIONS, ETH, INSTANCE, MINT_FEES_1, RELAY_FEES, VAULT_B,
+        Vault, VaultSlots, World, CHAIN_ID, DENOMINATIONS, ETH, INSTANCE, RELAY_FEES, VAULT_B,
     },
     render_transitions, TxReport,
 };
@@ -200,7 +200,7 @@ fn inbound_configuration_import_and_plaintext_claim() {
     let r = w.claim("Claim: leaf 6, 10 ETH to the payer, under root(A, 8) (fee schedule 1)", &cid_a, 8, &va, good);
     run(r, None);
     assert_eq!(w.balance(payer, &cid_a), DENOMINATIONS[2], "exactly the denomination: balances stay whole");
-    assert_eq!(w.balance(fee_recipient(), &cid_a), MINT_FEES_1[2], "schedule 1's mint fee");
+    assert_eq!(w.balance(fee_recipient(), &cid_a), 0, "no mint fee on LEZ: taken at deposit on Ethereum");
     assert_eq!(w.balance(relayer(), &cid_a), RELAY_FEES[1] + RELAY_FEES[2]);
     let deposit_b = w.deposit_b.clone();
     let witness_b = w.vault_b.witness(&deposit_b, 8);

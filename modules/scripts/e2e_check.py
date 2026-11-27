@@ -134,7 +134,8 @@ check("bridge Claim", "the bridge program decodes the message (canonical) to the
       dc.get("decoded") is True and dc.get("canonical") is True and fields.get("variant") == "Claim"
       and fields.get("leaf_index") == ic["leaf_index"] and fields.get("kind") == ic["kind"] and fields.get("dest") == ic["dest"]
       and fields.get("depositor") == ic["depositor"] and fields.get("amount") == ic["amount"] and fields.get("path_len") == 32
-      and fields.get("leaf_count") == len(ic["leaves"]) and fields.get("range_covers_leaf") is True, f"{dc.get('message_bytes')} bytes")
+      and fields.get("leaf_count") == len(ic["leaves"]) and "range" not in fields and "range_covers_leaf" not in fields,
+      f"{dc.get('message_bytes')} bytes")
 
 rpc = [json.loads(line) for line in (out / "rpc.log").read_text().splitlines() if line.strip()]
 methods = {}

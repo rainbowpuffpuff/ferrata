@@ -335,12 +335,11 @@ fn commitment_root(w: &World) -> Vec<u8> {
 fn bridge_fields(prefix: &str, message: &BridgeMessage, f: &mut Vec<(String, Vec<u8>)>) {
     let mut push = |name: &str, v: Vec<u8>| f.push((format!("{prefix}.{name}"), v));
     match message {
-        BridgeMessage::Issue { config_id, token, nullifier, amount, range, leaf_count, mint_to, relayer } => {
+        BridgeMessage::Issue { config_id, token, nullifier, amount, leaf_count, mint_to, relayer } => {
             push("Issue.config_id", config_id.to_vec());
             push("Issue.token", token.to_vec());
             push("Issue.nullifier", nullifier.to_vec());
             push("Issue.amount", amount.to_le_bytes().to_vec());
-            push("Issue.range", borsh::to_vec(range).unwrap());
             push("Issue.leaf_count", leaf_count.to_le_bytes().to_vec());
             if let Some(m) = mint_to {
                 push("Issue.mint_to", m.to_vec());
@@ -358,7 +357,7 @@ fn bridge_fields(prefix: &str, message: &BridgeMessage, f: &mut Vec<(String, Vec
             push("Burn.amount", amount.to_vec());
             push("Burn.c_out", c_out.to_vec());
         }
-        BridgeMessage::Claim { config_id, leaf_count, witness, range, relayer } => {
+        BridgeMessage::Claim { config_id, leaf_count, witness, relayer } => {
             push("Claim.config_id", config_id.to_vec());
             push("Claim.leaf_count", leaf_count.to_le_bytes().to_vec());
             push("Claim.witness.depositor", witness.depositor.to_vec());
@@ -371,7 +370,6 @@ fn bridge_fields(prefix: &str, message: &BridgeMessage, f: &mut Vec<(String, Vec
             push("Claim.witness.s", witness.s.to_vec());
             push("Claim.witness.kind", vec![witness.kind]);
             push("Claim.witness.dest", witness.dest.to_vec());
-            push("Claim.range", borsh::to_vec(range).unwrap());
             if let Some(r) = relayer {
                 push("Claim.relayer", r.to_vec());
             }
@@ -922,13 +920,12 @@ fn privacy_suite_lez_half() {
         wb.time += STEP_MS;
         let d = &deposits_b[u];
         let witness = vault_b.witness(d, n);
-        let range = wb.range(&cid, &ETH, d.leaf_index);
         let nf = harness::bridge::nullifier_of(wb.program, &cid, CHAIN_ID, &VAULT_P, &d.nullifier(CHAIN_ID, &VAULT_P));
         let mut actors = vec![bw::root_actor(wb.program, &cid, n)];
         actors.extend(wb.claim_actors(&cid, &ETH, nf, Some(user_account(&users[u])), Some(*relayer().value())));
         let mut r =
             collect_public(&mut wb, format!("lez:claim:plaintext:{k:02}"), "claim", "plaintext", k, &actors, |w| {
-                w.claim_with("plaintext claim", &cid, n, &VAULT_P, witness, range, Some(*relayer().value()))
+                w.claim_with("plaintext claim", &cid, n, &VAULT_P, witness, Some(*relayer().value()))
             });
         r.fields.push(("derived.nullifier_account".into(), nf.account_id.value().to_vec()));
         records.push(r);
@@ -988,7 +985,10 @@ fn privacy_suite_lez_half() {
     // Wrapped balances sit at holder PDAs since the security fixes (review C-1).
     let holder = |account| harness::bridge::holder_of(w.program, &cid, account).account_id;
     label(holder(relayer()), "holder(the relayer) (its wrapped balance: relay fees)");
-    label(holder(harness::bridge::fee_recipient()), "holder(the fee recipient) (its wrapped balance: mint fees)");
+    label(
+        holder(harness::bridge::fee_recipient()),
+        "holder(the fee recipient) (its wrapped balance: relay fees when no relayer)",
+    );
     label(bw::config_actor(w.program, &cid).account_id, "config(cid) (global gate, time)");
     label(bw::token_actor(w.program, &cid, &ETH).account_id, "token(cid, ETH) (token gate, time)");
     label(bw::root_actor(w.program, &cid, n).account_id, "root(cid, 20)");

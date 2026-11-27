@@ -1466,7 +1466,7 @@ impl Chain {
             "accounts": c["accounts"],
             "made_by": sent_by(&sent, "ferrata_bridge_module claim (the tool's claim with LEZ state)"),
             "lez": sent["lez"],
-            "public_on_lez": ["the nullifier N (its account)", "the token and denomination", "the root read", "the fee schedule's range", "the relayer"],
+            "public_on_lez": ["the nullifier N (its account)", "the token and denomination", "the root read", "the relayer"],
             "hidden": ["the destination account (an alias appears)", "the leaf index", "the depositor", "the private balance"],
         }))
     }

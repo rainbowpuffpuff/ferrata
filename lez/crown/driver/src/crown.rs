@@ -40,7 +40,7 @@ use ferrata_lez_bridge_wire::{
     burn_mac_v2, burn_seed, config_seed, fee_slot, fees_slots, holder_seed, nf_out_v2, nullifier_seed, register_slots,
     registry_slot,
     root_seed, token_seed, with_header, word_of, word_of_u128, BridgeConfig, BridgeMessage, BridgeState, CapParams,
-    ClaimWitness, ConfigState, Controls, FeeSchedule, HolderState, ImportProof, Note, PairingProof, ScheduleRange,
+    ClaimWitness, ConfigState, Controls, FeeSchedule, HolderState, ImportProof, Note, PairingProof,
     TokenEntry, VaultProof, SLOT_CONFIG_ID, SLOT_COUNT, SLOT_ROOT, UNLIMITED,
 };
 use ferrata_lez_wire::{instance_id, Config};
@@ -1102,16 +1102,6 @@ fn holder_pda(bridge: AccountId, cid: &Root, account: AccountId) -> Pda {
     Pda { program: bridge, seed: holder_seed(cid, account.value()) }
 }
 
-/// The fee schedule range a wallet names for a claim of `leaf`: the schedule it falls under and
-/// the widest range the token's state allows (as the harness's `range`).
-async fn range_for(live: &Live, token: Pda, leaf: u64) -> Result<ScheduleRange> {
-    let Some(BridgeState::Token(t)) = bridge_state(live, token).await? else { bail!("token(cid, ETH) is not registered") };
-    let j = t.schedules.iter().rposition(|s| s.from_leaf <= leaf).unwrap_or(0);
-    let until = t.schedules.get(j + 1).map_or(t.known_until, |s| s.from_leaf);
-    ensure!(leaf < until, "leaf {leaf} is beyond the token's known schedules (known until {})", t.known_until);
-    Ok(ScheduleRange { index: j as u64, from_leaf: t.schedules[j].from_leaf, until_leaf: until })
-}
-
 fn row_json(o: &Outcome) -> Value {
     json!({ "step": o.row.step, "status": o.row.status, "exit": o.row.exit, "block": o.row.block, "tx": o.row.tx_hash, "execGas": o.row.exec_gas })
 }
@@ -1307,10 +1297,9 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
             // Claim of deposit 0 (public), relay fee to the fee recipient (no relayer).
             let (w, nullifier, kind) = witness(&vault, &stage.deposits, 0)?;
             ensure!(kind == DestKind::Public, "deposit 0 is the public one");
-            let range = range_for(live, token_pda, 0).await?;
             let n_pda = Pda { program: bridge, seed: nullifier_seed(&cid, chain_id, &vault, &nullifier) };
             let dest = AccountId::new(w.dest);
-            let message = BridgeMessage::Claim { config_id: cid, leaf_count: n, witness: w, range, relayer: None };
+            let message = BridgeMessage::Claim { config_id: cid, leaf_count: n, witness: w, relayer: None };
             let mentions = vec![mention(root_pda), mention(token_pda), mention(config_pda), mention(n_pda), mention(holder_pda(bridge, &cid, dest)), mention(holder_pda(bridge, &cid, fee_recipient()))];
             let o = send(live, &format!("bridge Claim: deposit 0 (public) under root(cid, {n})"), mentions, &message, payer).await?.expect_applied()?;
             steps.push(row_json(&o));
@@ -1321,9 +1310,8 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
             let mut session = PrivateSession::open(live, bridge_bin, &b.private).await?;
             let (w, nullifier, kind) = witness(&vault, &stage.deposits, 1)?;
             ensure!(kind == DestKind::Private && w.dest == *session.me.value(), "deposit 1 is the private one, to the wallet's private account");
-            let range = range_for(live, token_pda, 1).await?;
             let n_pda = Pda { program: bridge, seed: nullifier_seed(&cid, chain_id, &vault, &nullifier) };
-            let message = BridgeMessage::ClaimPrivately { config_id: cid, leaf_count: n, witness: w, range, relayer: None };
+            let message = BridgeMessage::ClaimPrivately { config_id: cid, leaf_count: n, witness: w, relayer: None };
             let publics = vec![mention(root_pda), mention(token_pda), mention(config_pda), mention(n_pda), mention(holder_pda(bridge, &cid, fee_recipient()))];
             let o = session.send(live, "bridge ClaimPrivately: deposit 1 at LEZ's private test account 0", publics, &message, "claim").await?;
             steps.push(row_json(&o));

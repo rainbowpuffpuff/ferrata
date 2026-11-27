@@ -341,11 +341,10 @@ pub async fn history_of<L: Ledger>(ledger: &L, ctx: &Context) -> Result<History>
 /// private one, whose public part names `nullifier(cid, chain, vault, N)`. Matched locally: no per-item query.
 pub fn is_claimed(ctx: &Context, history: &History, n: &Hash) -> bool {
     history.claimed.contains(n)
-        || history.touched_privately.contains(&nullifier_actor(ctx.program, &ctx.cid, ctx.chain_id, &ctx.vault, n).account_id)
+        || history
+            .touched_privately
+            .contains(&nullifier_actor(ctx.program, &ctx.cid, ctx.chain_id, &ctx.vault, n).account_id)
 }
-
-/// The schedule range a wallet names for a claim of `leaf` (the widest its token state allows).
-pub use ferrata_wallet::claim::range_for;
 
 async fn token_state<L: Ledger>(ledger: &L, ctx: &Context, token: &[u8; 20]) -> Result<TokenState> {
     match read(ledger, token_actor(ctx.program, &ctx.cid, token)).await? {
@@ -461,13 +460,12 @@ pub struct ClaimPlan {
     pub root: Hash,
     pub leaf_count: u64,
     pub nullifier: Hash,
-    pub mint_fee: u128,
     pub relay_fee: u128,
 }
 
 /// Builds the claim of `owned` from the vault's whole leaf list `leaves`: the newest imported root
 /// that covers the leaf, read with its token's state from the zone, whether it is spent from `history` (never a read
-/// of its nullifier's account), then the shared builder (`ferrata_wallet::claim`: the path, the range, the program's
+/// of its nullifier's account), then the shared builder (`ferrata_wallet::claim`: the path, the program's
 /// checks, the accounts).
 #[allow(clippy::too_many_arguments)]
 pub async fn plan_claim<L: Ledger>(
@@ -515,7 +513,6 @@ pub async fn plan_claim<L: Ledger>(
         root: root_state.root,
         leaf_count: plan.leaf_count,
         nullifier: plan.nullifier,
-        mint_fee: plan.mint_fee,
         relay_fee: plan.relay_fee,
     })
 }
@@ -645,7 +642,10 @@ pub async fn plan_burn_at<L: Ledger>(
         // Signed at the holder's own actor, which forwards the note to its `holder(cid, account)`.
         BurnFrom::Public(account) => vec![
             Mention::Signer(own_actor(ctx.program, account)),
-            Mention::Pda { actor: holder_actor(ctx.program, &ctx.cid, account), seed: holder_seed(&ctx.cid, account.value()) },
+            Mention::Pda {
+                actor: holder_actor(ctx.program, &ctx.cid, account),
+                seed: holder_seed(&ctx.cid, account.value()),
+            },
         ],
         // Proven at the private account's own actor, which debits its private holding and sends the
         // note to the token's account in the clear.
@@ -798,7 +798,11 @@ impl Ledger for Sequencer {
                             let root = &tx.message.execution.root;
                             if root.to.program_account_id == program {
                                 let call = Applied { to: root.to, message: root.message.clone() };
-                                if reverted { out.refused.push(call) } else { out.applied.push(call) }
+                                if reverted {
+                                    out.refused.push(call)
+                                } else {
+                                    out.applied.push(call)
+                                }
                             }
                         }
                         // A refused private transaction's witness stays in its proof; what it delivers in the clear (a
@@ -952,13 +956,15 @@ impl Ledger for Sequencer {
         let mut job = None;
         let mut prove_secs = None;
         if credit.is_none() && !handed_over {
-            let input = GasDropInput { claim: ask.claim.clone(), one_time_address: *one_time.value(), relayer: ask.relayer };
+            let input =
+                GasDropInput { claim: ask.claim.clone(), one_time_address: *one_time.value(), relayer: ask.relayer };
             let journal =
                 verify_gas_drop(&input).map_err(|e| anyhow!("the gas-drop statement does not hold natively: {e:?}"))?;
             ensure!(journal.nullifier == ask.nullifier, "the gas-drop receipt's N is not the claim's");
             let elf = std::fs::read(&ask.elf)
                 .with_context(|| format!("reading the gas-drop guest {} (--gas-drop-elf)", ask.elf.display()))?;
-            let env = risc0_zkvm::ExecutorEnv::builder().write_slice(&input.encode()).build().map_err(|e| anyhow!("{e}"))?;
+            let env =
+                risc0_zkvm::ExecutorEnv::builder().write_slice(&input.encode()).build().map_err(|e| anyhow!("{e}"))?;
             let t = std::time::Instant::now();
             let info = tokio::task::block_in_place(|| {
                 risc0_zkvm::default_prover().prove_with_opts(env, &elf, &risc0_zkvm::ProverOpts::succinct())
@@ -966,7 +972,11 @@ impl Ledger for Sequencer {
             .map_err(|e| anyhow!("proving the gas-drop receipt: {e}"))?;
             prove_secs = Some(t.elapsed().as_secs_f64());
             // Nothing leaves this machine but a receipt of this guest with exactly the journal computed above.
-            crate::gasdrop_net::check_receipt(&info.receipt, &crate::gasdrop_net::image_id_of(&elf)?, &journal.encode())?;
+            crate::gasdrop_net::check_receipt(
+                &info.receipt,
+                &crate::gasdrop_net::image_id_of(&elf)?,
+                &journal.encode(),
+            )?;
             let value = serde_json::json!({
                 "kind": "gas-drop",
                 "receipt": serde_json::to_value(&info.receipt)?,
@@ -1368,8 +1378,8 @@ pub fn reveals(call: &LezCall) -> &'static str {
              anyone can link this mint to the Ethereum deposit"
         }
         BridgeMessage::ClaimPrivately { .. } => {
-            "private claim: N, the token, the denomination, the fee schedule's range, the root read, the relayer, when (its block); \
-             not the deposit, the path, s or the private destination"
+            "private claim: N, the token, the denomination, the root read, the relayer, when (its block); \
+             not the deposit, the path, s, the private destination or a fee schedule range"
         }
         BridgeMessage::Burn { .. } if matches!(call.mentions.first(), Some(Mention::PrivateSelf(_))) => {
             "private burn: the note (r, memo, mac, COut), the token, the denomination and the time; \
@@ -1386,7 +1396,7 @@ pub fn reveals(call: &LezCall) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ferrata_lez_bridge_wire::{ClaimWitness, ScheduleRange};
+    use ferrata_lez_bridge_wire::ClaimWitness;
 
     /// F.8: a plaintext claim publishes its deposit's leaf under any configuration of the program, so the leaf leaves
     /// every later private claim's anonymity set; only this configuration's claims spend a nullifier here.
@@ -1405,8 +1415,7 @@ mod tests {
                 kind: DestKind::Public as u8,
                 dest: [9; 32],
             };
-            let range = ScheduleRange { index: 0, from_leaf: 0, until_leaf: u64::MAX };
-            let message = BridgeMessage::Claim { config_id: cid, leaf_count: 10, witness, range, relayer: None };
+            let message = BridgeMessage::Claim { config_id: cid, leaf_count: 10, witness, relayer: None };
             Applied { to: config_actor(program, &cid), message: borsh::to_vec(&message).unwrap() }
         };
         let leaf = |leaf_index: u64, s: u8| {
@@ -1481,14 +1490,17 @@ mod tests {
             kind: DestKind::Public as u8,
             dest: [9; 32],
         };
-        let range = ScheduleRange { index: 0, from_leaf: 0, until_leaf: u64::MAX };
-        let refused_claim = BridgeMessage::Claim { config_id: [1; 32], leaf_count: 4, witness: witness(2), range, relayer: None };
+        let refused_claim =
+            BridgeMessage::Claim { config_id: [1; 32], leaf_count: 4, witness: witness(2), relayer: None };
         let ledger = Blocks(Included {
-            refused: vec![Applied { to: config_actor(program, &[1; 32]), message: borsh::to_vec(&refused_claim).unwrap() }],
+            refused: vec![Applied {
+                to: config_actor(program, &[1; 32]),
+                message: borsh::to_vec(&refused_claim).unwrap(),
+            }],
             ..Included::default()
         });
         let h = history_of(&ledger, &ctx).await.unwrap();
-        let set = |h: &History| ferrata_wallet::claim::anonymity_set(&deposits, &h.opened, &[0; 20], &[2; 32], 4, &range);
+        let set = |h: &History| ferrata_wallet::claim::anonymity_set(&deposits, &h.opened, &[0; 20], &[2; 32], 4);
         assert_eq!(set(&history(&ctx, &[])), 4, "nothing published: every deposit of the amount");
         assert_eq!(set(&h), 3, "the refused claim published leaf 2: it leaves the set");
         let d = &deposits[2];

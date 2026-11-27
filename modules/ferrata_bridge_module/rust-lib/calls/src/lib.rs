@@ -410,7 +410,6 @@ fn claim_message(
     config_id: &Hash,
     leaf_count: u64,
     w: &ClaimWitness,
-    range: [u64; 3],
     relayer: Option<Hash>,
     private: bool,
 ) -> Vec<u8> {
@@ -424,11 +423,10 @@ fn claim_message(
         kind: w.kind as u8,
         dest: w.dest,
     };
-    let range = bw::ScheduleRange { index: range[0], from_leaf: range[1], until_leaf: range[2] };
     let message = if private {
-        BridgeMessage::ClaimPrivately { config_id: *config_id, leaf_count, witness, range, relayer }
+        BridgeMessage::ClaimPrivately { config_id: *config_id, leaf_count, witness, relayer }
     } else {
-        BridgeMessage::Claim { config_id: *config_id, leaf_count, witness, range, relayer }
+        BridgeMessage::Claim { config_id: *config_id, leaf_count, witness, relayer }
     };
     borsh::to_vec(&message).expect("borsh")
 }
@@ -477,7 +475,7 @@ fn claim_of(req: &Value) -> Result<Value, String> {
     // The bridge program's claim, sent at `root(cid, n)`: plaintext `Claim` for a public destination,
     // `ClaimPrivately` (run in a private execution of the LEZ wallet) for a private one or with
     // `private`. With LEZ's state (`root_state`, `token_state`) the claim goes through the tool's code
-    // instead (`wallet::claim_with_state`): the program's checks, the fees and the accounts.
+    // instead (`wallet::claim_with_state`): the program's checks, the fixed relay fee and the accounts.
     if !req["config_id"].is_null() {
         let private = req["private"].as_bool().unwrap_or(w.kind != DestKind::Public);
         if !private && w.kind != DestKind::Public {
@@ -489,14 +487,8 @@ fn claim_of(req: &Value) -> Result<Value, String> {
                 (_, Some(ls)) => ls.len() as u64,
                 _ => return Err("the request needs `leaf_count` (the imported root's leaf count) or `leaves`".into()),
             };
-            let r = &req["range"];
-            let range = if r.is_null() {
-                [0, 0, u64::MAX]
-            } else {
-                [uint(&r["index"], "range.index")?, uint(&r["from_leaf"], "range.from_leaf")?, uint(&r["until_leaf"], "range.until_leaf")?]
-            };
             let relayer = if req["relayer"].is_null() { None } else { Some(fixed::<32>(&req["relayer"], "relayer")?) };
-            let m = claim_message(&config_id, leaf_count, &w, range, relayer, private);
+            let m = claim_message(&config_id, leaf_count, &w, relayer, private);
             out["variant"] = json!(if private { "ClaimPrivately" } else { "Claim" });
             out["message"] = json!(hex(&m));
             out["message_bytes"] = json!(m.len());
@@ -912,7 +904,7 @@ mod tests {
         let out: Value = serde_json::from_str(&claim(&c.to_string())).unwrap();
         assert_eq!(out["verdict"], "claimable", "{out}");
         assert_eq!(out["nullifier"], owned[1].1);
-        assert_eq!(out["message_bytes"], 1 + 32 + 8 + 20 + 20 + 32 + 8 + 4 + 32 * 32 + 32 + 1 + 32 + 24 + 1);
+        assert_eq!(out["message_bytes"], 1 + 32 + 8 + 20 + 20 + 32 + 8 + 4 + 32 * 32 + 32 + 1 + 32 + 1);
         // A wrong amount gives another leaf: refused.
         c["amount"] = json!("999");
         c.as_object_mut().unwrap().remove("leaves");

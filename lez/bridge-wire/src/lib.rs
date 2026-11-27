@@ -3,6 +3,10 @@
 //! a token's registry entry and fee schedules, the claim of a deposit), shared by the guest and the
 //! host. The plan is `lez/BRIDGE.md`.
 //!
+//! Claims do not read fee schedules: the vault takes the mint fee at deposit, and a claim mints only
+//! the denomination and the registry entry's fixed relay fee. `Register`, `ImportFees` and
+//! `ExtendFees` still mirror schedules into [`TokenState`] for the vault's other fee rules.
+//!
 //! | actor | address | state |
 //! |---|---|---|
 //! | `config(cid)` | PDA `H(…/config ‖ cid)` | [`ConfigState`]: the configuration, paired with its vault; global freezes, caps, `Sunset` |
@@ -288,7 +292,8 @@ pub struct FeeSchedule {
     /// Ethereum seconds: when the admin announced it, and when it took effect.
     pub announced_at: u64,
     pub effective_at: u64,
-    /// Minted on LEZ to the fee recipient by a claim (D13).
+    /// Credited to the fee recipient by the vault at deposit (F.13); retained in the mirrored
+    /// schedule, but never read by a claim.
     pub mint_fees: Vec<u128>,
     /// Deducted from a release on Ethereum (D13); the LEZ side only checks the ceiling.
     pub burn_fees: Vec<u128>,
@@ -335,26 +340,6 @@ impl FeeSchedule {
         }
         if self.index > 0 && self.announced_at.checked_add(FEE_NOTICE_SECONDS).is_none_or(|t| self.effective_at < t) {
             return Err(code::BAD_MESSAGE);
-        }
-        Ok(())
-    }
-}
-
-/// Which fee schedule a claim says its leaf falls under: schedule `index` covers
-/// `[from_leaf, until_leaf)`. The claimant checks its leaf index against the range inside its own
-/// execution (privately, for a private claim); the token actor checks the range against its
-/// schedules. A private claim so publishes the range, not the leaf index.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
-pub struct ScheduleRange {
-    pub index: u64,
-    pub from_leaf: u64,
-    pub until_leaf: u64,
-}
-
-impl ScheduleRange {
-    pub fn covers(&self, leaf_index: u64) -> Result<(), u8> {
-        if leaf_index < self.from_leaf || leaf_index >= self.until_leaf {
-            return Err(code::LEAF_NOT_IMPORTED);
         }
         Ok(())
     }
@@ -575,7 +560,8 @@ pub struct Controls {
     pub admin: Root,
     /// Freezes mints and burns (≤ 30 days unless renewed) and runs `Sunset`.
     pub freeze_authority: Root,
-    /// Receives the mint fees (and the relay fee of a claim that names no relayer).
+    /// Receives the vault's mint fees at deposit; on LEZ receives the relay fee of a claim that
+    /// names no relayer.
     pub fee_recipient: Root,
     /// The immutable floor of every cap.
     pub floor: CapParams,
@@ -972,16 +958,10 @@ pub enum BridgeMessage {
     /// Variant 5. At `root(cid, n)`: the plaintext claim, for a public destination. `relayer`
     /// receives the relay fee (`None`: the fee recipient). It carries no time: the token's and the
     /// configuration's attested clocks apply.
-    Claim { config_id: Root, leaf_count: u64, witness: ClaimWitness, range: ScheduleRange, relayer: Option<Root> },
+    Claim { config_id: Root, leaf_count: u64, witness: ClaimWitness, relayer: Option<Root> },
     /// Variant 6. At the claimant's own actor, meant to run privately: read `root(cid, n)`, verify
     /// the claim inside this execution, then `Issue`; a private destination must be this account.
-    ClaimPrivately {
-        config_id: Root,
-        leaf_count: u64,
-        witness: ClaimWitness,
-        range: ScheduleRange,
-        relayer: Option<Root>,
-    },
+    ClaimPrivately { config_id: Root, leaf_count: u64, witness: ClaimWitness, relayer: Option<Root> },
     /// Variant 7. Reply with this actor's state (`StateReply`), LEZ v0.4's read idiom.
     Read,
     /// Variant 8. `config(cid)` → `root(cid, n)`: the verified root, written once.
@@ -1028,14 +1008,14 @@ pub enum BridgeMessage {
     /// the attested absence of schedule `index` at a leaf count (the schedules cover up to it).
     ExtendFees { config_id: Root, token: Address, index: u64, schedule: Option<FeeSchedule>, count: u64 },
     /// Variant 15. A claimant (the root of a plaintext claim, or a private claimant) →
-    /// `token(cid, token)` after verifying the deposit: the denomination, the fee schedule of the
-    /// range, the mint freezes and caps; then `Admit` to `config(cid)` and `Spend`.
+    /// `token(cid, token)` after verifying the deposit: the denomination, its fixed relay fee, the
+    /// mint freezes and caps; then `Admit` to `config(cid)` and `Spend`. No schedule field is
+    /// present, so the public boundary does not reveal when the deposit was made.
     Issue {
         config_id: Root,
         token: Address,
         nullifier: Root,
         amount: u128,
-        range: ScheduleRange,
         leaf_count: u64,
         mint_to: Option<Root>,
         relayer: Option<Root>,
@@ -1256,18 +1236,11 @@ impl TokenState {
         Some(ferrata_lez_wire::header_actor(self.attestation, &self.instance_id, pending.record.record_slot))
     }
 
-    /// The denomination index and the mint and relay fees of a claim of `amount` whose leaf lies in
-    /// `range`: `range` must start at its schedule's `from_leaf` and end no later than the next
-    /// schedule's, or than `known_until` for the last one.
-    pub fn fees_for(&self, amount: u128, range: &ScheduleRange) -> Result<(u128, u128), u8> {
+    /// The fixed relay fee of registered denomination `amount`, or `NOT_REGISTERED` if it is not
+    /// registered. Claims never consult `schedules`: the mint fee was taken on Ethereum at deposit.
+    pub fn relay_fee_for(&self, amount: u128) -> Result<u128, u8> {
         let d = self.entry.index_of(amount).ok_or(code::NOT_REGISTERED)?;
-        let index = usize::try_from(range.index).map_err(|_| code::LEAF_NOT_IMPORTED)?;
-        let schedule = self.schedules.get(index).ok_or(code::LEAF_NOT_IMPORTED)?;
-        let bound = self.schedules.get(index + 1).map_or(self.known_until, |next| next.from_leaf);
-        if range.from_leaf != schedule.from_leaf || range.until_leaf > bound || range.until_leaf <= range.from_leaf {
-            return Err(code::LEAF_NOT_IMPORTED);
-        }
-        Ok((schedule.mint_fees[d], self.entry.relay_fees[d]))
+        Ok(self.entry.relay_fees[d])
     }
 }
 
@@ -1333,7 +1306,6 @@ pub struct PendingClaim {
     pub config_id: Root,
     pub leaf_count: u64,
     pub witness: ClaimWitness,
-    pub range: ScheduleRange,
     pub relayer: Option<Root>,
 }
 
@@ -1534,7 +1506,12 @@ pub fn check_fees(
 
 /// The reply to `AttestListing`: the vault's [`listing_slot`] of `token` under the record at `record_slot` holds 1
 /// (delisted) or 0 (listed); anything else is `IMPORT_MISMATCH`. Gives whether the token is delisted.
-pub fn check_listing(config: &BridgeConfig, token: &Address, record_slot: u64, attestation: &Attestation) -> Result<bool, u8> {
+pub fn check_listing(
+    config: &BridgeConfig,
+    token: &Address,
+    record_slot: u64,
+    attestation: &Attestation,
+) -> Result<bool, u8> {
     let [word] = vault_slots(config, record_slot, attestation, [listing_slot(token)]).ok_or(code::IMPORT_MISMATCH)?;
     match u64_of(&word) {
         Some(0) => Ok(false),
@@ -1561,17 +1538,16 @@ pub struct Claimed {
     pub kind: DestKind,
 }
 
-/// The claim statement (SPEC-v2 §3.3, D9, D13) against an imported root: the kind is known, the
-/// leaf index is below the root's count and inside the claimed fee schedule range; then the
-/// bridge core recomputes `C` and the leaf from the witness, checks the path (direction bits = the
-/// leaf index) to the root, and gives `N = H(s ‖ fid)` with the configuration's chain and vault.
-/// The token and the denomination are the token actor's to check (`Issue`).
-pub fn verify_claim(root: &RootState, w: &ClaimWitness, range: &ScheduleRange) -> Result<Claimed, u8> {
+/// The claim statement (SPEC-v2 §3.3, D9, F.13) against an imported root: the kind is known, the
+/// leaf index is below the root's count, and the bridge core recomputes `C` and the leaf from the
+/// witness, checks the path (direction bits = the leaf index) to the root, and gives `N = H(s ‖ fid)`
+/// with the configuration's chain and vault. The token and the denomination are the token actor's
+/// to check (`Issue`); no fee schedule takes part in verification.
+pub fn verify_claim(root: &RootState, w: &ClaimWitness) -> Result<Claimed, u8> {
     let kind = DestKind::from_byte(w.kind).ok_or(code::CLAIM_INVALID)?;
     if w.leaf_index >= root.leaf_count {
         return Err(code::LEAF_NOT_IMPORTED);
     }
-    range.covers(w.leaf_index)?;
     let directions = u32::try_from(w.leaf_index).map_err(|_| code::LEAF_NOT_IMPORTED)?;
     let amount = u128_of(&w.amount).ok_or(code::NOT_REGISTERED)?;
     let siblings: [Root; TREE_DEPTH] = w.path.as_slice().try_into().map_err(|_| code::CLAIM_INVALID)?;
@@ -1666,8 +1642,8 @@ pub mod code {
         /// another instance, chain or record; a vault whose `retired` flag is not set; a listing
         /// word other than 0 or 1, or a listing record no newer than the one the token holds.
         IMPORT_MISMATCH = 247;
-        /// A leaf index at or above the imported root's leaf count, or outside the fee schedule
-        /// range the claim names, or beyond the leaves the imported fee schedules cover.
+        /// A leaf index at or above the imported root's leaf count (a root not imported yet is
+        /// `NOT_FOUND`).
         LEAF_NOT_IMPORTED = 248;
         /// The opening, the leaf and the path do not hash to the root (a wrong leaf, path or
         /// destination), or an unknown kind.
@@ -1783,6 +1759,48 @@ mod tests {
         assert_eq!(roles.deep_enough(u64::MAX), Ok(()));
     }
 
+    /// F.13: the claim and issue encodings contain no schedule range or other schedule field.
+    #[test]
+    fn claims_do_not_encode_a_fee_schedule() {
+        let witness = ClaimWitness {
+            depositor: [1; 20],
+            token: [2; 20],
+            amount: [3; 32],
+            leaf_index: 4,
+            path: alloc::vec![],
+            s: [5; 32],
+            kind: 2,
+            dest: [6; 32],
+        };
+        let claim = BridgeMessage::Claim { config_id: [7; 32], leaf_count: 8, witness: witness.clone(), relayer: None };
+        let mut expected = alloc::vec![5u8];
+        expected.extend_from_slice(&[7; 32]);
+        expected.extend_from_slice(&8u64.to_le_bytes());
+        expected.extend(borsh::to_vec(&witness).unwrap());
+        expected.push(0); // relayer: None, immediately after the witness
+        assert_eq!(borsh::to_vec(&claim).unwrap(), expected);
+        assert_eq!(expected.len(), 191, "the old encoding was 215 bytes: exactly one 24-byte range longer");
+
+        let issue = BridgeMessage::Issue {
+            config_id: [7; 32],
+            token: [2; 20],
+            nullifier: [8; 32],
+            amount: 9,
+            leaf_count: 8,
+            mint_to: None,
+            relayer: None,
+        };
+        let mut expected = alloc::vec![15u8];
+        expected.extend_from_slice(&[7; 32]);
+        expected.extend_from_slice(&[2; 20]);
+        expected.extend_from_slice(&[8; 32]);
+        expected.extend_from_slice(&9u128.to_le_bytes());
+        expected.extend_from_slice(&8u64.to_le_bytes());
+        expected.extend_from_slice(&[0, 0]); // mint_to and relayer
+        assert_eq!(borsh::to_vec(&issue).unwrap(), expected);
+        assert_eq!(expected.len(), 111);
+    }
+
     /// F.10: the listing slot is the vault's SHA-256 slot, apart from the registry's and the fees'.
     #[test]
     fn the_listing_slot_is_its_own() {
@@ -1799,4 +1817,3 @@ mod tests {
         assert_eq!(listing_slot(&token), vector);
     }
 }
-

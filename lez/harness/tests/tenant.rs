@@ -469,7 +469,6 @@ fn r1_a_copied_plaintext_claim_does_not_block_the_owner() {
         config_id: cid_a,
         leaf_count: 8,
         witness: w.vault_a.witness(&deposit, 8),
-        range: w.range(&cid_a, &ETH, deposit.leaf_index),
         relayer: Some(*relayer().value()),
     };
     let seen = borsh::to_vec(&honest).unwrap();
@@ -483,16 +482,8 @@ fn r1_a_copied_plaintext_claim_does_not_block_the_owner() {
     let for_b = fake.witness(&Deposit::of(&copied), 9);
     let r = w.claim("B: Claim with the witness copied from the pending claim, ordered first", &cid_b, 9, &va, for_b);
     step(&mut log, r, None);
-    let BridgeMessage::Claim { config_id, leaf_count, witness, range, relayer } = honest else { unreachable!() };
-    let r = w.claim_with(
-        "A: the payer's own claim, applied after it",
-        &config_id,
-        leaf_count,
-        &va,
-        witness,
-        range,
-        relayer,
-    );
+    let BridgeMessage::Claim { config_id, leaf_count, witness, relayer } = honest else { unreachable!() };
+    let r = w.claim_with("A: the payer's own claim, applied after it", &config_id, leaf_count, &va, witness, relayer);
     let r = step(&mut log, r, None);
     assert_eq!(w.balance(w.chain.payer, &cid_a), DENOMINATIONS[2], "the payer holds its 10 ETH under A");
     assert_eq!(w.balance(w.chain.payer, &cid_b), DENOMINATIONS[2], "and B's copy under B, which no vault pays");
