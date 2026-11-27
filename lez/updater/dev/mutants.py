@@ -36,7 +36,7 @@ released together all send at once), j11 (a new copy of one update counts as a m
 joined), j13 (the cap not started again on a new state of the instance); after the second: j14 (each job passed when
 first read, of a kind that stopped moving, restarts the turn, so a party opening one each turn holds the `Open` back).
 
-The turns on the chain's height and the jobs of other parties' copies (ADR 0048, RFP-021 R.10 and R.9, 27 November
+The turns on the chain's height and the jobs of other parties' copies (ADR 0049, RFP-021 R.10 and R.9, 27 November
 2026): c1 (the turns count the updater's rounds again, the height given: the reader reading more often reaches its turn
 sooner: `tests/turns.rs`; c1gate the same, the in-process gate with honest updaters reading at different rates); c2
 (join or wait's bounds count rounds); c3 (the stall alarm counts rounds); c4 (no alarm for a height that stops); c5 (a

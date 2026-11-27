@@ -1,4 +1,4 @@
-# ADR 0048: Updater turns count the chain's height, and the updates of other parties' jobs are read from their `Open`s
+# ADR 0049: Updater turns count the chain's height, and the updates of other parties' jobs are read from their `Open`s
 
 - **Date:** 27 November 2026
 - **Status:** accepted; built

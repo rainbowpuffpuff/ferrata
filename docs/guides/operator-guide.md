@@ -158,7 +158,7 @@ two-hour cadence (§2).
   `H(key, job, step) mod W` blocks (an `Open`, and a step of a job the daemon does not carry, counted from where a step
   of that kind was first found due on the instance's state), `key` the daemon's own (so the wait differs per daemon and
   per step), reads the job's account just before sending, and an updater continues the open job of the update it chose.
-  **The clock is the LEZ chain's height** ([ADR 0048](../decisions/0048-updater-turns-on-the-chains-height.md), since
+  **The clock is the LEZ chain's height** ([ADR 0049](../decisions/0049-updater-turns-on-the-chains-height.md), since
   27 November 2026): the newest block the daemon's reads reflect (the sequencer backend: its follower's last block, final
   on Bedrock), the same for every operator reading the chain, and one no operator can bring sooner. A step falls due
   when a block applies the previous step (or when an update is served, between two blocks), and a turn is counted from
@@ -239,7 +239,7 @@ two-hour cadence (§2).
   ([`lez/updater/results/gate-overlap.txt`](../../lez/updater/results/gate-overlap.txt)). A job's account is found by
   its id, which hashes the whole update, `signature_slot` included, which the signature does not cover, and beacon
   nodes serve different finality updates for one checkpoint: so each round the updater also reads the instance's
-  applied `Open`s from the chain and rebuilds the update each carries (ADR 0048), and finds the job another party opened
+  applied `Open`s from the chain and rebuilds the update each carries (ADR 0049), and finds the job another party opened
   for a copy its own sources never served, joining it. In process, with one updater's sources serving every update
   re-dated by a slot (`lez/updater/results/gate-copies.txt`), the gas besides the completed jobs' is held to A3's 10%
   with it, against more without it; two copies' jobs opened in one block leave the one that does not lead with its

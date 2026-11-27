@@ -159,7 +159,7 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    and the updates of the jobs it carries, and, in each round it checks for other jobs (just before it would send a step
    whose turn has come), the updates of the jobs other parties opened, read from
    their `Open`s on chain (`Ledger::messages_to`; the sequencer backend: the blocks its follower holds, final on Bedrock;
-   [ADR 0048](../../docs/decisions/0048-updater-turns-on-the-chains-height.md)): an `Open` carries the update in the
+   [ADR 0049](../../docs/decisions/0049-updater-turns-on-the-chains-height.md)): an `Open` carries the update in the
    program's compact encoding, from which the bytes a source would serve are rebuilt
    (`ferrata_advance::served_update_of_open`; a period update's next committee from a full committee the updater holds
    for its summary) and remembered when the program's checks accept them (`_updates_from_chain_total`). A job's account
@@ -199,7 +199,7 @@ needs nothing saved: a transaction is either on chain or not, and the next start
 8. **Deferral.** Each (job, step) is sent by the updater whose wait, `H(key, job, step) mod defer_window` turns after
    it first found the step due, runs out first; the others find the step done and skip it. A turn is a block of the
    chain the instance lives on: the height the backend's reads reflect (`Ledger::height`; the sequencer backend: its
-   follower's last block, final on Bedrock), read once a round just after the instance's state (`read_clock`; ADR 0048,
+   follower's last block, final on Bedrock), read once a round just after the instance's state (`read_clock`; ADR 0049,
    RFP-021 R.10). Every party reading the chain reads the same heights and none can bring a block sooner, so an updater
    that reads more often reaches no turn sooner: it only notices a turn sooner, within the blocks between two of its
    readings. A turn that starts at a reading is counted from the block after the updater's previous reading, the first

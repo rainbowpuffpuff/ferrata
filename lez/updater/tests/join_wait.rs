@@ -485,7 +485,7 @@ fn a_copy_of_the_chosen_update_open_on_the_store_is_joined() {
 /// `a` carries U1's job (its `Open` alone applied); `b`, which never saw U1 served, opened U2's job and sent its `Miller`
 /// (the ledger gives no transactions here, `serve_messages = false`, as a backend that does not say: `b` cannot learn U1
 /// from `a`'s `Open`, and `a` finds U2's job through its sources alone, the path this test is for; from `b`'s `Open` on
-/// chain it would find it too, ADR 0048). `a`, about to send U1's `Miller`, has asked its sources what they serve now (a carrier does so in each
+/// chain it would find it too, ADR 0049). `a`, about to send U1's `Miller`, has asked its sources what they serve now (a carrier does so in each
 /// round), finds U2's job, which leads its own (more steps applied), and waits; U2's job finishes, U1's is abandoned
 /// with its `Open` alone.
 #[test]

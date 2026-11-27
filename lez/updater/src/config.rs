@@ -96,7 +96,7 @@ pub struct Policy {
     /// Turns over which updaters spread who sends a step: each waits `H(key, job, step) mod defer_window` turns after it
     /// first finds the step due (1: never waits). A turn is a block of the chain the instance lives on (the height the
     /// backend's reads reflect, `Ledger::height`: every party reading the chain counts the same blocks, so one reading it
-    /// more often reaches no turn sooner, RFP-021 R.10; ADR 0048), or this updater's round on a backend that gives no
+    /// more often reaches no turn sooner, RFP-021 R.10; ADR 0049), or this updater's round on a backend that gives no
     /// height. A step of a job it carries counts from where that step was first found due; an `Open`, or a step of a job
     /// it does not carry, from where a step of that kind was first found due on the instance's state, whatever job it is
     /// for (the block after the reading before, `Updater`'s `due_clock`); after it sends a step there, the next of that
@@ -134,7 +134,7 @@ pub struct Policy {
     /// signature slot, the most signers): as a rule the newer update; then by job id. A job's account is found by its id,
     /// which hashes the store and the update, so the jobs this updater can find are those of the updates its sources
     /// served or that it read from other parties' `Open`s on chain (`Ledger::messages_to`; the program's checks accept
-    /// each), copies of an update its sources never served included (ADR 0048). A job that has not moved for this many
+    /// each), copies of an update its sources never served included (ADR 0049). A job that has not moved for this many
     /// turns no longer holds this updater back; on one state of the instance it stops waiting three times this many turns
     /// after it first waited there, and does not wait again on that state. Default (unset): `2 * defer_window + 10`; 0:
     /// off (a job is opened whatever else is open); otherwise at least `defer_window + 4`.
