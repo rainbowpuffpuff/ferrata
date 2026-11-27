@@ -18,7 +18,7 @@ without them those checks are skipped, and say so. Nothing else is built or inst
 ```sh
 git clone https://github.com/rainbowpuffpuff/ferrata && cd ferrata
 python3 -I scripts/verify.py --list            # every check: its family, mode, requirement rows and EVIDENCE rows
-python3 -I scripts/verify.py --all             # the @@QUICK@@ quick offline checks: about 6 minutes
+python3 -I scripts/verify.py --all             # the 118 quick offline checks: about 6 minutes
 python3 -I scripts/test_verify.py              # the tamper tests: about 30 seconds
 python3 -I scripts/test_verify_lc.py           # the light-client records' tamper tests: seconds
 python3 -I scripts/test_verify_zone.py         # the four-key rc3 run's tamper tests: seconds
@@ -121,8 +121,8 @@ python3 -I scripts/verify.py RFP-021:F.4 --tests
 They need their toolchains: Rust (`cargo`), Foundry (`forge`), RISC Zero 3.0.5 (`r0vm`, `scripts/ci/install-risc0.sh`),
 LEZ's sources beside the repository (`scripts/fetch-upstream.sh`), the consensus vectors (`scripts/fetch-vectors.sh`);
 a missing tool is reported as a skip with the command to run once it is there. All of them take hours on one
-machine. CI's jobs run most of them (`scripts/ci/check-row-tests.py` shows which job runs which test); 45 run only on a
-build machine or by hand (their titles say "not in CI"); 13 are recipes `--tests` lists but never runs, because their
+machine. CI's jobs run most of them (`scripts/ci/check-row-tests.py` shows which job runs which test); 39 run only on a
+build machine or by hand (their titles say "not in CI"); 14 are recipes `--tests` lists but never runs, because their
 commands have placeholders to fill in or can send transactions (`ferrata-attest … --send`, the day-one kit's `go`):
 they print the recipe instead (titles marked "[by hand]").
 
@@ -173,9 +173,25 @@ export FERRATA_BRIDGE_ACCOUNT=1f2e94ffdf25a3feca4e0750be66700be3812434c8cf53e0eb
 export FERRATA_SEED=$HOME/ferrata.seed FERRATA_LEZ_WALLET=$HOME/ferrata-lez FERRATA_LEZ_PASSWORD_FILE=$HOME/ferrata-lez.pass
 ```
 
-The bridge program's binary (`ferrata_bridge_b1.bin`, the image `0x847a4336…7515` of `docs/image-ids.md`) comes from the
-reproducible build (`scripts/reproduce-image-ids.sh build`, or `scripts/reproduce/deployed.sh build`); check its image id
-with `r0vm --id` before using it.
+**Which bridge program the network runs.** Our test network runs `ferrata_bridge_b1` (`0x847a4336…7515`), the bridge
+program from before [ADR 0046](decisions/0046-mint-fee-at-deposit.md); this tree builds the program of ADR 0046
+(`ferrata_bridge_f13`, `0xffb47f6e…7675`), whose claims name no fee schedule, and the network is not redeployed with
+it ([`deploy/testnet/F13-REDEPLOY.md`](../deploy/testnet/F13-REDEPLOY.md) is the owner's procedure, not run). The two
+programs read their claims differently: B1's `Claim` and `ClaimPrivately` carry a fee-schedule range (24 bytes) that
+ADR 0046 dropped, and everything else the tool sends or reads (deposits, burns, releases, every account state) is the
+same. `ferrata` built from this tree reads the image id the network's program loader names for `FERRATA_BRIDGE_ACCOUNT`
+and builds each claim in that program's layout (`cli/wallet/src/deployed.rs`; EVIDENCE row 281): on this network, B1's,
+with the fee-schedule range its token state gives (the claim then shows that range, and `ferrata claim` counts the
+anonymity set within it, as B1's claims always did); any other image id is refused before anything is built, and
+`ferrata status` names the program (`zone: bridge program ferrata_bridge_b1 …`). A private claim or burn is proven with
+the binary of the program the network runs: the tool compares `--bridge-program`'s image id with the network's before
+proving and refuses another. That binary, `ferrata_bridge_b1.bin` (the image `0x847a4336…7515` under "Superseded" in
+`docs/image-ids.md`), comes from `scripts/reproduce/deployed.sh build`, which rebuilds every program the network runs
+from its recorded source commit; `scripts/reproduce-image-ids.sh build` builds this tree's programs, `ferrata_bridge_f13`
+among them, which this network would refuse. Check its image id with `r0vm --id` before using it. What has run of this:
+the tests of both layouts (B1's frozen encoding vectors, the loader header of LEZ rc1 and rc3, the claim plans and the
+module's session against stand-ins); a send to this network with this tree's tool has not (this project sends nothing
+to it from these tests).
 
 | Step | Command | What it printed in the rehearsal of 26 November 2026 (a throwaway seed and keystore, no funds, nothing sent) |
 |---|---|---|

@@ -192,3 +192,176 @@ def evidence_rows_integ(ctx):
                  "with a check")
     fail_if(problems, "EVIDENCE rows 271-274 and the rows citing them")
     return lines
+
+
+# ---- EVIDENCE rows 275-281: the gate runs at A3's size, F.13 under ADR 0046, F.7's ERC-20 and rotation runs, and the
+# tools' B1 layout; with RFP-021 R.9, R.10 and RFP-022 F.7, F.13, which cite them ---------------------------------------
+
+GATE_100 = "lez/results/perf-gate-sequencer-100.md"
+GATE_JOIN = "lez/results/perf-gate-sequencer-join.md"
+GATE_OVERLAP = "lez/updater/results/gate-overlap.txt"
+F13_FEES, F13_FEES_B1 = "e2e/both-halves/results/f13/fees.md", "e2e/both-halves/results/fees.md"
+F13_RT_STEPS, F13_PROOFS = "e2e/runs/f13-roundtrip-1/run/steps.tsv", "lez/results/f13/prove-bridge.md"
+F7_ERC20, F7_ROTATION = "e2e/runs/zone-bridge-rc3-erc20", "e2e/runs/zone-bridge-rc3-rotation"
+
+
+def _gate_runs(text: str) -> dict:
+    """Each run of a gate record (the generator's sections, which test_perf_records.py holds to the raw journals): A3's
+    ratio, honest-1's share, the abandoned jobs, all gas over the completed jobs' and the latency median."""
+    runs = {}
+    for name, body in re.findall(r"^## Run `(gate-g\d+)`\n(.*?)(?=^## Run `|\Z)", text, re.S | re.M):
+        grab = lambda pattern: (re.search(pattern, body) or [None, None])[1]
+        runs[name] = {"ratio": grab(r"\*\*R\.9:\*\* the honest daemons' execution gas on refused steps / on applied "
+                                    r"steps = [\d,]+ / [\d,]+ = \*\*([\d.]+)\*\*"),
+                      "share": grab(r"\*\*R\.10:\*\* honest-1's share of the honest daemons' fees = \*\*([\d.]+)\*\*"),
+                      "abandoned": grab(r"completed, \*\*(\d+) abandoned\*\*"),
+                      "completed": grab(r"Jobs: \d+ with an applied step, (\d+) completed"),
+                      "all": grab(r"the updates cost \*\*([\d.]+)\*\* times"),
+                      "latency": grab(r"revealed finality updates covered \([^)]*\): median \*\*(\d+) s\*\*"),
+                      "covered": grab(r"(\d+ of \d+) revealed finality updates covered")}
+    return runs
+
+
+def _overlap(text: str) -> dict:
+    """gate-overlap.txt: each gate's honest gas besides the completed jobs' over theirs, by its join-or-wait setting."""
+    out = {}
+    for block in text.split("\n\n"):
+        setting = re.search(r"honest join_wait_rounds\t([^\t\n]+)(?:\t([^\n]+))?", block)
+        besides = re.search(r"besides the completed jobs' / the completed jobs'\t([\d.]+)", block)
+        if setting and besides:
+            key = setting[1] + (f" ({setting[2]})" if setting[2] else "")
+            if key in out:
+                raise ValueError(f"{GATE_OVERLAP}: two gates named {key}")
+            out[key] = float(besides[1])
+    return out
+
+
+def _span(values: list, unit: str = "") -> str:
+    lo, hi = min(values), max(values)
+    return f"{lo}{unit}" if lo == hi else f"{lo}–{hi}{unit}"
+
+
+@check(id="evidence-rows-final", family="docs", mode="offline", evidence=(275, 276, 277, 278, 279, 280, 281),
+       rows=("RFP-021 R.9", "RFP-021 R.10", "RFP-022 F.7", "RFP-022 F.13"),
+       title="EVIDENCE rows 275-281 and RFP-021 R.9, R.10, RFP-022 F.7, F.13: every figure as the records give it",
+       what="the gate runs' A3 ratios, fee shares, abandoned jobs, gas over the completed jobs' and latency medians "
+            "(rows 275, 276; R.9, R.10), the in-process overlap gates (row 276, R.9), F.13's anonymity sets, round "
+            "trip steps and proving times (rows 277, 278; F.13), F.7's ERC-20 payments and rotation threshold (rows "
+            "279, 280; F.7), and the tests row 281 names",
+       against="the gate records' generated sections (test_perf_records.py holds them to the runs' journals), "
+               "gate-overlap.txt (CI's recorded.rs), the F.13 both-halves tables and round trip steps, the real-proof "
+               "record, the F.7 runs' vault checks and checkpoint attestor records (f7-* re-derive them), and the test "
+               "sources",
+       inputs=(EVIDENCE_DOC, STATUS_DOC, GATE_100, GATE_JOIN, GATE_OVERLAP, F13_FEES, F13_FEES_B1, F13_RT_STEPS,
+               F13_PROOFS, f"{F7_ERC20}/vault-checks.json", f"{F7_ROTATION}/checkpoint/attestor.json",
+               "cli/wallet/src/deployed.rs", "cli/src/lez.rs",
+               "modules/ferrata_bridge_module/rust-lib/calls/tests/network_session.rs"))
+def evidence_rows_final(ctx):
+    problems, lines = [], []
+    evidence = ctx.path(EVIDENCE_DOC).read_text(encoding="utf-8")
+    status = ctx.path(STATUS_DOC).read_text(encoding="utf-8")
+    read = lambda rel: ctx.path(rel).read_text(encoding="utf-8")
+
+    # Rows 275, 276; R.9, R.10: the gate runs
+    before, after = _gate_runs(read(GATE_100)), _gate_runs(read(GATE_JOIN))
+    names_before, names_after = ["gate-g6", "gate-g7"], ["gate-g8", "gate-g9", "gate-g10", "gate-g11"]
+    if sorted(before) != names_before or sorted(after, key=lambda n: int(n[6:])) != names_after or any(
+            None in r.values() for r in [*before.values(), *after.values()]):
+        problems.append(f"the gate records' runs did not parse: {before} {after}")
+    else:
+        b, a = [before[n] for n in names_before], [after[n] for n in names_after]
+        f = lambda runs, key, sep=" / ": sep.join(r[key] for r in runs)
+        _states(problems, "EVIDENCE row 275", _evidence_row(evidence, 275), (
+            f"A3's ratio honest refused / applied {f(b, 'ratio')}", f"honest-1's fee share {f(b, 'share')}",
+            f"latency median {f(b, 'latency')} s", f"all gas {f(b, 'all')} times the completed jobs'",
+            *(f"{r['covered']} finality updates covered" for r in b[:1])))
+        _states(problems, "EVIDENCE row 275", _evidence_row(evidence, 275),
+                (f"jobs completed / abandoned {b[0]['completed']} / {b[0]['abandoned']} and {b[1]['completed']} / "
+                 f"{b[1]['abandoned']}",))
+        _states(problems, "EVIDENCE row 276", _evidence_row(evidence, 276), (
+            f"jobs abandoned {f(a, 'abandoned')}", f"all gas {f(a, 'all')} times the completed jobs'",
+            f"A3's ratio {f(a, 'ratio')}", f"honest-1's share {f(a, 'share')}", f"latency median {f(a, 'latency')} s"))
+        overlap = _overlap(read(GATE_OVERLAP))
+        with_policy, without, alone = overlap.get("None"), overlap.get("Some(0)"), overlap.get("None (honest-1 alone)")
+        if with_policy is None or without is None or alone != 0:
+            problems.append(f"{GATE_OVERLAP}: no gate with and without join or wait ({overlap})")
+        else:
+            pct = lambda v: f"{100 * v:.1f}%"
+            _states(problems, "EVIDENCE row 276", _evidence_row(evidence, 276),
+                    (f"{pct(with_policy)} with the policy, {pct(without)} without",))
+            _states(problems, "RFP-021 R.9", _status_row(status, "RFP-021", "R.9"),
+                    (f"{pct(with_policy)} of the completed jobs' gas besides", f"{pct(without)} without the policy"))
+        _states(problems, "RFP-021 R.9", _status_row(status, "RFP-021", "R.9"), (
+            f"A3's ratio {b[0]['ratio']} and {b[1]['ratio']}", f"{b[0]['abandoned']} and {b[1]['abandoned']} jobs abandoned",
+            f"all gas {b[0]['all']} and {b[1]['all']} times", f"all gas {_span([r['all'] for r in a])} times",
+            f"A3's ratio {_span([r['ratio'] for r in a])}", "275, 276"))
+        if sum(int(r["abandoned"]) for r in a) != 1:
+            problems.append("RFP-021 R.9 says one job abandoned in four runs; the records say otherwise")
+        w8 = [before["gate-g6"], after["gate-g8"], after["gate-g10"]]
+        w30 = [before["gate-g7"], after["gate-g9"], after["gate-g11"]]
+        _states(problems, "RFP-021 R.10", _status_row(status, "RFP-021", "R.10"), (
+            f"{b[0]['share']} and {b[1]['share']} without join or wait", f"{_span([r['share'] for r in a])} with it",
+            f"latency median {_span([r['latency'] for r in w8], ' s')} at window 8",
+            f"{_span([r['latency'] for r in w30], ' s')} at window 30",
+            f"({_span([r['share'] for r in b + a])};", "275, 276"))
+        if not all(float(r["share"]) > 0.5 for r in b + a):
+            problems.append("RFP-021 R.10 says honest-1 paid more than half in all six runs; the records say otherwise")
+        lines.append(f"rows 275-276, RFP-021 R.9, R.10: A3's ratio {f(b + a, 'ratio')}, honest-1's share "
+                     f"{f(b + a, 'share')}, abandoned {f(b + a, 'abandoned')} ({GATE_100}, {GATE_JOIN}, {GATE_OVERLAP})")
+
+    # Rows 277, 278; F.13
+    def set_before(rel):
+        table = read(rel).split("## Claims", 1)[-1].split("## Releases", 1)[0]
+        sets = [int(m) for m in re.findall(r"^\| \d+ \| \d+ \|(?: [^|]+ \|)* (\d+) \| \d+ \|$", table, re.M)]
+        return sets
+    new_sets, old_sets = set_before(F13_FEES), set_before(F13_FEES_B1)
+    if len(new_sets) != 6 or len(old_sets) != 6:
+        problems.append(f"the both-halves fee tables did not parse: {new_sets} {old_sets}")
+    else:
+        lo, hi = new_sets[:3], new_sets[3:]
+        _states(problems, "RFP-022 F.13", _status_row(status, "RFP-022", "F.13"), (
+            f"keep one anonymity set ({lo[0]} and {hi[0]}; {old_sets[0]} and {old_sets[3]} before ADR 0046)",))
+        _states(problems, "EVIDENCE row 277", _evidence_row(evidence, 277), (f"the set is {lo[0]} on both sides",))
+        if len(set(new_sets)) != 1:
+            problems.append(f"{F13_FEES}: the sets before any claim differ across the change: {new_sets}")
+    steps = [r for r in csv.reader(io.StringIO(read(F13_RT_STEPS)), delimiter="\t") if r]
+    ok = sum(1 for r in steps if len(r) > 1 and r[1] == "ok")
+    proofs = read(F13_PROOFS)
+    claim_s = (re.search(r"private claim: REAL PROOF: execute_and_prove ([\d.]+) s", proofs) or [None, "?"])[1]
+    burn_s = (re.search(r"private burn: REAL PROOF: execute_and_prove ([\d.]+) s", proofs) or [None, "?"])[1]
+    _states(problems, "RFP-022 F.13", _status_row(status, "RFP-022", "F.13"),
+            (f"({ok} of {len(steps)} steps)", f"{claim_s} s and {burn_s} s", "277, 278, 281"))
+    _states(problems, "EVIDENCE row 278", _evidence_row(evidence, 278),
+            (f"{ok} of {len(steps)} steps ok", f"the private claim {claim_s} s", f"the private burn {burn_s} s"))
+    lines.append(f"rows 277-278, RFP-022 F.13: sets {new_sets} (before ADR 0046 {old_sets}); {ok} of {len(steps)} steps; "
+                 f"real proofs {claim_s} s and {burn_s} s")
+
+    # Rows 279, 280; F.7
+    checks = json.loads(read(f"{F7_ERC20}/vault-checks.json"))
+    paid = sorted({int(r["paidWei"]) for r in checks["releases"]})
+    attestor = json.loads(read(f"{F7_ROTATION}/checkpoint/attestor.json"))
+    n, t = attestor.get("n"), attestor.get("t")
+    words = {4: "four", 5: "five"}
+    if len(paid) != 1 or len(checks["releases"]) != 2 or n not in words or t not in words:
+        problems.append(f"the F.7 runs' records did not parse: paid {paid}, n {n}, t {t}")
+    else:
+        _states(problems, "RFP-022 F.7", _status_row(status, "RFP-022", "F.7"), (
+            f"each released once for {paid[0]:,} base units", f"{words[t]} of {words[n]} keys", "279, 280"))
+        _states(problems, "EVIDENCE row 279", _evidence_row(evidence, 279), (f"{paid[0]:,} base units each",))
+        _states(problems, "EVIDENCE row 280", _evidence_row(evidence, 280), (f"(n = {n}, t = {t})",))
+        lines.append(f"rows 279-280, RFP-022 F.7: two ERC-20 releases of {paid[0]:,} base units; rotation n = {n}, t = {t}")
+
+    # Row 281: the tests it names exist where it says
+    for rel, name in (("cli/wallet/src/deployed.rs", "fn b1s_frozen_claim_vectors_are_this_trees_claims_with_the_range"),
+                      ("cli/wallet/src/deployed.rs", "fn the_loader_header_names_the_image_in_both_lez_layouts"),
+                      ("cli/src/lez.rs", "fn the_claim_takes_the_layout_of_the_program_the_zone_runs"),
+                      ("cli/src/lez.rs", "fn a_binary_of_another_program_is_refused_before_proving"),
+                      ("modules/ferrata_bridge_module/rust-lib/calls/tests/network_session.rs",
+                       'claim_approval["program"], "ferrata_bridge_b1"')):
+        if name not in read(rel):
+            problems.append(f"EVIDENCE row 281: {rel} has no {name}")
+    _states(problems, "EVIDENCE row 281", _evidence_row(evidence, 281), ("B1's three frozen claim vectors",))
+    lines.append("row 281: the B1-layout tests it names are in cli/wallet/src/deployed.rs, cli/src/lez.rs and the "
+                 "module's network_session.rs (their toolchain runs are CI's roundtrip and modules-resolve jobs)")
+    fail_if(problems, "EVIDENCE rows 275-281 and the rows citing them")
+    return lines

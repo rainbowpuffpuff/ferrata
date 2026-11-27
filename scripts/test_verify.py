@@ -224,6 +224,49 @@ def walkable(t: Path, rels=SEAL_DIRS) -> Path:
     return t
 
 
+class EvidenceRowsFinal(TamperCase):
+    """evidence-rows-final: EVIDENCE rows 275-281 and RFP-021 R.9, R.10, RFP-022 F.7, F.13, held to their records. Each
+    altered document or record must fail on the figure altered."""
+
+    def test_passes_on_the_tree(self):
+        self.assertPasses("evidence-rows-final")
+
+    def test_a_document_figure_altered(self):
+        cases = (
+            ("docs/EVIDENCE.md", "A3's ratio 0.0770 / 0.0222 / 0.0853 / 0.0358", "A3's ratio 0.0770 / 0.0222 / 0.0835 / 0.0358",
+             "EVIDENCE row 276"),
+            ("docs/EVIDENCE.md", "honest-1's fee share 0.522 / 0.521", "honest-1's fee share 0.522 / 0.512", "EVIDENCE row 275"),
+            ("docs/requirements-status.md", "but 23 and 15 jobs abandoned", "but 24 and 15 jobs abandoned", "RFP-021 R.9"),
+            ("docs/requirements-status.md", "all gas 1.022–1.088 times", "all gas 1.022–1.089 times", "RFP-021 R.9"),
+            ("docs/requirements-status.md", "0.530–0.617 with it", "0.530–0.618 with it", "RFP-021 R.10"),
+            ("docs/requirements-status.md", "275–341 s at window 30", "275–342 s at window 30", "RFP-021 R.10"),
+            ("docs/requirements-status.md", "(6 and 6; 3 and 3 before ADR 0046)", "(6 and 5; 3 and 3 before ADR 0046)",
+             "RFP-022 F.13"),
+            ("docs/requirements-status.md", "301.9 s and 260.4 s", "301.9 s and 206.4 s", "RFP-022 F.13"),
+            ("docs/requirements-status.md", "each released once for 99,900,000 base units",
+             "each released once for 99,000,000 base units", "RFP-022 F.7"),
+            ("docs/EVIDENCE.md", "(n = 5, t = 4)", "(n = 5, t = 3)", "EVIDENCE row 280"),
+        )
+        for path, old, new, where in cases:
+            with self.subTest(old):
+                self.assertFails("evidence-rows-final", overlay({path: sub(old, new)}), where)
+
+    def test_a_record_altered(self):
+        """The records, not the documents: an overlap gate, a payment and a test renamed each fail the documents."""
+        t = overlay({"lez/updater/results/gate-overlap.txt": sub("\t0.0383\t(20771459", "\t0.0483\t(20771459")})
+        self.assertFails("evidence-rows-final", t, "RFP-021 R.9")
+        t = overlay({"e2e/runs/zone-bridge-rc3-erc20/vault-checks.json": sub('"paidWei": "99900000"', '"paidWei": "99800000"', 2)})
+        self.assertFails("evidence-rows-final", t, "RFP-022 F.7")
+        t = overlay({"lez/results/f13/prove-bridge.md": sub("execute_and_prove 301.9 s", "execute_and_prove 310.9 s")})
+        self.assertFails("evidence-rows-final", t, "RFP-022 F.13")
+        t = overlay({"cli/src/lez.rs": sub("fn the_claim_takes_the_layout_of_the_program_the_zone_runs",
+                                           "fn the_claim_layout")})
+        self.assertFails("evidence-rows-final", t, "EVIDENCE row 281")
+        t = overlay({"e2e/both-halves/results/f13/fees.md": sub("| 1 | 0 | 1000000000000000 | 6 | 5 |",
+                                                                "| 1 | 0 | 1000000000000000 | 5 | 5 |")})
+        self.assertFails("evidence-rows-final", t, "the sets before any claim differ")
+
+
 class EvidenceRows(TamperCase):
     """evidence-rows-integ: EVIDENCE rows 271-274 and the rows citing them, held to what the checks recompute (review
     round 1 of the integration, M5 and L2: these figures were labels no check read). Each altered copy must fail on

@@ -25,27 +25,27 @@ CHAR_LITERAL = re.compile(r"'(?:\\(?:x[0-9a-fA-F]{2}|u\{[0-9a-fA-F]{1,6}\}|.)|[^
 GROUPS = {
     "crates/ferrata-core/src/": (
         "consensus, SSZ/RLP/MPT/execution proofs and stores",
-        "linked into ferrata_lez / ferrata_bridge_b1",
+        "linked into ferrata_lez / ferrata_bridge_f13",
         "library calls from the guests; no independent entry point",
     ),
     "lez/wire/src/": (
         "attestation actors, messages, state and attestation requests",
-        "linked into ferrata_lez and ferrata_bridge_b1",
+        "linked into ferrata_lez and ferrata_bridge_f13",
         "defines Message for ferrata_lez",
     ),
     "lez/bridge-wire/src/": (
         "bridge actors, messages, state and vault-proof bindings",
-        "linked into ferrata_bridge_b1",
+        "linked into ferrata_bridge_f13",
         "defines BridgeMessage for the bridge guest",
     ),
     "lez/guests/program/src/": (
         "LEZ light-client actor shell and inclusion attestations",
-        "LEZ R0BF ferrata_lez (docs/image-ids.md:44)",
+        "LEZ R0BF ferrata_lez (docs/image-ids.md:46)",
         "main dispatches Message",
     ),
     "lez/guests/bridge/src/": (
         "LEZ deposit, burn, balances, clocks, roles and fees",
-        "LEZ R0BF ferrata_bridge_b1 (docs/image-ids.md:45)",
+        "LEZ R0BF ferrata_bridge_f13 (docs/image-ids.md:47)",
         "main dispatches BridgeMessage",
     ),
     "checkpoint/crates/checkpoint-core/src/": (
@@ -56,37 +56,37 @@ GROUPS = {
     ),
     "checkpoint/guests/checkpoint/src/": (
         "checkpoint rule A and composed segment-receipt verification",
-        "RISC Zero checkpoint_31 (docs/image-ids.md:51)",
+        "RISC Zero checkpoint_31 (docs/image-ids.md:53)",
         "zkVM main reads CheckpointInput",
     ),
     "checkpoint/guests/checkpoint-b/src/": (
         "checkpoint rule B and composed segment-receipt verification",
-        "RISC Zero checkpoint_b_31 (docs/image-ids.md:52)",
+        "RISC Zero checkpoint_b_31 (docs/image-ids.md:54)",
         "zkVM main reads CheckpointInputB",
     ),
     "checkpoint/guests/segment/src/": (
         "bounded LEZ block-chain segment used by either checkpoint rule",
-        "RISC Zero segment_31 (docs/image-ids.md:54), verified by checkpoint guests",
+        "RISC Zero segment_31 (docs/image-ids.md:56), verified by checkpoint guests",
         "zkVM main reads SegmentInput",
     ),
     "checkpoint/guests-0-3-5/checkpoint/src/": (
         "rule A for the Bedrock 0.3.5-rc.1 transaction layout",
-        "RISC Zero checkpoint_0_3_5_31 (docs/image-ids.md:85)",
+        "RISC Zero checkpoint_0_3_5_31 (docs/image-ids.md:87)",
         "zkVM main reads CheckpointInput",
     ),
     "checkpoint/guests-0-3-5/checkpoint-b/src/": (
         "rule B for the Bedrock 0.3.5-rc.1 transaction layout",
-        "RISC Zero checkpoint_b_0_3_5_31 (docs/image-ids.md:86)",
+        "RISC Zero checkpoint_b_0_3_5_31 (docs/image-ids.md:88)",
         "zkVM main reads CheckpointInputB",
     ),
     "bridge/crates/ferrata-bridge-core/src/": (
         "deposit/burn trees, commitments, nullifiers and release encoding",
-        "linked into release_31 and ferrata_bridge_b1",
+        "linked into release_31 and ferrata_bridge_f13",
         "library calls from the guests; no independent entry point",
     ),
     "bridge/guests/src/bin/release.rs": (
         "burn membership verification and bound release journal",
-        "RISC Zero release_31 (docs/image-ids.md:55), verified by FerrataVault",
+        "RISC Zero release_31 (docs/image-ids.md:57), verified by FerrataVault",
         "zkVM main reads ReleaseInput",
     ),
     "vault/src/FerrataVault.sol": (

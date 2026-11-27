@@ -90,11 +90,12 @@ def _holding(answer: dict, account: int) -> int:
     return int(holdings[0]["amount"])
 
 
-@check(id="f13-both-halves-fees", family="record", mode="offline", tier="quick", rows=(), evidence=(),
+@check(id="f13-both-halves-fees", family="record", mode="offline", tier="quick", rows=("RFP-022 F.13",),
+       evidence=(277,),
        title="ADR 0046 both halves: schedule arithmetic, six claims and one anonymity set",
        what="the schedule's notice and per-denomination fees, six claim rows and their decreasing sets, three releases, "
             "and the absence of a claim mint-fee column",
-       against=f"{NEW_FEES}'s own rows, with {OLD_FEES} as the pre-ADR contrast; no status row cites these records yet",
+       against=f"{NEW_FEES}'s own rows, with {OLD_FEES} as the pre-ADR contrast (EVIDENCE row 277)",
        inputs=(NEW_FEES, OLD_FEES))
 def f13_both_halves(ctx):
     problems = []
@@ -182,7 +183,8 @@ def f13_both_halves(ctx):
     ]
 
 
-@check(id="f13-roundtrip-record", family="record", mode="offline", tier="quick", rows=(), evidence=(),
+@check(id="f13-roundtrip-record", family="record", mode="offline", tier="quick", rows=("RFP-022 F.13",),
+       evidence=(278,),
        title="ADR 0046 rc3 round trip: all F.13 fee facts against the CLI and ledger records",
        what="17 ordered ok steps; two deposits/claims, escrow and owed deltas, LEZ application, image id, release and "
             "every numeric F.13 statement",

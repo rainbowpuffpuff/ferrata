@@ -398,7 +398,7 @@ def bridge_both_halves(ctx):
              "Invariant checks: A 6 times, B 2 times", "Forgeries refused: 9")
     for row, fragments in {
             "F.8": ("medians 2, 2, 2 and 27 sets of 1 among 81", "medians 4, 4, 3 and 10 sets of 1"),
-            "F.13": ("over both halves every claim and release", "capped at 1%", "fee change a claim shows its schedule's range"),
+            "F.13": ("under an immutable 1% ceiling", "3 and 3 before ADR 0046", "a fee change splits the set by deposit time"),
             "R.4": ("Every later act only delays", "an imported deposit claimed after `Sunset`", "a burn released under the sunset checkpoint"),
             "Sec.6": ("eight seeds of 60 steps: 141 deposits, 81 claims, 59 burns, 25 releases; 496 checks; 93 forgeries refused",),
             "Sec.8": ("two never-imported deposits refunded whole", "9 forgeries refused", "a new vault and configuration taking a deposit, claim and burn"),

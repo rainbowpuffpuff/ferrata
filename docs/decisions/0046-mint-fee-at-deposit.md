@@ -18,8 +18,9 @@ the mint fee carried the schedule into a claim.
 ## Options considered
 
 1. Keep it, disclosed: fee changes are rare and announced seven days ahead, and the client counts the anonymity set
-   per schedule. *Recorded:* docs/requirements-status.md, RFP-022's F.13 row before this record ("a design question
-   for the owner"). The clause would hold within a schedule only.
+   per schedule. *Recorded:* RFP-022's F.13 row before this record called it "a design question for the owner" (the
+   row was rewritten when this record was built); the split it left is recorded in e2e/both-halves/results/fees.md
+   ("the fee change splits the set at leaf 3"). The clause would hold within a schedule only.
 2. Mint the fees on LEZ in bulk: a permissionless instruction mints to the fee recipient the mint fees of every
    deposit up to a leaf count the program has learnt; claims carry no fee. *Reconstructed for contrast* (weighed with
    the others on 26 November 2026, in notes not kept in the repository). It keeps the fee on LEZ but adds an instruction

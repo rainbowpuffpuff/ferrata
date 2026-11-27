@@ -407,21 +407,23 @@ def _record(ctx, run, rotation=False):
 _COMMON_INPUTS = (DEPLOY_SCRIPT, TEST_BASE)
 
 
-@check(id="f7-zone-bridge-rc3-erc20", family="record", mode="offline", tier="quick", rows=(), evidence=(),
+@check(id="f7-zone-bridge-rc3-erc20", family="record", mode="offline", tier="quick", rows=("RFP-022 F.7",),
+       evidence=(279,),
        title="F.7 rc3 ERC-20 return leg: per-case records recomputed offline",
        what="three-of-four attestations and every refusal, native/GPU journals, two burns, schedule-derived releases/replays, "
             "three prover calls and every run README figure",
-       against=f"{ERC20}'s JSON/text records and the named Forge test source; no status row cites this check yet",
+       against=f"{ERC20}'s JSON/text records and the named Forge test source (EVIDENCE row 279)",
        inputs=(ERC20, TEST_ERC20) + _COMMON_INPUTS)
 def f7_erc20(ctx):
     return _record(ctx, ERC20)
 
 
-@check(id="f7-zone-bridge-rc3-rotation", family="record", mode="offline", tier="quick", rows=(), evidence=(),
+@check(id="f7-zone-bridge-rc3-rotation", family="record", mode="offline", tier="quick", rows=("RFP-022 F.7",),
+       evidence=(280,),
        title="F.7 rc3 committee rotation and ETH return leg: per-case records recomputed offline",
        what="four-of-five attestations/refusals, native/GPU journals, two burns, ETH releases/replays, prover calls, "
             "committee change, rotatedKeys fixture and run README figures",
-       against=f"{ROTATION}'s records, {FIXTURE_ROTATION} and the named Forge test sources; no status row cites this check yet",
+       against=f"{ROTATION}'s records, {FIXTURE_ROTATION} and the named Forge test sources (EVIDENCE row 280)",
        inputs=(ROTATION, FIXTURE_ROTATION, TEST_ROTATION) + _COMMON_INPUTS)
 def f7_rotation(ctx):
     return _record(ctx, ROTATION, rotation=True)

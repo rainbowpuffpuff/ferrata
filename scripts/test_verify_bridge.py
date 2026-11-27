@@ -5,11 +5,11 @@ Every bridge record check is run against the real repository, then against minim
 .scratch/, never /tmp) with one case verdict or code, one table number, and one status-row figure altered.  Copies
 contain only the files each check reads, at their original relative paths.
 
-`bridge-import-claim-costs` fails on the repository as it is: RFP-022 P.2 states B1's harness import range as
-231,635–237,140, but the B1 record's four applied `ImportRoot` cases run to 237,169 (vault B's 8-leaf import).  As
-with `lc-stage4-attest-costs` in scripts/test_verify_lc.py, the tampered copies start from the row with that one
-figure corrected, so that each tamper still has to be what fails; the check is run unfolded too, and must fail on
-exactly that.
+`bridge-import-claim-costs` failed on the repository until RFP-022 P.2's row was corrected (27 November 2026): the row
+stated B1's harness import range as 231,635–237,140, but the B1 record's four applied `ImportRoot` cases run to
+237,169 (vault B's 8-leaf import).  As with `lc-stage4-attest-costs` in scripts/test_verify_lc.py, the tampered copies
+start from the corrected row, so that each tamper still has to be what fails; a row still stating the earlier range
+must make the check fail on exactly that.
 
 Two rows state no number (U.6, Priv.5); their status tamper alters the wording the check holds them to.
 """
@@ -265,8 +265,8 @@ REVIEW_REPRODUCTIONS = {
 }
 
 
-# RFP-022 P.2 states B1's harness import range as 231,635–237,140, but the B1 record's vault-B import costs 237,169,
-# so bridge-import-claim-costs fails on the repository until the row is corrected. Its tampered copies start from the
+# RFP-022 P.2 stated B1's harness import range as 231,635–237,140, but the B1 record's vault-B import costs 237,169,
+# so bridge-import-claim-costs failed on the repository until the row was corrected. Its tampered copies start from the
 # corrected row, so that each tamper still has to be what fails.
 P2_OLD, P2_FOLDED = "231,635–237,140 on B1's", "231,635–237,169 on B1's"
 

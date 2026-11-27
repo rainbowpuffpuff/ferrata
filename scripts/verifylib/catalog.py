@@ -62,12 +62,14 @@ def _register_wrappers() -> None:
         what="the relayer's credit, the claim that pays its fee from it and the refused claim without it",
         against="the session's recorded blocks and logs in lez/results/v0.4.0-rc3/gas-drop",
         inputs=("lez/results/v0.4.0-rc3/gas-drop",))
-    _py("perf-records", "scripts/test_perf_records.py", family="record", mode="offline", evidence=(227,),
-        rows=("RFP-022 P.5", "RFP-022 P.6"),
-        title="RFP-022 P.5 and P.6: every documented figure recomputed from the raw records",
-        what="lez/results/perf-latency-bridge.md, perf-daemons.md, perf-gate-sequencer.md byte for byte and "
-             "docs/performance.md §P.5/§P.6 figure by figure",
-        against="crown-live-3's stages and driver log, the daemons' GNU time and samples, the GPU and laptop runs")
+    _py("perf-records", "scripts/test_perf_records.py", family="record", mode="offline", evidence=(227, 275, 276),
+        rows=("RFP-022 P.5", "RFP-022 P.6", "RFP-021 R.9", "RFP-021 R.10"),
+        title="RFP-022 P.5 and P.6, RFP-021 R.9 and R.10: every documented figure recomputed from the raw records",
+        what="lez/results/perf-latency-bridge.md, perf-daemons.md, perf-gate-sequencer.md, perf-gate-sequencer-100.md and "
+             "perf-gate-sequencer-join.md byte for byte, A3's figures and the abandoned jobs from the gate runs' "
+             "journals, and docs/performance.md §P.5/§P.6 and the operator guide's gate rows figure by figure",
+        against="crown-live-3's stages and driver log, the daemons' GNU time and samples, the GPU and laptop runs, and "
+                "the gate runs' journals, reveals and logs (bench/perf/results/gate-g6 … gate-g11)")
     for cid, gen, args, out, ev, rows, title in (
             ("perf-tracking", "bench/perf/tracking_cost.py", ("lez/lab/results/record",), "lez/results/perf-tracking.md",
              (167,), ("RFP-021 P.3",), "RFP-021 P.3: the tracking cost over the lab's eight days"),

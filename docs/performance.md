@@ -647,7 +647,7 @@ measured, and the owner's laptop below it, 8 of its 16 threads: P.4 of both RFPs
 (RFP-021 P.4: a limit of 5 hops proposed, not declared); `ferrata-attest` and `ferrata_attest_module` not measured,
 the §8 `monitor` not measured (RFP-021 P.6); the bridge's actions (RFP-022's program), the soft-requirement programs
 (`statements`, `rebate`) and the second consumer (`ferrata_holdings`) at different state sizes (programs of their own;
-every message of RFP-021's attestation program and of its reference consumer is measured, §P.9); A3's 100-update gate and its waste ratio on a sequencer (RFP-021 R.9, R.10); the importer's LEZ-side
+every message of RFP-021's attestation program and of its reference consumer is measured, §P.9); A3's adversarial daemon at 100 updates on a sequencer (RFP-021 R.9; the two honest daemons at A3's size ran: EVIDENCE rows 275, 276); the importer's LEZ-side
 resources as a daemon and `monitor`'s LEZ traffic (RFP-022 P.6); v5's ERC-20 calls and refunds on Sepolia's gas rules
 (RFP-022 P.3); the source-chain finality of LEZ testnet 0.4, which is not released (RFP-022 P.5's outbound leg ran on a
 devnet). Every one is a milestone

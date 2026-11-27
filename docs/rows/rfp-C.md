@@ -214,7 +214,8 @@ cost its handler's decoding and the check, of the order of `JobOpen`'s 19,050–
 measured after a restructure). It could be done with the RISC Zero 3.1.0 rebuild that LEZ's `dev` already carries (`lez/testnet04/README.md`),
 which moves the image ids anyway. (2)
 needs no image change: an updater policy that does not open a job on a store another party's open job will change
-(join it or wait). A lower gas limit for `Open` would cap the same-block revert. Against a daemon that never defers,
+(join it or wait): built since, `policy.join_wait_rounds` ([ADR 0047](../decisions/0047-updater-join-or-wait.md); its runs at
+A3's size are EVIDENCE rows 275 and 276). A lower gas limit for `Open` would cap the same-block revert. Against a daemon that never defers,
 the honest daemons' ratio was 1.31 at window 8 (G2); other windows were not run with the adversary.
 
 Proposed EVIDENCE row: | new | RFP-021 R.9, R.10 and P.6 on a running LEZ sequencer: two honest `ferrata-updater`
