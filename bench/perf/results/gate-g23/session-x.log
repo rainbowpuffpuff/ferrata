@@ -1,0 +1,12 @@
+[18:04:40] crown LEZ session x (chain stand-in)
+[18:04:41] restored generation 1 (194M)
+[18:04:42] Bedrock node up: {"cryptarchia_info":{"lib":"64c425a8d1c6bab89b6698c32a037772818e1a93d6c90da54e1ed4efbd07f7e2","lib_slot":10309646,"tip":"58f3ddbaf452c84bb9ec4c8e4fb3e5aef2023e1f23b3f93c4ff000c867050719","slot":10309651,"height":200,"state":"Online"},"phase":"InitialBlockDownload"}
+[18:04:45] node slot 0 is unix second 1785061027 (slots of 1 s)
+[18:05:32] sequencer start 1: scheduler after 46 s; its blocks fall 4 s after an epoch second
+[18:05:32] sequencer up, head block 19
+[18:05:32] hook ~/Downloads/software_i_built/logos-rfp/spike/ferrata-wt-r910-h2/bench/perf/gate-hook.sh
+[19:54:06] driver exit 0
+[19:57:47] sequencer stopped (exit 0)
+[19:57:55] node stopped (exit 143)
+[19:58:04] saved generation 2 (1750055583 bytes; head block 692)
+[19:58:04] session x: ok

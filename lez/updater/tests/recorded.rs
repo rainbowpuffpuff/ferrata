@@ -11,7 +11,7 @@ use sha2::Digest as _;
 use ferrata_core::{witness::CompactStore, Root};
 use ferrata_lez_wire::Config;
 use ferrata_updater::{
-    chain::{decode_finality_update, decode_update, preset, root},
+    chain::{decode_finality_update, decode_update, encode_finality_update, encode_update, preset, root},
     config::{Fees, Policy},
     ledger::{HarnessLedger, Ledger},
     source::{lab_record, load_entries, Clock, Entry, Fault, Faulty, Recorded, Source},
@@ -52,6 +52,14 @@ impl Rec {
     }
     fn faulty(&self, label: &str, clock: &Clock, fault: Fault) -> Box<dyn Source> {
         Box::new(Faulty::new(self.source(label, clock, 0), fault, self.config.clone()))
+    }
+    /// A source serving copies of every recorded update (`copy_of`), `lag` entries behind.
+    fn copies(&self, label: &str, clock: &Clock, lag: usize) -> Box<dyn Source> {
+        let mut s = self.source(label, clock, lag);
+        for e in &mut s.entries {
+            e.bytes = copy_of(&e.bytes, e.period_update, &self.config);
+        }
+        Box::new(s)
     }
     fn updater(
         &self,
@@ -343,6 +351,64 @@ struct GateOpts {
     honest_join_wait: Option<u64>,
     /// honest-1 alone (honest-2 never plans): what one updater pays on the same schedule.
     solo: bool,
+    /// The honest updaters read the chain every `polls[d]` rounds (A3's gate: every round); an updater whose transaction
+    /// is not settled yet does not read it (the daemon's `submit` waits for its transaction's block).
+    polls: [usize; 2],
+    /// A block every `block_every` rounds (A3's gate: every round): the transactions sent since the last block settle
+    /// together, in a shuffled order.
+    block_every: usize,
+    /// The ledger gives the updaters its height (`Ledger::height`: the blocks settled), the clock their turns count; off:
+    /// none, and each counts its own rounds (the updater before the turns counted blocks).
+    heights: bool,
+    /// honest-2's sources serve copies of every update (its signature slot moved by one, `copy_of`), never the bytes
+    /// honest-1's sources serve: each job honest-1 opens is of a copy honest-2 was never served, and the reverse.
+    copies: bool,
+    /// The ledger gives the transactions it applied (`Ledger::messages_to`), from which an updater learns the updates of
+    /// other parties' jobs; off: it does not (the updater before it learned them).
+    messages: bool,
+}
+
+impl GateOpts {
+    /// A3's gate: every recorded update the newest once, two honest updaters reading the chain each round, a block a
+    /// round, the ledger's height and transactions given.
+    fn a3(chains: Vec<&'static str>, adversary: bool) -> Self {
+        GateOpts {
+            chains,
+            adversary,
+            salt: String::new(),
+            seed: None,
+            reveal_every: None,
+            honest_join_wait: None,
+            solo: false,
+            polls: [1, 1],
+            block_every: 1,
+            heights: true,
+            copies: false,
+            messages: true,
+        }
+    }
+}
+
+/// A copy of the update `bytes` (a period update when `period`): its `signature_slot`, which the signature does not cover
+/// (only its fork version), moved by one slot, later unless that leaves its sync-committee period, then earlier; the same
+/// finalized header, so its job leaves the store where the original's does, but other bytes, so another job id.
+fn copy_of(bytes: &[u8], period: bool, config: &Config) -> Vec<u8> {
+    let (mut u, layout) = if period { decode_update(bytes, config) } else { decode_finality_update(bytes, config) }.unwrap();
+    let spec = config.spec();
+    let s = u.signature_slot;
+    let same = |t: u64| spec.period_at_slot(t) == spec.period_at_slot(s) && t > u.attested_header.beacon.slot;
+    u.signature_slot = if same(s + 1) {
+        s + 1
+    } else if same(s - 1) {
+        s - 1
+    } else {
+        panic!("no copy of the update signed at {s}")
+    };
+    let out = if period { encode_update(&u, layout) } else { encode_finality_update(&u, layout) };
+    let back = if period { decode_update(&out, config) } else { decode_finality_update(&out, config) }.unwrap();
+    assert_eq!(back.0, u, "the copy decodes to the update it encodes");
+    assert_ne!(out, bytes);
+    out
 }
 
 struct GateRun {
@@ -367,6 +433,12 @@ fn run_gate(opts: &GateOpts) -> GateRun {
     let recs: Vec<Rec> = opts.chains.iter().map(|n| rec(n)).collect();
     let (h1, h2, adv) = (key(0x31), key(0x32), key(0x33));
     let mut l = HarnessLedger::new(&[h1.clone(), h2.clone(), adv.clone()]);
+    // The blocks settled so far: the height the updaters' reads reflect.
+    let mut height = 0u64;
+    if opts.heights {
+        l.height = Some(height);
+    }
+    l.serve_messages = opts.messages;
     let clocks: Vec<Clock> = recs.iter().map(|_| Clock::new(1)).collect();
     let salt = &opts.salt;
     let honest = Policy { join_wait_rounds: opts.honest_join_wait, ..policy(8) };
@@ -375,6 +447,11 @@ fn run_gate(opts: &GateOpts) -> GateRun {
         .iter()
         .zip(&clocks)
         .map(|(r, c)| {
+            let h2_sources: Vec<Box<dyn Source>> = if opts.copies {
+                vec![r.copies("b", c, 0), r.copies("c", c, 0), r.copies("stale", c, 3)]
+            } else {
+                vec![r.honest("b", c), r.honest("c", c), Box::new(r.source("stale", c, 3))]
+            };
             vec![
                 r.updater(
                     &format!("honest-1{salt}"),
@@ -383,13 +460,7 @@ fn run_gate(opts: &GateOpts) -> GateRun {
                     None,
                     honest.clone(),
                 ),
-                r.updater(
-                    &format!("honest-2{salt}"),
-                    h2.clone(),
-                    vec![r.honest("b", c), r.honest("c", c), Box::new(r.source("stale", c, 3))],
-                    None,
-                    honest.clone(),
-                ),
+                r.updater(&format!("honest-2{salt}"), h2.clone(), h2_sources, None, honest.clone()),
                 r.updater(
                     "adversary",
                     adv.clone(),
@@ -405,35 +476,44 @@ fn run_gate(opts: &GateOpts) -> GateRun {
     let mut junk_due = vec![false; recs.len()];
     let mut sent = Vec::new();
     let mut latency: Vec<Vec<(usize, Option<usize>)>> = recs.iter().map(|_| Vec::new()).collect();
-    let mut rounds = 0;
+    // Per chain and updater: a transaction sent and not settled yet (it does not read the chain until it is), and
+    // whether its last plan found nothing to do.
+    let mut busy = vec![[false; 3]; recs.len()];
+    let mut idle_last = vec![[true; 3]; recs.len()];
+    // The transactions sent since the last block.
+    #[allow(clippy::type_complexity)]
+    let mut pending: Vec<(usize, usize, Option<ferrata_updater::updater::Action>, Option<ferrata_updater::ledger::Tx>)> =
+        Vec::new();
+    let mut rounds: usize = 0;
     loop {
         rounds += 1;
-        assert!(rounds < 20_000, "the gate run did not finish");
-        // Plan against the state the previous block left.
-        let mut block: Vec<(
-            usize,
-            usize,
-            Option<ferrata_updater::updater::Action>,
-            Option<ferrata_updater::ledger::Tx>,
-        )> = Vec::new();
-        let mut idle = vec![true; recs.len()];
+        assert!(rounds < 40_000, "the gate run did not finish");
+        // Plan against the state the last block left.
         for (c, chain) in ups.iter_mut().enumerate() {
             for (d, u) in chain.iter_mut().enumerate() {
-                if opts.solo && d == 1 {
+                if (opts.solo && d == 1) || busy[c][d] {
+                    continue;
+                }
+                if d < 2 && !rounds.is_multiple_of(opts.polls[d]) {
+                    continue;
+                }
+                // The adversary reads the chain in the first round of each block (each round, in A3's gate), and races a
+                // third of the steps due then, as in A3's gate.
+                if d == 2 && !(rounds - 1).is_multiple_of(opts.block_every) {
                     continue;
                 }
                 let plan = u.plan(&l).unwrap();
+                if d < 2 {
+                    idle_last[c][d] = !matches!(plan, Plan::Send(_) | Plan::Deferred(_));
+                }
                 match plan {
                     Plan::Send(a) => {
-                        if d < 2 {
-                            idle[c] = false;
-                        }
                         // The adversary races a third of the time.
                         if d < 2 || (adversary && rng.next().is_multiple_of(3)) {
-                            block.push((c, d, Some(a), None));
+                            busy[c][d] = true;
+                            pending.push((c, d, Some(a), None));
                         }
                     }
-                    Plan::Deferred(_) if d < 2 => idle[c] = false,
                     Plan::Stuck(w) if d < 2 => panic!("{} {}: {w}", u.label, u.inst.name),
                     _ => {}
                 }
@@ -453,7 +533,7 @@ fn run_gate(opts: &GateOpts) -> GateRun {
                     decode_finality_update(&bytes, &r.config)
                 };
                 if let Ok((forged, _)) = forged {
-                    block.push((c, 2, None, Some(chain[2].open_unchecked(&l, &forged).unwrap())));
+                    pending.push((c, 2, None, Some(chain[2].open_unchecked(&l, &forged).unwrap())));
                 }
                 if t >= 3 {
                     let e = &r.entries[t - 3];
@@ -463,56 +543,64 @@ fn run_gate(opts: &GateOpts) -> GateRun {
                         decode_finality_update(&e.bytes, &r.config)
                     };
                     if let Ok((old, _)) = old {
-                        block.push((c, 2, None, Some(chain[2].open_unchecked(&l, &old).unwrap())));
+                        pending.push((c, 2, None, Some(chain[2].open_unchecked(&l, &old).unwrap())));
                     }
                 }
             }
         }
-        rng.shuffle(&mut block);
-        for (c, d, action, junk) in block {
-            let u = &mut ups[c][d];
-            match (action, junk) {
-                (Some(a), _) => {
-                    if let Some(out) = u.submit(&mut l, &a, false).unwrap() {
-                        let parts = recs[c].config.adoption_parts;
-                        let last = a.step == Step::Finish
-                            || (matches!(a.step, Step::Adopt(p) if p + 1 == parts) && a.tx.actors.len() > 1);
+        if rounds.is_multiple_of(opts.block_every) {
+            height += 1;
+            let mut block = std::mem::take(&mut pending);
+            rng.shuffle(&mut block);
+            for (c, d, action, junk) in block {
+                busy[c][d] = false;
+                let u = &mut ups[c][d];
+                match (action, junk) {
+                    (Some(a), _) => {
+                        if let Some(out) = u.submit(&mut l, &a, false).unwrap() {
+                            let parts = recs[c].config.adoption_parts;
+                            let last = a.step == Step::Finish
+                                || (matches!(a.step, Step::Adopt(p) if p + 1 == parts) && a.tx.actors.len() > 1);
+                            sent.push(Sent {
+                                chain: c,
+                                block: height as usize,
+                                daemon: d,
+                                job: a.job_id,
+                                step: a.step,
+                                last,
+                                applied: out.applied,
+                                gas: out.gas_exec + out.gas_stor,
+                            });
+                        }
+                    }
+                    (None, Some(tx)) => {
+                        let out = l.submit(&adv, &tx, 4_800_000, 1_000_000_000).unwrap();
+                        // A junk job is never finished: named by its account.
+                        let job: Root = sha2::Sha256::digest(format!("{:?}", tx.actors.get(1)).as_bytes()).into();
                         sent.push(Sent {
                             chain: c,
-                            block: rounds,
-                            daemon: d,
-                            job: a.job_id,
-                            step: a.step,
-                            last,
+                            block: height as usize,
+                            daemon: 2,
+                            job,
+                            step: Step::Open,
+                            last: false,
                             applied: out.applied,
                             gas: out.gas_exec + out.gas_stor,
                         });
                     }
+                    _ => {}
                 }
-                (None, Some(tx)) => {
-                    let out = l.submit(&adv, &tx, 4_800_000, 1_000_000_000).unwrap();
-                    // A junk job is never finished: named by its account.
-                    let job: Root = sha2::Sha256::digest(format!("{:?}", tx.actors.get(1)).as_bytes()).into();
-                    sent.push(Sent {
-                        chain: c,
-                        block: rounds,
-                        daemon: 2,
-                        job,
-                        step: Step::Open,
-                        last: false,
-                        applied: out.applied,
-                        gas: out.gas_exec + out.gas_stor,
-                    });
-                }
-                _ => {}
             }
-        }
-        // What each instance holds after the block: the revealed finality updates it now covers.
-        for (c, r) in recs.iter().enumerate() {
-            if let Some(s) = ups[c][0].inst.store(&l).unwrap() {
-                for (i, (_, covered)) in latency[c].iter_mut().enumerate() {
-                    if covered.is_none() && s.finalized.slot >= r.entries[i].finalized_slot {
-                        *covered = Some(rounds);
+            if opts.heights {
+                l.height = Some(height);
+            }
+            // What each instance holds after the block: the revealed finality updates it now covers.
+            for (c, r) in recs.iter().enumerate() {
+                if let Some(s) = ups[c][0].inst.store(&l).unwrap() {
+                    for (i, (_, covered)) in latency[c].iter_mut().enumerate() {
+                        if covered.is_none() && s.finalized.slot >= r.entries[i].finalized_slot {
+                            *covered = Some(rounds);
+                        }
                     }
                 }
             }
@@ -522,16 +610,19 @@ fn run_gate(opts: &GateOpts) -> GateRun {
         let mut done = true;
         for c in 0..recs.len() {
             let at_end = clocks[c].now() >= recs[c].entries.len();
-            if !(idle[c] && at_end) {
+            let idle = (0..2).all(|d| (opts.solo && d == 1) || (idle_last[c][d] && !busy[c][d]));
+            if !(idle && at_end) {
                 done = false;
             }
             let due = match opts.reveal_every {
-                None => idle[c],
+                None => idle,
                 Some(k) => rounds.is_multiple_of(k),
             };
             if due && !at_end {
                 clocks[c].set(clocks[c].now() + 1);
                 junk_due[c] = true;
+                // Not idle until each honest updater has read the chain again.
+                idle_last[c] = [false; 3];
             }
             // Entries served from the next round on (the first entry from round 1).
             while latency[c].len() < clocks[c].now() {
@@ -553,6 +644,21 @@ fn run_gate(opts: &GateOpts) -> GateRun {
     }
     if opts.solo {
         lines[0] += "\thonest-1 alone";
+    }
+    if opts.polls != [1, 1] || opts.block_every != 1 {
+        lines[0] += &format!(
+            "\thonest-1 reads every\t{}\thonest-2 reads every\t{}\ta block every\t{} rounds",
+            opts.polls[0], opts.polls[1], opts.block_every
+        );
+    }
+    if !opts.heights {
+        lines[0] += "\tturns counted in each updater's own rounds (no height)";
+    }
+    if opts.copies {
+        lines[0] += "\thonest-2 served copies";
+    }
+    if !opts.messages {
+        lines[0] += "\tno Opens learned from the chain";
     }
     for (c, r) in recs.iter().enumerate() {
         let s = store(&ups[c][0], &l);
@@ -616,6 +722,14 @@ fn run_gate(opts: &GateOpts) -> GateRun {
         joined(1),
         passed(1)
     ));
+    if opts.copies || !opts.messages {
+        let learned = |d: usize| ups.iter().map(|ch| ch[d].metrics.updates_from_chain).sum::<u64>();
+        lines.push(format!(
+            "updates learned from other parties' Opens\thonest-1\t{}\thonest-2\t{}",
+            learned(0),
+            learned(1)
+        ));
+    }
     let latency: Vec<Vec<(usize, Option<usize>)>> = latency
         .into_iter()
         .zip(&recs)
@@ -771,15 +885,7 @@ fn gate_two_honest_one_adversary() {
     let salt = std::env::var("GATE_SALT").unwrap_or_default();
     let seed = std::env::var("GATE_SEED").ok().and_then(|v| v.parse::<u64>().ok());
     let adversary = std::env::var("GATE_ADVERSARY").ok().as_deref() != Some("0");
-    let opts = GateOpts {
-        chains: vec!["mainnet", "sepolia"],
-        adversary,
-        salt: salt.clone(),
-        seed,
-        reveal_every: None,
-        honest_join_wait: None,
-        solo: false,
-    };
+    let opts = GateOpts { salt: salt.clone(), seed, ..GateOpts::a3(vec!["mainnet", "sepolia"], adversary) };
     let run = run_gate(&opts);
     let f = fates(&run.sent);
     let text = gate_lines(&run, &f);
@@ -833,13 +939,10 @@ fn gate_overlapping_updates_join_or_wait() {
     let mut runs = Vec::new();
     for (join_wait, solo) in [(None, false), (Some(0), false), (None, true)] {
         let opts = GateOpts {
-            chains: vec!["mainnet"],
-            adversary: false,
-            salt: String::new(),
-            seed: None,
             reveal_every: Some(6),
             honest_join_wait: join_wait,
             solo,
+            ..GateOpts::a3(vec!["mainnet"], false)
         };
         let run = run_gate(&opts);
         let f = fates(&run.sent);
@@ -876,6 +979,127 @@ fn gate_overlapping_updates_join_or_wait() {
     let out = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("results");
     fs::create_dir_all(&out).unwrap();
     fs::write(out.join("gate-overlap.txt"), text.trim_end().to_string() + "\n").unwrap();
+}
+
+/// RFP-021 R.10's first clause, that cost does not fall systematically on whichever party reacts fastest: honest-1 reads
+/// the chain every round, honest-2 every third round, a new recorded mainnet update every 12 rounds whatever they do
+/// (one every 4 blocks at a block every three rounds; the sequencer gate's replay reveals one every 6 blocks). With a
+/// block every three rounds (honest-2 reads once a block, honest-1 three times) and the turns counted on the chain's
+/// height (`Ledger::height`, the updater now), each honest updater pays 35-65% of the honest fees (A3's limits) and A3's
+/// ratio holds; counted in each updater's own rounds (the updater before), the one reading three times as often waits a
+/// third as long and pays more than 65%. Then: a block every two rounds (honest-2 reads every 1.5 blocks); A3's whole
+/// gate (both recorded chains, every update the newest once, the adversary racing a third of the steps due in each block
+/// and waiting for no one) with the pair reading once and three times a block: A3's limits hold in both. Last, honest-2
+/// reading every third block (every sixth round, a block every two): it notices its turns up to three blocks late and
+/// pays less than honest-1, the residual the operator guide §3.4 states (an operator should read the chain at least once
+/// a block). `GATE_POLL_SALT` names the updaters otherwise (another draw of every wait). The runs' figures go to
+/// `results/gate-polls.txt` (`gate-polls-salt-SALT.txt`).
+#[test]
+fn gate_poll_speeds_share_the_cost() {
+    let salt = std::env::var("GATE_POLL_SALT").unwrap_or_default();
+    let mut text = String::new();
+    let mut runs = Vec::new();
+    // (heights, reads, a block every, A3's whole gate)
+    for (heights, polls, block_every, a3) in [
+        (true, [1, 3], 3, false),
+        (false, [1, 3], 3, false),
+        (true, [1, 3], 2, false),
+        (true, [1, 3], 3, true),
+        (true, [1, 6], 2, false),
+    ] {
+        let opts = if a3 {
+            GateOpts {
+                polls,
+                block_every,
+                heights,
+                salt: salt.clone(),
+                ..GateOpts::a3(vec!["mainnet", "sepolia"], true)
+            }
+        } else {
+            GateOpts {
+                reveal_every: Some(12),
+                polls,
+                block_every,
+                heights,
+                salt: salt.clone(),
+                ..GateOpts::a3(vec!["mainnet"], false)
+            }
+        };
+        let run = run_gate(&opts);
+        let f = fates(&run.sent);
+        text += &gate_lines(&run, &f);
+        text += "\n";
+        runs.push(run);
+    }
+    println!("{text}");
+    for (i, run) in runs.iter().enumerate() {
+        println!("run {i}: honest-1 share {:.4}, A3's ratio {:.4}", run.share1, run.ratio);
+    }
+    // The record first, so that a draw that fails an assertion below still leaves its figures.
+    let out = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("results");
+    fs::create_dir_all(&out).unwrap();
+    let name = if salt.is_empty() { "gate-polls.txt".to_string() } else { format!("gate-polls-salt-{salt}.txt") };
+    fs::write(out.join(name), text.trim_end().to_string() + "\n").unwrap();
+    let (blocks, rounds) = (&runs[0], &runs[1]);
+    for (name, run) in [("heights", blocks), ("heights, 1.5 blocks a read", &runs[2]), ("A3's whole gate", &runs[3])] {
+        assert!(
+            (0.35..=0.65).contains(&run.share1) && (0.35..=0.65).contains(&run.share2),
+            "{name}: shares {:.3} {:.3}",
+            run.share1,
+            run.share2
+        );
+        assert!(run.ratio <= 0.10, "{name}: A3's ratio {:.4}", run.ratio);
+    }
+    assert!(
+        rounds.share1 > 0.65 && rounds.share1 > blocks.share1,
+        "counted in rounds, the updater reading three times as often pays more: {:.3} (heights: {:.3})",
+        rounds.share1,
+        blocks.share1
+    );
+    // A reader every third block notices its turns late and pays less than half: 0.329 in the recorded draw, 0.431 and
+    // 0.473 under GATE_POLL_SALT a and b (a measured residual of RFP-021 R.10, not a goal).
+    assert!(runs[4].share2 < 0.50, "a reader every third block pays less than half: {:.3}", runs[4].share2);
+}
+
+/// RFP-021 R.9 when the updaters' sources serve different copies of each update (honest-2's sources serve every update
+/// with its signature slot moved by one, `copy_of`: the same finalized header, other bytes, another job id), with jobs
+/// overlapping (a new recorded mainnet update every 6 rounds, as `gate_overlapping_updates_join_or_wait`). Learning the
+/// updates of other parties' jobs from their `Open`s on chain (`Ledger::messages_to`, the updater now), each updater
+/// finds the job the other opened for its copy and joins it: the gas spent besides the completed jobs' is held to A3's
+/// 10%, and every honest job abandoned was opened in the block of the job that overtook it (neither could read the
+/// other's). Without it (the updater before), each opens its own copy's job beside the other's, and more is abandoned.
+/// The runs' figures go to `results/gate-copies.txt`.
+#[test]
+fn gate_copies_join_or_wait() {
+    let mut text = String::new();
+    let mut runs = Vec::new();
+    for messages in [true, false] {
+        let opts = GateOpts { reveal_every: Some(6), copies: true, messages, ..GateOpts::a3(vec!["mainnet"], false) };
+        let run = run_gate(&opts);
+        let f = fates(&run.sent);
+        text += &gate_lines(&run, &f);
+        let done: u64 = (0..2).map(|d| f.gas[d].0).sum();
+        let besides: u64 = (0..2).map(|d| f.gas[d].1 + f.gas[d].2).sum();
+        let waste = besides as f64 / done as f64;
+        text += &format!(
+            "honest execution and storage gas besides the completed jobs' / the completed jobs'\t{waste:.4}\t({besides} / {done})\n\n"
+        );
+        runs.push((run, f, waste));
+    }
+    println!("{text}");
+    let (on, f_on, waste_on) = &runs[0];
+    let (_, f_off, waste_off) = &runs[1];
+    assert!(*waste_on <= 0.10, "learning other parties' copies, at most A3's 10% besides the completed jobs: {waste_on:.4}");
+    assert!(waste_off > waste_on, "without it, more: {waste_off:.4} against {waste_on:.4}");
+    let (h, same) = f_on.honest();
+    assert_eq!(same, h.len(), "every honest job abandoned was opened in the block of the job that overtook it");
+    let gas = |f: &Fates| f.gas[0].1 + f.gas[1].1;
+    assert!(gas(f_on) < gas(f_off), "learning abandons less: {} against {}", gas(f_on), gas(f_off));
+    assert!(on.ratio <= 0.10, "A3's ratio {:.4}", on.ratio);
+    assert!((0.35..=0.65).contains(&on.share1), "shares {:.3} {:.3}", on.share1, on.share2);
+    let out = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("results");
+    fs::create_dir_all(&out).unwrap();
+    fs::write(out.join("gate-copies.txt"), text.trim_end().to_string() + "\n").unwrap();
 }
 
 /// A beacon node on loopback serving a recorded chain over the beacon API (SSZ, the `updates`

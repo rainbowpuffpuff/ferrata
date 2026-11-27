@@ -93,11 +93,14 @@ impl Default for Fees {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Policy {
-    /// Rounds over which updaters spread who sends a step: each waits `H(key, job, step) mod
-    /// defer_window` rounds after it first sees the step due (1: never waits). A step of a job it carries counts from the
-    /// first round that step was due; an `Open`, or a step of a job it does not carry, from the first round a step of
-    /// that kind was due on the instance's state, whatever job it is for; after it sends a step there, the next of that
-    /// kind waits `defer_window - 1` rounds.
+    /// Turns over which updaters spread who sends a step: each waits `H(key, job, step) mod defer_window` turns after it
+    /// first finds the step due (1: never waits). A turn is a block of the chain the instance lives on (the height the
+    /// backend's reads reflect, `Ledger::height`: every party reading the chain counts the same blocks, so one reading it
+    /// more often reaches no turn sooner, RFP-021 R.10; ADR 0049), or this updater's round on a backend that gives no
+    /// height. A step of a job it carries counts from where that step was first found due; an `Open`, or a step of a job
+    /// it does not carry, from where a step of that kind was first found due on the instance's state, whatever job it is
+    /// for (the block after the reading before, `Updater`'s `due_clock`); after it sends a step there, the next of that
+    /// kind waits `defer_window - 1` turns.
     pub defer_window: u64,
     /// A source whose newest verified finalized slot is this far behind the best is lagging.
     pub max_lag_slots: u64,
@@ -122,17 +125,19 @@ pub struct Policy {
     pub finish_own_jobs: bool,
     /// Join or wait (RFP-021 R.9): a job finishes only on the store it began on, so two jobs open on one store waste
     /// the steps of the one that does not finish. This updater does not send a step of a job (its `Open` included)
-    /// while another job open on the instance's store leads it and has moved within this many rounds: it waits for that
+    /// while another job open on the instance's store leads it and has moved within this many turns (blocks of the
+    /// chain, as `defer_window` counts them; rounds on a backend that gives no height): it waits for that
     /// job, or joins it (sends its next step instead) when that job leaves the store as its own would (a copy of the same
     /// update; with `min_distinct_clients` comparing bytes, which a copy does not share, it waits instead). A job leads
     /// another when the chain holds more of its steps; between two with as many, the one whose update ranks higher as an
     /// update is chosen (adopting the next committee the store lacks, then the furthest finalized header, the earliest
-    /// signature slot, the most signers): as a rule the newer update; then by job id. Only jobs of updates this updater's
-    /// sources served (and the program's checks accepted) can be found: a job's account is found by its id, which hashes
-    /// the store and the update. A job that has not moved for this many rounds no longer holds this updater back; on one
-    /// state of the instance it stops waiting three times this many rounds after it first waited there, and does not wait
-    /// again on that state. Default (unset): `2 * defer_window + 10`; 0: off (a job is opened whatever else is open);
-    /// otherwise at least `defer_window + 4`.
+    /// signature slot, the most signers): as a rule the newer update; then by job id. A job's account is found by its id,
+    /// which hashes the store and the update, so the jobs this updater can find are those of the updates its sources
+    /// served or that it read from other parties' `Open`s on chain (`Ledger::messages_to`; the program's checks accept
+    /// each), copies of an update its sources never served included (ADR 0049). A job that has not moved for this many
+    /// turns no longer holds this updater back; on one state of the instance it stops waiting three times this many turns
+    /// after it first waited there, and does not wait again on that state. Default (unset): `2 * defer_window + 10`; 0:
+    /// off (a job is opened whatever else is open); otherwise at least `defer_window + 4`.
     #[serde(default)]
     pub join_wait_rounds: Option<u64>,
     /// Client diversity (0, the default: off; otherwise at least 2): send only an update that sources reporting at
@@ -292,13 +297,21 @@ impl File {
         if self.policy.defer_window == 0 || self.policy.max_attempts == 0 {
             bail!("policy: defer_window and max_attempts must be at least 1");
         }
+        if self.policy.defer_window > 1000 {
+            bail!(
+                "policy.defer_window = {}: at most 1000 turns (blocks of the chain; a turn older than 1024 is forgotten once \
+                 4096 are kept, and would start again)",
+                self.policy.defer_window
+            );
+        }
         if let Some(n) = self.policy.join_wait_rounds.filter(|&n| n != 0) {
             let least = self.policy.defer_window.saturating_add(4);
             if n < least || n > 1_000_000 {
                 bail!(
-                    "policy.join_wait_rounds = {n}: 0 (off) or from defer_window + 4 ({least}) to 1000000 rounds (below \
+                    "policy.join_wait_rounds = {n}: 0 (off) or from defer_window + 4 ({least}) to 1000000 turns (below \
                      that, a job still moving would be passed between its turns: a step goes out up to defer_window - 1 \
-                     rounds after it is due, and other updaters read it a few rounds later)"
+                     turns after it is due, and other updaters read it a few turns later; a turn is a block of the chain, \
+                     or a round on a backend that gives no height)"
                 );
             }
         }

@@ -9,7 +9,9 @@ block from the moment the sequencer publishes it) and checks it against the foll
 the two differ the read fails and the round sends nothing (`lez/live/driver/src/live.rs`, `actor_state`). So a job is in
 effect seen from the publication of the block of its `Open` (a read of it fails until the block is final, then shows
 it), provided the daemon reads its account, which needs the job's update (a job's account is found by its id, which
-hashes the update). In these runs both daemons are served the same updates by one replay.
+hashes the update). In the runs before `GATE_COPIES` both daemons are served the same updates by one replay; with
+`GATE_COPIES=1` honest-2 is served a copy of each, and a daemon learns the other's copy from its `Open` on chain once that
+`Open`'s block is final (ADR 0049).
 
 Times: a transaction's send time is its settlement time (the journal, to the second) less the time from send to
 settlement its daemon logged (`[updater] ... + 11.6s <hash>`); a block's publication and finality times are the

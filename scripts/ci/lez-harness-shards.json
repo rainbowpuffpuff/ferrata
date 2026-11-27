@@ -84,7 +84,9 @@
           "names": [
             "an_update_one_client_serves_is_held_back",
             "catches_up_mainnet_and_sepolia_from_recorded_data",
+            "gate_copies_join_or_wait",
             "gate_overlapping_updates_join_or_wait",
+            "gate_poll_speeds_share_the_cost",
             "gate_two_honest_one_adversary",
             "restart_mid_job_and_mid_period",
             "stale_and_down_sources_fall_back"
@@ -99,6 +101,7 @@
       "updater_tests": [
         "bounds",
         "config",
+        "copies",
         "daemon_clock",
         "diversity_limits",
         "every_party",
@@ -109,7 +112,8 @@
         "redating",
         "refusals",
         "replacement",
-        "serve"
+        "serve",
+        "turns"
       ],
       "updater_splits": [
         {
@@ -118,7 +122,9 @@
           "names": [
             "an_update_one_client_serves_is_held_back",
             "catches_up_mainnet_and_sepolia_from_recorded_data",
+            "gate_copies_join_or_wait",
             "gate_overlapping_updates_join_or_wait",
+            "gate_poll_speeds_share_the_cost",
             "gate_two_honest_one_adversary",
             "restart_mid_job_and_mid_period",
             "stale_and_down_sources_fall_back"

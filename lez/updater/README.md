@@ -156,9 +156,27 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    open on the instance's store among those of the updates it knows, and how many steps the chain holds of each. It
    knows the updates its sources served that the program's checks accepted (at most `MAX_KNOWN` = 64, and of one kind,
    copies of one update, `KNOWN_PER_KIND` = 4, the earliest signed of each kind and those whose jobs it found open kept)
-   and the updates of the jobs it carries. A job's account is found by its id, which hashes the update, so a job of an
-   update it was never served cannot be found: two updaters whose sources serve different copies of an update do not
-   see each other's jobs. On the sequencer backend a read is checked against the follower of the final blocks, so the
+   and the updates of the jobs it carries, and, in each round it checks for other jobs (just before it would send a step
+   whose turn has come), the updates of the jobs other parties opened, read from
+   their `Open`s on chain (`Ledger::messages_to`; the sequencer backend: the blocks its follower holds, final on Bedrock;
+   [ADR 0049](../../docs/decisions/0049-updater-turns-on-the-chains-height.md)): an `Open` carries the update in the
+   program's compact encoding, from which the bytes a source would serve are rebuilt
+   (`ferrata_advance::served_update_of_open`; a period update's next committee from a full committee the updater holds
+   for its summary) and remembered when the program's checks accept them (`_updates_from_chain_total`). A job's account
+   is found by its id, which hashes the update, `signature_slot` included; so a job opened for a copy of an update the
+   updater's sources never served (another beacon node's, or a re-dated one) is found too, recognized as the same update
+   for the store by where it leaves it, and joined (`tests/copies.rs`). The `Open`s read are queued and at most
+   `MAX_LEARN_PER_ROUND` (64) judged a round (the queue holds `MAX_PENDING_OPENS`, 256; the first read after a start
+   goes back to the follower's start); a learned update whose job is open is marked open before it is remembered, so a
+   batch of copies cannot push the leading one out of `known` (at most twice `MAX_KNOWN` entries in all); a period
+   update's `Open` whose full committee the updater holds nowhere yet stays queued until it does or the update no
+   longer moves the store; an `Open` encoded in a layout above the one served is not learned. Limits (a review's, not
+   fixed): a send is not held for `Open`s still queued, which are judged oldest first, moot ones included, and dropped
+   unjudged beyond 256: after a restart over a long history, or under a flood of `Open`s, a step can go out before a
+   leading job queued behind them is learned; past twice `MAX_KNOWN` entries an open job's update can be pushed out
+   before its job is read; a learned job is joined only in a round in which the sources serve a useful update. `/health` says
+   `degraded` after five rounds in a row in which the instance's transactions could not be read
+   (`_transactions_unread_rounds`, `_opens_dropped_total`). On the sequencer backend a read is checked against the follower of the final blocks, so the
    account of a job a block not yet final changed fails to read ("the sequencer and the follower disagree"): such a job
    is waited for as one that just moved (`_waits_for_unreadable_jobs_total`); any other failed read ends the round in
    an error, as before. Another job *leads* this one when the chain holds more of its steps, or as many and its update
@@ -167,40 +185,60 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    would (the same finalized header and adoption: a copy of the same update) is joined, its next step sent instead,
    unless this updater holds that step after a refusal, or `min_distinct_clients` compares bytes (a copy does not share
    them): then it is waited for. Another leading job is waited for while it moves (more steps applied to jobs of its
-   kind, or one of its kind first read, within `join_wait_rounds` rounds; unset, `2 × defer_window + 10`, 26 at the
-   default window; a configuration sets at least `defer_window + 4`), then passed. On one state of the instance the
-   updater stops waiting `JOIN_WAIT_CAP × join_wait_rounds` rounds (78 at the defaults) after it first waited there,
+   kind, or one of its kind first read, within `join_wait_rounds` turns of the clock item 8 counts, blocks of the chain;
+   unset, `2 × defer_window + 10`, 26 at the default window; a configuration sets at least `defer_window + 4`), then
+   passed. On one state of the instance the updater stops waiting `JOIN_WAIT_CAP × join_wait_rounds` turns (78 at the
+   defaults) after it first waited there,
    however the jobs move, and does not wait again on that state. When a wait ends (nothing left to wait for, or the
    cap) the step's turn starts again, once per wait, so that updaters released together do not all send in one round;
-   so join or wait adds at most `JOIN_WAIT_CAP × join_wait_rounds + defer_window - 1` rounds on a state (85 at the
+   so join or wait adds at most `JOIN_WAIT_CAP × join_wait_rounds + defer_window - 1` turns on a state (85 at the
    defaults) to the turns of item 8. Past `stall_rounds` (58 at the defaults) `/health` reports the instance not
-   moving, so under such a wait it can say `degraded`, and `down` past twice that. A job this updater moved last and
+   moving, so under such a wait it can say `degraded`, and `down` past twice that (116: under the strongest attacker
+   the sum of the two bounds, 153 turns, passes it, and `/health` says `down`: nothing has moved for that long). A job this updater moved last and
    does not carry (it opened it and left it) holds it back no longer, so with `finish_own_jobs = false` it opens the
    newer update's job as before; this, the jobs passed and the cap are kept in memory only, so after a restart a job
    this updater left is waited for once more, and every job open on the store counts as just read. A carrier asks its
    sources in each round it does not otherwise ask them (judging them as in any round), so it finds a newer job that
    leads its own. Metrics `_waits_for_other_jobs_total`, `_waits_for_unreadable_jobs_total`, `_jobs_joined_total`,
    `_stalled_jobs_passed_total`, `_join_waits_capped_total`; `join_wait_rounds = 0` turns it off.
-8. **Deferral.** Each (job, step) is sent by the updater whose wait, `H(key, job, step) mod defer_window` rounds after
-   it first saw the step due, runs out first; the others find the step done and skip it. Two honest updaters collide on
-   a job's step only when their turns for it end in the same round. A step of a job this updater carries (it sent a step
-   of it, item 7) counts from the first round that step was due. An `Open`, and a step of a job it does not carry, count
+8. **Deferral.** Each (job, step) is sent by the updater whose wait, `H(key, job, step) mod defer_window` turns after
+   it first found the step due, runs out first; the others find the step done and skip it. A turn is a block of the
+   chain the instance lives on: the height the backend's reads reflect (`Ledger::height`; the sequencer backend: its
+   follower's last block, final on Bedrock), read once a round just after the instance's state (`read_clock`; ADR 0049,
+   RFP-021 R.10). Every party reading the chain reads the same heights and none can bring a block sooner, so an updater
+   that reads more often reaches no turn sooner: it only notices a turn sooner, within the blocks between two of its
+   readings (for a step a block makes due; an `Open` falls due when an update is served, between blocks, and an
+   updater reading once a block starts its count for it a block later than one reading several times a block about
+   half the time: ADR 0049). A turn that starts at a reading is counted from the block after the updater's previous
+   reading, the first at which what it now finds due can have become due, but at most one block before the reading
+   (`due_clock`): one reading every two blocks does not also lose the block between its readings to the start of the
+   count, and one back after a long gap waits its draw like any other (`tests/turns.rs`; in process, honest updaters
+   reading three times and once a block pay 0.533 / 0.467 of the honest fees, counted in rounds 0.847 / 0.153; one
+   reading every 1.5 blocks pays 0.549 against one reading twice a block; one reading every third block, which notices
+   its turns up to three blocks late, pays 0.329: `results/gate-polls.txt`; an operator should read the chain at least
+   once a block). The clock never goes back (a lower height leaves it where it was) and keeps the kind of its
+   first reading; a backend that gives no height counts the updater's rounds, as before. The failure handling counts
+   rounds still (holds after a refusal, the breaker, demoted sources): it decides nothing between updaters whose steps
+   land. Two honest updaters collide on a job's step only when their turns for it end in the same block (or before one
+   can read the other's step: the reads are of final blocks). A step of a job this updater carries (it sent a step
+   of it, item 7) counts from where that step was first found due. An `Open`, and a step of a job it does not carry, count
    from the first round a step of that kind was due on the instance's state, whatever job it is for; after it sends a
-   step there, the next of that kind waits `defer_window - 1` rounds. A job's id hashes `signature_slot`, which a source
+   step there, the next of that kind waits `defer_window - 1` turns. A job's id hashes `signature_slot`, which a source
    can change at will; any beacon node can build another real update of the period from each of its blocks; and anyone
    may open a job and send its steps. Counted by the job, a source serving a new copy each round, or opening each copy
    itself (two internal reviews' findings M1), had this updater count again each round. Now each kind of
-   step has one turn per state, at most `defer_window - 1` rounds, whatever the sources serve and others send; a source
+   step has one turn per state, at most `defer_window - 1` turns, whatever the sources serve and others send; a source
    can only present jobs at another step, each kind's turn running once. So, on each state of the instance, this
-   updater's first step goes out within `K × (defer_window - 1)` rounds of the first round one was due there (`K = 3 +
+   updater's first step goes out within `K × (defer_window - 1)` turns of where one was first found due there (`K = 3 +
    adoption_parts` kinds: `Open`, `Miller`, the adoption's parts, `Finish`), and the job it then carries takes each of
-   its other steps within `defer_window` rounds: an update adopting the next committee is applied at most `K ×
-   (defer_window - 1) + 1 + (K - 1) × defer_window` rounds after the first round it was due on that state (68 at the
-   defaults, `defer_window` 8 and two parts; measured 66 rounds with the strongest attacker known in
+   its other steps within `defer_window` turns: an update adopting the next committee is applied at most `K ×
+   (defer_window - 1) + 1 + (K - 1) × defer_window` turns after it was first found due on that state (68 at the
+   defaults, `defer_window` 8 and two parts; measured, in tests whose ledger gives no height (a turn is a round there),
+   66 rounds with the strongest attacker known in
    `tests/redating.rs`, and 67 with every slot of the period searched in an independent review run, not reproduced by a
    committed test; 16 to 26 with the openers,
    30 with the started slots). Join or wait (item 7) adds waits of its own, at most `JOIN_WAIT_CAP × join_wait_rounds +
-   defer_window - 1` rounds on a state (85 at the defaults; the code implies no tighter bound for the two together than
+   defer_window - 1` turns on a state (85 at the defaults; the code implies no tighter bound for the two together than
    the sum, 68 + 85 = 153); with it the tests measured 36 rounds with the strongest attacker, 23 to 26 with the openers
    and 30 with the started slots, the updater joining the copies the attacker took furthest. The turns start again whenever the state changes, and anyone may change it by applying a
    real update: a party that applies older real updates itself starts a new state with each, and new turns ("Not built,
@@ -352,13 +390,15 @@ finalized header's slot, two sources serving other bytes for one update or waiti
 stayed due, failed at transport after every retry; refused with the chain unreadable after it: from the round that
 reads the step still due), a round that ended in an error, the last round
 stuck, sending paused, or no progress: the instance's finalized slot unmoved for
-`6 × defer_window + 10` rounds while the sources serve updates more than `max_lag_slots` past it.
+`6 × defer_window + 10` turns of item 8's clock (blocks of the chain; rounds on a backend that gives no height), or, on
+the chain's height, that height unmoved for as many rounds (a follower that no longer gets final blocks stops every
+turn), while the sources serve updates more than `max_lag_slots` past it.
 `down` (HTTP 503), whenever this updater moves nothing once the instance is active (before that, a step held for good, such as the initialization's `Adopt` out of gas, is `degraded`, naming what to change): no light-client source usable and answering;
 five sends in a row that did not land; five rounds in a row that ended in an error (a chain that
 answers neither reads nor sends fails each round before anything is sent; so does a round that cannot fetch the
 committees the store summarises, 9c L-U2: it used to stay `degraded`); the instance, or before
 `Init` its checkpoint, past its weak-subjectivity period by the chain's clock (a person must
-initialise a new instance, or start from a newer checkpoint); no progress for twice the rounds above,
+initialise a new instance, or start from a newer checkpoint); no progress for twice the turns above,
 `2 × (6 × defer_window + 10)` (a step held, sending paused, too few sources or clients agreeing, round
 after round); or the budget reached (the review of the fixes, M1: an unreachable chain and an
 instance past its period stayed `degraded`, HTTP 200, in 200 rounds of 200). After an outage longer
@@ -388,8 +428,9 @@ over whole: that bound limits parsing, not memory); a provider's message reaches
 `_tx_total{step,result=applied|refused|rejected}`, `_refused_by_code_total{code}`,
 `_refusals_total{cause=window|gas|program|other,after=race|due|unread}`, `_held_steps`, `_sending_paused`,
 `_failing_sends`, `_failed_rounds`, `_past_weak_subjectivity` (1: the instance or its checkpoint is
-past its weak-subjectivity period), `_sources_head_slot`, `_rounds_without_progress`,
-`_gas_total{result}`, `_fee_total{result}`, `_budget_remaining`, `_transport_errors_total`,
+past its weak-subjectivity period), `_sources_head_slot`, `_rounds_without_progress` (polling rounds; the stall alarm
+counts blocks of the turn clock, item 7), `_turn_clock` (the clock's last reading) and `_turn_clock_is_height` (1: the
+chain's height, item 8; 0: the updater's rounds), `_gas_total{result}`, `_fee_total{result}`, `_budget_remaining`, `_transport_errors_total`,
 `_retries_total`, `_deferrals_total`, `_steps_done_by_others_total`, `_jobs_finished_total`, join or wait's
 `_waits_for_other_jobs_total` (rounds a step whose turn had come waited for another job), of them
 `_waits_for_unreadable_jobs_total`, `_jobs_joined_total`, `_stalled_jobs_passed_total` and `_join_waits_capped_total`,

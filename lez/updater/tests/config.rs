@@ -41,6 +41,7 @@ fn bad_configurations_are_refused() {
         ("preset = \"mainnet\"", "preset = \"holesky\"", "unknown preset"),
         ("checkpoint = \"4baa", "checkpoint = \"zz4baa", "checkpoint not hex"),
         ("defer_window = 1", "defer_window = 0", "zero deferral window"),
+        ("defer_window = 1", "defer_window = 1001", "a deferral window past 1000 turns"),
         ("defer_window = 1", "defer_window = 8\njoin_wait_rounds = 11", "join_wait_rounds below defer_window + 4"),
         ("defer_window = 1", "defer_window = 1\njoin_wait_rounds = 1000001", "join_wait_rounds without bound"),
         (

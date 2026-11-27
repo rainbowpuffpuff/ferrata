@@ -657,6 +657,10 @@ jobs:
       # a proof on a sibling image, a guest missing from a stage's sums and another program's private run refused.
       - name: The P.2 proof records and their image-id checks (bench/perf/test_summarize_proofs.py)
         run: python3 -I bench/perf/test_summarize_proofs.py
+      # RFP-021 R.9, R.10: the sequencer gate's parts: beacon_replay.py's copies of each update (its signature slot
+      # moved by one, within its period), gate-hook.sh's defaults and summarize_gate.py's per-daemon lines.
+      - name: The gate scripts' copies, defaults and per-daemon lines (bench/perf/test_gate_scripts.py)
+        run: python3 -I bench/perf/test_gate_scripts.py
       # RFP-021 U.3, P.6: the record of the modules on the LEZ v0.4.0-rc3 network we run, its figures and checks computed
       # again from its files, offline (modules/results/live-testnet-2026-11-23/).
       - name: The live test-network record's figures and checks recomputed (modules/scripts/test_live_testnet.py)

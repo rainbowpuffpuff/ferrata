@@ -57,6 +57,22 @@ pub trait Ledger {
     fn now_ms(&self) -> Option<u64> {
         None
     }
+    /// The height of the newest block the backend's reads reflect (the sequencer backend: the last block its follower
+    /// holds, final on Bedrock). Every party reading this chain reads the same heights, and no party can make them come
+    /// sooner: the clock the updaters' turns are counted on (`policy.defer_window`, `policy.join_wait_rounds`; RFP-021
+    /// R.10), so that an updater reading the chain more often does not reach its turn sooner. `None` (the default): the
+    /// backend gives none, and the turns count this updater's own rounds.
+    fn height(&self) -> Option<u64> {
+        None
+    }
+    /// The messages of the transactions the chain applied with root actor `root` in blocks after `after`, oldest first,
+    /// and the newest block read: how an updater learns the updates of the jobs other parties opened, from their `Open`s
+    /// (`policy.join_wait_rounds`; RFP-021 R.9), copies it was never served included. `None` (the default): the backend
+    /// does not say.
+    fn messages_to(&self, root: Actor, after: u64) -> Result<Option<(Vec<Vec<u8>>, u64)>> {
+        let _ = (root, after);
+        Ok(None)
+    }
 }
 
 /// This machine's clock, in Unix milliseconds.
@@ -89,14 +105,21 @@ mod harness_ledger {
     /// Each transaction is settled in a block of its own. `fail_next` makes the next submissions
     /// fail as a dropped connection would (nothing sent). `now` sets the block time of every
     /// transaction (the chain's clock, which the updater reads before sending: `Ledger::now_ms`);
-    /// `None` (the default): each transaction's own `time_ms`.
+    /// `None` (the default): each transaction's own `time_ms`. `height` is the height the reads reflect
+    /// (`Ledger::height`, the updaters' turn clock): a test that makes blocks of several transactions sets it per block;
+    /// `None` (the default): none is given, and the updaters count their rounds.
     pub struct HarnessLedger {
         pub state: V03State,
         pub block_id: u64,
         pub fail_next: usize,
         pub now: Option<u64>,
+        pub height: Option<u64>,
         /// (payer, label, outcome) of every settled transaction.
         pub log: Vec<(AccountId, String, TxOutcome)>,
+        /// (block, root actor, message) of every transaction the chain applied (`Ledger::messages_to`).
+        pub applied: Vec<(u64, Actor, Vec<u8>)>,
+        /// Whether `Ledger::messages_to` gives them (default); off, it gives none, as a backend that does not say.
+        pub serve_messages: bool,
     }
 
     impl HarnessLedger {
@@ -113,7 +136,16 @@ mod harness_ledger {
                 .with_public_accounts(accounts)
                 .with_named_programs([(programs::fee_account_id(), programs::fee())])
                 .with_genesis_programs([(harness::ferrata_program(), true)]);
-            Self { state, block_id: 2, fail_next: 0, now: None, log: Vec::new() }
+            Self {
+                state,
+                block_id: 2,
+                fail_next: 0,
+                now: None,
+                height: None,
+                log: Vec::new(),
+                applied: Vec::new(),
+                serve_messages: true,
+            }
         }
 
         /// The Ferrata program's account.
@@ -137,6 +169,19 @@ mod harness_ledger {
 
         fn now_ms(&self) -> Option<u64> {
             self.now
+        }
+
+        fn height(&self) -> Option<u64> {
+            self.height
+        }
+
+        fn messages_to(&self, root: Actor, after: u64) -> Result<Option<(Vec<Vec<u8>>, u64)>> {
+            if !self.serve_messages {
+                return Ok(None);
+            }
+            let messages =
+                self.applied.iter().filter(|(b, r, _)| *b > after && *r == root).map(|(_, _, m)| m.clone()).collect();
+            Ok(Some((messages, self.block_id.saturating_sub(1).max(after))))
         }
 
         fn submit(&mut self, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome> {
@@ -192,6 +237,9 @@ mod harness_ledger {
                         block: self.block_id,
                         note: charge.revert.unwrap_or_default(),
                     };
+                    if out.applied {
+                        self.applied.push((self.block_id, tx.root, tx.message.clone()));
+                    }
                     self.block_id += 1;
                     out
                 }

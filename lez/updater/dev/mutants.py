@@ -35,6 +35,17 @@ whose account fails to read is taken for no job, so the updater sends: it used t
 released together all send at once), j11 (a new copy of one update counts as a move), j12 (the copy behind is
 joined), j13 (the cap not started again on a new state of the instance); after the second: j14 (each job passed when
 first read, of a kind that stopped moving, restarts the turn, so a party opening one each turn holds the `Open` back).
+
+The turns on the chain's height and the jobs of other parties' copies (ADR 0049, RFP-021 R.10 and R.9, 27 November
+2026): c1 (the turns count the updater's rounds again, the height given: the reader reading more often reaches its turn
+sooner: `tests/turns.rs`; c1gate the same, the in-process gate with honest updaters reading at different rates); c2
+(join or wait's bounds count rounds); c3 (the stall alarm counts rounds); c4 (no alarm for a height that stops); c5 (a
+turn counted from this reading, not the block after the previous one: a reader reading less often than once a block
+loses the blocks between its readings); c6 (that credit not capped at a block: an updater back after a long gap finds
+every draw elapsed); l1 (no `Open` learned from the chain: `tests/copies.rs`; l1gate the in-process gate with copies);
+l2 (a learned update whose job is open not marked open before it is remembered: a batch of copies pushes the leading
+job's update out); e1 (a light-client header written in an SSZ container as a fixed field: the bytes an `Open` gives
+back are not the ones a source served).
 """
 import os
 import signal
@@ -53,7 +64,7 @@ KEY = ("                std::cmp::Reverse(p.update.signature_slot),\n"
        "                std::cmp::Reverse(p.update.signature_slot),\n")
 # The order's first element, an update that can be sent now, made the same for every candidate.
 # After a step sent on a state: a whole turn for the next of its kind there.
-SENT = ".insert((state_digest(&action.store_seen), action.step), (self.round + 1, Some(whole)));"
+SENT = ".insert((state_digest(&action.store_seen), action.step), (self.clock + 1, Some(whole)));"
 OPEN = ("                now.is_none_or(|t| config.slot_start_ms(p.update.signature_slot) <= t),\n",
         "                now.map(|_| true).unwrap_or(true),\n")
 MUTANTS = {
@@ -109,7 +120,7 @@ MUTANTS = {
     "j9": ([(U, "                Err(e) if format!(\"{e:#}\").contains(\"disagree\") => out.push((k, None)),",
              "                Err(e) if format!(\"{e:#}\").contains(\"disagree\") => {}")],
            ["--test", "join_wait", "an_unreadable_job"]),
-    "j10": ([(U, "                self.first_due.insert((since, step), (self.round, None));", "                let _ = since;")],
+    "j10": ([(U, "                self.first_due.insert((since, step), (self.clock, None));", "                let _ = since;")],
             ["--test", "join_wait", "updaters_released_together"]),
     "j11": ([(U, "            let e = most.entry(k.lands).or_default();", "            let e = most.entry((false, k.jid)).or_default();"),
              (U, "            let still = round.saturating_sub(self.rivals.1.get(&k.lands).map_or(round, |e| e.1));",
@@ -123,6 +134,39 @@ MUTANTS = {
     "j14": ([(U, "                if self.passed.insert(k.jid) {\n                    self.metrics.stalled_jobs_passed += 1;",
               "                if self.passed.insert(k.jid) {\n                    self.in_wait = true;\n                    self.metrics.stalled_jobs_passed += 1;")],
             ["--test", "join_wait", "new_jobs_of_a_stalled_kind"]),
+    "c1": ([(U, "            (Some(h), true) => {\n                if h < self.clock {",
+             "            (Some(_h), true) => {\n                let h = self.round;\n                if h < self.clock {")],
+           ["--test", "turns", "a_turn_comes_at_a_height"]),
+    "c1gate": ([(U, "            (Some(h), true) => {\n                if h < self.clock {",
+                 "            (Some(_h), true) => {\n                let h = self.round;\n                if h < self.clock {")],
+               ["--test", "recorded", "gate_poll_speeds_share_the_cost"]),
+    "c2": ([(U, "        let round = self.clock;\n        let unit = self.clock_unit();",
+             "        let round = self.round;\n        let unit = self.clock_unit();")],
+           ["--test", "turns", "a_stalled_job_is_passed_after_join_wait_blocks"]),
+    "c3": ([(U, "        let still = self.metrics.turn_clock.saturating_sub(self.metrics.progress_clock);",
+             "        let still = self.round.saturating_sub(self.metrics.progress_round);")],
+           ["--test", "turns", "the_stall_alarm_counts_blocks"]),
+    "c4": ([(U, "            if self.metrics.turn_clock_height { self.round.saturating_sub(self.clock_moved_round) } else { 0 };",
+             "            if false { self.round.saturating_sub(self.clock_moved_round) } else { 0 };")],
+           ["--test", "turns", "the_stall_alarm_counts_blocks"]),
+    "c5": ([(U, "        self.prev_clock.map_or(self.clock, |p| p.saturating_add(1).max(self.clock.saturating_sub(1)).min(self.clock))",
+             "        self.prev_clock.map_or(self.clock, |_| self.clock)")],
+           ["--test", "recorded", "gate_poll_speeds_share_the_cost"]),
+    "l1": ([(U, "        self.learn_from_chain(ledger, store);\n        let mut wanted",
+             "        let mut wanted")],
+           ["--test", "copies"]),
+    "l1gate": ([(U, "        self.learn_from_chain(ledger, store);\n        let mut wanted",
+                 "        let mut wanted")],
+               ["--test", "recorded", "gate_copies_join_or_wait"]),
+    "l2": ([(U, "        if !matches!(self.job_on_chain(ledger, &p.jid), Ok(None)) {\n            self.open_digests.insert(digest);",
+             "        if false {\n            self.open_digests.insert(digest);")],
+           ["--test", "copies", "a_batch_of_copies"]),
+    "c6": ([(U, "        self.prev_clock.map_or(self.clock, |p| p.saturating_add(1).max(self.clock.saturating_sub(1)).min(self.clock))",
+             "        self.prev_clock.map_or(self.clock, |p| p.saturating_add(1).min(self.clock))")],
+           ["--test", "turns", "an_updater_back_after_a_long_gap"]),
+    "e1": ([("lez/advance/src/lib.rs", "    matches!(layout, LcFork::Capella | LcFork::Deneb | LcFork::Electra)",
+             "    matches!(layout, LcFork::Capella | LcFork::Deneb)")],
+           ["--test", "copies", "an_open_gives_back"]),
     "u2": ([(U, "self.ensure_committees(&store)?;",
              "if let Err(e) = self.ensure_committees(&store) {\n            return Ok(Plan::Stuck(format!(\"{e:#}\")));\n        }")],
            ["--test", "health", "committees_no_source_serves"]),

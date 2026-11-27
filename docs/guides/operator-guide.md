@@ -142,9 +142,10 @@ two-hour cadence (§2).
   `NotNewer`, 205 `NO_JOB`).
 - **Deferral.** Each daemon waits a random share of a window `W`, re-checks the chain, then sends. The
   design note gives the duplicate probability as `1 − (1 − Δ/W)^n` for block interval Δ and `n` daemons
-  ([`attestation.md`](../design/attestation.md) §9). With LEZ's 10-s blocks ([`lez/lab/README.md`](../../lez/lab/README.md)):
+  ([`attestation.md`](../design/attestation.md) §9). `ferrata-updater` counts `W` in blocks, so `Δ/W` is `1/W`; with
+  LEZ's 10-s blocks ([`lez/lab/README.md`](../../lez/lab/README.md)) a window of `W` blocks is `W × 10` s:
 
-  | `W` | mean added latency (`W/2`) | `n` = 2 | 3 | 5 | 10 |
+  | `W` | mean added latency of one step (about `W/2`) | `n` = 2 | 3 | 5 | 10 |
   |---:|---:|---:|---:|---:|---:|
   | 60 s | 30 s | 0.306 | 0.421 | 0.598 | 0.838 |
   | 120 s | 60 s | 0.160 | 0.230 | 0.353 | 0.581 |
@@ -154,15 +155,38 @@ two-hour cadence (§2).
 
   Derived by arithmetic from that formula. A duplicate costs the 2.2M step above.
   `ferrata-updater` defers per step rather than per update: each (job, step) waits
-  `H(key, job, step) mod W` rounds (an `Open`, and a step of a job the daemon does not carry, counted from the first
-  round a step of that kind was due on the instance's state), `key` the daemon's own (so the wait differs per daemon and
+  `H(key, job, step) mod W` blocks (an `Open`, and a step of a job the daemon does not carry, counted from where a step
+  of that kind was first found due on the instance's state), `key` the daemon's own (so the wait differs per daemon and
   per step), reads the job's account just before sending, and an updater continues the open job of the update it chose.
-  The window counts the daemon's own polling rounds (`poll_secs` each, plus the round's own work), not seconds: an
-  operator that polls more often waits fewer seconds, so it would send first more often and, with join or wait, carry
-  the jobs it opens. The runs below gave both daemons the same `poll_secs`; operators who want the cost spread should
-  do the same. A wait on a clock all parties share (LEZ blocks, beacon slots) is not built (RFP-021 R.10 is in part).
-  It does not open a job, or send a step of one, while another job open on the instance's store leads it (join or wait,
-  below).
+  **The clock is the LEZ chain's height** ([ADR 0049](../decisions/0049-updater-turns-on-the-chains-height.md), since
+  27 November 2026): the newest block the daemon's reads reflect (the sequencer backend: its follower's last block, final
+  on Bedrock), the same for every operator reading the chain, and one no operator can bring sooner. A step falls due
+  when a block applies the previous step (or, for an `Open`, when an update is served, between two blocks), and a turn
+  is counted from the block after the daemon's previous reading (at most one block before its reading), so two daemons
+  polling at least once a block find a step a block made due at the same height and reach their turns at the heights
+  their draws give, however often each polls. An `Open` that falls due when an update is served is counted from the
+  block the daemon had read if it polls again before the next block, and from the next block if not: a daemon polling
+  once a block starts that count a block later than one polling several times a block about half the time, a bias
+  against the slower poller that no test or run here measures apart. Polling more often only notices a turn sooner,
+  within the
+  blocks between two readings: an operator polling less often than once a block notices some turns up to its poll
+  interval late, and counts a turn from the block after its previous reading (at most one block back), which can be
+  before the step fell due: reading every 1.5 blocks the two about cancel, reading every third block it notices late
+  more often than it gains and pays less (in process 0.329 against 0.671). An operator whose beacon sources serve a new
+  update sooner finds its `Open` due sooner, by as many blocks as they lead (not measured here: in every run below one
+  replay served both daemons at once). Before this, the window counted each daemon's own polling rounds, so an operator polling more often waited
+  fewer seconds and sent first more often (a daemon that never deferred, polling
+  every 2 s against 4, applied 93 of 99 steps: run G2 below). In process (`lez/updater/results/gate-polls.txt`, CI's
+  `recorded.rs`), honest updaters reading the chain three times and once a block pay 0.533 and 0.467 of the honest fees
+  (counted in rounds, as before: 0.847 and 0.153); one reading every 1.5 blocks against one reading twice a block pays
+  0.549 (the slower, here), one reading every third block 0.329; A3's whole gate with its adversary and the honest pair
+  reading once and three times a block meets A3's limits.
+  What still counts rounds is the failure handling (a step held after a refusal, the breaker, a demoted source), which
+  decides nothing between daemons whose steps land. Operators should poll at least once a block (`poll_secs` at most
+  the chain's block interval); the example configuration's 12 s, a beacon slot, is a little slower than LEZ's 10-s
+  blocks. The reads are of final blocks, so two daemons collide when their turns fall within the finality delay (about
+  6 s on the gate's zone, under a block). It does not open a job, or send a step of one, while another job open on the
+  instance's store leads it (join or wait, below).
 - **The strategy's effect, measured on a running LEZ v0.4.0-rc1 sequencer** (21 and 26 November 2026;
   [`perf-gate-sequencer.md`](../../lez/results/perf-gate-sequencer.md) for G2–G5,
   [`perf-gate-sequencer-100.md`](../../lez/results/perf-gate-sequencer-100.md) for G6 and G7,
@@ -183,6 +207,31 @@ two-hour cadence (§2).
   | G10: 106 updates, join or wait | 8 (5.8–6.1 s) | 60 s | 105 / 157 s | 65 / 31 | 7.7M | 1.088 | 0.088 | 0.0853 | 0.541 |
   | G11: 106 updates, join or wait | 30 (4.6–4.7 s) | 60 s | 326 / 595 s | 21 / 75 | 3.2M | 1.036 | 0.036 | 0.0358 | 0.577 |
 
+  With the turns on the chain's height (ADR 0049; 27 November 2026, one build, commit `860be342`;
+  [`perf-gate-sequencer-r910.md`](../../lez/results/perf-gate-sequencer-r910.md)): window 8 blocks of 10 s, 106 updates
+  revealed every 60 s, both honest daemons polling every 4 s unless the run says otherwise.
+
+  | run | reveal step | latency median / p90 | updates covered: own job / a later one | execution gas per revealed update | total / completed-job gas | honest waste: refused and abandoned / completed | A3's ratio: refused / applied | honest-1's fee share |
+  |---|---:|---|---|---:|---:|---:|---:|---:|
+  | G22: honest-1 every 2 s, honest-2 every 6 s | 60 s | 156 / 265 s | 43 / 53 | 5.3M | 1.037 | 0.037 | 0.0331 | 0.575 |
+  | G23: honest-2 served copies | 60 s | 161 / 286 s | 42 / 54 | 5.1M | 1.042 | 0.042 | 0.0001 | 0.498 |
+  | G24: with A3's adversary | 60 s | 35 / 45 s | 96 / 0 | 10.9M | 1.107 | 0.953 | 0.9529 | 0.497 |
+  | G25: the default | 60 s | 165 / 285 s | 41 / 55 | 5.2M | 1.059 | 0.059 | 0.0550 | 0.577 |
+  | G26: the default | 60 s | 145 / 255 s | 44 / 52 | 5.4M | 1.048 | 0.048 | 0.0484 | 0.583 |
+
+  Polling every 2 s against 6 s (G22: 3.8 and, on average, 1.35 reads a block) left honest-1's share where equal polls
+  put it (G25, G26), in one run per setting with the fast poll on honest-1 (not swapped): honest-1 paid more than half
+  in each run where one replay served both daemons and no adversary ran (these, G6–G11), the same instance, updates and
+  keys repeating largely the same draws; with copies (G23) 0.498, beside the adversary (G24) 0.497. No run here reads
+  less often than once a block or at the example's 12 s. The latency at window 8 is longer than G10's (105 / 157 s), a
+  turn being a 10-s block rather than a round of about 6 s. With copies (G23) every abandoned job was left at its
+  `Open`,
+  opened before the other's `Open` was in a final block: 5 in the same block, 1 ambiguous, and 4 (0.017 of the completed
+  jobs' gas) once the other's block was published, which a read of the newest block would have stopped (the daemon reads
+  final blocks); A3's ratio there counts refused steps only, and the duplicates show as abandoned gas (0.042). A3's
+  adversary (G24), never deferring and polling every 2 s, sent almost every step, and the honest daemons' few sends lost
+  their races: A3's ratio 0.9529, outside its limit.
+
   A longer window costs latency and saves gas: fewer races, and intermediate updates skipped (a later update's job
   covers them). G6 and G7 compare windows 8 and 30 at one reveal step over 106 updates each (A3's gate asks 100;
   each run on its own box's build of the same sources): the median latency grows from 105 to 275 s, the execution gas
@@ -198,12 +247,13 @@ two-hour cadence (§2).
   ([`perf-gate-sequencer-join.md`](../../lez/results/perf-gate-sequencer-join.md), `bench/perf/gate_abandoned.py`).
 - **Join or wait** (`policy.join_wait_rounds`, built since; [ADR 0047](../decisions/0047-updater-join-or-wait.md),
   [`lez/updater/README.md`](../../lez/updater/README.md) item 7). Just before sending a step, the updater reads which jobs
-  of the updates it was served are open on the instance's store. A job leads another when the chain holds more of its
+  of the updates it was served, or read from other parties' `Open`s on chain (ADR 0049), are open on the instance's
+  store. A job leads another when the chain holds more of its
   steps (so any open job leads an `Open`), at as many when its update is newer. A leading copy of its own update (the
   same finalized header and adoption) it joins, sending that job's next step; another leading job it waits for while the
-  steps of jobs of its kind keep growing within `join_wait_rounds` rounds (default `2 × defer_window + 10`); on one state
-  of the instance it stops waiting three times that after its first wait there, so join or wait adds at most 85 rounds
-  on a state at the defaults (with the turn that restarts when a wait ends), and a party that opens jobs delays it a
+  steps of jobs of its kind keep growing within `join_wait_rounds` turns (blocks of the chain since ADR 0049; rounds on a
+  backend that gives no height; default `2 × defer_window + 10`); on one state of the instance it stops waiting three
+  times that after its first wait there, so join or wait adds at most 85 turns on a state at the defaults (with the turn that restarts when a wait ends), and a party that opens jobs delays it a
   bounded time.
   Two builds of it reran G6 and G7 on the sequencer, each built once for both windows
   ([`perf-gate-sequencer-join.md`](../../lez/results/perf-gate-sequencer-join.md)): G8 and G9 the first (commit
@@ -219,9 +269,14 @@ two-hour cadence (§2).
   opened 20 of the 29 jobs in G9 and 16 of 29 in G11 (G9's skew has no cause found). Each figure is one run. In process,
   with updates revealed every 6 rounds, the gas two updaters spend besides the completed jobs' is 3.8% of theirs with
   it (refused duplicates only) and 33.3% without it (29 jobs abandoned); one updater alone spends none besides
-  ([`lez/updater/results/gate-overlap.txt`](../../lez/updater/results/gate-overlap.txt)). Only jobs of updates the
-  updater was served can be found (a job's account is found by its id, which hashes the update): two updaters whose
-  sources serve different copies of an update do not see each other's jobs.
+  ([`lez/updater/results/gate-overlap.txt`](../../lez/updater/results/gate-overlap.txt)). A job's account is found by
+  its id, which hashes the whole update, `signature_slot` included, which the signature does not cover, and beacon
+  nodes serve different finality updates for one checkpoint: so each round the updater also reads the instance's
+  applied `Open`s from the chain and rebuilds the update each carries (ADR 0049), and finds the job another party opened
+  for a copy its own sources never served, joining it. In process, with one updater's sources serving every update
+  re-dated by a slot (`lez/updater/results/gate-copies.txt`), the gas besides the completed jobs' is held to A3's 10%
+  with it, against more without it; two copies' jobs opened in one block leave the one that does not lead with its
+  `Open` alone (`lez/updater/tests/copies.rs`).
 - **The acceptance run (measured, dev mode).** Two honest `ferrata-updater`s and one adversarial
   updater, on the lab's 58 recorded updates (14 mainnet, 44 Sepolia; not the 100 planned: all that was recorded then), each round a block settled in a shuffled order, `W` = 8 rounds: every update
   applied once; the honest updaters' gas on refused steps was **0.057–0.087** of their gas on applied

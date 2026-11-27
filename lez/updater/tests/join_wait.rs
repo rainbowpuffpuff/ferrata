@@ -482,8 +482,10 @@ fn a_copy_of_the_chosen_update_open_on_the_store_is_joined() {
     assert_eq!(run.jobs(), vec![(j1, 2, true)], "U1's job: b sent its Miller and Finish");
 }
 
-/// `a` carries U1's job (its `Open` alone applied); `b`, which never saw U1 served, opened U2's job and sent its
-/// `Miller`. `a`, about to send U1's `Miller`, has asked its sources what they serve now (a carrier does so in each
+/// `a` carries U1's job (its `Open` alone applied); `b`, which never saw U1 served, opened U2's job and sent its `Miller`
+/// (the ledger gives no transactions here, `serve_messages = false`, as a backend that does not say: `b` cannot learn U1
+/// from `a`'s `Open`, and `a` finds U2's job through its sources alone, the path this test is for; from `b`'s `Open` on
+/// chain it would find it too, ADR 0049). `a`, about to send U1's `Miller`, has asked its sources what they serve now (a carrier does so in each
 /// round), finds U2's job, which leads its own (more steps applied), and waits; U2's job finishes, U1's is abandoned
 /// with its `Open` alone.
 #[test]
@@ -492,6 +494,7 @@ fn a_carrier_finds_a_newer_job_that_leads_its_own_and_waits() {
     let c = fx.two_new_finality_updates();
     let (ka, kb) = (key(0x7b), key(0x7c));
     let mut l = HarnessLedger::new(&[ka.clone(), kb.clone()]);
+    l.serve_messages = false;
     let mut a = fx.updater("a", ka, None);
     let mut b = fx.updater("b", kb, None);
     catch_up(&fx, &mut a, &mut l, c);
@@ -518,16 +521,17 @@ fn a_carrier_finds_a_newer_job_that_leads_its_own_and_waits() {
     assert_eq!(finalized(&a, &l), fx.entries[c + 1].finalized_slot, "U2 applied");
 }
 
-/// `a` carries U1's job, its `Open` alone applied; `b`, which never saw U1 served, opened U2's job: as many steps. U2 is
-/// the update both are served, and its job, applied, leaves U1 superseded, so U2's job leads ([`leads`]): `a`, which
-/// knows both, waits; `b`, which cannot find `a`'s job, carries on; U1's job is abandoned with its `Open` alone and no
-/// job is paid for U1 again.
+/// `a` carries U1's job, its `Open` alone applied; `b`, which never saw U1 served, opened U2's job: as many steps (the
+/// ledger gives no transactions here, `serve_messages = false`, as in the test above). U2 is the update both are served,
+/// and its job, applied, leaves U1 superseded, so U2's job leads ([`leads`]): `a`, which knows both, waits; `b`, which
+/// cannot find `a`'s job, carries on; U1's job is abandoned with its `Open` alone and no job is paid for U1 again.
 #[test]
 fn a_carrier_yields_to_a_newer_job_with_as_many_steps() {
     let fx = Fx::load();
     let c = fx.two_new_finality_updates();
     let (ka, kb) = (key(0x7d), key(0x7e));
     let mut l = HarnessLedger::new(&[ka.clone(), kb.clone()]);
+    l.serve_messages = false;
     let mut a = fx.updater("a", ka, None);
     let mut b = fx.updater("b", kb, None);
     catch_up(&fx, &mut a, &mut l, c);

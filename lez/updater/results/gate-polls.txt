@@ -1,0 +1,85 @@
+gate	rounds	1311	seed	default	adversary	false	salt		reveal every	12	honest join_wait_rounds	None	honest-1 reads every	1	honest-2 reads every	3	a block every	3 rounds
+mainnet	updates applied	33	jobs (with Init)	34	finalized slot	15684000
+honest-1	applied tx	62	refused tx	6	gas applied	193918764	gas refused	6627014	fee	1604366224	deferrals	924
+honest-2	applied tx	56	refused tx	4	gas applied	173030724	gas refused	2589461	fee	1404961480	deferrals	283
+adversary	applied tx	0	refused tx	0	gas applied	0	gas refused	0	fee	0	deferrals	0
+honest refused gas / applied gas	0.0251	(gate <= 0.10)
+honest-1 share of honest fees	0.5331	honest-2	0.4669	(gate 0.35-0.65 each)
+updates	108	adversary junk Opens	0	ledger transactions	128
+join or wait	honest-1 rounds waited	177	joined	0	waits ended by a stall or the cap	0	honest-2 rounds waited	92	joined	0	waits ended by a stall or the cap	0
+jobs	completed	34	abandoned (applied steps, never completed, overtaken)	0	of them opened by an honest updater	0	opened in the block of the job that overtook it	0	with their Open alone applied	0
+honest-1	execution and storage gas in completed jobs	193918764	in abandoned jobs	0	on refused steps	6627014
+honest-2	execution and storage gas in completed jobs	173030724	in abandoned jobs	0	on refused steps	2589461
+adversary (refused: its junk Opens too)	execution and storage gas in completed jobs	0	in abandoned jobs	0	on refused steps	0
+unfinished jobs (in flight at the end)	0	gas	0
+honest gas in abandoned jobs / in completed jobs	0.0000
+latency (rounds from the first round a finality update is served to the round whose block leaves the instance at least as fresh, inclusive)	covered	98	of	98	median	51.5	p90	86
+
+gate	rounds	1314	seed	default	adversary	false	salt		reveal every	12	honest join_wait_rounds	None	honest-1 reads every	1	honest-2 reads every	3	a block every	3 rounds	turns counted in each updater's own rounds (no height)
+mainnet	updates applied	71	jobs (with Init)	72	finalized slot	15684000
+honest-1	applied tx	202	refused tx	8	gas applied	622753284	gas refused	4386430	fee	5017117712	deferrals	801
+honest-2	applied tx	30	refused tx	12	gas applied	95148658	gas refused	17940334	fee	904711936	deferrals	306
+adversary	applied tx	0	refused tx	0	gas applied	0	gas refused	0	fee	0	deferrals	0
+honest refused gas / applied gas	0.0311	(gate <= 0.10)
+honest-1 share of honest fees	0.8472	honest-2	0.1528	(gate 0.35-0.65 each)
+updates	108	adversary junk Opens	0	ledger transactions	252
+join or wait	honest-1 rounds waited	59	joined	0	waits ended by a stall or the cap	0	honest-2 rounds waited	84	joined	0	waits ended by a stall or the cap	0
+jobs	completed	72	abandoned (applied steps, never completed, overtaken)	0	of them opened by an honest updater	0	opened in the block of the job that overtook it	0	with their Open alone applied	0
+honest-1	execution and storage gas in completed jobs	622753284	in abandoned jobs	0	on refused steps	4386430
+honest-2	execution and storage gas in completed jobs	95148658	in abandoned jobs	0	on refused steps	17940334
+adversary (refused: its junk Opens too)	execution and storage gas in completed jobs	0	in abandoned jobs	0	on refused steps	0
+unfinished jobs (in flight at the end)	0	gas	0
+honest gas in abandoned jobs / in completed jobs	0.0000
+latency (rounds from the first round a finality update is served to the round whose block leaves the instance at least as fresh, inclusive)	covered	98	of	98	median	20.0	p90	38
+
+gate	rounds	1314	seed	default	adversary	false	salt		reveal every	12	honest join_wait_rounds	None	honest-1 reads every	1	honest-2 reads every	3	a block every	2 rounds
+mainnet	updates applied	50	jobs (with Init)	51	finalized slot	15684000
+honest-1	applied tx	77	refused tx	6	gas applied	236665293	gas refused	5145041	fee	1934482672	deferrals	852
+honest-2	applied tx	92	refused tx	6	gas applied	287339877	gas refused	6699592	fee	2352315752	deferrals	278
+adversary	applied tx	0	refused tx	0	gas applied	0	gas refused	0	fee	0	deferrals	0
+honest refused gas / applied gas	0.0226	(gate <= 0.10)
+honest-1 share of honest fees	0.4513	honest-2	0.5487	(gate 0.35-0.65 each)
+updates	108	adversary junk Opens	0	ledger transactions	181
+join or wait	honest-1 rounds waited	284	joined	0	waits ended by a stall or the cap	0	honest-2 rounds waited	56	joined	0	waits ended by a stall or the cap	0
+jobs	completed	51	abandoned (applied steps, never completed, overtaken)	0	of them opened by an honest updater	0	opened in the block of the job that overtook it	0	with their Open alone applied	0
+honest-1	execution and storage gas in completed jobs	236665293	in abandoned jobs	0	on refused steps	5145041
+honest-2	execution and storage gas in completed jobs	287339877	in abandoned jobs	0	on refused steps	6699592
+adversary (refused: its junk Opens too)	execution and storage gas in completed jobs	0	in abandoned jobs	0	on refused steps	0
+unfinished jobs (in flight at the end)	0	gas	0
+honest gas in abandoned jobs / in completed jobs	0.0000
+latency (rounds from the first round a finality update is served to the round whose block leaves the instance at least as fresh, inclusive)	covered	98	of	98	median	33.0	p90	51
+
+gate	rounds	3303	seed	default	adversary	true	salt		honest-1 reads every	1	honest-2 reads every	3	a block every	3 rounds
+mainnet	updates applied	108	jobs (with Init)	109	finalized slot	15684000
+sepolia	updates applied	138	jobs (with Init)	139	finalized slot	11608192
+honest-1	applied tx	173	refused tx	53	gas applied	534040561	gas refused	39963198	fee	4592030072	deferrals	4212
+honest-2	applied tx	192	refused tx	47	gas applied	604949896	gas refused	53690601	fee	5269123976	deferrals	1391
+adversary	applied tx	475	refused tx	70	gas applied	1469761853	gas refused	47014197	fee	12134208400	deferrals	0
+honest refused gas / applied gas	0.0822	(gate <= 0.10)
+honest-1 share of honest fees	0.4657	honest-2	0.5343	(gate 0.35-0.65 each)
+updates	246	adversary junk Opens	486	ledger transactions	1496
+join or wait	honest-1 rounds waited	0	joined	0	waits ended by a stall or the cap	0	honest-2 rounds waited	0	joined	0	waits ended by a stall or the cap	0
+jobs	completed	248	abandoned (applied steps, never completed, overtaken)	0	of them opened by an honest updater	0	opened in the block of the job that overtook it	0	with their Open alone applied	0
+honest-1	execution and storage gas in completed jobs	534040561	in abandoned jobs	0	on refused steps	39963198
+honest-2	execution and storage gas in completed jobs	604949896	in abandoned jobs	0	on refused steps	53690601
+adversary (refused: its junk Opens too)	execution and storage gas in completed jobs	1469761853	in abandoned jobs	0	on refused steps	249713320
+unfinished jobs (in flight at the end)	0	gas	0
+honest gas in abandoned jobs / in completed jobs	0.0000
+latency (rounds from the first round a finality update is served to the round whose block leaves the instance at least as fresh, inclusive)	covered	196	of	196	median	14.0	p90	26
+
+gate	rounds	1320	seed	default	adversary	false	salt		reveal every	12	honest join_wait_rounds	None	honest-1 reads every	1	honest-2 reads every	6	a block every	2 rounds
+mainnet	updates applied	46	jobs (with Init)	47	finalized slot	15684000
+honest-1	applied tx	107	refused tx	6	gas applied	330620070	gas refused	2244279	fee	2662914792	deferrals	928
+honest-2	applied tx	50	refused tx	5	gas applied	156357818	gas refused	6616475	fee	1303794344	deferrals	115
+adversary	applied tx	0	refused tx	0	gas applied	0	gas refused	0	fee	0	deferrals	0
+honest refused gas / applied gas	0.0182	(gate <= 0.10)
+honest-1 share of honest fees	0.6713	honest-2	0.3287	(gate 0.35-0.65 each)
+updates	108	adversary junk Opens	0	ledger transactions	168
+join or wait	honest-1 rounds waited	146	joined	0	waits ended by a stall or the cap	0	honest-2 rounds waited	46	joined	0	waits ended by a stall or the cap	0
+jobs	completed	47	abandoned (applied steps, never completed, overtaken)	0	of them opened by an honest updater	0	opened in the block of the job that overtook it	0	with their Open alone applied	0
+honest-1	execution and storage gas in completed jobs	330620070	in abandoned jobs	0	on refused steps	2244279
+honest-2	execution and storage gas in completed jobs	156357818	in abandoned jobs	0	on refused steps	6616475
+adversary (refused: its junk Opens too)	execution and storage gas in completed jobs	0	in abandoned jobs	0	on refused steps	0
+unfinished jobs (in flight at the end)	0	gas	0
+honest gas in abandoned jobs / in completed jobs	0.0000
+latency (rounds from the first round a finality update is served to the round whose block leaves the instance at least as fresh, inclusive)	covered	98	of	98	median	35.0	p90	65
