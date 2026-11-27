@@ -248,8 +248,9 @@ The caps count what moves: a deposit's whole payment (mint fee included), a rele
 **Schedules.** Registration sets schedule 0: no mint or burn fee (protocol fees start at zero) and the checkpoint
 fees given. The admin announces schedule `current + 1` with `announceFees(token, mintFees, burnFees, checkpointFees)`.
 It takes effect seven days of Ethereum time later, at the token's first deposit or release from then on or at
-anyone's `applyFees(token)`, and applies to the deposits from the leaf count at that moment (`fromLeaf`); a deposit
-keeps the schedule of its leaf index. One change can be pending per token: a new announcement replaces it and
+anyone's `applyFees(token)`, and applies to the deposits from the leaf count at that moment (`fromLeaf`, published
+for the LEZ mirror; since ADR 0046 no vault path reads a leaf's schedule: the mint fee is credited at the deposit and
+a refund returns the denomination and the registered relay fee). One change can be pending per token: a new announcement replaces it and
 restarts the seven days, announcing the fees in force withdraws it, and a change already due is put in force before
 a new announcement is recorded. `feeState(token)` and `fees(token, index, denomIndex)` read them.
 
