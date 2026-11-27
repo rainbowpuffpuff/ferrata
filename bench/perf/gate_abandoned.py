@@ -14,19 +14,22 @@ hashes the update). In these runs both daemons are served the same updates by on
 Times: a transaction's send time is its settlement time (the journal, to the second) less the time from send to
 settlement its daemon logged (`[updater] ... + 11.6s <hash>`); a block's publication and finality times are the
 sequencer's log lines `Publishing block N` and `Channel update: ... finalized A..=B` (to the second; every process of a
-run runs under one libfaketime offset). The later `Open` of a pair is classed:
-  same block    both `Open`s in one block: each was sent before the other was in any block;
-  in flight     sent at least one second before the earlier `Open`'s block was published (`sent + 1 <= published`,
-                both times truncated to the second): no read could show the earlier job;
-  served        sent once that block was published, at least one second before it was final: a read of the earlier job
-                then fails, so a daemon that reads it (join or wait does) sends nothing that round;
-  final         sent later: a read shows the earlier job;
+run runs under one libfaketime offset; the send time is known to within about a second above it, so the sequencer's
+second is compared with a one-second margin each way). The later `Open` of a pair is classed:
+  same block    both `Open`s in one block, and no other job open on that store published before them;
+  in flight     sent at least one second before the earlier `Open`'s block was published, and before any other job open
+                on that store was published: no read could show a job open on the store;
+  ambiguous     within a second of that block's publication (the times' resolution);
+  served        sent once a job open on the store was published (the earlier `Open`'s block, or another job's), at least
+                one second before that block was final: a read of the job then fails, so a daemon that reads it (join or
+                wait does) sends nothing that round;
+  final         sent later: a read shows the job;
   unknown       a time is missing.
-The first two are contention no read could avoid; the next two are what join or wait (`policy.join_wait_rounds`)
+The first two are contention no read could avoid; served and final are what join or wait (`policy.join_wait_rounds`)
 removes, for a daemon served the other job's update. Steps of an abandoned job after its `Open` (applied or refused) are
-also counted when sent once the job that overtook it was published and led it: more of its steps published, or as many
-and an older update (an earlier finalized slot), as `leads` in lez/updater/src/updater.rs orders jobs: join or wait does
-not send those either."""
+also counted when sent once the job that overtook it was published and led it, as `leads` in
+lez/updater/src/updater.rs orders jobs: more of its steps published, or as many and its update ranking higher (adopting
+a committee first, then the later finalized slot): join or wait does not send those either."""
 
 import gzip
 import re
@@ -35,7 +38,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 STEP = {"open": "Open", "miller": "Miller", "adopt0": "adopt 1/2", "adopt1": "adopt 2/2", "finish": "Finish"}
-CLASSES = ("same block", "in flight", "served", "final", "unknown")
+CLASSES = ("same block", "in flight", "ambiguous", "served", "final", "unknown")
 
 
 def unix(utc):
@@ -92,6 +95,8 @@ def analyse(run):
     jobs, refused = {}, {}
     for r in applied:
         jobs.setdefault(r["job"], []).append(r)
+    opens = {r["job"]: r for r in applied if r["step"] == "open"}
+    adopting = {r["job"] for r in rows if r["step"].startswith("adopt")}
     for r in rows:
         if r["status"] == "refused":
             refused.setdefault(r["job"], []).append(r)
@@ -110,13 +115,22 @@ def analyse(run):
             skipped += 1
             continue
         early, late = sorted((open_j, open_k), key=lambda r: (r["block"], r["sent"] or 0))
-        pub, fin, sent = published.get(early["block"]), final.get(early["block"]), late["sent"]
-        if open_j["block"] == open_k["block"]:
+        sent = late["sent"]
+        # Jobs open on the same store before the later Open: those first applied after the last completion before it.
+        before = max((b for b in done.values() if b < late["block"]), default=-1)
+        others = [r for x, r in opens.items() if r["block"] > before and r["block"] <= late["block"] and r is not late]
+        pub = min((published[r["block"]] for r in others if r["block"] in published), default=None)
+        fin_of = lambda t: min((final[r["block"]] for r in others if published.get(r["block"]) == t and r["block"] in final), default=None)
+        fin = fin_of(pub) if pub is not None else None
+        same = all(r["block"] == late["block"] for r in others)
+        if same:
             cls = "same block"
         elif sent is None or pub is None or fin is None:
             cls = "unknown"
         elif sent + 1 <= pub:
             cls = "in flight"
+        elif sent < pub + 1:
+            cls = "ambiguous"
         elif sent + 1 <= fin:
             cls = "served"
         else:
@@ -130,7 +144,8 @@ def analyse(run):
             seen = lambda x: published.get(x["block"]) is not None and published[x["block"]] + 1 <= r["sent"]
             theirs = sum(1 for x in jobs[k] if seen(x))
             ours = sum(1 for x in rs if x is not r and x["block"] < r["block"] and seen(x))
-            if theirs and (theirs > ours or (theirs == ours and jobs[k][0]["slot"] < rs[0]["slot"])):
+            rank = lambda job, slot: (job in adopting, slot)
+            if theirs and (theirs > ours or (theirs == ours and rank(k, jobs[k][0]["slot"]) > rank(j, rs[0]["slot"]))):
                 led.append(r)
         out.append(dict(job=j, slot=rs[0]["slot"], opener=open_j["daemon"], open_block=open_j["block"],
                         steps=" + ".join(STEP.get(r["step"], r["step"]) for r in sorted(rs, key=lambda r: r["block"])),
@@ -147,14 +162,16 @@ def clock(t):
 
 
 def main():
-    for run in sys.argv[1:]:
+    for i, run in enumerate(sys.argv[1:]):
         out, skipped = analyse(run)
         name = Path(run).name
+        if i:
+            print()
         print(f"### Abandoned jobs of `{name}`\n")
         if not out:
-            print(f"None{f' ({skipped} pairs without an applied `Open` skipped)' if skipped else ''}.\n")
+            print(f"None{f' ({skipped} pairs without an applied `Open` skipped)' if skipped else ''}.")
             continue
-        print("| abandoned job (finalized slot) | opened by, in block | steps applied (execution gas); refused | overtaken by (finalized slot) | its `Open` by, in block | the later `Open` sent | the earlier `Open`'s block published / final | the later `Open` | later steps sent once the overtaking job was published and led |")
+        print("| abandoned job (finalized slot) | opened by, in block | steps applied (execution gas); refused | overtaken by (finalized slot) | its `Open` by, in block | the later `Open` sent | the first block of a job open on the store, published / final | the later `Open` | later steps sent once the overtaking job was published and led |")
         print("|---|---|---|---|---|---:|---:|---|---:|")
         for d in out:
             ref = f"; {d['refused']} refused ({g(d['refused_gas'])})" if d["refused"] else ""
@@ -166,13 +183,13 @@ def main():
         gas = lambda ds: sum(d["gas"] + d["refused_gas"] for d in ds)
         unavoidable = by["same block"] + by["in flight"]
         led = [d for d in unavoidable if d["led"]]
-        parts = ", ".join(f"{c} {len(by[c])} ({g(gas(by[c]))})" for c in CLASSES if by[c] or c != "unknown")
+        parts = ", ".join(f"{c} {len(by[c])} ({g(gas(by[c]))})" for c in CLASSES if by[c] or c not in ("unknown", "ambiguous"))
         print(f"\n`{name}`: {len(out)} abandoned jobs, {g(gas(out))} execution gas (applied and refused steps): {parts}; "
-              f"**{len(by['served']) + len(by['final'])} with the later `Open` sent once the earlier job was published** "
+              f"**{len(by['served']) + len(by['final'])} with the later `Open` sent once a job open on the store was published** "
               f"({g(gas(by['served'] + by['final']))}); of the {len(unavoidable)} whose `Open`s no read could have avoided, "
               f"{len(led)} with later steps sent once the overtaking job was published and led them "
               f"({sum(d['led'] for d in led)} steps, {g(sum(d['led_gas'] for d in led))})"
-              + (f"; {skipped} pairs without an applied `Open` skipped" if skipped else "") + ".\n")
+              + (f"; {skipped} pairs without an applied `Open` skipped" if skipped else "") + ".")
 
 
 if __name__ == "__main__":

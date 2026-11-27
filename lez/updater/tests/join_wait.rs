@@ -483,9 +483,9 @@ fn a_copy_of_the_chosen_update_open_on_the_store_is_joined() {
 }
 
 /// `a` carries U1's job (its `Open` alone applied); `b`, which never saw U1 served, opened U2's job and sent its
-/// `Miller`. `a`, about to send U1's `Miller`, asks its sources what they serve now (it carries a job, so it did not
-/// this round), finds U2's job, which leads its own (more steps applied), and waits; U2's job finishes, U1's is
-/// abandoned with its `Open` alone.
+/// `Miller`. `a`, about to send U1's `Miller`, has asked its sources what they serve now (a carrier does so in each
+/// round), finds U2's job, which leads its own (more steps applied), and waits; U2's job finishes, U1's is abandoned
+/// with its `Open` alone.
 #[test]
 fn a_carrier_finds_a_newer_job_that_leads_its_own_and_waits() {
     let fx = Fx::load();
@@ -615,10 +615,11 @@ fn an_unreadable_job_on_the_store_is_waited_for_not_an_error() {
 }
 
 /// When a wait ends (the job waited for stops moving), every updater waiting for it would send in the same round: the
-/// step's turn starts again for each, so their hashed waits keep them apart. Two updaters, `defer_window` 8, wait for
-/// a job a party opened and left; each block is planned against the state before it and settles together, as on a
-/// sequencer. Over four pairs of updaters (other names, so other waits), the `Open`s of U2's job are refused as
-/// duplicates at most once (equal draws), not once per pair.
+/// step's turn starts again for each, so their hashed waits keep them apart. Two updaters, `defer_window` 8, whose
+/// `Open` turns on the state have run, both first read a job a party opened and left in the same round; each block is
+/// planned against the state before it and settles together, as on a sequencer. Over four pairs of updaters (other
+/// names, so other waits), the `Open`s of U2's job are refused as duplicates at most once (equal draws), not once per
+/// pair.
 #[test]
 fn updaters_released_together_take_their_turns_again() {
     let fx = Fx::load();
@@ -630,7 +631,7 @@ fn updaters_released_together_take_their_turns_again() {
         let mut l = HarnessLedger::new(&[kb.clone(), kc.clone(), opener.clone()]);
         let mk = |label: String, k: PrivateKey| {
             let inst = Instance::new("mainnet", HarnessLedger::program(), fx.config.clone(), fx.checkpoint);
-            let policy = Policy { defer_window: 8, retry_base_ms: 0, join_wait_rounds: Some(10), ..Policy::default() };
+            let policy = Policy { defer_window: 8, retry_base_ms: 0, join_wait_rounds: Some(12), ..Policy::default() };
             let source = Recorded::open("a", &fx.dir, &fx.config, fx.clock.clone()).unwrap();
             let mut u = Updater::new(&label, inst, k, Fees::default(), policy, vec![Box::new(source)], None).unwrap();
             u.sleep = no_sleep;
@@ -644,8 +645,12 @@ fn updaters_released_together_take_their_turns_again() {
                 break;
             }
         }
+        // Both are served U1 for a whole turn (their plans dropped), so that their `Open` turns on this state have run
+        // and both first read the party's job in the same round.
         fx.clock.set(c + 1);
-        let _ = (b.plan(&l).unwrap(), cc.plan(&l).unwrap());
+        for _ in 0..8 {
+            let _ = (b.plan(&l).unwrap(), cc.plan(&l).unwrap());
+        }
         let (u1, _) = decode_finality_update(&fx.entries[c].bytes, &fx.config).unwrap();
         let tx = b.open_unchecked(&l, &u1).unwrap();
         assert!(l.submit(&opener, &tx, 4_800_000, 1_000_000_000).unwrap().applied);
@@ -675,9 +680,9 @@ fn updaters_released_together_take_their_turns_again() {
     assert!(refused_opens <= 1, "Opens refused as duplicates: {refused_opens} in four pairs");
 }
 
-/// A party opens a new copy of U1's job every round (copies the updater was served: the same finalized header, other
-/// signature slots), while the updater has chosen U2. Copies of one update are one kind of job: a new copy opened is
-/// not a move of that kind, so the updater waits `join_wait_rounds` from the first, not until the cap.
+/// A party opens a new copy of U1's job in each of four rounds (copies the updater was served: the same finalized
+/// header, other signature slots), while the updater has chosen U2. Copies of one update are one kind of job: a new
+/// copy opened is not a move of that kind, so the updater waits `join_wait_rounds` from the first, not until the cap.
 #[test]
 fn new_copies_of_one_update_opened_each_round_are_not_moves() {
     let fx = Fx::load();
@@ -757,4 +762,74 @@ fn of_two_copies_open_the_one_further_on_is_joined() {
     println!("b, U1 chosen, copy A open, copy B through its Miller: {}", show(&p));
     assert!(matches!(&p, Plan::Send(x) if x.job_id == jb && x.step != Step::Miller), "{}", show(&p));
     assert_eq!(b.metrics.jobs_joined, 1);
+}
+
+/// A party keeps opening new jobs of a kind that has stopped moving (a lying source serves a new copy of U1 each round,
+/// and the party opens the copy's job), while the updater, `defer_window` 8, has chosen U2. Each new job is passed when
+/// first read; the wait ends once, its turn starts again once, and its `Open` goes out within `join_wait_rounds` and
+/// one turn of its first wait. Four updaters (other names and keys, so other draws): each new job used to restart the
+/// turn, so an updater whose draw for U2's `Open` was not 0 sent nothing while the party kept opening.
+#[test]
+fn new_jobs_of_a_stalled_kind_do_not_hold_the_open_back() {
+    let fx = Fx::load();
+    let c = fx.two_new_finality_updates();
+    let mut lines = Vec::new();
+    for n in 0..4u8 {
+        let (kb, opener) = (key(0xc0 + n), key(0xd0 + n));
+        let mut l = HarnessLedger::new(&[kb.clone(), opener.clone()]);
+        let copy = Arc::new(Mutex::new(None));
+        let liar = CopyFinality {
+            inner: Recorded::open("liar", &fx.dir, &fx.config, fx.clock.clone()).unwrap(),
+            copy: copy.clone(),
+        };
+        let honest = Recorded::open("a", &fx.dir, &fx.config, fx.clock.clone()).unwrap();
+        let inst = Instance::new("mainnet", HarnessLedger::program(), fx.config.clone(), fx.checkpoint);
+        let policy = Policy { defer_window: 8, retry_base_ms: 0, ..Policy::default() };
+        let sources: Vec<Box<dyn Source>> = vec![Box::new(honest), Box::new(liar)];
+        let mut b = Updater::new(&format!("b{n}"), inst, kb, Fees::default(), policy, sources, None).unwrap();
+        b.sleep = no_sleep;
+        catch_up(&fx, &mut b, &mut l, c);
+        fx.clock.set(c + 1);
+        let _ = b.plan(&l).unwrap();
+        let (u1, _) = decode_finality_update(&fx.entries[c].bytes, &fx.config).unwrap();
+        let tx = b.open_unchecked(&l, &u1).unwrap();
+        assert!(l.submit(&opener, &tx, 4_800_000, 1_000_000_000).unwrap().applied, "the party's Open of U1");
+        fx.clock.set(c + 2);
+        let (wait, w) = (b.policy.join_wait(), b.policy.defer_window);
+        let (mut first_wait, mut sent) = (None, None);
+        let mut prev: Option<Vec<u8>> = None;
+        for round in 0..150u64 {
+            // The copy served the round before: the party opens its job, once U1's kind has stopped moving.
+            if let (Some(bytes), true) = (prev.take(), first_wait.is_some_and(|f| round > f + wait)) {
+                let (u, _) = decode_finality_update(&bytes, &fx.config).unwrap();
+                let tx = b.open_unchecked(&l, &u).unwrap();
+                assert!(l.submit(&opener, &tx, 4_800_000, 1_000_000_000).unwrap().applied, "a copy's Open");
+            }
+            let bytes = redate(fx.entries[c].bytes.clone(), &fx.config, u1.signature_slot + 1 + round);
+            *copy.lock().unwrap() = Some(bytes.clone());
+            prev = Some(bytes);
+            match b.tick(&mut l).unwrap() {
+                Plan::Deferred(Step::Open) if b.metrics.job_waits > 0 && first_wait.is_none() => {
+                    first_wait = Some(round)
+                }
+                Plan::Send(x) if x.step == Step::Open => {
+                    sent = Some(round);
+                    break;
+                }
+                _ => {}
+            }
+        }
+        lines.push(format!(
+            "b{n}: first wait in round {first_wait:?}, U2's Open sent in round {sent:?}; passed {}",
+            b.metrics.stalled_jobs_passed
+        ));
+        let (f, s) = (first_wait.expect("a wait"), sent.unwrap_or(u64::MAX));
+        assert!(
+            s <= f + wait + w + 1,
+            "b{n}: sent {} rounds after the first wait (bound {})\n{lines:?}",
+            s.saturating_sub(f),
+            wait + w + 1
+        );
+    }
+    println!("{}", lines.join("\n"));
 }

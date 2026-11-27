@@ -823,9 +823,10 @@ fn gate_two_honest_one_adversary() {
 /// served the same bytes, so two `Open`s in one block are of one job (one refused), never of two: without join or wait
 /// every abandoned job was opened once the job that overtook it could be read; with it none is abandoned (the residue
 /// of two jobs opened in one block is constructed in `tests/join_wait.rs`). R.9's own measure, the gas the two updaters
-/// spend (applied steps of completed and abandoned jobs, refused steps) per job completed, is held to at most 10% (A3's
-/// allowance) above what honest-1 alone spends on the same schedule. The instance ends where the record does, and A3's
-/// two limits hold. The three runs' figures go to `results/gate-overlap.txt`.
+/// spend besides the completed jobs (applied steps of abandoned jobs, refused steps) over the completed jobs' gas, is
+/// held to A3's 10% with it; honest-1 alone on the same schedule spends nothing besides (it applies fewer updates: a
+/// second updater applies more of the overlapping ones). The instance ends where the record does, and A3's two limits
+/// hold. The three runs' figures go to `results/gate-overlap.txt`.
 #[test]
 fn gate_overlapping_updates_join_or_wait() {
     let mut text = String::new();
@@ -843,26 +844,23 @@ fn gate_overlapping_updates_join_or_wait() {
         let run = run_gate(&opts);
         let f = fates(&run.sent);
         text += &gate_lines(&run, &f);
-        // R.9's measure: what the updaters spent (applied steps of completed and abandoned jobs, refused steps) per job
-        // completed, against one updater alone on the same schedule.
-        let spent: u64 = (0..2).map(|d| f.gas[d].0 + f.gas[d].1 + f.gas[d].2).sum();
+        // R.9's measure: what the updaters spent besides the completed jobs (applied steps of abandoned jobs, refused
+        // steps), over the completed jobs' gas; one updater alone spends nothing besides.
+        let done: u64 = (0..2).map(|d| f.gas[d].0).sum();
+        let besides: u64 = (0..2).map(|d| f.gas[d].1 + f.gas[d].2).sum();
+        let waste = besides as f64 / done as f64;
         text += &format!(
-            "honest execution and storage gas, all of it, per job completed\t{}\t({spent} / {})\n\n",
-            spent / f.completed as u64,
-            f.completed
+            "honest execution and storage gas besides the completed jobs' / the completed jobs'\t{waste:.4}\t({besides} / {done})\n\n"
         );
-        let per_job = spent / f.completed as u64;
-        runs.push((run, f, per_job));
+        runs.push((run, f, waste));
     }
     println!("{text}");
-    let (on, f_on, per_on) = &runs[0];
-    let (_, f_off, per_off) = &runs[1];
-    let (_, _, per_solo) = &runs[2];
-    assert!(
-        *per_on as f64 <= *per_solo as f64 * 1.10,
-        "two updaters with join or wait pay per job completed at most 10% (A3's allowance) more than one alone: {per_on} against {per_solo}"
-    );
-    assert!(per_off > per_on, "without join or wait they pay more: {per_off} against {per_on}");
+    let (on, f_on, waste_on) = &runs[0];
+    let (_, f_off, waste_off) = &runs[1];
+    let (_, _, waste_solo) = &runs[2];
+    assert_eq!(*waste_solo, 0.0, "one updater alone spends nothing besides its completed jobs");
+    assert!(*waste_on <= 0.10, "with join or wait, at most A3's 10% besides the completed jobs: {waste_on:.4}");
+    assert!(waste_off > waste_on, "without it, more: {waste_off:.4} against {waste_on:.4}");
     let (h, _) = f_on.honest();
     assert!(h.is_empty() && f_on.abandoned.is_empty(), "with join or wait, no job abandoned: {}", h.len());
     assert!(on.ratio <= 0.10, "A3's ratio {:.4}", on.ratio);
@@ -877,7 +875,7 @@ fn gate_overlapping_updates_join_or_wait() {
     // Written once the assertions hold (a mutant's run leaves the record as it was).
     let out = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("results");
     fs::create_dir_all(&out).unwrap();
-    fs::write(out.join("gate-overlap.txt"), &text).unwrap();
+    fs::write(out.join("gate-overlap.txt"), text.trim_end().to_string() + "\n").unwrap();
 }
 
 /// A beacon node on loopback serving a recorded chain over the beacon API (SSZ, the `updates`

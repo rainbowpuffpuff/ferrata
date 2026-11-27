@@ -124,13 +124,15 @@ pub struct Policy {
     /// the steps of the one that does not finish. This updater does not send a step of a job (its `Open` included)
     /// while another job open on the instance's store leads it and has moved within this many rounds: it waits for that
     /// job, or joins it (sends its next step instead) when that job leaves the store as its own would (a copy of the same
-    /// update). A job leads another when the chain holds more of its steps; between two with as many, the one whose
-    /// update ranks lower as an update is chosen (adopting the next committee the store lacks, then the furthest
-    /// finalized header, the earliest signature slot, the most signers): as a rule the older update, so the job opened
-    /// first; then by job id. Only jobs of updates this updater's sources served (and the program's checks accepted) can
-    /// be found: a job's account is found by its id, which hashes the store and the update. A job that has not moved for
-    /// this many rounds no longer holds this updater back, and on one state of the instance it waits at most three times
-    /// this many rounds in all. Default (unset): `2 * defer_window + 10`; 0: off (a job is opened whatever else is open).
+    /// update; with `min_distinct_clients` comparing bytes, which a copy does not share, it waits instead). A job leads
+    /// another when the chain holds more of its steps; between two with as many, the one whose update ranks higher as an
+    /// update is chosen (adopting the next committee the store lacks, then the furthest finalized header, the earliest
+    /// signature slot, the most signers): as a rule the newer update; then by job id. Only jobs of updates this updater's
+    /// sources served (and the program's checks accepted) can be found: a job's account is found by its id, which hashes
+    /// the store and the update. A job that has not moved for this many rounds no longer holds this updater back; on one
+    /// state of the instance it stops waiting three times this many rounds after it first waited there, and does not wait
+    /// again on that state. Default (unset): `2 * defer_window + 10`; 0: off (a job is opened whatever else is open);
+    /// otherwise at least `defer_window + 4`.
     #[serde(default)]
     pub join_wait_rounds: Option<u64>,
     /// Client diversity (0, the default: off; otherwise at least 2): send only an update that sources reporting at
@@ -291,11 +293,12 @@ impl File {
             bail!("policy: defer_window and max_attempts must be at least 1");
         }
         if let Some(n) = self.policy.join_wait_rounds.filter(|&n| n != 0) {
-            if n < self.policy.defer_window || n > 1_000_000 {
+            let least = self.policy.defer_window.saturating_add(4);
+            if n < least || n > 1_000_000 {
                 bail!(
-                    "policy.join_wait_rounds = {n}: 0 (off) or from defer_window ({}) to 1000000 rounds (a job still \
-                     moving between its turns would be passed below defer_window)",
-                    self.policy.defer_window
+                    "policy.join_wait_rounds = {n}: 0 (off) or from defer_window + 4 ({least}) to 1000000 rounds (below \
+                     that, a job still moving would be passed between its turns: a step goes out up to defer_window - 1 \
+                     rounds after it is due, and other updaters read it a few rounds later)"
                 );
             }
         }

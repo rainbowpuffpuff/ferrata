@@ -29,10 +29,12 @@ Join or wait (`policy.join_wait_rounds`, RFP-021 R.9, 27 November 2026): j1 (no 
 jobs with as many steps, the newer update's leads); j3 (a job that stops moving holds the updater back for good); j4 (no
 cap on a state); j5 (a job this updater opened and left holds it back); j6 (a carrier does not ask its sources, so it
 does not find a newer job that leads its own); j7 (a copy of the chosen update open on the store is waited for, not
-joined); j8 (only an `Open` waits: a step of a job behind another is sent); after the first review round: j9 (a job
+joined); j8 (only an `Open` waits: a step of a job behind another is sent); after the first review round, j2 makes the
+older update's job lead at as many steps (the newer leads since); j9 (a job
 whose account fails to read is taken for no job, so the updater sends: it used to fail the round), j10 (updaters
 released together all send at once), j11 (a new copy of one update counts as a move), j12 (the copy behind is
-joined), j13 (the cap not started again on a new state of the instance).
+joined), j13 (the cap not started again on a new state of the instance); after the second: j14 (each job passed when
+first read, of a kind that stopped moving, restarts the turn, so a party opening one each turn holds the `Open` back).
 """
 import os
 import signal
@@ -98,13 +100,14 @@ MUTANTS = {
     "j6": ([(U, "        if self.learned == self.round {\n            return;\n        }",
              "        if self.learned == self.round || self.round > 0 {\n            return;\n        }")],
            ["--test", "join_wait", "a_carrier_"]),
-    "j7": ([(U, "            if joinable && k.lands == own_lands && !self.joining {",
-             "            if joinable && k.lands != own_lands && !self.joining {")],
+    "j7": ([(U, "            if joinable && k.lands == own_lands && !self.joining && self.held_back(&k.jid, next).is_none() {",
+             "            if joinable && k.lands != own_lands && !self.joining && self.held_back(&k.jid, next).is_none() {")],
            ["--test", "join_wait", "a_copy_of_the_chosen_update"]),
     "j8": ([(U, "        match self.join_or_wait(ledger, &chosen, job.as_ref(), step, state, store)? {",
              "        match if job.is_none() { self.join_or_wait(ledger, &chosen, job.as_ref(), step, state, store)? } else { None } {")],
            ["--test", "join_wait"]),
-    "j9": ([(U, "                Err(_) => out.push((k, None)),", "                Err(_) => {}")],
+    "j9": ([(U, "                Err(e) if format!(\"{e:#}\").contains(\"disagree\") => out.push((k, None)),",
+             "                Err(e) if format!(\"{e:#}\").contains(\"disagree\") => {}")],
            ["--test", "join_wait", "an_unreadable_job"]),
     "j10": ([(U, "                self.first_due.insert((since, step), (self.round, None));", "                let _ = since;")],
             ["--test", "join_wait", "updaters_released_together"]),
@@ -117,6 +120,9 @@ MUTANTS = {
             ["--test", "join_wait", "of_two_copies_open"]),
     "j13": ([(U, "            self.passed.clear();\n            self.wait_start = None;", "            self.passed.clear();")],
             ["--test", "join_wait", "a_new_job_each_round"]),
+    "j14": ([(U, "                if self.passed.insert(k.jid) {\n                    self.metrics.stalled_jobs_passed += 1;",
+              "                if self.passed.insert(k.jid) {\n                    self.in_wait = true;\n                    self.metrics.stalled_jobs_passed += 1;")],
+            ["--test", "join_wait", "new_jobs_of_a_stalled_kind"]),
     "u2": ([(U, "self.ensure_committees(&store)?;",
              "if let Err(e) = self.ensure_committees(&store) {\n            return Ok(Plan::Stuck(format!(\"{e:#}\")));\n        }")],
            ["--test", "health", "committees_no_source_serves"]),

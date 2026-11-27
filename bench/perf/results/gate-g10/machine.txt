@@ -1,0 +1,8 @@
+date: 2026-11-22T01:58:57Z
+nproc --all: 32
+model name	: unknown
+MemTotal:       67108864 kB
+bundle sha256 5f8937d7af34af21fbcf29fd5e6bda892843fb79508fc72133c14956a0dcd373
+ferrata-updater sha256 0354a75821e0acfa83d7df0cbba184c85c08cfb1dc326895e9d24942285f55e2
+GATE_ENTRIES=106 GATE_STEP=60 GATE_WINDOW=8 GATE_POLL=4 GATE_ADVERSARY=0
+FAKETIME=-5d LD_PRELOAD=/usr/lib/x86_64-linux-gnu/faketime/libfaketime.so.1 (libfaketime: every process's wall clock; monotonic clocks real: FAKETIME_DONT_FAKE_MONOTONIC=1)

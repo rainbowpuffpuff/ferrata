@@ -14,7 +14,7 @@ adversary (refused: its junk Opens too)	execution and storage gas in completed j
 unfinished jobs (in flight at the end)	0	gas	0
 honest gas in abandoned jobs / in completed jobs	0.0000
 latency (rounds from the first round a finality update is served to the round whose block leaves the instance at least as fresh, inclusive)	covered	98	of	98	median	14.0	p90	25
-honest execution and storage gas, all of it, per job completed	10626363	(563197243 / 53)
+honest execution and storage gas besides the completed jobs' / the completed jobs'	0.0383	(20771459 / 542425784)
 
 gate	rounds	655	seed	default	adversary	false	salt		reveal every	6	honest join_wait_rounds	Some(0)
 mainnet	updates applied	55	jobs (with Init)	56	finalized slot	15684000
@@ -32,7 +32,7 @@ adversary (refused: its junk Opens too)	execution and storage gas in completed j
 unfinished jobs (in flight at the end)	0	gas	0
 honest gas in abandoned jobs / in completed jobs	0.2879
 latency (rounds from the first round a finality update is served to the round whose block leaves the instance at least as fresh, inclusive)	covered	98	of	98	median	13.0	p90	23
-honest execution and storage gas, all of it, per job completed	13565396	(759662211 / 56)
+honest execution and storage gas besides the completed jobs' / the completed jobs'	0.3327	(189639011 / 570023200)
 
 gate	rounds	655	seed	default	adversary	false	salt		reveal every	6	honest join_wait_rounds	None	honest-1 alone
 mainnet	updates applied	42	jobs (with Init)	43	finalized slot	15684000
@@ -50,5 +50,4 @@ adversary (refused: its junk Opens too)	execution and storage gas in completed j
 unfinished jobs (in flight at the end)	0	gas	0
 honest gas in abandoned jobs / in completed jobs	0.0000
 latency (rounds from the first round a finality update is served to the round whose block leaves the instance at least as fresh, inclusive)	covered	98	of	98	median	19.0	p90	32
-honest execution and storage gas, all of it, per job completed	10461854	(449859734 / 43)
-
+honest execution and storage gas besides the completed jobs' / the completed jobs'	0.0000	(0 / 449859734)
