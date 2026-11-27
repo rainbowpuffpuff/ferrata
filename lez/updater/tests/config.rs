@@ -41,6 +41,8 @@ fn bad_configurations_are_refused() {
         ("preset = \"mainnet\"", "preset = \"holesky\"", "unknown preset"),
         ("checkpoint = \"4baa", "checkpoint = \"zz4baa", "checkpoint not hex"),
         ("defer_window = 1", "defer_window = 0", "zero deferral window"),
+        ("defer_window = 1", "defer_window = 8\njoin_wait_rounds = 11", "join_wait_rounds below defer_window + 4"),
+        ("defer_window = 1", "defer_window = 1\njoin_wait_rounds = 1000001", "join_wait_rounds without bound"),
         (
             "dir = \"../../lab/results/record/net/mainnet\"\n\n  [[chain.source]]",
             "url = \"http://x\"\n  dir = \"y\"\n\n  [[chain.source]]",

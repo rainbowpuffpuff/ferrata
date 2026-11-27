@@ -33,6 +33,9 @@ max_attempts = 5
 demote_rounds = 50                  # rounds a source that served something the program refuses is not asked
 max_periods_per_request = 16        # periods per `updates` request
 finish_own_jobs = true              # finish a job this updater sent a step for before another (its update is kept in state_dir)
+# join_wait_rounds = 26             # join or wait (RFP-021 R.9): no step of a job (its Open included) while another job open
+                                    # on the store leads it and moved within this many rounds (a copy of the same update is
+                                    # joined); unset: 2 * defer_window + 10; 0: off
 min_distinct_clients = 0            # client diversity: 0 (off) or at least 2 sources of different clients, as each reports at
                                     # /eth/v1/node/version, must agree on an update before it is sent (Init and committees exempt)
 client_match = "bytes"              # what they agree on: "bytes" (its SSZ, byte for byte; light-client sources) or

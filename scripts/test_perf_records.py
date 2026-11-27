@@ -542,5 +542,371 @@ class TestGeneratedRecords(unittest.TestCase):
                       "recorded them, 60 times the design's hourly cadence)")
 
 
+class TestGate100(unittest.TestCase):
+    """`lez/results/perf-gate-sequencer-100.md` (RFP-021 R.9 and R.10 at A3's size: runs G6 and G7, 106 recorded
+    updates, windows 8 and 30): a hand-written header, then `bench/perf/summarize_gate.py`'s output on the two runs,
+    byte for byte; the runs are the ones the header describes (each `machine.txt`, `done.txt`, `reveals.tsv`, two
+    daemons); A3's two figures, the steps applied twice and the claim that every refused step raced an applied step of
+    its own block are recomputed from the journals themselves; the header's other figures are the generator's (its
+    `summarize`). Each figure is asserted as the header's own string (whitespace folded), with its count."""
+
+    RUNS = (("gate-g6", 8), ("gate-g7", 30))
+    DOC = "lez/results/perf-gate-sequencer-100.md"
+
+    @classmethod
+    def setUpClass(cls):
+        dirs = [f"bench/perf/results/{name}" for name, _ in cls.RUNS]
+        cls.out = subprocess.run([sys.executable, "-I", "bench/perf/summarize_gate.py", *dirs], cwd=ROOT,
+                                 capture_output=True, encoding="utf-8", check=True).stdout
+        cls.doc = rd(cls.DOC)
+        head = cls.doc[: len(cls.doc) - len(cls.out)] if cls.doc.endswith(cls.out) else ""
+        cls.header = " ".join(head.split())
+        sys.path.insert(0, str(ROOT / "bench" / "perf"))
+        import contextlib
+        import io
+        import summarize_gate
+        with contextlib.redirect_stdout(io.StringIO()):
+            cls.keys = {name: summarize_gate.summarize(ROOT / d) for (name, _), d in zip(cls.RUNS, dirs)}
+        cls.journals = {}
+        for name, _ in cls.RUNS:
+            rows = []
+            for d in ("honest-1", "honest-2"):
+                for line in rd(f"bench/perf/results/{name}/state-{d}/journal.tsv").splitlines():
+                    f = line.split("\t")
+                    if len(f) >= 12:  # round, step, job, slot, status, exit, gas exec, gas storage, fee, block, t, label
+                        rows.append(dict(daemon=d, step=f[1], job=f[2], status=f[4], exit=f[5], gas=int(f[6] or 0),
+                                         fee=int(f[8] or 0), block=int(f[9] or -1), label=f[11]))
+            cls.journals[name] = rows
+
+    def has(self, needle, count=1):
+        n = self.header.count(needle)
+        self.assertEqual(n, count, f"{self.DOC}'s header states '{needle}' {n} time(s), not {count}")
+
+    def test_the_record_is_its_header_then_the_generator_output(self):
+        self.assertTrue(self.out.startswith("## Run `gate-g6`"))
+        self.assertTrue(self.doc.endswith(self.out))
+        self.assertTrue(self.header.startswith("# RFP-021 R.9 and R.10 at a hundred updates"))
+        self.assertNotIn("## Run", self.header)
+
+    def test_the_runs_are_the_ones_described(self):
+        for name, window in self.RUNS:
+            run = f"bench/perf/results/{name}"
+            machine = rd(f"{run}/machine.txt")
+            self.assertIn(f"\nGATE_ENTRIES=106 GATE_STEP=60 GATE_WINDOW={window} GATE_POLL=4 GATE_ADVERSARY=0\n", machine)
+            self.assertIn("\nFAKETIME=-5d ", machine)
+            self.assertIn("FAKETIME_DONT_FAKE_MONOTONIC=1)", machine)
+            self.assertEqual(rd(f"{run}/done.txt"), "done=1\n")
+            kinds = [line.split("\t")[2] for line in rd(f"{run}/reveals.tsv").splitlines()[1:]]
+            self.assertEqual((len(kinds), kinds.count("finality"), kinds.count("period")), (106, 96, 10))
+            self.assertEqual(sorted(p.name for p in (ROOT / run).glob("state-*")), ["state-honest-1", "state-honest-2"])
+        self.has("each run reveals 106 of the lab's recorded mainnet updates (96 finality updates and 10 sync-committee "
+                 "period updates; `GATE_ENTRIES=106`; A3's gate asks 100), one every 60 s (`GATE_STEP=60`)")
+        self.has("no adversary (`GATE_ADVERSARY=0`); `gate-g6` at the default deferral window of 8 rounds, `gate-g7` at 30")
+        self.has("(`FAKETIME=-5d`, monotonic clocks real)")
+
+    def test_the_reveals_are_the_recorded_updates(self):
+        """Each run's reveals.tsv is the lab's recorded mainnet updates in the replay's order (sorted names), entry by
+        entry, with the slots bench/perf/beacon_replay.py reads from each SSZ file; each UTC stamp is its own Unix time's
+        (truncated to the second, the Unix time rounded to the millisecond), the times rising; and the header names each
+        run's updater build as its machine.txt and hook.log do."""
+        import beacon_replay
+        expect = []
+        for i, p in enumerate(sorted((ROOT / "lez/lab/results/record/net/mainnet/updates").glob("*.ssz"))[:106], 1):
+            kind = p.name.split(".")[1]
+            expect.append([str(i), p.name, kind, *map(str, beacon_replay.slots(kind, p.read_bytes()))])
+        self.assertEqual(len(expect), 106)
+        stamp = lambda x: datetime.fromtimestamp(int(x), timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        shas = []
+        for name, _ in self.RUNS:
+            rows = [line.split("\t") for line in rd(f"bench/perf/results/{name}/reveals.tsv").splitlines()[1:]]
+            self.assertEqual([r[:6] for r in rows], expect)
+            last = 0.0
+            for r in rows:
+                t = float(r[7])
+                self.assertIn(r[6], (stamp(t), stamp(t - 0.0005)), r)
+                self.assertGreater(t, last, r)
+                last = t
+            sha = re.search(r"ferrata-updater sha256 ([0-9a-f]{64})", rd(f"bench/perf/results/{name}/machine.txt")).group(1)
+            self.assertIn(f"updater sha256 {sha};", rd(f"bench/perf/results/{name}/hook.log"))
+            shas.append(sha)
+        self.has(f"G6's updater sha256 `{shas[0][:8]}…`, G7's `{shas[1][:8]}…`")
+
+    def test_a3s_figures_from_the_journals(self):
+        """The honest daemons' execution gas on refused steps over applied steps, honest-1's share of the fees (applied
+        and refused), and no (job, step, label) applied twice: summed from the journals, not read from the generator."""
+        stated = {}
+        for (name, window) in self.RUNS:
+            rows = self.journals[name]
+            applied = sum(r["gas"] for r in rows if r["status"] == "applied")
+            refused = sum(r["gas"] for r in rows if r["status"] == "refused")
+            fees = {d: sum(r["fee"] for r in rows if r["daemon"] == d and r["status"] in ("applied", "refused"))
+                    for d in ("honest-1", "honest-2")}
+            ratio, share = refused / applied, fees["honest-1"] / sum(fees.values())
+            self.assertLessEqual(ratio, 0.10)
+            self.assertTrue(0.35 <= share <= 0.65)
+            self.assertEqual((f"{ratio:.4f}", f"{share:.3f}"),
+                             (f"{self.keys[name]['r9']:.4f}", f"{self.keys[name]['share']:.3f}"))
+            done = [(r["job"], r["step"], r["label"]) for r in rows if r["status"] == "applied"]
+            self.assertEqual(len(done), len(set(done)))
+            stated[window] = (ratio, share)
+        r8, s8 = stated[8]
+        r30, s30 = stated[30]
+        self.has(f"`gate-g6` (window 8) **{r8:.4f}** and honest-1's share **{s8:.3f}**; "
+                 f"`gate-g7` (window 30) **{r30:.4f}** and **{s30:.3f}**. Both runs meet both limits, "
+                 f"window 8 by {0.10 - r8:.4f}.")
+        self.has("In both runs no step was applied twice")
+
+    def test_every_refused_step_raced_an_applied_step_of_its_block(self):
+        """Each refused step shares its block with the same step of the same job applied, or (exit 82, StoreChanged) is
+        a `Finish` whose job another job's applied `Finish` overtook in that block; the header names those blocks."""
+        store_changed = {}
+        for name, _ in self.RUNS:
+            rows = self.journals[name]
+            applied = {(r["job"], r["step"], r["block"]) for r in rows if r["status"] == "applied"}
+            finishes = {(r["job"], r["block"]) for r in rows if r["status"] == "applied" and r["step"] == "finish"}
+            for r in (r for r in rows if r["status"] == "refused"):
+                if (r["job"], r["step"], r["block"]) in applied:
+                    continue
+                self.assertEqual((r["step"], r["exit"]), ("finish", "82"), r)
+                self.assertTrue(any(b == r["block"] and j != r["job"] for j, b in finishes), r)
+                store_changed.setdefault(name, []).append(r["block"])
+        self.assertEqual({k: sorted(v) for k, v in store_changed.items()}, {"gate-g6": [243, 267, 289]})
+        self.has("`gate-g6`'s three refused `Finish` steps with exit code 82 (`StoreChanged`) show as \"0 of 3\"")
+        self.has("another job (blocks 243, 267 and 289)")
+        self.assertIn("| honest daemons | finish | 82 | 3 | 11,055,840 | 0 of 3 |", self.out)
+
+    def test_the_headers_other_figures_are_the_generators(self):
+        k6, k7 = self.keys["gate-g6"], self.keys["gate-g7"]
+        for k in (k6, k7):
+            self.assertEqual((k["lat_n"], k["fin_revealed"], k["twice"]), (96, 96, 0))
+        self.has(f"all {k6['lat_n']} revealed finality updates were covered: {k6['own']} of them by their own job at "
+                 f"window 8 (latency median {k6['lat_med']:.0f} s, p90 {k6['lat_p90']:.0f} s), {k7['own']} at window 30 "
+                 f"(median {k7['lat_med']:.0f} s, p90 {k7['lat_p90']:.0f} s)")
+        self.has(f"{g(k6['gas_aband'])} execution gas at window 8 and {g(k7['gas_aband'])} at window 30, so that all the "
+                 f"daemons' gas is **{k6['mult']:.3f}** and **{k7['mult']:.3f}** times the completed jobs'")
+
+    def test_the_operator_guides_rows_and_figures(self):
+        """docs/guides/operator-guide.md §3.4 (R.10's documented effect of the window on latency): its G6 and G7 rows
+        and the figures of the sentence comparing them, each from the generator's figures for the run."""
+        guide = rd("docs/guides/operator-guide.md")
+        folded = " ".join(guide.split())
+        cells = {}
+        for name, window in self.RUNS:
+            k = self.keys[name]
+            lo, hi = (f"{x:.1f}" for x in k["round_s"])
+            cells[name] = dict(gas=f"{k['total_gas'] / k['revealed'] / 1e6:.1f}M", aband=f"{k['gas_aband'] / 1e6:.1f}M",
+                               ref=f"{k['gas_ref'] / 1e6:.1f}M")
+            row = (f"| {name[5:].upper()}: {k['revealed']} updates | {window} ({lo if lo == hi else f'{lo}–{hi}'} s) | "
+                   f"{k['reveal_step']:.0f} s | {k['lat_med']:.0f} / {k['lat_p90']:.0f} s | {k['own']} / {k['later']} | "
+                   f"{cells[name]['gas']} | {k['mult']:.3f} | {k['waste']:.3f} | {k['r9']:.4f} | {k['share']:.3f} |")
+            self.assertEqual(guide.count(row), 1, row)
+        k6, k7, c6, c7 = self.keys["gate-g6"], self.keys["gate-g7"], cells["gate-g6"], cells["gate-g7"]
+        for needle in (f"the median latency grows from {k6['lat_med']:.0f} to {k7['lat_med']:.0f} s, the execution gas "
+                       f"per revealed update falls from {c6['gas']} to {c7['gas']}",
+                       f"(G6: {c6['aband']} abandoned against {c6['ref']} refused; G7: {c7['aband']} against {c7['ref']})",
+                       "meet A3's two limits without its adversarial daemon"):
+            self.assertEqual(folded.count(needle), 1, needle)
+
+
+class TestGateJoin(unittest.TestCase):
+    """`lez/results/perf-gate-sequencer-join.md` (RFP-021 R.9 and R.10 with join or wait, `policy.join_wait_rounds`):
+    a hand-written header, then `bench/perf/summarize_gate.py`'s output on the four runs with join or wait, then
+    `bench/perf/gate_abandoned.py`'s on G6, G7 (before it) and them, byte for byte. The runs are the ones the header
+    describes (each `machine.txt`, `done.txt`, `reveals.tsv`, two daemons; one updater build for both runs of a pair,
+    the two pairs' builds different, each named by the header with its commit); the reveals are the recorded updates;
+    A3's two figures and limits, the steps applied twice and "every refused step in the block of the same step of the
+    same job, applied" are recomputed from the journals; abandoned jobs, and for each whether the later `Open` was sent
+    before any job open on its store was published, are recomputed here from the journals, the daemons' logs and the
+    sequencer's log (none in the final build's runs); the policy's counters from each daemon's last `/metrics`; the
+    operator guide's rows for the four runs."""
+
+    RUNS = (("gate-g8", 8), ("gate-g9", 30), ("gate-g10", 8), ("gate-g11", 30))
+    FINAL = ("gate-g10", "gate-g11")
+    BEFORE = ("gate-g6", "gate-g7")
+    DOC = "lez/results/perf-gate-sequencer-join.md"
+    BUILDS = {"gate-g8": "b9377f5f", "gate-g10": "39a87ce4"}
+
+    @classmethod
+    def setUpClass(cls):
+        dirs = [f"bench/perf/results/{name}" for name, _ in cls.RUNS]
+        run = lambda script, ds: subprocess.run([sys.executable, "-I", script, *ds], cwd=ROOT, capture_output=True,
+                                                encoding="utf-8", check=True).stdout
+        cls.out = run("bench/perf/summarize_gate.py", dirs)
+        cls.abandoned_out = run("bench/perf/gate_abandoned.py", [f"bench/perf/results/{n}" for n in cls.BEFORE] + dirs)
+        cls.doc = rd(cls.DOC)
+        tail = cls.out + cls.abandoned_out
+        head = cls.doc[: len(cls.doc) - len(tail)] if cls.doc.endswith(tail) else ""
+        cls.header = " ".join(head.split())
+        sys.path.insert(0, str(ROOT / "bench" / "perf"))
+        import contextlib
+        import io
+        import summarize_gate
+        with contextlib.redirect_stdout(io.StringIO()):
+            cls.keys = {name: summarize_gate.summarize(ROOT / d) for (name, _), d in zip(cls.RUNS, dirs)}
+        cls.journals = {name: cls.journal(name) for name in cls.BEFORE + tuple(n for n, _ in cls.RUNS)}
+
+    def has(self, needle, count=1):
+        n = self.header.count(needle)
+        self.assertEqual(n, count, f"{self.DOC}'s header states '{needle}' {n} time(s), not {count}")
+
+    @staticmethod
+    def journal(name):
+        rows = []
+        for d in ("honest-1", "honest-2"):
+            for line in rd(f"bench/perf/results/{name}/state-{d}/journal.tsv").splitlines():
+                f = line.split("\t")
+                if len(f) >= 13:
+                    rows.append(dict(daemon=d, step=f[1], job=f[2], slot=int(f[3]), status=f[4], exit=f[5],
+                                     gas=int(f[6] or 0), fee=int(f[8] or 0), block=int(f[9]), t=unix(f[10]),
+                                     label=f[11], hash=f[12].split(" ")[0]))
+        return rows
+
+    def sha(self, name):
+        return re.search(r"ferrata-updater sha256 ([0-9a-f]{64})", rd(f"bench/perf/results/{name}/machine.txt")).group(1)
+
+    def test_the_record_is_its_header_then_the_generators_output(self):
+        self.assertTrue(self.out.startswith("## Run `gate-g8`"))
+        self.assertTrue(self.abandoned_out.startswith("### Abandoned jobs of `gate-g6`"))
+        self.assertTrue(self.doc.endswith(self.out + self.abandoned_out))
+        self.assertTrue(self.header.startswith("# RFP-021 R.9 with join or wait"))
+        self.assertNotIn("## Run", self.header)
+
+    def test_the_runs_are_the_ones_described(self):
+        for name, window in self.RUNS:
+            run = f"bench/perf/results/{name}"
+            machine = rd(f"{run}/machine.txt")
+            self.assertIn(f"\nGATE_ENTRIES=106 GATE_STEP=60 GATE_WINDOW={window} GATE_POLL=4 GATE_ADVERSARY=0\n", machine)
+            self.assertIn("\nFAKETIME=-5d ", machine)
+            self.assertIn("FAKETIME_DONT_FAKE_MONOTONIC=1)", machine)
+            self.assertEqual(rd(f"{run}/done.txt"), "done=1\n")
+            kinds = [line.split("\t")[2] for line in rd(f"{run}/reveals.tsv").splitlines()[1:]]
+            self.assertEqual((len(kinds), kinds.count("finality"), kinds.count("period")), (106, 96, 10))
+            self.assertEqual(sorted(p.name for p in (ROOT / run).glob("state-*")), ["state-honest-1", "state-honest-2"])
+            self.assertIn(f"updater sha256 {self.sha(name)};", rd(f"{run}/hook.log"))
+            for d in ("honest-1", "honest-2"):
+                self.assertIn("ferrata_updater_waits_for_other_jobs_total{", rd(f"{run}/metrics-{d}.txt"))
+        self.assertEqual(self.sha("gate-g8"), self.sha("gate-g9"), "one build for the first pair")
+        self.assertEqual(self.sha("gate-g10"), self.sha("gate-g11"), "one build for the second pair")
+        self.assertNotEqual(self.sha("gate-g8"), self.sha("gate-g10"), "two builds")
+        for first, commit in self.BUILDS.items():
+            self.has(f"(commit `{commit}`, updater sha256 `{self.sha(first)[:8]}…`)")
+
+    def test_the_reveals_are_the_recorded_updates(self):
+        import beacon_replay
+        expect = []
+        for i, p in enumerate(sorted((ROOT / "lez/lab/results/record/net/mainnet/updates").glob("*.ssz"))[:106], 1):
+            kind = p.name.split(".")[1]
+            expect.append([str(i), p.name, kind, *map(str, beacon_replay.slots(kind, p.read_bytes()))])
+        for name, _ in self.RUNS:
+            rows = [line.split("\t") for line in rd(f"bench/perf/results/{name}/reveals.tsv").splitlines()[1:]]
+            self.assertEqual([r[:6] for r in rows], expect, name)
+
+    def test_a3s_figures_limits_and_steps_from_the_journals(self):
+        for name, window in self.RUNS:
+            rows = self.journals[name]
+            applied = sum(r["gas"] for r in rows if r["status"] == "applied")
+            refused = sum(r["gas"] for r in rows if r["status"] == "refused")
+            fees = {d: sum(r["fee"] for r in rows if r["daemon"] == d and r["status"] in ("applied", "refused"))
+                    for d in ("honest-1", "honest-2")}
+            ratio, share = refused / applied, fees["honest-1"] / sum(fees.values())
+            self.assertLessEqual(ratio, 0.10, name)
+            self.assertTrue(0.35 <= share <= 0.65, f"{name}: {share:.3f}")
+            self.assertEqual((f"{ratio:.4f}", f"{share:.3f}"),
+                             (f"{self.keys[name]['r9']:.4f}", f"{self.keys[name]['share']:.3f}"))
+            self.has(f"`{name}` (window {window}) **{ratio:.4f}** and honest-1's share **{share:.3f}**")
+            done = [(r["job"], r["step"], r["label"]) for r in rows if r["status"] == "applied"]
+            self.assertEqual(len(done), len(set(done)), f"{name}: a step applied twice")
+            twins = {(r["job"], r["step"], r["block"]) for r in rows if r["status"] == "applied"}
+            finishes = {(r["job"], r["block"]) for r in rows if r["status"] == "applied" and r["step"] == "finish"}
+            for r in (r for r in rows if r["status"] == "refused"):
+                if (r["job"], r["step"], r["block"]) in twins:
+                    continue
+                # A Finish refused because another job's Finish in its block moved the store first (exit 82).
+                self.assertEqual((r["step"], r["exit"]), ("finish", "82"), f"{name}: a refused step without its twin: {r}")
+                self.assertTrue(any(b == r["block"] and j != r["job"] for j, b in finishes), r)
+        self.has("every refused step shared its block with the same step of the same job, applied")
+
+    def test_abandoned_jobs_and_when_their_opens_were_sent(self):
+        """Recomputed here: a job with an applied step that never completed, overtaken by the first job to complete at or
+        after its first applied step. For each, the later `Open` of the pair, sent (its settlement less the delay its
+        daemon logged) at least a second before any job open on its store was published, or in one block with it, is
+        contention no read could avoid; any other is not. G6 and G7: 23 and 15 abandoned, none so. The runs with join or
+        wait: one abandoned (G10), opened in the block of the job that overtook it."""
+        import gzip
+        avoidable, abandoned = {}, {}
+        for name in self.BEFORE + tuple(n for n, _ in self.RUNS):
+            run = ROOT / "bench/perf/results" / name
+            rows = self.journals[name]
+            delay = {}
+            for d in ("honest-1", "honest-2"):
+                for line in (run / f"daemon-{d}.log").read_text().splitlines():
+                    m = re.match(r"\[updater\] .* \+\s*([\d.]+)s ([0-9a-f]{64})$", line)
+                    if m:
+                        delay[m.group(2)] = float(m.group(1))
+            published = {}
+            for line in gzip.decompress((run / "sequencer.log.gz").read_bytes()).decode("utf-8", "replace").splitlines():
+                m = re.match(r"\[(\S+Z) INFO\s+sequencer_core\] Publishing block (\d+) ", line)
+                if m:
+                    published.setdefault(int(m.group(2)), unix(m.group(1)))
+            last = lambda r: r["step"] == "finish" or r["label"].endswith("init adopt 2/2")
+            applied = [r for r in rows if r["status"] == "applied"]
+            done = {r["job"]: r["block"] for r in applied if last(r)}
+            first = {}
+            for r in applied:
+                first[r["job"]] = min(first.get(r["job"], r["block"]), r["block"])
+            opens = {r["job"]: r for r in applied if r["step"] == "open"}
+            n = bad = 0
+            for j, b in first.items():
+                over = min(((ob, k) for k, ob in done.items() if ob >= b), default=None)
+                if j in done or over is None:
+                    continue
+                n += 1
+                pair = [opens.get(j), opens.get(over[1])]
+                self.assertTrue(all(pair), f"{name}: an abandoned job's pair without an applied Open")
+                late = max(pair, key=lambda r: (r["block"], r["t"]))
+                sent = late["t"] - delay[late["hash"]]
+                before = max((x for x in done.values() if x < late["block"]), default=-1)
+                pubs = [published[r["block"]] for r in opens.values()
+                        if before < r["block"] <= late["block"] and r is not late and r["block"] != late["block"]]
+                if pubs and sent > min(pubs) - 1:
+                    bad += 1
+            abandoned[name], avoidable[name] = n, bad
+        self.assertEqual({n: (abandoned[n], avoidable[n]) for n in self.BEFORE}, {"gate-g6": (23, 23), "gate-g7": (15, 15)})
+        for name, _ in self.RUNS:
+            self.assertEqual(abandoned[name], self.keys[name]["abandoned"], name)
+            self.assertIn(f"### Abandoned jobs of `{name}`", self.abandoned_out)
+        for name in self.FINAL:
+            self.assertEqual(avoidable[name], 0, f"{name}: an Open sent once a job open on its store was published")
+        self.assertEqual({n: abandoned[n] for n, _ in self.RUNS}, {"gate-g8": 0, "gate-g9": 0, "gate-g10": 1, "gate-g11": 0})
+        self.has("In the four runs one job was abandoned, in `gate-g10`, opened in the block of the job that overtook it")
+
+    def test_the_policys_counters(self):
+        for name in self.FINAL:
+            waits = capped = 0
+            for d in ("honest-1", "honest-2"):
+                m = rd(f"bench/perf/results/{name}/metrics-{d}.txt")
+                waits += int(re.search(r"^ferrata_updater_waits_for_other_jobs_total\{[^}]*\} (\d+)$", m, re.M).group(1))
+                capped += int(re.search(r"^ferrata_updater_join_waits_capped_total\{[^}]*\} (\d+)$", m, re.M).group(1))
+            self.assertGreater(waits, 0, name)
+            self.assertEqual(capped, 0, name)
+
+    def test_the_operator_guides_rows(self):
+        guide = rd("docs/guides/operator-guide.md")
+        for name, window in self.RUNS:
+            k = self.keys[name]
+            lo, hi = (f"{x:.1f}" for x in k["round_s"])
+            gas = f"{k['total_gas'] / k['revealed'] / 1e6:.1f}M"
+            row = (f"| {name[5:].upper()}: {k['revealed']} updates, join or wait | {window} "
+                   f"({lo if lo == hi else f'{lo}–{hi}'} s) | {k['reveal_step']:.0f} s | {k['lat_med']:.0f} / "
+                   f"{k['lat_p90']:.0f} s | {k['own']} / {k['later']} | {gas} | {k['mult']:.3f} | {k['waste']:.3f} | "
+                   f"{k['r9']:.4f} | {k['share']:.3f} |")
+            self.assertEqual(guide.count(row), 1, row)
+
+
+def g(n):
+    """A gas figure as the generator prints it (bench/perf/summarize_gate.py's `g`)."""
+    return f"{int(round(n)):,}"
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -7,6 +7,7 @@
 //! summary's `pubkeys_root`, accepted only when they match the summaries on chain.
 
 use std::{
+    cmp::Reverse,
     collections::{BTreeMap, BTreeSet},
     fmt::Write as _,
     fs,
@@ -161,6 +162,64 @@ pub const MAX_HELD: usize = 1024;
 /// Refusals after which the chain could not be read ([`After::Unread`]) kept to be judged once it can be read again; the
 /// oldest beyond this is dropped unjudged.
 pub const MAX_UNJUDGED: usize = 64;
+/// `policy.join_wait_rounds`: the updates the sources served and the program's checks accepted that are remembered, so
+/// that a job another party opened for one of them can be found on chain (a job's account is found by its id, which
+/// hashes the store and the update); the least recently served is dropped first.
+pub const MAX_KNOWN: usize = 64;
+/// ... and of one kind (updates whose jobs would leave the store at the same place: copies of one update), at most this
+/// many: copies a source serves in numbers (a re-dated copy is as valid) push out older copies of their own kind only,
+/// not the update of another party's job. One whose job was found open on the instance's state is kept.
+pub const KNOWN_PER_KIND: usize = 4;
+/// `policy.join_wait_rounds`: on one state of the instance, this updater waits for other parties' jobs at most this many
+/// times `join_wait_rounds` rounds from the first round it waited there, even while jobs that lead its own keep moving:
+/// room for a job another party opened to finish (each of its steps waiting its turn), and a bound on the wait when a
+/// party opens a new job each round. With the turns (`defer_window`), it bounds how long one state holds the updater.
+pub const JOIN_WAIT_CAP: u64 = 3;
+
+/// How a job's update ranks against another's on the same store, as an update is chosen (`plan_inner`): adopting the
+/// next committee the store lacks, then the furthest finalized header, then the earliest signature slot, then the most
+/// signers.
+pub type Rank = (bool, u64, Reverse<u64>, usize);
+
+/// The steps of `job` the chain has applied: its `Open`, its `Miller`, then each `Adopt` part.
+pub fn steps_applied(job: &Job) -> u32 {
+    let miller = u32::from(!matches!(job.phase, Phase::Miller { .. }));
+    1 + miller + job.adoption.as_ref().map_or(0, |a| a.chunk_roots.len() as u32)
+}
+
+/// A job a known update gives on the instance's store (`policy.join_wait_rounds`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct KnownJob {
+    pub jid: Root,
+    pub rank: Rank,
+    /// What applying it leaves the store at: whether it adopts the next committee the store lacks, and the root of its
+    /// finalized header. Two jobs with the same are the same update for the store (copies differ in their attested
+    /// header, signature slot or signers).
+    pub lands: (bool, Root),
+    /// The update's bytes as served, by their SHA-256 (`Updater`'s `known`, or a job it carries).
+    pub digest: Root,
+}
+
+/// What [`Updater`]'s `join_or_wait` found: a job to join instead (its update planned, whether it came from the
+/// `updates` endpoint, its bytes), or why to wait.
+enum JoinOrWait {
+    Join(Box<Planned>, bool, Vec<u8>),
+    /// Why, and the job waited for.
+    Wait(String, Root),
+    /// A wait ended this round (nothing left to wait for, or the cap reached): every updater waiting for the same job
+    /// would send in the same round, so this one's turn for the step starts again, once per wait.
+    Released,
+}
+
+/// Whether job `a` leads job `b` on one store (`policy.join_wait_rounds`), each given as (steps the chain has applied,
+/// its update's [`Rank`], job id): the job with more steps applied leads, so any open job leads one not opened yet;
+/// between two with as many (opened in one block, or each before the other could be read), the one whose update ranks
+/// higher as an update is chosen (as a rule the newer: the update every party is being served, and the one whose job,
+/// once applied, leaves the other's update superseded, so no job is needed for it), then the greater job id. A total
+/// order: two updaters that read the same chain and know both updates agree on which of two jobs leads.
+pub fn leads(a: &(u32, Rank, Root), b: &(u32, Rank, Root)) -> bool {
+    a > b
+}
 
 /// Why the chain refused a transaction, as its outcome says (LEZ's note, the program's exit code).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -410,6 +469,22 @@ pub struct Metrics {
     pub deferrals: u64,
     /// Steps it planned that another updater sent first (seen on chain before sending).
     pub skipped_done: u64,
+    /// `policy.join_wait_rounds`: rounds in which a step whose turn had come was not sent because another job open on
+    /// the instance's store leads its job and moved within `join_wait_rounds` (an `Open` waits for any such job).
+    pub job_waits: u64,
+    /// ... times it joined a job open on the store that leaves it as its own would (a copy of the same update) instead
+    /// of sending a step of its own job.
+    pub jobs_joined: u64,
+    /// ... and steps sent although another open job led theirs, because that job had not moved for `join_wait_rounds`
+    /// (the wait's bound), counted once per job passed.
+    pub stalled_jobs_passed: u64,
+    /// ... rounds of those in which the job waited for could not be read (on the sequencer backend: a block not yet final
+    /// holds a transaction of it).
+    pub unreadable_waits: u64,
+    /// ... and states of the instance on which this updater stopped waiting for moving jobs that led its own, because it
+    /// had waited [`JOIN_WAIT_CAP`] times `join_wait_rounds` rounds since it first waited there: a party that opens a new
+    /// job each round cannot hold it back for longer.
+    pub wait_caps: u64,
     /// Jobs whose last step (it applied the update) it sent.
     pub jobs_finished: u64,
     pub budget_stops: u64,
@@ -513,6 +588,40 @@ pub struct Updater {
     /// Refusals after which the chain could not be read ([`After::Unread`]): the action and its cause, judged at the next
     /// round that reads the chain. At most [`MAX_UNJUDGED`].
     unjudged: Vec<(Action, Refusal, String)>,
+    /// `policy.join_wait_rounds`: updates the sources served that the program's checks accepted, by the SHA-256 of the
+    /// bytes served: (period update, the bytes, the last round a source served them, the kind of job it gives
+    /// ([`KnownJob::lands`]), its signature slot). With the updates of the jobs it
+    /// carries, the jobs of these are the ones this updater can find open on chain. At most [`MAX_KNOWN`].
+    known: BTreeMap<Root, (bool, Vec<u8>, u64, (bool, Root), u64)>,
+    /// The known updates whose jobs were found open on the instance's state (`known_jobs.0`): not pushed out of `known`.
+    open_digests: BTreeSet<Root>,
+    /// A join is being planned (`join_or_wait` joins once, not again from the joined job's step).
+    joining: bool,
+    /// What each known update's job is on the instance's state (`.0`, [`state_turn`]), or `None` when the update would
+    /// not move that store; computed once per state.
+    known_jobs: (Root, BTreeMap<Root, Option<KnownJob>>),
+    /// The jobs found open on the instance's state (`.0`), by what they would leave the store at ([`KnownJob::lands`]):
+    /// the most steps any of them has applied, and the first round this updater read that many. They move when that
+    /// count grows (a new job of the same kind, such as a copy of the same update, does not move them); jobs that have
+    /// not moved for `join_wait_rounds` no longer hold this updater back. Reset when the state changes (a job binds the
+    /// store it began on).
+    rivals: (Root, BTreeMap<(bool, Root), (u32, u64)>),
+    /// Jobs passed after they stopped moving (`Metrics::stalled_jobs_passed`), each counted once; reset with `rivals`.
+    passed: BTreeSet<Root>,
+    /// The first round this updater waited for another job on the instance's state ([`JOIN_WAIT_CAP`]), and whether the
+    /// cap was reached there. Reset with `rivals`.
+    wait_start: Option<(u64, bool)>,
+    /// The last check on this state ended in a wait: the next check that does not wait ends the episode and restarts
+    /// the step's turn ([`JoinOrWait::Released`]). Reset with `rivals`.
+    in_wait: bool,
+    /// The last round in which `known` was brought up to date from the sources.
+    learned: u64,
+    /// Per job, the steps the chain held once this updater's last applied step of it landed: a job whose count is still
+    /// that, and which this updater does not carry, last moved by this updater's own step (it opened the job and left
+    /// it, `finish_own_jobs = false`): it holds this updater back no longer. At most [`MAX_HELD`].
+    own_moves: BTreeMap<Root, u32>,
+    /// Why this round's step was not sent, when another job leads it (`last_plan`, the log), and that job.
+    waiting_for: Option<(Root, String)>,
     pub breaker: Breaker,
     /// The instance can no longer advance by the chain's clock: its finalized header (before `Init`: the checkpoint)
     /// is past its weak-subjectivity period, so the program refuses every `Open` (`Init`) from now on. (The finalized
@@ -567,6 +676,17 @@ impl Updater {
             held: BTreeMap::new(),
             held_saved: String::new(),
             unjudged: Vec::new(),
+            known: BTreeMap::new(),
+            open_digests: BTreeSet::new(),
+            joining: false,
+            known_jobs: ([0u8; 32], BTreeMap::new()),
+            rivals: ([0u8; 32], BTreeMap::new()),
+            passed: BTreeSet::new(),
+            wait_start: None,
+            in_wait: false,
+            learned: 0,
+            own_moves: BTreeMap::new(),
+            waiting_for: None,
             breaker: Breaker::default(),
             expired: None,
             sleep: real_sleep,
@@ -1052,7 +1172,13 @@ impl Updater {
         let round = self.round;
         self.held.retain(|_, h| h.retry_at.is_none() || h.round + HOLD_ROUNDS > round);
         self.judge_unread(ledger);
+        let waited = self.waiting_for.take().map(|w| w.0);
         let mut plan = self.plan_inner(ledger);
+        if let Some((leader, why)) = &self.waiting_for {
+            if waited != Some(*leader) {
+                self.log(&format!("not sent: {why}"));
+            }
+        }
         self.save_held();
         if matches!(plan, Ok(Plan::Send(_))) && self.round < self.breaker.paused_until {
             plan = Ok(Plan::Stuck(self.paused()));
@@ -1062,7 +1188,10 @@ impl Updater {
         }
         self.metrics.last_plan = match &plan {
             Ok(Plan::UpToDate) => "up-to-date".into(),
-            Ok(Plan::Deferred(s)) => format!("deferred {}", s.name()),
+            Ok(Plan::Deferred(s)) => match &self.waiting_for {
+                Some((_, why)) => format!("deferred {}: {why}", s.name()),
+                None => format!("deferred {}", s.name()),
+            },
             Ok(Plan::Waiting(w)) => format!("waiting: {w}"),
             Ok(Plan::Stuck(w)) => format!("stuck: {w}"),
             Ok(Plan::Send(a)) => format!("send {}", a.tx.label),
@@ -1169,6 +1298,11 @@ impl Updater {
         // L-U2: it used to end `Stuck`, before the sources' head was read, and `/health` stayed `degraded` for good).
         self.ensure_committees(&store)?;
         if self.policy.finish_own_jobs {
+            // Join or wait: a carrier asks its sources too, each round, so that it knows the update of a job another
+            // party opens meanwhile (a job is found by its id, which hashes the update).
+            if self.policy.join_wait() > 0 && !self.carried.is_empty() {
+                self.learn_updates(ledger, &store);
+            }
             if let Some(plan) = self.continue_carried(ledger, &store, &state)? {
                 return Ok(plan);
             }
@@ -1221,6 +1355,7 @@ impl Updater {
                     let e = best_seen.entry(c.source).or_default();
                     *e = (*e).max(p.update.finalized_header.beacon.slot);
                     seen_digests.insert(digest, true);
+                    self.remember(c.period_update, &c.raw, Self::lands_of(&p), p.update.signature_slot);
                     useful.push((c.source, p, c.period_update, c.raw));
                 }
                 Verdict::NoChange => {
@@ -1238,6 +1373,7 @@ impl Updater {
             }
         }
         self.metrics.sources_head = seen_head;
+        self.learned = self.round;
         // Lag: a source whose newest verified finalized slot is far behind the best.
         let best =
             useful.iter().map(|(_, p, ..)| p.update.finalized_header.beacon.slot).max().unwrap_or(store.finalized.slot);
@@ -1402,7 +1538,8 @@ impl Updater {
         state: &InstanceState,
         store: &CompactStore,
     ) -> Result<Plan> {
-        let step = ferrata_advance::next_step(self.job_on_chain(ledger, &chosen.jid)?.as_ref());
+        let job = self.job_on_chain(ledger, &chosen.jid)?;
+        let step = ferrata_advance::next_step(job.as_ref());
         let fin = store.finalized.slot;
         let signature_slot = chosen.update.signature_slot;
         let window = match step {
@@ -1455,6 +1592,35 @@ impl Updater {
         if self.defer(&chosen.jid, &since, step) {
             return Ok(Plan::Deferred(step));
         }
+        // Join or wait (`policy.join_wait_rounds`; RFP-021 R.9): read now, just before sending, whether another job open
+        // on this store leads this one. Only one job per store can finish (each binds the store it began on), so a step
+        // of a job that trails another is paid for nothing if the other finishes. A copy of the same update is joined
+        // (its next step sent instead); another job is waited for until it finishes, falls behind, or stops moving.
+        match self.join_or_wait(ledger, &chosen, job.as_ref(), step, state, store)? {
+            None => {}
+            Some(JoinOrWait::Join(p, period_update, raw)) => {
+                self.joining = true;
+                let plan = self.next_step(ledger, *p, (period_update, raw), state, store);
+                self.joining = false;
+                if matches!(plan, Ok(Plan::Send(_))) {
+                    self.metrics.jobs_joined += 1;
+                }
+                return plan;
+            }
+            Some(JoinOrWait::Wait(why, leader)) => {
+                self.metrics.job_waits += 1;
+                self.waiting_for = Some((leader, why));
+                return Ok(Plan::Deferred(step));
+            }
+            Some(JoinOrWait::Released) => {
+                // The step's turn starts again from this round, so that updaters released together do not all send
+                // in this round.
+                self.first_due.insert((since, step), (self.round, None));
+                if self.defer(&chosen.jid, &since, step) {
+                    return Ok(Plan::Deferred(step));
+                }
+            }
+        }
         let tx = self.job_tx(&chosen, step)?;
         self.sending = Some((chosen.jid, served.0, served.1));
         Ok(Plan::Send(Action {
@@ -1465,6 +1631,346 @@ impl Updater {
             store_seen: Some((state.active, state.store.clone())),
             window,
         }))
+    }
+
+    // ---- join or wait (`policy.join_wait_rounds`; RFP-021 R.9) ----------------------------------------------------
+
+    /// Remember an update a source served that the program's checks accepted (its job leaving the store at `lands`;
+    /// signed at `signature_slot`), so that a job another party opens for it can be found on chain. At most
+    /// [`KNOWN_PER_KIND`] of one kind and [`MAX_KNOWN`] in all, the least recently served dropped first, apart from the
+    /// earliest signed of each kind (the copy every source serving the first update of a checkpoint serves, and the one
+    /// a re-dated copy cannot undercut) and those whose jobs were found open on the instance's state (unless twice
+    /// [`MAX_KNOWN`] are kept).
+    fn remember(&mut self, period_update: bool, raw: &[u8], lands: (bool, Root), signature_slot: u64) {
+        if self.policy.join_wait() == 0 {
+            return;
+        }
+        let digest: Root = Sha256::digest(raw).into();
+        let round = self.round;
+        if let Some(k) = self.known.get_mut(&digest) {
+            k.2 = round;
+            return;
+        }
+        self.known.insert(digest, (period_update, raw.to_vec(), round, lands, signature_slot));
+        type Known = BTreeMap<Root, (bool, Vec<u8>, u64, (bool, Root), u64)>;
+        let open = &self.open_digests;
+        let first_of_kind = |known: &Known, kind: (bool, Root)| {
+            known.iter().filter(|(_, k)| k.3 == kind).min_by_key(|(d, k)| (k.4, **d)).map(|(d, _)| *d)
+        };
+        let oldest = |known: &Known, kind: Option<(bool, Root)>, keep_open: bool| {
+            known
+                .iter()
+                .filter(|(d, k)| {
+                    **d != digest
+                        && !(keep_open && open.contains(*d))
+                        && kind.is_none_or(|l| k.3 == l)
+                        && first_of_kind(known, k.3) != Some(**d)
+                })
+                .min_by_key(|(_, k)| k.2)
+                .map(|(d, _)| *d)
+        };
+        if self.known.values().filter(|k| k.3 == lands).count() > KNOWN_PER_KIND {
+            if let Some(d) = oldest(&self.known, Some(lands), true) {
+                self.known.remove(&d);
+            }
+        }
+        if self.known.len() > MAX_KNOWN {
+            let keep_open = self.known.len() <= 2 * MAX_KNOWN;
+            if let Some(d) = oldest(&self.known, None, keep_open) {
+                self.known.remove(&d);
+            }
+        }
+    }
+
+    /// For a round that does not otherwise ask the sources (a step of a job this updater carries comes first): ask them
+    /// what they serve now and remember what the program's checks accept, so that a job another party opened for it is
+    /// seen. No step is chosen from it; the sources are judged as in any round (one serving an update signed in the
+    /// future, or one the program would refuse, is demoted; their figures count the requests), and the sources' head is
+    /// brought up to date for `/health`.
+    fn learn_updates(&mut self, ledger: &dyn Ledger, store: &CompactStore) {
+        if self.learned == self.round {
+            return;
+        }
+        self.learned = self.round;
+        let candidates = self.candidates(store);
+        let (candidates, _) = self.refuse_future(candidates, ledger.now_ms());
+        let mut head = store.finalized.slot;
+        for c in candidates {
+            match self.evaluate(store, &c.update) {
+                Verdict::Useful(p) => {
+                    head = head.max(c.update.finalized_header.beacon.slot);
+                    self.remember(c.period_update, &c.raw, Self::lands_of(&p), p.update.signature_slot);
+                }
+                Verdict::Unverifiable => head = head.max(c.update.finalized_header.beacon.slot),
+                Verdict::NoChange => {}
+                Verdict::Invalid(why) => {
+                    let kind = if c.period_update { "period update" } else { "finality update" };
+                    self.demote(
+                        c.source,
+                        &format!("{kind} attested at {}: {why}", c.update.attested_header.beacon.slot),
+                    );
+                }
+            }
+        }
+        self.metrics.sources_head = self.metrics.sources_head.max(head);
+    }
+
+    /// How `p`'s update ranks on `store` ([`Rank`]).
+    fn rank_of(store: &CompactStore, p: &Planned) -> Rank {
+        (
+            store.next.is_none() && p.outcome.adopted,
+            p.update.finalized_header.beacon.slot,
+            Reverse(p.update.signature_slot),
+            p.update.sync_aggregate.bits.iter().filter(|b| **b).count(),
+        )
+    }
+
+    /// What applying `p` leaves the store at ([`KnownJob::lands`]): whether it adopts a committee (a period update
+    /// carrying the next one does, a finality update of the same header does not), and its finalized header's root.
+    fn lands_of(p: &Planned) -> (bool, Root) {
+        (p.outcome.adopted, p.update.finalized_header.beacon.hash_tree_root())
+    }
+
+    /// The update `raw` as the program's checks judge it on `store`: its job, if it would move the store.
+    fn plan_raw(&self, store: &CompactStore, period_update: bool, raw: &[u8]) -> Option<Box<Planned>> {
+        let decoded = if period_update {
+            decode_update(raw, &self.inst.config)
+        } else {
+            decode_finality_update(raw, &self.inst.config)
+        };
+        match self.evaluate(store, &decoded.ok()?.0) {
+            Verdict::Useful(p) => Some(p),
+            _ => None,
+        }
+    }
+
+    /// The update of a known job: whether it came from the `updates` endpoint, and its bytes.
+    fn known_bytes(&self, digest: &Root) -> Option<(bool, Vec<u8>)> {
+        if let Some((p, raw, ..)) = self.known.get(digest) {
+            return Some((*p, raw.clone()));
+        }
+        self.carried.values().find(|(_, raw)| Sha256::digest(raw).as_slice() == digest).cloned()
+    }
+
+    /// The jobs open on the instance's store other than `own`, among those of the known updates and of the jobs this
+    /// updater carries, each with the steps the chain holds of it and its next step, read now (`None`: not readable now:
+    /// on the sequencer backend, the read of an account a block not yet final changed fails, "the sequencer and the
+    /// follower disagree"). Any other failed read is an error, as any read of the chain.
+    fn open_jobs(
+        &mut self,
+        ledger: &dyn Ledger,
+        store: &CompactStore,
+        state: &InstanceState,
+        own: &Root,
+    ) -> Result<Vec<(KnownJob, Option<(u32, Step)>)>> {
+        let seen = state_turn(state);
+        if self.known_jobs.0 != seen {
+            self.known_jobs = (seen, BTreeMap::new());
+            self.open_digests.clear();
+        }
+        let mut wanted: BTreeMap<Root, (bool, &Vec<u8>)> =
+            self.known.iter().map(|(d, (p, raw, ..))| (*d, (*p, raw))).collect();
+        for (p, raw) in self.carried.values() {
+            wanted.insert(Sha256::digest(raw).into(), (*p, raw));
+        }
+        let missing: Vec<(Root, Option<KnownJob>)> = wanted
+            .iter()
+            .filter(|(d, _)| !self.known_jobs.1.contains_key(*d))
+            .map(|(d, (p, raw))| {
+                let job = self.plan_raw(store, *p, raw).map(|q| KnownJob {
+                    jid: q.jid,
+                    rank: Self::rank_of(store, &q),
+                    lands: Self::lands_of(&q),
+                    digest: *d,
+                });
+                (*d, job)
+            })
+            .collect();
+        let wanted: BTreeSet<Root> = wanted.into_keys().collect();
+        self.known_jobs.1.extend(missing);
+        self.known_jobs.1.retain(|d, _| wanted.contains(d));
+        let jobs: BTreeMap<Root, KnownJob> =
+            self.known_jobs.1.values().flatten().filter(|k| k.jid != *own).map(|k| (k.jid, *k)).collect();
+        let mut out = Vec::new();
+        for (jid, k) in jobs {
+            match self.job_on_chain(ledger, &jid) {
+                Ok(Some(job)) => {
+                    self.open_digests.insert(k.digest);
+                    out.push((k, Some((steps_applied(&job), ferrata_advance::next_step(Some(&job))))));
+                }
+                Ok(None) => {}
+                Err(e) if format!("{e:#}").contains("disagree") => out.push((k, None)),
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(out)
+    }
+
+    /// Join or wait, for the next step of `chosen`'s job (`job`: as the chain holds it, `None` before its `Open`), read
+    /// from the chain now, just before sending: the job open on the instance's store that [`leads`] this one most, among
+    /// those of the updates this updater knows. One that leaves the store as this one would (the same finalized header
+    /// and adoption: a copy of the same update) is joined, moving or not: its next step is sent instead (unless
+    /// `policy.min_distinct_clients` compares bytes, which a copy does not share: then it is waited for). One that leaves
+    /// it elsewhere is waited for while it moves: the most steps the chain holds of the jobs that leave the store where it
+    /// does grew (or this updater first read one) within `policy.join_wait_rounds` rounds; it is passed once it has not
+    /// moved for that long (counted once). A job whose account fails to read (on the sequencer backend, a read is checked
+    /// against the follower of the final blocks, so it fails while a block not yet final holds a transaction of the job)
+    /// is waited for as one that just moved. On one state of the instance, waiting ends [`JOIN_WAIT_CAP`] times
+    /// `join_wait_rounds` rounds after this updater first waited there, however the jobs move, and it does not wait again
+    /// on that state. In the first check after a wait in which nothing is waited for (the job finished, fell behind or
+    /// was passed), and when the cap ends a wait, the step's turn starts again, once ([`JoinOrWait::Released`]).
+    #[allow(clippy::too_many_arguments)]
+    fn join_or_wait(
+        &mut self,
+        ledger: &dyn Ledger,
+        chosen: &Planned,
+        job: Option<&Job>,
+        step: Step,
+        state: &InstanceState,
+        store: &CompactStore,
+    ) -> Result<Option<JoinOrWait>> {
+        let wait = self.policy.join_wait();
+        if wait == 0 {
+            return Ok(None);
+        }
+        if job.is_some() {
+            self.learn_updates(ledger, store);
+        }
+        let own = (job.map_or(0, steps_applied), Self::rank_of(store, chosen), chosen.jid);
+        let own_lands = Self::lands_of(chosen);
+        let others = self.open_jobs(ledger, store, state, &chosen.jid)?;
+        let seen = state_turn(state);
+        if self.rivals.0 != seen {
+            self.rivals = (seen, BTreeMap::new());
+            self.passed.clear();
+            self.wait_start = None;
+            self.in_wait = false;
+        }
+        let round = self.round;
+        // How far each kind of job has moved.
+        let mut most: BTreeMap<(bool, Root), u32> = BTreeMap::new();
+        for (k, read) in &others {
+            if let Some((steps, _)) = read {
+                let e = most.entry(k.lands).or_default();
+                *e = (*e).max(*steps);
+            }
+        }
+        for (lands, steps) in most {
+            let e = self.rivals.1.entry(lands).or_insert((steps, round));
+            if steps > e.0 {
+                *e = (steps, round);
+            }
+        }
+        let joinable = self.policy.min_distinct_clients < 2 || self.policy.client_match == ClientMatch::FinalizedHeader;
+        let mut join: Option<(KnownJob, u32)> = None;
+        // (job, its steps or none read, rounds since its kind moved)
+        let mut leader: Option<(KnownJob, Option<u32>, u64)> = None;
+        for (k, read) in others {
+            let Some((steps, next)) = read else {
+                // Not readable now: waited for as a job that has just moved (bounded by the cap).
+                if leader.is_none() {
+                    leader = Some((k, None, 0));
+                }
+                continue;
+            };
+            let me = (steps, k.rank, k.jid);
+            if !leads(&me, &own) {
+                continue;
+            }
+            // A copy whose next step this updater holds after a refusal is not joined (it would be planned every round
+            // and never sent): it is waited for as any other job, within the bounds.
+            if joinable && k.lands == own_lands && !self.joining && self.held_back(&k.jid, next).is_none() {
+                if join.as_ref().is_none_or(|j| leads(&me, &(j.1, j.0.rank, j.0.jid))) {
+                    join = Some((k, steps));
+                }
+                continue;
+            }
+            // A job this updater moved last and does not carry (it left it): no one is shown to move it.
+            if !self.carried.contains_key(&k.jid) && self.own_moves.get(&k.jid) == Some(&steps) {
+                continue;
+            }
+            let still = round.saturating_sub(self.rivals.1.get(&k.lands).map_or(round, |e| e.1));
+            if still >= wait {
+                if self.passed.insert(k.jid) {
+                    self.metrics.stalled_jobs_passed += 1;
+                    self.log(&format!(
+                        "job 0x{} (finalized slot {}, {steps} step(s) applied) leads this store's job 0x{} but has not \
+                         moved for {still} rounds (policy.join_wait_rounds {wait}): passed",
+                        &hex::encode(k.jid)[..16],
+                        k.rank.1,
+                        &hex::encode(chosen.jid)[..16]
+                    ));
+                }
+                continue;
+            }
+            let better = match &leader {
+                None | Some((_, None, _)) => true,
+                Some((l, Some(ls), _)) => leads(&me, &(*ls, l.rank, l.jid)),
+            };
+            if better {
+                leader = Some((k, Some(steps), still));
+            }
+        }
+        if let Some((k, steps)) = join {
+            match self
+                .known_bytes(&k.digest)
+                .and_then(|(pu, raw)| self.plan_raw(store, pu, &raw).filter(|p| p.jid == k.jid).map(|p| (p, pu, raw)))
+            {
+                Some((p, period_update, raw)) => {
+                    self.log(&format!(
+                        "job 0x{} (finalized slot {}, {steps} step(s) applied), open on this store, leaves it as job \
+                         0x{} would ({} step(s) applied): joined",
+                        &hex::encode(k.jid)[..16],
+                        k.rank.1,
+                        &hex::encode(chosen.jid)[..16],
+                        own.0
+                    ));
+                    return Ok(Some(JoinOrWait::Join(p, period_update, raw)));
+                }
+                // Its update no longer at hand: waited for instead.
+                None => leader = Some((k, Some(steps), 0)),
+            }
+        }
+        // The end of a wait episode (no leading job left to wait for) restarts the step's turn, once.
+        let Some((k, steps, still)) = leader else {
+            return Ok(std::mem::replace(&mut self.in_wait, false).then_some(JoinOrWait::Released));
+        };
+        let cap = wait.saturating_mul(JOIN_WAIT_CAP);
+        let started = self.wait_start.get_or_insert((round, false));
+        if round.saturating_sub(started.0) >= cap {
+            self.in_wait = false;
+            if std::mem::replace(&mut started.1, true) {
+                return Ok(None);
+            }
+            self.metrics.wait_caps += 1;
+            self.log(&format!(
+                "{} of job 0x{}: this updater has waited {cap} rounds on this state of the instance for jobs that lead \
+                 its own (JOIN_WAIT_CAP {JOIN_WAIT_CAP} x policy.join_wait_rounds {wait}): sent",
+                step.name(),
+                &hex::encode(chosen.jid)[..16]
+            ));
+            return Ok(Some(JoinOrWait::Released));
+        }
+        self.in_wait = true;
+        let what = match steps {
+            Some(n) => format!("{n} step(s) applied, last moved {still} round(s) ago"),
+            None => {
+                self.metrics.unreadable_waits += 1;
+                "its account not readable now (a transaction of it not final yet)".into()
+            }
+        };
+        Ok(Some(JoinOrWait::Wait(
+            format!(
+                "job 0x{} (finalized slot {}, {what}), open on this store, leads job 0x{} (finalized slot {}, {} step(s) \
+                 applied): waiting for it (at most {wait} rounds after it last moves)",
+                &hex::encode(k.jid)[..16],
+                k.rank.1,
+                &hex::encode(chosen.jid)[..16],
+                own.1 .1,
+                own.0
+            ),
+            k.jid,
+        )))
     }
 
     /// Whether `window` refuses a transaction settled now ([`WINDOW_MARGIN_MS`] before its end), by the chain's clock
@@ -1931,6 +2437,18 @@ impl Updater {
             }
         }
         if out.applied {
+            let after = match action.step {
+                Step::Open => Some(1),
+                Step::Miller => Some(2),
+                Step::Adopt(p) => Some(3 + u32::from(p)),
+                Step::Init | Step::Finish => None,
+            };
+            if let Some(n) = after {
+                if self.own_moves.len() >= MAX_HELD {
+                    self.own_moves.clear();
+                }
+                self.own_moves.insert(action.job_id, n);
+            }
             self.held.remove(&(action.job_id, action.step));
             self.breaker = Breaker::default();
             self.metrics.failing_sends = 0;
@@ -2216,6 +2734,11 @@ impl Updater {
         let _ = writeln!(o, "ferrata_updater_retries_total{{{l}}} {}", m.retries);
         let _ = writeln!(o, "ferrata_updater_deferrals_total{{{l}}} {}", m.deferrals);
         let _ = writeln!(o, "ferrata_updater_steps_done_by_others_total{{{l}}} {}", m.skipped_done);
+        let _ = writeln!(o, "ferrata_updater_waits_for_other_jobs_total{{{l}}} {}", m.job_waits);
+        let _ = writeln!(o, "ferrata_updater_jobs_joined_total{{{l}}} {}", m.jobs_joined);
+        let _ = writeln!(o, "ferrata_updater_stalled_jobs_passed_total{{{l}}} {}", m.stalled_jobs_passed);
+        let _ = writeln!(o, "ferrata_updater_join_waits_capped_total{{{l}}} {}", m.wait_caps);
+        let _ = writeln!(o, "ferrata_updater_waits_for_unreadable_jobs_total{{{l}}} {}", m.unreadable_waits);
         let _ = writeln!(o, "ferrata_updater_jobs_finished_total{{{l}}} {}", m.jobs_finished);
         let _ = writeln!(o, "ferrata_updater_finalized_slot{{{l}}} {}", m.finalized_slot);
         let _ = writeln!(o, "ferrata_updater_sources_head_slot{{{l}}} {}", m.sources_head);

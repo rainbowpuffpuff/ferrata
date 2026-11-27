@@ -518,7 +518,8 @@ fn opened(attack: Attack, payer_byte: u8, n13: usize, n20: usize) -> OpenedRun {
     let mut u = r.updater(label, victim.clone(), vec![Box::new(liar), Box::new(honest)], policy(w));
     assert_eq!(u.payer_id, id_of(&victim), "the tag as the attacker computes it");
     let src = CopySource { inner: r.recorded("opener", &clock), config: r.config.clone(), current: current.clone() };
-    let att_policy = Policy { finish_own_jobs: false, ..policy(1) };
+    // The attacker sends the steps it chooses: it neither finishes its jobs nor waits for others' (join or wait off).
+    let att_policy = Policy { finish_own_jobs: false, join_wait_rounds: Some(0), ..policy(1) };
     let mut att = r.updater("attacker", attacker.clone(), vec![Box::new(src)], att_policy);
     settle(&mut u, &mut l, 200);
     assert_eq!(store(&u, &l).finalized.slot, 15_630_016, "the record's entry 9");

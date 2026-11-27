@@ -1,0 +1,12 @@
+[02:04:36] crown LEZ session x (chain stand-in)
+[02:04:38] restored generation 1 (155M)
+[02:04:38] Bedrock node up: {"cryptarchia_info":{"lib":"fd63378026cc435bb569d16bec22d3341cd3517d5a2473cd43c020e2e73c0463","lib_slot":10252043,"tip":"3cf1bcf69226bb2a20ad29f505685c1eead353e0c6678512aa8629425c5d86f8","slot":10252048,"height":265,"state":"Online"},"phase":"InitialBlockDownload"}
+[02:04:41] node slot 0 is unix second 1785061027 (slots of 1 s)
+[02:05:14] sequencer start 1: scheduler after 32 s; its blocks fall 6 s after an epoch second
+[02:05:14] sequencer up, head block 19
+[02:05:14] hook <repo>/bench/perf/gate-hook.sh
+[03:54:47] driver exit 0
+[03:57:30] sequencer stopped (exit 0)
+[03:57:39] node stopped (exit 143)
+[03:57:47] saved generation 2 (1729915671 bytes; head block 692)
+[03:57:47] session x: ok
