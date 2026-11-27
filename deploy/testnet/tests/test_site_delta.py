@@ -8,8 +8,10 @@ bundle and the wallet, as served now), then changed the way a host drifts: one f
 no longer has. install.sh runs for real (bash, sha256sum, install), as the current user, under a scratch directory
 beside this file. Standard library only.
 """
+import contextlib
 import hashlib
 import importlib.util
+import io
 import json
 import os
 import subprocess
@@ -92,8 +94,10 @@ class Pack(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def install(self):
-        env = dict(os.environ, WWW=str(self.www), OWNER=ME, BACKUP=str(self.d / "backup"))
+    def install(self, path_prefix=None, **extra):
+        env = dict(os.environ, WWW=str(self.www), OWNER=ME, BACKUP=str(self.d / "backup"), **extra)
+        if path_prefix:
+            env["PATH"] = f"{path_prefix}:{env['PATH']}"
         return subprocess.run(["bash", str(self.pkg / "install.sh")], env=env, capture_output=True, text=True)
 
     def test_the_package_holds_exactly_the_plan(self):
@@ -142,6 +146,22 @@ class Pack(unittest.TestCase):
         self.assertEqual((self.www / "wallet/bridge.js").read_bytes(), self.old["/wallet/bridge.js"])
         self.assertFalse(list(self.www.rglob("*.site-delta-new")))
 
+    def test_a_rename_that_fails_puts_back_the_ones_before_it(self):
+        shim = self.d / "shim"
+        shim.mkdir()
+        real = subprocess.run(["bash", "-c", "command -v mv"], capture_output=True, text=True).stdout.strip()
+        (shim / "mv").write_text(  # the second mv call fails, as a rename could
+            "#!/bin/bash\nn=$(( $(cat \"$MV_COUNT\" 2>/dev/null || echo 0) + 1 )); echo $n > \"$MV_COUNT\"\n"
+            f"[ \"$n\" = 2 ] && {{ echo 'mv: injected failure' >&2; exit 1; }}\nexec {real} \"$@\"\n")
+        (shim / "mv").chmod(0o755)
+        r = self.install(path_prefix=str(shim), MV_COUNT=str(self.d / "mv-count"))
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn("a rename failed: the files already renamed were put back; nothing installed", r.stdout)
+        self.assertEqual((self.www / "index.html").read_bytes(), self.old["/index.html"])        # renamed, then put back
+        self.assertEqual((self.www / "wallet/bridge.js").read_bytes(), self.old["/wallet/bridge.js"])
+        self.assertFalse((self.www / "testers/index.html").exists())
+        self.assertFalse([p for p in self.www.rglob("*") if p.name.endswith((".site-delta-new", ".site-delta-old"))])
+
     def test_a_damaged_package_installs_nothing(self):
         p = self.pkg / "www/index.html"
         p.write_bytes(p.read_bytes() + b" ")
@@ -149,6 +169,32 @@ class Pack(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertIn("not whole", r.stdout)
         self.assertEqual((self.www / "index.html").read_bytes(), self.old["/index.html"])
+
+
+class PackGuard(unittest.TestCase):
+    def test_pack_refuses_a_stale_bundle_unless_told(self):
+        with tempfile.TemporaryDirectory(dir=HERE) as d:
+            m, _, _ = served_now()
+            m["files"][0]["sha256"] = "6" * 64
+            f, out = Path(d) / "manifest.json", Path(d) / "out"
+            f.write_text(json.dumps(m))
+            saved = sd.bundle_fresh
+            try:
+                sd.bundle_fresh = lambda commit: (False, "stale, as the test says")
+                with self.assertRaises(SystemExit) as cm, contextlib.redirect_stdout(io.StringIO()):
+                    sd.main(["pack", "--manifest", str(f), "--out", str(out)])
+                self.assertIn("refusing to pack: stale, as the test says", str(cm.exception))
+                self.assertFalse(out.exists())
+                with contextlib.redirect_stdout(io.StringIO()):
+                    sd.main(["pack", "--manifest", str(f), "--out", str(out), "--allow-stale"])
+                self.assertEqual(len(list(out.glob("site-*.tar"))), 1)
+            finally:
+                sd.bundle_fresh = saved
+
+    def test_only_the_checked_out_commit(self):
+        ok, why = sd.bundle_fresh(sd.git("rev-parse", "HEAD~1").decode().strip())
+        self.assertFalse(ok)
+        self.assertIn("is not the checked-out commit", why)
 
 
 class Cli(unittest.TestCase):

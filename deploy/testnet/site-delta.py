@@ -12,12 +12,16 @@ longer has (listed, never deleted). `--parts` picks what is deployed: build (the
 (/wallet/), msg, names, other (the explorer bundle and the host's pages), or all; changes outside it are listed as
 left out. Read-only: one GET of the manifest (or a file), then git.
 
-`pack` writes DIR/site-REF12.tar holding www/PATH for each file to install, SHA256SUMS (those files), EXPECT (the
+`pack` refuses unless REF is the checked-out commit, the tree is clean and `site/build.py --check` passes (a stale
+bundle would deploy an old page; `--allow-stale` overrides), then writes DIR/site-REF12.tar holding www/PATH for each
+file to install, SHA256SUMS (those files), EXPECT (the
 SHA-256 each target has on the host now, as the manifest says, or "absent") and install.sh. On the host, as root,
 `bash install.sh` checks the package and every target first and installs nothing if one differs from EXPECT (the host
 moved since the manifest was made); otherwise it copies each old file to a backup directory and stages each new one
 beside its target (root:root 644), removing what it staged and changing nothing if any of that fails, then renames
-each staged file over its target (one rename per file: a reader sees the old file or the new one, never part of one). The wallet's config.json and the other files the host
+each staged file over its target, putting back the ones already renamed if a rename fails. One rename per file: a
+reader sees each file old or new, never part of one, but may see some files new and others still old for the moment
+the renames take. The wallet's config.json and the other files the host
 generates are never in a package (the manifest lists them apart). Standard library only.
 """
 import argparse
@@ -59,7 +63,8 @@ while read -r want path; do
 done < EXPECT
 [ "$bad" = 0 ] || {{ echo "the host differs from the manifest: nothing installed"; exit 1; }}
 # Every old file kept and every new one staged beside its target before any target changes; a failure here removes
-# what was staged and changes nothing. Then one rename per file.
+# what was staged and changes nothing. Then one rename per file; if a rename fails, the files already renamed are put
+# back from the backup (or removed, where the manifest said absent) and nothing stays installed.
 mkdir -p "$BACKUP"
 staged=()
 unstage() {{ for s in "${{staged[@]}}"; do rm -f "$s"; done; echo "staging failed: nothing installed"; exit 1; }}
@@ -68,8 +73,21 @@ while read -r want path; do
   install -D -o "${{OWNER%%:*}}" -g "${{OWNER##*:}}" -m 644 "www/$path" "$WWW/$path.site-delta-new" || unstage
   staged+=("$WWW/$path.site-delta-new")
 done < EXPECT
+moved=()
+putback() {{
+  for m in "${{moved[@]}}"; do
+    if [ -f "$BACKUP/$m" ]; then
+      install -o "${{OWNER%%:*}}" -g "${{OWNER##*:}}" -m 644 "$BACKUP/$m" "$WWW/$m.site-delta-old" && mv -f "$WWW/$m.site-delta-old" "$WWW/$m"
+    else
+      rm -f "$WWW/$m"
+    fi
+  done
+  for s in "${{staged[@]}}"; do rm -f "$s"; done
+  echo "a rename failed: the files already renamed were put back; nothing installed"; exit 1
+}}
 while read -r want path; do
-  mv -f "$WWW/$path.site-delta-new" "$WWW/$path"
+  mv -f "$WWW/$path.site-delta-new" "$WWW/$path" || putback
+  moved+=("$path")
 done < EXPECT
 echo "installed $(wc -l < EXPECT) file(s) from {ref12}; the replaced ones are in $BACKUP"
 """
@@ -169,6 +187,20 @@ def show(p: dict, ref: str, manifest: dict) -> None:
             print(f"  {path}  ({repo_path})")
 
 
+def bundle_fresh(commit: str):
+    """Whether the build page's bundle at `commit` is what site/build.py makes now: only for the checked-out commit and a
+    clean tree (build.py builds from the working tree). Returns (ok, why)."""
+    head = git("rev-parse", "HEAD").decode().strip()
+    if commit != head:
+        return False, f"{commit[:12]} is not the checked-out commit ({head[:12]}): check out the tip you deploy"
+    if git("status", "--porcelain", "--untracked-files=no").strip():
+        return False, "the working tree has changes: pack from a clean checkout"
+    r = subprocess.run([sys.executable, "-I", str(ROOT / "site/build.py"), "--check"], capture_output=True, text=True, cwd=ROOT)
+    if r.returncode != 0:
+        return False, "site/build.py --check: the committed bundle is not a fresh build (rebuild it, commit, push, then pack)"
+    return True, ""
+
+
 def pack(p: dict, ref_commit: str, out_dir: Path) -> Path:
     if not p["install"]:
         raise SystemExit("site-delta: nothing to install")
@@ -199,6 +231,7 @@ def main(argv=None) -> int:
     ap.add_argument("--ref", default="HEAD")
     ap.add_argument("--parts", default="build,wallet", help=f"comma-separated, of {', '.join(PARTS)}; or all")
     ap.add_argument("--out", help="pack: the directory the package is written to")
+    ap.add_argument("--allow-stale", action="store_true", help="pack even if the committed bundle is not a fresh build")
     a = ap.parse_args(argv)
     parts = set(PARTS) if a.parts == "all" else set(a.parts.split(","))
     if parts - set(PARTS):
@@ -211,6 +244,9 @@ def main(argv=None) -> int:
     if a.command == "pack":
         if not a.out:
             ap.error("pack needs --out DIR")
+        ok, why = (True, "") if a.allow_stale else bundle_fresh(commit)
+        if not ok:
+            raise SystemExit(f"site-delta: refusing to pack: {why}")
         t = pack(p, commit, Path(a.out))
         print(f"wrote {t} ({t.stat().st_size} bytes), sha256 {hashlib.sha256(t.read_bytes()).hexdigest()}")
     return 0

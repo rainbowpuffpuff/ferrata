@@ -36,7 +36,8 @@ python3 -I deploy/testnet/site-delta.py plan                       # reads <netw
 python3 -I deploy/testnet/site-delta.py pack --out ../site-deploy-pkg
 ```
 
-`<network>` is the address `scripts/reproduce/deployed-programs.json` names. Read the plan: every line is a file the
+`<network>` is the address `scripts/reproduce/deployed-programs.json` names. `pack` refuses a stale bundle (the tip must
+be checked out, the tree clean, `site/build.py --check` passing). Read the plan: every line is a file the
 host serves today with the SHA-256 the manifest records, and the one it gets. If the plan lists a file you did not
 expect, stop and find out why. `pack` prints the package's path (`site-TIP12.tar`) and its SHA-256: keep both.
 
@@ -59,7 +60,8 @@ aws ssm get-command-invocation --instance-id $INSTANCE --command-id <the id prin
 ```
 
 The commands run under the host's `/bin/sh` (Ubuntu 24.04: dash), the package's script under bash. `install.sh` first checks the package and every target against what the manifest says the host serves; if one
-differs (the host moved since the manifest was made), it says which and installs nothing. Otherwise it prints
+differs (the host moved since the manifest was made), it says which and installs nothing; it stages every file before
+it replaces any, and puts back the files already renamed if a rename fails. Otherwise it prints
 `installed N file(s) from TIP12; the replaced ones are in /var/lib/ferrata/site-backup/TIP12-<time>`. Caddy, the
 configs, the sequencer and every other file are untouched; no service restarts.
 
