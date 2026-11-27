@@ -1,5 +1,6 @@
 //! Differences from the reference implementations that the coverage-guided fuzzers of `fuzz/`
-//! found and that are intended (fuzz/RESULTS.md); the regressions of fixed findings are in
+//! found and that are intended, and the one difference between the two BLS libraries that the `bls`
+//! target requires (fuzz/RESULTS.md); the regressions of fixed findings are in
 //! crates/ferrata-core/tests/fuzz_regressions.rs.
 
 use std::collections::BTreeMap;
@@ -9,7 +10,14 @@ use alloy_trie::{
     proof::{verify_proof, ProofRetainer},
     HashBuilder, Nibbles,
 };
-use ferrata_core::{mpt::verify, Error};
+use bls12_381::{G1Affine, G1Projective};
+use ferrata_core::{
+    bls::{Aggregation, BlsBackend, Blst, Zkcrypto},
+    mpt::verify,
+    types::{BlsPubkey, SyncCommittee},
+    Error,
+};
+use ferrata_spectests::testkit::{fake_committee, sign};
 
 fn alloy_trie(entries: &BTreeMap<Vec<u8>, Vec<u8>>, targets: &[Vec<u8>]) -> (B256, Vec<Vec<Vec<u8>>>) {
     let retainer = ProofRetainer::new(targets.iter().map(|t| Nibbles::unpack(t)).collect());
@@ -64,4 +72,53 @@ fn exclusion_proof_padded_below_a_diverging_extension() {
     let padded = vec![honest[0].clone(), donor[1].clone()];
     assert_eq!(verify(&root, &absent, &padded), Err(Error::ProofTrailingNodes));
     assert!(alloy_accepts(&root, &absent, None, &padded), "alloy-trie 0.9.9 accepts the padded proof");
+}
+
+/// Difference B1 (fuzz target `bls`, between the two BLS libraries; known from the code before the
+/// target was written, so the target requires it instead of reporting it; intended): the two points
+/// with x = 0, (0, 2) and (0, -2), are on the curve and of order 3. blst's decoder refuses them
+/// even where only the on-curve check is asked (`blst_p1_uncompress` returns
+/// `BLST_POINT_NOT_IN_GROUP`, `bls/blst_backend.rs`, `uncompress`); zkcrypto's on-curve decoding
+/// (`G1Affine::from_compressed_unchecked`) takes them. So on the two paths that decode keys with
+/// the on-curve check only, `check_committee_onchain` and `verify_checked`, a committee holding one
+/// is refused by blst and may be accepted by zkcrypto: here a committee `[k, (0, 2)]` whose
+/// aggregate is their sum, `k` signing, verifies under zkcrypto's subtractive composition
+/// (aggregate minus the non-signer is `k`) and is refused by blst. `KeyValidate`
+/// (`check_committee`, `fast_aggregate_verify`) refuses the point in both. blst, which the programs
+/// use, is the stricter side, and no Ethereum committee holds such a key (each passed `KeyValidate`
+/// at its deposit). The `bls` target requires exactly this: blst's refusal wherever such a key is
+/// decoded on those paths.
+#[test]
+fn order_three_keys_on_the_on_curve_paths() {
+    let mut order_three: BlsPubkey = [0u8; 48];
+    order_three[0] = 0x80;
+    let t = G1Affine::from_compressed_unchecked(&order_three).unwrap();
+    assert!(!bool::from(t.is_torsion_free()), "(0, 2) is outside G1");
+    let fake = fake_committee(1, 0x5a);
+    let k = fake.committee.pubkeys[0];
+    let sum = G1Projective::from(G1Affine::from_compressed(&k).unwrap()) + t;
+    let committee =
+        SyncCommittee { pubkeys: vec![k, order_three], aggregate_pubkey: G1Affine::from(sum).to_compressed() };
+    let bits = [true, false];
+    let message = [0x21u8; 32];
+    let signature = sign(&fake, &[true], &message);
+
+    for a in [Aggregation::Additive, Aggregation::Subtractive, Aggregation::Auto] {
+        let (blst, zkcrypto) = (Blst::new(a), Zkcrypto::new(a));
+        assert_eq!(blst.check_committee(&committee), Err(Error::CommitteeInvalid));
+        assert_eq!(zkcrypto.check_committee(&committee), Err(Error::CommitteeInvalid));
+        assert_eq!(blst.fast_aggregate_verify(&committee, &bits, &message, &signature), Ok(()), "k alone signs");
+        assert_eq!(zkcrypto.fast_aggregate_verify(&committee, &bits, &message, &signature), Ok(()));
+        assert_eq!(blst.check_committee_onchain(&committee), Err(Error::CommitteeInvalid), "blst: {a:?}");
+        assert_eq!(zkcrypto.check_committee_onchain(&committee), Ok(()), "zkcrypto: {a:?}");
+    }
+    // The additive composition (and Auto, at one signer of two) decodes the signer only.
+    for a in [Aggregation::Additive, Aggregation::Auto] {
+        assert_eq!(Blst::new(a).verify_checked(&committee, &bits, &message, &signature), Ok(()));
+        assert_eq!(Zkcrypto::new(a).verify_checked(&committee, &bits, &message, &signature), Ok(()));
+    }
+    // The subtractive one decodes the non-signer, (0, 2).
+    let a = Aggregation::Subtractive;
+    assert_eq!(Blst::new(a).verify_checked(&committee, &bits, &message, &signature), Err(Error::PubkeyInvalid));
+    assert_eq!(Zkcrypto::new(a).verify_checked(&committee, &bits, &message, &signature), Ok(()));
 }

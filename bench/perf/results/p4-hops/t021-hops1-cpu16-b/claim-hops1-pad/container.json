@@ -1,0 +1,1363 @@
+{
+ "declared": {
+  "modal_cpu_request_and_limit": 16.0,
+  "modal_memory_mib_request_and_limit": 16384
+ },
+ "nproc": "16",
+ "nproc_all": "16",
+ "os_cpu_count": 16,
+ "sched_getaffinity": 16,
+ "cpuinfo_processors": 16,
+ "cpuinfo_model_names": [
+  "unknown"
+ ],
+ "cpuinfo_ids": [
+  [
+   "bogomips",
+   "3092.88"
+  ],
+  [
+   "cache size",
+   "8192 KB"
+  ],
+  [
+   "cpu family",
+   "25"
+  ],
+  [
+   "model",
+   "1"
+  ],
+  [
+   "stepping",
+   "unknown"
+  ],
+  [
+   "vendor_id",
+   "AuthenticAMD"
+  ]
+ ],
+ "cpuinfo_siblings": [
+  "16"
+ ],
+ "cpuinfo_cpu_cores": [
+  "16"
+ ],
+ "cpu_flags": [
+  "adx",
+  "avx2",
+  "bmi2",
+  "ht",
+  "sha_ni"
+ ],
+ "cgroup": {
+  "cgroup.controllers": null,
+  "cpu.max": null,
+  "cpu.weight": null,
+  "cpuset.cpus.effective": null,
+  "memory.max": null,
+  "memory.high": null,
+  "memory.current": null,
+  "memory.peak": null,
+  "memory.swap.max": null,
+  "memory.events": null,
+  "memory/memory.limit_in_bytes": "17179869184",
+  "memory/memory.max_usage_in_bytes": null,
+  "memory/memory.usage_in_bytes": "70565888",
+  "cpu/cpu.cfs_quota_us": "1600000",
+  "cpu/cpu.cfs_period_us": "100000",
+  "cpuset/cpuset.cpus": "0-15"
+ },
+ "proc_self_cgroup": "7:pids:/ta-01M8F2JHBVGW16MD2R62MFW2HR\n6:memory:/ta-01M8F2JHBVGW16MD2R62MFW2HR\n5:job:/ta-01M8F2JHBVGW16MD2R62MFW2HR\n4:devices:/ta-01M8F2JHBVGW16MD2R62MFW2HR\n3:cpuset:/ta-01M8F2JHBVGW16MD2R62MFW2HR\n2:cpuacct:/ta-01M8F2JHBVGW16MD2R62MFW2HR\n1:cpu:/ta-01M8F2JHBVGW16MD2R62MFW2HR",
+ "meminfo_kib": {
+  "MemTotal": 16777216,
+  "MemFree": 16708236,
+  "MemAvailable": 16708236,
+  "Cached": 31164,
+  "SwapTotal": 0,
+  "SwapFree": 0,
+  "Shmem": 0
+ },
+ "kernel": "Linux version 4.19.0-gvisor #1 SMP Sun Jan 10 15:06:54 PST 2016",
+ "os": "Ubuntu 24.04.5 LTS",
+ "glibc": "ldd (Ubuntu GLIBC 2.39-0ubuntu8.9) 2.39",
+ "env": {
+  "MODAL_REGION": "eu-west",
+  "MODAL_CLOUD_PROVIDER": "CLOUD_PROVIDER_AZURE"
+ },
+ "job": "claim-hops1-pad",
+ "tag": "t021-hops1-cpu16-b",
+ "affinity": 0,
+ "manifest": {
+  "binary_from": "lez/target/debug/prove_vault_claim",
+  "ferrata_commit": "t-021-wip",
+  "ferrata_uncommitted_changes": 1,
+  "fixtures_from": [
+   "crates/ferrata-spectests/fixtures/sepolia-gloas-2026-11-10",
+   "crates/ferrata-spectests/fixtures/sepolia-attest-2026-11-10",
+   "crates/ferrata-spectests/fixtures/sepolia-vault-v5-2026-11-11",
+   "crates/ferrata-spectests/fixtures/sepolia-hops-2026-11-18",
+   "crates/ferrata-spectests/fixtures/sepolia-hops-2026-11-27"
+  ],
+  "expected_consumer_image_id": "8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96",
+  "program_image_id": "816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df",
+  "env": {
+   "FERRATA_VAULT_FIXTURE_DIR": "fixtures/sepolia-vault-v5-2026-11-11",
+   "FERRATA_SEPOLIA_FIXTURE_DIR": "fixtures/sepolia-gloas-2026-11-10",
+   "FERRATA_SEPOLIA_ATTEST_DIR": "fixtures/sepolia-attest-2026-11-10",
+   "FERRATA_HOPS_FIXTURES_DIR": "fixtures"
+  },
+  "prove_command": "FERRATA_EXPECT_CONSUMER_IMAGE_ID=<expected_consumer_image_id> <env, each under this directory> RISC0_DEV_MODE=0 /usr/bin/time -v ./prove_vault_claim --hops K --shape wallet --tx-out tx-claim.borsh",
+  "files": {
+   "fixtures/sepolia-attest-2026-11-10/SHA256SUMS": {
+    "bytes": 1128,
+    "sha256": "48fd76e4ff4ca92c6eb18b444d1ab3fd2479bf412d6249456d056f4f15341e3e"
+   },
+   "fixtures/sepolia-attest-2026-11-10/SOURCE.md": {
+    "bytes": 3843,
+    "sha256": "85073bab482b101fc8ffb6803f2573dedda87416312dfcc229e0cc6aa47cb096"
+   },
+   "fixtures/sepolia-attest-2026-11-10/beacon_header_11549664_second.json": {
+    "bytes": 669,
+    "sha256": "8b81397c1dff330418840ed4ebbda40d37f5d9d76da524ea9c00eb72a23ce492"
+   },
+   "fixtures/sepolia-attest-2026-11-10/block.json": {
+    "bytes": 40955,
+    "sha256": "4b12a06f3be044152beb27410d02e5da59edcba6a7cafad2089be74c92539f41"
+   },
+   "fixtures/sepolia-attest-2026-11-10/block_second.json": {
+    "bytes": 40954,
+    "sha256": "c0df19bf4387308aa699d7e63cda6d2400d65b3347bc1595099b837e2ae85756"
+   },
+   "fixtures/sepolia-attest-2026-11-10/call_0x1c7d4b196cb0c7b01d743fbc6116a902379c7238_totalSupply_12105936.json": {
+    "bytes": 103,
+    "sha256": "ac65b54ae06e9df873cc168a155895f505e7a8428e5417cf2d0e8aae9c4776dd"
+   },
+   "fixtures/sepolia-attest-2026-11-10/finality_update.ssz": {
+    "bytes": 1448,
+    "sha256": "b13b21b8f41fe1bfe8a7c42cf88f2152234bfa7f2237e92c99e088ed095f7946"
+   },
+   "fixtures/sepolia-attest-2026-11-10/fixture.json": {
+    "bytes": 1643,
+    "sha256": "4c68a336d52a4a0a2bbde76f84fe5727a83e20e8cfcf4886a4dd6f65d913ccfd"
+   },
+   "fixtures/sepolia-attest-2026-11-10/header.rlp": {
+    "bytes": 678,
+    "sha256": "5adf339fd2a6696ace3c388a9d2d561c893fd1ed7ca7143addf9936bd3a50af6"
+   },
+   "fixtures/sepolia-attest-2026-11-10/proof_0x1c7d4b196cb0c7b01d743fbc6116a902379c7238_12105936.json": {
+    "bytes": 13158,
+    "sha256": "9d31bb6abc4550a733d07cdb196311f89e638238e6750a3f2d89164c33e566db"
+   },
+   "fixtures/sepolia-attest-2026-11-10/proof_0xca11bde05977b3631167028862be2a173976ca11_12105936.json": {
+    "bytes": 7338,
+    "sha256": "6e0efd00594d0bc98933edbcd4ed746eecb6030dab6ac885656697447c7e8cea"
+   },
+   "fixtures/sepolia-attest-2026-11-10/proof_0xca11bde05977b3631167028862be2a173976ca11_mainnet_26385920.json": {
+    "bytes": 7886,
+    "sha256": "35749d507a4bed653482a5369c371998e211767967497fc92e1210a0a41c19e7"
+   },
+   "fixtures/sepolia-attest-2026-11-10/receipts_12105936.json": {
+    "bytes": 1034164,
+    "sha256": "a375f37c8eb51bec4b1b7b4acb5cf6f9f25d1138c6c80020da5d7f83e803d75c"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/SHA256SUMS": {
+    "bytes": 6563,
+    "sha256": "8ea1c70d964417507adf039c8e7e66da3344270a9a4c2b5a655b528b653a890b"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/SOURCE.md": {
+    "bytes": 12408,
+    "sha256": "412d957b02b4a0043acc78899519ea2c11b287050ef5d20b2d3b2f6f4a47c6ac"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_block_finalized_second.json": {
+    "bytes": 4626,
+    "sha256": "09eb8c2070ff5a96ccf33b96cad75c9d1a9150276f80801d5db799906f013680"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11288576_second.json": {
+    "bytes": 669,
+    "sha256": "f68cdad08c552cd76bd7255b83f736d4d2fa4fa52b748c780e46baec6a01db1f"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11290112_second.json": {
+    "bytes": 669,
+    "sha256": "aa474e4477377caa68e4a856e954a364f9f846efe28c22778757c1f2de6cb49f"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11297184_second.json": {
+    "bytes": 668,
+    "sha256": "4a7c893367a60ba15f631cfdcbfabdefb38dade699ed8c42e7019d4ff60abc00"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11304960_second.json": {
+    "bytes": 669,
+    "sha256": "49c02ed898e865fecb1e26ba9bdfb78acfe0ce5b28f0de0399684e9490f772ee"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11313312_second.json": {
+    "bytes": 669,
+    "sha256": "b03d8ed4d8851c961ed87aad551a28cc3343283e17d0fdd6fb84f77a10bfab91"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11321504_second.json": {
+    "bytes": 668,
+    "sha256": "08ff3d4bfe3c44c5f82a68218286331035b9f5416ce9aba416e21a9ce6a16bd3"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11329536_second.json": {
+    "bytes": 668,
+    "sha256": "50d9817ad3b88900d3e907da222f3fe3be8906bc9f608bd678626418263627d5"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11337888_second.json": {
+    "bytes": 668,
+    "sha256": "2c8fe301e1c978359ffb2102e62d555f1f04e4fdc9f0834956c3fa22b1bbc486"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11345920_second.json": {
+    "bytes": 668,
+    "sha256": "25ccffeec74a079cabd33038e9d6cdb4ecf4228b702d156bcc84d8b9c1458e80"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11354112_second.json": {
+    "bytes": 669,
+    "sha256": "2b64735d49cfb3548f04a9b4adc5d962c872531100c0bc79c0a625637173119a"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11362432_second.json": {
+    "bytes": 669,
+    "sha256": "357491846a8d9cf932d4db1278a313c91d140828c4dc98b1864eada212e7fc16"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11370496_second.json": {
+    "bytes": 669,
+    "sha256": "88ba7913ac014a544ea6889fda0b7168e01529f2cdae51b394b39e850fae2315"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11381312_second.json": {
+    "bytes": 669,
+    "sha256": "ef10ceaeb2957d5a2f8218eb07fa6d4fb5c7629f8bfcb4fcc6a6b69fff4e911f"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11386880_second.json": {
+    "bytes": 669,
+    "sha256": "7b659bdb194dc31fa5a3aa1dadc94c0c58bdd9984c154a5e8341037bae172a03"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11395072_second.json": {
+    "bytes": 668,
+    "sha256": "ca55a7993b174a58cc3ffff35506170207c0c5c25f67a8e6ce5f08405689aa18"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11403264_second.json": {
+    "bytes": 668,
+    "sha256": "a92b533531b4e7b30ea83cf90f9dce3da22bd47f6774630cf87b48bf66f4e636"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11411456_second.json": {
+    "bytes": 669,
+    "sha256": "a26615725f34c0850430acba9365d0ed38ad801fcf3eb2d8b30d79ae8b7c39a3"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11419648_second.json": {
+    "bytes": 669,
+    "sha256": "ef290d1ecfc776e78c7d581c0a83a10b70f77c4eee67311e7aff43c0a597b6dd"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11427840_second.json": {
+    "bytes": 668,
+    "sha256": "c413327a8a9cc9912c9c99142016965e99547e5fe94e6920d95d2a8d5636f35b"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11438688_second.json": {
+    "bytes": 669,
+    "sha256": "602a2991ea1451dc984007675b8c2497793fa51d46b25af689135099526d8472"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11449728_second.json": {
+    "bytes": 668,
+    "sha256": "19705450bf2f379018847ba3bca58f0ebc2f4dc7487ba4f4a6657cb3f917f18f"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11452416_second.json": {
+    "bytes": 669,
+    "sha256": "cf0e4571f8a817a334ad4849d85e9633029f6c487fa834fa63b5c2b1f05f5b9c"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11460608_second.json": {
+    "bytes": 669,
+    "sha256": "1d714fbd6a1adce9dfd1c22c38d006d9f9b0ee57cf141d2cc473decd8151c737"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11468800_second.json": {
+    "bytes": 668,
+    "sha256": "49c4d306f401b56b84713288aa1d13757d7941fbb5a8d2b8800d999b7db67c00"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11476992_second.json": {
+    "bytes": 669,
+    "sha256": "e8ae7b6903cf0cfd1d08e27ea86efa4774ae55aa1abc6e6f1cd2ce028c9fb002"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11485184_second.json": {
+    "bytes": 668,
+    "sha256": "06cd15fc46b8dffbf63cd5246614b556056fb5322db059e3537002cc8f0426b2"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11493376_second.json": {
+    "bytes": 668,
+    "sha256": "1b4c9423f82403878f50ea3617ead7a3a3879fbd6a36fafd192158c27daeefbb"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11501600_second.json": {
+    "bytes": 668,
+    "sha256": "76930cc29c32349d0f5bae19fb64b3024ade370714568c71ef3463a1d36fad47"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11510304_second.json": {
+    "bytes": 669,
+    "sha256": "35ee2352c2ed656f5be6315b7465d4568c6e9bca98fdae4a5bb81cd086c997ec"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11517952_second.json": {
+    "bytes": 668,
+    "sha256": "1ea362e8510426678377c131a78e10775f97b5a88bab305af50c9a66898425a2"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11526144_second.json": {
+    "bytes": 669,
+    "sha256": "2d9e8e57285ee28b89a759d35239fe25a66a75ccf1ec33ffef7bd7d41728b103"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11537760_second.json": {
+    "bytes": 669,
+    "sha256": "78821ae26dec425a7549adc1b6c4dda3fc9a49e5e3a045646265f8bdbac21f50"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11542528_second.json": {
+    "bytes": 669,
+    "sha256": "679bb8f2edf4559c01c4ec137b1a0d5ee2218e419cb5bc64f8ad348834456b1e"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/beacon_header_11547104_second.json": {
+    "bytes": 668,
+    "sha256": "96852763c5fa133849810f7cbf955ab91e4a24be749fb29d2b899737a0c74811"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/block.json": {
+    "bytes": 13640,
+    "sha256": "6f78b20113b03a85606375b83c2cd99d4f3a7a0d7fa651b7471a2bacffd7862d"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/block_second.json": {
+    "bytes": 13639,
+    "sha256": "eecff2b6cadfff72459cf19b088fcdeef10ea531a7c441a6300b2e464c168447"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/bootstrap.ssz": {
+    "bytes": 25679,
+    "sha256": "e55bc5ef6ede9cf7b1f09ba302d1723001bd03268672f2dd4875c8c38889c81d"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/finality_update.ssz": {
+    "bytes": 1448,
+    "sha256": "c0995f40e846dbb9be0737c7d62d6a37c44d85944eb2f4d702831e7c5f507208"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/header.rlp": {
+    "bytes": 687,
+    "sha256": "16732c1b0da332b7931b6520d2656ca37a2eb0d149c7eb95dd8c9469038d0c26"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1378.ssz": {
+    "bytes": 26906,
+    "sha256": "20a6127c6dcc8cbfb38fdf4b9fbc4adf91ea2d5ea102a6004285ed89872b59bc"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1379.ssz": {
+    "bytes": 26424,
+    "sha256": "b99effe5b9f8425fd7f7acfd1e76d49d96560d360e30bf960a0d039187aa5fa8"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1380.ssz": {
+    "bytes": 26424,
+    "sha256": "3c202185023bef0630ea537b754cef8bfa825ced747fcab357ef0274d0615096"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1381.ssz": {
+    "bytes": 26424,
+    "sha256": "b440e98b72d4966772a0f339d11f080bfd1bfad9ef7db18d891e43b016932074"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1382.ssz": {
+    "bytes": 26424,
+    "sha256": "88b5ea6300827102512e0a5cfc09167a19e507db5fed80a20968d4dd8f5837be"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1383.ssz": {
+    "bytes": 26424,
+    "sha256": "883c2878247f1e36891ff8920652f4c5fd32a93ec57482d7c01d0663453538a4"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1384.ssz": {
+    "bytes": 26424,
+    "sha256": "d199b88c3f5cf80aefc5367b3e2bd22c1dc27117c8dfaaff296cce7e287b6228"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1385.ssz": {
+    "bytes": 26424,
+    "sha256": "b4184f5326a95ebf08ac155acbffc577f521b59e39e9ebf4d04ca87d669f8a83"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1386.ssz": {
+    "bytes": 26424,
+    "sha256": "5d2eaccbbd088846986d282e7f13f5269d523b935fc6f43fadada724863cb4d0"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1387.ssz": {
+    "bytes": 26424,
+    "sha256": "e2f86478dbf0e1e3e16f491e36c33f69140d4a440d903aab6b1032b61a543ad0"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1388.ssz": {
+    "bytes": 26424,
+    "sha256": "109d96acdce81d2dd10f5daffdd413c410a52ebfe48d807219dbe46bba6405b9"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1389.ssz": {
+    "bytes": 26424,
+    "sha256": "c62cb0ce9c6f5c3a3452bec015665a150b29b20796aa6421919f374983b4be42"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1390.ssz": {
+    "bytes": 26424,
+    "sha256": "ea25e10e8ceab99407290f671513f5702dc153abf5b3e8702649029b435a2b8d"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1391.ssz": {
+    "bytes": 26424,
+    "sha256": "27e7f7ae53eb27106acf5f99798c0f053cb4ec416c650d65b47174cb6b65c119"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1392.ssz": {
+    "bytes": 26424,
+    "sha256": "7670a0430ca02b3728b5608eda852f5673a93c28ae8dd7fad9431ad14198cea8"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1393.ssz": {
+    "bytes": 26424,
+    "sha256": "60ff17567f00c843fbad29dc03947332e99295a17c11f9d0526665d561635428"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1394.ssz": {
+    "bytes": 26424,
+    "sha256": "98e09dfa5e3a31ba1395742154df9151e832a6ac11f9a606e717f60fd1f9e320"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1395.ssz": {
+    "bytes": 26424,
+    "sha256": "ffcde50dc0404c5105997174fb5c3b1158ef3e5b83c91ceca23b0a949c92ddfc"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1396.ssz": {
+    "bytes": 26424,
+    "sha256": "785b1d77c8342675c5d438716ced7e6a715ee9f0d6030e8d4645a3b3f3283ae8"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1397.ssz": {
+    "bytes": 26424,
+    "sha256": "f44eb646dccf518ed585e9379e38b9535f4d182234bab9bd94494d955d0bb95e"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1398.ssz": {
+    "bytes": 26424,
+    "sha256": "90717f09108711e83291e0f64b821c622502ca06ff736da9e54a574334ba9711"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1399.ssz": {
+    "bytes": 26424,
+    "sha256": "c8b7a9e32a0105ccec98d9db3d3d917714a7e2876e7ecb71152272c3452ae6d3"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1400.ssz": {
+    "bytes": 26424,
+    "sha256": "f3ce460da15822b6b79c1a64b7ecb83f4b01a438cdd26892df4e4dd6d3687f6a"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1401.ssz": {
+    "bytes": 26424,
+    "sha256": "5830da97661e4fed06e35888167e285bb8a4f819696c578839c65f6496c091b6"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1402.ssz": {
+    "bytes": 26424,
+    "sha256": "4c7222d77de6e4d0bf84c950bb6aff9f7cd33e151fe294a79bb5b576f861710b"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1403.ssz": {
+    "bytes": 26424,
+    "sha256": "847e55507060ef80f656e174d7dae180f964f38b946acd60f70eb37f285d8037"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1404.ssz": {
+    "bytes": 26424,
+    "sha256": "e8b9a0a82b9dec4fc4d81d36bd8bdf726eb76f7bcd266dc802d54077a12c9a75"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1405.ssz": {
+    "bytes": 26424,
+    "sha256": "d83b873cf64a21523e679c10c068f9a3ac8c33c46a8186b0955a96219136eea3"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1406.ssz": {
+    "bytes": 26424,
+    "sha256": "d492f62af9ab9c4b0df5eaadb9c69dfd3817a357a5f838b34909947591c18d11"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1407.ssz": {
+    "bytes": 26424,
+    "sha256": "eedba6e9a3b853d2b2de422fe2ea04e05e332e68f586851bb5681d03c81014b5"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1408.ssz": {
+    "bytes": 26424,
+    "sha256": "acd6031e07f5122a4d12d4fe4711ef900744db994faef152024c4958cc626b99"
+   },
+   "fixtures/sepolia-gloas-2026-11-10/update_1409.ssz": {
+    "bytes": 26424,
+    "sha256": "2c33ada09c5b0b4cf8f00b1821fdea3545bc4b7f64a5f12948ea2f43df085e44"
+   },
+   "fixtures/sepolia-hops-2026-11-18/SHA256SUMS": {
+    "bytes": 13608,
+    "sha256": "93d5730dfdcbcb5956d42bc1efd62a047eabe2089bd19453b9fa0477cf658519"
+   },
+   "fixtures/sepolia-hops-2026-11-18/SOURCE.md": {
+    "bytes": 20364,
+    "sha256": "ad5027c97d397e090284a8d28634a1b2de665901bf98c1d4678fbd93e0edb14f"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11850661.json": {
+    "bytes": 12763,
+    "sha256": "75247390279df51c3ce53040319dd3e8dc74ce98a3edb405f6eabf000e81fea0"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11850661_second.json": {
+    "bytes": 12762,
+    "sha256": "0bacfff6133970edcb6d8e5ec308de7429b724189b11da1185751cc35e075b00"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11858852.json": {
+    "bytes": 13782,
+    "sha256": "8fac67c6858a4e613cf0550b98b0a601ec9187f28685418d90d894daa4508801"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11858852_second.json": {
+    "bytes": 13781,
+    "sha256": "0db4a2fa522a07960b084b7712029e15387be6718e7fb4913688f4e3d9ef92b7"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11867043.json": {
+    "bytes": 10405,
+    "sha256": "65a92f410ad6b0520683674ca9cd2e6c0eec46713ab11965f3bb8710ad653ad4"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11867043_second.json": {
+    "bytes": 10404,
+    "sha256": "caf38075cb9166718745f963316da6897eab4c19ea0508dd9c34d152dcb4bf24"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11875234.json": {
+    "bytes": 15935,
+    "sha256": "08467a565b4ad9f1fb07c947674365162eea01ce89312b5c2504dd76eb916412"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11875234_second.json": {
+    "bytes": 15934,
+    "sha256": "9935daa659f9770e270bb94ff9eebd51c188d5250b28fbce0d163d44ea8b78b9"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11883425.json": {
+    "bytes": 10791,
+    "sha256": "048617f53096ebfd14f1a1a0dcc19c97232636d462591c2ebd47c6f262827dc3"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11883425_second.json": {
+    "bytes": 10790,
+    "sha256": "a1b351ff95d095d6a10dff1e765c67581f6660eb10b0a111c135df758c246720"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11891616.json": {
+    "bytes": 13006,
+    "sha256": "dae0a0ff3cb64c54f2397d82e24ed00a6df34664129b6982b1844976a0abba93"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11891616_second.json": {
+    "bytes": 13005,
+    "sha256": "c211aea7bf5f04eca1b029af0577f1aec5847aea4119100690d486ef1b0ba2a2"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11899807.json": {
+    "bytes": 19169,
+    "sha256": "3c5462496ed75f390c079a2b53e8f4ce048ac94ac85c6f12c28a49ace474c035"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11899807_second.json": {
+    "bytes": 19168,
+    "sha256": "c252005636986b16e3c4915f98b7882af978d5d7b2864de90960968a339f7e4a"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11907998.json": {
+    "bytes": 12278,
+    "sha256": "557d68aea89e804d9e79e090db07f0fc733b929176e0d4459342ed45027855d1"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11907998_second.json": {
+    "bytes": 12277,
+    "sha256": "4dbb59891e19f4d45e3298cb8df47aed708cd78695ab8d60617b0b94755e6ae9"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11916189.json": {
+    "bytes": 12038,
+    "sha256": "fed872b5210bb68cf12ce6e5e05399019322a3a40dee2ae8f1a032cb37103d87"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11916189_second.json": {
+    "bytes": 12037,
+    "sha256": "0d6328dc5e9342bd937333d5da40ed0d11d24cb0ed8a2da9af435147288e4523"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11924380.json": {
+    "bytes": 12585,
+    "sha256": "1851218a388997f42749328eeff5f8ce7a59b82c187d3e27a19519eb00e4ec16"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11924380_second.json": {
+    "bytes": 12584,
+    "sha256": "35ffea86f2e6ca4438b5a9736a460c70064a4b4927d77f507baeb22039d7494c"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11932571.json": {
+    "bytes": 8466,
+    "sha256": "27bd6d84754cbe08aefb878d9652bbde56d948650b824d4a93dcea0c119a1ba4"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11932571_second.json": {
+    "bytes": 8465,
+    "sha256": "52fea38c07bfcaacf4483a8780ca0ade309ce6e20b1a835498496a5ac02c857e"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11940762.json": {
+    "bytes": 15016,
+    "sha256": "b5e6170a43b53a765cce6b8030130c59ef02a2cedd0cf63b129d1a5a5c45b369"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11940762_second.json": {
+    "bytes": 15015,
+    "sha256": "68f493abbdbb726afaf216c13660661cfc8a5dbf0b9e86b0c246677c808a673d"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11948953.json": {
+    "bytes": 13050,
+    "sha256": "867e56cb9285669f9cdf51827b0ca2c072f0e611375282e9daf2f909a6bfee03"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11948953_second.json": {
+    "bytes": 13049,
+    "sha256": "2ccaf1eca671bc5887486b4c0d623d6b36e7abb6f9007c7ad4f26fa1c040a825"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11957144.json": {
+    "bytes": 12111,
+    "sha256": "cfd66954ab84d8fb51279352f0c8fb50ed7bd0bcb5e32072968878cfd97212ff"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11957144_second.json": {
+    "bytes": 12110,
+    "sha256": "c3eb4250965fb59c01a4674d409f4780b4ddbbb453d958ddb2076ef51b04fb64"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11965335.json": {
+    "bytes": 11163,
+    "sha256": "873d08cd4ac8b3196065e3b0c3475326e3c32291b9c674c1f26994124f854d37"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11965335_second.json": {
+    "bytes": 11162,
+    "sha256": "78c5fe512ba633f904982658b0dd7ebc8d8e68dac148ae8536256e8245b52727"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11973526.json": {
+    "bytes": 10415,
+    "sha256": "0eb4476c733b85abc2fec83ece8e52e31173d39f17839219753e525809a38b90"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11973526_second.json": {
+    "bytes": 10414,
+    "sha256": "0e88abb9388d39b35896fc2467941955131b62eb5f879351c5bef545fec4bdca"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11981717.json": {
+    "bytes": 9904,
+    "sha256": "542e06298256bdeaeed6cca2ffaa0b7bdfaef88c00f7dec6c2f675ffb550d9c4"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11981717_second.json": {
+    "bytes": 9903,
+    "sha256": "bb7c6558de4815661d8fcfa70c833e33539eeea76075d706b06be97e50846554"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11989908.json": {
+    "bytes": 12120,
+    "sha256": "ff31209734147018a08e205d5be8ce5c8dfe20040334a2160d6cae70f07f6008"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11989908_second.json": {
+    "bytes": 12119,
+    "sha256": "44fcbb9329f46b3faf12c986766f8dcd6834efe46a6b86f0c6e07b864fb308c0"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11998099.json": {
+    "bytes": 13523,
+    "sha256": "6f1157d1bd754c248b68ef93fbb663fb3ef2e35a54cded603bbc61972f285f35"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_11998099_second.json": {
+    "bytes": 13522,
+    "sha256": "26b2eaaf709f01ecfce0ce4c2a2c8e7670bc9b515cc9c77285ed91cb4e31a8c1"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12006290.json": {
+    "bytes": 7997,
+    "sha256": "dc882524be5e35213bbab518761463db1593218f7f555b3ac4499a646c41d6c5"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12006290_second.json": {
+    "bytes": 7996,
+    "sha256": "f7b70a241eacace2fa97bcb19367051d1573d96b5ad9bb91caf50436d3666165"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12014481.json": {
+    "bytes": 10387,
+    "sha256": "b8cdc0c1737cf8aab38e54107e241f6b7aa91a3bfd8010cf26cb9f91e157a580"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12014481_second.json": {
+    "bytes": 10386,
+    "sha256": "687cb87df7e9f2005a3ae58e05a6d5cc3fd06feca8e846a05effc6249db3e574"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12022672.json": {
+    "bytes": 11766,
+    "sha256": "494381c78d3130bbad20d14ca3fa58516dfeda5a93e33db36038bd82ed9b63bf"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12022672_second.json": {
+    "bytes": 11765,
+    "sha256": "852777fb524598e37685953e27c6c4d59429ab0d1292ca49eaad1f2539106728"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12030863.json": {
+    "bytes": 11706,
+    "sha256": "d028c6fe33c73e846e9460d12b9901e120e4c3971d1642c2591925c7241adfa0"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12030863_second.json": {
+    "bytes": 11705,
+    "sha256": "4241c0ce73923d27a6b03407c4abf0599eafa175b4adab01ffc33ef95edcf6d6"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12039054.json": {
+    "bytes": 9285,
+    "sha256": "0bedb18e3e6ff2a117862abfdf205c5dad0c8ae0ff1371af46076e4ba739b285"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12039054_second.json": {
+    "bytes": 9284,
+    "sha256": "8bd1ed887d0d877909758f4f1724a7d3bd84ccd787334fa2ef9909b13e2c8838"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12047245.json": {
+    "bytes": 14111,
+    "sha256": "7813fe0783b826f6451e4e6eef266f1e2246a34fd273a74583dbff0cd9c9f7f4"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12047245_second.json": {
+    "bytes": 14110,
+    "sha256": "dd2d5da8da682985c08545a85759e9ab2f80d6a25ced2634e9dc753ae7b5e4dc"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12055436.json": {
+    "bytes": 15442,
+    "sha256": "1d2e94b0257ef082a171ce7cd715f9225c6d74d860a8019b29c7c21df37f8e1b"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12055436_second.json": {
+    "bytes": 15441,
+    "sha256": "856d0c1bdec4769b0d7e7a9dfceb46da94a95e74e92b47ec1ae491d092301f23"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12063627.json": {
+    "bytes": 35031,
+    "sha256": "ac6bce8e6b4859c56adec263b98dffab25ced336fb04facdc8a4e09bc58c0680"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12063627_second.json": {
+    "bytes": 35030,
+    "sha256": "e53cdc4d1313732e414a366b13c92241edd90f3363c85af0923ac4fde97cf7a7"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12071818.json": {
+    "bytes": 12887,
+    "sha256": "b2da0736ed36233cd8a2f08810fd7d40b3ac2d7a23182744544c6378124d7aa2"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12071818_second.json": {
+    "bytes": 12886,
+    "sha256": "7ea3381ca6cbd96731cb2441e3918254de640d2db0789a3496cbec742aa453d2"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12080009.json": {
+    "bytes": 10194,
+    "sha256": "8cb6de793dcd4a048cef1733b678ac974f5969abbbecc7df58901238e1be0305"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12080009_second.json": {
+    "bytes": 10193,
+    "sha256": "84ded546c945672d0da68044ca3a6909818931f94c6e72441542f1db0aa501bc"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12088200.json": {
+    "bytes": 9260,
+    "sha256": "81f3b79d85533f03e055d4114928ffa255227c19a34caeb625b904c9b84f2f16"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12088200_second.json": {
+    "bytes": 9259,
+    "sha256": "7aeaf1123960adb042ee1e3264d582640856578cc8969244e7e1689f1626bd13"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12096391.json": {
+    "bytes": 10767,
+    "sha256": "7df7cfcc59231af94bfe892349ba6d19f40208c3e9b058790346438aae989c4f"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12096391_second.json": {
+    "bytes": 10766,
+    "sha256": "1a01fba1a28796505e6b2f50d6cd2a18fe1484866e760d7262b58cca6250c68c"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12104581.json": {
+    "bytes": 13897,
+    "sha256": "c000c12c4df0ef0fa61c54c8001ccfce85efb69d44f093096291436c9ae489bc"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12104581_second.json": {
+    "bytes": 13896,
+    "sha256": "ad46000e0cc5ffec91c6aacd1c1fa9f5ee83e45fc25b129ca16f0a8ff98e34e7"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12104582.json": {
+    "bytes": 29215,
+    "sha256": "6ce77f49b534d279399063537db6534e81417c38504f207816ceb893119ab1bb"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12104582_second.json": {
+    "bytes": 29214,
+    "sha256": "934b92ada14b8a29d0f4257ec094238a5ee39202b4023eb255a655ba2e7e2193"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12111477.json": {
+    "bytes": 36863,
+    "sha256": "faef87195ad83d9feafd970efc43c081032c154aa322f4e7bbca7a2dd183237c"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12111477_second.json": {
+    "bytes": 36862,
+    "sha256": "b08052a40c7a3590cf5669a6ea4a241105a86dfa911709a204e3511bcfd2625b"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12111574.json": {
+    "bytes": 11921,
+    "sha256": "fee6ce5b87a28f91cb0fc3438a3daae0b69a8291152af28ce3276ddf769adcf2"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12111574_second.json": {
+    "bytes": 11920,
+    "sha256": "2391efd57799843cef56787ce795ae400481971d3acd3fdd94885213c2371d8b"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12112773.json": {
+    "bytes": 14893,
+    "sha256": "50566fafe4777cce63eedadc186845a218d690216329ba472da102d235194913"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12112773_second.json": {
+    "bytes": 14892,
+    "sha256": "5a0785ee9dd26218c5c5df64fe884f84b9a0d9d2d99cf7ee2c945ef845afa36a"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12112774.json": {
+    "bytes": 11665,
+    "sha256": "a1e5465e3898242dcadb97e678561b70a4948306ef2de1c6f4510b3a319bf8d7"
+   },
+   "fixtures/sepolia-hops-2026-11-18/block_12112774_second.json": {
+    "bytes": 11664,
+    "sha256": "b34cbb10beaee55bbba376e33752b52870ba72053ce6d1e9951eccbefe2c0aa1"
+   },
+   "fixtures/sepolia-hops-2026-11-18/call_0x1c7d4b196cb0c7b01d743fbc6116a902379c7238_totalSupply_12080009.json": {
+    "bytes": 102,
+    "sha256": "82db86f108c186b3d6c23e6b710424899fb98cb42d6b987f6cc86e0a47d6dae1"
+   },
+   "fixtures/sepolia-hops-2026-11-18/fixture.json": {
+    "bytes": 5761,
+    "sha256": "24c1d309d51331e8993b859deed5f2b47216cd681f8f915844a8283bcff3cbd8"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_11850661.rlp": {
+    "bytes": 649,
+    "sha256": "bf9b07dde2f332ac2f94b066cd6e62b11a6aefe838cdaee0f7ae4eb8b51df5c1"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_11858852.rlp": {
+    "bytes": 678,
+    "sha256": "009f561a7a5d07ef6c8f8c43258544b2ffc65485b90ba1955853019a4ed2a5c2"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_11867043.rlp": {
+    "bytes": 678,
+    "sha256": "b16b7eef1739817045964e63a88c19d9cb3b0a41e6da0f264112d586be165a8c"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_11875234.rlp": {
+    "bytes": 653,
+    "sha256": "3bd3c5d3a34e0cd70c3d5948e472cff9f88194fc56f9a141fa9a9499155e38f9"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_11883425.rlp": {
+    "bytes": 669,
+    "sha256": "a6e9d5a2473e20dfb20e42aad9f63f6d0a4ef9e300ce06c91ca2e9f6f4ed1fec"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_11891616.rlp": {
+    "bytes": 673,
+    "sha256": "28f9527d2645c5b48f7e4f34c4e7a1f6eb9aa7641ebf6f5810c15acce7cbd1bd"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_11899807.rlp": {
+    "bytes": 678,
+    "sha256": "79ff3ac0d8866283ed9bda47ae37cebf853984e700ce06b8353037a650c110ad"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_11907998.rlp": {
+    "bytes": 656,
+    "sha256": "a4c042c0358f868d33b927923d881deaafddef935fe02dd1f096c8ca56d58ef6"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_11916189.rlp": {
+    "bytes": 672,
+    "sha256": "677a4c56eb1222aac4e4285132b1fe5c0c4d8f91cce4286379575e14cf6fd599"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_11924380.rlp": {
+    "bytes": 672,
+    "sha256": "cab48134561bb90e3c8cb615a2c02c22ab9b40c7a44aeb3af437705f28d52912"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_11932571.rlp": {
+    "bytes": 681,
+    "sha256": "e12412e43ac27cfeaa2359afc5e6158ff78819513d2d55f1dae5b13f692b8bc0"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_11940762.rlp": {
+    "bytes": 684,
+    "sha256": "134bc60f814da67bcf26bceb37b1725700bae1b5872c72e307dae6b0d6f27739"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_11948953.rlp": {
+    "bytes": 656,
+    "sha256": "27cdad8f6a6c017ed3a52c900e64290fb98a55c82634e4d35481aa7042d0b046"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_11957144.rlp": {
+    "bytes": 681,
+    "sha256": "b0248e8dd7dec714f576f45ff74ea56d9d18e50433378f30404cdd36f7677dad"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_11965335.rlp": {
+    "bytes": 687,
+    "sha256": "820da11794b56780e1f8ff22c51b8317be1ab44d2705275b7d7607f9ff49e07d"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_11973526.rlp": {
+    "bytes": 684,
+    "sha256": "5976d74d1e1e94500f5279f20f41d4f6243000dab72411f08a088500a8176874"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_11981717.rlp": {
+    "bytes": 682,
+    "sha256": "2f4770aa9851f0a9b8c4e64a0a9577ac0448e2e986eac641bebd588049e052a1"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_11989908.rlp": {
+    "bytes": 673,
+    "sha256": "6db80ed8422d396dcd991591186fefc18d481273693625d85e875195dba03b5f"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_11998099.rlp": {
+    "bytes": 684,
+    "sha256": "49cf3c430876a4ad2afa004afc29ce7b7bf755482dac8be01d70a1a36cc53bd1"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_12006290.rlp": {
+    "bytes": 682,
+    "sha256": "a932df3ce0a2497c716dd5bded29f821c259e7bdda59317bc3a361dda9d04f91"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_12014481.rlp": {
+    "bytes": 670,
+    "sha256": "6f86af5a15b88320e67f83a6680731694b1a9381afdc4640c8ad836ebe263dce"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_12022672.rlp": {
+    "bytes": 678,
+    "sha256": "13b4248c60efb84d058196b85eaf4c539ebf280751659243982f5ab444036099"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_12030863.rlp": {
+    "bytes": 674,
+    "sha256": "4355446b7f17148667a692ddf275a77e2a05c80e69b8cdb5111ac1a7c5184f46"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_12039054.rlp": {
+    "bytes": 674,
+    "sha256": "7a23067ac6280447d615412578d05c7641185840ad19e0164e28d42530f0345e"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_12047245.rlp": {
+    "bytes": 674,
+    "sha256": "6bcd4ca07e9f8e0be5adfd6d45047a13ce2f5991a79944d41f630356c43dcbd5"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_12055436.rlp": {
+    "bytes": 678,
+    "sha256": "9ffb66694f14498df88ca9ca25002b71cd840a0a667f09a57fa7410ccebf3e61"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_12063627.rlp": {
+    "bytes": 687,
+    "sha256": "9421899ea321a943e2ef247b7fc107a77282563980211a8ced853949561e850f"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_12071818.rlp": {
+    "bytes": 688,
+    "sha256": "651f39af56cd987f1aca3debf4ab5a4ba780c3b45fc2a5b6857d209413ecd0db"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_12080009.rlp": {
+    "bytes": 677,
+    "sha256": "73b49e6ba1a77bbecbd107655e1050ba2756a4c16fc7a7893a721a4f3443d615"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_12088200.rlp": {
+    "bytes": 673,
+    "sha256": "f8ca833e81a4270ecda7aa7d80d4c2b02582c9b90f97b1901993afc2bca0d16f"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_12096391.rlp": {
+    "bytes": 687,
+    "sha256": "a2dfdb988c228f26876406f0bd31cae7503a69e064b3f021ed58bc00bc87667e"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_12104581.rlp": {
+    "bytes": 664,
+    "sha256": "e0de3a42f942481a08ff07ac6163da85f4cf07d05389b242a5e5bff58f16c98c"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_12104582.rlp": {
+    "bytes": 664,
+    "sha256": "ea004594281373a17533e15ea2794566e57b1f788b2962a63151ddaf124f77f7"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_12111477.rlp": {
+    "bytes": 664,
+    "sha256": "9562b0ead79e3be490fed2d58f2dcec73fbd960af483841fa746a801547323f6"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_12111574.rlp": {
+    "bytes": 677,
+    "sha256": "b1d046a0e2ea0559c2246fb992321f8f9f604aa787473a50f3ad59bd15f394aa"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_12112773.rlp": {
+    "bytes": 687,
+    "sha256": "1c703009696dea9df9cb54d82bda994dd3b60f8a5b680f5adeef095558ceec61"
+   },
+   "fixtures/sepolia-hops-2026-11-18/header_12112774.rlp": {
+    "bytes": 687,
+    "sha256": "c758043cd59637b70290df63e4d255baa18d8d02337cc08b93aba27c36b94c5d"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_0x1c7d4b196cb0c7b01d743fbc6116a902379c7238_12080009.json": {
+    "bytes": 13158,
+    "sha256": "4b7d9329e4c01df20792628909963569d40fbdfc832ba2c85dc5365b142fdc65"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_11850661.json": {
+    "bytes": 7737,
+    "sha256": "c7970903c0f15e65f79ae223092425be7dfd323c823ddf012bc709223aa6cb34"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_11858852.json": {
+    "bytes": 11547,
+    "sha256": "df9482c079eaeb34133298ea8434234c0f1ada21ba65343801da2c20cc43c337"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_11867043.json": {
+    "bytes": 11547,
+    "sha256": "a7a34b29722c4c4a2bad145d425e5be88c546a4e35594fa964e6766d2a20ae95"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_11875234.json": {
+    "bytes": 11547,
+    "sha256": "57456b2e0600f6750d4f6105adbab3b57957d25c9b7cd237dc3a5f1010af3be9"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_11883425.json": {
+    "bytes": 11547,
+    "sha256": "f2297df2afee96f15e2401cf3031b6aeb432db273ddcf56c41106eda5a6dadfe"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_11891616.json": {
+    "bytes": 11547,
+    "sha256": "cfb26c5dabe2e45e4da6c10a2f5344b6b03611688f6abba8a7cbabd2ee169516"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_11899807.json": {
+    "bytes": 11547,
+    "sha256": "c3e7c5041402488bc63aed69ccb01814fe69f93f727478f6280754ecf3c866a6"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_11907998.json": {
+    "bytes": 11547,
+    "sha256": "ac99e1bef984aac19183e5e376bf1bfea4bbe1ddc0898619990862adbfcc28b3"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_11916189.json": {
+    "bytes": 11547,
+    "sha256": "0c743588eb99319781bc5273a37d2cc8d49023fb137fbfe8f7ce16af75823c6d"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_11924380.json": {
+    "bytes": 11546,
+    "sha256": "0baacf70483cdb20dfd338343583f9a2ab09d1a85cd720ab2e35cb9380e9759e"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_11932571.json": {
+    "bytes": 11547,
+    "sha256": "48ae4bac03063c444b25f50d1256020c18365e725d54d549cbc8213288c6683a"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_11940762.json": {
+    "bytes": 11547,
+    "sha256": "8a2e6d529083dba613640a939943c236b65b567828cfbe0286e52bb9de588373"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_11948953.json": {
+    "bytes": 11547,
+    "sha256": "e432a4146598d5df3cb7d780f08dc831d7009bf3eadeb995b57e17ba09982cde"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_11957144.json": {
+    "bytes": 11547,
+    "sha256": "a49ca17d1577830facc25a513f571734c3cbe4875ba03c6aa564ef60f2716135"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_11965335.json": {
+    "bytes": 11547,
+    "sha256": "324fec535ac6cfbdb8980c07ffeaa8db21e4009144bc214869371a03a0c93e06"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_11973526.json": {
+    "bytes": 11547,
+    "sha256": "0bb9791809c172175e2b441470ecded3119b52f31eb063a165445412a73eea8c"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_11981717.json": {
+    "bytes": 11547,
+    "sha256": "49332611a21944dcd03a74d78b742988d7eb81e419cba7c119afce9460a5472b"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_11989908.json": {
+    "bytes": 11547,
+    "sha256": "b70159d584adbc901eaa61e10ec0e6350d6e5155057b0d0432b2ac53c89e9f87"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_11998099.json": {
+    "bytes": 11547,
+    "sha256": "ed0ef331e8113787b1a9c6d7b91d2504d186bd0e440711ebe9ff827009b779e2"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_12006290.json": {
+    "bytes": 11547,
+    "sha256": "025f084841e744b26ecea145c8e0a1726fd61c34176e0d0034de68b382d836dd"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_12014481.json": {
+    "bytes": 11547,
+    "sha256": "0c949a6f7697527090308b13f7a66621a5e8237ac1833721ea27596c36a4877d"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_12022672.json": {
+    "bytes": 11547,
+    "sha256": "6a8f0477ce2df1503a293504492102d0b9acbb1fb6dd4ba562bfeb20db3d98e9"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_12030863.json": {
+    "bytes": 11547,
+    "sha256": "ac605c6788973643215994e80b0446cee35bc80331ee4fe5c127c3651edcb550"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_12039054.json": {
+    "bytes": 11547,
+    "sha256": "5fb1f72a5714e22d3bea3ed60ab1eb098fafae4fb12798eb0b74d1172f24276b"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_12047245.json": {
+    "bytes": 11547,
+    "sha256": "99dd52c8ceef3f77db193633cbd1bd365144d46e4173108d8186779f76f11629"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_12055436.json": {
+    "bytes": 11547,
+    "sha256": "706186ee5638ad0ef9008258fd971b517ff1a4e4a438ecb302275c6aca4ed6d2"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_12063627.json": {
+    "bytes": 11547,
+    "sha256": "f4060152dde40b3cf8aca49232f008dd2ca209ba7f92cb2f8cd4088823e68fa5"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_12071818.json": {
+    "bytes": 11547,
+    "sha256": "ffccbf9ca3403bed77484fa0ed760e70c0dc0a2a6a9016995115878f08aa8419"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_12080009.json": {
+    "bytes": 11547,
+    "sha256": "67d3340efc26f4cfe4f8137476f8ba3fdd914b1bbf5af329517f692e85d1b5f0"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_12088200.json": {
+    "bytes": 11547,
+    "sha256": "31926e8a1a9a1bb46168d81dfd57d99130d29cbabc600a5e75503f96ffe921eb"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_12096391.json": {
+    "bytes": 11546,
+    "sha256": "2fafbecace51097df2b45461f8dcc4ba556a8ea99060d51873091ba1021babc1"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_12104582.json": {
+    "bytes": 11547,
+    "sha256": "5cd0d6fe2ac8c763bfff7e01da18a64a0aefa4355ec05fe54ed9c3a569d620ce"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_12111477.json": {
+    "bytes": 7737,
+    "sha256": "cb611f88e0aa3084242c9a4270f4783f728ca869e8bbc631518274246654a40e"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_12111574.json": {
+    "bytes": 11227,
+    "sha256": "73eb4bc8f6d5a6ddbea83a16b94233b5fa9da8f76b4fd268a75846d4f6b26fcb"
+   },
+   "fixtures/sepolia-hops-2026-11-18/proof_history_12112773.json": {
+    "bytes": 15102,
+    "sha256": "4ce2d3973aef3e6656c65eca395605156b12f2cd9554d178b69e704185f7f935"
+   },
+   "fixtures/sepolia-hops-2026-11-18/receipts_12080009.json": {
+    "bytes": 207677,
+    "sha256": "183bbef15e772b31ebc4eb7406c2cbdddd6d5ee7c71a09815d586aaed7e5bba1"
+   },
+   "fixtures/sepolia-hops-2026-11-27/SHA256SUMS": {
+    "bytes": 4104,
+    "sha256": "a40da0b093ee025d8d10c07073841fe7ab955008a797d33a6d6cfc68ed89b49c"
+   },
+   "fixtures/sepolia-hops-2026-11-27/SOURCE.md": {
+    "bytes": 6713,
+    "sha256": "d88d84a7707ce47c895b23f2afdc5794f7b26133c0550e7fad5ff352577252b6"
+   },
+   "fixtures/sepolia-hops-2026-11-27/block_12111477.json": {
+    "bytes": 36863,
+    "sha256": "faef87195ad83d9feafd970efc43c081032c154aa322f4e7bbca7a2dd183237c"
+   },
+   "fixtures/sepolia-hops-2026-11-27/block_12111477_second.json": {
+    "bytes": 36862,
+    "sha256": "29bab86ff8a73e893d0624659c72dbee80a540d1437ad9f37f5121de2d4dadc3"
+   },
+   "fixtures/sepolia-hops-2026-11-27/block_12111737.json": {
+    "bytes": 38272,
+    "sha256": "4f862dbb7fd4de57d6b4cefc32caa513303629141899c583c377c81f9892ff40"
+   },
+   "fixtures/sepolia-hops-2026-11-27/block_12111737_second.json": {
+    "bytes": 38271,
+    "sha256": "c2fbbfb520e6ebbbdbf734e592373900495a9c81c024cfc78f1feef27d23fd59"
+   },
+   "fixtures/sepolia-hops-2026-11-27/block_12111801.json": {
+    "bytes": 8202,
+    "sha256": "6784c067367abaa82376a3655aa840ff1850b3336741f94840672ccb0b8d22d3"
+   },
+   "fixtures/sepolia-hops-2026-11-27/block_12111801_second.json": {
+    "bytes": 8201,
+    "sha256": "369cf347df1b3618f5ff495685cc21ad8aa0799aed680772ad09f56f0ef01ed1"
+   },
+   "fixtures/sepolia-hops-2026-11-27/block_12111909.json": {
+    "bytes": 39634,
+    "sha256": "5ad105536092c89c1c6602b824625c2549adec95c601fa465b2f9223f9cb0629"
+   },
+   "fixtures/sepolia-hops-2026-11-27/block_12111909_second.json": {
+    "bytes": 39633,
+    "sha256": "34e94b5f4609e11ef07b4dc6710f3cdfd6573c145177c70d1e70f9b66c6c18b9"
+   },
+   "fixtures/sepolia-hops-2026-11-27/block_12111996.json": {
+    "bytes": 7226,
+    "sha256": "5bfe6801f1f636add13eaf50872ef9d20501d31f7ed16558c5f38b8ab6110c53"
+   },
+   "fixtures/sepolia-hops-2026-11-27/block_12111996_second.json": {
+    "bytes": 7225,
+    "sha256": "029d9e72548ba819461470cbd2a9269021fb688ecd9242573d214880b285231b"
+   },
+   "fixtures/sepolia-hops-2026-11-27/block_12112125.json": {
+    "bytes": 34711,
+    "sha256": "e0d329edd5ae5bee5daa2de01dd9b88d6af11d2c775d7ff69c6834dc1c384839"
+   },
+   "fixtures/sepolia-hops-2026-11-27/block_12112125_second.json": {
+    "bytes": 34710,
+    "sha256": "8c9621f8361fb715cc7569aeb5632fab3cc9d85c49ed67d1c829e5e4e25ea1ba"
+   },
+   "fixtures/sepolia-hops-2026-11-27/block_12112255.json": {
+    "bytes": 15589,
+    "sha256": "638dd8827d44634c0649c4f3f4c4570fac2400a3007b0a88c9367c9a8fabcc4f"
+   },
+   "fixtures/sepolia-hops-2026-11-27/block_12112255_second.json": {
+    "bytes": 15588,
+    "sha256": "0345f9634eb51f1f3e8dd8bd0aa92ad541caae113b78fcf76a612ca55a8bb3cb"
+   },
+   "fixtures/sepolia-hops-2026-11-27/block_12112341.json": {
+    "bytes": 37866,
+    "sha256": "a604cf3f2d926a753f2e1aed4fe7591d20a30dff13851572780a765f9f32f8fc"
+   },
+   "fixtures/sepolia-hops-2026-11-27/block_12112341_second.json": {
+    "bytes": 37865,
+    "sha256": "531974d15df10906e5d7494b3f5260e6190673263ac8beac98c035064e8a466c"
+   },
+   "fixtures/sepolia-hops-2026-11-27/block_12112449.json": {
+    "bytes": 35318,
+    "sha256": "2f845caffc301da2f3785a4ec66458cf01f9e125725a2cb7c419974aa028515b"
+   },
+   "fixtures/sepolia-hops-2026-11-27/block_12112449_second.json": {
+    "bytes": 35317,
+    "sha256": "1b23fbf8c1d5b46b41f634bcaf7cbf0c9617d3a14b86380c506500e3c7881c1c"
+   },
+   "fixtures/sepolia-hops-2026-11-27/block_12112514.json": {
+    "bytes": 14400,
+    "sha256": "11fc3b5835b80382a675367d6bd4e6fcd58e9c2305871e28cbb32714db59dc0c"
+   },
+   "fixtures/sepolia-hops-2026-11-27/block_12112514_second.json": {
+    "bytes": 14399,
+    "sha256": "94adb4b97f58c05f9d3ec723e3af3b1a0977e0314caa508f4f1d8d94835190d1"
+   },
+   "fixtures/sepolia-hops-2026-11-27/block_12112773.json": {
+    "bytes": 14893,
+    "sha256": "50566fafe4777cce63eedadc186845a218d690216329ba472da102d235194913"
+   },
+   "fixtures/sepolia-hops-2026-11-27/block_12112773_second.json": {
+    "bytes": 14892,
+    "sha256": "ed9440ab4dc823c591c37c413027462718567ccc5931834abfc5d9723ca2a130"
+   },
+   "fixtures/sepolia-hops-2026-11-27/fixture.json": {
+    "bytes": 1808,
+    "sha256": "fc01925c23080581f9246729907bf007b052b1dd0f5f38df52960670bcbebf88"
+   },
+   "fixtures/sepolia-hops-2026-11-27/header_12111477.rlp": {
+    "bytes": 664,
+    "sha256": "9562b0ead79e3be490fed2d58f2dcec73fbd960af483841fa746a801547323f6"
+   },
+   "fixtures/sepolia-hops-2026-11-27/header_12111737.rlp": {
+    "bytes": 673,
+    "sha256": "9516eb99992b8b8c3b21ecbc632944e595063c0bca7120ce12861f23041aa953"
+   },
+   "fixtures/sepolia-hops-2026-11-27/header_12111801.rlp": {
+    "bytes": 681,
+    "sha256": "36d44ec2ed507022aa174334863c780ccef2fd2ac6adab58385aa1a02f8485c7"
+   },
+   "fixtures/sepolia-hops-2026-11-27/header_12111909.rlp": {
+    "bytes": 664,
+    "sha256": "c6661b0a87712f98cbe55adc778ff122e73ec18512d1dff4466fcee38e1156c7"
+   },
+   "fixtures/sepolia-hops-2026-11-27/header_12111996.rlp": {
+    "bytes": 681,
+    "sha256": "dd1886012d771719dd1cd41184bd9950784b0572c6446e561b8abdce4d41f5f9"
+   },
+   "fixtures/sepolia-hops-2026-11-27/header_12112125.rlp": {
+    "bytes": 687,
+    "sha256": "0a7ef6f7d637171cde5d3464e8d5025da5ca41956d0de29120d73d4ff51bbc60"
+   },
+   "fixtures/sepolia-hops-2026-11-27/header_12112255.rlp": {
+    "bytes": 687,
+    "sha256": "dffa6670bd708c6d640024ac18d387bb94a2540e1e8359da6bb7f1f5341cdccd"
+   },
+   "fixtures/sepolia-hops-2026-11-27/header_12112341.rlp": {
+    "bytes": 677,
+    "sha256": "b2ce954ebc63933ceaaa876841c3e50967af6a4cdf30dd380c4b918cec3227d4"
+   },
+   "fixtures/sepolia-hops-2026-11-27/header_12112449.rlp": {
+    "bytes": 687,
+    "sha256": "a9db8c42e6e084d971dbfda2c0ad79e1435b03abc265198ce5aef3594ea03de9"
+   },
+   "fixtures/sepolia-hops-2026-11-27/header_12112514.rlp": {
+    "bytes": 687,
+    "sha256": "775337408d48a131863fbe4549f3ca1f52cf971189a832d15ca6b613dfb8c205"
+   },
+   "fixtures/sepolia-hops-2026-11-27/header_12112773.rlp": {
+    "bytes": 687,
+    "sha256": "1c703009696dea9df9cb54d82bda994dd3b60f8a5b680f5adeef095558ceec61"
+   },
+   "fixtures/sepolia-hops-2026-11-27/proof_history_12111477.json": {
+    "bytes": 7737,
+    "sha256": "cb611f88e0aa3084242c9a4270f4783f728ca869e8bbc631518274246654a40e"
+   },
+   "fixtures/sepolia-hops-2026-11-27/proof_history_12111737.json": {
+    "bytes": 11227,
+    "sha256": "60697ed47fe4289d235d2971f368b9aebe1dc200187fc362355dd3a0c02829ac"
+   },
+   "fixtures/sepolia-hops-2026-11-27/proof_history_12111801.json": {
+    "bytes": 11227,
+    "sha256": "1120a4d44525fc8f7ab32869c1899f24ba7e647975f052798973b7a80b4ff89e"
+   },
+   "fixtures/sepolia-hops-2026-11-27/proof_history_12111909.json": {
+    "bytes": 11227,
+    "sha256": "ed049c9680562cb20a68baddaa05673ac1e29d77de9d531b4416ad514c5e9bb2"
+   },
+   "fixtures/sepolia-hops-2026-11-27/proof_history_12111996.json": {
+    "bytes": 11419,
+    "sha256": "2a742551149aa37990deac2dbb625cfc21723474941c5f94f656718e653049e8"
+   },
+   "fixtures/sepolia-hops-2026-11-27/proof_history_12112125.json": {
+    "bytes": 11184,
+    "sha256": "ea61018a45202827af70c2ba28ae0b907f2d8850653acb510ce27db6c822ffd3"
+   },
+   "fixtures/sepolia-hops-2026-11-27/proof_history_12112255.json": {
+    "bytes": 11227,
+    "sha256": "7605fbc848dda65f66077abbfd6494d1594204157140ab10b6309ee440d85b32"
+   },
+   "fixtures/sepolia-hops-2026-11-27/proof_history_12112341.json": {
+    "bytes": 11355,
+    "sha256": "34c147bd6b84b80afce966c9d69d19326f825213a3479901706b4a20f7355a7d"
+   },
+   "fixtures/sepolia-hops-2026-11-27/proof_history_12112449.json": {
+    "bytes": 11226,
+    "sha256": "185dff973f726857b3f885cfbd24eb80bb9f96cb1c58dbf481c9daa7accbad13"
+   },
+   "fixtures/sepolia-hops-2026-11-27/proof_history_12112514.json": {
+    "bytes": 11547,
+    "sha256": "869ce7d97e32db02c9f7cfc4b632427e3bf65890458db51ea0eaa2089eff9d4e"
+   },
+   "fixtures/sepolia-hops-2026-11-27/proof_history_12112773.json": {
+    "bytes": 18954,
+    "sha256": "b86911632bcf2b2408d018812106bcbe83f6895429bb9cc648731c2c5091a232"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/SHA256SUMS": {
+    "bytes": 2068,
+    "sha256": "8263bbad45f48cadfd763b86102b0eafcf8a21ebf745a22faea9010b181a96de"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/SOURCE.md": {
+    "bytes": 6611,
+    "sha256": "8bf1e9d28e66e4099fd5eadb76ee8c17eb7f6c5c18ec723e5c404f149f9f99f4"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/beacon_header_11556608_second.json": {
+    "bytes": 668,
+    "sha256": "ce7105423c1758a63700f80370de28f3933e2288cf181f9f684d09a2d3e88333"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/block.json": {
+    "bytes": 14893,
+    "sha256": "50566fafe4777cce63eedadc186845a218d690216329ba472da102d235194913"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/block_12111477.json": {
+    "bytes": 36863,
+    "sha256": "faef87195ad83d9feafd970efc43c081032c154aa322f4e7bbca7a2dd183237c"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/block_12111574.json": {
+    "bytes": 11921,
+    "sha256": "fee6ce5b87a28f91cb0fc3438a3daae0b69a8291152af28ce3276ddf769adcf2"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/block_second.json": {
+    "bytes": 14892,
+    "sha256": "ed9440ab4dc823c591c37c413027462718567ccc5931834abfc5d9723ca2a130"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/call_0xfe3199fa2634413cbac317371076cae3eb2d9e54_depositRoot_12112773.json": {
+    "bytes": 103,
+    "sha256": "e3a1be5deb64d6c0d01e194d878f21c73567011a0edf03c6f962e545ae3d7a9d"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/call_0xfe3199fa2634413cbac317371076cae3eb2d9e54_nextLeafIndex_12112773.json": {
+    "bytes": 103,
+    "sha256": "a6d16b40a1a4acdf924699c602482bfac50af3dd206ddab831c76b1a8c0216a6"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/deposits_12112773.json": {
+    "bytes": 1774,
+    "sha256": "96a1dadd79fab917066e18fe121f39836cd8e36cd6f2f25b75d198f2e12e0d4e"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/finality_update.ssz": {
+    "bytes": 1448,
+    "sha256": "082e867f96e5ffba2a44cfbdd9212673392f54677a7a90fd4b520cfaa492a452"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/fixture.json": {
+    "bytes": 3308,
+    "sha256": "a3f2cc91c2301ab031331fc5990526eddeec06258b9ee7fe94ee5c870956d1fa"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/header.rlp": {
+    "bytes": 687,
+    "sha256": "1c703009696dea9df9cb54d82bda994dd3b60f8a5b680f5adeef095558ceec61"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/header_12111477.rlp": {
+    "bytes": 664,
+    "sha256": "9562b0ead79e3be490fed2d58f2dcec73fbd960af483841fa746a801547323f6"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/header_12111574.rlp": {
+    "bytes": 677,
+    "sha256": "b1d046a0e2ea0559c2246fb992321f8f9f604aa787473a50f3ad59bd15f394aa"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/proof_0xca11bde05977b3631167028862be2a173976ca11_12112773.json": {
+    "bytes": 7338,
+    "sha256": "7a79e9234740d4523f8dd500bd5632aa28c6ed61b5267854cc34e2312176775b"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/proof_0xca11bde05977b3631167028862be2a173976ca11_mainnet_26392819.json": {
+    "bytes": 7886,
+    "sha256": "793c485cb24f7571d9d93d2d5be1446a70a4dd5176f48a731af73e912633b996"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/proof_0xfe3199fa2634413cbac317371076cae3eb2d9e54_12112773.json": {
+    "bytes": 11062,
+    "sha256": "2b3957190de66695f970b2f9f5bb77d937b7bcea2c7c51db02d7a9f2574d0be0"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/proof_absent_12112773.json": {
+    "bytes": 7742,
+    "sha256": "e2de2fa2a208eef0c07d7825d8b8cef26bf95c51f947964a725e9756317cd4c8"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/proof_history_12112773.json": {
+    "bytes": 14782,
+    "sha256": "ce36c4cd6212e656fdb0248dc56cad434a62178970ac1fdccb21d96efff08397"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/receipts_12111477.json": {
+    "bytes": 1258127,
+    "sha256": "a3fa63d79786cce8752115dcf9135d1fae2d30373270e54b7342334dac07529d"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/receipts_12111574.json": {
+    "bytes": 307926,
+    "sha256": "bfea9979d6f7b109b6032fc55f25f6684056768d22e694c0e8386967d533ba47"
+   },
+   "fixtures/sepolia-vault-v5-2026-11-11/receipts_12112773.json": {
+    "bytes": 369739,
+    "sha256": "5bffbe4d4a2d1d3d2e8ce8e260b5b211eb7583197ba5e124fa3cc901fdc0801f"
+   },
+   "prove_vault_claim": {
+    "bytes": 161605008,
+    "sha256": "2a3d2c9a907e323cf0b192112d9fa7af60d9bb60a8f29960a63fef64c262ad21"
+   }
+  }
+ },
+ "input_hashes_equal_manifest": true,
+ "r0vm_version": "risc0-r0vm 3.0.5",
+ "r0vm_sha256": "36c016a5bb2ded5bd1f8f92cc487e6ffaeb1e95ec05850c983081a0f716b515b",
+ "image_ids": "consumer image 8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96; program image 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df; mode: real proof (r0vm); hops 1; shape bare\n| program (guests/program) | `816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df` | 627064 |\n| consumer (guests/consumer) | `8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96` | 471408 |\n| bridge (guests/bridge) | `ffb47f6eaec6ef13f49505e5e80209f73d38ea53792e77656994f8069dde7675` | 602908 |\n| holdings (guests/holdings) | `a79e3f5c4496f2707ab6f55a980efb00dd80aaf562b51f5a504349e9a97c5591` | 307504 |\n| scripted (guests/scripted) | `8cb0e3f54dd11a2aea7551227c43e6416a6218e101cc7779c98f4f1a53d64e61` | 268228 |\n| program, software Keccak | `efe9c58caa0eacd4c837815d7dbb3c003011b478f9cc5b85fca083b6f0a5cb3e` | 630292 |\n| consumer, accelerated Keccak | `fa9bef9049151bc92ef32de84e0fdc1153447f115b090b8b6414330ce9d243cc` | 468408 |",
+ "env_set": {
+  "RISC0_DEV_MODE": "0",
+  "RISC0_INFO": "1",
+  "RUST_LOG": "info"
+ }
+}

@@ -1,0 +1,76 @@
+# Ferrata's light-client core on consensus-specs v1.7.0-beta.5's light-client vectors (released 26 Nov 2026), unchanged
+date_utc:      2026-11-27 (the Modal build box)
+git_rev:       the t-021 tree before 7034660b; crates/ferrata-core and the test crate as at 50b396a8 (no code changed for this run)
+vectors:       https://github.com/ethereum/consensus-specs/releases/download/v1.7.0-beta.5/minimal.tar.gz, its tests/minimal/*/light_client/ extracted
+pinned before: v1.7.0-beta.4 (scripts/fetch-vectors.sh; its archive's SHA-256 matched the pin)
+command:       FERRATA_VECTORS=<beta.5>/tests/minimal cargo test -p ferrata-spectests --locked --test vectors -- --nocapture
+compare:       the same command on beta.4's extracted tree: the same 6 tests pass with the same per-case lines (only cargo's download lines differ)
+
+## archives (light_client files: beta.4 2,865, beta.5 2,899; 552 of beta.5's new or changed, data and config)
+26d09aea70c62ed235a120a95082d544ab1c2e6fe36bd35ea1bd5da62f3b7b68  minimal-v1.7.0-beta.4.tar.gz
+d27cebe9faf09dc688abd6fd046434b45a13687e3b2c7bae18fe750ac58f3bc5  minimal-v1.7.0-beta.5.tar.gz
+
+=== the beta.5 run ===
+running 6 tests
+update_ranking: 7 cases, 399 updates in canonical order
+test update_ranking_vectors ... ok
+test sync_vectors_blst_subtractive ... ok
+sync: 52 cases, 185 steps (160 process_update, 21 force_update, 4 upgrade_store, 28 older-fork updates upgraded)
+policy store: 150 steps compared equal to the spec store, 91 updates applied, 7 cases stopped at a forced update
+  altair/advance_finality_without_sync_committee          steps   5  policy compared   5  applied  4  refused {50: 1}
+  altair/capella_store_with_legacy_data                   steps   1  policy compared   1  applied  1  refused {}
+  altair/deneb_store_with_legacy_data                     steps   1  policy compared   1  applied  1  refused {}
+  altair/electra_store_with_legacy_data                   steps   1  policy compared   1  applied  1  refused {}
+  altair/gloas_store_with_legacy_data                     steps   1  policy compared   1  applied  1  refused {}
+  altair/light_client_sync                                steps  10  policy compared   5  applied  3  refused {50: 1, 52: 1}  (stopped: forced update)
+  altair/light_client_sync_no_force_update                steps   3  policy compared   3  applied  1  refused {50: 1}
+  altair/supply_sync_committee_from_past_update           steps   1  policy compared   1  applied  1  refused {}
+  bellatrix/advance_finality_without_sync_committee       steps   5  policy compared   5  applied  4  refused {50: 1}
+  bellatrix/capella_deneb_fork                            steps   1  policy compared   1  applied  1  refused {}
+  bellatrix/capella_electra_fork                          steps   1  policy compared   1  applied  1  refused {}
+  bellatrix/capella_fork                                  steps   8  policy compared   8  applied  2  refused {52: 5}
+  bellatrix/capella_store_with_legacy_data                steps   1  policy compared   1  applied  1  refused {}
+  bellatrix/deneb_store_with_legacy_data                  steps   1  policy compared   1  applied  1  refused {}
+  bellatrix/electra_store_with_legacy_data                steps   1  policy compared   1  applied  1  refused {}
+  bellatrix/gloas_store_with_legacy_data                  steps   1  policy compared   1  applied  1  refused {}
+  bellatrix/light_client_sync                             steps  10  policy compared   5  applied  3  refused {50: 1, 52: 1}  (stopped: forced update)
+  bellatrix/light_client_sync_no_force_update             steps   3  policy compared   3  applied  1  refused {50: 1}
+  bellatrix/supply_sync_committee_from_past_update        steps   1  policy compared   1  applied  1  refused {}
+  capella/advance_finality_without_sync_committee         steps   5  policy compared   5  applied  4  refused {50: 1}
+  capella/deneb_electra_fork                              steps   1  policy compared   1  applied  1  refused {}
+  capella/deneb_fork                                      steps   8  policy compared   8  applied  2  refused {52: 5}
+  capella/deneb_gloas_fork                                steps   1  policy compared   1  applied  1  refused {}
+  capella/deneb_store_with_legacy_data                    steps   1  policy compared   1  applied  1  refused {}
+  capella/electra_store_with_legacy_data                  steps   1  policy compared   1  applied  1  refused {}
+  capella/gloas_store_with_legacy_data                    steps   1  policy compared   1  applied  1  refused {}
+  capella/light_client_sync                               steps  10  policy compared   5  applied  3  refused {50: 1, 52: 1}  (stopped: forced update)
+  capella/light_client_sync_no_force_update               steps   3  policy compared   3  applied  1  refused {50: 1}
+  capella/supply_sync_committee_from_past_update          steps   1  policy compared   1  applied  1  refused {}
+  deneb/advance_finality_without_sync_committee           steps   5  policy compared   5  applied  4  refused {50: 1}
+  deneb/electra_fork                                      steps   8  policy compared   8  applied  2  refused {52: 5}
+  deneb/electra_gloas_fork                                steps   1  policy compared   1  applied  1  refused {}
+  deneb/electra_store_with_legacy_data                    steps   1  policy compared   1  applied  1  refused {}
+  deneb/gloas_store_with_legacy_data                      steps   1  policy compared   1  applied  1  refused {}
+  deneb/light_client_sync                                 steps  10  policy compared   5  applied  3  refused {50: 1, 52: 1}  (stopped: forced update)
+  deneb/light_client_sync_no_force_update                 steps   3  policy compared   3  applied  1  refused {50: 1}
+  deneb/supply_sync_committee_from_past_update            steps   1  policy compared   1  applied  1  refused {}
+  electra/advance_finality_without_sync_committee         steps   5  policy compared   5  applied  4  refused {50: 1}
+  electra/gloas_store_with_legacy_data                    steps   1  policy compared   1  applied  1  refused {}
+  electra/light_client_sync                               steps  10  policy compared   5  applied  3  refused {50: 1, 52: 1}  (stopped: forced update)
+  electra/light_client_sync_no_force_update               steps   3  policy compared   3  applied  1  refused {50: 1}
+  electra/supply_sync_committee_from_past_update          steps   1  policy compared   1  applied  1  refused {}
+  fulu/advance_finality_without_sync_committee            steps   5  policy compared   5  applied  4  refused {50: 1}
+  fulu/gloas_fork                                         steps   8  policy compared   8  applied  2  refused {52: 5}
+  fulu/gloas_store_with_legacy_data                       steps   1  policy compared   1  applied  1  refused {}
+  fulu/light_client_sync                                  steps  10  policy compared   5  applied  3  refused {50: 1, 52: 1}  (stopped: forced update)
+  fulu/light_client_sync_no_force_update                  steps   3  policy compared   3  applied  1  refused {50: 1}
+  fulu/supply_sync_committee_from_past_update             steps   1  policy compared   1  applied  1  refused {}
+  gloas/advance_finality_without_sync_committee           steps   5  policy compared   5  applied  4  refused {50: 1}
+  gloas/light_client_sync                                 steps  10  policy compared   5  applied  3  refused {50: 1, 52: 1}  (stopped: forced update)
+  gloas/light_client_sync_no_force_update                 steps   3  policy compared   3  applied  1  refused {50: 1}
+  gloas/supply_sync_committee_from_past_update            steps   1  policy compared   1  applied  1  refused {}
+test sync_vectors_blst_auto ... ok
+test sync_vectors_blst_additive ... ok
+test sync_vectors_zkcrypto_auto ... ok
+test sync_vectors_onchain_adoption ... ok
+test result: ok. 6 passed; 0 failed; 0 ignored (the same on beta.4)

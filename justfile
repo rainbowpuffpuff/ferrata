@@ -129,6 +129,7 @@ links:
     python3 -I scripts/test_perf_records.py
     python3 -I bench/perf/test_summarize_proofs.py
     python3 -I bench/perf/test_gate_scripts.py
+    python3 -I bench/perf/test_summarize_p4_hops.py
     python3 -I modules/scripts/test_live_testnet.py
     python3 -I checkpoint/attestor/test_resources.py
     python3 -I scripts/test_audit_scope.py

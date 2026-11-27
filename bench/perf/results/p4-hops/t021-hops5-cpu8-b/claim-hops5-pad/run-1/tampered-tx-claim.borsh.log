@@ -1,0 +1,6 @@
+consumer image 8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96; program image 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df; mode: real proof (r0vm); hops 1; shape bare
+record: finalized slot 11556608, block 12112773; deposit 0 in block 12111477 (1296 blocks back), reached through 1 hop(s)
+
+thread 'main' (5750) panicked at harness/src/bin/prove_vault_claim.rs:234:14:
+settlement accepts the transaction: "Invalid privacy preserving execution circuit proof"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

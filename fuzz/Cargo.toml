@@ -10,16 +10,22 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-ferrata-core = { path = "../crates/ferrata-core", features = ["blst"] }
+ferrata-core = { path = "../crates/ferrata-core", features = ["blst", "zkcrypto"] }
 # Reference implementations the tests already compare with (same versions as the workspace).
 alloy-rlp = "0.3.17"
 alloy-trie = { version = "0.9.9", features = ["std"] }
 alloy-primitives = "1.7.3"
+# The `bls` target builds its inputs with these (the versions ferrata-core uses): points outside the
+# subgroups, keys of known secrets, and signatures.
+bls12_381 = { version = "0.8", default-features = false, features = ["groups", "alloc"] }
+blst = "0.3"
 
 [dev-dependencies]
 # Seed maker only (examples/seeds.rs): reads the committed vectors and fixtures.
 ferrata-spectests = { path = "../crates/ferrata-spectests" }
 serde_json = "1"
+serde_yaml = "0.9"
+hex = "0.4"
 
 # Its own workspace, as cargo-fuzz expects; the root workspace lists its members explicitly.
 [workspace]
@@ -76,6 +82,13 @@ bench = false
 [[bin]]
 name = "lc"
 path = "fuzz_targets/lc.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "bls"
+path = "fuzz_targets/bls.rs"
 test = false
 doc = false
 bench = false

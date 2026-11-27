@@ -65,7 +65,7 @@ could not confirm.
 | The `no_std` build for the guest ISA; the declared minimum Rust | `cargo build -p ferrata-core --no-default-features --features zkcrypto --target riscv32im-unknown-none-elf --release --locked`; `cargo +1.85.0 check --workspace --locked` | CI `test`; macOS `user-side` (the first command) | Offline | — |
 | The full Helios sweep (10,000 mutations) | `bash scripts/helios-oracle-full.sh [--out FILE]` | map: local (CI `test` runs a 400-mutation subset) | Offline, long | — |
 | Planted mutants and the review's mutants | `python3 scripts/mutants.py [M108 …]`; `python3 scripts/review-mutants.py` | map: box | Offline, long (the whole suite per mutant) | — |
-| Fuzzing, seven targets | `cd fuzz && RUSTFLAGS=-Coverflow-checks=on cargo fuzz build -a -s none && ./run.sh 1560 5 out` | the fixed findings replayed by `fuzz_regressions.rs` (CI `test`) | Offline; hours; cargo-fuzz | — |
+| Fuzzing, eight targets (`bls` since 27 Nov 2026: `FUZZ_ARGS=-max_len=4096`, as `fuzz/RESULTS.md` says) | `cd fuzz && RUSTFLAGS=-Coverflow-checks=on cargo fuzz build -a -s none && ./run.sh 1560 5 out` | the fixed findings replayed by `fuzz_regressions.rs` (CI `test`) | Offline; hours; cargo-fuzz | — |
 | Guest cycle counts (a measurement) | `cd bench && cargo build --release -p host && ./target/release/host blst-accel`; `bench/run.sh [CONFIG …]` | none | Offline (RISC Zero executor) | — |
 | Fixture refresh | `python3 scripts/fetch-mainnet-e2e.py`; `scripts/fetch-sepolia-checkpoint.py`; `scripts/fetch-sepolia-gloas.py` | none | Online | — |
 

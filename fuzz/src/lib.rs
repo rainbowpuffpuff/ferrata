@@ -4,6 +4,8 @@
 
 use ferrata_core::fork::{ChainSpec, LcFork, Preset};
 
+pub mod bls;
+
 /// The light-client fork a selector byte names.
 pub fn lc_fork(b: u8) -> LcFork {
     [LcFork::Altair, LcFork::Capella, LcFork::Deneb, LcFork::Electra, LcFork::Gloas][usize::from(b % 5)]

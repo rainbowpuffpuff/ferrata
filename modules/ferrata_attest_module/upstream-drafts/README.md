@@ -19,12 +19,19 @@ the same check as a method of `beacon_api_module` itself:
   own slot (`/eth/v1/beacon/headers/{slot}`), at or below its finalized slot (`/eth/v1/beacon/headers/finalized`), on the
   expected chain (`/eth/v1/beacon/genesis`: `genesis_validators_root` and `genesis_time`; `/eth/v1/config/spec`:
   `DEPOSIT_CHAIN_ID`). A provider agrees, disagrees or is unavailable (not counted); the checkpoint passes when at least
-  `min_providers` (default 3) agree on distinct hosts and none disagrees.
+  `min_providers` (default 3, at least 1) agree on distinct hosts (host and port) and none disagrees; a provider that
+  knows the root but gives no slot for it disagrees (its slot and finality cannot be checked).
 - `src/checkpoint.rs` (new, the check), `src/glue.rs` (the method), `src/lib.rs` (the module and `CheckpointExpect`),
   `src/beacon.rs` (`get_path`, a GET of a JSON document with 404 as `None`; `Plan::client` made crate-visible),
-  `src/tests.rs` (three tests on providers served on loopback, in the crate's own test style).
+  `src/tests.rs` (tests on providers served on loopback, in the crate's own test style: three on 21 November, two
+  more and an ignored live one on 27 November).
 - What it leaves to the caller: the instance's own parts (its configuration, the instance id, the bootstrap's committee
   branch and `KeyValidate`), which need the instance's wire format; `ferrata_attest_module.verify_checkpoint` does those.
+- Plain-http providers (27 November 2026): asked like the others, and a disagreement from one still fails the check,
+  but its agreement is not counted unless the caller sets `allow_plain_http`, as the module's own `finalized_header`
+  takes a root over https only (its `docs/specs.md`, "HTTPS-only enforcement on `finalized_header`": "Over plain HTTP,
+  an on-path attacker could substitute a forged root"). Each provider's entry in the reply says whether it was
+  `counted`.
 
 Tested: `cargo test --no-default-features` in the module's `rust-lib/` with the patch (results below).
 
@@ -35,3 +42,41 @@ case one bad provider among three good ones, called `disagrees`, the checkpoint 
 `verify_checkpoint_counts_hosts_and_skips_the_unavailable`: two ids for one endpoint count once, an unreachable provider
 is `unavailable` and not counted). The glue method (`src/glue.rs`) is compiled only by the module builder (it includes
 the generated scaffold), which this test does not run.
+
+**Result** (Modal build box, 27 November 2026), with plain-http agreement not counted by default: the patch applies to
+`aca138e` and, with `git apply --check`, to the module's head of that day, `d0ac27d` (its only change since `aca138e`
+is `docs/specs.md`); `cargo test --no-default-features` in `rust-lib/` (the SDK's source linked as
+`logos-rust-sdk-src`): **34 passed**, the crate's 29 and 5 new: the fourth,
+`verify_checkpoint_counts_no_plain_http_agreement_by_default` (three agreeing plain-http providers: `failed`, 0
+counted, each `agrees` with `counted: false`), and the fifth, `verify_checkpoint_needs_a_slot_and_at_least_one_provider`
+(a provider that knows the root but gives no slot disagrees, so three good ones beside it do not pass the root;
+`min_providers: 0` is taken as 1). These changes followed an internal review of that evening. The other three tests set
+`allow_plain_http`, as their providers are loopback http servers. A sixth,
+`verify_checkpoint_live`, is ignored by default (CI does not reach the network): it asks the providers named in
+`BEACON_LIVE_PROVIDERS` about `BEACON_LIVE_ROOT`.
+
+**Live** (Modal build box, 27 November 2026, 15:44Z; reads only): `verify_checkpoint_live` on Sepolia, for the crown
+runs' checkpoint `0x3b901f5e…ccf7c` (slot 11,562,112; EVIDENCE rows 105, 117, 196), asked of three https providers of
+three operators (ChainSafe's Lodestar, publicnode, ethPandaOps) and of the module's plain-http Nimbus provider:
+verdict **ok**, 3 counted, each at slot 11,562,112 with finalized slot 11,671,647; Nimbus agreed and was not counted
+([`results/verify-checkpoint-live-2026-11-27.json`](results/verify-checkpoint-live-2026-11-27.json), the reply and
+the command). Nimbus's Sepolia host did not answer over https that day. The live run used the patch before the evening's two
+fixes (a missing slot, `min_providers` 0); both only add refusals, and every provider gave the root's slot.
+
+## What RFP-021 F.9 still lacks after `beacon_api_module` (27 November 2026)
+
+1. **Logos's module has no such method.** Nothing was sent upstream; the pull request's text is ready in
+   [`PR-beacon_api_module.md`](PR-beacon_api_module.md), for the owner to open (the patch above is its content).
+2. **The method has not run inside a Logos Core.** It has run against public providers, as a crate test (above). Its
+   glue (`src/glue.rs`) is compiled only by the module builder,
+   which has not been run on the patched module: no `.lgx` of it was built, loaded or called with `logosctl`. What did
+   run in a headless Logos Core is our own module's `verify_checkpoint`, its beacon reads through
+   `beacon_api_module.raw_get` (EVIDENCE row 196).
+3. **The module's built-in providers cannot pass the check alone.** Version 0.2.0 seeds, for Sepolia, one https
+   provider (`lodestar`) and one plain-http (`nimbus-unstable`); for mainnet, one https (`lodestar`) and two plain-http
+   (`nimbus-testing`, `nimbus-unstable`, one operator); `rust-lib/src/beacon.rs`, `DEFAULT_PROVIDERS`. With the
+   default quorum of three agreeing https hosts, a caller must first add providers (`add_provider`), ideally of
+   distinct operators; the pull request's text says so, and the defaults are the module owners' to change.
+4. **The instance's own parts stay ours.** The configuration, the instance id, the bootstrap's committee branch and
+   `KeyValidate` need the attestation program's wire format, which an Ethereum module should not know:
+   `ferrata_attest_module.verify_checkpoint` does them, and calls this check for the root.

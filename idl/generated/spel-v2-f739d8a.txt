@@ -1,0 +1,20 @@
+# idl/spel-v2/run-at.sh: SPEL PR #301 at f739d8a (LEZ tag = "v0.4.0-rc3") on Ferrata (tree not named) [named by hand afterwards: 39096179 on branch t-021; the box's copy has no .git]
+## 1. SPEL as f739d8a has it
+ferrata_attestation: generate_idl(lez/wire, message Message, states ["InstanceState", "RecordState", "JobState", "Attestation"])
+  generated: IDL version "2", 15 messages, 18 types
+  wrote idl/generated/at-f739d8a/ferrata_attestation.idl-v2.json
+  against the hand-written IDL: 33 messages and types compared, 0 difference(s)
+    first: Message::Init#1 -> {"Init":{"bootstrap":"010203","checkpoint":"d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1","config":{"adoption_parts":2,"chain_id":"11155111"
+    committed vectors: SPEL v2 decoded 21 of 21 exactly; mutants refused
+ferrata_bridge: generate_idl(lez/bridge-wire, message BridgeMessage, states ["BridgeState"])
+  expected: ferrata_bridge: generate_idl (state BridgeState) failed: cannot describe `(Root , u128)` (in `BridgeMessage::Spend`): only paths and arrays are supported
+SPEL v2 check: passed
+## 2. SPEL f739d8a with patches/spel-c90ca0b-idl-gen-tuples.patch
+ferrata_bridge: generate_idl(lez/bridge-wire, message BridgeMessage, states ["BridgeState"])
+  generated: IDL version "2", 31 messages, 31 types
+  wrote idl/generated/at-f739d8a/ferrata_bridge.idl-v2.json
+  against the hand-written IDL: 62 messages and types compared, 0 difference(s)
+    first: BridgeMessage::Burn#1 -> {"Burn":{"amount":"c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedf","c_out":"c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6",
+    committed vectors: SPEL v2 decoded 55 of 55 exactly; mutants refused
+SPEL v2 check: passed
+spel-v2 run at f739d8a: done

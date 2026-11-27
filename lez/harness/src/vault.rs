@@ -601,6 +601,16 @@ impl RealVault {
         trie.proof(&key[..len])
     }
 
+    /// Deposit `i`'s log through a chain of `k` hops (1 to [`crate::hops::MAX_USER_HOPS`]) from the
+    /// record's block: [`crate::hops::claim_hops`]; `k = 1` is [`RealVault::deposit_proof`].
+    pub fn deposit_proof_hops(&self, i: usize, k: usize) -> DepositProof {
+        let d = &self.deposits[i];
+        DepositProof {
+            hops: crate::hops::claim_hops(k, self.block, d.block, self.hop(d.block)),
+            ..self.deposit_proof(i)
+        }
+    }
+
     /// Deposit `i`'s log, one hop back from the record's block.
     pub fn deposit_proof(&self, i: usize) -> DepositProof {
         let d = &self.deposits[i];
