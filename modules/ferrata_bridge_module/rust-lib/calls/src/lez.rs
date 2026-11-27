@@ -463,10 +463,7 @@ pub(crate) fn switch_sequencer(sequencer: &str) -> Result<(Value, Switched), Str
         return Err(format!("lez_core's wallet config {config} has no `sequencer` object"));
     }
     cfg["sequencer"]["sequencer_addr"] = json!(sequencer.trim());
-    let tag: String = hex(&ferrata_bridge_core::sha256(sequencer.trim().as_bytes())).trim_start_matches("0x").chars().take(8).collect();
-    let base = config.strip_suffix(".json").unwrap_or(&config);
-    let base = base.split(".seq-").next().unwrap_or(base);
-    let copy = format!("{base}.seq-{tag}.json");
+    let copy = config_copy(&config, sequencer);
     write_private(&copy, &serde_json::to_vec_pretty(&cfg).map_err(|e| e.to_string())?)?;
     match open_on(&copy, sequencer) {
         Ok(read) => {
@@ -501,6 +498,19 @@ pub(crate) fn put_back(prev: &Switched) -> Result<(), String> {
 /// The sequencer `lez_core`'s wallet names, when the session's LEZ goes through it.
 pub(crate) fn sequencer() -> Option<String> {
     with(|l| l.wallet["sequencer"].as_str().map(str::to_string)).flatten()
+}
+
+/// The path of the copy of wallet config `config` that names `sequencer`: beside the config the session opened,
+/// `<stem>.seq-<first 8 hex of the URL's SHA-256>.json`, where `<stem>` is that config's file name without `.json` and
+/// without the `.seq-<8 hex>` of an earlier switch (so copies never nest; only the file name's own suffix is taken off).
+fn config_copy(config: &str, sequencer: &str) -> String {
+    let tag: String = hex(&ferrata_bridge_core::sha256(sequencer.trim().as_bytes())).trim_start_matches("0x").chars().take(8).collect();
+    let stem = config.strip_suffix(".json").unwrap_or(config);
+    let stem = match stem.rsplit_once(".seq-") {
+        Some((s, t)) if t.len() == 8 && t.bytes().all(|b| b.is_ascii_hexdigit()) && !t.contains('/') => s,
+        _ => stem,
+    };
+    format!("{stem}.seq-{tag}.json")
 }
 
 /// `bytes` to `path` (mode 0600 where the platform has modes), through a file beside it renamed over it.
@@ -556,6 +566,22 @@ pub(crate) fn report() -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_config_copy_sits_beside_the_config_and_never_nests() {
+        let a = config_copy("/w/lez-wallet/wallet_config.json", "http://127.0.0.1:19301");
+        assert!(a.starts_with("/w/lez-wallet/wallet_config.seq-") && a.ends_with(".json") && a.len() == "/w/lez-wallet/wallet_config.seq-12345678.json".len(), "{a}");
+        // From a copy, the next copy replaces its suffix (no wallet_config.seq-x.seq-y.json).
+        let b = config_copy(&a, "http://127.0.0.1:19302");
+        assert!(b.starts_with("/w/lez-wallet/wallet_config.seq-") && b.matches(".seq-").count() == 1 && b != a, "{b}");
+        assert_eq!(config_copy(&b, "http://127.0.0.1:19301"), a, "the same sequencer, the same copy");
+        // A directory named like a suffix is not taken for one.
+        let c = config_copy("/w/x.seq-deadbeef/wallet_config.json", "http://127.0.0.1:19301");
+        assert!(c.starts_with("/w/x.seq-deadbeef/wallet_config.seq-"), "{c}");
+        let d = config_copy("/w/.seq-data/config", "http://127.0.0.1:19301");
+        assert!(d.starts_with("/w/.seq-data/config.seq-"), "{d}");
+        assert!(same_sequencer("http://127.0.0.1:19301/", "HTTP://127.0.0.1:19301") && !same_sequencer("http://127.0.0.1:19301/", "http://127.0.0.1:19302"));
+    }
 
     #[test]
     fn bytes_are_the_sdk_canonical_form() {
