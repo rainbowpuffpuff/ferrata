@@ -413,11 +413,17 @@ pub(crate) struct Switched {
     sequencer: String,
 }
 
-/// A sequencer URL as LEZ's wallet prints it (`url::Url`: a trailing `/` on a bare origin) or as a person types it,
-/// compared without that slash and without the case of its scheme and host.
-fn same_sequencer(a: &str, b: &str) -> bool {
-    let n = |s: &str| s.trim().trim_end_matches('/').to_ascii_lowercase();
-    n(a) == n(b)
+/// A sequencer URL as LEZ's wallet prints it (`url::Url`: a `/` path on a bare origin) or as a person types it, compared
+/// without the case of its scheme and host (never of its user info, path or query) and without a bare `/` path.
+pub(crate) fn same_sequencer(a: &str, b: &str) -> bool {
+    fn norm(s: &str) -> String {
+        let s = s.trim();
+        let (scheme, rest) = s.split_once("://").map_or((String::new(), s), |(a, b)| (a.to_ascii_lowercase(), b));
+        let (auth, path) = rest.find(['/', '?', '#']).map_or((rest, ""), |i| (&rest[..i], &rest[i..]));
+        let auth = auth.rsplit_once('@').map_or_else(|| auth.to_ascii_lowercase(), |(u, h)| format!("{u}@{}", h.to_ascii_lowercase()));
+        format!("{scheme}://{auth}{}", if path == "/" { "" } else { path })
+    }
+    norm(a) == norm(b)
 }
 
 /// `lez_core`'s wallet opened on `config` (with the session's storage and password), then read back: the sequencer it
@@ -447,7 +453,7 @@ fn open_on(config: &str, want: &str) -> Result<Value, String> {
 /// `set_endpoints`' LEZ sequencer while the session's LEZ goes through `lez_core` (RFP-022 U.9). `lez_core`'s wallet
 /// holds its own connection, to the sequencer its wallet config names (`sequencer.sequencer_addr`), and `lez_core` has
 /// no method that sets it; so a copy of the config in use naming `sequencer` is written beside it
-/// (`<config>.seq-<8 hex of the URL's SHA-256>.json`, mode 0600; the config in use is never written), and `lez_core`
+/// (`<config>.seq-<16 hex of the URL's SHA-256>.json`, mode 0600; the config in use is never written), and `lez_core`
 /// opens the session's wallet again on that copy (`open`, the same storage and password, `force_rpc`). Kept only when
 /// `lez_core` then names `sequencer` (`get_sequencer_addr`) and reads a block through it; otherwise the config in use is
 /// opened again ([`put_back`]) and the reason returned, with whether that worked. The caller has read the sequencer
@@ -501,16 +507,19 @@ pub(crate) fn sequencer() -> Option<String> {
 }
 
 /// The path of the copy of wallet config `config` that names `sequencer`: beside the config the session opened,
-/// `<stem>.seq-<first 8 hex of the URL's SHA-256>.json`, where `<stem>` is that config's file name without `.json` and
+/// `<stem>.seq-<first 16 hex of the URL's SHA-256>.json`, where `<stem>` is that config's file name without `.json` and
 /// without the `.seq-<8 hex>` of an earlier switch (so copies never nest; only the file name's own suffix is taken off).
 fn config_copy(config: &str, sequencer: &str) -> String {
-    let tag: String = hex(&ferrata_bridge_core::sha256(sequencer.trim().as_bytes())).trim_start_matches("0x").chars().take(8).collect();
+    let hash = hex(&ferrata_bridge_core::sha256(sequencer.trim().as_bytes()));
+    let tag: String = hash.trim_start_matches("0x").chars().take(16).collect();
     let stem = config.strip_suffix(".json").unwrap_or(config);
     let stem = match stem.rsplit_once(".seq-") {
-        Some((s, t)) if t.len() == 8 && t.bytes().all(|b| b.is_ascii_hexdigit()) && !t.contains('/') => s,
+        Some((s, t)) if t.len() == 16 && t.bytes().all(|b| b.is_ascii_hexdigit()) => s,
         _ => stem,
     };
-    format!("{stem}.seq-{tag}.json")
+    let copy = format!("{stem}.seq-{tag}.json");
+    // Never the config in use (one named like a copy for this sequencer): the put-back reads it.
+    if copy == config { format!("{stem}.seq-{tag}.again.json") } else { copy }
 }
 
 /// `bytes` to `path` (mode 0600 where the platform has modes), through a file beside it renamed over it.
@@ -570,17 +579,23 @@ mod tests {
     #[test]
     fn a_config_copy_sits_beside_the_config_and_never_nests() {
         let a = config_copy("/w/lez-wallet/wallet_config.json", "http://127.0.0.1:19301");
-        assert!(a.starts_with("/w/lez-wallet/wallet_config.seq-") && a.ends_with(".json") && a.len() == "/w/lez-wallet/wallet_config.seq-12345678.json".len(), "{a}");
+        assert!(a.starts_with("/w/lez-wallet/wallet_config.seq-") && a.ends_with(".json") && a.len() == "/w/lez-wallet/wallet_config.seq-0123456789abcdef.json".len(), "{a}");
         // From a copy, the next copy replaces its suffix (no wallet_config.seq-x.seq-y.json).
         let b = config_copy(&a, "http://127.0.0.1:19302");
         assert!(b.starts_with("/w/lez-wallet/wallet_config.seq-") && b.matches(".seq-").count() == 1 && b != a, "{b}");
         assert_eq!(config_copy(&b, "http://127.0.0.1:19301"), a, "the same sequencer, the same copy");
         // A directory named like a suffix is not taken for one.
-        let c = config_copy("/w/x.seq-deadbeef/wallet_config.json", "http://127.0.0.1:19301");
-        assert!(c.starts_with("/w/x.seq-deadbeef/wallet_config.seq-"), "{c}");
+        let c = config_copy("/w/x.seq-deadbeef00112233/wallet_config.json", "http://127.0.0.1:19301");
+        assert!(c.starts_with("/w/x.seq-deadbeef00112233/wallet_config.seq-"), "{c}");
         let d = config_copy("/w/.seq-data/config", "http://127.0.0.1:19301");
         assert!(d.starts_with("/w/.seq-data/config.seq-"), "{d}");
+        // A config in use named like the copy for the sequencer asked: the copy goes elsewhere, never over it.
+        assert_ne!(config_copy(&a, "http://127.0.0.1:19301"), a);
+        // Only the scheme and host are compared without case, and only a bare `/` path is dropped.
         assert!(same_sequencer("http://127.0.0.1:19301/", "HTTP://127.0.0.1:19301") && !same_sequencer("http://127.0.0.1:19301/", "http://127.0.0.1:19302"));
+        assert!(same_sequencer("https://Gateway.Example/ZoneA", "https://gateway.example/ZoneA"));
+        assert!(!same_sequencer("https://gateway.example/ZoneA?Key=AbC", "https://gateway.example/zonea?key=abc"));
+        assert!(!same_sequencer("https://User:Pw@gateway.example/", "https://user:pw@gateway.example/"));
     }
 
     #[test]

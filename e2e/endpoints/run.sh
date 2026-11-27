@@ -378,7 +378,9 @@ lezcore_scenario() {
     --arg b "$W/bundle/program/ferrata_bridge.bin" '{via: "lez_core", wallet: {config: $c, storage: $s, password_file: $p}, program_bin: $b}')"
   zcheck "lez_core opened the user's wallet, on sequencer 0" "true $s0/" "$(jq -r '[.ok, .result.wallet.sequencer] | map(tostring) | join(" ")' <<< "$ZR")"
   zc registry '{}'
-  zcheck "registry read through lez_core on sequencer 0" "true" "$(jq -r '.ok' <<< "$ZR")"
+  zcheck "registry read through lez_core on sequencer 0: reads answered and equal" "true lez_core yes" \
+    "$(jq -r '.ok as $ok | (.result.tokens[0].lez_read_via // {}) as $v | [($ok | tostring), ($v.via // "none"),
+      (if (($v.reads // 0) > 0) and (($v.equal // 0) > 0) and (($v.equal // 0) + ($v.unanswered // 0) == ($v.reads // -1)) then "yes" else "no" end)] | join(" ")' <<< "$ZR")"
   local u
   for u in "$s1" "$s2"; do
     zc set_endpoints "$(jq -c -n --arg s "$u" '{sequencer: $s}')"
@@ -387,7 +389,10 @@ lezcore_scenario() {
     zcheck "set_endpoints $u: lez_core's wallet read a block through it" "yes" \
       "$(jq -r 'if (.result.checks.lez_core.read.head // 0) > 0 then "yes" else "no" end' <<< "$ZR")"
     zc registry '{}'
-    zcheck "registry read through lez_core on $u" "true" "$(jq -r '.ok' <<< "$ZR")"
+    # Read through lez_core, not the chain service's fallback: some reads answered, all of those equal.
+    zcheck "registry read through lez_core on $u: reads answered and equal" "true lez_core yes" \
+      "$(jq -r '.ok as $ok | (.result.tokens[0].lez_read_via // {}) as $v | [($ok | tostring), ($v.via // "none"),
+        (if (($v.reads // 0) > 0) and (($v.equal // 0) > 0) and (($v.equal // 0) + ($v.unanswered // 0) == ($v.reads // -1)) then "yes" else "no" end)] | join(" ")' <<< "$ZR")"
   done
   zc set_endpoints "$(jq -c -n --arg s "$sc" '{sequencer: $s}')"
   zcheck "set_endpoints $sc (a closed port): refused, both kept on $s2" "false yes" \

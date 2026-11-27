@@ -87,7 +87,12 @@ fn serve(f: impl Fn(Value) -> Value + Send + 'static) -> String {
         for s in l.incoming() {
             let Ok(mut s) = s else { continue };
             let Some(body) = read_request(&mut s) else { continue };
-            let out = f(serde_json::from_slice(&body).unwrap_or(Value::Null)).to_string();
+            let v = f(serde_json::from_slice(&body).unwrap_or(Value::Null));
+            // `{"__drop": true}`: the connection closed with no answer (an answer lost on its way back).
+            if v.get("__drop") == Some(&Value::Bool(true)) {
+                continue;
+            }
+            let out = v.to_string();
             let _ = write!(
                 s,
                 "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{out}",
@@ -261,6 +266,8 @@ struct Service {
     /// The sequencers whose zone holds the session's configuration, and the Ethereum RPCs of the deployment.
     good_seqs: HashSet<String>,
     good_eths: HashSet<String>,
+    /// The next `module.set_endpoints` (not a dry run) switches, then its answer is lost.
+    lose_next_switch: bool,
 }
 
 fn chain_service(state: Arc<Mutex<Service>>) -> String {
@@ -303,6 +310,9 @@ fn chain_service(state: Arc<Mutex<Service>>) -> String {
                     }
                     if let Some(u) = &eth {
                         st.eth = u.clone();
+                    }
+                    if std::mem::take(&mut st.lose_next_switch) {
+                        return json!({ "__drop": true });
                     }
                     Ok(json!({ "eth_rpc": st.eth, "sequencer": st.seq,
                                "switched": { "eth_rpc": eth.is_some(), "sequencer": seq.is_some() }, "in_use": {} }))
@@ -353,6 +363,7 @@ fn endpoints_switch_through_their_owners_and_stay_on_failure() {
         set_calls: 0,
         good_seqs: [seq_a.clone(), seq_b.clone(), LEZ_DOWN.to_string()].into(),
         good_eths: [e_a.clone(), e_b.clone()].into(),
+        lose_next_switch: false,
     }));
     let svc = chain_service(state.clone());
     let in_service = |s: &Arc<Mutex<Service>>| {
@@ -491,6 +502,26 @@ fn endpoints_switch_through_their_owners_and_stay_on_failure() {
     ok("set_endpoints", json!({ "sequencer": seq_a }));
     assert_eq!((in_service(&state).1, lez_wallet().1), (seq_a.clone(), seq_a.clone()));
     assert_eq!(ok("lez_report", json!({}))["log"].as_array().unwrap().iter().filter(|e| e["kind"] == "switch").count(), 3, "three switches tried");
+    // The chain service's answer to the switch lost after it switched: read again and put back; lez_core not moved.
+    state.lock().unwrap().lose_next_switch = true;
+    refused("set_endpoints", json!({ "sequencer": seq_b }), &["not switched", "did not answer", "it had switched: put back", &format!("LEZ sequencer {seq_a}")]);
+    assert_eq!((in_service(&state).1, lez_wallet().1), (seq_a.clone(), seq_a.clone()), "both on the sequencer in use");
+    // Split already (the chain service on B, lez_core on A, as a lost answer with a failed put-back would leave them):
+    // the same request moves lez_core alone, and says it switched.
+    state.lock().unwrap().seq = seq_b.clone();
+    let r = ok("set_endpoints", json!({ "sequencer": seq_b }));
+    assert_eq!((in_service(&state).1, lez_wallet().1), (seq_b.clone(), seq_b.clone()), "healed: {r}");
+    assert_eq!(r["switched"]["sequencer"], true, "{r}");
+    // Through eth_rpc_module, a chain set to `required` whose reading fails after its switch: the Ethereum endpoint, the
+    // chain service's sequencer and lez_core's wallet all put back.
+    let e_before = registry().endpoints.get(&CHAIN).cloned().unwrap();
+    registry().required = true;
+    refused("set_endpoints", json!({ "eth_rpc": e_fork, "sequencer": seq_a }), &["not switched", "after the switch", "Put back"]);
+    registry().required = false;
+    assert_eq!(registry().endpoints.get(&CHAIN), Some(&e_before), "eth_rpc_module put back");
+    assert_eq!((in_service(&state).1, lez_wallet().1), (seq_b.clone(), seq_b.clone()), "the chain service and lez_core put back");
+    ok("set_endpoints", json!({ "sequencer": seq_a }));
+    assert_eq!((in_service(&state).1, lez_wallet().1), (seq_a.clone(), seq_a.clone()));
     ok("set_endpoints", json!({ "eth_rpc": e_a }));
     assert_eq!(registry().endpoints.get(&CHAIN), Some(&e_a));
     ok("lez", json!({ "via": "plain" }));
@@ -513,6 +544,7 @@ fn endpoints_switch_through_their_owners_and_stay_on_failure() {
         set_calls: 0,
         good_seqs: [seq_a.clone()].into(),
         good_eths: [e_y.clone(), e_y2.clone()].into(),
+        lose_next_switch: false,
     }));
     let svc_y = chain_service(y.clone());
     let patched = registry().patched.len();

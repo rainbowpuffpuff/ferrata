@@ -229,6 +229,8 @@ wait_round() { # STEP: until the daemon no longer runs; its lines in STEP-lines.
     sleep 0.5
   done
   printf '%s\n' "$st" > "$R/$1-lines.json"
+  # A round still running when the wait ends, or a status never read, is a failure, never an end.
+  [ "$(jq -r '.running' <<< "$st" 2>/dev/null)" = false ] || check "$1-round-ended" false "$(jq -r '.running // "unread"' <<< "$st" 2>/dev/null || echo unread)"
 }
 round() { start_round "$1"; wait_round "$1"; }
 events() { jq -r '[.. | objects | .event? // empty] | join(",")' "$R/$1-lines.json" 2>/dev/null; }
@@ -278,10 +280,12 @@ check K0-via-tx_sender_module true "$(jq -r '[.. | objects | select(.via? != nul
 warp 3601
 rm -f "$CTL.hit"; echo "trap eth_sendRawTransaction" > "$CTL"
 start_round K1a > "$R/K1.log" 2>&1
-if wait_hit 120; then
+hit=$(wait_hit 120 && echo yes || echo no); check K1-fault-fired yes "$hit"
+if [ "$hit" = yes ]; then
   sleep 1; f1=$(inflight)
   STEP=K1 kill_pids $(host_pids $MODS_ALL)
   note "K1 killed: $(killed K1)"
+  check K1-every-module-host-killed "daemon 0 hosts 7" "$(killed K1 | cut -d' ' -f1-4)"
   note "K1: the broadcast trapped at the proxy; in flight: $f1; every module host SIGKILLed"
   check K1-nothing-left-before-restart 0 "$(count finalizeAttested)"
   echo pass > "$CTL"
@@ -304,10 +308,12 @@ jq -c -n --arg j "$rj" '{kind: "release", journal: $j, seal: "0x"}' > "$INBOX/k2
 bal0=$(cast balance --rpc-url "$up" "$recipient")
 rm -f "$CTL.hit"; echo "hold eth_sendRawTransaction 25" > "$CTL"
 start_round K2a > "$R/K2.log" 2>&1
-if wait_hit 120; then
+hit=$(wait_hit 120 && echo yes || echo no); check K2-fault-fired yes "$hit"
+if [ "$hit" = yes ]; then
   sleep 1; f2=$(inflight)
   STEP=K2 kill_pids $(host_pids ferrata_relayer_module)
   note "K2 killed: $(killed K2)"
+  check K2-the-relayer-host-alone-killed "daemon 0 hosts 1 (ferrata_relayer_module" "$(killed K2 | cut -d' ' -f1-5)"
   note "K2: the release's broadcast reached the node, its answer held; in flight: $f2; the relayer module's host SIGKILLed"
   check K2-mined-while-held 1 "$(count release)"
   STEP=K2 reload_hosts ferrata_relayer_module >> "$R/K2.log" 2>&1
@@ -318,7 +324,7 @@ else
   note "K2: the hold never fired ($(cat "$CTL"))"; echo pass > "$CTL"; wait_round K2a >> "$R/K2.log" 2>&1
 fi
 check K2-release-once 1 "$(count release)"
-check K2-recipient-paid-once "$denom" "$(( $(cast balance --rpc-url "$up" "$recipient") - bal0 ))"
+check K2-recipient-paid-once "$((denom - relay_fee - cp_fee))" "$(( $(cast balance --rpc-url "$up" "$recipient") - bal0 ))"   # the denomination less the relay and checkpoint fees, once
 check K2-nullifier-used true "$(cast call --rpc-url "$up" "$vault" 'nullifierUsed(bytes32)(bool)' "$(label nullifier/1)")"
 [ "$(count claimOwed)" = 1 ] || round K2c >> "$R/K2.log" 2>&1   # the fee withdrawal, if the restarted round ended first
 check K2-claimOwed-once 1 "$(count claimOwed)"
@@ -334,6 +340,7 @@ done
 sleep 1; f3=$(inflight); pend=$(cast rpc --rpc-url "$up" txpool_status | jq -r '.pending')
 STEP=K3 kill_core
 note "K3 killed: $(killed K3)"
+check K3-killed-with-its-transaction-broadcast-and-pending "yes 0x1" "$( [ "$(jq -r '.hash // "null"' <<< "$f3" 2>/dev/null)" != null ] && echo yes || echo no) $pend"
 check K3-daemon-and-every-host-killed "daemon 1" "$(killed K3 | cut -d' ' -f1-2)"
 check K3-nothing-of-the-session-left "" "$(session_pids | paste -sd, -)"
 note "K3: broadcast and pending (txpool $pend); in flight: $f3; Logos Core SIGKILLed (daemon and hosts)"
@@ -401,10 +408,12 @@ cast send --unlocked --from "$prover" --rpc-url "$up" "$vault" \
 check M1-wrong-candidate-submitted 1 "$(grep -c '^status *1' "$R/M1-submit.log")"
 rm -f "$CTL.hit"; echo "trap eth_sendRawTransaction" > "$CTL"
 mon_start M1a > "$R/M1.log" 2>&1
-if wait_hit 120; then
+hit=$(wait_hit 120 && echo yes || echo no); check M1-fault-fired yes "$hit"
+if [ "$hit" = yes ]; then
   sleep 1
   STEP=M1 kill_pids $(host_pids $MODS_ALL)
   note "M1: the monitor's cancel trapped at the proxy; killed: $(killed M1)"
+  check M1-every-module-host-killed "daemon 0 hosts 7" "$(killed M1 | cut -d' ' -f1-4)"
   check M1-nothing-left-before-restart 0 "$(cancels 1)"
   echo pass > "$CTL"
   STEP=M1 reload_hosts $MODS_ALL >> "$R/M1.log" 2>&1
@@ -415,6 +424,10 @@ else
   note "M1: the trap never fired ($(cat "$CTL"))"; echo pass > "$CTL"; mon_wait M1a >> "$R/M1.log" 2>&1
 fi
 check M1-cancelled-once 1 "$(cancels 1)"
+# What the restarted stack may add: tx_sender_module burns, after a restart, the number its lost request was signed at
+# (send.rs: seeding), so its new cancel waits behind a gap the monitor fills the plain way at that number (the gap fill);
+# the module's cancel then reverts (UnknownCandidate) and changes nothing. One such reverted call at most.
+check M1-at-most-one-reverted-extra-call yes "$( [ "$(jq -s 'length' "$R/watcher-txs.jsonl")" -le 2 ] && [ "$(cancels 0)" -le 1 ] && echo yes || echo no)"
 note "M1: the watcher's transactions: $(jq -s -c 'map({nonce, call, status})' "$R/watcher-txs.jsonl")"
 check M1-candidate-gone "$zero" "$(cast call --rpc-url "$up" "$vault" 'candidates(bytes32)(bytes32,bytes32,uint64,uint32,uint48,uint32,uint64,address)' "$s3" | head -n 1)"
 check M1-watcher-nothing-queued "$(cast nonce --rpc-url "$up" "$watcher")" "$(cast nonce --block pending --rpc-url "$up" "$watcher")"
@@ -428,6 +441,8 @@ check every-receipt-status-1 7 "$(jq -s '[.[] | select(.status == 1)] | length' 
 check jobs-booked "k0-checkpoint.json,k2-release.json,k3-checkpoint.json,k5-checkpoint.json" "$(ls "$STATE/done" 2>/dev/null | paste -sd, -)"
 check inbox-empty "" "$(ls "$INBOX" 2>/dev/null | grep -v '^done$' | paste -sd, -)"
 check vault-final-state "$s2" "$(cast call --rpc-url "$up" "$vault" 'finalState()(bytes32)')"
+check relayer-no-inflight-at-the-end none "$(inflight)"
+check relayer-nothing-queued "$(cast nonce --rpc-url "$up" "$relayer")" "$(cast nonce --block pending --rpc-url "$up" "$relayer")"
 c tx_sender_module history "$relayer" 31337 > /dev/null
 printf '%s\n' "$LAST" > "$R/tx_sender-history.json"
 cp "$S"/logs/*.log "$R/" 2>/dev/null || true
