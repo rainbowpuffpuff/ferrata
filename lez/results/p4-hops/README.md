@@ -39,7 +39,8 @@ From [`table.md`](table.md) (`bench/perf/summarize_p4_hops.py` on the records in
 | 5 | 16 vCPU, 16 GiB (AMD Zen 3, GCP us-central) | 1511.3 | 1604.3 | 9,713,774 (12) | 9.19 / 9.24 | 239,551 | 255,976 | yes | 101 |
 | 5 | 8 vCPU, 16 GiB (AMD Zen 3, AZURE eu-west) | 3255.1 | 3365.7 | 9,714,281 (12) | 9.19 / 9.23 | 239,551 | 255,976 | yes | 101 |
 
-Machines: Modal containers with CPU and memory request = limit (gVisor), AMD Zen 3. 16 vCPU are the declared
+Machines: Modal containers with CPU and memory request = limit (gVisor): AMD Zen 3 and Zen 4, and an Intel part for
+the two-hop 16-vCPU run (the table names each), one run per row. 16 vCPU are the declared
 x86-64 minimum's 16 threads; 8 vCPU are a mid-range laptop's shape held to half of them. `execute_and_prove` is the
 proof's own time; the binary's wall adds rebuilding the fixture's state (the instance follows the recorded Sepolia
 chain to the record) and settling once. Peak memory: r0vm's resident set (GNU time) and the container's (cgroup).
