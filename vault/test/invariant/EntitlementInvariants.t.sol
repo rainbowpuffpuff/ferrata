@@ -14,7 +14,7 @@ import {EntitlementHandler} from "./EntitlementHandler.sol";
 /// forge-config: default.invariant.runs = 128
 /// forge-config: default.invariant.depth = 64
 /// @notice RFP-022 Reliability #4 on the vault: later activity can delay, but must never invalidate, an accepted burn, an
-///         owed balance, or a refundable leaf. Written by an e-INFRA worker (Kimi K3.1 Pro) for the internal review of
+///         owed balance, or a refundable leaf. Written by a second model (an e-INFRA worker) for the internal review of
 ///         27 November 2026, read line by line before it was brought in; two mutations of `_checkRelease` (refusing a
 ///         delisted token; accepting only the newest checkpoint's root) each make it fail.
 /// @dev Disclosed exceptions, deliberately outside the handler: tripping RISC Zero's emergency stop, `revokeFrom` of

@@ -564,7 +564,7 @@ New in v4:
   script's default does since the internal review of 27 November 2026 (S-2). The floor is one number in value units for
   every bucket, so it also binds each token's release bucket to at least that value, and it holds against the admin's
   caps, not against the admin's registrations: a token the admin registers with a large `unitWeight` and releases itself
-  can use the shared global bucket up (internal review B-1).
+  can use the shared global bucket up (internal review V-1).
 - **The freeze key is powerful until replaced.** A compromised freeze authority can keep renewing freezes, cancel
   every candidate, revoke honest checkpoints within the window, or retire the vault: a denial of service, not theft.
   The admin replaces it after 14 days (D13). A compromised admin can, after the same 14 days, install its own freeze
