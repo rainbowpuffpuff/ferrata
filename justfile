@@ -21,6 +21,9 @@ commit_full := `scripts/release.sh commit`
 # Where CI's runner keeps its scratch files ($RUNNER_TEMP in the workflows): a local stand-in when it is
 # unset, used by the recipes that run a whole CI job (the links job's sequencer-record check writes there).
 export RUNNER_TEMP := env_var_or_default("RUNNER_TEMP", justfile_directory() + "/../tmp/runner-temp")
+# The environment CI's workflows set for every job (ci.yml's top-level env), exported here so a recipe that
+# runs a whole job runs it with the variables the job's steps see (scripts/ci/test_ci_model.py compares them).
+export FOUNDRY_OFFLINE := "false"
 
 # List the recipes.
 default:
@@ -80,9 +83,12 @@ ci-commands *jobs:
 # Each recipe below runs exactly the `run:` commands of one job of .github/workflows/ci.yml, in order, one
 # recipe line per command line: scripts/ci/test_ci_model.py compares them with the workflow as
 # scripts/ci/ci_model.py reads it (run `just ci-commands JOB` or
-# `python3 -I scripts/ci/ci_model.py --steps JOB` to see them). What the recipes leave out is the runner's
-# own setup, the `uses:` steps: checkout, toolchain installs and caches. Each recipe line is its own shell,
-# as each CI step is; `just` runs them with bash -euo pipefail, as GitHub runs a step with `bash -e`.
+# `python3 -I scripts/ci/ci_model.py --steps JOB` to see them) — the command text, the directory it runs in,
+# the environment the workflow sets, and the shell options. What the recipes leave out is the runner's own
+# setup, the `uses:` steps: checkout, toolchain installs and caches. Each recipe line is its own shell, as
+# each CI step is; `just` runs them with bash -euo pipefail, so those jobs ask GitHub for `shell: bash`
+# (which adds pipefail to its `-e`; `just`'s `-u` only makes its own run stricter), and the recipes export
+# the variables the workflows set for the whole file (FOUNDRY_OFFLINE).
 
 # CI's idl job: the IDL alone decodes every committed borsh vector of both programs (idl/README.md).
 idl:

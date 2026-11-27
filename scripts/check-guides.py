@@ -24,8 +24,9 @@ Checks:
      the vault does not count (finalisations only, or "time under a freeze not counting").
   6. Counts a terminal user relies on, against what the code declares: how many methods each Logos module's trait
      has, where a document states a number (modules/README.md's overview and table, the user guide's §13, the
-     consumer guide's §13); the web wallet's README against the `test(` declarations of its Node test files, and
-     against the arguments `test/fork_bridge.py` requires; the mini-app's README against the run its RESULTS.md
+     consumer guide's §13), and modules/README.md's table naming each trait's methods both ways (no method missing,
+     no removed method left in it); the web wallet's README against the `test(` declarations of its Node test files,
+     and against the arguments `test/fork_bridge.py` requires; the mini-app's README against the run its RESULTS.md
      records.
 """
 import json
@@ -337,8 +338,17 @@ def method_count_findings(texts, module_methods):
     return out
 
 
+# Backticked names a module's table row may name without being one of its trait's methods: the references its
+# Methods cell makes to other modules' parts (Logos Core's keystore and tx sender, which the `custody` notes name).
+# A name outside the trait and outside these is a method the trait no longer has, or never had.
+DESCRIPTIVE_NAMES = {"ferrata_monitor_module": ("keystore_module", "tx_sender_module"),
+                     "ferrata_relayer_module": ("keystore_module", "tx_sender_module")}
+
+
 def method_list_findings(readme, module_methods):
-    """modules/README.md's table of modules names every method of each module's trait."""
+    """modules/README.md's table of modules and each module's trait name the same methods, both ways: every
+    method of the trait appears in its row, and every callable the row names is one of the trait's (or one of the
+    descriptive references `DESCRIPTIVE_NAMES` allows), so a removed method cannot stay documented."""
     out = []
     for module, methods in module_methods.items():
         if methods is None:
@@ -347,9 +357,14 @@ def method_list_findings(readme, module_methods):
         if not row:
             out.append(f"modules/README.md: no table row for {module}")
             continue
+        cell = row.group(1)
         for name in methods:
-            if not re.search(rf"\b{name}\b", row.group(1)):
+            if not re.search(rf"\b{name}\b", cell):
                 out.append(f"modules/README.md: {module}'s trait has `{name}`, its table row does not name it")
+        allowed = set(methods) | set(DESCRIPTIVE_NAMES.get(module, ()))
+        for name in re.findall(r"`([A-Za-z_][A-Za-z0-9_]*)`", cell):
+            if name not in allowed:
+                out.append(f"modules/README.md: {module}'s table row names `{name}`, its trait has no such method")
     return out
 
 

@@ -524,6 +524,9 @@ jobs:
 
   links:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -654,6 +657,9 @@ jobs:
   # runs with lez/ (by hand) and fails when the wire and the committed vectors part.
   idl:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: The IDL alone decodes every committed borsh vector of both programs
@@ -663,6 +669,9 @@ jobs:
   # vault's selectors, topics and hash vectors, run from admin/index.html's inline script.
   admin:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: The admin view's self-test
@@ -676,6 +685,9 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:

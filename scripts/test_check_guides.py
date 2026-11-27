@@ -203,6 +203,22 @@ class MethodCounts(unittest.TestCase):
         self.assertEqual(out, ["modules/README.md: ferrata_bridge_module's trait has `admin`, "
                                "its table row does not name it"])
 
+    def test_a_removed_method_left_in_the_table_is_caught(self):
+        """The other direction (review round 3, M8): a row may not name a callable the trait no longer has, for a
+        module with no numeric count shape to catch it either."""
+        readme = ("| Module | Directory | Methods |\n|---|---|---|\n"
+                  "| `ferrata_monitor_module` | `ferrata_monitor_module/` | `version`, `check`, `removed_method` |\n")
+        out = cg.method_list_findings(readme, {"ferrata_monitor_module": ["version", "check"]})
+        self.assertEqual(out, ["modules/README.md: ferrata_monitor_module's table row names `removed_method`, "
+                               "its trait has no such method"])
+
+    def test_the_rows_descriptive_references_still_pass(self):
+        """A row's notes may name other modules' parts (`keystore_module`, `tx_sender_module`) in backticks."""
+        readme = ("| Module | Directory | Methods |\n|---|---|---|\n"
+                  "| `ferrata_monitor_module` | `ferrata_monitor_module/` | `version`, `run`; `custody` (the watcher "
+                  "key into Logos Core's `keystore_module`, unlocked for `tx_sender_module`) |\n")
+        self.assertEqual(cg.method_list_findings(readme, {"ferrata_monitor_module": ["version", "run", "custody"]}), [])
+
     def test_the_repository_agrees(self):
         methods = {}
         for module, path in cg.MODULES.items():
