@@ -1,8 +1,8 @@
 //! The mini-app's whole network session from its committed terminal calls file. Every server is bound to
 //! 127.0.0.1: the network configuration, faucet and LEZ JSON-RPC on one loopback origin, and Ethereum JSON-RPC on
 //! another. Nothing on a public network is contacted. As in tests/endpoints.rs, these are protocol stand-ins, not
-//! chains: they serve real Borsh states, a Deposit log and its recomputed root, and verify that two confirms sign
-//! and send exactly the prepared message hashes.
+//! chains: they serve real Borsh states, a Deposit log and its recomputed root. The claim on pinned B1 is refused
+//! without a send. The burn's confirm must decode as this tree's exact `Burn` before resulting state is exposed.
 //!
 //! Run all targets: `cargo test --locked --offline` from calls/. The replay uses the same `wallet_calls` function as
 //! `cargo run --example call -- wallet examples/network-session.jsonl` (with loopback URLs substituted here).
@@ -13,6 +13,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 use base64::Engine as _;
+use borsh::BorshDeserialize as _;
 use ferrata_bridge_calls::{wallet_as, wallet_calls, ViewClient};
 use ferrata_bridge_core::{chain_id_u256, hmac_sha256, inbound, outbound, sha256, tree::Tree, BridgeKeys, Hash, U256};
 use ferrata_lez_bridge_wire::{self as bw, BridgeState};
@@ -139,9 +140,9 @@ struct Fixture {
     config_state: Vec<u8>,
     root_state: Vec<u8>,
     token_state: Vec<u8>,
-    nullifier_state: Vec<u8>,
     burn_state: Vec<u8>,
-    holder_with_claim: Vec<u8>,
+    burn_message: bw::BridgeMessage,
+    holder_before_burn: Vec<u8>,
     holder_after_burn: Vec<u8>,
     deposit_log: Value,
     deposit_root: Hash,
@@ -244,6 +245,15 @@ impl Fixture {
                 c_out: note.c_out,
             },
         }));
+        let burn_message = bw::BridgeMessage::Burn {
+            config_id: cid,
+            r: note.r,
+            memo: note.memo,
+            mac: note.mac,
+            token: note.token,
+            amount: note.amount,
+            c_out: note.c_out,
+        };
         let holder_state = |held| {
             encode_state(&BridgeState::Holder(bw::HolderState {
                 holdings: vec![bw::Holding { config_id: cid, token: [0u8; 20], amount: held }],
@@ -262,18 +272,13 @@ impl Fixture {
             config: id58(bw::config_actor(program, &cid).account_id.value()),
             root: id58(bw::root_actor(program, &cid, 1).account_id.value()),
             token: id58(bw::token_actor(program, &cid, &[0u8; 20]).account_id.value()),
-            nullifier_state: encode_state(&BridgeState::Nullifier(bw::NullifierState {
-                config_id: cid,
-                token: [0u8; 20],
-                leaf_count: 1,
-                amount: CLAIM_AMOUNT,
-            })),
-            holder_with_claim: holder_state(CLAIM_AMOUNT),
+            holder_before_burn: holder_state(CLAIM_AMOUNT),
             holder_after_burn: holder_state(CLAIM_AMOUNT - BURN_AMOUNT),
             deposit_log,
             deposit_root,
             cid,
             burn_state,
+            burn_message,
             config_state,
             root_state,
             token_state,
@@ -281,12 +286,40 @@ impl Fixture {
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 struct NetworkState {
     sent: Vec<String>,
+    decoded: Vec<bw::BridgeMessage>,
+    burn_applied: bool,
     methods: Vec<String>,
     faucet_body: Option<Value>,
     faucet_called: bool,
+}
+
+/// Decode a captured public transaction's root call with the current bridge wire. Unlike the old send-count
+/// simulation, malformed or wrong-layout data cannot make the stand-in report its actor states as applied.
+fn captured_bridge_message(wire: &str) -> Result<bw::BridgeMessage, String> {
+    let raw = base64::engine::general_purpose::STANDARD.decode(wire).map_err(|e| e.to_string())?;
+    let tx = raw.get(1..).ok_or("short public transaction")?;
+    let mut at = 0usize;
+    let mut take = |n: usize| -> Result<&[u8], String> {
+        let out = tx.get(at..at + n).ok_or("truncated transaction message")?;
+        at += n;
+        Ok(out)
+    };
+    let count = |b: &[u8]| -> Result<usize, String> {
+        Ok(u32::from_le_bytes(b.try_into().map_err(|_| "u32 length")?) as usize)
+    };
+    let actors = count(take(4)?)?;
+    take(actors.checked_mul(64).ok_or("actor count overflow")?)?;
+    let signers = count(take(4)?)?;
+    take(signers.checked_mul(32).ok_or("signer count overflow")?)?;
+    if count(take(4)?)? != 0 {
+        return Err("promoted actors in a public bridge call".into());
+    }
+    take(64)?;
+    let data_len = count(take(4)?)?;
+    bw::BridgeMessage::try_from_slice(take(data_len)?).map_err(|e| format!("current BridgeMessage decoder: {e}"))
 }
 
 fn network(f: Arc<Fixture>, state: Arc<Mutex<NetworkState>>) -> String {
@@ -310,7 +343,7 @@ fn network(f: Arc<Fixture>, state: Arc<Mutex<NetworkState>>) -> String {
         let method = req["method"].as_str().unwrap_or("").to_string();
         let mut st = state.lock().unwrap();
         st.methods.push(method.clone());
-        let sends = st.sent.len();
+        let burn_applied = st.burn_applied;
         let result = match method.as_str() {
             "getLastBlockId" => json!(5),
             "getAccountsNonces" => {
@@ -327,7 +360,24 @@ fn network(f: Arc<Fixture>, state: Arc<Mutex<NetworkState>>) -> String {
                 let wire = req["params"][0].as_str().unwrap().to_string();
                 let tx = base64::engine::general_purpose::STANDARD.decode(&wire).unwrap();
                 assert_eq!(tx[0], 0, "public transaction wire");
+                let decoded = match captured_bridge_message(&wire) {
+                    Ok(message) if message == f.burn_message => message,
+                    Ok(message) => {
+                        return (
+                            200,
+                            json!({ "jsonrpc": "2.0", "id": req["id"], "error": { "code": -32000, "message": format!("unexpected bridge message: {message:?}") } }),
+                        );
+                    }
+                    Err(e) => {
+                        return (
+                            200,
+                            json!({ "jsonrpc": "2.0", "id": req["id"], "error": { "code": -32000, "message": e } }),
+                        );
+                    }
+                };
                 let reply = hash_hex(&sha256(&tx[1..]));
+                st.decoded.push(decoded);
+                st.burn_applied = true;
                 st.sent.push(wire);
                 json!(reply)
             }
@@ -348,10 +398,10 @@ fn network(f: Arc<Fixture>, state: Arc<Mutex<NetworkState>>) -> String {
                 } else if id == f.token {
                     json!(f.token_state)
                 } else if id == f.holder {
-                    json!(if sends >= 2 { &f.holder_after_burn } else { &f.holder_with_claim })
-                } else if id == f.nullifier && sends >= 1 {
-                    json!(f.nullifier_state)
-                } else if id == f.burn && sends >= 2 {
+                    json!(if burn_applied { &f.holder_after_burn } else { &f.holder_before_burn })
+                } else if id == f.nullifier {
+                    Value::Null // B1 refused the claim: decoding another message must not manufacture this state.
+                } else if id == f.burn && burn_applied {
                     json!(f.burn_state)
                 } else {
                     Value::Null
@@ -423,7 +473,7 @@ fn assert_ok(r: &Value) -> &Value {
     r
 }
 
-/// The two captured transactions carry one valid signature over exactly each approved message hash.
+/// The captured burn carries one valid signature over exactly its approved message hash.
 fn assert_signed(wire: &str, approved_hash: &str) {
     let raw = base64::engine::general_purpose::STANDARD.decode(wire).unwrap();
     assert_eq!(raw[0], 0);
@@ -451,7 +501,7 @@ fn terminal_calls_file_drives_the_whole_network_session_offline() {
     let file = include_str!("../examples/network-session.jsonl").replace("$NETWORK", &base).replace("$ETH_RPC", &eth);
     assert!(!file.contains("https://"), "no public endpoint in the replay");
     let replies = wallet_calls(&file);
-    assert_eq!(replies.len(), 18, "one reply per directive in the committed calls file");
+    assert_eq!(replies.len(), 16, "one reply per directive in the committed calls file");
     let r: Vec<Value> = replies.iter().map(|s| value(s)).collect();
 
     assert_error(&r[0], "opened by the Ferrata Bridge view");
@@ -468,7 +518,7 @@ fn terminal_calls_file_drives_the_whole_network_session_offline() {
     assert!(!replies[3].contains(PHRASE), "the phrase is never printed by the open reply");
     assert_error(&r[4], "belongs to the Ferrata Bridge view");
     assert_error(&r[5], "each call must carry its counter and MAC");
-    for (i, r) in r.iter().enumerate().take(16).skip(3) {
+    for (i, r) in r.iter().enumerate().take(14).skip(3) {
         assert_eq!(r["session_account"], ACCOUNT0, "reply {i} names the session's /0");
     }
 
@@ -491,35 +541,25 @@ fn terminal_calls_file_drives_the_whole_network_session_offline() {
     assert_eq!(faucet["result"]["tx_hash"], "faucet-transaction");
     assert_error(&r[8], "no transaction waits for approval");
 
-    let claim = assert_ok(&r[9]);
-    let approval = &claim["result"]["to_approve"];
-    assert_eq!(approval["signed"], false, "the claim is not signed on its approve step");
-    assert_eq!(approval["kind"], "claim");
-    assert_eq!(approval["leaf_index"], 0);
-    assert_eq!(approval["amount"], CLAIM_AMOUNT.to_string());
-    assert!(approval["message_hash"].as_str().unwrap().starts_with("0x"));
+    // Review r1 M1: this server pins B1. The F13 range-free claim is refused before there is an approval,
+    // signature or send; no nullifier/holder state may be manufactured from this request afterwards.
+    assert_error(&r[9], "ferrata_bridge_b1");
+    let claim_error = r[9]["error"].as_str().unwrap();
     assert!(
-        claim["result"].get("tx_hash").is_none() && claim["result"].get("block").is_none(),
-        "approve returns an unsigned approval, never a mined claim"
+        claim_error.contains("fee-schedule range") && claim_error.contains("deploy/testnet/F13-REDEPLOY.md"),
+        "{claim_error}"
     );
+    assert!(claim_error.contains("Nothing was signed or sent"), "{claim_error}");
+    assert!(
+        r[9].get("result").is_none() && r[9]["result"]["to_approve"].is_null(),
+        "no claim approval exists: {}",
+        r[9]
+    );
+    // The driver has completed the file by this point; below, the final capture must contain the later
+    // burn alone. In particular, this refusal produced no claim approval and no captured claim transaction.
+    assert_eq!(state.lock().unwrap().faucet_body, Some(json!({ "account": ACCOUNT0, "public_key": PUBLIC_KEY0 })));
 
-    assert_eq!(assert_ok(&r[10])["result"]["job"]["kind"], "claim");
-    let claim_job = assert_ok(&r[11]);
-    assert_eq!(claim_job["result"]["state"], "settled", "{claim_job}");
-    let claim_done = &claim_job["result"]["result"];
-    assert_eq!(claim_done["settled"], true);
-    assert_eq!(claim_done["block"], 6);
-    assert_eq!(claim_done["approved"]["message_hash"], approval["message_hash"]);
-    assert_eq!(claim_done["balance"], CLAIM_AMOUNT.to_string());
-    assert!(claim_done["tx_bytes"].as_u64().unwrap() > 100);
-    {
-        let st = state.lock().unwrap();
-        assert_eq!(st.sent.len(), 2, "the two confirms are the only LEZ sends in the replay");
-        assert_signed(&st.sent[0], claim_done["approved"]["message_hash"].as_str().unwrap());
-        assert_eq!(st.faucet_body, Some(json!({ "account": ACCOUNT0, "public_key": PUBLIC_KEY0 })));
-    }
-
-    let burn = assert_ok(&r[12]);
+    let burn = assert_ok(&r[10]);
     let burn_approval = &burn["result"]["to_approve"];
     assert_eq!(burn_approval["signed"], false);
     assert_eq!(burn_approval["kind"], "burn");
@@ -530,19 +570,26 @@ fn terminal_calls_file_drives_the_whole_network_session_offline() {
         burn["result"].get("tx_hash").is_none() && burn["result"].get("block").is_none(),
         "the public burn's approve step sends nothing"
     );
-    assert_eq!(assert_ok(&r[13])["result"]["job"]["kind"], "burn");
-    let burn_job = assert_ok(&r[14]);
+    assert_eq!(assert_ok(&r[11])["result"]["job"]["kind"], "burn");
+    let burn_job = assert_ok(&r[12]);
     assert_eq!(burn_job["result"]["state"], "settled", "{burn_job}");
     let burn_done = &burn_job["result"]["result"];
     assert_eq!(burn_done["approved"]["message_hash"], burn_approval["message_hash"]);
     assert_eq!(burn_done["balance"], (CLAIM_AMOUNT - BURN_AMOUNT).to_string());
     {
         let st = state.lock().unwrap();
-        assert_eq!(st.sent.len(), 2, "one claim and one burn, no other LEZ transaction");
-        assert_signed(&st.sent[1], burn_done["approved"]["message_hash"].as_str().unwrap());
+        assert_eq!(st.sent.len(), 1, "only the burn is sent; the incompatible claim was not");
+        assert!(st.decoded.iter().all(|m| matches!(m, bw::BridgeMessage::Burn { .. })), "no claim was signed or sent");
+        assert_signed(&st.sent[0], burn_done["approved"]["message_hash"].as_str().unwrap());
+        assert_eq!(captured_bridge_message(&st.sent[0]).unwrap(), fixture.burn_message);
+        assert_eq!(
+            st.decoded.as_slice(),
+            &[fixture.burn_message.clone()],
+            "state followed the decoded Burn, not a send counter"
+        );
     }
 
-    let release = assert_ok(&r[15]);
+    let release = assert_ok(&r[13]);
     assert_eq!(release["result"]["handoff"], true);
     assert_eq!(release["result"]["settled"], false);
     assert_eq!(release["result"]["released"], false);
@@ -550,8 +597,8 @@ fn terminal_calls_file_drives_the_whole_network_session_offline() {
     assert_eq!(release["result"]["amount"], BURN_AMOUNT.to_string());
     assert_eq!(release["result"]["recipient"], format!("0x{DEPOSITOR_HEX}"));
     assert!(release["result"]["what"].as_str().unwrap().contains("ferrata release --burn 0"));
-    assert_eq!(assert_ok(&r[16])["result"]["keys"], "wiped");
-    assert_error(&r[17], "no wallet session");
+    assert_eq!(assert_ok(&r[14])["result"]["keys"], "wiped");
+    assert_error(&r[15], "no wallet session");
 
     // A second open exercises the same client as the file: a genuine envelope succeeds once, its exact replay is
     // refused, a forged tag and another caller cannot replace it, and a fresh counter works afterwards.

@@ -193,6 +193,175 @@ pub fn build_claim(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ferrata_bridge_core::inbound::{commitment, deposit_id, nullifier};
+
+    const CHAIN_ID: u64 = 11_155_111;
+    const AMOUNT: u128 = 1_000;
+    const RELAY_FEE: u128 = 7;
+
+    fn plan_context() -> (Context, OwnedDeposit, RootState, TokenState) {
+        let program = AccountId::new([0x10; 32]);
+        let cid = [0x20; 32];
+        let vault = [0x30; 20];
+        let ctx = Context { program, cid, chain_id: CHAIN_ID, vault };
+        let kind = DestKind::Public;
+        let dest = [0x40; 32];
+        let s = [0x50; 32];
+        let depositor = [0x60; 20];
+        let token = [0x70; 20];
+        let mut amount = [0u8; 32];
+        amount[16..].copy_from_slice(&AMOUNT.to_be_bytes());
+        let commitment = commitment(&s, kind, &dest);
+        let leaf = deposit_leaf(0, &depositor, &token, &amount, &commitment);
+        let deposit = VaultDeposit { depositor, j: 0, leaf_index: 0, token, amount, commitment };
+        let nullifier = nullifier(&s, &deposit_id(&ferrata_bridge_core::chain_id_u256(CHAIN_ID), &vault, 0, &leaf));
+        let owned = OwnedDeposit { deposit, s, kind, account_index: 0, dest, leaf, nullifier };
+        let root = RootState {
+            config_id: cid,
+            evm_chain_id: CHAIN_ID,
+            vault,
+            leaf_count: 1,
+            root: Tree::from_leaves(vec![leaf]).unwrap().root(),
+            record_slot: 8,
+            block_number: 9,
+        };
+        let unlimited = bw::CapParams { capacity: u128::MAX, refill_per_second: u128::MAX };
+        let controls = bw::Controls {
+            admin: [0x81; 32],
+            freeze_authority: [0x82; 32],
+            fee_recipient: [0x83; 32],
+            floor: bw::CapParams { capacity: 1, refill_per_second: 1 },
+            token_cap: unlimited,
+            global_cap: unlimited,
+        };
+        let token = TokenState {
+            config_id: cid,
+            evm_chain_id: CHAIN_ID,
+            vault,
+            attestation: AccountId::new([0x84; 32]),
+            instance_id: [0x85; 32],
+            entry: bw::TokenEntry {
+                token: owned.deposit.token,
+                lez_definition: [0x86; 32],
+                decimals: 18,
+                lez_unit: 1,
+                unit_weight: 1,
+                denominations: vec![AMOUNT],
+                relay_fees: vec![RELAY_FEE],
+            },
+            schedules: vec![],
+            known_until: 1,
+            controls,
+            gate: bw::Gate::new(unlimited, 0),
+            pending: None,
+            delisted: false,
+            listing_slot: 0,
+        };
+        (ctx, owned, root, token)
+    }
+
+    fn pda(actor: crate::Actor, seed: crate::PdaSeed) -> Mention {
+        Mention::Pda { actor, seed }
+    }
+
+    /// Review r1 M3: pin every field of complete plans, especially the exact ordered account
+    /// mentions. The custom-relayer cases fail if recipients are reduced to `fee_recipient`.
+    #[test]
+    fn complete_claim_plans_pin_accounts_root_and_message_bytes() {
+        for (kind, private, custom_relayer) in [
+            (DestKind::Public, false, false),
+            (DestKind::Public, false, true),
+            (DestKind::Public, true, false),
+            (DestKind::Public, true, true),
+            (DestKind::Private, true, false),
+            (DestKind::Private, true, true),
+        ] {
+            let (ctx, mut owned, root, token) = plan_context();
+            owned.kind = kind;
+            owned.dest = if kind == DestKind::Public { [0x40; 32] } else { [0x41; 32] };
+            owned.deposit.commitment = commitment(&owned.s, kind, &owned.dest);
+            owned.leaf = deposit_leaf(
+                0,
+                &owned.deposit.depositor,
+                &owned.deposit.token,
+                &owned.deposit.amount,
+                &owned.deposit.commitment,
+            );
+            owned.nullifier = nullifier(
+                &owned.s,
+                &deposit_id(&ferrata_bridge_core::chain_id_u256(CHAIN_ID), &ctx.vault, 0, &owned.leaf),
+            );
+            let tree = Tree::from_leaves(vec![owned.leaf]).unwrap();
+            let root = RootState { root: tree.root(), ..root };
+            let path = tree.path(0).unwrap();
+            let inputs = ClaimInputs { leaves: &[owned.leaf], leaf_count: 1, root: &root, token: &token, spent: false };
+            let relayer = custom_relayer.then_some([0x90; 32]);
+            let prover = (private && kind == DestKind::Public).then(|| AccountId::new([0x91; 32]));
+            let plan = build_claim(&ctx, &owned, &inputs, private, relayer, prover).unwrap();
+
+            let root_actor = root_actor(ctx.program, &ctx.cid, 1);
+            let n_actor = nullifier_actor(ctx.program, &ctx.cid, CHAIN_ID, &ctx.vault, &owned.nullifier);
+            let root_account = if kind == DestKind::Private {
+                AccountId::new(owned.dest)
+            } else {
+                prover.unwrap_or(AccountId::new(owned.dest))
+            };
+            let mut expected_mentions = Vec::new();
+            if private {
+                expected_mentions.push(Mention::PrivateSelf(own_actor(ctx.program, root_account)));
+            }
+            expected_mentions.extend([
+                pda(root_actor, root_seed(&ctx.cid, 1)),
+                pda(
+                    token_actor(ctx.program, &ctx.cid, &owned.deposit.token),
+                    token_seed(&ctx.cid, &owned.deposit.token),
+                ),
+                pda(config_actor(ctx.program, &ctx.cid), config_seed(&ctx.cid)),
+                pda(n_actor, nullifier_seed(&ctx.cid, CHAIN_ID, &ctx.vault, &owned.nullifier)),
+            ]);
+            let fee = AccountId::new(token.controls.fee_recipient);
+            let paid = relayer.map(AccountId::new).unwrap_or(fee);
+            let destinations =
+                (kind == DestKind::Public).then_some(AccountId::new(owned.dest)).into_iter().chain([fee, paid]);
+            for account in destinations {
+                let actor = holder_actor(ctx.program, &ctx.cid, account);
+                if !expected_mentions.iter().any(|m| m.actor() == actor) {
+                    expected_mentions.push(pda(actor, holder_seed(&ctx.cid, account.value())));
+                }
+            }
+            assert_eq!(
+                plan.mentions, expected_mentions,
+                "mentions: {kind:?}, private={private}, custom={custom_relayer}"
+            );
+            assert_eq!(plan.root_index, 0);
+
+            let witness = bw::ClaimWitness {
+                depositor: owned.deposit.depositor,
+                token: owned.deposit.token,
+                amount: owned.deposit.amount,
+                leaf_index: 0,
+                path: path.siblings.to_vec(),
+                s: owned.s,
+                kind: kind as u8,
+                dest: owned.dest,
+            };
+            let expected_message = if private {
+                BridgeMessage::ClaimPrivately { config_id: ctx.cid, leaf_count: 1, witness, relayer }
+            } else {
+                BridgeMessage::Claim { config_id: ctx.cid, leaf_count: 1, witness, relayer }
+            };
+            assert_eq!(plan.message, expected_message);
+            assert_eq!(borsh::to_vec(&plan.message).unwrap(), borsh::to_vec(&expected_message).unwrap());
+            assert_eq!(
+                plan.what,
+                format!("{} claim of leaf 0 under root(cid, 1)", if private { "private" } else { "plaintext" })
+            );
+            assert_eq!(plan.leaf_count, 1);
+            assert_eq!(plan.path, path);
+            assert_eq!(plan.nullifier, owned.nullifier);
+            assert_eq!(plan.relay_fee, RELAY_FEE);
+        }
+    }
 
     #[test]
     fn the_newest_covering_import() {
