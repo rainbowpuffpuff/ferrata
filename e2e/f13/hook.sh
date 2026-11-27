@@ -1,31 +1,50 @@
 #!/usr/bin/env bash
-# RFP-022 F.13 end to end: the mint fee taken on Ethereum at deposit (docs/decisions/0046-*). The bridge round trip of
-# scripts/ci/sequencer-roundtrip-hook.sh (its tools, stand-ins and records; read its header first), with two deposits
-# under two fee schedules in between: schedule 0 (no mint fee) and schedule 1 (a mint fee announced by the admin, in
-# force after the vault's seven days, which anvil's clock passes). Run by lez/live/run.sh's phase `hook` while LEZ's
-# standalone sequencer runs (FERRATA_CI_RT_HOOK=e2e/f13/hook.sh, through e2e/rc3-roundtrip/run.sh for LEZ v0.4.0-rc3).
+# RFP-022 F.13 end to end: the protocol fees charged on LEZ in the wrapped token (docs/decisions/0048-*). The bridge
+# round trip of scripts/ci/sequencer-roundtrip-hook.sh (its tools, stand-ins and records; read its header first), with
+# two deposits under two fee schedules in between: schedule 0 (no protocol fee) and schedule 1 (a mint fee and a burn
+# fee announced by the admin, in force after the vault's seven days, which anvil's clock passes). Run by
+# lez/live/run.sh's phase `hook` while LEZ's standalone sequencer runs (FERRATA_CI_RT_HOOK=e2e/f13/hook.sh, through
+# e2e/rc3-roundtrip/run.sh for LEZ v0.4.0-rc3).
 # Steps (one line each in steps.tsv; the first failure stops the run):
 #   fork, zone: programs and the stand-in instance, vault deployed on the fork      as the CI hook (the bridge program
-#                   must be docs/image-ids.md's FERRATA_F13_BRIDGE_ROW, default ferrata_bridge_f13)
+#                   must be docs/image-ids.md's FERRATA_F13_BRIDGE_ROW, default ferrata_bridge_lezfee)
 #   deposit under schedule 0
 #                   `ferrata deposit` of one denomination to the user's public /0: the vault's escrow grows by the
-#                   denomination and the relay fee, the fee recipient's credit (owed) by nothing (schedule 0 has no
-#                   mint fee); the vault captured at that block
-#   fee change      the admin announces schedule 1 (a mint fee of 0.5% of each denomination, the same burn and checkpoint
-#                   fees), anvil's clock passes the seven days, applyFees puts it in force
+#                   denomination and the relay fee, its LEZ fee total (lezFees) and the Ethereum fee recipient's credit
+#                   (owed) by nothing; the vault captured at that block
+#   fee change      the admin announces schedule 1 (a mint fee of 0.5% and a burn fee of 0.2% of each denomination, the
+#                   same checkpoint fees), anvil's clock passes the seven days, applyFees puts it in force
 #   deposit under schedule 1
-#                   `ferrata deposit` again (the tool prices it under schedule 1): the escrow grows by the denomination
-#                   and the relay fee again, and the fee recipient's credit by exactly schedule 1's mint fee, at the
-#                   deposit; the vault captured at that block
+#                   `ferrata deposit` again (the tool prices it under schedule 1): the escrow grows by the denomination,
+#                   the relay fee and the mint fee, lezFees by exactly the mint fee (LezFeesAccrued), owed by nothing;
+#                   the vault captured at that block
 #   operator import crown-driver crown-b --operator-only over both captures: Init, Register ETH, ImportRoot n=1, then
-#                   ImportRoot n=2 (schedule 1 is not imported: no claim reads it)
+#                   ImportRoot n=2 (schedule 1 is not imported: neither claims nor collections read it)
 #   fees            seqnet-fund --public-only (as the CI hook)
 #   claim of leaf 0 (schedule 0), claim of leaf 1 (schedule 1)
 #                   `ferrata claim --plaintext --leaf N --relayer <the user's public /1>`: each claim mints exactly the
 #                   denomination to /0 and the registered relay fee to /1, whatever the deposit's schedule; neither
-#                   claim names a schedule (the message has no such field)
-#   claim again refused, burn, checkpoint journal, checkpoint accepted, release journal, release paid, release again
-#   refused         as the CI hook (one denomination burnt and released)
+#                   claim names a schedule or a fee (the message has no such field)
+#   mint fees collected
+#                   `ferrata-relayer collect-fees`, sent from the user's own LEZ account (anyone may): CollectFees
+#                   attests the vault's lezFees under the newest record (capture 2's block) and mints it, in the wrapped
+#                   token, to the configuration's fee recipient on LEZ: its holding grows by schedule 1's mint fee
+#   nothing more to collect
+#                   the same command again: nothing sent (the total under that record is minted already)
+#   claim again refused, burn, checkpoint journal, checkpoint accepted, release journal
+#                   as the CI hook (one denomination burnt)
+#   release paid    the release under schedule 1 pays the fresh address the denomination less the relay, burn and
+#                   checkpoint fees; the burn fee stays in escrow and lezFees grows by it; owed grows by the checkpoint
+#                   fee only (the prover's)
+#   record after the release
+#                   the vault captured after the release; crown-driver crown-b --skip-stages 2 --updates-only yes: the
+#                   stand-in committee finalizes that block (a record, no bridge call)
+#   burn fee collected
+#                   `ferrata-relayer collect-fees` again: the fee recipient's holding grows by schedule 1's burn fee
+#   escrow backs LEZ
+#                   every deposit claimed, the burn released, every fee collected: the vault's ETH escrow equals the
+#                   wrapped ETH on LEZ (the user's /0 and /1 and the fee recipient)
+#   release again refused
 # Records in CI_RT_OUT as the CI hook's, and in facts.json the F.13 facts (fees.*).
 set -uo pipefail
 REPO="$CI_RT_REPO"; R="$CI_RT_OUT"; W="$CI_RT_WORK"; B="$CI_RT_TOOLS"; SEQ="$ZONE_RPC"; SEPOLIA_RPCS="$CI_RT_SEPOLIA_RPCS"
@@ -145,7 +164,7 @@ D=(--program-bin "$B/ferrata_lez.bin" --bridge-bin "$B/ferrata_bridge.bin" --rpc
 SA="$W/session-a.json"; cp "$SA" "$R/lez/session-a.json"
 ATTEST="$(jq -r .attestation.account "$SA")"; BRIDGE="$(jq -r .bridge.header "$SA")"
 [ "$(jq -r .attestation.imageId "$SA")" = "$(docs_id ferrata_lez)" ] || die "the attestation program is not docs/image-ids.md's ferrata_lez"
-BRIDGE_ROW="${FERRATA_F13_BRIDGE_ROW:-ferrata_bridge_f13}"
+BRIDGE_ROW="${FERRATA_F13_BRIDGE_ROW:-ferrata_bridge_lezfee}"
 [ -n "$(docs_id "$BRIDGE_ROW")" ] || die "docs/image-ids.md has no row $BRIDGE_ROW"
 [ "$(jq -r .bridge.imageId "$SA")" = "$(docs_id "$BRIDGE_ROW")" ] || die "the bridge program is not docs/image-ids.md's $BRIDGE_ROW"
 ok "attestation program $(jq -r .attestation.imageId "$SA" | cut -c1-12)… and bridge program $(jq -r .bridge.imageId "$SA" | cut -c1-12)… deployed through LEZ's loader; stand-in instance $(jq -r .instance.id "$SA" | cut -c1-12)… (bootstrap slot $STAND_IN_SLOT); zone tip $(jq -r .tip.id "$SA")"
@@ -215,6 +234,11 @@ RELAY0="$(call 'fees(address,uint256,uint8)(uint256,uint256,uint256,uint256)' "$
 [ -n "$(int "$RELAY0")" ] && [ "$RELAY0" -gt 0 ] || die "denomination 0's relay fee ($RELAY0) is not a positive number"
 owed_fr() { call 'owed(address,address)(uint256)' "$FEE_RECIPIENT" "$ETH" | awk '{print $1}'; }
 escrow() { call 'escrowed(address)(uint256)' "$ETH" | awk '{print $1}'; }
+lez_fees() { call 'lezFees(address)(uint256)' "$ETH" | awk '{print $1}'; }
+# log_sum TX EVENT-SIGNATURE: the sum of the data words of TX's logs of that event (one uint256 each, or the first)
+log_sum() {
+  cast receipt "$1" --rpc-url "$RPC" --json | python3 -I -c 'import json, sys; r = json.load(sys.stdin); t = sys.argv[1].lower(); print(sum(int(l["data"][2:66], 16) for l in r["logs"] if l["topics"] and l["topics"][0].lower() == t))' "$(cast keccak "$2")"
+}
 capture() {
   local slots s; slots="$("$B/crown-driver" capture-slots | jq -r '.slots[].slot')"; local sargs=()
   for s in $slots; do sargs+=(--slot "$s"); done
@@ -239,21 +263,24 @@ PUB1="$(awk '/^LEZ public accounts/ {f = 1; next} /^LEZ private accounts/ {f = 0
 [[ "$PUB1" =~ ^0x[0-9a-f]{64}$ ]] || die "keys printed no public /1 (user/01-keys.txt)"
 u 02-status "${FE[@]}" status || die "status"
 [ "$(call 'feeState(address)(uint64,uint64)' "$ETH" | head -n 1)" = 0 ] || die "ETH is not under fee schedule 0"
-OWED_0="$(owed_fr)"; ESC_0="$(escrow)"
+OWED_0="$(owed_fr)"; ESC_0="$(escrow)"; LF_0="$(lez_fees)"
+[ "$LF_0" = 0 ] || die "the vault's lezFees is $LF_0 before any deposit"
 DEPOSIT_TX="$(deposit_step 1 04-deposit)" || die "the deposit under schedule 0"
-OWED_1="$(owed_fr)"; ESC_1="$(escrow)"
+OWED_1="$(owed_fr)"; ESC_1="$(escrow)"; LF_1="$(lez_fees)"
 [ "$(( ESC_1 - ESC_0 ))" = "$(( DENOM + RELAY0 ))" ] || die "the escrow grew by $(( ESC_1 - ESC_0 )), not the denomination and the relay fee ($(( DENOM + RELAY0 )))"
-[ "$OWED_1" = "$OWED_0" ] || die "the fee recipient was credited $(( OWED_1 - OWED_0 )) at a deposit under schedule 0 (no mint fee)"
+[ "$OWED_1" = "$OWED_0" ] || die "the fee recipient was credited $(( OWED_1 - OWED_0 )) on Ethereum at a deposit under schedule 0"
+[ "$LF_1" = "$LF_0" ] || die "lezFees grew by $(( LF_1 - LF_0 )) at a deposit under schedule 0 (no mint fee)"
 capture capture-1
 u 05-scan "${FE[@]}" scan || die "scan"
-ok "Ethereum tx $DEPOSIT_TX: 0.001 ETH to the user's public /0; escrow +$(( ESC_1 - ESC_0 )) wei (the denomination and the relay fee $RELAY0), the fee recipient's credit +0; the vault captured"
+ok "Ethereum tx $DEPOSIT_TX: 0.001 ETH to the user's public /0; escrow +$(( ESC_1 - ESC_0 )) wei (the denomination and the relay fee $RELAY0), lezFees +0, the Ethereum fee recipient's credit +0; the vault captured"
 
 begin "fee change"
 read -r -a CPF <<< "$(for i in 0 1 2; do call 'fees(address,uint256,uint8)(uint256,uint256,uint256,uint256)' "$ETH" 0 "$i" | sed -n 4p | awk '{print $1}'; done | tr '\n' ' ')"
 read -r -a BF <<< "$(for i in 0 1 2; do call 'fees(address,uint256,uint8)(uint256,uint256,uint256,uint256)' "$ETH" 0 "$i" | sed -n 3p | awk '{print $1}'; done | tr '\n' ' ')"
 MINT=(5000000000000 50000000000000 500000000000000)   # 0.5% of 0.001, 0.01 and 0.1 ETH: whole LEZ units, under the 1% ceiling
+BURN=(2000000000000 20000000000000 200000000000000)   # 0.2%: whole LEZ units too (ADR 0048: burn fees are minted on LEZ)
 cast send "$VAULT" 'announceFees(address,uint256[],uint256[],uint256[])' "$ETH" "[${MINT[0]},${MINT[1]},${MINT[2]}]" \
-  "[${BF[0]},${BF[1]},${BF[2]}]" "[${CPF[0]},${CPF[1]},${CPF[2]}]" --rpc-url "$RPC" --unlocked --from "$DEPLOYER" > "$W/announce.txt" 2>&1 \
+  "[${BURN[0]},${BURN[1]},${BURN[2]}]" "[${CPF[0]},${CPF[1]},${CPF[2]}]" --rpc-url "$RPC" --unlocked --from "$DEPLOYER" > "$W/announce.txt" 2>&1 \
   || { cat "$W/announce.txt"; die "announceFees"; }
 PENDING_AT="$(call 'feeState(address)(uint64,uint64)' "$ETH" | sed -n 2p | awk '{print $1}')"
 [ -n "$(int "$PENDING_AT")" ] && [ "$PENDING_AT" -gt "$(eth_now)" ] || die "no pending fee schedule after announceFees ($PENDING_AT)"
@@ -262,20 +289,24 @@ cast send "$VAULT" 'applyFees(address)' "$ETH" --rpc-url "$RPC" --unlocked --fro
 [ "$(call 'feeState(address)(uint64,uint64)' "$ETH" | head -n 1)" = 1 ] || die "fee schedule 1 is not in force after applyFees"
 M1="$(call 'fees(address,uint256,uint8)(uint256,uint256,uint256,uint256)' "$ETH" 1 0 | sed -n 1p | awk '{print $1}')"
 R1="$(call 'fees(address,uint256,uint8)(uint256,uint256,uint256,uint256)' "$ETH" 1 0 | sed -n 2p | awk '{print $1}')"
-[ "$M1" = "${MINT[0]}" ] && [ "$R1" = "$RELAY0" ] || die "schedule 1 of denomination 0: mint fee $M1 (want ${MINT[0]}), relay fee $R1 (want $RELAY0)"
-ok "announceFees (mint fees ${MINT[*]} wei; burn ${BF[*]}, checkpoint ${CPF[*]} unchanged); the seven days passed on the fork's clock; schedule 1 in force: denomination 0 pays mint fee $M1 and relay fee $R1"
+B1="$(call 'fees(address,uint256,uint8)(uint256,uint256,uint256,uint256)' "$ETH" 1 0 | sed -n 3p | awk '{print $1}')"
+CP1="$(call 'fees(address,uint256,uint8)(uint256,uint256,uint256,uint256)' "$ETH" 1 0 | sed -n 4p | awk '{print $1}')"
+[ "$M1" = "${MINT[0]}" ] && [ "$R1" = "$RELAY0" ] && [ "$B1" = "${BURN[0]}" ] || die "schedule 1 of denomination 0: mint fee $M1 (want ${MINT[0]}), relay fee $R1 (want $RELAY0), burn fee $B1 (want ${BURN[0]})"
+ok "announceFees (mint fees ${MINT[*]} wei, burn fees ${BURN[*]} wei (schedule 0: ${BF[*]}), checkpoint ${CPF[*]} unchanged); the seven days passed on the fork's clock; schedule 1 in force: denomination 0 pays mint fee $M1, relay fee $R1, burn fee $B1 at release"
 
 begin "deposit under schedule 1"
 DEPOSIT2_TX="$(deposit_step 2 06-deposit-2)" || die "the deposit under schedule 1"
 grep -q -E "mint fee|$M1" "$R/user/06-deposit-2.txt" || say "note: the deposit's output names no mint fee"
-OWED_2="$(owed_fr)"; ESC_2="$(escrow)"
-[ "$(( ESC_2 - ESC_1 ))" = "$(( DENOM + RELAY0 ))" ] || die "the escrow grew by $(( ESC_2 - ESC_1 )) at the deposit under schedule 1, not the denomination and the relay fee ($(( DENOM + RELAY0 )))"
-[ "$(( OWED_2 - OWED_1 ))" = "$M1" ] || die "the fee recipient was credited $(( OWED_2 - OWED_1 )) at the deposit under schedule 1, not its mint fee $M1"
-oc="$(cast keccak 'OwedCredited(address,address,uint256)')"
-CREDIT_EV="$(cast receipt "$DEPOSIT2_TX" --rpc-url "$RPC" --json | python3 -I -c 'import json, sys; r = json.load(sys.stdin); t = sys.argv[1].lower(); print(sum(int(l["data"], 16) for l in r["logs"] if l["topics"] and l["topics"][0].lower() == t))' "$oc")"
-[ "$CREDIT_EV" = "$M1" ] || die "the deposit's OwedCredited events credit $CREDIT_EV, not the mint fee $M1"
+OWED_2="$(owed_fr)"; ESC_2="$(escrow)"; LF_2="$(lez_fees)"
+[ "$(( ESC_2 - ESC_1 ))" = "$(( DENOM + RELAY0 + M1 ))" ] || die "the escrow grew by $(( ESC_2 - ESC_1 )) at the deposit under schedule 1, not the denomination, the relay fee and the mint fee ($(( DENOM + RELAY0 + M1 )))"
+[ "$(( LF_2 - LF_1 ))" = "$M1" ] || die "lezFees grew by $(( LF_2 - LF_1 )) at the deposit under schedule 1, not its mint fee $M1"
+[ "$OWED_2" = "$OWED_1" ] || die "the Ethereum fee recipient was credited $(( OWED_2 - OWED_1 )) at the deposit (ADR 0048: nothing on Ethereum)"
+CREDIT_EV="$(log_sum "$DEPOSIT2_TX" 'OwedCredited(address,address,uint256)')"
+ACCRUED_EV="$(log_sum "$DEPOSIT2_TX" 'LezFeesAccrued(address,uint256,uint256)')"
+[ "$CREDIT_EV" = 0 ] || die "the deposit's OwedCredited events credit $CREDIT_EV (ADR 0048: none)"
+[ "$ACCRUED_EV" = "$M1" ] || die "the deposit's LezFeesAccrued events accrue $ACCRUED_EV, not the mint fee $M1"
 capture capture-2
-ok "Ethereum tx $DEPOSIT2_TX: escrow +$(( ESC_2 - ESC_1 )) wei (the denomination and the relay fee, as under schedule 0); the fee recipient $FEE_RECIPIENT credited $M1 wei at the deposit (OwedCredited); the vault captured"
+ok "Ethereum tx $DEPOSIT2_TX: escrow +$(( ESC_2 - ESC_1 )) wei (the denomination, the relay fee and the mint fee $M1); lezFees +$(( LF_2 - LF_1 )) (LezFeesAccrued $ACCRUED_EV), the Ethereum fee recipient $FEE_RECIPIENT credited nothing; the vault captured"
 
 # ---- the operator's import -----------------------------------------------------------------------------------------
 begin "operator import"
@@ -339,6 +370,31 @@ for f in 08-claim 08c-claim-2; do
   if grep -q -i -E 'schedule|range' "$R/user/$f.txt"; then say "note: user/$f.txt mentions a schedule or range: $(grep -i -m1 -E 'schedule|range' "$R/user/$f.txt" | cut -c1-160)"; fi
 done
 ok "LEZ tx $CLAIM2_TX applied: /0 +$(( HOLD_CLAIM2 - HOLD_CLAIM )) (the denomination), the relayer /1 +$(( RELAYED_1 - RELAYED_0 )) (the relay fee): the same amounts as the claim under schedule 0"
+
+# collect_fees NAME: `ferrata-relayer collect-fees` of ETH, sent from the user's own LEZ wallet and public /0 (anyone may
+# send it); its JSON lines in eth/NAME.jsonl; prints the last line's event
+RLZ=("$B/ferrata-relayer" --eth-rpc "$RPC" --vault "$VAULT" --chain-id "$CHAIN" --unlocked "$RELAYER" --from-block "$FROM"
+     --state "$W/relayer-fees" --sequencer "$SEQ" --seed "$U/seed.txt" --lez-wallet "$U/lez-wallet" --lez-password-file "$U/lez.pass"
+     --lez-account "$PUB0" --bridge-account "$BRIDGE")
+collect_fees() {
+  "${RLZ[@]}" collect-fees --token "$ETH" > "$R/eth/$1.jsonl" 2> "$W/$1.err" || { tail -n 10 "$W/$1.err"; die "ferrata-relayer collect-fees"; }
+  grep -E '^\{' "$R/eth/$1.jsonl" | tail -n 1 | jq -r .event
+}
+last() { grep -E '^\{' "$R/eth/$1.jsonl" | tail -n 1 | jq -r --arg k "$2" '.[$k] // empty'; }
+
+begin "mint fees collected"
+[ "$(collect_fees 17-collect-mint)" = fees-collected ] || die "the collection was not applied ($(tail -n 1 "$R/eth/17-collect-mint.jsonl" | cut -c1-300))"
+[ "$(last 17-collect-mint vaultTotal)" = "$LF_2" ] || die "the collection read the vault's total $(last 17-collect-mint vaultTotal), not lezFees at capture 2 ($LF_2)"
+[ "$(last 17-collect-mint amount)" = "$M1" ] && [ "$(last 17-collect-mint collectedBefore)" = 0 ] || die "the collection minted $(last 17-collect-mint amount) after $(last 17-collect-mint collectedBefore), not the mint fee $M1 after 0"
+FR_LEZ="$(last 17-collect-mint feeRecipient)"; FR_1="$(last 17-collect-mint feeRecipientHoldingAfter)"
+[ "$(last 17-collect-mint feeRecipientHoldingBefore)" = 0 ] && [ "$FR_1" = "$M1" ] || die "the fee recipient's LEZ holding went $(last 17-collect-mint feeRecipientHoldingBefore) -> $FR_1, not 0 -> $M1"
+COLLECT1_TX="$(last 17-collect-mint tx)"
+ok "LEZ tx $COLLECT1_TX (CollectFees, sent from the user's public /0) applied under header(id, $(last 17-collect-mint recordSlot)) of block $(last 17-collect-mint block): the vault's lezFees $LF_2 attested, $M1 minted to the fee recipient $FR_LEZ on LEZ (holding 0 -> $FR_1)"
+
+begin "nothing more to collect"
+[ "$(collect_fees 18-collect-again)" = fee-collection-waiting ] || die "a second collection under the same record was not refused before sending ($(tail -n 1 "$R/eth/18-collect-again.jsonl" | cut -c1-300))"
+last 18-collect-again reason | grep -q 'minted already' || die "the second collection waits for another reason: $(last 18-collect-again reason)"
+ok "nothing sent: $(last 18-collect-again reason | cut -c1-200)"
 
 begin "claim again refused"
 if u 10-claim-again "${F[@]}" "${C[@]}" --leaf 0 --send --yes; then die "a second claim of leaf 0 was not refused"; fi
@@ -411,6 +467,7 @@ rdig="0x$(python3 -I -c 'import hashlib, sys; print(hashlib.sha256(bytes.fromhex
 cast send "$MOCK" "accept(bytes32,bytes32)" "$REL_ID" "$rdig" --rpc-url "$RPC" --unlocked --from "$DEPLOYER" > "$W/accept-release.txt" 2>&1 \
   || { cat "$W/accept-release.txt"; die "the mock verifier's accept (release)"; }
 cp "$W/release-job.json" "$W/relayer-inbox/release.json"
+ESC_REL0="$(escrow)"
 relayer_round
 topic="$(cast keccak 'Release(bytes32,address,address,uint256,address,uint256,bytes32)')"
 ev="$(cast logs --rpc-url "$RPC" --address "$VAULT" --from-block "$FROM" "$topic" --json)"
@@ -420,14 +477,46 @@ words="$(echo "$ev" | jq -r '.[0].data' | sed 's/^0x//')"
 AMOUNT="$(python3 -I -c 'import sys; d = sys.argv[1]; print(int(d[0:64], 16))' "$words")"
 RELAY_FEE="$(python3 -I -c 'import sys; d = sys.argv[1]; print(int(d[128:192], 16))' "$words")"
 FRESH_BAL="$(cast balance "$FRESH" --rpc-url "$RPC")"
-# The event's amount is the burn's whole denomination; the vault pays the recipient that less the relay fee and the
-# fees it credits in the same transaction (the denomination's checkpoint fee, to the checkpoint's prover: OwedCredited).
+# The event's amount is the burn's whole denomination; the vault pays the recipient that less the relay fee, the
+# checkpoint fee it credits to the checkpoint's prover (OwedCredited) and the burn fee it keeps in escrow for the fee
+# recipient on LEZ (LezFeesAccrued; ADR 0048).
 [ "$AMOUNT" = "$DENOM" ] || die "the Release event's amount $AMOUNT is not the burnt $DENOM"
-oc="$(cast keccak 'OwedCredited(address,address,uint256)')"
-CREDITED="$(cast receipt "$RELEASE_TX" --rpc-url "$RPC" --json | python3 -I -c 'import json, sys; r = json.load(sys.stdin); t = sys.argv[1].lower(); print(sum(int(l["data"], 16) for l in r["logs"] if l["topics"] and l["topics"][0].lower() == t))' "$oc")"
-[ "$(( FRESH_BAL + RELAY_FEE + CREDITED ))" = "$AMOUNT" ] || die "the fresh address holds $FRESH_BAL wei; with the relay fee $RELAY_FEE and the credited fees $CREDITED that is not the Release event's $AMOUNT"
+CREDITED="$(log_sum "$RELEASE_TX" 'OwedCredited(address,address,uint256)')"
+ACCRUED_R="$(log_sum "$RELEASE_TX" 'LezFeesAccrued(address,uint256,uint256)')"
+LF_R="$(lez_fees)"; ESC_R="$(escrow)"; OWED_R="$(owed_fr)"
+[ "$CREDITED" = "$CP1" ] || die "the release credited $CREDITED on Ethereum, not the checkpoint fee $CP1 alone"
+[ "$ACCRUED_R" = "$B1" ] && [ "$(( LF_R - LF_2 ))" = "$B1" ] || die "the release accrued $ACCRUED_R (lezFees +$(( LF_R - LF_2 ))), not the burn fee $B1"
+[ "$(( ESC_REL0 - ESC_R ))" = "$(( DENOM - B1 ))" ] || die "the escrow fell by $(( ESC_REL0 - ESC_R )) at the release, not the denomination less the burn fee ($(( DENOM - B1 )))"
+[ "$OWED_R" = "$OWED_2" ] || die "the Ethereum fee recipient was credited $(( OWED_R - OWED_2 )) at the release (ADR 0048: nothing)"
+[ "$(( FRESH_BAL + RELAY_FEE + CREDITED + B1 ))" = "$AMOUNT" ] || die "the fresh address holds $FRESH_BAL wei; with the relay fee $RELAY_FEE, the checkpoint fee $CREDITED and the burn fee $B1 that is not the Release event's $AMOUNT"
 [ "$FRESH_BAL" -gt 0 ] || die "the fresh address received nothing"
-ok "Ethereum tx $RELEASE_TX: the Release event pays out the burnt $AMOUNT wei: $FRESH_BAL to the fresh address, $RELAY_FEE relay fee to the relayer, $CREDITED credited (OwedCredited: the checkpoint fee)"
+ok "Ethereum tx $RELEASE_TX: the Release event pays out the burnt $AMOUNT wei: $FRESH_BAL to the fresh address, $RELAY_FEE relay fee to the relayer, $CREDITED credited (OwedCredited: the checkpoint fee), $B1 kept in escrow (LezFeesAccrued: the burn fee; lezFees $LF_2 -> $LF_R)"
+
+begin "record after the release"
+capture capture-3
+"$B/crown-driver" crown-b --chain stand-in "${D[@]}" --identity "$SA" --capture "$W/capture-1" --capture "$W/capture-2" \
+  --capture "$W/capture-3" --skip-stages 2 --updates-only yes --private fake --operator-only yes \
+  --session-out "$W/session-b3.json" --notes-out "$W/notes-3.json" > "$R/lez/crown-b-record-3.log" 2>&1 \
+  || { tail -n 25 "$R/lez/crown-b-record-3.log"; die "crown-driver crown-b --skip-stages 2 --updates-only yes"; }
+grep -q 'recorded (--updates-only' "$R/lez/crown-b-record-3.log" || die "crown-b recorded no header for capture 3"
+ok "the stand-in committee finalized the fork's block $(jq -r .block "$W/capture-3/fixture.json") (after the release): $(grep -o 'header(id, [0-9]*) of block [0-9]*' "$R/lez/crown-b-record-3.log" | tail -n 1)"
+
+begin "burn fee collected"
+[ "$(collect_fees 19-collect-burn)" = fees-collected ] || die "the collection after the release was not applied ($(tail -n 1 "$R/eth/19-collect-burn.jsonl" | cut -c1-300))"
+[ "$(last 19-collect-burn vaultTotal)" = "$LF_R" ] || die "the collection read the vault's total $(last 19-collect-burn vaultTotal), not lezFees after the release ($LF_R)"
+[ "$(last 19-collect-burn amount)" = "$B1" ] && [ "$(last 19-collect-burn collectedBefore)" = "$M1" ] || die "the collection minted $(last 19-collect-burn amount) after $(last 19-collect-burn collectedBefore), not the burn fee $B1 after $M1"
+FR_2="$(last 19-collect-burn feeRecipientHoldingAfter)"
+[ "$(last 19-collect-burn feeRecipientHoldingBefore)" = "$FR_1" ] && [ "$FR_2" = "$(( M1 + B1 ))" ] || die "the fee recipient's LEZ holding went $(last 19-collect-burn feeRecipientHoldingBefore) -> $FR_2, not $FR_1 -> $(( M1 + B1 ))"
+COLLECT2_TX="$(last 19-collect-burn tx)"
+ok "LEZ tx $COLLECT2_TX (CollectFees) applied under header(id, $(last 19-collect-burn recordSlot)) of block $(last 19-collect-burn block): lezFees $LF_R attested, $B1 (the release's burn fee) minted to the fee recipient (holding $FR_1 -> $FR_2)"
+
+begin "escrow backs LEZ"
+HOLD_END="$(holding public 20-recover)" || die "the user's holding could not be read"
+RELAYED_END="$(holding public 20b-recover 1)" || die "the relayer account's holding could not be read"
+ESC_END="$(escrow)"
+LEZ_SUPPLY=$(( HOLD_END + RELAYED_END + FR_2 ))
+[ "$ESC_END" = "$LEZ_SUPPLY" ] || die "the vault escrows $ESC_END wei of ETH, the wrapped ETH on LEZ is $LEZ_SUPPLY (/0 $HOLD_END, /1 $RELAYED_END, the fee recipient $FR_2)"
+ok "every deposit claimed, the burn released, every fee collected: the vault's ETH escrow $ESC_END wei = the wrapped ETH on LEZ $LEZ_SUPPLY (the user's /0 $HOLD_END, /1 $RELAYED_END, the fee recipient $FR_2)"
 
 begin "release again refused"
 [ -n "$CALLDATA" ] || die "the release's calldata was not printed (user/16-release.txt)"
@@ -458,14 +547,24 @@ jq -n --arg fb "$FORK_BLOCK" --arg fh "$FORK_HASH" --arg ft "$(date -u -d "@$FOR
   --arg d2 "$DEPOSIT2_TX" --arg c2 "$CLAIM2_TX" --arg hc2 "$HOLD_CLAIM2" --arg r0 "$RELAYED_0" --arg r1 "$RELAYED_1" \
   --arg rl "$RELAY0" --arg m1 "$M1" --arg o0 "$OWED_0" --arg o1 "$OWED_1" --arg o2 "$OWED_2" --arg e0 "$ESC_0" --arg e1 "$ESC_1" \
   --arg e2 "$ESC_2" --arg fr2 "$FEE_RECIPIENT" --arg ce "$CREDIT_EV" --arg br2 "$BRIDGE_ROW" --arg bid "$(jq -r .bridge.imageId "$SA")" \
-  '{fees: {bridgeProgram: {row: $br2, imageId: $bid}, feeRecipient: $fr2, relayFeeWei: $rl,
+  --arg lf0 "$LF_0" --arg lf1 "$LF_1" --arg lf2 "$LF_2" --arg lfr "$LF_R" --arg ae "$ACCRUED_EV" --arg ar "$ACCRUED_R" --arg b1 "$B1" \
+  --arg cp1 "$CP1" --arg frl "$FR_LEZ" --arg fh1 "$FR_1" --arg fh2 "$FR_2" --arg k1 "$COLLECT1_TX" --arg k2 "$COLLECT2_TX" \
+  --arg he "$HOLD_END" --arg re "$RELAYED_END" --arg ee "$ESC_END" --arg ls "$LEZ_SUPPLY" --arg er0 "$ESC_REL0" --arg err "$ESC_R" \
+  '{fees: {adr: "0048", bridgeProgram: {row: $br2, imageId: $bid}, ethereumFeeRecipient: $fr2, lezFeeRecipient: $frl, relayFeeWei: $rl,
       schedule0: {depositTx: $dtx, mintFeeWei: "0", escrowDeltaWei: (($e1 | tonumber) - ($e0 | tonumber) | tostring),
+        lezFeesDeltaWei: (($lf1 | tonumber) - ($lf0 | tonumber) | tostring),
         feeRecipientCreditDeltaWei: (($o1 | tonumber) - ($o0 | tonumber) | tostring),
         claim: {tx: $ctx, mintedToDestinationWei: $hc, paidToRelayerWei: $r0}},
-      schedule1: {depositTx: $d2, mintFeeWei: $m1, escrowDeltaWei: (($e2 | tonumber) - ($e1 | tonumber) | tostring),
+      schedule1: {depositTx: $d2, mintFeeWei: $m1, burnFeeWei: $b1, checkpointFeeWei: $cp1,
+        escrowDeltaWei: (($e2 | tonumber) - ($e1 | tonumber) | tostring),
+        lezFeesDeltaWei: (($lf2 | tonumber) - ($lf1 | tonumber) | tostring), lezFeesAccruedEventsWei: $ae,
         feeRecipientCreditDeltaWei: (($o2 | tonumber) - ($o1 | tonumber) | tostring), owedCreditedEventsWei: $ce,
         claim: {tx: $c2, mintedToDestinationWei: (($hc2 | tonumber) - ($hc | tonumber) | tostring),
-          paidToRelayerWei: (($r1 | tonumber) - ($r0 | tonumber) | tostring)}}},
+          paidToRelayerWei: (($r1 | tonumber) - ($r0 | tonumber) | tostring)}},
+      collections: [{tx: $k1, vaultTotalWei: $lf2, mintedWei: $m1, feeRecipientHoldingAfterWei: $fh1},
+                    {tx: $k2, vaultTotalWei: $lfr, mintedWei: $b1, feeRecipientHoldingAfterWei: $fh2}],
+      release: {escrowBeforeWei: $er0, escrowAfterWei: $err, burnFeeAccruedEventsWei: $ar, lezFeesAfterWei: $lfr},
+      conservation: {escrowWei: $ee, lezSupplyWei: $ls, user0Wei: $he, user1Wei: $re, feeRecipientWei: $fh2}},
     fork: {block: ($fb | tonumber), hash: $fh, time: $ft, ageS: ($fa | tonumber), maxAgeS: 3600, rpc: $frpc},
     standInSlot: ($ss | tonumber), vault: $v, configId: $c,
     deposit: {tx: $dtx, denominationWei: $den}, claim: {tx: $ctx, holdingAfterClaim: $hc},

@@ -46,7 +46,7 @@ script that re-checks every step from public data and the recorded blocks.
   `crown-live-1` the one of its own table below. Their vaults and LEZ programs are immutable and keep it, and their
   records still check from this tree: `e2e/crown.sh verify RUN` takes the ids from the run's own records, and
   `scripts/verify-sepolia.py` holds each live vault to the programs it was deployed with.
-- **A run started from this tree** runs the bridge program since ADR 0046 (`ferrata_bridge_f13`, `0xffb47f6e…7675`,
+- **A run started from this tree** runs the bridge program since ADR 0048 (`ferrata_bridge_lezfee`, `0x2ba8dc18…17fb`,
   binary sha256 `c84fe2db…`: a claim names no fee schedule; the vault of this tree takes the mint fee at the deposit)
   with this tree's crown-driver, which speaks only that program (B1's accounts, `holder(cid, account)`,
   `nullifier(cid, chain, vault, N)`, and its claims without a schedule range) and, like
@@ -57,7 +57,7 @@ script that re-checks every step from public data and the recorded blocks.
   (`e2e/runs/rc3-roundtrip-b1/REHEARSAL.md`). The input sets `rc1` and `rc3` on the Volume carry the earlier bridge program and a crown-driver built
   before B1, so this tree refuses them before anything runs or is sent: `start`'s first step (`drive.py`,
   `prepare_inputs`) requires the bundle's `program/ferrata_lez.bin` and `program/ferrata_bridge.bin` to have
-  `docs/image-ids.md`'s `ferrata_lez` and `ferrata_bridge_f13` ids; the crown-driver refuses any other bridge program
+  `docs/image-ids.md`'s `ferrata_lez` and `ferrata_bridge_lezfee` ids; the crown-driver refuses any other bridge program
   (`--bridge-bin`, `config-id`); `lez/crown/build.sh` refuses to pack one. Before these checks, a bundle repacked with
   this tree's driver around the earlier program would have deployed a vault and sent both deposits, then failed at
   session B's claims.

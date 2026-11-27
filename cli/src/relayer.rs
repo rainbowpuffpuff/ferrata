@@ -1229,45 +1229,28 @@ pub fn import_proofs(answer: &serde_json::Value) -> Result<(Vec<Vec<u8>>, SlotPr
     Ok((account, proof_entry(answer, 0)?, proof_entry(answer, 1)?))
 }
 
-/// The relayer's root import (bridge.md §6): the configuration's newest record on the zone (the
-/// instance's finalized header, `header(id, slot)`), the vault's slots 0 and 1 at that record's block
-/// (`eth_getProof` from the relayer's Ethereum endpoint, the block's hash checked against the record;
-/// under a Gloas record, which binds the block's hash only, the block's header rebuilt from the endpoint,
-/// checked against that hash and sent in front of the account proof),
-/// and, when its count is above the newest imported one, `ImportRoot` built and dry-run with
-/// `ferrata_wallet::import` (the attestation program's `evaluate` and the bridge program's
-/// `check_import`, natively): an import the programs would refuse is an error here, and nothing is sent.
-/// `vault_count` is the vault's `nextLeafIndex` now (what the relayer waits to cover).
-pub async fn plan_root_import<L: crate::lez::Ledger>(
+/// The configuration's newest record on the zone (the instance's finalized header, `header(id, slot)`) and its execution
+/// block as the relayer's Ethereum endpoint serves it: the block's number and hash (checked against the record; under a
+/// Gloas record, which binds the block's hash only, the block's header rebuilt from the endpoint, checked against that
+/// hash and kept to travel in front of the account proof), and the block tag for `eth_getProof`. Shared by root
+/// imports and fee collections. `Ok(Err(reason))`: nothing to read yet (no instance, record or execution block).
+pub struct RecordAt {
+    pub slot: u64,
+    pub record: ferrata_lez_wire::RecordState,
+    pub block_number: u64,
+    pub block_hash: Hash,
+    pub rlp_header: Option<Vec<u8>>,
+    pub tag: String,
+}
+
+async fn newest_record<L: crate::lez::Ledger>(
     ledger: &L,
     p: &DynProvider,
-    ctx: &crate::lez::Context,
-    history: &crate::lez::History,
-    vault_count: u64,
-) -> Result<RootImport> {
+    config: &ferrata_lez_bridge_wire::BridgeConfig,
+) -> Result<std::result::Result<RecordAt, String>> {
     use borsh::BorshDeserialize as _;
     use ferrata_core::witness::ExecutionSummary;
-    use ferrata_lez_bridge_wire::{config_actor, BridgeState, ConfigState};
-    use ferrata_wallet::import;
-
-    let imported = history.roots.iter().copied().max().unwrap_or(0);
-    let waiting = |reason: String| -> Result<RootImport> { Ok(RootImport::Waiting { reason, vault_count, imported }) };
-    let config = match crate::lez::read(ledger, config_actor(ctx.program, &ctx.cid)).await? {
-        Some(BridgeState::Config(ConfigState::Ready { sunset: true, .. })) => {
-            return Ok(RootImport::Closed {
-                reason: "the configuration is sunset: no root is imported after it".into(),
-            })
-        }
-        Some(BridgeState::Config(ConfigState::Ready { config, .. })) => config,
-        Some(BridgeState::Config(ConfigState::Pairing { .. })) => {
-            return waiting("the configuration is pairing (Init is outstanding)".into())
-        }
-        None => return waiting("the zone holds no config(cid): the configuration is not initialised".into()),
-        Some(other) => bail!("config(cid) holds another state: {other:?}"),
-    };
-    if vault_count <= imported {
-        return Ok(RootImport::UpToDate { imported });
-    }
+    let waiting = |reason: String| -> Result<std::result::Result<RecordAt, String>> { Ok(Err(reason)) };
     let Some(instance) = crate::lez::instance(ledger, config.attestation, &config.instance_id).await? else {
         return waiting(format!("the zone holds no instance {} of the attestation program", hx(&config.instance_id)));
     };
@@ -1329,6 +1312,50 @@ pub async fn plan_root_import<L: crate::lez::Ledger>(
             hx(&block_hash)
         );
     }
+    Ok(Ok(RecordAt { slot, record, block_number, block_hash, rlp_header, tag }))
+}
+
+/// The relayer's root import (bridge.md §6): the configuration's newest record on the zone (the
+/// instance's finalized header, `header(id, slot)`), the vault's slots 0 and 1 at that record's block
+/// (`eth_getProof` from the relayer's Ethereum endpoint, the block's hash checked against the record;
+/// under a Gloas record, which binds the block's hash only, the block's header rebuilt from the endpoint,
+/// checked against that hash and sent in front of the account proof),
+/// and, when its count is above the newest imported one, `ImportRoot` built and dry-run with
+/// `ferrata_wallet::import` (the attestation program's `evaluate` and the bridge program's
+/// `check_import`, natively): an import the programs would refuse is an error here, and nothing is sent.
+/// `vault_count` is the vault's `nextLeafIndex` now (what the relayer waits to cover).
+pub async fn plan_root_import<L: crate::lez::Ledger>(
+    ledger: &L,
+    p: &DynProvider,
+    ctx: &crate::lez::Context,
+    history: &crate::lez::History,
+    vault_count: u64,
+) -> Result<RootImport> {
+    use ferrata_lez_bridge_wire::{config_actor, BridgeState, ConfigState};
+    use ferrata_wallet::import;
+
+    let imported = history.roots.iter().copied().max().unwrap_or(0);
+    let waiting = |reason: String| -> Result<RootImport> { Ok(RootImport::Waiting { reason, vault_count, imported }) };
+    let config = match crate::lez::read(ledger, config_actor(ctx.program, &ctx.cid)).await? {
+        Some(BridgeState::Config(ConfigState::Ready { sunset: true, .. })) => {
+            return Ok(RootImport::Closed {
+                reason: "the configuration is sunset: no root is imported after it".into(),
+            })
+        }
+        Some(BridgeState::Config(ConfigState::Ready { config, .. })) => config,
+        Some(BridgeState::Config(ConfigState::Pairing { .. })) => {
+            return waiting("the configuration is pairing (Init is outstanding)".into())
+        }
+        None => return waiting("the zone holds no config(cid): the configuration is not initialised".into()),
+        Some(other) => bail!("config(cid) holds another state: {other:?}"),
+    };
+    if vault_count <= imported {
+        return Ok(RootImport::UpToDate { imported });
+    }
+    let RecordAt { slot, record, block_number, block_hash, rlp_header, tag } = match newest_record(ledger, p, &config).await? {
+        Ok(at) => at,
+        Err(reason) => return waiting(reason),
+    };
     let answer: serde_json::Value = p
         .raw_request("eth_getProof".into(), (hx(&ctx.vault), [hx(&[0u8; 32]), hx(&word_of(1))], tag))
         .await
@@ -1367,6 +1394,148 @@ pub async fn plan_root_import<L: crate::lez::Ledger>(
         leaf_count,
         imported,
         writes,
+    })))
+}
+
+// ---- protocol-fee collections (RFP-022 F.13, ADR 0048) ---------------------------------------------------------
+
+/// What a fee collection finds ([`plan_fee_collection`]).
+#[derive(Clone, Debug)]
+pub enum FeeCollection {
+    /// Nothing to send now: no record to read yet, or the vault's total at the newest record is minted already.
+    Waiting { reason: String },
+    /// A `CollectFees`, built and dry-run: ready to send.
+    Planned(Box<PlannedCollection>),
+}
+
+/// A `CollectFees` call and what it mints.
+#[derive(Clone, Debug)]
+pub struct PlannedCollection {
+    pub call: crate::lez::LezCall,
+    pub token: ferrata_lez_bridge_wire::Address,
+    /// The record it reads: `header(id, record_slot)` of the configuration's instance, and its execution block.
+    pub record_slot: u64,
+    pub block_number: u64,
+    pub block_hash: Hash,
+    /// The vault's protocol-fee total of the token at that block, what LEZ minted of it before, and what this call mints.
+    pub total: u128,
+    pub collected: u128,
+    pub amount: u128,
+    /// The `fees(cid, token)` state the dry run says the collection writes.
+    pub writes: ferrata_lez_bridge_wire::FeesState,
+    /// The configuration's fee recipient on LEZ, credited at its `holder(cid, account)`.
+    pub fee_recipient: Hash,
+}
+
+/// The storage proof of the vault's slot `key` (a SHA-256 slot) in an `eth_getProof` answer: its nodes and value.
+fn proof_entry_key(answer: &serde_json::Value, key: &Hash) -> Result<(Vec<Vec<u8>>, Hash)> {
+    let want = U256::from_be_bytes(*key);
+    for e in answer["storageProof"].as_array().ok_or_else(|| anyhow!("eth_getProof: no storageProof"))? {
+        if quantity(&e["key"])? == want {
+            return Ok((nodes(&e["proof"])?, quantity(&e["value"])?.to_be_bytes::<32>()));
+        }
+    }
+    bail!("eth_getProof: no proof of slot {}", hx(key))
+}
+
+/// A protocol-fee collection of `token` (ADR 0048): the configuration's newest record on the zone and its block (as
+/// for a root import, [`newest_record`]), the vault's [`ferrata_lez_bridge_wire::lez_fees_slot`] of the token at that
+/// block (`eth_getProof`), and `CollectFees` built and dry-run with `ferrata_wallet::fees` (the attestation program's
+/// `evaluate`, the bridge program's `check_lez_fees` and `FeesState::accrue`, natively) against `fees(cid, token)` as
+/// the zone holds it. Refused before anything is built on a zone that runs B1's program (it has no `CollectFees`), for a
+/// token the configuration has not registered, or when the dry run refuses; `Waiting` when the newest record's total is
+/// minted already.
+pub async fn plan_fee_collection<L: crate::lez::Ledger>(
+    ledger: &L,
+    p: &DynProvider,
+    ctx: &crate::lez::Context,
+    token: ferrata_lez_bridge_wire::Address,
+    limit: u128,
+) -> Result<FeeCollection> {
+    use ferrata_lez_bridge_wire::{code, config_actor, fees_actor, token_actor, BridgeState, ConfigState};
+    use ferrata_wallet::deployed::BridgeProgram;
+    use ferrata_wallet::fees;
+
+    let waiting = |reason: String| -> Result<FeeCollection> { Ok(FeeCollection::Waiting { reason }) };
+    if crate::lez::bridge_program(ledger, ctx).await? == BridgeProgram::B1 {
+        bail!(
+            "refused before anything was built: the zone runs ferrata_bridge_b1 (the test network's program), which has \
+             no CollectFees: its claims mint the mint fee on LEZ one by one (ADR 0048 needs the redeployment of \
+             deploy/testnet/F13-REDEPLOY.md)"
+        );
+    }
+    let config = match crate::lez::read(ledger, config_actor(ctx.program, &ctx.cid)).await? {
+        Some(BridgeState::Config(ConfigState::Ready { config, .. })) => config,
+        Some(BridgeState::Config(ConfigState::Pairing { .. })) => {
+            return waiting("the configuration is pairing (Init is outstanding)".into())
+        }
+        None => return waiting("the zone holds no config(cid): the configuration is not initialised".into()),
+        Some(other) => bail!("config(cid) holds another state: {other:?}"),
+    };
+    match crate::lez::read(ledger, token_actor(ctx.program, &ctx.cid, &token)).await? {
+        Some(BridgeState::Token(_)) => {}
+        None => bail!(
+            "refused before anything was built: token {} is not registered under this configuration (code {} on LEZ)",
+            hx(&token),
+            code::NOT_REGISTERED
+        ),
+        Some(other) => bail!("token(cid, token) holds another state: {other:?}"),
+    }
+    let current = match crate::lez::read(ledger, fees_actor(ctx.program, &ctx.cid, &token)).await? {
+        None => None,
+        Some(BridgeState::Fees(f)) => Some(f),
+        Some(other) => bail!("fees(cid, token) holds another state: {other:?}"),
+    };
+    let RecordAt { slot, record, block_number, block_hash, rlp_header, tag } = match newest_record(ledger, p, &config).await? {
+        Ok(at) => at,
+        Err(reason) => return waiting(reason),
+    };
+    let key = ferrata_lez_bridge_wire::lez_fees_slot(&token);
+    let answer: serde_json::Value = p
+        .raw_request("eth_getProof".into(), (hx(&ctx.vault), [hx(&key)], tag))
+        .await
+        .with_context(|| format!("eth_getProof of the vault's fee total at block {block_number}"))?;
+    let account = nodes(&answer["accountProof"])?;
+    let (slot_nodes, _value) = proof_entry_key(&answer, &key)?;
+    let proof = fees::fees_proof(account, slot_nodes, rlp_header);
+    let collected = current.map_or(0, |f| f.collected);
+    let (total, amount, writes) =
+        match fees::dry_run_collect(&ctx.cid, &config, &record, slot, &token, limit, &proof, current.as_ref()) {
+            Ok(x) => x,
+            Err(c) if c == code::ALREADY_WRITTEN => {
+                return waiting(format!(
+                    "nothing to collect: the vault's fee total of {} at block {block_number} (header(id, {slot})) is minted already ({collected})",
+                    hx(&token)
+                ))
+            }
+            Err(c) => {
+                return Err(anyhow!(crate::codes::program_refusal(
+                    u32::from(c),
+                    format!(
+                        "the dry run of CollectFees under header(id, {slot}) (the attestation and bridge programs' own checks): not sent"
+                    )
+                )))
+            }
+        };
+    let c = fees::collect_call(ctx.program, &ctx.cid, &config, slot, token, limit, proof);
+    let call = crate::lez::LezCall {
+        what: c.what,
+        mentions: c.mentions.into_iter().map(Into::into).collect(),
+        root_index: c.root_index,
+        message: c.message,
+        wire: None,
+    };
+    Ok(FeeCollection::Planned(Box::new(PlannedCollection {
+        call,
+        token,
+        record_slot: slot,
+        block_number,
+        block_hash,
+        total,
+        collected,
+        amount,
+        writes,
+        fee_recipient: config.controls.fee_recipient,
     })))
 }
 

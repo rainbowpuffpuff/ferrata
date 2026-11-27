@@ -187,16 +187,17 @@ fn h(bytes: &[u8]) -> String {
 /// refused after the Sepolia stages had deployed a vault and sent deposits. Every command that loads `--bridge-bin`,
 /// and `config-id`, refuses another program before anything is deployed or sent (e2e/crown/README.md, "Since
 /// milestone B1"); the live runs' program needs the driver of `f13faee2`. Since 22 November 2026 (ADR 0032: a burn's
-/// tag is used once, `burn(cid, r)`) B1's program was `0x847a4336…` (B1's first build `0xac1fb59b…`); since ADR 0046 (a claim
-/// names no fee schedule) the program of this tree is `0xffb47f6e…`, docs/image-ids.md `ferrata_bridge_f13`.
-pub const BRIDGE_IMAGE_ID: &str = "ffb47f6eaec6ef13f49505e5e80209f73d38ea53792e77656994f8069dde7675";
+/// tag is used once, `burn(cid, r)`) B1's program was `0x847a4336…` (B1's first build `0xac1fb59b…`); ADR 0046's (a claim
+/// names no fee schedule) was `0xffb47f6e…`, never deployed; since ADR 0048 (protocol fees minted on LEZ by
+/// `CollectFees`) the program of this tree is `0x2ba8dc18…`, docs/image-ids.md `ferrata_bridge_lezfee`.
+pub const BRIDGE_IMAGE_ID: &str = "2ba8dc18461fc8a62895fcf370855dcb1427d84f888659a7d52102af4ed817fb";
 
 /// Refuses a bridge program other than [`BRIDGE_IMAGE_ID`].
 pub fn check_bridge_image(image_id: [u8; 32]) -> Result<()> {
     ensure!(
         hex::encode(image_id) == BRIDGE_IMAGE_ID,
         "the bridge program 0x{} is not the one this crown-driver speaks (0x{BRIDGE_IMAGE_ID}, docs/image-ids.md \
-         `ferrata_bridge_f13`): its messages or accounts differ; B1's program needs the driver of 40e8d799, the live runs' that of f13faee2",
+         `ferrata_bridge_lezfee`): its messages or accounts differ; B1's program needs the driver of 40e8d799, the live runs' that of f13faee2",
         hex::encode(image_id)
     );
     Ok(())
@@ -1317,6 +1318,13 @@ pub struct SessionB {
     /// `ImportRoot` sent by this session (default); `false` (`--import-roots no`, with `--operator-only yes`): left
     /// to the relayer daemon (`ferrata-relayer --import-roots`, e2e/seqnet).
     pub import_roots: bool,
+    /// The first `skip_stages` captures were applied by an earlier session B on this zone (`--skip-stages N`): their
+    /// updates, and the catch-up before them, are replayed natively only, nothing is sent for them.
+    pub skip_stages: usize,
+    /// Only the light client's updates of the remaining captures (`--updates-only yes`, with `--operator-only yes`):
+    /// no `Init`, `Register`, `ImportFees` or `ImportRoot`. A later record for a call another tool makes under it
+    /// (e2e/f13/hook.sh: the protocol-fee collection after a release, ADR 0048).
+    pub updates_only: bool,
 }
 
 /// Session B: the captures, the bridge's pairing, registration and imports, the claims and the
@@ -1339,7 +1347,21 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
     for (p, update) in &chain.catch_up[..chain.base_updates] {
         native_apply(&mut world.native, &chain.config, update, &format!("period {p} (session A's)"))?;
     }
-    scenario::check_store(live, &world).await.context("the instance is not where session A left it")?;
+    ensure!(b.skip_stages < chain.stages.len(), "--skip-stages {} leaves no capture to apply", b.skip_stages);
+    ensure!(!b.updates_only || b.operator_only, "--updates-only yes needs --operator-only yes");
+    let mut applied = chain.base_updates;
+    for stage in chain.stages.iter().take(b.skip_stages) {
+        // Applied on the zone by an earlier session B: replayed natively, so the native store is where the zone is.
+        let period = stage.update.signature_slot / 8192;
+        while applied < chain.catch_up.len() && chain.catch_up[applied].0 < period {
+            let (p, update) = &chain.catch_up[applied];
+            native_apply(&mut world.native, &chain.config, update, &format!("period {p} (an earlier session B's)"))?;
+            applied += 1;
+        }
+        native_apply(&mut world.native, &chain.config, &stage.update, &format!("{} (an earlier session B's)", stage.label))?;
+    }
+    let where_from = if b.skip_stages == 0 { "session A" } else { "the earlier sessions" };
+    scenario::check_store(live, &world).await.with_context(|| format!("the instance is not where {where_from} left it"))?;
 
     let vault = chain.stages[0].vault;
     let config = id.bridge_config_for(vault, &b.token);
@@ -1352,8 +1374,7 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
     let mut steps: Vec<Value> = Vec::new();
     let mut claims: Vec<Value> = Vec::new();
     let mut notes: Vec<Value> = Vec::new();
-    let mut applied = chain.base_updates;
-    for (k, stage) in chain.stages.iter().enumerate() {
+    for (k, stage) in chain.stages.iter().enumerate().skip(b.skip_stages) {
         let period = stage.update.signature_slot / 8192;
         while applied < chain.catch_up.len() && chain.catch_up[applied].0 < period {
             let (p, update) = &chain.catch_up[applied];
@@ -1363,6 +1384,10 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
         let run = scenario::apply(live, &mut world, &stage.update, &format!("{} finality update (block {})", stage.label, stage.block), Harness::None, payer).await?;
         ensure!(run.outcome.is_some_and(|o| o.advanced), "{}: the finality update does not finalize a new header", stage.label);
         let slot = stage.update.finalized_header.beacon.slot;
+        if b.updates_only {
+            println!("[crown-b] {}: header(id, {slot}) of block {} recorded (--updates-only: no bridge call)", stage.label, stage.block);
+            continue;
+        }
         let (slot2_proof, slot2) = stage.slot(&SLOT_CONFIG_ID)?;
         ensure!(slot2 == cid, "{}: the vault's slot 2 is {}, not this configuration's id", stage.label, h(&slot2));
         let header_pda = world.inst.header(slot);
@@ -1711,7 +1736,7 @@ mod tests {
         assert!(2 * one <= c.floor.capacity && 4 * one <= c.token_cap.capacity);
     }
 
-    /// The bridge program this driver speaks is docs/image-ids.md's `ferrata_bridge_f13`; B1's, the live runs' program,
+    /// The bridge program this driver speaks is docs/image-ids.md's `ferrata_bridge_lezfee`; B1's, the live runs' program,
     /// and any other, are refused.
     #[test]
     fn the_driver_speaks_the_bridge_program_since_b1_only() {
@@ -1723,7 +1748,7 @@ mod tests {
             hex::decode_to_slice(&rows[0].split(" | `0x").nth(1).unwrap()[..64], &mut id).unwrap();
             id
         };
-        let tree = id_of("ferrata_bridge_f13");
+        let tree = id_of("ferrata_bridge_lezfee");
         assert_eq!(hex::encode(tree), BRIDGE_IMAGE_ID);
         assert!(check_bridge_image(tree).is_ok());
         let b1 = id_of("ferrata_bridge_b1");

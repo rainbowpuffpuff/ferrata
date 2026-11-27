@@ -16,7 +16,7 @@
 #                     tag's tree), this tree's crown-driver ($CROWN_LEZ_TMP/bin, built with that tag selected), fixture/
 #                     and session.sh; lez-config/lez-tag.txt names the tag; -> $CROWN_LEZ_TMP/bundle.tar.zst
 #
-# This tree's crown-driver speaks only the bridge program of docs/image-ids.md's `ferrata_bridge_f13` (since ADR 0046)
+# This tree's crown-driver speaks only the bridge program of docs/image-ids.md's `ferrata_bridge_lezfee` (since ADR 0048)
 # (accounts keyed by the configuration): pack, repack and rebase put it in place of a bundle's other program/
 # ferrata_bridge.bin (the bundles of November 2026 carry the live runs' program): CROWN_BRIDGE_BIN if set (this
 # tree's ferrata_bridge.bin, which scripts/reproduce-image-ids.sh build --out DIR writes to DIR/programs/), otherwise the
@@ -65,12 +65,12 @@ bridge_tree_build() {
 }
 
 # The bundle's bridge program: CROWN_BRIDGE_BIN if given (repack, rebase), and in any case the one this tree's
-# crown-driver speaks (the sha256 docs/image-ids.md records for `ferrata_bridge_f13`). A bundle that carries another
+# crown-driver speaks (the sha256 docs/image-ids.md records for `ferrata_bridge_lezfee`). A bundle that carries another
 # (crown-live-3's, the live runs' program) gets the one built from this tree when CROWN_BRIDGE_BIN is not set.
 bridge_tree() {
   if [ -n "${CROWN_BRIDGE_BIN:-}" ]; then cp "$CROWN_BRIDGE_BIN" "$1/program/ferrata_bridge.bin"; fi
   local want got
-  want="$( { grep -F '`ferrata_bridge_f13` |' "$REPO/docs/image-ids.md" || true; } | awk -F'|' '{gsub(/[` ]/, "", $4); print $4}')"
+  want="$( { grep -F '`ferrata_bridge_lezfee` |' "$REPO/docs/image-ids.md" || true; } | awk -F'|' '{gsub(/[` ]/, "", $4); print $4}')"
   got="$( { sha256sum "$1/program/ferrata_bridge.bin" 2> /dev/null || true; } | cut -c1-64)"
   if [ -z "${CROWN_BRIDGE_BIN:-}" ] && [ -n "$want" ] && [ "$got" != "$want" ] && [ -d "$1/program" ]; then
     cp "$(bridge_tree_build)" "$1/program/ferrata_bridge.bin"
@@ -78,7 +78,7 @@ bridge_tree() {
   fi
   [ -n "$want" ] && [ "$got" = "$want" ] || {
     echo "program/ferrata_bridge.bin has sha256 $got, not the bridge program this tree's crown-driver speaks ($want," \
-      "docs/image-ids.md \`ferrata_bridge_f13\`): set CROWN_BRIDGE_BIN to this tree's ferrata_bridge.bin" >&2
+      "docs/image-ids.md \`ferrata_bridge_lezfee\`): set CROWN_BRIDGE_BIN to this tree's ferrata_bridge.bin" >&2
     exit 1
   }
 }

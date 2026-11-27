@@ -121,6 +121,9 @@ pub fn handler_name(input: &ReceiveInput) -> String {
         Ok(BridgeMessage::SetDepth { .. }) => "SetDepth",
         Ok(BridgeMessage::AttestListing { .. }) => "AttestListing",
         Ok(BridgeMessage::SetListing { .. }) => "SetListing",
+        Ok(BridgeMessage::CollectFees { .. }) => "CollectFees",
+        Ok(BridgeMessage::AccrueFees { .. }) => "AccrueFees",
+        Ok(BridgeMessage::MintFees { .. }) => "MintFees",
         // Anything that is not one of the bridge's messages is a reply it waits for.
         Err(_) => "(reply)",
     };
