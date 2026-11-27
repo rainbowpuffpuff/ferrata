@@ -58,8 +58,10 @@ machine that saves only some directories between runs, point `WALLET_WORK` at on
   and anvil, with the pages laid out as the host serves them (`serve.py --site BUILD_DIR`: the build page at `/`, the
   wallet at `/wallet/`): the build page's reviewer link to the testers' page, its link to the wallet, a new wallet,
   the faucet, a deposit declined in the browser wallet and then made, the private destination's note and its link to
-  step 6e, a deposit to the private account, a browser wallet without Sepolia ETH refused at the review, "Find my
-  deposits". Not the claim: that needs the attestation and bridge programs on the zone (the record says so).
+  step 6e, a deposit to the private account, a browser wallet without Sepolia ETH (and one with the deposit but not
+  its gas) refused at the review, Review pressed while a deposit waits for the wallet's signature (the controls stay
+  locked and the reviewed plan is sent), "Find my deposits". Not the claim: that needs the attestation and bridge
+  programs on the zone (the record says so).
 - `test/review.test.mjs`: the findings of the independent review that unit tests can hold: amounts with a comma are
   refused, a transaction missing from its block is "outcome unknown", EIP-55 (the EIP's own examples), a record past
   200 KB, the record's iteration count kept on save, no second wallet over the first, embedded trie nodes (a forged

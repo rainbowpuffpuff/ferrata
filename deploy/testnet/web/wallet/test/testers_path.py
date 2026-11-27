@@ -2,8 +2,10 @@
 """The testers' path through the pages as the host serves them, in headless Chromium, against a local LEZ v0.4.0-rc3
 sequencer and anvil as "Sepolia" (run by `box.sh testers NAME`, which starts both and test/serve.py --site). It follows
 what a visitor does: the build page's reviewer link to the testers' page, that page's link to the wallet, a new wallet,
-the faucet, then the bridge's deposits through a stand-in browser wallet (EIP-1193, anvil's unlocked accounts),
-checking each step against what the testers' page says it should show and against the chains themselves.
+the faucet, then the bridge's deposits through a stand-in browser wallet (EIP-1193, anvil's unlocked accounts; it can
+decline a signature, or hold it open), checking each step against what the testers' page says it should show and
+against the chains themselves; and the refusals before a signature (no Sepolia ETH; the deposit covered but not its
+gas) and the lock while a deposit waits for its signature.
 
 Not rehearsed here, and why: the claim (step 6b) needs the attestation and bridge programs deployed on the local zone
 with a light-client record covering anvil's blocks, which this harness does not set up (EVIDENCE rows 244 and 250 record
@@ -16,6 +18,7 @@ WALLET_DEPOSITOR, WALLET_OUT (the record), WALLET_SHOTS (screenshots). Exit 0 wh
 import json
 import os
 import re
+from decimal import Decimal
 import sys
 import time
 import urllib.parse
@@ -74,10 +77,12 @@ def deposits_of(addr):
 # The stand-in browser wallet: anvil's unlocked accounts; window.__account picks one, window.__reject makes it decline
 # the next transaction as MetaMask does when its user presses Reject (EIP-1193 code 4001).
 STAND_IN = """
-window.__chain = '0xaa36a7'; window.__account = DEPOSITOR; window.__reject = false;
+window.__chain = '0xaa36a7'; window.__account = DEPOSITOR; window.__reject = false; window.__hold = false;
 window.ethereum = { isStandIn: true, async request({ method, params }) {
   if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [window.__account];
   if (method === 'eth_chainId') return window.__chain;
+  if (method === 'eth_sendTransaction' && window.__hold) {   // the signature screen left open until the test answers
+    window.__held = true; await new Promise((r) => { window.__release = r; }); window.__held = false; }
   if (method === 'eth_sendTransaction' && window.__reject) {
     window.__reject = false; const e = new Error('MetaMask Tx Signature: User denied transaction signature.'); e.code = 4001; throw e; }
   const r = await window.__walletRpc(method, params || []);
@@ -219,15 +224,41 @@ def steps():
               out.startswith("Your Sepolia ETH, 0 ETH, does not cover") and "Nothing was signed" in out
               and page.locator("[data-testid=bridge-go]").is_disabled() and not deposits_of(poor), out)
         shot(page, "05-no-eth")
+        # -- 6b. Enough for the deposit and its fees, not for the gas: refused at the review, the gas named
+        tot = re.search(r"does not cover ([0-9.]+) ETH", out)
+        if tot:
+            eth("anvil_setBalance", [poor, hex(int(Decimal(tot.group(1)) * 10**18) + 1)])
+            summary, out = review(page)
+        check("enough for the deposit and its fees, not for the gas: refused at the review, before any signature",
+              bool(tot) and out.startswith("Your Sepolia ETH,") and "(the deposit, its fees and the gas)" in out
+              and page.locator("[data-testid=bridge-go]").is_disabled() and not deposits_of(poor), out)
         page.evaluate("(a) => { window.__account = a; }", DEPOSITOR)
         page.click("[data-testid=bridge-connect]")
         page.wait_for_timeout(800)
+
+        # -- 6c. Review pressed while a deposit waits for the wallet's signature: connect, review and the deposit's
+        # choices are locked, and the deposit sends the plan that was reviewed
+        page.select_option("[data-testid=bridge-kind]", "public")
+        summary, out = review(page)
+        reviewed = re.search(r"Commitment C\s*(0x[0-9a-f]{64})", summary)
+        page.evaluate("() => { window.__hold = true; }")
+        page.click("[data-testid=bridge-go]")
+        page.wait_for_function("() => window.__held === true", timeout=60000)
+        locked = {x: page.locator(f"[data-testid={x}]").is_disabled() for x in ("bridge-review", "bridge-connect", "bridge-kind", "bridge-denom")}
+        page.locator("[data-testid=bridge-review]").click(force=True)   # a disabled button ignores it, and the lock too
+        page.evaluate("() => { window.__hold = false; window.__release(); }")
+        res = wait_out(page, "Deposited|failed|rror|changed")
+        sent = [log["data"][-64:] for log in deposits_of(DEPOSITOR)]
+        check("Review pressed during a deposit's signature: the controls locked, the reviewed plan sent",
+              all(locked.values()) and res.startswith("Deposited: leaf 2 ") and reviewed and reviewed.group(1)[2:] in sent,
+              (locked, res[:120]))
 
         # -- 7. Step 6b's first half: the wallet finds both deposits on the vault
         page.click("[data-testid=bridge-find]")
         page.wait_for_function("() => /deposits are this wallet|rror/.test(document.querySelector('[data-testid=bridge-claim-out]').textContent)", timeout=60000)
         found = text(page, "[data-testid=bridge-claim-out]")
-        check("\"Find my deposits on the vault\" finds this wallet's two", found.startswith("2 of the vault's "), found)
+        mine = len(deposits_of(DEPOSITOR))
+        check(f"\"Find my deposits on the vault\" finds this wallet's {mine}", found.startswith(f"{mine} of the vault's {mine} "), found)
         lst = page.locator("[data-testid=bridge-deposits]")
         check("the private deposit links the steps of a private claim",
               lst.locator("a[href='/testers/#step-private']").count() == 1, text(page, "[data-testid=bridge-deposits]")[:300])
