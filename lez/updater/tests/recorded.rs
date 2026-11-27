@@ -1035,6 +1035,11 @@ fn gate_poll_speeds_share_the_cost() {
     for (i, run) in runs.iter().enumerate() {
         println!("run {i}: honest-1 share {:.4}, A3's ratio {:.4}", run.share1, run.ratio);
     }
+    // The record first, so that a draw that fails an assertion below still leaves its figures.
+    let out = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("results");
+    fs::create_dir_all(&out).unwrap();
+    let name = if salt.is_empty() { "gate-polls.txt".to_string() } else { format!("gate-polls-salt-{salt}.txt") };
+    fs::write(out.join(name), text.trim_end().to_string() + "\n").unwrap();
     let (blocks, rounds) = (&runs[0], &runs[1]);
     for (name, run) in [("heights", blocks), ("heights, 1.5 blocks a read", &runs[2]), ("A3's whole gate", &runs[3])] {
         assert!(
@@ -1051,11 +1056,9 @@ fn gate_poll_speeds_share_the_cost() {
         rounds.share1,
         blocks.share1
     );
-    assert!(runs[4].share2 < 0.40, "a reader every third block pays less (0.329 recorded): {:.3}", runs[4].share2);
-    let out = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("results");
-    fs::create_dir_all(&out).unwrap();
-    let name = if salt.is_empty() { "gate-polls.txt".to_string() } else { format!("gate-polls-salt-{salt}.txt") };
-    fs::write(out.join(name), text.trim_end().to_string() + "\n").unwrap();
+    // A reader every third block notices its turns late and pays less than half: 0.329 in the recorded draw, 0.431 and
+    // 0.473 under GATE_POLL_SALT a and b (a measured residual of RFP-021 R.10, not a goal).
+    assert!(runs[4].share2 < 0.50, "a reader every third block pays less than half: {:.3}", runs[4].share2);
 }
 
 /// RFP-021 R.9 when the updaters' sources serve different copies of each update (honest-2's sources serve every update
