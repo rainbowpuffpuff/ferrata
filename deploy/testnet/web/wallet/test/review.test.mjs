@@ -117,7 +117,7 @@ import * as cl from '../claim.js';
 import * as br from '../bridge.js';
 import { forPublicPda } from '../attest.js';
 function burnStage() {
-  const iv = JSON.parse(readFileSync(new URL('../../../../../idl/vectors/ferrata_bridge.vectors.json', import.meta.url))).vectors;
+  const iv = JSON.parse(readFileSync(new URL('../../../../../idl/deployed/ferrata_bridge_b1.vectors.json', import.meta.url))).vectors;
   const state = (n) => lez.unhex(iv.find((x) => x.name === n).hex);
   const programId = '36iqVMFpfgHrwoeuVvZhXX3caM1JPBJh56PBw5A4H1rk', program = lez.idFromString(programId);
   const cid = Uint8Array.from({ length: 32 }, (_, i) => 164 + i), token = Uint8Array.from({ length: 20 }, (_, i) => 184 + i);

@@ -58,7 +58,7 @@ BUILTIN_IDLS = {
     "native token": {"name": "native_token", "instructions": [
         {"name": "transfer", "discriminator": [0], "args": [{"name": "to", "type": "account_id"}, {"name": "amount", "type": "u128"}]}]},
 }
-IDLS = {"ferrata_attestation": "idl/ferrata_attestation.idl.json", "ferrata_bridge_b1": "idl/ferrata_bridge.idl.json",
+IDLS = {"ferrata_attestation": "idl/ferrata_attestation.idl.json", "ferrata_bridge_b1": "idl/deployed/ferrata_bridge_b1.idl.json",
         "ferrata_names": "idl/ferrata_names.idl.json", "ferrata_msg": "idl/ferrata_msg.idl.json",
         "ferrata_msg_v2": "idl/ferrata_msg_v2.idl.json"}
 

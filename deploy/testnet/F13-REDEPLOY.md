@@ -16,6 +16,7 @@ What is new and what stays:
 | attestation program, release and checkpoint guests | unchanged | unchanged (19 of 20 guests rebuild to their recorded ids) |
 | vault | v5, mint fee escrowed and minted on LEZ | v5 with ADR 0046's deposit and refund |
 | clients (`ferrata`, the module, crown-driver, relayer) | claims with a range | claims without one: rebuild from this tree |
+| the web wallet (`deploy/testnet/web/wallet`), the explorer's IDL, `scripts/lez-read.py` | speak B1's claims (`idl/deployed/`) | not updated in this tree: the web wallet's claim encoder (`claim.js`) and the three readers move to `idl/ferrata_bridge.idl.json` with the redeploy (`idl/deployed/README.md`) |
 
 ## 1. Build and check (any machine; no key)
 

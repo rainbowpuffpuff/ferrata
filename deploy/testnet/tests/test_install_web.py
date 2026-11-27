@@ -61,7 +61,8 @@ def tree(t):
     for f in ("status.html", "health.js", "style.css", "robots.txt", "AGENTS-limits.md"):
         shutil.copy(SRC / "host" / "www" / f, d / "host" / "www" / f)
     shutil.copy(SRC / "host" / "Caddyfile", d / "host" / "Caddyfile")
-    for f in ("ferrata_attestation.idl.json", "ferrata_bridge.idl.json"):
+    for f in ("ferrata_attestation.idl.json", "ferrata_bridge.idl.json", "deployed/ferrata_bridge_b1.idl.json"):
+        (t / "idl" / f).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(REPO / "idl" / f, t / "idl" / f)
     for name, body in (("curl", 'case "$*" in *api/token*) echo tok;; *public-ipv4*) echo 192.0.2.10;; esac\n'),
                        ("caddy", "exit 0\n"), ("systemctl", "exit 0\n")):
