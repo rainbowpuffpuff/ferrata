@@ -11,7 +11,8 @@ of its ControlID.sol and Groth16Verifier.sol are compared with the copied ones t
 `r8-phase-split` reads the committed Cargo lockfiles: every workspace that makes a proof the vault takes (phase 1 of
 docs/design/risc0-3.1-migration.md) locks risc0-zkvm 3.1.0, risc0-groth16 3.0.6 and risc0-circuit-recursion 4.1.0;
 the LEZ-linked workspaces (phase 2, which waits on a LEZ tag on risc0 3.1) are listed with what they lock, and RFP-022
-R.8's row must say what they lock (a row that still says 3.0.5 after LEZ moved, or the reverse, fails).
+R.8's row must say what they lock, in its phrase "LEZ verifies private transactions with risc0-zkvm X" (a row that
+still says 3.0.5 after LEZ moved, or the reverse, fails).
 """
 from __future__ import annotations
 
@@ -201,15 +202,20 @@ def r8_phase_split(ctx):
     lines.append("phase 2 (LEZ-linked, waits on a LEZ tag on risc0 3.1): " +
                  "; ".join(f"{rel} risc0-zkvm {v}" for rel, v in lez.items()))
     reason = _row_text(ctx.path(STATUS).read_text(), "RFP-022", "R.8")
+    # The row's LEZ sentence names the zkVM LEZ verifies private transactions with; the row also names 3.1.0 for the
+    # Ethereum side, so only that phrase says which is LEZ's (review round 2: a row naming another version passed).
+    said = re.search(r"LEZ verifies private transactions with risc0-zkvm (\d+\.\d+\.\d+)", reason)
     if len(versions) != 1:
         problems.append(f"the LEZ-linked lockfiles disagree: {lez}")
-    elif versions[0].startswith("3.0."):
-        if f"risc0-zkvm {versions[0]}" not in reason or "phase 2" not in reason:
-            problems.append(f"R.8's row does not say that LEZ is on risc0-zkvm {versions[0]} until phase 2")
-        else:
-            lines.append(f"R.8's row says LEZ is on risc0-zkvm {versions[0]} until phase 2, as the lockfiles do")
-    elif "3.0.5" in reason and "phase 2" in reason:
-        problems.append(f"the LEZ-linked lockfiles lock risc0-zkvm {versions[0]}, but R.8's row still says 3.0.5 and "
-                        "phase 2: the row is stale")
+    elif not said:
+        problems.append("R.8's row does not say which risc0-zkvm LEZ verifies private transactions with")
+    elif said.group(1) != versions[0]:
+        problems.append(f"the LEZ-linked lockfiles lock risc0-zkvm {versions[0]}, but R.8's row says LEZ verifies "
+                        f"private transactions with {said.group(1)}: the row is stale")
+    elif versions[0].startswith("3.0.") and "phase 2" not in reason:
+        problems.append(f"R.8's row does not say that LEZ is on risc0-zkvm {versions[0]} until phase 2")
+    else:
+        lines.append(f"R.8's row says LEZ verifies private transactions with risc0-zkvm {versions[0]}, as the "
+                     "LEZ-linked lockfiles lock" + (", until phase 2" if versions[0].startswith("3.0.") else ""))
     fail_if(problems, "RISC Zero 3.1 phase split")
     return lines

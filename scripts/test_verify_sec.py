@@ -130,7 +130,49 @@ class SecChecks(unittest.TestCase):
         def mutate(r):
             for rel in checks_sec.PHASE2:
                 _replace(r / rel, 'name = "risc0-zkvm"\nversion = "3.0.5"', 'name = "risc0-zkvm"\nversion = "3.1.0"')
-        self._fails(SPLIT, mutate, "but R.8's row still says 3.0.5 and phase 2: the row is stale")
+        self._fails(SPLIT, mutate, "but R.8's row says LEZ verifies private transactions with 3.0.5: the row is stale")
+
+    def _move_lez(self, r, to="3.1.0"):
+        for rel in checks_sec.PHASE2:
+            _replace(r / rel, 'name = "risc0-zkvm"\nversion = "3.0.5"', f'name = "risc0-zkvm"\nversion = "{to}"')
+
+    def _row(self, r, old, new):
+        text = (r / checks_sec.STATUS).read_text()
+        row = text.find("| R.8 |", text.find("## RFP-022:"))
+        end = text.find("\n", row)
+        line = text[row:end]
+        self.assertIn(old, line)
+        (r / checks_sec.STATUS).write_text(text[:row] + line.replace(old, new) + text[end:])
+
+    def test_lez_moved_and_the_row_names_another_old_version(self):
+        """Review round 2: the row names a 3.0.x other than 3.0.5 after LEZ moved; it passed before."""
+        def mutate(r):
+            self._move_lez(r)
+            self._row(r, "risc0-zkvm 3.0.5", "risc0-zkvm 3.0.4")
+        self._fails(SPLIT, mutate, "but R.8's row says LEZ verifies private transactions with 3.0.4: the row is stale")
+
+    def test_lez_moved_and_the_row_names_neither(self):
+        def mutate(r):
+            self._move_lez(r)
+            self._row(r, "risc0-zkvm 3.0.5", "risc0-zkvm 4.0.0")
+        self._fails(SPLIT, mutate, "but R.8's row says LEZ verifies private transactions with 4.0.0: the row is stale")
+
+    def test_the_row_drops_phase_2_while_lez_is_on_3_0(self):
+        self._fails(SPLIT, lambda r: self._row(r, "phase 2", "phase two"),
+                    "R.8's row does not say that LEZ is on risc0-zkvm 3.0.5 until phase 2")
+
+    def test_lez_moved_and_the_row_follows_passes(self):
+        """The row rewritten for LEZ on 3.1 (phase 2 done, no 3.0.x named) passes."""
+        with tempfile.TemporaryDirectory(prefix="split-follows-", dir=SCRATCH) as td:
+            root = self._copy(SPLIT, Path(td))
+            self._move_lez(root)
+            text = (root / checks_sec.STATUS).read_text()
+            row = text.find("| R.8 |", text.find("## RFP-022:"))
+            end = text.find("\n", row)
+            line = text[row:end].replace("risc0-zkvm 3.0.5", "risc0-zkvm 3.1.0").replace("phase 2", "the LEZ tag")
+            (root / checks_sec.STATUS).write_text(text[:row] + line + text[end:])
+            r = self._run(SPLIT, root)
+            self.assertEqual(r.status, "PASS", "\n".join(r.lines))
 
     def test_one_lez_linked_workspace_moved_alone(self):
         self._fails(SPLIT, lambda r: _replace(r / "cli/Cargo.lock", 'name = "risc0-zkvm"\nversion = "3.0.5"',
@@ -147,7 +189,7 @@ class SecChecks(unittest.TestCase):
             self.assertIn("risc0-zkvm 3.0.5", line)
             (r / checks_sec.STATUS).write_text(text[:row] + line.replace("risc0-zkvm 3.0.5", "risc0-zkvm 3.0.x") +
                                                text[end:])
-        self._fails(SPLIT, mutate, "R.8's row does not say that LEZ is on risc0-zkvm 3.0.5 until phase 2")
+        self._fails(SPLIT, mutate, "R.8's row does not say which risc0-zkvm LEZ verifies private transactions with")
 
 
 if __name__ == "__main__":
