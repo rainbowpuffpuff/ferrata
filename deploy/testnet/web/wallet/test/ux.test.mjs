@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DEPOSIT_REFUSALS, revertDataOf, walletError, costOf, burnRecipient, lockGroup } from '../bridge.js';
+import { DEPOSIT_REFUSALS, revertDataOf, walletError, costOf, burnRecipient, lockGroup, refusedBy } from '../bridge.js';
 import { keccak } from '../eth.js';
 import { hex } from '../lez.js';
 
@@ -78,6 +78,16 @@ test('a refusal names the contract that refused: the vault by default, the token
   assert.match(walletError(allowance), /^The vault refuses it \(ERC20InsufficientAllowance\)/);
   assert.match(walletError({ ...allowance, subject: 'The token' }), /^The token refuses it \(ERC20InsufficientAllowance\)/);
   assert.match(walletError({ code: 3, message: 'execution reverted: no', subject: 'The test token' }), /^The test token refuses it/);
+});
+
+test('tagging a refusal never hides the wallet\'s own answer (a frozen error, a primitive, nothing)', () => {
+  const frozen = Object.freeze({ code: 4001, message: 'User rejected the request.' });
+  assert.equal(walletError(refusedBy(frozen, 'The token')), 'You declined it in your browser wallet, so it was not sent.');
+  assert.equal(walletError(refusedBy('execution reverted', 'The token')), 'The token refuses it (execution reverted). It was not sent.');
+  assert.equal(walletError(refusedBy(undefined, 'The token')), 'unknown error');
+  const e = new Error('x');
+  assert.equal(refusedBy(e, 'The token'), e);   // an ordinary error keeps its identity, tagged
+  assert.equal(e.subject, 'The token');
 });
 
 test('every refusal the page names is declared where it says (the vault; OpenZeppelin\'s ERC-20 errors when vault/lib is there)', () => {
