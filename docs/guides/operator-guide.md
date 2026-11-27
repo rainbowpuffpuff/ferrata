@@ -506,7 +506,9 @@ part of that total it has not minted yet (at most `--limit`, to stay within the 
 token, to the configuration's fee recipient. Anyone may send it; it mints only to that recipient and names no user's
 transaction. It logs `lez-fees-collected` (the record, the block, the vault's total, what was minted before and now, the
 transaction, the fee recipient's holding before and after), `lez-fee-collection-waiting` (no record yet, or the total
-under the newest record is minted already, or the record is not deep enough: nothing sent) or
+under the newest record is minted already, or the record is not deep enough, or mints of the token or of the whole
+configuration are frozen, or a mint bucket, the token's or the configuration's, is below the amount as the zone holds it
+now: nothing sent) or
 `lez-fee-collection-unconfirmed`; it refuses before building anything on a zone that runs B1's program (no
 `CollectFees`) or for a token the configuration has not registered, and before sending a `--limit` that is not a whole
 number of the token's LEZ unit. The count and the vault's total are 256-bit (a token's fees over a deployment's life are
@@ -514,7 +516,9 @@ not bounded by 2^128); each collection mints at most 2^128 − 1. Not run end to
 rehearsal's stand-in chain has none (anvil's fork mode writes a zero state root, which the stand-in replaces, so its
 records name blocks no endpoint has); there the operator's `crown-driver collect-fees` sends the same `CollectFees` from a
 capture's storage proof (`e2e/f13/hook.sh`, on a local LEZ v0.4.0-rc3 sequencer). Its builder is tested
-(`ferrata_wallet::fees`); its planner shares the root import's record and block checks.
+(`ferrata_wallet::fees`), and its planner's refusals and waits before Ethereum is read and its reading of the fee
+total's storage proof (`cargo test --lib relayer`: `a_fee_collection_is_refused_or_waits_before_ethereum_is_read`,
+`the_fee_total_proof_is_read_by_its_key`); the planner shares the root import's record and block checks.
 
 Logs are one JSON object per line (`start`, `root-imported`, `root-import-waiting`, `root-import-refused`,
 `root-import-failed`, `root-import-closed`, `job-done`, `job-refused`, `candidate-waiting`, `finalized`,

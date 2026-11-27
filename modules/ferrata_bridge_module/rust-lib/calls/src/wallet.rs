@@ -184,8 +184,9 @@ pub(crate) fn claim_with_state(req: &Value) -> Result<Value, String> {
     let relayer = if req["relayer"].is_null() { None } else { Some(fixed::<32>(&req["relayer"], "relayer")?) };
     let prover = if req["prover"].is_null() { None } else { Some(account(&req["prover"], "prover")?) };
     let inputs = claim::ClaimInputs { leaves: &leaves, leaf_count: n, root: &root, token: &token_state, spent };
-    // The program the claim goes to (`bridge_image_id`, as the zone's loader names it): this tree's (ADR 0046, the
-    // default) or the test network's B1, whose claim names a fee-schedule range (`ferrata_wallet::deployed`).
+    // The program the claim goes to (`bridge_image_id`, as the zone's loader names it): this tree's
+    // (`ferrata_bridge_lezfee`, ADR 0048, whose claims keep ADR 0046's layout; the default) or the test network's B1,
+    // whose claim names a fee-schedule range (`ferrata_wallet::deployed`).
     let program = if req["bridge_image_id"].is_null() {
         BridgeProgram::F13
     } else {

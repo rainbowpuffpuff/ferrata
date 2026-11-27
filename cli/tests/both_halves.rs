@@ -1356,7 +1356,7 @@ async fn migration_rehearsal_honours_positions_in_flight() -> Result<()> {
     let _ = writeln!(
         out,
         "\nInvariant checks: A {} times, B {} times (vault balance == escrowed + owed; supply == minted - burnt; supply + \
-         unminted + unreleased == escrowed). Forgeries refused: {}. {} s in all.",
+         unminted + unreleased + uncollected fees == escrowed, the last none here). Forgeries refused: {}. {} s in all.",
         a.checked,
         b.checked,
         log.forged,

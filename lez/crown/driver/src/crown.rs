@@ -1503,9 +1503,10 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
                 let o = send(live, &format!("bridge ImportFees: {} schedule 1 absent at n={n}", b.token.label()), vec![mention(config_pda), mention(header_pda), mention(token_pda)], &message, payer).await?.expect_applied()?;
                 steps.push(row_json(&o));
             } else {
-                // ADR 0046: no claim reads the fee schedules (the vault took each deposit's mint fee), so a schedule 1
-                // announced in the run (e2e/f13/hook.sh) is left unimported; the claims under it go on.
-                println!("[crown-b] {}: {} has a schedule 1; not imported (ADR 0046: no claim reads a schedule)", stage.label, b.token.label());
+                // ADR 0048: neither a claim nor a fee collection reads the fee schedules (the vault escrows the protocol
+                // fees and `CollectFees` attests their total), so a schedule 1 announced in the run (e2e/f13/hook.sh) is
+                // left unimported; the claims under it go on.
+                println!("[crown-b] {}: {} has a schedule 1; not imported (ADR 0048: no claim or collection reads a schedule)", stage.label, b.token.label());
             }
         }
         if let Some(BridgeState::Token(t)) = bridge_state(live, token_pda).await? {

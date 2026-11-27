@@ -1459,7 +1459,7 @@ fn proof_entry_key(answer: &serde_json::Value, key: &Hash) -> Result<(Vec<Vec<u8
 /// `evaluate`, the bridge program's `check_lez_fees` and `FeesState::accrue`, natively) against `fees(cid, token)` as
 /// the zone holds it. Refused before anything is built on a zone that runs B1's program (it has no `CollectFees`), for a
 /// token the configuration has not registered, or when the dry run refuses; `Waiting` when the newest record's total is
-/// minted already.
+/// minted already, or while the token's or the configuration's mint gate would refuse the amount (a freeze, a bucket).
 #[allow(clippy::too_many_arguments)]
 pub async fn plan_fee_collection<L: crate::lez::Ledger>(
     ledger: &L,
@@ -1481,16 +1481,16 @@ pub async fn plan_fee_collection<L: crate::lez::Ledger>(
              deploy/testnet/F13-REDEPLOY.md)"
         );
     }
-    let (config, roles) = match crate::lez::read(ledger, config_actor(ctx.program, &ctx.cid)).await? {
-        Some(BridgeState::Config(ConfigState::Ready { config, roles, .. })) => (config, roles),
+    let (config, roles, config_gate) = match crate::lez::read(ledger, config_actor(ctx.program, &ctx.cid)).await? {
+        Some(BridgeState::Config(ConfigState::Ready { config, roles, gate, .. })) => (config, roles, gate),
         Some(BridgeState::Config(ConfigState::Pairing { .. })) => {
             return waiting("the configuration is pairing (Init is outstanding)".into())
         }
         None => return waiting("the zone holds no config(cid): the configuration is not initialised".into()),
         Some(other) => bail!("config(cid) holds another state: {other:?}"),
     };
-    let lez_unit = match crate::lez::read(ledger, token_actor(ctx.program, &ctx.cid, &token)).await? {
-        Some(BridgeState::Token(t)) => t.entry.lez_unit,
+    let t = match crate::lez::read(ledger, token_actor(ctx.program, &ctx.cid, &token)).await? {
+        Some(BridgeState::Token(t)) => t,
         None => bail!(
             "refused before anything was built: token {} is not registered under this configuration (code {} on LEZ)",
             hx(&token),
@@ -1504,6 +1504,19 @@ pub async fn plan_fee_collection<L: crate::lez::Ledger>(
         Some(BridgeState::Fees(f)) if f.config_id == ctx.cid && f.token == token => Some(f),
         Some(other) => bail!("fees(cid, token) holds another state: {other:?}"),
     };
+    // F.14, as `MintFees` applies it: while mints of the token or of the whole configuration are frozen the program
+    // refuses a collection (242), so it waits, before anything is read from Ethereum (review r1).
+    for (scope, g) in [("of this token", &t.gate), ("of the whole configuration", &config_gate)] {
+        if g.now_ms < g.mints_until {
+            return waiting(format!(
+                "mints {scope} are frozen until Ethereum time {} (the bridge's attested clock): MintFees would refuse \
+                 the collection (code {}); nothing is sent",
+                g.mints_until / 1000,
+                code::FROZEN
+            ));
+        }
+    }
+    let lez_unit = t.entry.lez_unit;
     let RecordAt { slot, record, block_number, block_hash, rlp_header, tag } =
         match record_block(ledger, p, &config, record_slot).await? {
             Ok(at) => at,
@@ -1556,6 +1569,17 @@ pub async fn plan_fee_collection<L: crate::lez::Ledger>(
             u32::from(code::BAD_MESSAGE),
             format!("refused before sending: {amount} base units is not a whole number of the token's LEZ unit {lez_unit} (choose a --limit that is)")
         )));
+    }
+    // F.11 with the amount: the token's and the configuration's mint buckets, as `MintFees` and `Admit` apply them to the
+    // state read now. A bucket below the amount waits for its refill, or for a smaller --limit that fits (review r1).
+    let value = t.entry.value(amount).ok_or_else(|| anyhow!("{amount} base units have no value in the token's units"))?;
+    for (scope, mut g) in [("the token's", t.gate), ("the configuration's", config_gate)] {
+        if let Err(c) = g.admit(true, value) {
+            return waiting(format!(
+                "{scope} mint gate refuses {amount} base units now (code {c}): nothing is sent; a bucket refills with \
+                 attested time, or a smaller --limit fits it"
+            ));
+        }
     }
     let c = fees::collect_call(ctx.program, &ctx.cid, &config, slot, token, limit, proof);
     let call = crate::lez::LezCall {
@@ -1772,6 +1796,160 @@ mod tests {
         let mut other = block.clone();
         other["gasUsed"] = serde_json::json!("0x1");
         assert_ne!(alloy::primitives::keccak256(header_rlp(&other).unwrap()), alloy::primitives::keccak256(&rlp));
+    }
+
+    /// ADR 0048: the fee total's storage proof is found by its own key, written in full or as a quantity; an answer
+    /// without it is refused (review r1).
+    #[test]
+    fn the_fee_total_proof_is_read_by_its_key() {
+        let key = ferrata_lez_bridge_wire::lez_fees_slot(&[0; 20]);
+        let other = ferrata_lez_bridge_wire::lez_fees_slot(&[1; 20]);
+        let answer = serde_json::json!({
+            "accountProof": ["0xf8"],
+            "storageProof": [
+                { "key": hx(&other), "value": "0x9", "proof": ["0xaa"] },
+                { "key": hx(&key), "value": "0x1234", "proof": ["0xbb", "0xcc"] },
+            ],
+        });
+        let (nodes, value) = proof_entry_key(&answer, &key).unwrap();
+        assert_eq!(nodes, vec![vec![0xbb], vec![0xcc]]);
+        assert_eq!(value, word_of(0x1234));
+        let mut short = [0u8; 32];
+        short[31] = 7;
+        let answer = serde_json::json!({ "storageProof": [{ "key": "0x7", "value": "0x0", "proof": [] }] });
+        assert_eq!(proof_entry_key(&answer, &short).unwrap(), (Vec::<Vec<u8>>::new(), [0u8; 32]));
+        assert!(proof_entry_key(&serde_json::json!({ "storageProof": [] }), &key).is_err());
+        assert!(proof_entry_key(&serde_json::json!({}), &key).is_err());
+    }
+
+    /// A zone for planning: the bridge states it holds and the image its loader names; it sends nothing.
+    struct Held {
+        states: std::collections::HashMap<lee::AccountId, Vec<u8>>,
+        image: Option<[u8; 32]>,
+    }
+
+    impl crate::lez::Ledger for Held {
+        async fn applied(&self, _: lee::AccountId) -> Result<Vec<crate::lez::Applied>> {
+            Ok(Vec::new())
+        }
+        async fn actor_state(&self, actor: lee_core::account::Actor) -> Result<Vec<u8>> {
+            Ok(self.states.get(&actor.account_id).cloned().unwrap_or_default())
+        }
+        async fn bridge_image(&self, _: lee::AccountId) -> Result<Option<[u8; 32]>> {
+            Ok(self.image)
+        }
+        async fn submit(&mut self, _: &crate::lez::LezCall) -> Result<String> {
+            unreachable!("planning sends nothing")
+        }
+    }
+
+    async fn plan_on(zone: &Held, ctx: &crate::lez::Context) -> Result<FeeCollection> {
+        // No endpoint answers at this address: every case of the test returns before Ethereum is asked.
+        let p = crate::eth::provider("http://127.0.0.1:9")?;
+        plan_fee_collection(zone, &p, ctx, [0; 20], u128::MAX, None).await
+    }
+
+    /// ADR 0048's collection is refused, or waits, before anything is read from Ethereum or built: on B1's zone (it has
+    /// no `CollectFees`) and on a program this tool does not know, refused; a configuration not initialised, waiting; a
+    /// token not registered, refused; mints frozen, the token's or the whole configuration's, waiting (review r1).
+    #[tokio::test]
+    async fn a_fee_collection_is_refused_or_waits_before_ethereum_is_read() {
+        use ferrata_lez_bridge_wire as bw;
+        use ferrata_wallet::deployed;
+        let program = lee::AccountId::new([0x10; 32]);
+        let ctx = crate::lez::Context { program, cid: [0x20; 32], chain_id: 11_155_111, vault: [0x30; 20] };
+        let unlimited = bw::CapParams { capacity: u128::MAX, refill_per_second: u128::MAX };
+        let controls = bw::Controls {
+            admin: [1; 32],
+            freeze_authority: [2; 32],
+            fee_recipient: [3; 32],
+            floor: bw::CapParams { capacity: 1, refill_per_second: 1 },
+            token_cap: unlimited,
+            global_cap: unlimited,
+        };
+        let config = bw::BridgeConfig {
+            bedrock_genesis_id: [1; 32],
+            channel_id: [5; 32],
+            bridge_image_id: [2; 32],
+            attestation: lee::AccountId::new([4; 32]),
+            instance_id: [5; 32],
+            evm_chain_id: ctx.chain_id,
+            vault: ctx.vault,
+            controls,
+        };
+        let open = bw::Gate::new(unlimited, 1_000);
+        let frozen = bw::Gate { mints_until: 2_000, ..open };
+        let ready = |gate: bw::Gate| {
+            bw::BridgeState::Config(bw::ConfigState::Ready {
+                config: config.clone(),
+                pending: None,
+                gate,
+                sunset: false,
+                roles: bw::Roles::new(&controls),
+            })
+        };
+        let token = |gate: bw::Gate| {
+            bw::BridgeState::Token(bw::TokenState {
+                config_id: ctx.cid,
+                evm_chain_id: ctx.chain_id,
+                vault: ctx.vault,
+                attestation: config.attestation,
+                instance_id: config.instance_id,
+                entry: bw::TokenEntry {
+                    token: [0; 20],
+                    lez_definition: [6; 32],
+                    decimals: 18,
+                    lez_unit: 1,
+                    unit_weight: 1,
+                    denominations: vec![1_000],
+                    relay_fees: vec![7],
+                },
+                schedules: Vec::new(),
+                known_until: 0,
+                controls,
+                gate,
+                pending: None,
+                delisted: false,
+                listing_slot: 0,
+            })
+        };
+        let zone = |image: Option<[u8; 32]>, config: Option<bw::BridgeState>, token: Option<bw::BridgeState>| {
+            let mut states = std::collections::HashMap::new();
+            if let Some(c) = config {
+                states.insert(bw::config_actor(program, &ctx.cid).account_id, borsh::to_vec(&c).unwrap());
+            }
+            if let Some(t) = token {
+                states.insert(bw::token_actor(program, &ctx.cid, &[0; 20]).account_id, borsh::to_vec(&t).unwrap());
+            }
+            Held { states, image }
+        };
+        let refused = |r: Result<FeeCollection>| match r {
+            Err(e) => format!("{e:#}"),
+            Ok(other) => panic!("not refused: {other:?}"),
+        };
+        let waits = |r: Result<FeeCollection>| match r {
+            Ok(FeeCollection::Waiting { reason }) => reason,
+            Ok(other) => panic!("not waiting: {other:?}"),
+            Err(e) => panic!("refused, not waiting: {e:#}"),
+        };
+
+        let b1 = zone(Some(deployed::B1_IMAGE_ID), Some(ready(open)), Some(token(open)));
+        let e = refused(plan_on(&b1, &ctx).await);
+        assert!(e.contains("refused before anything was built") && e.contains("ferrata_bridge_b1"), "{e}");
+        let unknown = zone(Some([0x99; 32]), Some(ready(open)), Some(token(open)));
+        refused(plan_on(&unknown, &ctx).await);
+
+        let empty = zone(Some(deployed::F13_IMAGE_ID), None, None);
+        assert!(waits(plan_on(&empty, &ctx).await).contains("not initialised"));
+        let unregistered = zone(None, Some(ready(open)), None);
+        let e = refused(plan_on(&unregistered, &ctx).await);
+        assert!(e.contains("not registered"), "{e}");
+
+        for (config_gate, token_gate, scope) in [(open, frozen, "of this token"), (frozen, open, "of the whole configuration")] {
+            let z = zone(Some(deployed::F13_IMAGE_ID), Some(ready(config_gate)), Some(token(token_gate)));
+            let reason = waits(plan_on(&z, &ctx).await);
+            assert!(reason.contains(&format!("mints {scope} are frozen")) && reason.contains("nothing is sent"), "{reason}");
+        }
     }
 
     #[test]

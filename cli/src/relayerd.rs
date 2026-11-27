@@ -1522,7 +1522,11 @@ pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Op
                     fields["feeRecipientHoldingBefore"] = json!(before.to_string());
                     fields["feeRecipientHoldingAfter"] = json!(after.to_string());
                     log(&sink, if applied { "lez-fees-collected" } else { "lez-fee-collection-unconfirmed" }, fields);
-                    ensure!(applied, "CollectFees sent ({tx}) but fees(cid, token) does not hold what the dry run wrote");
+                    ensure!(
+                        applied,
+                        "CollectFees sent ({tx}) but not applied: fees(cid, token) does not hold what the dry run wrote (the \
+                         program refused it, or the zone moved since the dry run: a freeze, a bucket, another collection)"
+                    );
                 }
             }
         }

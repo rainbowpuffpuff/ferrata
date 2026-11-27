@@ -47,7 +47,8 @@ script that re-checks every step from public data and the recorded blocks.
   records still check from this tree: `e2e/crown.sh verify RUN` takes the ids from the run's own records, and
   `scripts/verify-sepolia.py` holds each live vault to the programs it was deployed with.
 - **A run started from this tree** runs the bridge program since ADR 0048 (`ferrata_bridge_lezfee`, `0x9d02d54d…a321`,
-  binary sha256 `c84fe2db…`: a claim names no fee schedule; the vault of this tree takes the mint fee at the deposit)
+  binary sha256 `a17854cc…`: a claim names no fee schedule; the vault of this tree escrows both protocol fees and counts
+  them in `lezFees`, which `CollectFees` mints on LEZ)
   with this tree's crown-driver, which speaks only that program (B1's accounts, `holder(cid, account)`,
   `nullifier(cid, chain, vault, N)`, and its claims without a schedule range) and, like
   `vault/script/DeployVault.s.sol`, deploys a capped configuration (`FERRATA_UNCAPPED=1` for the unlimited one of the

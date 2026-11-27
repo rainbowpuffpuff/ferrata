@@ -3434,13 +3434,13 @@
                 "path": "config_id"
               },
               {
-                "kind": "arg",
-                "path": "holder"
+                "kind": "account",
+                "path": "token_actor.controls.fee_recipient"
               }
             ]
           },
           "docs": [
-            "holder(cid, fee_recipient), credited the minted fees"
+            "holder(cid, fee_recipient), credited the minted fees: fee_recipient is the configuration's (Controls::fee_recipient, in token(cid, token)'s state), not an argument"
           ]
         }
       ],
@@ -3592,13 +3592,13 @@
                 "path": "config_id"
               },
               {
-                "kind": "arg",
-                "path": "holder"
+                "kind": "account",
+                "path": "token_actor.controls.fee_recipient"
               }
             ]
           },
           "docs": [
-            "holder(cid, fee_recipient), credited the minted fees"
+            "holder(cid, fee_recipient), credited the minted fees: fee_recipient is the configuration's (Controls::fee_recipient, in token(cid, token)'s state), not an argument"
           ]
         }
       ],
@@ -3722,13 +3722,13 @@
                 "path": "config_id"
               },
               {
-                "kind": "arg",
-                "path": "holder"
+                "kind": "account",
+                "path": "token_actor.controls.fee_recipient"
               }
             ]
           },
           "docs": [
-            "holder(cid, fee_recipient), credited the minted fees"
+            "holder(cid, fee_recipient), credited the minted fees: fee_recipient is the configuration's (Controls::fee_recipient, in token(cid, token)'s state), not an argument"
           ]
         }
       ],
