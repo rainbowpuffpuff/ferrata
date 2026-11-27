@@ -266,8 +266,8 @@ step("registry before the operator's first import", async (app) => {
 step("deposit: private by default", async (app) => {
   await tab(app, "deposit");
   check((await get(app, "destKind")) === "private", "private destination pre-selected");
-  check((await get(app, "delayOn && relayerOn")) === true, "the random delay and the relayer on by default");
-  check(has(await evalIn(app, "deposit.leaks.summary", "text"), "Minimal"), "the leak indicator reads Minimal");
+  check((await get(app, "delayOn && !relayerOn")) === true, "the random delay on by default; no relayer pays the claim's LEZ fee in the mini-app yet");
+  check(has(await evalIn(app, "deposit.leaks.summary", "text"), "Elevated"), "the leak indicator reads Elevated (the fee payer: the user's own private account)");
   const before = chain("before deposit");
   await picture(app, "07-deposit-defaults");
   await click(app, "deposit.review");
@@ -323,7 +323,7 @@ step("the private claim, once its random delay has passed", async (app) => {
   await click(app, "claim.pick.0");
   check((await get(app, "claimMode")) === "private", "the private claim pre-selected");
   check((await evalIn(app, "claim.submit", "enabled")) === false, "held by the deposit's random delay");
-  check(has(await evalIn(app, "claim.leaks.summary", "text"), "Minimal"), "the leak indicator reads Minimal");
+  check(has(await evalIn(app, "claim.leaks.summary", "text"), "Elevated"), "the leak indicator reads Elevated (the fee payer)");
   await picture(app, "12-claim-held-by-its-delay");
   await userWaits(app, "heldUntil[0]");
   await waitFor(app, async () => { if ((await get(app, "held(0)")) !== false) throw new Error("held"); }, 10000, "the delay passed");

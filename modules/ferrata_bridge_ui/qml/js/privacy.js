@@ -44,7 +44,13 @@ function step(name, ownRelease) {
     };
 }
 
-// level: 0 fine, 1 a correlation the user accepts, 2 a direct link.
+// Who pays a claim's LEZ fee when no relayer does (RFP-022 U.05's fee-payer correlation). The module's claim names no
+// relayer and no gas drop on any of its paths (the chain service's, lez_core's, a test network's): the private account
+// that proves pays it, as the `ferrata` tool does with --no-gas-drop (cli/src/flow.rs, its `fee payer:` line).
+var OWN_FEE = "Your own private account pays the claim's LEZ fee: its native LEZ came from somewhere (a faucet, a purchase or a public account of yours), which can link the claim to you. A relayer's gas drop avoids that (the ferrata tool's default when the network publishes a relayer); the mini-app has none yet.";
+
+// level: 0 fine, 1 a correlation the user accepts, 2 a direct link. `relayer`: a relayer pays the claim's LEZ fee on
+// this path (none does in the mini-app yet: the view passes false).
 function leaks(c) {
     var out = [];
     out.push({ level: 0, text: "Fixed denomination: your deposit looks like every other deposit of " + c.denominationText + "." });
@@ -59,7 +65,7 @@ function leaks(c) {
     if (c.relayer)
         out.push({ level: 0, text: "Permissionless relayer: a relayer submits and pays the LEZ fee; no fee payment ties the claim to you." });
     else
-        out.push({ level: 1, text: "Self-submitted: the account paying the LEZ fee is linked to the claim." });
+        out.push({ level: 1, text: OWN_FEE });
     if (c.account >= 8)
         out.push({ level: 2, text: "Account /" + c.account + " is outside the recovery window (8): a restored wallet would not find it." });
     return out;
@@ -111,5 +117,7 @@ function claimLeaks(c) {
         out.push({ level: 0, text: "Held by your random delay: the claim will not follow the deposit closely in time." });
     if (c.relayer)
         out.push({ level: 0, text: "Submitted by a permissionless relayer: no fee payment ties the claim to you." });
+    else
+        out.push({ level: 1, text: OWN_FEE });
     return out;
 }
