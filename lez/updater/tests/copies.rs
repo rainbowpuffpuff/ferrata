@@ -295,3 +295,51 @@ fn a_batch_of_copies_read_at_once_keeps_the_job_that_leads() {
         show(&first)
     );
 }
+
+/// The in-process chain whose transactions cannot be read (`Ledger::messages_to` fails, as a backend whose block history
+/// is unreachable while its account reads still work).
+struct NoHistory {
+    inner: HarnessLedger,
+}
+
+impl Ledger for NoHistory {
+    fn actor_state(&self, actor: lee::Actor) -> anyhow::Result<Vec<u8>> {
+        self.inner.actor_state(actor)
+    }
+    fn submit(
+        &mut self,
+        payer: &PrivateKey,
+        tx: &Tx,
+        gas_limit: u64,
+        max_fee: u128,
+    ) -> anyhow::Result<ferrata_updater::ledger::TxOutcome> {
+        self.inner.submit(payer, tx, gas_limit, max_fee)
+    }
+    fn messages_to(&self, _root: lee::Actor, _after: u64) -> anyhow::Result<Option<(Vec<Vec<u8>>, u64)>> {
+        anyhow::bail!("the block history is unreachable (injected)")
+    }
+}
+
+/// Five rounds in a row in which the instance's transactions cannot be read turn `/health` `degraded`, saying so (the
+/// jobs other parties open for copies its sources do not serve are not seen meanwhile); the updater still works from
+/// what its sources serve.
+#[test]
+fn unread_transactions_are_reported_by_health() {
+    let fx = Fx::load();
+    let c = fx.new_finality_update();
+    let ka = key(0x87);
+    let mut l = NoHistory { inner: HarnessLedger::new(std::slice::from_ref(&ka)) };
+    let mut a = fx.updater("a", ka, false);
+    fx.clock.set(c);
+    let mut rounds = 0;
+    while a.metrics.learn_failures < 5 {
+        a.tick(&mut l).unwrap();
+        rounds += 1;
+        assert!(rounds < 400, "the transactions were never asked for");
+    }
+    let (status, why) = a.health();
+    println!("after {rounds} rounds: {status} {why:?}");
+    assert!(why.iter().any(|w| w.contains("transactions could not be read")), "{why:?}");
+    assert_ne!(status, "ok");
+    assert!(a.render_metrics().contains("ferrata_updater_transactions_unread_rounds{daemon=\"a\",chain=\"mainnet\"} "));
+}
