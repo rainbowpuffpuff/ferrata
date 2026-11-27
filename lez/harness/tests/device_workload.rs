@@ -108,13 +108,14 @@ const BURN_TRANSITION: (u64, usize, u64) = (25_377, 1, 131_072);
 /// checked against the record's segments again (the asserts below) or the measurements redone.
 const ATTEST_TRANSITIONS_NOW: [u64; 2] = [34_717, 346_763];
 /// 41,322 and 110,378 since ADR 0046 (27 November 2026; 41,785 and 110,944 before): the claim names no fee schedule,
-/// so it no longer carries or checks a range; still one segment each, of 131,072 and 262,144 padded cycles, as the
-/// record's.
-const CLAIM_TRANSITIONS_NOW: [u64; 2] = [41_322, 110_378];
+/// so it no longer carries or checks a range; 41,321 and 110,358 since ADR 0048 (`ferrata_bridge_lezfee`, the same
+/// day); still one segment each, of 131,072 and 262,144 padded cycles, as the record's.
+const CLAIM_TRANSITIONS_NOW: [u64; 2] = [41_321, 110_358];
 /// 23,610 since ADR 0032 (22 November 2026): the burn record is keyed on the note's tag, so the private transition no
 /// longer hashes the note (25,773 before); 23,580 since ADR 0046 (27 November 2026: the holder's state no longer holds
-/// a claim's schedule range); still one segment of 131,072 padded cycles, as the record's.
-const BURN_TRANSITION_NOW: u64 = 23_580;
+/// a claim's schedule range); 23,579 since ADR 0048 (the same day); still one segment of 131,072 padded cycles, as the
+/// record's.
+const BURN_TRANSITION_NOW: u64 = 23_579;
 
 /// Each proof's receipt and transaction sizes as the record states them, `(receipt bytes,
 /// transaction bytes)`: the unpadded first pass (p4-minimum:23-25) and the padded pass (337-339;
