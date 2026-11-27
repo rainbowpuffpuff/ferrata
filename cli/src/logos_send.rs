@@ -356,10 +356,13 @@ pub fn custody(call: ModuleCall, req: &CustodyRequest) -> Value {
         Ok(r) => parse(&r),
         Err(e) => return json!({ "verdict": "error", "error": format!("{KEYSTORE}.import_private_key: {e}") }),
     };
+    // The keystore's own answers for a key it holds (e83a899: "this key is here already…"; earlier ones: "…exists…"),
+    // matched by their shape, so that another refusal is never taken for one and its reason is kept.
     let said = why(&imported).to_lowercase();
-    let held_already = imported.get("ok") != Some(&Value::Bool(true)) && (said.contains("exist") || said.contains("already"));
+    let held_already =
+        imported.get("ok") != Some(&Value::Bool(true)) && (said.contains("exist") || said.starts_with("this key is here already"));
     // In a wallet the keystore names as locked: the manager lists the account only once an approver unlocked it.
-    let locked_wallet = held_already && said.contains("locked");
+    let locked_wallet = held_already && said.contains("in a locked wallet");
     if imported.get("ok") != Some(&Value::Bool(true)) && !held_already {
         return json!({ "verdict": "refused", "step": "import_private_key", "address": address.to_checksum(None),
                        "reply": imported });
@@ -386,7 +389,7 @@ pub fn custody(call: ModuleCall, req: &CustodyRequest) -> Value {
                                           {{seed, way, passwords}}), then call custody again; nothing was unlocked or sent") });
     }
     if listed.is_null() {
-        return json!({ "verdict": "refused", "step": "accounts", "address": address.to_checksum(None),
+        return json!({ "verdict": "refused", "step": "accounts", "address": address.to_checksum(None), "reply": imported,
                        "error": format!("{SIGNER_MANAGER} does not list the imported account after 20 s") });
     }
     // The manager finds an account by its `id` (registry.rs `same_id`), which `accounts` lists beside the address.
@@ -692,9 +695,16 @@ mod tests {
             ("history", json!({ "ok": true, "address": a, "transactions": [] })),
         ]);
         let r = custody(fake, &req);
-        std::fs::remove_dir_all(&dir).ok();
         assert_eq!(r["verdict"], "ok", "{r}");
         assert_eq!(r["imported"], "held already", "{r}");
         assert_eq!(r["historyOpen"], true);
+        // Another refusal that only mentions "already" and "locked" is not a key held already: refused at the import,
+        // with the keystore's own reason, and no wallet is said to be locked.
+        let other = json!({ "ok": false, "error": "the keystore is locked: an import is already running" });
+        script(&[("import_private_key", other)]);
+        let r = custody(fake, &req);
+        std::fs::remove_dir_all(&dir).ok();
+        assert_eq!((r["verdict"].as_str(), r["step"].as_str()), (Some("refused"), Some("import_private_key")), "{r}");
+        assert!(r["reply"]["error"].as_str().unwrap().contains("an import is already running"), "{r}");
     }
 }

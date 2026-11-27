@@ -483,6 +483,8 @@ pub(crate) fn switch_sequencer(sequencer: &str) -> Result<(Value, Switched), Str
         }
         Err(why) => {
             let back = put_back(&prev).map_or_else(|e| format!("; putting lez_core back on {} failed: {e}", prev.config), |_| String::new());
+            // The copy this failed switch wrote is in nobody's use (never the config in use: `config_copy`).
+            let _ = std::fs::remove_file(&copy);
             log(json!({ "kind": "switch", "from": prev.sequencer, "to": sequencer, "error": why, "put_back": back.is_empty() }));
             Err(format!("{why}{back}"))
         }
@@ -532,8 +534,12 @@ fn write_private(path: &str, bytes: &[u8]) -> Result<(), String> {
     #[cfg(unix)]
     std::os::unix::fs::OpenOptionsExt::mode(&mut o, 0o600);
     let mut f = o.open(&tmp).map_err(|e| format!("writing {tmp}: {e}"))?;
-    f.write_all(bytes).and_then(|()| f.sync_all()).map_err(|e| format!("writing {tmp}: {e}"))?;
-    std::fs::rename(&tmp, path).map_err(|e| format!("renaming {tmp}: {e}"))
+    let done = f.write_all(bytes).and_then(|()| f.sync_all()).map_err(|e| format!("writing {tmp}: {e}"))
+        .and_then(|()| std::fs::rename(&tmp, path).map_err(|e| format!("renaming {tmp}: {e}")));
+    if done.is_err() {
+        let _ = std::fs::remove_file(&tmp);
+    }
+    done
 }
 
 /// `lez_core.poll_transaction_status(hash)`: whether LEZ's wallet finds it on the zone.

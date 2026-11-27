@@ -20,7 +20,7 @@ endpoint, the reason and the endpoints kept. While a private claim or burn is be
 While the session's LEZ goes through Logos Core's `lez_core` (`wallet lez`), whose wallet holds its own connection (the
 sequencer its wallet config names, `sequencer.sequencer_addr`; `lez_core` has no method that sets it), the switch moves
 it too: after the chain service has read the new sequencer and switched, `lez_core` opens the session's wallet again on
-a copy of that config naming the new sequencer (`<config>.seq-<8 hex>.json`, mode 0600; the config in use is never
+a copy of that config naming the new sequencer (`<config>.seq-<16 hex>.json`, mode 0600; the config in use is never
 written), and the switch is kept only if `lez_core` then names the new sequencer and reads a block through it; otherwise
 `lez_core` is opened again on the config it had and the chain service's endpoints are put back (both or neither;
 `calls/src/lez.rs` `switch_sequencer`, `put_back`; tested natively in `calls/tests/endpoints.rs`). As with

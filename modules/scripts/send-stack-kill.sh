@@ -58,7 +58,8 @@ c() {
   jq -c -n --args '$ARGS.positional' -- "$@" > "$OUT/.args" 2>/dev/null || echo '[]' > "$OUT/.args"
   jq -c -n --arg m "$m" --arg f "$f" --slurpfile a "$OUT/.args" --arg o "$out" --argjson rc "$rc" \
     '{module: $m, method: $f, args: $a[0], exit: $rc,
-      reply: ($o | fromjson? // $o | if type == "object" and (.result | type) == "string" then .result |= (fromjson? // .) else . end)}' \
+      reply: ($o | fromjson? // $o | if type == "object" and (.result | type) == "string" then .result |= (fromjson? // .) else . end
+              | walk(if type == "object" then del(.password, .passwords, .secret) else . end))}' \
     >> "$OUT/calls.jsonl"
   LAST=$(jq -c 'if (.result | type) == "string" then (.result | fromjson? // .result) else (.result // .) end' <<< "$out" 2>/dev/null || echo "$out")
   echo "$m.$f -> exit $rc: ${LAST:0:300}"
@@ -175,6 +176,7 @@ unlock_wallets() {
   mkdir -p "$R/unlock"; chmod 700 "$R/unlock"
   python3 -I - "$R/wallets-${STEP:-start}.json" "$pw" "$R/unlock" <<'PY' > "$R/unlock/files.txt"
 import json, os, sys
+# argv[2] is the password FILE's path (0600), never the password itself.
 w = json.load(open(sys.argv[1])); pw = open(sys.argv[2]).read().rstrip("\n"); out = sys.argv[3]
 for x in w.get("wallets", []):
     if not x.get("locked") or not x.get("ways"):
@@ -357,7 +359,9 @@ check K3-no-inflight-left none "$(inflight)"
 # K4: the endpoint down for a whole round, then up: the second checkpoint's finalizeAttested.
 warp 3601
 echo outage > "$CTL"
+o0=$(grep -c '"outage"' "$R/proxy.jsonl" 2>/dev/null || echo 0)
 round K4a > "$R/K4.log" 2>&1
+check K4-the-outage-met-the-round yes "$( [ "$(grep -c '"outage"' "$R/proxy.jsonl" 2>/dev/null || echo 0)" -gt "$o0" ] && echo yes || echo no)"
 check K4-nothing-sent-during-outage 1 "$(count finalizeAttested)"
 note "K4: during the outage: $(jq -c '[.. | objects | select(.error? != null) | .error] | .[0:2]' "$R/K4a-lines.json" 2>/dev/null)"
 echo pass > "$CTL"
@@ -369,6 +373,7 @@ s4=$(label state/4)
 jq -c -n --arg j "$(cp_journal "$s2" "$s4" 40 "$(label block/40)" "$(label burn-root/4)" 4)" '{kind: "checkpoint", journal: $j, seal: "0x"}' > "$INBOX/k5-checkpoint.json"
 rm -f "$CTL.hit"; echo "late eth_sendRawTransaction 8" > "$CTL"
 round K5a > "$R/K5.log" 2>&1
+check K5-fault-fired yes "$(wait_hit 30 && echo yes || echo no)"
 for _ in $(seq 300); do grep -q 'late forward answered' "$R/proxy.jsonl" 2>/dev/null && break; sleep 0.1; done
 note "K5: the broadcast answered 503 and forwarded late: $(grep -c 'late forward answered' "$R/proxy.jsonl" 2>/dev/null) late forward(s); the first round: $(events K5a); in flight: $(inflight)"
 echo pass > "$CTL"
