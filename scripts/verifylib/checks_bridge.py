@@ -170,12 +170,25 @@ def _check_privacy_run(ctx, problems: list, base: str, real: bool) -> dict:
         derived = 18 / 20 * (1 / 20)
         _expect(problems, lez["candidate_set_sizes"] == [[1, 2], [20, 18]] and lez["exactly_identified"] == 0
                 and abs(lez["success"] - derived) < 1e-15, f"{label}: 4.5% claim-to-burn rate not rederived")
+    # The adversary table row by row: each game's own six cells against its own JSON object, not a search of the
+    # whole document (another game's cells would satisfy that).
+    adversary_rows = _table(summary, "game")
+    rows_by_name = {}
+    for row in adversary_rows:
+        rows_by_name.setdefault(row[0], []).append(row[1:])
+    _expect(problems, set(rows_by_name) == set(result["adversary"]),
+            f"{label}: the adversary table's games {sorted(rows_by_name)} are not the JSON's "
+            f"{sorted(result['adversary'])}")
     for name, game in result["adversary"].items():
         fields = [game["success"], game["exactly_identified"], game["candidate_set_sizes"],
                   game["without_derived_identifiers"], game["with_order_state"], result["order_only"][name]]
-        rendered = ["100.0%" if x == 1 else _pct(x) if isinstance(x, float) else f"{x} of 20" if isinstance(x, int)
-                    else ", ".join(f"{size}: {count}" for size, count in x) for x in fields]
-        _expect(problems, all(str(x) in summary for x in rendered), f"{label}: adversary summary changed for {name}")
+        rendered = [f"{x} of 20" if isinstance(x, int) else "100.0%" if x == 1 else _pct(x)
+                    if isinstance(x, float) else ", ".join(f"{size}: {count}" for size, count in x) for x in fields]
+        own = rows_by_name.get(name, [])
+        _expect(problems, len(own) == 1, f"{label}: {len(own)} adversary table rows for {name}")
+        if len(own) == 1:
+            _expect(problems, own[0] == rendered,
+                    f"{label}: the {name} row {own[0]} is not its JSON's {rendered}")
     hidden = result["hidden"]
     searched = sum(v["values searched"] for v in hidden.values())
     _expect(problems, len(hidden) == 4 and searched == (320 if real else 680),
@@ -206,7 +219,7 @@ def _check_privacy_run(ctx, problems: list, base: str, real: bool) -> dict:
 @check(id="bridge-privacy", title="Priv.1–Priv.4/F.2/F.8/F.9/R.5: both 20-user privacy ledgers",
        family="record", mode="offline", tier="quick", rows=("RFP-022 Priv.1", "RFP-022 Priv.2", "RFP-022 Priv.3",
        "RFP-022 Priv.4", "RFP-022 F.2", "RFP-022 F.8", "RFP-022 F.9", "RFP-022 R.5"), evidence=(23, 89),
-       what="both runs' eight gates, seven adversary games/candidate-set partitions, all classified fields, hidden-value counts and per-user recovery; the real run's 40 LEZ and 20 release proofs",
+       what="both runs' eight gates, the seven adversary games' own summary rows against their JSON, all classified fields, hidden-value counts and per-user recovery; the real run's 40 LEZ and 20 release proofs",
        against="docs/privacy/{generated,real/generated}/{results.json,summary.md,b6.md}, real/proofs.json, both RESULTS.md and the RFP-022 status text",
        inputs=(STATUS, f"{PRIVACY}/RESULTS.md", f"{PRIVACY}/generated/results.json", f"{PRIVACY}/generated/summary.md",
                f"{PRIVACY}/generated/b6.md", f"{PRIVACY}/real/RESULTS.md", f"{PRIVACY}/real/generated/results.json",
@@ -617,10 +630,17 @@ def bridge_state_projections(ctx):
     grew = [_int(r[4]) for r in claims]
     _expect(problems, len(grew) == 2 and grew[0] - 165 == 3 * (grew[1] - 165) and grew[1] - 165 == 162,
             f"P.7: holder growth is not 3×162 and 1×162: {grew}")
+    # The root row's own arithmetic, both measurements of it: LEZ's account layout is actor state + 56 = borsh
+    # Account (the light-client record check's own rule), and the account with its 32-B key is the 205 B stated.
     root = re.search(r"root\(cid, \d+\) \| (\d+) \| (\d+) \|", state)
-    _expect(problems, root is not None and int(root.group(2)) + 32 == 205, "P.7: root account+key != 205")
+    root_actor, root_account = (int(root.group(1)), int(root.group(2))) if root else (0, 0)
+    root_total = root_account + 32
+    _expect(problems, root is not None and root_actor + 56 == root_account and root_total == 205,
+            f"P.7: the root row is not actor state {root_actor} + 56 = borsh Account {root_account}, "
+            f"+ 32 = account and key 205 B")
     burn = [r for r in _table(state.split("## 4.", 1)[1].split("## 5.", 1)[0], "transaction") if r[0].startswith("public burn")]
-    _expect(problems, len(burn) == 2 and all(_int(r[3]) + 32 == _int(r[4]) == 273 for r in burn), "P.7: burn sizes changed")
+    _expect(problems, len(burn) == 2 and all(_int(r[2]) + 56 == _int(r[3]) and _int(r[3]) + 32 == _int(r[4]) == 273
+                                            for r in burn), "P.7: burn sizes changed")
     eth = _text(ctx, "lez/results/perf-state-ethereum.txt")
     slots = {m.group(1): (int(m.group(2)), int(m.group(3))) for m in re.finditer(r"GROWTH\t(.*?)\tops.*\n\s+(\d+) (\d+) \d+", eth)}
     expected_slots = {"releases, 25 more (total)": (25, 25), "deposits by 25 new addresses (total)": (25, 28),
@@ -637,22 +657,27 @@ def bridge_state_projections(ctx):
     holder = grew[1] - 165
     _expect(problems, f"{mb(1_000_000 * holder)} when" in projections and f"{mb(2_000_000 * holder)} if" in projections
             and f"{mb(10_000_000 * holder)} and {mb(20_000_000 * holder)}" in projections, "P.7: holder projections changed")
-    _expect(problems, mb(8766 * 205) == "1.80 MB" and "8,766 a year at one an hour: 1.80 MB" in projections,
+    _expect(problems, mb(8766 * root_total) == "1.80 MB"
+            and f"8,766 a year at one an hour: {mb(8766 * root_total)}" in projections,
             "P.7: root annual projection changed")
     _phrases(problems, projections, "perf-projections", "nullifier 165 B", "burn record 273 B", "frontier is 32 slots",
              "1,000,000 + at most 32 / at most 32", "10,000,000 + at most 32 / at most 32", "162 to 324 B")
-    _phrases(problems, _row(ctx, "P.7"), "P.7", "nullifier 165 B", "burn record 273 B", "root 205 B", "162 B per new holder",
+    _phrases(problems, _row(ctx, "P.7"), "P.7", "nullifier 165 B", "burn record 273 B", f"root {root_total:,} B",
+             "162 B per new holder",
              "one slot per release and per new depositor", "nullifiers 165 MB / 1.65 GB", "holders 162–324 MB at 1M claims")
     fail_if(problems, "state projection record/status mismatch")
-    return [f"three LEZ growth rows: exact deltas 165 B/nullifier and 273 B/burn; holder deltas 486=3×162 and 162; root 173+32=205 B",
+    return [f"three LEZ growth rows: exact deltas 165 B/nullifier and 273 B/burn; holder deltas 486=3×162 and 162; "
+            f"root {root_actor}+56={root_account}, +32={root_total} B",
             "vault: releases 25/25 one slot each; 25 new depositors 28 slots (25+3 frontier), repeat 25/1 frontier only; suite verdict ok",
-            f"1M/10M: nullifiers {mb(1e6*165)}/{mb(1e7*165)}, burns {mb(1e6*273)}/{mb(1e7*273)}, holders {mb(1e6*holder)}–{mb(2e6*holder)} at 1M; 8,766 roots = {mb(8766*205)}/year",
+            f"1M/10M: nullifiers {mb(1e6*165)}/{mb(1e7*165)}, burns {mb(1e6*273)}/{mb(1e7*273)}, holders {mb(1e6*holder)}–{mb(2e6*holder)} at 1M; 8,766 roots = {mb(8766*root_total)}/year",
             "LIMIT: MB/GB are decimal units as in the generator; the 68-B added holding and 32-slot frontier bound are documented bounds, not additional growth runs"]
 
 
 @check(id="bridge-u8-refusals", title="U.8: CLI/freeze refusal cases and mini-app verdicts",
        family="record", mode="offline", tier="quick", rows=("RFP-022 U.8",), evidence=(62, 85, 202, 221, 233),
-       what="the log's source/code/refusal cases, nine distinct freeze commands, the summary/mutant cases and 27 mini-app test verdicts",
+       what="the log's source/code/refusal cases, the nine required freeze modes (vault deposits/releases whole and "
+       "per token, bridge mints/burns per token and whole, and the private path) each anchored to its own raw-log "
+       "refusal, and the 12 tool + 7 mini-app mutant results (only the no-mutant control fails nothing)",
        against="e2e/runs/{cli-u8,cli-freezes}/{README.md,test.log}, modules/ferrata_bridge_ui/results/qmltest.txt and RFP-022 U.8",
        inputs=(STATUS, "e2e/runs/cli-u8/README.md", "e2e/runs/cli-u8/test.log", "e2e/runs/cli-freezes/README.md",
                "e2e/runs/cli-freezes/test.log", "modules/ferrata_bridge_ui/results/qmltest.txt"))
@@ -689,15 +714,50 @@ def bridge_u8(ctx):
     freeze_log = _text(ctx, "e2e/runs/cli-freezes/test.log")
     freeze_readme = _text(ctx, "e2e/runs/cli-freezes/README.md")
     freeze_rows = _table(freeze_readme.split("## What the tool says", 1)[1], "Freeze")
-    _expect(problems, len(freeze_rows) == 9 and len({r[0] for r in freeze_rows}) == 9, "U.8: nine distinct freeze rows expected")
-    for row in freeze_rows:
-        name = row[0]
-        code = ("DepositsAreFrozen" if "vault deposits, whole" in name else "TokenDepositsAreFrozen" if "vault deposits" in name
-                else "ReleasesAreFrozen" if "vault releases, whole" in name else "TokenReleasesAreFrozen" if "vault releases" in name
-                else "242 FROZEN")
+    # The nine required freeze modes as an explicit matrix, each row anchored to its own refusal line in the raw
+    # log (its FREEZE marker, error code and command path), not nine arbitrary distinct labels: the vault's four
+    # (deposits/releases x whole vault/token) and the bridge's four (mints/burns x token/whole configuration),
+    # plus the private path of the bridge's whole-configuration mint freeze, refused before its proof.
+    freeze_matrix = (
+        # (the table row's Freeze cell, its Command cell, the raw log's FREEZE line, the code it refuses with)
+        ("vault deposits, whole vault (`setDepositsFrozen`)", "`ferrata deposit` (the binary)",
+         "FREEZE (vault, deposit): error: refused: vault error DepositsAreFrozen()", "DepositsAreFrozen"),
+        ("vault deposits of ETH (`setTokenDepositsFrozen`)", "`ferrata deposit`",
+         "FREEZE (vault, deposit): error: refused: vault error TokenDepositsAreFrozen()", "TokenDepositsAreFrozen"),
+        ("bridge mints of ETH (`Freeze`, token)", "`claim` (plaintext path)",
+         "FREEZE (LEZ, claim, mints of this token):", "242 FROZEN"),
+        ("bridge mints, whole configuration (`Freeze`, no token)", "`claim` (plaintext path)",
+         "FREEZE (LEZ, claim, mints of the whole configuration):", "242 FROZEN"),
+        ("bridge burns of ETH", "`burn` (public holding)",
+         "FREEZE (LEZ, burn, burns of this token):", "242 FROZEN"),
+        ("bridge burns, whole configuration", "`burn`",
+         "FREEZE (LEZ, burn, burns of the whole configuration):", "242 FROZEN"),
+        ("vault releases, whole vault (`setReleasesFrozen`)", "`release` (self-sent)",
+         "FREEZE (vault, release): refused: vault error ReleasesAreFrozen()", "ReleasesAreFrozen"),
+        ("vault releases of ETH (`setTokenReleasesFrozen`)", "`release`",
+         "FREEZE (vault, release): refused: vault error TokenReleasesAreFrozen()", "TokenReleasesAreFrozen"),
+        ("bridge mints, whole configuration", "`claim` (private path, before its proof)",
+         "FREEZE (LEZ, private claim):", "242 FROZEN"),
+    )
+    freeze_by_label = {r[0]: r for r in freeze_rows}
+    _expect(problems, len(freeze_rows) == 9 and len(freeze_by_label) == 9,
+            f"U.8: {len(freeze_rows)} freeze rows, {len(freeze_by_label)} distinct, nine expected")
+    _expect(problems, set(freeze_by_label) == {row[0] for row in freeze_matrix},
+            f"U.8: the freeze table's rows {sorted(freeze_by_label)} are not the nine required modes "
+            f"{sorted(row[0] for row in freeze_matrix)}")
+    for label, command, anchor, code in freeze_matrix:
+        row = freeze_by_label.get(label)
+        _expect(problems, row is not None, f"U.8: no freeze table row {label!r}")
+        if row is None:
+            continue
+        _expect(problems, row[1] == command, f"U.8: the {label} row's command is {row[1]!r}, not {command!r}")
         _expect(problems, code in row[2] or (code == "242 FROZEN" and "…" in row[2]),
-                f"U.8: freeze table code changed for {name}")
-        _expect(problems, code in freeze_log, f"U.8: {name} / {code} absent from raw log")
+                f"U.8: freeze table code changed for {label}")
+        matches = [ln for ln in freeze_log.splitlines() if ln.startswith(anchor) and code in ln]
+        _expect(problems, len(matches) == 1,
+                f"U.8: {label}: {len(matches)} raw-log refusals start {anchor!r} with {code}, one expected")
+        _expect(problems, matches and "checked before sending" in matches[0],
+                f"U.8: {label}: its raw-log refusal is not a pre-send check")
     _expect(problems, "test result: ok. 1 passed; 0 failed" in freeze_log and "finished in 34.47s" in freeze_log,
             "U.8: freeze test verdict changed")
     qml = _text(ctx, "modules/ferrata_bridge_ui/results/qmltest.txt")
@@ -712,16 +772,66 @@ def bridge_u8(ctx):
     _expect(problems, len(tool_mutants) == 12 and all(r[2].startswith("fails") for r in tool_mutants),
             "U.8: twelve failing tool-mutant results changed")
     mini_mutants = _table(u8.split("Mini-app:", 1)[1], "Mutant")
-    _expect(problems, len(mini_mutants) == 7 and all("failed" in r[2] or "0 failed" in r[2] for r in mini_mutants),
-            "U.8: seven mini-app mutant results changed")
+    # The seven mini-app mutant results: F0, the no-mutant control, is the only one allowed to fail nothing;
+    # each Q0-Q5 must fail the tests its `Must break` cell names, and those names must be the run's own tests.
+    qml_names = re.findall(r"^PASS   : qmltestrunner::FerrataMiniApp::(\w+)\(\)", qml, re.M)
+
+    def _named_test(name):
+        """The qmltest function a mutant's `Must break` cell names (`test_09`, shorthand `06b`): the one function
+        equal to it or continuing it before another word character, or None when that is not exactly one."""
+        hits = [f for f in qml_names if f == name or f.startswith(name + "_")]
+        return hits[0] if len(hits) == 1 else None
+
+    def _expected_failures(cell):
+        """The test names the cell names: `test_09`, `06b` shorthand and `09b`–`09f` ranges, expanded."""
+        names = []
+        tokens = [(m.group(1), m.start(), m.end()) for m in re.finditer(r"`([^`]+)`", cell)]
+        i = 0
+        while i < len(tokens):
+            tok, _, end = tokens[i]
+            name = tok if tok.startswith("test_") else "test_" + tok
+            if i + 1 < len(tokens) and cell[end:tokens[i + 1][1]].strip() == "–":
+                after = tokens[i + 1][0]
+                after = after if after.startswith("test_") else "test_" + after
+                stem, last = name[:-1], name[-1]
+                if after[:-1] == stem and last.isalpha() and "a" <= last <= after[-1] <= "z":
+                    names += [stem + chr(c) for c in range(ord(last), ord(after[-1]) + 1)]
+                    i += 2  # the range's end is consumed with its start
+                    continue
+            names.append(name)
+            i += 1
+        return names
+
+    _expect(problems, len(mini_mutants) == 7
+            and [r[0].split()[0] for r in mini_mutants] == [f"Q{i}" for i in range(6)] + ["F0"],
+            "U.8: the seven mini-app mutant rows are not Q0-Q5 then F0")
+    for mid, must_break, result in mini_mutants:
+        m = re.match(r"(\d+) passed, (\d+) failed", result)
+        _expect(problems, m is not None, f"U.8: mini-app mutant {mid}: unreadable result {result!r}")
+        if m is None:
+            continue
+        passed, failed = int(m.group(1)), int(m.group(2))
+        _expect(problems, passed + failed == len(qml_names),
+                f"U.8: mini-app mutant {mid}: {passed} passed + {failed} failed, the run has {len(qml_names)} tests")
+        if mid.startswith("F0"):
+            _expect(problems, failed == 0 and must_break == "nothing",
+                    f"U.8: the no-mutant control F0 broke {failed} tests ({must_break!r})")
+        else:
+            named = _expected_failures(must_break)
+            _expect(problems, failed > 0, f"U.8: mutant {mid} broke nothing ({result!r})")
+            _expect(problems, len(named) == failed,
+                    f"U.8: mutant {mid}: {must_break!r} names {len(named)} tests, {failed} failed")
+            _expect(problems, all(_named_test(n) for n in named),
+                    f"U.8: mutant {mid}: {must_break!r} names tests the 27-case run does not have: {named}")
     _phrases(problems, u8, "U.8 README", "31 named forms fail", "names_nothing_catches_every_form", "every U.08 refusal of the sequence",
              "unmoved", "the signer's nonce is unchanged")
     _phrases(problems, _row(ctx, "U.8"), "U.8", "9 of 9", "252 by the plaintext path", "249 on a redirected opening",
              "245 before any import", "248 before the claim's root's", "inbound depth",
              "`BurnRootNotAccepted`", "`VerificationFailed`", "Mutants break each check", "all seven modes")
     fail_if(problems, "U.8 record/status mismatch")
-    return [f"{len(expected)} named CLI cases rechecked with pre-send source/code; 9 distinct freeze rows + raw log; CLI verdict 2 passed, freeze verdict 1 passed",
-            "mini-app: 27 PASS, 0 FAIL; all seven U8 modes' banner codes present; 12 tool + 7 mini-app mutant result rows checked",
+    return [f"{len(expected)} named CLI cases rechecked with pre-send source/code; the nine required freeze modes as their own table rows and raw-log FREEZE lines; CLI verdict 2 passed, freeze verdict 1 passed",
+            "mini-app: 27 PASS, 0 FAIL; all seven U8 modes' banner codes present; 12 tool mutants fail their checks; "
+            "Q0-Q5 each fail the tests their rows name (the run's own), F0 alone fails nothing",
             "LIMIT: names-nothing/value and unchanged nonces are the tests' recorded assertions; raw per-mutant logs are not committed beside README's summaries"]
 
 
@@ -1023,6 +1133,15 @@ def bridge_r12_module_flows(ctx):
     _phrases(problems, _text(ctx, "modules/results/final-2026-11-13/README.md"), "final record",
              "`bridge_e2e.sh` 24/24 in each Core", "e2e.sh` 43/43")
     guide = _text(ctx, "docs/guides/user-guide.md").split("## 13.", 1)[1]
+    # The guide's method count is read from the guide, not retyped here: both of its statements of it, and they
+    # must agree, so a count edit cannot leave this check's own words (or one of the two) stale.
+    counts = [re.search(r"(\w+) methods a Logos ui module or a client calls", guide),
+              re.search(r"The (\w+) methods natively", guide)]
+    _expect(problems, all(counts), "R.12: the user guide's §13 no longer states the module's method count twice")
+    if all(counts):
+        _expect(problems, counts[0].group(1) == counts[1].group(1),
+                f"R.12: the guide's method counts disagree: {counts[0].group(1)} and {counts[1].group(1)}")
+    method_count = counts[0].group(1) if counts[0] else "an unstated number of"
     _phrases(problems, guide, "user guide §13", "`ferrata_bridge_module` is the bridge's core module",
              "logosctl call ferrata_bridge_module", "24 of 24 checks", "one release proven",
              "for real through Logos Core", "recovery and the registry", "**Messages** of the bridge program",
@@ -1036,7 +1155,7 @@ def bridge_r12_module_flows(ctx):
             f"the release proven for real through Logos Core: reply dev_mode false, verdict {reply['verdict']!r}, "
             f"image id matching, and the receipt re-hashed ({digest[:16]}…, {len(receipt):,} B) equal to the committed "
             f"digest and the module's own reply",
-            "user guide §13 still states the eleven methods, the logosctl commands, 24 of 24 and the one real release proof",
+            f"user guide §13 still states the {method_count} methods, the logosctl commands, 24 of 24 and the one real release proof",
             "LIMIT: the guide's wording and the Basecamp/mini-app runs the row also cites (EVIDENCE 125, 126) are not "
             "re-derived here; the real-proof record is the module's own reply and receipt, not a chain read"]
 

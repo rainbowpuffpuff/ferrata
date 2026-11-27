@@ -128,8 +128,9 @@ def alarms(cfg: dict, slot: int, *, active: bool, next_committee: bool, now_ms: 
                             "has stopped."})
     elif lag_epochs >= th["lag_warn_epochs"]:
         out.append({"level": "warn", "text": f"Finalized header {lag_epochs} epochs behind {by}."})
-    # the committee period, when the next committee is not known yet
-    period_end_ms = time_of_slot_ms((slot // period + 1) * period)
+    # the committee period, when the next committee is not known yet. BigInt division truncates toward zero
+    # (ferrata.js), so a pre-genesis slot ends its period one period early, not one late: _div, not Python's floor.
+    period_end_ms = time_of_slot_ms((_div(slot, period) + 1) * period)
     if not next_committee:
         hours = (period_end_ms - now_ms) / 3600000
         if hours < 0:

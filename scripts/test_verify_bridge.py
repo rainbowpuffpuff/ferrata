@@ -16,6 +16,7 @@ Two rows state no number (U.6, Priv.5); their status tamper alters the wording t
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -150,6 +151,30 @@ STATUS_NUMBER = {
                                   "each public choice needs no acknowledgement"),
 }
 
+# The adversarial review's own reproductions (REVIEW-cli.md), one per finding in the record checks: each altered
+# record escaped its check before the fix, and each must be what fails it now.  Same shape as the tables above.
+REVIEW_REPRODUCTIONS = {
+    # 1: the informational adversary row rewritten with other games' values (100%, 20 of 20, singleton sets).
+    "bridge-privacy": ((f"{PRIVACY}/real/generated/summary.md",
+                        "| round trip: deposit to release (informational) | 5.0% | 0 of 20 | 20: 20 | 5.0% | 5.0% | 5.0% |",
+                        "| round trip: deposit to release (informational) | 100.0% | 20 of 20 | 1: 20 | 100.0% | 100.0% | 100.0% |"),),
+    # 2: Q0 loses both of its expected failures (25 passed, 2 failed -> 27 passed, 0 failed).
+    "bridge-u8-refusals": (("e2e/runs/cli-u8/README.md", "25 passed, 2 failed: exactly those",
+                            "27 passed, 0 failed: none"),
+                           # 3: the required private-path freeze row renamed to an unclassified case.
+                           ("e2e/runs/cli-freezes/README.md",
+                            "| bridge mints, whole configuration | `claim` (private path, before its proof) |",
+                            "| an unclassified freeze case | `claim` (private path, before its proof) |")),
+    # 6: the root row's actor state (117) changed without its borsh Account (173), so 999 + 56 != 173.
+    "bridge-state-projections": (("lez/results/perf-state.md",
+                                  "| (an `ImportRoot` of `with_roots`) | root(cid, 8) | 117 | 173 | — | — |",
+                                  "| (an `ImportRoot` of `with_roots`) | root(cid, 8) | 999 | 173 | — | — |"),),
+    # 10: one of the guide's two method counts edited, so the two disagree.
+    "bridge-r12-module-flows": (("docs/guides/user-guide.md",
+                                 "twelve methods a Logos ui module or a client calls",
+                                 "thirteen methods a Logos ui module or a client calls"),),
+}
+
 
 # RFP-022 P.2 states B1's harness import range as 231,635–237,140, but the B1 record's vault-B import costs 237,169,
 # so bridge-import-claim-costs fails on the repository until the row is corrected. Its tampered copies start from the
@@ -254,6 +279,24 @@ class BridgeVerifyTamperTests(unittest.TestCase):
             with self.subTest(check=cid):
                 row, old, new = spec
                 self._assert_fails(cid, lambda root, row=row, old=old, new=new: _status_tamper(root, row, old, new))
+
+    def test_05_review_reproductions_fail(self):
+        """Each altered record the adversarial review escaped with (REVIEW-cli.md) is refused by the fixed check."""
+        for cid, tampers in REVIEW_REPRODUCTIONS.items():
+            for i, (rel, old, new) in enumerate(tampers):
+                with self.subTest(check=cid, tamper=i):
+                    self._assert_fails(cid, lambda root, rel=rel, old=old, new=new: _replace(root / rel, old, new))
+
+    def test_06_r12_prints_the_guides_own_method_count(self):
+        """The R.12 check's result line states the method count the user guide itself states, not a number
+        retyped into the check (review round 3, L10: the line said 'the eleven methods' while the guide,
+        and check 6 of scripts/check-guides.py, said twelve)."""
+        guide = (ROOT / "docs/guides/user-guide.md").read_text(encoding="utf-8")
+        m = re.search(r"(\w+) methods a Logos ui module or a client calls", guide)
+        self.assertIsNotNone(m, "the guide no longer states the module's method count")
+        result = self._run(self.checks["bridge-r12-module-flows"], ROOT)
+        self.assertEqual(result.status, "PASS", result.lines)
+        self.assertTrue(any(f"states the {m.group(1)} methods" in ln for ln in result.lines), result.lines)
 
 
 if __name__ == "__main__":

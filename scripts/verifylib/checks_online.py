@@ -276,7 +276,8 @@ def _sourcify_rows(lines):
 @check(id="sourcify-status-online", family="sepolia", mode="online", evidence=(122,),
        title="What Sourcify holds for every contract of the live round trip (the crown-live-3 deployment)",
        what="vault/script/sourcify.sh status: each of the five addresses' match (exact, a match, or nothing) and "
-            "the fully qualified name Sourcify shows for it",
+            "the fully qualified name Sourcify shows for it, every one of the five asked about at its recorded "
+            "address",
        against="the exact matches EVIDENCE row 122 records for crown-live-3's five contracts (vault, registry, token, "
                "emergency stop, Groth16 verifier; five of the row's twelve, which cover three deployments); GET "
                "requests only (the script's `risc0` and `vault` modes publish, and are not run here)",
@@ -291,8 +292,25 @@ def _sourcify_status(ctx):
         raise Skipped("the script named no contract (the deployment record names none)")
     if any(m is None for _, _, m in rows):
         raise Skipped("sourcify.dev could not be read: " + out[0].strip()[:160])
-    fail_if([f"{f} {a}: Sourcify holds {m}" for f, a, m in rows if m != "exact_match"], "the contracts")
-    return [f"{f:16} {a}  {m}" for f, a, m in rows]
+    # Every one of the five contracts, each exactly once, each asked about at the address the deployment record
+    # holds for it: the script itself skips a field the record lacks, so seeing one row is not seeing them all.
+    deploy = json.loads((ctx.root / "e2e/runs/crown-live-3/deploy.json").read_text())
+    problems = []
+    for field in SOURCIFY_FIELDS:
+        own = [r for r in rows if r[0] == field]
+        address = deploy.get(field)
+        if len(own) != 1:
+            problems.append(f"{field}: {len(own)} rows in the script's answer, one expected")
+            continue
+        _, asked, match = own[0]
+        if not address:
+            problems.append(f"{field}: the deployment record names no address for it")
+        elif asked != address:
+            problems.append(f"{field}: asked about {asked}, the deployment record holds {address}")
+        elif match != "exact_match":
+            problems.append(f"{field} {address}: Sourcify holds {match}")
+    fail_if(problems, "the contracts")
+    return [f"{f:16} {deploy[f]}  exact_match" for f in SOURCIFY_FIELDS if deploy.get(f)]
 
 
 @check(id="updater-live-sepolia-beacon", family="beacon", mode="online", evidence=(99, 104),
