@@ -1,0 +1,60 @@
+{
+ "what": "beacon_api_module.verify_checkpoint (the draft of upstream-drafts/, its crate's ignored test verify_checkpoint_live) against public Sepolia beacon API providers, reads only",
+ "when_utc": {
+  "before": "2026-11-27T15:44:28Z",
+  "after": "2026-11-27T15:44:33Z"
+ },
+ "command": "BEACON_LIVE_PROVIDERS=lodestar=https://lodestar-sepolia.chainsafe.io,publicnode=https://ethereum-sepolia-beacon-api.publicnode.com,ethpandaops=https://beacon.sepolia.ethpandaops.io,nimbus-unstable=http://unstable.sepolia.beacon-api.nimbus.team BEACON_LIVE_ROOT=0x3b901f5e6853b5cf5eb04d7ccfe1272e66c38291cb3a11dd159cacd1117ccf7c BEACON_LIVE_GVR=0xd8ea171f3c94aea21ebc42a1ed61052acf3f9209c00e4efbaaddac09ed9b8078 cargo test --no-default-features verify_checkpoint_live -- --ignored --nocapture (in rust-lib/ of logos-evm-beacon-api-module aca138e with the patch)",
+ "root_is": "the crown runs' Sepolia checkpoint (slot 11,562,112), as EVIDENCE rows 105, 117 and 196",
+ "reply": {
+  "agreeing": 3,
+  "chainId": 11155111,
+  "needed": 3,
+  "ok": true,
+  "providers": [
+   {
+    "counted": true,
+    "disagree": [],
+    "endpoint": "https://lodestar-sepolia.chainsafe.io",
+    "finalized_slot": 11671647,
+    "id": "lodestar",
+    "slot": 11562112,
+    "unavailable": [],
+    "verdict": "agrees"
+   },
+   {
+    "counted": true,
+    "disagree": [],
+    "endpoint": "https://ethereum-sepolia-beacon-api.publicnode.com",
+    "finalized_slot": 11671647,
+    "id": "publicnode",
+    "slot": 11562112,
+    "unavailable": [],
+    "verdict": "agrees"
+   },
+   {
+    "counted": true,
+    "disagree": [],
+    "endpoint": "https://beacon.sepolia.ethpandaops.io",
+    "finalized_slot": 11671647,
+    "id": "ethpandaops",
+    "slot": 11562112,
+    "unavailable": [],
+    "verdict": "agrees"
+   },
+   {
+    "counted": false,
+    "disagree": [],
+    "endpoint": "http://unstable.sepolia.beacon-api.nimbus.team",
+    "finalized_slot": 11671647,
+    "id": "nimbus-unstable",
+    "slot": 11562112,
+    "unavailable": [],
+    "verdict": "agrees"
+   }
+  ],
+  "root": "0x3b901f5e6853b5cf5eb04d7ccfe1272e66c38291cb3a11dd159cacd1117ccf7c",
+  "slot": 11562112,
+  "verdict": "ok"
+ }
+}

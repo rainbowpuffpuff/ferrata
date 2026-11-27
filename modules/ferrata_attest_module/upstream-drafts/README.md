@@ -47,13 +47,23 @@ is `docs/specs.md`); `cargo test --no-default-features` in `rust-lib/` (the SDK'
 `logos-rust-sdk-src`): **33 passed**, the crate's 29 and 4 new, the fourth
 `verify_checkpoint_counts_no_plain_http_agreement_by_default` (three agreeing plain-http providers: `failed`, 0
 counted, each `agrees` with `counted: false`; a disagreeing plain-http provider fails the check even when no agreement
-is needed). The other three tests set `allow_plain_http`, as their providers are loopback http servers.
+is needed). The other three tests set `allow_plain_http`, as their providers are loopback http servers. A fifth,
+`verify_checkpoint_live`, is ignored by default (CI does not reach the network): it asks the providers named in
+`BEACON_LIVE_PROVIDERS` about `BEACON_LIVE_ROOT`.
+
+**Live** (Modal build box, 27 November 2026, 15:44Z; reads only): `verify_checkpoint_live` on Sepolia, for the crown
+runs' checkpoint `0x3b901f5e…ccf7c` (slot 11,562,112; EVIDENCE rows 105, 117, 196), asked of three https providers of
+three operators (ChainSafe's Lodestar, publicnode, ethPandaOps) and of the module's plain-http Nimbus provider:
+verdict **ok**, 3 counted, each at slot 11,562,112 with finalized slot 11,671,647; Nimbus agreed and was not counted
+([`results/verify-checkpoint-live-2026-11-27.json`](results/verify-checkpoint-live-2026-11-27.json), the reply and
+the command). Nimbus's Sepolia host did not answer over https that day.
 
 ## What RFP-021 F.9 still lacks after `beacon_api_module` (27 November 2026)
 
 1. **Logos's module has no such method.** Nothing was sent upstream; the pull request's text is ready in
    [`PR-beacon_api_module.md`](PR-beacon_api_module.md), for the owner to open (the patch above is its content).
-2. **The method has not run inside a Logos Core.** Its glue (`src/glue.rs`) is compiled only by the module builder,
+2. **The method has not run inside a Logos Core.** It has run against public providers, as a crate test (above). Its
+   glue (`src/glue.rs`) is compiled only by the module builder,
    which has not been run on the patched module: no `.lgx` of it was built, loaded or called with `logosctl`. What did
    run in a headless Logos Core is our own module's `verify_checkpoint`, its beacon reads through
    `beacon_api_module.raw_get` (EVIDENCE row 196).

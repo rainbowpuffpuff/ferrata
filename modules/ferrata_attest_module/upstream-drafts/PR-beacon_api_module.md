@@ -43,9 +43,12 @@ the caller's, as they depend on the light client's format.
 
 Changes: `rust-lib/src/checkpoint.rs` (new: the check), `src/glue.rs` (the method), `src/lib.rs` (the module and
 `CheckpointExpect`), `src/beacon.rs` (`get_path`: a GET of a JSON document with 404 as `None`; `Plan::client` made
-crate-visible), `src/tests.rs` (four tests on providers served on loopback, in the crate's test style: three agreeing;
+crate-visible), `src/tests.rs` (four tests on providers served on loopback, in the crate's test style, and an ignored live one: three agreeing;
 another block at the slot, not finalized, another genesis, each one bad provider among three good ones; two ids of one
 endpoint counted once and an unreachable provider not counted; plain-http agreement not counted by default).
 
-Tested: `cargo test --no-default-features` in `rust-lib/`, 33 passed (29 existing, 4 new). Not tested here: the module
-builder's build of the glue and a call through `logosctl`.
+Tested: `cargo test --no-default-features` in `rust-lib/`, 33 passed (29 existing, 4 new) and one ignored,
+`verify_checkpoint_live`, which asks the providers named in the environment (`BEACON_LIVE_PROVIDERS`, `BEACON_LIVE_ROOT`,
+`BEACON_LIVE_GVR`); run on 27 November 2026 against three https Sepolia providers of three operators and the
+plain-http Nimbus one: `ok`, 3 counted, Nimbus asked and not counted. Not tested here: the module builder's build of
+the glue and a call through `logosctl`.

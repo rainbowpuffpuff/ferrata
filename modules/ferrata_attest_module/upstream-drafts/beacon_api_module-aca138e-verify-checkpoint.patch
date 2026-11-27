@@ -261,10 +261,10 @@ index 495b6ff..1e40569 100644
  #[cfg(test)]
  mod tests;
 diff --git a/rust-lib/src/tests.rs b/rust-lib/src/tests.rs
-index 4a78087..553f3f1 100644
+index 4a78087..3d2e7f2 100644
 --- a/rust-lib/src/tests.rs
 +++ b/rust-lib/src/tests.rs
-@@ -404,3 +404,111 @@ fn only_proxy_rs_builds_a_client() {
+@@ -404,3 +404,133 @@ fn only_proxy_rs_builds_a_client() {
          assert!(!text.contains("Client::builder") && !text.contains("Client::new"), "{}", path.display());
      }
  }
@@ -375,4 +375,26 @@ index 4a78087..553f3f1 100644
 +    list.push(provider("bad", &bad.base));
 +    let v = plan(11_155_111, list).verify_checkpoint(&CP_ROOT[..66], &crate::CheckpointExpect { min_providers: Some(0), ..strict });
 +    assert_eq!(v["verdict"], "failed", "{v:#}");
++}
++
++/// Against public providers, not in CI (`#[ignore]`): `BEACON_LIVE_PROVIDERS` (`id=https://…`, comma-separated) asked
++/// about `BEACON_LIVE_ROOT` on chain `BEACON_LIVE_CHAIN_ID` (default Sepolia's), its genesis validators root
++/// `BEACON_LIVE_GVR`; the reply is printed. `cargo test --no-default-features verify_checkpoint_live -- --ignored
++/// --nocapture`.
++#[test]
++#[ignore]
++fn verify_checkpoint_live() {
++    let var = |k: &str| std::env::var(k).unwrap_or_else(|_| panic!("{k} is not set"));
++    let chain_id = std::env::var("BEACON_LIVE_CHAIN_ID").ok().map_or(11_155_111, |c| c.parse().unwrap());
++    let providers = var("BEACON_LIVE_PROVIDERS")
++        .split(',')
++        .map(|p| p.split_once('=').expect("id=endpoint"))
++        .map(|(id, endpoint)| provider(id, endpoint))
++        .collect();
++    let mut p = plan(chain_id, providers);
++    p.cfg.timeout_secs = 20;
++    let expect = crate::CheckpointExpect { genesis_validators_root: Some(var("BEACON_LIVE_GVR")), ..Default::default() };
++    let v = p.verify_checkpoint(&var("BEACON_LIVE_ROOT"), &expect);
++    println!("{v:#}");
++    assert_eq!(v["verdict"], "ok");
 +}
