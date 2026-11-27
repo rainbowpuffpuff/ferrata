@@ -129,6 +129,19 @@ class Pack(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertIn("present, the manifest says absent: testers/index.html", r.stdout)
 
+    def test_a_failure_while_staging_changes_nothing(self):
+        (self.www / "testers").mkdir()
+        (self.www / "testers").chmod(0o555)                          # the third file cannot be staged
+        try:
+            r = self.install()
+        finally:
+            (self.www / "testers").chmod(0o755)
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn("staging failed: nothing installed", r.stdout)
+        self.assertEqual((self.www / "index.html").read_bytes(), self.old["/index.html"])
+        self.assertEqual((self.www / "wallet/bridge.js").read_bytes(), self.old["/wallet/bridge.js"])
+        self.assertFalse(list(self.www.rglob("*.site-delta-new")))
+
     def test_a_damaged_package_installs_nothing(self):
         p = self.pkg / "www/index.html"
         p.write_bytes(p.read_bytes() + b" ")

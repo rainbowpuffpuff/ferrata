@@ -15,8 +15,9 @@ left out. Read-only: one GET of the manifest (or a file), then git.
 `pack` writes DIR/site-REF12.tar holding www/PATH for each file to install, SHA256SUMS (those files), EXPECT (the
 SHA-256 each target has on the host now, as the manifest says, or "absent") and install.sh. On the host, as root,
 `bash install.sh` checks the package and every target first and installs nothing if one differs from EXPECT (the host
-moved since the manifest was made); otherwise it copies each old file to a backup directory and installs each new one
-atomically (a temporary name, then a rename), root:root 644. The wallet's config.json and the other files the host
+moved since the manifest was made); otherwise it copies each old file to a backup directory and stages each new one
+beside its target (root:root 644), removing what it staged and changing nothing if any of that fails, then renames
+each staged file over its target (one rename per file: a reader sees the old file or the new one, never part of one). The wallet's config.json and the other files the host
 generates are never in a package (the manifest lists them apart). Standard library only.
 """
 import argparse
@@ -57,10 +58,17 @@ while read -r want path; do
   fi
 done < EXPECT
 [ "$bad" = 0 ] || {{ echo "the host differs from the manifest: nothing installed"; exit 1; }}
+# Every old file kept and every new one staged beside its target before any target changes; a failure here removes
+# what was staged and changes nothing. Then one rename per file.
 mkdir -p "$BACKUP"
+staged=()
+unstage() {{ for s in "${{staged[@]}}"; do rm -f "$s"; done; echo "staging failed: nothing installed"; exit 1; }}
 while read -r want path; do
-  [ "$want" = absent ] || install -D -m 644 "$WWW/$path" "$BACKUP/$path"
-  install -D -o "${{OWNER%%:*}}" -g "${{OWNER##*:}}" -m 644 "www/$path" "$WWW/$path.site-delta-new"
+  [ "$want" = absent ] || install -D -m 644 "$WWW/$path" "$BACKUP/$path" || unstage
+  install -D -o "${{OWNER%%:*}}" -g "${{OWNER##*:}}" -m 644 "www/$path" "$WWW/$path.site-delta-new" || unstage
+  staged+=("$WWW/$path.site-delta-new")
+done < EXPECT
+while read -r want path; do
   mv -f "$WWW/$path.site-delta-new" "$WWW/$path"
 done < EXPECT
 echo "installed $(wc -l < EXPECT) file(s) from {ref12}; the replaced ones are in $BACKUP"
