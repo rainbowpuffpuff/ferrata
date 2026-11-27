@@ -328,6 +328,7 @@ tests = [
   { path = "lez/updater/results/gate-copies.txt", kind = "record" },
   { path = "lez/results/perf-gate-sequencer-100.md", kind = "record" },
   { path = "lez/results/perf-gate-sequencer-join.md", kind = "record" },
+  { path = "lez/results/perf-gate-sequencer-r910.md", kind = "record" },
 ]
 note = "A3's gate: two honest daemons and one adversary over 58 recorded updates in process, honest gas on refused steps 5.7-8.7% of applied (gate <= 10%), each update applied once (EVIDENCE row 80); on a running sequencer at A3's size, 106 updates, two honest daemons (rows 275, 276): without join or wait 23 and 15 jobs abandoned, with it (join_wait.rs; gate_overlapping_updates_join_or_wait in recorded.rs) one in four runs, all gas 1.022-1.088 times the completed jobs'; test_perf_records.py recomputes both records from the runs' journals. In part: daemons served different copies of an update not covered"
 [[row]]
@@ -341,6 +342,7 @@ tests = [
   { path = "lez/updater/results/gate-polls.txt", kind = "record" },
   { path = "lez/results/perf-gate-sequencer-100.md", kind = "record" },
   { path = "lez/results/perf-gate-sequencer-join.md", kind = "record" },
+  { path = "lez/results/perf-gate-sequencer-r910.md", kind = "record" },
   { path = "docs/guides/operator-guide.md", kind = "document" },
 ]
 note = "the in-process gate runs: honest-1's share of the honest fees 0.39-0.47 (gate 0.35-0.65) over 58 updates, deferral window 8 rounds; on a running sequencer at A3's size, 106 updates, six runs at windows 8 and 30 (EVIDENCE rows 275, 276): honest-1's share 0.521-0.617, all 96 finality updates covered, latency medians 105-341 s, in the operator guide's table (section 3.4, held to the records by test_perf_records.py)"
