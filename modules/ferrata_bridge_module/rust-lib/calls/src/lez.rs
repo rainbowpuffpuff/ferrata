@@ -495,9 +495,27 @@ pub(crate) fn switch_sequencer(sequencer: &str) -> Result<(Value, Switched), Str
     }
 }
 
-/// `lez_core`'s wallet opened again on the config it had before [`switch_sequencer`], and read back.
+/// After a put-back that failed: what `lez_core`'s wallet names now, recorded as the session's (null when it names
+/// none), so that `info`, the next switch and the refusal say where it is rather than where it was.
+fn resync() -> Option<String> {
+    let addr = call("get_sequencer_addr", &json!([]), READ_MS).ok().map(|(a, _)| a.trim().to_string()).filter(|a| !a.is_empty());
+    with(|l| {
+        l.wallet["sequencer"] = addr.clone().map_or(Value::Null, Value::from);
+        l.log.push(json!({ "kind": "resync", "sequencer": addr }));
+    });
+    addr
+}
+
+/// `lez_core`'s wallet opened again on the config it had before [`switch_sequencer`], and read back. When that fails,
+/// what it names now is recorded ([`resync`]) and named in the error.
 pub(crate) fn put_back(prev: &Switched) -> Result<(), String> {
-    let read = open_on(&prev.config, &prev.sequencer)?;
+    let read = match open_on(&prev.config, &prev.sequencer) {
+        Ok(read) => read,
+        Err(e) => {
+            let now = resync();
+            return Err(format!("{e} (lez_core's wallet now names {})", now.as_deref().unwrap_or("no sequencer")));
+        }
+    };
     with(|l| {
         l.wallet["config"] = json!(prev.config);
         l.wallet["sequencer"] = read["sequencer"].clone();

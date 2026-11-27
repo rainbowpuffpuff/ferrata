@@ -229,6 +229,8 @@ const LEZ_DOWN: &str = "http://127.0.0.1:19302";
 
 /// `lez_core`'s wallet as the fake holds it: the config it was opened on and the sequencer that config names.
 static LEZ_WALLET: OnceLock<Mutex<(String, String)>> = OnceLock::new();
+/// A config `open` fails on (it answers 1 and keeps the wallet it had), when set.
+static OPEN_FAILS: OnceLock<Mutex<Option<String>>> = OnceLock::new();
 
 fn lez_wallet() -> (String, String) {
     LEZ_WALLET.get_or_init(Mutex::default).lock().unwrap().clone()
@@ -242,6 +244,9 @@ fn lez_core(method: &str, args: &str, _timeout_ms: u64) -> Result<String, String
         "open" => {
             let a: Value = serde_json::from_str(args).map_err(|e| e.to_string())?;
             let config = a[0].as_str().ok_or("open: config")?.to_string();
+            if OPEN_FAILS.get_or_init(Mutex::default).lock().unwrap().as_deref() == Some(config.as_str()) {
+                return Ok("1".into());
+            }
             let cfg: Value = serde_json::from_str(&std::fs::read_to_string(&config).map_err(|e| format!("{config}: {e}"))?)
                 .map_err(|e| e.to_string())?;
             let seq = cfg["sequencer"]["sequencer_addr"].as_str().ok_or("open: no sequencer.sequencer_addr")?.to_string();
@@ -522,6 +527,20 @@ fn endpoints_switch_through_their_owners_and_stay_on_failure() {
     assert_eq!((in_service(&state).1, lez_wallet().1), (seq_b.clone(), seq_b.clone()), "the chain service and lez_core put back");
     ok("set_endpoints", json!({ "sequencer": seq_a }));
     assert_eq!((in_service(&state).1, lez_wallet().1), (seq_a.clone(), seq_a.clone()));
+    // lez_core's put-back fails too (the config in use cannot be opened again; the wallet stays on the copy it took): the
+    // refusal says where lez_core's wallet is, `info` too, and the same request later moves it back.
+    let (in_use, _) = lez_wallet();
+    *OPEN_FAILS.get_or_init(Mutex::default).lock().unwrap() = Some(in_use.clone());
+    refused("set_endpoints", json!({ "sequencer": LEZ_DOWN }), &["not switched", "reads no block", "is kept", "not put back", LEZ_DOWN]);
+    *OPEN_FAILS.get_or_init(Mutex::default).lock().unwrap() = None;
+    assert_eq!((in_service(&state).1, lez_wallet().1), (seq_a.clone(), LEZ_DOWN.to_string()), "the chain service put back, lez_core not");
+    let i = ok("info", json!({}));
+    assert_eq!(i["endpoints"]["sequencer"]["lez_core"], json!(format!("{LEZ_DOWN}/")), "info says where lez_core is: {i}");
+    let r = ok("set_endpoints", json!({ "sequencer": seq_a }));
+    assert_eq!((in_service(&state).1, lez_wallet().1), (seq_a.clone(), seq_a.clone()), "healed by the same request: {r}");
+    // The endpoint in use given again, differing only in host case and a bare `/`: nothing new, nothing switched.
+    let r = ok("set_endpoints", json!({ "sequencer": format!("{}/", seq_a.replace("127.0.0.1", "127.0.0.1")) }));
+    assert_eq!(r["switched"], json!({ "eth_rpc": false, "sequencer": false }), "{r}");
     ok("set_endpoints", json!({ "eth_rpc": e_a }));
     assert_eq!(registry().endpoints.get(&CHAIN), Some(&e_a));
     ok("lez", json!({ "via": "plain" }));

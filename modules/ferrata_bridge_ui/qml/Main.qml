@@ -1426,7 +1426,7 @@ Rectangle {
         var d = depositOf(claimLeaf);
         propose({
             title: claimMode === "private" ? "Private claim on LEZ" : "Plaintext claim on LEZ",
-            rows: [["Requested by", "Ferrata Bridge (ferrata_bridge_ui)"], ["Account", d ? d.kind + " LEZ account /" + d.account : "?"], ["Asset", "wrapped ETH"], ["Amount", d ? Fmt.eth(d.amount) : "?"], ["Destination", "the bridge program, configuration " + Fmt.short(info ? info.config_id : "")], ["Submitted by", relayerOn ? "a permissionless relayer" : "you: your private account pays the LEZ fee"]],
+            rows: [["Requested by", "Ferrata Bridge (ferrata_bridge_ui)"], ["Account", d ? d.kind + " LEZ account /" + d.account : "?"], ["Asset", "wrapped ETH"], ["Amount", d ? Fmt.eth(d.amount) : "?"], ["Destination", "the bridge program, configuration " + Fmt.short(info ? info.config_id : "")], ["Submitted by", relayerOn ? "a permissionless relayer" : claimMode === "private" ? "you: your private account pays the LEZ fee" : "you: the claim's public account pays the LEZ fee"]],
             effects: claimMode === "private" ? ["Proves the claim in the LEZ wallet; spends the deposit's nullifier", "Mints the denomination to your account; does not say which deposit"] : ["Spends the deposit's nullifier in public", "Mints the denomination to your account, naming the deposit"]
         }, function () {
             step("claim", { leaf_index: claimLeaf, private: claimMode === "private" });

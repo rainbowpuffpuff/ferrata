@@ -47,7 +47,7 @@ function step(name, ownRelease) {
 // Who pays a claim's LEZ fee when no relayer does (RFP-022 U.05's fee-payer correlation). The module's claim names no
 // relayer and no gas drop on any of its paths (the chain service's, lez_core's, a test network's): the private account
 // that proves pays it, as the `ferrata` tool does with --no-gas-drop (cli/src/flow.rs, its `fee payer:` line).
-var OWN_FEE = "Your own private account pays the claim's LEZ fee: its native LEZ came from somewhere (a faucet, a purchase or a public account of yours), which can link the claim to you. A relayer's gas drop avoids that (the ferrata tool's default when the network publishes a relayer); the mini-app has none yet.";
+var OWN_FEE = "Your own account pays the claim's LEZ fee (the private account that proves a private claim; a plaintext claim's public account): its native LEZ came from somewhere (a faucet, a purchase or another account of yours), which can link the claim to you. A relayer's gas drop avoids that (the ferrata tool's default when the network publishes a relayer); the mini-app has none yet.";
 
 // level: 0 fine, 1 a correlation the user accepts, 2 a direct link. `relayer`: a relayer pays the claim's LEZ fee on
 // this path (none does in the mini-app yet: the view passes false).

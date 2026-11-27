@@ -376,7 +376,9 @@ rm -f "$CTL.hit"; echo "late eth_sendRawTransaction 8" > "$CTL"
 round K5a > "$R/K5.log" 2>&1
 check K5-fault-fired yes "$(wait_hit 30 && echo yes || echo no)"
 for _ in $(seq 300); do grep -q 'late forward answered' "$R/proxy.jsonl" 2>/dev/null && break; sleep 0.1; done
-note "K5: the broadcast answered 503 and forwarded late: $(grep -c 'late forward answered' "$R/proxy.jsonl" 2>/dev/null) late forward(s); the first round: $(events K5a); in flight: $(inflight)"
+late_n=$(grep -c 'late forward answered' "$R/proxy.jsonl" 2>/dev/null); late_n=${late_n:-0}
+check K5-delivered-late-to-the-node yes "$( [ "$late_n" -ge 1 ] && echo yes || echo no)"
+note "K5: the broadcast answered 503 and forwarded late: $late_n late forward(s); the first round: $(events K5a); in flight: $(inflight)"
 echo pass > "$CTL"
 round K5b >> "$R/K5.log" 2>&1
 note "K5: the next round: $(events K5b)"

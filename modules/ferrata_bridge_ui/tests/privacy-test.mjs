@@ -20,7 +20,8 @@ const defaults = { kind: "private", delay: true, delayHours: 3, account: 0, deno
 // The deposit screen on the view's defaults: the fee payer is the user's own private account (level 1).
 const dep = P.leaks({ ...defaults, relayer: false });
 const fee = dep.find((l) => /pays the claim's LEZ fee/.test(l.text));
-ok("deposit: the fee-payer line names the user's own private account", fee && fee.level === 1 && /Your own private account/.test(fee.text), JSON.stringify(fee));
+ok("deposit: the fee-payer line names the user's own account (private for a private claim, public for a plaintext one)",
+  fee && fee.level === 1 && /Your own account/.test(fee.text) && /private account that proves/.test(fee.text) && /plaintext claim's public account/.test(fee.text), JSON.stringify(fee));
 ok("deposit: no line says a relayer pays", !dep.some((l) => /relayer submits and pays/.test(l.text)));
 ok("deposit: the indicator reads Elevated, not Minimal", /^Elevated/.test(P.exposure(dep)), P.exposure(dep));
 // With a relayer that pays (a path that has one), the same choices read Minimal.
@@ -29,7 +30,7 @@ ok("deposit with a paying relayer: Minimal", /^Minimal/.test(P.exposure(depR)), 
 
 // The claim screen: a private claim, held by its delay, no relayer: the fee-payer line is there too.
 const claim = P.claimLeaks({ mode: "private", kind: "private", held: true, skipDelay: false, relayer: false });
-ok("claim: the fee-payer line is shown", claim.some((l) => l.level === 1 && /Your own private account/.test(l.text)), JSON.stringify(claim));
+ok("claim: the fee-payer line is shown", claim.some((l) => l.level === 1 && /Your own account pays the claim's LEZ fee/.test(l.text)), JSON.stringify(claim));
 ok("claim: Elevated", /^Elevated/.test(P.exposure(claim)), P.exposure(claim));
 const claimR = P.claimLeaks({ mode: "private", kind: "private", held: true, skipDelay: false, relayer: true });
 ok("claim with a paying relayer: Minimal", /^Minimal/.test(P.exposure(claimR)), P.exposure(claimR));
@@ -40,7 +41,8 @@ ok("Main.qml: relayerOn false by default", /property bool relayerOn: false/.test
 const box = qml.split("\n").find((l) => l.includes('objectName: "deposit.relayer"')) || "";
 ok("Main.qml: the relayer box disabled and says the mini-app has none yet", /enabled: false/.test(box) && /not in the mini-app yet/.test(box), box.trim());
 ok("Main.qml: nothing sets relayerOn true", !/relayerOn\s*=\s*(true|checked)/.test(qml));
-ok("Main.qml: the claim's approval names the user's private account as the fee payer", qml.includes('"you: your private account pays the LEZ fee"'));
+ok("Main.qml: the claim's approval names who pays: the private account for a private claim, the public one for a plaintext claim",
+  qml.includes('claimMode === "private" ? "you: your private account pays the LEZ fee" : "you: the claim\'s public account pays the LEZ fee"'));
 ok("Main.qml: the defaults note no longer lists a permissionless relayer among the defaults", !/random delay before the claim, a permissionless relayer/.test(qml));
 
 console.log(failed ? `${failed} FAILED` : "all passed");
