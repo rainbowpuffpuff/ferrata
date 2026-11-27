@@ -240,9 +240,16 @@ class RoundTripB1(TamperCase):
              "c84fe2dbbc008c1a94c096fb6c598eb1580da2996b6b1e54ae807d0041e08fdc  ./ferrata_bridge.bin", "tools.sha256"),
             (f"{rec}/run/user/08-claim.txt", "program      ferrata_bridge_b1", "program      ferrata_bridge_f13",
              "08-claim.txt"),
+            # Review r2 M-C2: the transcript's hash, the zone's decoding of the claim, its range and mint fee.
+            (f"{rec}/run/user/08-claim.txt", "sent: f20711077f69", "sent: 000011077f69", "not one transaction"),
+            (f"{rec}/run/lez/transactions.tsv", "public\tfalse\tbridge\tundecoded", "public\tfalse\tbridge\tClaim",
+             "this tree's layout"),
+            (f"{rec}/run/user/08-claim.txt", "range 0 (leaves 0..1)", "range 0 (leaves 0..9)", "the range"),
+            (f"{rec}/run/user/08-claim.txt", "mint fee     0 ETH (0 base units", "mint fee     5 ETH (5 base units",
+             "the mint fee"),
         )
         for path, old, new, where in cases:
-            with self.subTest(path):
+            with self.subTest(path=path, new=new):
                 self.assertFails("rc3-roundtrip-b1-record", overlay({path: sub(old, new)}), where)
 
 
@@ -340,8 +347,8 @@ class EvidenceRows(TamperCase):
         """Row 274 renumbered away; RFP-022 F.7 no longer citing row 273: each fails."""
         t = walkable(overlay({"docs/EVIDENCE.md": sub("| 274 | ", "| 299 | ")}))
         self.assertFails("evidence-rows-integ", t, "EVIDENCE row 274: not found")
-        t = walkable(overlay({"docs/requirements-status.md": sub("206, 266, 273, 279, 280; `vault/test/real/ZoneBridgeRc3Multi.t.sol`",
-                                                                 "206, 266, 279, 280; `vault/test/real/ZoneBridgeRc3Multi.t.sol`")}))
+        t = walkable(overlay({"docs/requirements-status.md": sub("250, 266, 273, 279, 280; `vault/test/real/ZoneBridgeRc3Multi.t.sol`",
+                                                                 "250, 266, 279, 280; `vault/test/real/ZoneBridgeRc3Multi.t.sol`")}))
         self.assertFails("evidence-rows-integ", t, "does not cite row 273")
 
     def test_review_round_2_figures(self):

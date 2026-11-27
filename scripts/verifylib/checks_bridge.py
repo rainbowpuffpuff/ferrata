@@ -457,7 +457,7 @@ def bridge_import_claim_costs(ctx):
     _expect(problems, (old_b, new_b) == (236_202, 237_169), "P.2: configuration-B import costs changed")
     # P.2's stated harness ranges, held to every applied import of the two records (configuration A and B).
     p2 = _row(ctx, "P.2")
-    stated = {"deployed": re.search(r"measured \((\d[\d,]*)\s*[–-]\s*(\d[\d,]*) execution gas in the harness for the deployed", p2),
+    stated = {"deployed": re.search(r"measured \((\d[\d,]*)\s*[–-]\s*(\d[\d,]*) execution gas in the harness for the live runs' program before B1", p2),
               "B1": re.search(r"; (\d[\d,]*)\s*[–-]\s*(\d[\d,]*) on B1's", p2)}
     for (name, m), rel in zip(stated.items(), paths):
         applied = [_int(r[3]) for r in _applied_imports(ledgers[rel])]

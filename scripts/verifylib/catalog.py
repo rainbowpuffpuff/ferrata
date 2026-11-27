@@ -433,6 +433,34 @@ def _rc3_roundtrip_b1(ctx):
     again = next((s for s in steps if s[0] == "claim again refused"), None)
     if not again or "250 ALREADY_CLAIMED" not in again[3]:
         problems.append("run/steps.tsv: the claim again was not refused as already claimed")
+    # Review r2 M-C2: the transaction the tool sent is the one applied, and the zone holds it in B1's layout, not this
+    # tree's: the transcript's hash, facts.json's, the steps' and the zone export's are one; the export's decoder (this
+    # tree's layout, `seqnet-txs`) did not read it as a `Claim` (B1's claims: `undecoded`, or `Claim (B1)` since L11).
+    sent = re.findall(r"^sent: ([0-9a-f]{64})$", claim, re.M)
+    facts_tx = json.loads((rec / "run/facts.json").read_text()).get("claim", {}).get("tx")
+    if len(sent) != 1 or sent[0] != facts_tx or not claim_step or f"LEZ tx {sent[0]} applied" not in claim_step[3]:
+        problems.append(f"the claim's hash: transcript {sent}, facts.json {facts_tx}, steps.tsv "
+                        f"{claim_step[3][:80] if claim_step else None}: not one transaction")
+    rows = [ln.split("\t") for ln in (rec / "run/lez/transactions.tsv").read_text().splitlines()]
+    head, rows = rows[0], rows[1:]
+    col = {name: i for i, name in enumerate(head)}
+    applied = [r for r in rows if sent and r[col["tx_hash"]] == sent[0]]
+    if len(applied) != 1 or [applied[0][col[k]] for k in ("kind", "reverted", "program")] != ["public", "false", "bridge"]:
+        problems.append(f"run/lez/transactions.tsv: the claim {sent[:1]} is not one applied public bridge transaction")
+    elif applied[0][col["bridge_variant"]] not in ("undecoded", "Claim (B1)"):
+        problems.append(f"run/lez/transactions.tsv: the zone's claim reads as {applied[0][col['bridge_variant']]!r}, "
+                        "this tree's layout, not B1's")
+    # The range is the widest the token state the operator imported allows (one schedule, from leaf 0, known until the
+    # log's leaf), and the mint fee the one the deposit was quoted under schedule 0.
+    known = re.findall(r"token\(cid, ETH\): (\d+) schedule\(s\), known until leaf (\d+)",
+                       (rec / "run/lez/crown-b-operator.log").read_text())
+    want = f"names the fee schedule range 0 (leaves 0..{known[-1][1]})" if known and known[-1][0] == "1" else None
+    if want is None or want not in claim:
+        problems.append(f"run/user/08-claim.txt: the range is not the operator log's one schedule {known[-1:]} ({want})")
+    fee = lambda text: re.findall(r"mint fee +(\S+ ETH \(\d+ base units)", text)
+    quoted, minted = fee((rec / "run/user/04-deposit.txt").read_text()), fee(claim)
+    if len(quoted) != 1 or quoted != minted:
+        problems.append(f"run/user/08-claim.txt: the mint fee {minted} is not the deposit's {quoted}")
     fail_if(problems, "the B1 round trip's records")
     return lines + [f"the zone's bridge program {image[:12]}… (B1's), its binary sha256 {sums['ferrata_bridge.bin'][:12]}… "
                     "(deployed-programs.json's); ferrata's claim in B1's layout applied, the same claim again refused (250)"]

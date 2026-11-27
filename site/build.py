@@ -1479,7 +1479,9 @@ def generated_css(site):
 def stamp():
     commit = git("log", "-1", "--format=%H", "--", ".", f":(exclude){OUT_REL}").strip()
     date = git("log", "-1", "--format=%cs", commit).strip()
-    dirty = bool(git("status", "--porcelain", "--", ".", f":(exclude){OUT_REL}").strip())
+    # Uncommitted changes to tracked files only: an untracked file (a reviewer's notes) changes no source of the bundle
+    # (review r2 L7: it made --check report a fresh bundle stale).
+    dirty = bool(git("status", "--porcelain", "--untracked-files=no", "--", ".", f":(exclude){OUT_REL}").strip())
     status_commit = git("log", "-1", "--format=%H", "--", "docs/requirements-status.md").strip()
     status_date = git("log", "-1", "--format=%cs", status_commit).strip()
     return {"commit": commit, "short": commit[:8], "date": date, "dirty": dirty, "status_commit": status_commit,

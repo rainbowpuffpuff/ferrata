@@ -243,12 +243,15 @@ def _span(values: list, unit: str = "") -> str:
 
 @check(id="evidence-rows-final", family="docs", mode="offline", evidence=(275, 276, 277, 278, 279, 280, 281),
        rows=("RFP-021 R.9", "RFP-021 R.10", "RFP-022 F.7", "RFP-022 F.13"),
-       title="EVIDENCE rows 275-281 and RFP-021 R.9, R.10, RFP-022 F.7, F.13: their figures as the records give them",
+       title="EVIDENCE rows 275-281 and RFP-021 R.9, R.10, RFP-022 F.7, F.13: the figures listed below, as the records give them",
        what="the gate runs' A3 ratios, fee shares, abandoned jobs, gas over the completed jobs' and latency medians "
             "(rows 275, 276; R.9, R.10), the in-process overlap gates (row 276, R.9), F.13's anonymity sets, round "
             "trip steps and proving times (rows 277, 278; F.13), F.7's ERC-20 payments, rotation threshold, replays "
-            "refused and proving times (rows 279, 280; F.7), and the tests row 281 names (the runs' other figures are "
-            "the f7-*, f13-* and perf-records checks')",
+            "refused and proving times (rows 279, 280; F.7), and the tests row 281 names. LIMIT (review r2 M-C1): only "
+            "these; the rows' other figures (e.g. steps applied and refused per run, abandoned jobs' gas, the F.13 "
+            "round trip's gas, bytes and wei, the F.7 runs' blocks, cycles and amounts, row 281's range and binary "
+            "sha256) are held by no check of these documents: the f7-*, f13-* and perf-records checks hold the runs' "
+            "own records, not these rows",
        against="the gate records' generated sections (test_perf_records.py holds them to the runs' journals), "
                "gate-overlap.txt (CI's recorded.rs), the F.13 both-halves tables and round trip steps, the real-proof "
                "record, the F.7 runs' vault checks and checkpoint attestor records (f7-* re-derive them), and the test "
