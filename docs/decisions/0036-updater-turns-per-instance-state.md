@@ -27,7 +27,7 @@ updater's public key kept copies choosing the longest waits and prevented the ne
 The second. Commits `87e7813b` and `88cdb90a` first changed `Open` and then every step of an uncarried job to per-state
 turns. A step of a job the updater has already sent remains per-job. Each kind of step has one turn per state, bounded
 by `defer_window - 1`; after a send, the next of its kind waits `defer_window - 1` rounds. The turns restart whenever
-the instance's state changes.
+the instance's state changes. Since ADR 0048 the turns count blocks of the chain, not rounds.
 
 ## Rationale and trade-offs
 

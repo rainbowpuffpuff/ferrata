@@ -320,9 +320,12 @@ id = "RFP-021 R.9"
 tests = [
   { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/updater/tests/join_wait.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/updater/tests/copies.rs", kind = "test", ci = "lez-harness" },
   { path = "scripts/test_perf_records.py", kind = "test", ci = "links" },
+  { path = "bench/perf/test_gate_scripts.py", kind = "test", ci = "links" },
   { path = "lez/updater/results/gate.txt", kind = "record" },
   { path = "lez/updater/results/gate-overlap.txt", kind = "record" },
+  { path = "lez/updater/results/gate-copies.txt", kind = "record" },
   { path = "lez/results/perf-gate-sequencer-100.md", kind = "record" },
   { path = "lez/results/perf-gate-sequencer-join.md", kind = "record" },
 ]
@@ -331,8 +334,11 @@ note = "A3's gate: two honest daemons and one adversary over 58 recorded updates
 id = "RFP-021 R.10"
 tests = [
   { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/updater/tests/turns.rs", kind = "test", ci = "lez-harness" },
   { path = "scripts/test_perf_records.py", kind = "test", ci = "links" },
+  { path = "bench/perf/test_gate_scripts.py", kind = "test", ci = "links" },
   { path = "lez/updater/results/gate.txt", kind = "record" },
+  { path = "lez/updater/results/gate-polls.txt", kind = "record" },
   { path = "lez/results/perf-gate-sequencer-100.md", kind = "record" },
   { path = "lez/results/perf-gate-sequencer-join.md", kind = "record" },
   { path = "docs/guides/operator-guide.md", kind = "document" },

@@ -34,7 +34,7 @@ copy (the same finalized header and adoption) is joined; another leading job is 
 chain holds of jobs of its kind grow within `join_wait_rounds` rounds (default `2 × defer_window + 10`). On one state of
 the instance the updater stops waiting `JOIN_WAIT_CAP` (3) times that after its first wait there, and does not wait
 again on it; a job whose account fails to read because a block not yet final holds its transaction is waited for; when a
-wait ends the step's turn starts again, once. The program is unchanged.
+wait ends the step's turn starts again, once. The program is unchanged. Since ADR 0048 the bounds count blocks of the chain, as the turns do, and the jobs an updater can find include those of updates it read from other parties' `Open`s on chain, copies its sources never served included.
 
 ## Rationale and trade-offs
 
