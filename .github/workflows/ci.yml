@@ -370,6 +370,8 @@ jobs:
         run: node --version && node --test deploy/testnet/web/msg/test/*.test.mjs
       - name: The web wallet's fee-payer line (the network's gas-drop relayer; RFP-022 U.5, Priv.7)
         run: node --test deploy/testnet/web/wallet/test/gasdrop.test.mjs
+      - name: The web wallet's bridge tab in plain words (refusals by name, the cost before the signature)
+        run: node --test deploy/testnet/web/wallet/test/ux.test.mjs
       - name: The IDLs are what idl/tools/msg_idl.py writes
         run: python3 -I idl/tools/msg_idl.py --check
       - name: Free disk space

@@ -35,7 +35,7 @@ The page's Content-Security-Policy allows scripts, styles and connections to its
 ## Tests
 
 ```sh
-node --test test/*.test.mjs                       # 48: LEZ's pinned vectors, recorded Attest messages, SPEC-v2 and IDL vectors, the PWA list, the review's findings
+node --test test/*.test.mjs                       # 53: LEZ's pinned vectors, recorded Attest messages, SPEC-v2 and IDL vectors, the PWA list, the review's findings, the bridge tab's plain words
 bash test/box.sh build                            # LEZ rc3's sequencer + wallet CLI (LEZ's source beside the repository)
 bash test/box.sh e2e NAME                         # with Foundry and vault/lib present, the bridge steps too
 ```
@@ -43,6 +43,13 @@ bash test/box.sh e2e NAME                         # with Foundry and vault/lib p
 `box.sh` keeps its build in `WALLET_WORK` (default `ferrata-scratch/wallet/box` beside the repository); on a build
 machine that saves only some directories between runs, point `WALLET_WORK` at one of them.
 
+- `test/ux.test.mjs`: the bridge tab against ethskills' frontend-ux, qa and wallets checklists (27 November 2026): a
+  browser wallet's errors (declined, a request already waiting, not allowed, disconnected, no Sepolia ETH) and the
+  vault's refusals by name (each held to its declaration in `vault/src/FerrataVault.sol`, wherever the wallet nests
+  the revert data) in plain words next to the action; the review's cost priced live (`eth_estimateGas`,
+  `eth_gasPrice`, rounded up to the gwei) with the Sepolia ETH it needs, refused before any signature when the
+  balance falls short; a name typed as the burn's recipient refused with its reason. In the page, each button holds
+  one request at a time, and the review shows the addresses EIP-55 checksummed.
 - `test/review.test.mjs`: the findings of the independent review that unit tests can hold: amounts with a comma are
   refused, a transaction missing from its block is "outcome unknown", EIP-55 (the EIP's own examples), a record past
   200 KB, the record's iteration count kept on save, no second wallet over the first, embedded trie nodes (a forged
