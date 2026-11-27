@@ -103,7 +103,7 @@ tests = [
   { path = "cli/results/attest-seq-r6/README.md", kind = "record" },
   { path = "modules/ferrata_attest_module/upstream-drafts/results/verify-checkpoint-live-2026-11-27.json", kind = "record" },
 ]
-note = "parameters fixed at Init (refusals 18/203, 53 past the bound); verify_checkpoint is a method of ferrata_attest_module (EVIDENCE rows 59, 105), its beacon checks through beacon_api_module in a headless Logos Core, the check drafted as that module's method, not opened (row 196)"
+note = "parameters fixed at Init (refusals 18/203, 53 past the bound); verify_checkpoint is a method of ferrata_attest_module (EVIDENCE rows 59, 105), its beacon checks through beacon_api_module in a headless Logos Core, the check drafted as that module's method, not opened (row 196), run live against three https Sepolia providers of three operators (row 296)"
 
 [[row]]
 id = "RFP-021 F.10"
@@ -412,7 +412,7 @@ tests = [
   { path = "lez/results/p4-hops/README.md", kind = "record" },
   { path = "docs/decisions/0056-user-proof-hop-limit.md", kind = "document" },
 ]
-note = "the private attestation proven at cloud containers held to the declared minimum (904.3 s at 8 CPUs), on an M1 Mac mini (857.4 s padded, EVIDENCE row 88) and on one L4; padded as the wallet pads them (wallet_padding.rs, row 38); on the owner's laptop, below the declared minimum (8 of its 16 threads), 4,596.7 s, settled (EVIDENCE row 264); hops inside the user's proof: at most 2 declared at the x86-64 minimum, none on the M1 until measured (ADR 0056; the padded private claim proven through 1-5 hops at 16 and 8 CPUs, vault_claim_hops.rs in CI, EVIDENCE row 298); device_workload.rs (CI, lez-harness) holds the work those proofs measured: the programs' private transitions in the record's segments and padded sizes (user cycles pinned at this tree's values, -652 to +625 from the record's), the claim's and burn's transactions at the recorded sizes to the byte, the wallet's padded shape; the attestation's transaction is 32 bytes larger than recorded (231,246 and 255,334 against 231,214 and 255,302), and LEZ's circuit's session cannot be measured in dev mode, so the recorded times stand for a transaction 32 bytes smaller"
+note = "the private attestation proven at cloud containers held to the declared minimum (904.3 s at 8 CPUs), on an M1 Mac mini (857.4 s padded, EVIDENCE row 88) and on one L4; padded as the wallet pads them (wallet_padding.rs, row 38); on the owner's laptop, below the declared minimum (8 of its 16 threads), 4,596.7 s, settled (EVIDENCE row 264); hops inside the user's proof: at most 2 declared at the x86-64 minimum, none on the M1 until measured (ADR 0056; the padded private claim proven through 1-5 hops at 16 and 8 CPUs, vault_claim_hops.rs in CI, EVIDENCE row 298); device_workload.rs (CI, lez-harness) holds the work those proofs measured: the programs' private transitions in the record's segments and padded sizes (user cycles pinned at this tree's values, -1,798 to +523 from the record's), the claim's and burn's transactions at the recorded sizes to the byte, the wallet's padded shape; the attestation's transaction is 32 bytes larger than recorded (231,246 and 255,334 against 231,214 and 255,302), and LEZ's circuit's session cannot be measured in dev mode, so the recorded times stand for a transaction 32 bytes smaller"
 
 [[row]]
 id = "RFP-021 P.5"
