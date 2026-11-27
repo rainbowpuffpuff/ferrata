@@ -157,6 +157,10 @@ two-hour cadence (§2).
   `H(key, job, step) mod W` rounds (an `Open`, and a step of a job the daemon does not carry, counted from the first
   round a step of that kind was due on the instance's state), `key` the daemon's own (so the wait differs per daemon and
   per step), reads the job's account just before sending, and an updater continues the open job of the update it chose.
+  The window counts the daemon's own polling rounds (`poll_secs` each, plus the round's own work), not seconds: an
+  operator that polls more often waits fewer seconds, so it would send first more often and, with join or wait, carry
+  the jobs it opens. The runs below gave both daemons the same `poll_secs`; operators who want the cost spread should
+  do the same. A wait on a clock all parties share (LEZ blocks, beacon slots) is not built (RFP-021 R.10 is in part).
   It does not open a job, or send a step of one, while another job open on the instance's store leads it (join or wait,
   below).
 - **The strategy's effect, measured on a running LEZ v0.4.0-rc1 sequencer** (21 and 26 November 2026;
