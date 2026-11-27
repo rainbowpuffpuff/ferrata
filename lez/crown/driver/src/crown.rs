@@ -1699,7 +1699,7 @@ mod tests {
         let t = 1_763_000_123;
         let mut schedule_preimage = b"ferrata/fees/v1".to_vec();
         schedule_preimage.extend_from_slice(&[0x11; 20]);
-        for v in [0, 0, t, t] {
+        for v in [0u64, 0, t, t] {
             schedule_preimage.extend_from_slice(&v.to_be_bytes());
         }
         schedule_preimage.push(3);
