@@ -75,6 +75,14 @@ verify *args:
 lez-read *args:
     python3 -I scripts/lez-read.py "$@"
 
+# The internal security review of 27 November 2026 (docs/security/internal-review-2026-11-27.md): the vault suites of
+# its fixes and of RFP-022 Sec.9's LEZ case (docs/security/lez-receipt-unsound.md), then the R.8 checks and their
+# tamper tests. Needs forge and vault/lib (scripts/vault_libs.py install).
+security-review:
+    cd vault && forge test --match-path 'test/{InternalReview,LezReceiptUnsound}.t.sol'
+    python3 -I scripts/verify.py r8-risc0-selectors r8-phase-split
+    python3 -I scripts/test_verify_sec.py
+
 # Print the commands CI's jobs run, as scripts/ci/ci_model.py reads the workflows (one job, several, or all).
 ci-commands *jobs:
     python3 -I scripts/ci/ci_model.py --trace "$@"
