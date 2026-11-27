@@ -14,6 +14,8 @@
 #       SIGKILLed, a block mined, Logos Core started again: a second checkpoint
 #   K4  the endpoint down for a whole round (every call 503 or cut, the relayer's reads and Logos Core's), then up:
 #       the second checkpoint's finalizeAttested
+#   K5  a third checkpoint whose broadcast is answered 503 at once and reaches the node 8 s later (the endpoint failed
+#       in the client's eyes, not in the node's): the relayer must not send it twice
 #   M1  ferrata_monitor_module (holding the watcher key too, its fallback) against a wrong candidate: its cancelCandidate's
 #       broadcast trapped before the node, every module host SIGKILLed, the modules loaded again, the monitor started
 #       again: the candidate cancelled once (a second cancel, if the module sent one, reverts: it changes nothing)
@@ -355,6 +357,20 @@ echo pass > "$CTL"
 round K4b >> "$R/K4.log" 2>&1
 check K4-finalizeAttested-once 2 "$(count finalizeAttested)"
 
+# K5: a third checkpoint, its broadcast answered 503 and forwarded to the node 8 s later.
+s4=$(label state/4)
+jq -c -n --arg j "$(cp_journal "$s2" "$s4" 40 "$(label block/40)" "$(label burn-root/4)" 4)" '{kind: "checkpoint", journal: $j, seal: "0x"}' > "$INBOX/k5-checkpoint.json"
+rm -f "$CTL.hit"; echo "late eth_sendRawTransaction 8" > "$CTL"
+round K5a > "$R/K5.log" 2>&1
+for _ in $(seq 300); do grep -q 'late forward answered' "$R/proxy.jsonl" 2>/dev/null && break; sleep 0.1; done
+note "K5: the broadcast answered 503 and forwarded late: $(grep -c 'late forward answered' "$R/proxy.jsonl" 2>/dev/null) late forward(s); the first round: $(events K5a); in flight: $(inflight)"
+echo pass > "$CTL"
+round K5b >> "$R/K5.log" 2>&1
+note "K5: the next round: $(events K5b)"
+[ "$(count submitCandidate)" = 3 ] && [ "$(inflight)" = none ] || { round K5c >> "$R/K5.log" 2>&1; note "K5: one more round: $(events K5c)"; }
+check K5-submitCandidate-once 3 "$(count submitCandidate)"
+check K5-no-inflight-left none "$(inflight)"
+
 # M1: the monitor against a wrong candidate, its cancel's broadcast trapped, every module host SIGKILLed.
 check monitor-custody ok "$CUSTODY_M"
 s3=$(label state/3)
@@ -406,10 +422,10 @@ check M1-watcher-nonces-without-gap "$(seq 0 $(( $(jq -s 'length' "$R/watcher-tx
 
 # The whole account.
 relayer_txs
-check total-relayer-transactions 6 "$(jq -s 'length' "$R/relayer-txs.jsonl")"
-check nonces-without-gap "$(seq 0 5 | paste -sd, -)" "$(jq -s -r 'map(.nonce) | sort | map(tostring) | join(",")' "$R/relayer-txs.jsonl")"
-check every-receipt-status-1 6 "$(jq -s '[.[] | select(.status == 1)] | length' "$R/relayer-txs.jsonl")"
-check jobs-booked "k0-checkpoint.json,k2-release.json,k3-checkpoint.json" "$(ls "$STATE/done" 2>/dev/null | paste -sd, -)"
+check total-relayer-transactions 7 "$(jq -s 'length' "$R/relayer-txs.jsonl")"
+check nonces-without-gap "$(seq 0 6 | paste -sd, -)" "$(jq -s -r 'map(.nonce) | sort | map(tostring) | join(",")' "$R/relayer-txs.jsonl")"
+check every-receipt-status-1 7 "$(jq -s '[.[] | select(.status == 1)] | length' "$R/relayer-txs.jsonl")"
+check jobs-booked "k0-checkpoint.json,k2-release.json,k3-checkpoint.json,k5-checkpoint.json" "$(ls "$STATE/done" 2>/dev/null | paste -sd, -)"
 check inbox-empty "" "$(ls "$INBOX" 2>/dev/null | grep -v '^done$' | paste -sd, -)"
 check vault-final-state "$s2" "$(cast call --rpc-url "$up" "$vault" 'finalState()(bytes32)')"
 c tx_sender_module history "$relayer" 31337 > /dev/null
