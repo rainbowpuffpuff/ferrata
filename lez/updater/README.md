@@ -164,9 +164,14 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    for its summary) and remembered when the program's checks accept them (`_updates_from_chain_total`). A job's account
    is found by its id, which hashes the update, `signature_slot` included; so a job opened for a copy of an update the
    updater's sources never served (another beacon node's, or a re-dated one) is found too, recognized as the same update
-   for the store by where it leaves it, and joined (`tests/copies.rs`). An `Open` it cannot rebuild (a period update
-   whose full committee it holds nowhere; an `Open` encoded in a layout above the one served) is not learned. On the
-   sequencer backend a read is checked against the follower of the final blocks, so the
+   for the store by where it leaves it, and joined (`tests/copies.rs`). The `Open`s read are queued and at most
+   `MAX_LEARN_PER_ROUND` (64) judged a round (the queue holds `MAX_PENDING_OPENS`, 256; the first read after a start
+   goes back to the follower's start); a learned update whose job is open is marked open before it is remembered, so a
+   batch of copies cannot push the leading one out of `known` (at most twice `MAX_KNOWN` entries in all); a period
+   update's `Open` whose full committee the updater holds nowhere yet stays queued until it does or the update no
+   longer moves the store; an `Open` encoded in a layout above the one served is not learned. `/health` says
+   `degraded` after five rounds in a row in which the instance's transactions could not be read
+   (`_transactions_unread_rounds`, `_opens_dropped_total`). On the sequencer backend a read is checked against the follower of the final blocks, so the
    account of a job a block not yet final changed fails to read ("the sequencer and the follower disagree"): such a job
    is waited for as one that just moved (`_waits_for_unreadable_jobs_total`); any other failed read ends the round in
    an error, as before. Another job *leads* this one when the chain holds more of its steps, or as many and its update
@@ -197,8 +202,9 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    RFP-021 R.10). Every party reading the chain reads the same heights and none can bring a block sooner, so an updater
    that reads more often reaches no turn sooner: it only notices a turn sooner, within the blocks between two of its
    readings. A turn that starts at a reading is counted from the block after the updater's previous reading, the first
-   at which what it now finds due can have become due (`due_clock`), so one reading less often than once a block does
-   not also lose the blocks between its readings to the start of the count (`tests/turns.rs`; in process, honest
+   at which what it now finds due can have become due, but at most one block before the reading (`due_clock`): one
+   reading every two blocks does not also lose the block between its readings to the start of the count, and one back
+   after a long gap waits its draw like any other (`tests/turns.rs`; in process, honest
    updaters reading once and three times a block pay 0.533 / 0.467 of the honest fees, counted in rounds 0.847 / 0.153:
    `results/gate-polls.txt`). The clock never goes back (a lower height leaves it where it was) and keeps the kind of its
    first reading; a backend that gives no height counts the updater's rounds, as before. The failure handling counts

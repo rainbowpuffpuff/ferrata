@@ -64,8 +64,11 @@ window. Turns are coarser: a window of 8 is 8 blocks (80 s at LEZ's 10-s blocks)
 Reading the chain's `Open`s costs a scan of the new blocks each round and a native check of each new `Open`'s update; a
 party can now make an updater wait for its job without serving it the update, within the same bounds as before (the
 job must move the store, and waits end after `join_wait_rounds` blocks without a move and `JOIN_WAIT_CAP` times that on
-a state). An `Open` whose update an updater cannot rebuild (a period update whose full committee it holds nowhere, or an
-`Open` encoded in a layout above the one served) is not learned: its job is unseen, as before.
+a state). An `Open` encoded in a layout above the one served is not learned (its job unseen, as before); a period update's
+`Open` whose full committee the updater holds nowhere yet waits in a bounded queue until it does. A turn that starts at
+a reading is credited at most the one block before it (the block after the previous reading, when that is the one
+before), so an updater reading every two blocks loses no block to the start of its count and one back after a long gap
+waits its draw.
 
 ## Sources
 
