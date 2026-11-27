@@ -23,7 +23,7 @@ it too: after the chain service has read the new sequencer and switched, `lez_co
 a copy of that config naming the new sequencer (`<config>.seq-<8 hex>.json`, mode 0600; the config in use is never
 written), and the switch is kept only if `lez_core` then names the new sequencer and reads a block through it; otherwise
 `lez_core` is opened again on the config it had and the chain service's endpoints are put back (both or neither;
-`calls/src/lez.rs` `switch_sequencer`, `put_back`). Scenario Z of `run.sh live` runs it live (below). The view shows the endpoints in use (`info`, read from each owner) and
+`calls/src/lez.rs` `switch_sequencer`, `put_back`; tested natively in `calls/tests/endpoints.rs`). Scenario Z of `run.sh live` (`U9_LEZCORE`) runs it live; written on 27 Nov 2026 and not yet run: that day `lez_core`'s upstream Nix build failed on the build box and the stand-in instance's `Init` reverted ("Execution outside of the validity window": the bundle's fixture has aged past its window). The view shows the endpoints in use (`info`, read from each owner) and
 who holds each. The Ethereum and LEZ paths belong to the deployment the session was opened on: opened on another one
 (another chain service or configuration), the session drops them (`open`'s `paths_reset`), so that no switch writes
 another chain's record of `eth_rpc_module`.
