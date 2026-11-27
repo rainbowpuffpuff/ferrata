@@ -46,23 +46,27 @@ script that re-checks every step from public data and the recorded blocks.
   `crown-live-1` the one of its own table below. Their vaults and LEZ programs are immutable and keep it, and their
   records still check from this tree: `e2e/crown.sh verify RUN` takes the ids from the run's own records, and
   `scripts/verify-sepolia.py` holds each live vault to the programs it was deployed with.
-- **A run started from this tree** runs the bridge program since B1 (`ferrata_bridge_b1`, `0x847a4336…7515` since ADR 0032 of
-  22 November 2026, binary sha256 `537cbe7a…a036`; B1's first build was `0xac1fb59b…442e`) with this tree's crown-driver, which speaks only B1's accounts (`holder(cid, account)`,
-  `nullifier(cid, chain, vault, N)`) and, like `vault/script/DeployVault.s.sol`, deploys a capped configuration
-  (`FERRATA_UNCAPPED=1` for the unlimited one of the live runs). The input sets `rc1` and `rc3` on the Volume carry
-  the earlier bridge program and a crown-driver built before B1, so this tree refuses them before anything runs or is
-  sent: `start`'s first step (`drive.py`, `prepare_inputs`) requires the bundle's `program/ferrata_lez.bin` and
-  `program/ferrata_bridge.bin` to have `docs/image-ids.md`'s `ferrata_lez` and `ferrata_bridge_b1` ids; the
-  crown-driver refuses any other bridge program (`--bridge-bin`, `config-id`); `lez/crown/build.sh` refuses to pack
-  one. Before these checks, a bundle repacked with this tree's driver around the earlier program would have deployed
-  a vault and sent both deposits, then failed at session B's claims.
+- **A run started from this tree** runs the bridge program since ADR 0046 (`ferrata_bridge_f13`, `0xffb47f6e…7675`,
+  binary sha256 `c84fe2db…`: a claim names no fee schedule; the vault of this tree takes the mint fee at the deposit)
+  with this tree's crown-driver, which speaks only that program (B1's accounts, `holder(cid, account)`,
+  `nullifier(cid, chain, vault, N)`, and its claims without a schedule range) and, like
+  `vault/script/DeployVault.s.sol`, deploys a capped configuration (`FERRATA_UNCAPPED=1` for the unlimited one of the
+  live runs). B1's program (`ferrata_bridge_b1`, `0x847a4336…7515` since ADR 0032 of 22 November 2026, binary sha256
+  `537cbe7a…a036`; B1's first build was `0xac1fb59b…442e`) is the test network's and needs the crown-driver of
+  `40e8d799`. The input sets `rc1` and `rc3` on the Volume carry the earlier bridge program and a crown-driver built
+  before B1, so this tree refuses them before anything runs or is sent: `start`'s first step (`drive.py`,
+  `prepare_inputs`) requires the bundle's `program/ferrata_lez.bin` and `program/ferrata_bridge.bin` to have
+  `docs/image-ids.md`'s `ferrata_lez` and `ferrata_bridge_f13` ids; the crown-driver refuses any other bridge program
+  (`--bridge-bin`, `config-id`); `lez/crown/build.sh` refuses to pack one. Before these checks, a bundle repacked with
+  this tree's driver around the earlier program would have deployed a vault and sent both deposits, then failed at
+  session B's claims.
 - **To run on this tree**: a bundle with this tree's crown-driver (`lez/crown/build.sh driver`, with the LEZ tag of
-  the input set it replaces selected) and B1's `ferrata_bridge.bin` (`scripts/reproduce-image-ids.sh build --out DIR`
-  writes it to `DIR/programs/`), made by `lez/crown/build.sh repack FROM` (or `rebase`, `pack`) with
+  the input set it replaces selected) and this tree's `ferrata_bridge.bin` (`scripts/reproduce-image-ids.sh build
+  --out DIR` writes it to `DIR/programs/`), made by `lez/crown/build.sh repack FROM` (or `rebase`, `pack`) with
   `CROWN_BRIDGE_BIN=DIR/programs/ferrata_bridge.bin`, and a fixture whose `Init` is still valid (`crown-driver check
-  --chain sepolia`); uploaded as its own input set, `e2e/crown.sh setup --inputs rc3-b1 --bundle FILE --programs DIR`
-  with `rc3`'s R0BF programs (the vault-side guests did not change), then `e2e/crown.sh start --inputs rc3-b1 RUN`. No
-  crown run of B1 has been made. The earlier programs run from a checkout of `f13faee2`.
+  --chain sepolia`); uploaded as its own input set, `e2e/crown.sh setup --inputs rc3-f13 --bundle FILE --programs DIR`
+  with `rc3`'s R0BF programs (the vault-side guests did not change), then `e2e/crown.sh start --inputs rc3-f13 RUN`.
+  No crown run of B1's or ADR 0046's program has been made. The earlier programs run from a checkout of `f13faee2`.
 
 ## On LEZ v0.4.0-rc3: input set `rc3`, the live run `crown-live-4` (DONE, 18 Nov 2026)
 
