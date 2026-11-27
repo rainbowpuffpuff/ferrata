@@ -885,7 +885,9 @@ def render_index(site, model):
 
     # Try it
     parts.append('<section class="wrap band" id="try" aria-labelledby="h-try"><h2 id="h-try">Try it</h2>'
-                 '<p class="lede">Commands as the guides give them. Building from source needs Rust and, for the LEZ side, '
+                 f'<p class="lede">In a browser, on our test network: <a href="{TESTERS_DIR}/">the testers’ page</a> (the faucet, '
+                 'the wallet, a deposit on Sepolia, a private claim, step by step). From a terminal: the commands below, as the '
+                 'guides give them. Building from source needs Rust and, for the LEZ side, '
                  'RISC Zero’s toolchain (<a href="' + h(site.src("docs/guides/quickstart.md")) + '">quickstart</a>).</p><div class="try-grid">')
     for tr in c.get("try", []):
         lines = "\n".join(tr["lines"])
