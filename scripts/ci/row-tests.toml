@@ -861,6 +861,7 @@ id = "RFP-022 U.6"
 tests = [
   { path = "cli/tests/e2e.rs", kind = "test", ci = "roundtrip" },
   { path = "modules/ferrata_bridge_ui/scripts/box-test.sh", kind = "test", ci = "box", run = "modules/ferrata_bridge_ui/scripts/box-test.sh" },
+  { path = "modules/ferrata_bridge_module/rust-lib/calls/tests/network_session.rs", kind = "test", ci = "modules-resolve" },
 ]
 note = "private execution and destination preselected in the tool and the mini-app; a public destination, a plaintext claim and a public burn each need their own acknowledgement and print a WARNING (rows 62, 84-86)"
 

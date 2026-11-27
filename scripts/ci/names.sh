@@ -47,6 +47,6 @@ if ! node -e 'const [a,b]=process.versions.node.split(".").map(Number); process.
   fi
   node="$N/bin/node"
 fi
-stamp "the JS resolver against the program's vectors, and the CLI ($("$node" --version))"
+stamp "the JS resolver against the program's vectors, and the CLI (including its offline register) ($("$node" --version))"
 "$node" --test names/js/test/names.test.mjs names/js/test/review.test.mjs
 stamp "passed"

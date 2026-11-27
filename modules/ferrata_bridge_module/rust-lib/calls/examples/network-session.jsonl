@@ -1,0 +1,23 @@
+# Loopback-only network-session replay for `cargo run --example call -- wallet FILE`.
+# tests/network_session.rs substitutes the two placeholders with 127.0.0.1 stand-ins;
+# no line in this test scenario names or may reach a public network endpoint.
+# The standard phrase is test data, never a real wallet. `$previous` and `wait` are
+# directives of the shared calls-file driver (wallet_calls), described in call.rs.
+{"raw":true,"as":"module:other_module","method":"seal_key","params":{}}
+{"raw":true,"method":"balances","params":{}}
+{"raw":true,"method":"confirm","params":{"pending_id":"0123456789abcdef0123456789abcdef"}}
+{"client":"alice","method":"open_network","params":{"network":"$NETWORK","eth_rpc":"$ETH_RPC","depositor":"0x9858EfFD232B4033E47d90003D41EC34EcaEda94","phrase":"abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"}}
+{"raw":true,"as":"module:other_module","method":"balances","params":{}}
+{"raw":true,"method":"balances","params":{}}
+{"client":"alice","method":"balances","params":{}}
+{"client":"alice","method":"faucet","params":{"account":0}}
+{"client":"alice","method":"confirm","params":{"pending_id":"0123456789abcdef0123456789abcdef"}}
+{"client":"alice","method":"claim","params":{"leaf_index":0,"private":false}}
+{"client":"alice","method":"confirm","params":{"pending_id":"$previous","wait":true}}
+{"client":"alice","method":"job","params":{"id":"$previous"}}
+{"client":"alice","method":"burn","params":{"private":false,"account":0,"amount":"100000000000000","recipient":"0x9858EfFD232B4033E47d90003D41EC34EcaEda94","release_delay_ms":1000}}
+{"client":"alice","method":"confirm","params":{"pending_id":"$previous","wait":true}}
+{"client":"alice","method":"job","params":{"id":"$previous"}}
+{"client":"alice","method":"release","params":{"i":0}}
+{"client":"alice","method":"close","params":{}}
+{"raw":true,"method":"balances","params":{}}

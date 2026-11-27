@@ -345,7 +345,7 @@ jobs:
       CARGO_INCREMENTAL: "0"
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: The JS library (Node 20 or later)
+      - name: The JS library and CLI (offline CLI processes against loopback RPC stand-ins)
         run: node --version && node --test deploy/testnet/web/msg/test/*.test.mjs
       - name: The web wallet's fee-payer line (the network's gas-drop relayer; RFP-022 U.5, Priv.7)
         run: node --test deploy/testnet/web/wallet/test/gasdrop.test.mjs
@@ -514,13 +514,13 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq libpcsclite-dev protobuf-compiler
       - name: cli/'s library compiles as ferrata_relayer_module builds it (without lez-wallet)
         run: cd cli && cargo +1.98.1 check --locked --no-default-features --lib
-      # RFP-022 U.9: the bridge module's set_endpoints (the mini-app's "Apply and test") through the modules that hold the
-      # connections (a chain service, eth_rpc_module, lez_core), against stand-ins on 127.0.0.1: switched only after the
-      # new endpoint answered for the deployment, both kept on a refusal, put back after a failed reading. Local only; the
-      # live run inside Logos Core is e2e/endpoints/run.sh (build box).
-      - name: The bridge module's endpoint switching through their owners (RFP-022 U.9)
+      # All bridge-calls targets on loopback: the unit suites; RFP-022 U.9 endpoint switching through each connection
+      # owner, put back after a failed reading; and the terminal network session (RFP-022 U.6): balances and faucet,
+      # plaintext claim/public burn approve-then-confirm, and release hand-off. No public network. The live endpoint
+      # run inside Logos Core remains e2e/endpoints/run.sh (build box).
+      - name: The bridge module's calls, endpoint switching and terminal network session (RFP-022 U.6, U.9)
         working-directory: modules/ferrata_bridge_module/rust-lib
-        run: cargo test --locked -p ferrata-bridge-calls --test endpoints -- --nocapture
+        run: cargo test --locked -p ferrata-bridge-calls -- --nocapture
 
   links:
     runs-on: ubuntu-latest
