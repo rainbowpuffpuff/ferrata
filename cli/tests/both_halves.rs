@@ -544,7 +544,9 @@ async fn deposit(
     )
     .await?;
     let leaf = eth::view(p, vault, IVault::nextLeafIndexCall {}, None).await? - 1;
-    side.unminted.insert(leaf, price.total);
+    // ADR 0046: the vault escrows the denomination and the relay fee; the mint fee is credited to the fee recipient
+    // (owed) at the deposit, so it is not part of what the zone will mint.
+    side.unminted.insert(leaf, price.total - price.mint_fee);
     Ok(leaf)
 }
 

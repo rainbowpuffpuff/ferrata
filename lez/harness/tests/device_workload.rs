@@ -107,10 +107,14 @@ const BURN_TRANSITION: (u64, usize, u64) = (25_377, 1, 131_072);
 /// the same segments and padded sizes; these exact pins catch the next change, which must then be
 /// checked against the record's segments again (the asserts below) or the measurements redone.
 const ATTEST_TRANSITIONS_NOW: [u64; 2] = [34_717, 346_763];
-const CLAIM_TRANSITIONS_NOW: [u64; 2] = [41_785, 110_944];
+/// 41,322 and 110,378 since ADR 0046 (27 November 2026; 41,785 and 110,944 before): the claim names no fee schedule,
+/// so it no longer carries or checks a range; still one segment each, of 131,072 and 262,144 padded cycles, as the
+/// record's.
+const CLAIM_TRANSITIONS_NOW: [u64; 2] = [41_322, 110_378];
 /// 23,610 since ADR 0032 (22 November 2026): the burn record is keyed on the note's tag, so the private transition no
-/// longer hashes the note (25,773 before); still one segment of 131,072 padded cycles, as the record's.
-const BURN_TRANSITION_NOW: u64 = 23_610;
+/// longer hashes the note (25,773 before); 23,580 since ADR 0046 (27 November 2026: the holder's state no longer holds
+/// a claim's schedule range); still one segment of 131,072 padded cycles, as the record's.
+const BURN_TRANSITION_NOW: u64 = 23_580;
 
 /// Each proof's receipt and transaction sizes as the record states them, `(receipt bytes,
 /// transaction bytes)`: the unpadded first pass (p4-minimum:23-25) and the padded pass (337-339;
@@ -128,6 +132,10 @@ const BURN_PADDED: (usize, usize) = (239_046, 254_966);
 /// transaction: LEZ's circuit, which dominates them, reads the message, and its cycles cannot be
 /// measured in dev mode (module header), so this difference is reported, not hidden.
 const ATTEST_BARE_NOW: usize = 231_246;
+/// This tree's private claim transaction, at the record's receipt sizes: 24 bytes smaller than the record's runs measured
+/// it, bare and padded, since ADR 0046 (the claim's public `Issue` no longer carries a 24-byte schedule range).
+const CLAIM_BARE_NOW: usize = CLAIM_BARE.1 - 24;
+const CLAIM_PADDED_NOW: usize = CLAIM_PADDED.1 - 24;
 const ATTEST_PADDED_NOW: usize = 255_334;
 
 /// The private part's public shape, at the sizes the record's padded-section table states
@@ -511,10 +519,10 @@ fn the_private_claim_proves_the_work_the_record_measured() {
             .expect("the claim proves and settles");
         match shape {
             Shape::Bare => {
-                check_size("the private claim", shape, &run, CLAIM_BARE, CLAIM_BARE.1, "p4-minimum:24");
+                check_size("the private claim", shape, &run, CLAIM_BARE, CLAIM_BARE_NOW, "p4-minimum:24");
             }
             Shape::Wallet => {
-                check_size("the private claim", shape, &run, CLAIM_PADDED, CLAIM_PADDED.1, "p4-minimum:338");
+                check_size("the private claim", shape, &run, CLAIM_PADDED, CLAIM_PADDED_NOW, "p4-minimum:338");
                 check_shape("the private claim", shape, &run, &WALLET_ROW, "p4-minimum:324");
             }
         }
@@ -552,7 +560,7 @@ fn the_private_burn_proves_the_work_the_record_measured() {
             shape,
             &claim,
             if shape == Shape::Bare { CLAIM_BARE } else { CLAIM_PADDED },
-            if shape == Shape::Bare { CLAIM_BARE.1 } else { CLAIM_PADDED.1 },
+            if shape == Shape::Bare { CLAIM_BARE_NOW } else { CLAIM_PADDED_NOW },
             if shape == Shape::Bare { "p4-minimum:24" } else { "p4-minimum:338" },
         );
         print_header(&format!("private burn ({})", shape.name()), "p4-minimum:25,73-74,339");
