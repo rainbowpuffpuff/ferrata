@@ -89,8 +89,9 @@ Toolchain and dependencies:
   risc0-ethereum itself pins.
 
 The vault takes the vendored one-function `IRiscZeroVerifier`, whose selector is the same as RISC Zero's. Its
-runtime is 24,369 bytes, 207 below the EIP-170 limit (24,254 before milestone B1's listing slot), with the library
-(12,793 bytes) holding the cold admin code; further features need more of it moved to the library. `forge build
+runtime is 24,567 bytes, 9 below the EIP-170 limit (`forge build --sizes`, solc 0.8.26, 200 optimizer runs; 24,423 at
+the tree before ADR 0048's accrual, 24,554 with it, and 24,617 with the internal review's S-1 re-check before that check
+and the one before a deposit became one function), with the library (14,666 bytes) holding the cold admin code; further features need more of it moved to the library. `forge build
 --sizes` prints these and exits 1 with "some contracts exceed the runtime size limit": the one over it is
 `VaultHandler` (38,215 bytes), the invariant campaign's test-only handler, which is never deployed (forge does not
 apply EIP-170 to tests).
@@ -477,8 +478,9 @@ has to agree on each):
   in the candidate (one more slot, measured in GAS.md) and copied into the checkpoint's history entry. v5 credited
   the sender of `finalize` (A) or `finalizeAttested` (B): under rule (B) that call needs no proof, so anyone took the
   fee without proving, and under (A) a copied seal redirected it (review 2026-11-11 M-2). Still open: copying a
-  pending `submitCandidate` from the mempool takes the credit; closing it needs the prover's address in the checkpoint
-  journal (a new checkpoint program).
+  pending `submitCandidate` from the mempool takes the credit, and so does resubmitting a cancelled, revoked or stale
+  candidate's public seal, which needs no mempool (internal review F-1, Low: for a watcher it is deterministic);
+  closing both needs the prover's address in the checkpoint journal (a new checkpoint program).
 - **Who receives the protocol fees**: the LEZ configuration's fee recipient receives their accrued deltas in the
   wrapped token on LEZ. The immutable Ethereum `feeRecipient` remains in the deployment ABI but is credited nothing;
   checkpoint fees are credited to the prover on Ethereum.

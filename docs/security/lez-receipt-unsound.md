@@ -20,18 +20,18 @@ risc0-zkvm 3.0.5, in the range of RISC Zero's advisory GHSA-g6qg-9j8p-7j87, and 
 transaction's journal lists with the sender the journal names. If a forged receipt is accepted, a forger can deliver,
 in the bridge program (`lez/guests/bridge/src/main.rs`):
 
-- `Mint` from a nullifier's actor (`:180-193`): wrapped tokens credited to any holder, without a deposit and outside
+- `Mint` from a nullifier's actor (`:185-199`): wrapped tokens credited to any holder, without a deposit and outside
   the gate that applies LEZ's mint caps and freezes;
-- the burn record from a token's actor (`:758-765`): a burn note at `burn(cid, r)` that no holder paid for, outside
+- the burn record from a token's actor (`:873-880`): a burn note at `burn(cid, r)` that no holder paid for, outside
   the burn caps and freezes; the checkpoint program reads it as any burn
   (`checkpoint/crates/checkpoint-core/src/rule.rs:110-113`);
-- `root(cid, n)` from the configuration's actor (`write_root`, `:443-459`): a deposit root of the forger's choosing,
+- `root(cid, n)` from the configuration's actor (`write_root`, `:461-477`): a deposit root of the forger's choosing,
   claimable on LEZ, which the checkpoint does not count (it counts `ImportRoot` messages only, `rule.rs:116-118`);
 - through the attestation program's records, which are in reach too (trust.md §5), a top-level `ImportRoot` of a
   forged root and leaf count, which the checkpoint does count;
 - **the configuration's role messages** (added by this document): `config(cid)` authorizes `Sunset`, `Freeze`,
-  `SetCap`, `SetDepth`, `ProposeRoles`, `CancelRoles` and `Pause` by the sender actor (`from_account`, `:920-923`,
-  `:980-984`). A role's own actor takes only top-level calls (`:972-977`), but a replayed call can be delivered at
+  `SetCap`, `SetDepth`, `ProposeRoles`, `CancelRoles` and `Pause` by the sender actor (`from_account`, `:1036-1039`,
+  `:1096-1100`). A role's own actor takes only top-level calls (`:1088-1093`), but a replayed call can be delivered at
   `config(cid)` directly, naming the role's actor as its sender. So the forger can also lift or set LEZ's freezes,
   raise or zero LEZ's caps, and send `Sunset` (which the checkpoint counts as a visible call, `rule.rs:119`).
   [`docs/trust.md`](../trust.md) §5 lists the role actors as out of reach; that holds for the role actors, not for
@@ -72,7 +72,7 @@ every freeze renewed on day 29 (releases, checkpoints, deposits) still holds on 
 | Position | Under the runbook, while renewed | If a freeze lapses, or before detection | Shown by |
 |---|---|---|---|
 | Deposit LEZ never imported | refunded whole (denomination and relay fee) to the depositor its leaf names, once the sunset checkpoint is past its revocation window; per-token release freezes do not stop refunds | refunds draw on the token's escrow: forged releases made before detection can leave it short, and the refund is refused (`InsufficientEscrow`); a forged import count at the sunset moves the refund boundary up, and a deposit below it is not refundable; **a forged import count above the vault's tree, if it lands before LEZ's `Sunset`, means no checkpoint is ever finalised again, the sunset checkpoint included: the boundary is never set and nothing is refunded** (after retirement no deposit can catch the count up; a count above 2^32 never can) | `…theRunbookHoldsEveryPositionWhileRenewed`; `…forgedReleasesBeforeDetectionCanLeaveAnUnimportedDepositUnrefundable`; `…aForgedImportCountAtSunsetLeavesADepositBelowItUnrefundable`; `…afterRetirementAForgedCountAboveTheTreeEndsCheckpointsAndRefunds` |
-| Deposit imported on LEZ, not yet claimed | claimable on LEZ (claims of imported roots go on after `Sunset`); the wrapped token it mints is diluted by forged mints, and its way back is a burn, which waits (below) | the same | LEZ side, by reading (`main.rs:154-160`, `:301-303`) |
+| Deposit imported on LEZ, not yet claimed | claimable on LEZ (claims of imported roots go on after `Sunset`); the wrapped token it mints is diluted by forged mints, and its way back is a burn, which waits (below) | the same | LEZ side, by reading (`main.rs:159-165`, `:313-315`) |
 | Wrapped tokens held on LEZ | diluted: the vault's escrow backs them and the forged mints alike; redeemable only through a burn, which waits | a race with forged burns for the token's escrow | by reading; the race: `…withoutTheFreezeTheShortfallFallsOnTheLastRedeemer` |
 | Burn not yet in a finalised checkpoint | waits: no candidate can be submitted while checkpoints are frozen | released in the race once a checkpoint carries it; a forged import count above the vault's tree halts every checkpoint (`ImportedLeafCountTooHigh`) until real deposits catch up, which they cannot once the vault is retired, nor ever above 2^32 leaves: then the burn waits for good | `…theRunbookHoldsEveryPositionWhileRenewed`; `…aForgedImportCountAboveTheTreeHaltsCheckpointsUntilDepositsCatchUp`; `…afterRetirementAForgedCountAboveTheTreeEndsCheckpointsAndRefunds` |
 | Burn under an accepted root, not released | held, its nullifier unused (`TokenReleasesAreFrozen`), and so is every forged one | paid in arrival order with the forged burns; when the escrow runs out the last are refused (`InsufficientEscrow`): the shortfall falls on the late redeemers | `…theRunbookHoldsEveryPositionWhileRenewed`; `…withoutTheFreezeTheShortfallFallsOnTheLastRedeemer` |

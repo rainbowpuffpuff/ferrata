@@ -22,8 +22,9 @@ dos, erc20, bridges, chain-specific, signatures), one specialist per group of do
 the reviewer's own line-by-line reading of both contracts, and every claimed finding confirmed against the code and,
 where it could be, by a test that fails on `50b396a8`. Earlier reviews were not re-reported: the review of
 11 November 2026 and its fixes ([`../reviews/security/`](../reviews/security/)), the vault review of 16 November
-(F-1 … F-9) and the red team of 18 November. Line numbers are at this branch's tip unless a commit is named
-(`vault/src/FerrataVault.sol` is three lines longer than at `50b396a8` after line 690, from S-1's fix).
+(F-1 … F-9) and the red team of 18 November. Line numbers are at the review's own tip, `5fdd573b`, unless a commit is
+named (`vault/src/FerrataVault.sol` there is three lines longer than at `50b396a8` after line 690, from S-1's fix); the
+merge with ADR 0048's vault of 27 November 2026 moved them again.
 
 **Result.** No critical or high finding. Four findings fixed and two in part, each change with a test that fails on
 `50b396a8` and passes after it: one medium (the monitor's nonce), five low (the vault, the deployment default, the
@@ -39,7 +40,7 @@ the reason they were not fixed tonight.
 | S-1 | Low | vault | A token hook can retire the vault or finalise a sunset checkpoint inside `deposit`, which then lands anyway | **fixed** (`ad2e91d5`) |
 | S-2 | Low | deploy script | The default release floor is below the largest exit: an admin can set caps that refuse a 10,000-token release or a 0.1 ETH refund for good | **fixed** (`1da2fd28`) |
 | S-3 | Low | verifier check | `check-verifier.sh` trusted `SELECTOR()`: a fake verifier, a fake stop, an owned or tripped stop all passed | **fixed** (`68b3e124`) |
-| F-1 | Low | vault, fee code | A cancelled or revoked candidate's public seal can be resubmitted by anyone, who then takes its checkpoint fees | for the fee rewrite |
+| F-1 | Low | vault, fee code | A cancelled or revoked candidate's public seal can be resubmitted by anyone, who then takes its checkpoint fees | **open** (still so under ADR 0048 at the merge of 27 Nov 2026; below) |
 | V-1 | Low | vault | A token the admin registers with a large `unitWeight` can use the shared global release bucket up, floor or not | documented |
 | C-4 | Low | monitor | The watcher key in `--key-env` is inherited by every `sh -c` child; node and alert commands have no timeout | **in part** (`b1be13ab`): not inherited; `/proc` and timeouts open |
 | C-5 | Low | `deploy.sh` | A Hoodi or Holesky RPC is routed through the Sepolia proxy | open |
@@ -86,7 +87,9 @@ register a token of a given kind, or a deployer to misconfigure, is ranked by wh
   hold for such a token. No funds are lost: the leaf lies above the refund boundary and is refundable, and LEZ, after
   `Sunset`, imports nothing; a refund path computed against the earlier root must be recomputed.
 - **Fix.** The check is made again after the pull (`FerrataVault.sol:691-693`), 63 bytes of the 153 left under
-  EIP-170 (90 left; the fee rewrite on `f13-lez` changes the size too, so the merge must be measured again).
+  EIP-170 (90 left). Measured again at the merge with ADR 0048's fee accrual (27 November 2026): 24,617 bytes, 41 over;
+  the check before a deposit and the one after the pull now call one internal function, `_checkOpen()`, with the same
+  condition and error: 24,567 bytes, 9 under, every vault test passing.
 - **Test.** `vault/test/InternalReview.t.sol`: `test_S1_aTokenHookCannotLandADepositAfterRetirement`,
   `test_S1_aTokenHookCannotLandADepositAfterASunsetCheckpoint` (both "next call did not revert" on `50b396a8`), and a
   control in which the hook changes nothing. No other input `_checkDeposit` reads can be changed from an unprivileged
@@ -162,6 +165,10 @@ candidate recorded (`FerrataRegistry.releaseFeesAndPayouts`).
   else, and watchers gain a motive to cancel. The known open item (copying a pending submission from the mempool,
   `vault/README.md`) needs a mempool; this needs none. Fix: the prover's address in the checkpoint journal (a new
   checkpoint program); a vault-only stopgap is a write-once `firstProver[digest]` set at the first verified submission.
+  **Open at the merge of 27 November 2026** (ADR 0048's vault, `f13-lez`, does not change it): the stopgap needs a
+  storage slot and code the vault has no room for (24,567 bytes after the merge, 9 under EIP-170; it would first move
+  code into `FerrataRegistry`), and the real fix is a new checkpoint program. Severity stays Low: only checkpoint fees
+  (each at most 1% of a release, set per token) move to the wrong party; no escrow, release or refund is affected.
 - **F-2 (Info).** A prover that submits through a public router (Multicall3's `aggregate`) makes the router the prover;
   anyone can then claim its fees through the router. Document: submit from one's own account.
 - **F-3 (known).** Outbound fees are those in force at release (review L-2, not fixed by design).
