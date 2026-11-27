@@ -100,7 +100,8 @@ id_of() { local v; v="$(jq -r --arg p "$1.bin" 'select(.program == $p or (.progr
 hexfile() { tr -d ' \n' < "$1" | sed 's/^0x//'; }
 zero_address() { local a="${1,,}"; [ -z "$a" ] || [ "$a" = 0x0000000000000000000000000000000000000000 ]; }
 asset_balance() { # token owner: an ERC-20 balance in base units, ETH in wei
-  if zero_address "$1"; then cast balance "$2" --rpc-url "$R"; else cast call "$1" 'balanceOf(address)(uint256)' "$2" --rpc-url "$R"; fi
+  # cast prints a uint256 as "N [N in scientific notation]": the first word is the number
+  if zero_address "$1"; then cast balance "$2" --rpc-url "$R"; else cast call "$1" 'balanceOf(address)(uint256)' "$2" --rpc-url "$R" | awk '{print $1}'; fi
 }
 mkdir -p "$RUN/logs"
 
