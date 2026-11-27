@@ -508,6 +508,16 @@ pub struct Metrics {
     pub sources_head: u64,
     /// The round in which the instance's finalized slot last moved (or the instance was first seen active; 0: not yet).
     pub progress_round: u64,
+    /// ... and the turn clock's reading then ([`Metrics::turn_clock`]): what the stall alarm counts.
+    pub progress_clock: u64,
+    /// The turn clock (`policy.defer_window`, `policy.join_wait_rounds`) as the last round read it: the height of the
+    /// chain's newest block the backend's reads reflect where it gives one ([`Ledger::height`]; `turn_clock_height`),
+    /// otherwise this updater's round.
+    pub turn_clock: u64,
+    pub turn_clock_height: bool,
+    /// `policy.join_wait_rounds`: updates this updater learned from other parties' `Open`s on chain
+    /// ([`Ledger::messages_to`]) that its sources had not served (copies of an update included), counted once each.
+    pub updates_from_chain: u64,
     /// `policy.min_distinct_clients`: this round waits for clients, and the furthest update the sources serve that the
     /// program would not refuse finalizes this many slots past the instance (`None`: not waiting for clients). Beyond
     /// `max_lag_slots`, `/health` says so.
@@ -616,6 +626,12 @@ pub struct Updater {
     in_wait: bool,
     /// The last round in which `known` was brought up to date from the sources.
     learned: u64,
+    /// This round's reading of the turn clock ([`Updater::read_clock`]): the chain's height, or the round.
+    clock: u64,
+    /// `policy.join_wait_rounds`: the newest block whose `Open`s were read ([`Updater::learn_from_chain`]), and the last
+    /// round they were read in.
+    chain_seen: u64,
+    chain_read: u64,
     /// Per job, the steps the chain held once this updater's last applied step of it landed: a job whose count is still
     /// that, and which this updater does not carry, last moved by this updater's own step (it opened the job and left
     /// it, `finish_own_jobs = false`): it holds this updater back no longer. At most [`MAX_HELD`].
@@ -685,6 +701,9 @@ impl Updater {
             wait_start: None,
             in_wait: false,
             learned: 0,
+            clock: 0,
+            chain_seen: 0,
+            chain_read: 0,
             own_moves: BTreeMap::new(),
             waiting_for: None,
             breaker: Breaker::default(),
@@ -1141,11 +1160,15 @@ impl Updater {
     // ---- a round --------------------------------------------------------------------------
 
     /// Whether this updater waits its turn to send `step` of job `jid` (`policy.defer_window`): `H(tag, jid, step) mod
-    /// defer_window` rounds from the first round the step was due under `since` (an `Open`, or a step of a job this
-    /// updater does not carry: the instance's state, as [`state_turn`] gives it; a step of a job it carries: the job),
-    /// or the wait fixed for the turn (after this updater sent such a step there: a whole turn, [`Updater::submit`]).
+    /// defer_window` turns of the clock ([`Updater::read_clock`]: the chain's blocks) from the first reading at which it
+    /// found the step due under `since` (an `Open`, or a step of a job this updater does not carry: the instance's state,
+    /// as [`state_turn`] gives it; a step of a job it carries: the job), or the wait fixed for the turn (after this
+    /// updater sent such a step there: a whole turn, [`Updater::submit`]). Counted in blocks, two updaters that read the
+    /// chain at least once a block find a step due at the same height (the block that made it due, or the first they
+    /// read after the update came) and reach their turns at the heights their draws give, however often each reads:
+    /// reading more often only notices a turn sooner within the block it comes in (RFP-021 R.10).
     fn defer(&mut self, jid: &Root, since: &Root, step: Step) -> bool {
-        let (due, fixed) = *self.first_due.entry((*since, step)).or_insert((self.round, None));
+        let (due, fixed) = *self.first_due.entry((*since, step)).or_insert((self.clock, None));
         let wait = fixed.unwrap_or_else(|| {
             let mut h = Sha256::new();
             h.update(self.tag);
@@ -1154,11 +1177,35 @@ impl Updater {
             let d: [u8; 32] = h.finalize().into();
             u64::from_le_bytes(d[..8].try_into().expect("8")) % self.policy.defer_window
         });
-        if self.round.saturating_sub(due) < wait {
+        if self.clock.saturating_sub(due) < wait {
             self.metrics.deferrals += 1;
             return true;
         }
         false
+    }
+
+    /// This round's reading of the turn clock that `policy.defer_window` and `policy.join_wait_rounds` count: the height
+    /// of the chain's newest block the backend's reads reflect ([`Ledger::height`]), which every party reading the chain
+    /// reads alike and none can hasten (RFP-021 R.10: an updater polling more often than another reaches no turn
+    /// sooner); this updater's round where the backend gives none (the wait then counts its own rounds, as before).
+    /// Read just after the instance's state, so that it is the height that state is of.
+    fn read_clock(&mut self, ledger: &dyn Ledger) {
+        let (clock, height) = match ledger.height() {
+            Some(h) => (h, true),
+            None => (self.round, false),
+        };
+        self.clock = clock;
+        self.metrics.turn_clock = clock;
+        self.metrics.turn_clock_height = height;
+    }
+
+    /// What the turn clock counts, for the log and `/health`.
+    fn clock_unit(&self) -> &'static str {
+        if self.metrics.turn_clock_height {
+            "block(s)"
+        } else {
+            "round(s)"
+        }
     }
 
     /// Read the chain and the sources; decide this round's transaction.
@@ -1166,7 +1213,7 @@ impl Updater {
         self.round += 1;
         self.metrics.rounds += 1;
         if self.first_due.len() > 4096 {
-            let horizon = self.round.saturating_sub(1024);
+            let horizon = self.clock.saturating_sub(1024);
             self.first_due.retain(|_, (r, _)| *r >= horizon);
         }
         let round = self.round;
@@ -1208,6 +1255,7 @@ impl Updater {
         let spec = config.spec();
         let fork = config.fork().ok_or_else(|| anyhow!("config: no layout"))?;
         let state = self.inst.state(ledger)?;
+        self.read_clock(ledger);
         // A step held on another state of the instance is moot (a job commits to the store it starts from): forgotten.
         let seen = state_digest(&state.as_ref().map(|s| (s.active, s.store.clone())));
         self.held.retain(|_, h| h.state == seen);
@@ -1287,6 +1335,7 @@ impl Updater {
         let store = CompactStore::decode(&state.store).map_err(|e| anyhow!("store: {e:?}"))?;
         if self.metrics.progress_round == 0 || store.finalized.slot != self.metrics.finalized_slot {
             self.metrics.progress_round = self.round;
+            self.metrics.progress_clock = self.clock;
         }
         if self.expired.as_ref().is_some_and(|(slot, _)| *slot != store.finalized.slot) {
             self.expired = None;
@@ -1613,9 +1662,9 @@ impl Updater {
                 return Ok(Plan::Deferred(step));
             }
             Some(JoinOrWait::Released) => {
-                // The step's turn starts again from this round, so that updaters released together do not all send
-                // in this round.
-                self.first_due.insert((since, step), (self.round, None));
+                // The step's turn starts again from this reading of the clock, so that updaters released together do
+                // not all send at once.
+                self.first_due.insert((since, step), (self.clock, None));
                 if self.defer(&chosen.jid, &since, step) {
                     return Ok(Plan::Deferred(step));
                 }
@@ -1715,6 +1764,70 @@ impl Updater {
         self.metrics.sources_head = self.metrics.sources_head.max(head);
     }
 
+    /// Once a round: the updates of the jobs other parties opened since the last read, from their `Open`s the chain
+    /// applied ([`Ledger::messages_to`]: on the sequencer backend, the blocks its follower holds, final on Bedrock),
+    /// remembered as known updates when the program's checks accept them on the instance's store, so that a job opened
+    /// from a copy of an update this updater's sources never served (another beacon node's: copies differ in their
+    /// attested header, signature slot or signers, and a job's id hashes the whole update) is found, recognized as the
+    /// same update for the store ([`KnownJob::lands`]) and joined, or waited for (RFP-021 R.9). An `Open` carries the
+    /// update in the program's compact encoding; the bytes a source would serve are rebuilt from it
+    /// (`ferrata_advance::served_update_of_open`; a period update's next committee from the full committee this updater
+    /// holds for its summary, from the store's committees or a period update its sources served). A backend that gives
+    /// no messages (`None`) leaves the updater with the jobs of the updates its sources served, as before.
+    fn learn_from_chain(&mut self, ledger: &dyn Ledger, store: &CompactStore) {
+        if self.policy.join_wait() == 0 || self.chain_read == self.round {
+            return;
+        }
+        self.chain_read = self.round;
+        let read = match ledger.messages_to(self.inst.actor(), self.chain_seen) {
+            Ok(Some(r)) => r,
+            Ok(None) => return,
+            Err(e) => {
+                // Read again next round, from the same block.
+                self.log(&format!("the instance's transactions could not be read: {e:#}"));
+                return;
+            }
+        };
+        let (messages, newest) = read;
+        self.chain_seen = self.chain_seen.max(newest);
+        for m in messages {
+            let Ok(Message::Open { update, .. }) = borsh::from_slice::<Message>(&m) else {
+                continue;
+            };
+            let committees = &self.committees;
+            let known = &self.known;
+            let config = &self.inst.config;
+            let committee = |root: &Root| {
+                committees.get(root).cloned().or_else(|| {
+                    known.values().filter(|k| k.0).find_map(|k| {
+                        let (u, _) = decode_update(&k.1, config).ok()?;
+                        (committee_key(&u.next_sync_committee) == *root).then_some(u.next_sync_committee)
+                    })
+                })
+            };
+            let Some((period_update, raw, decoded)) = ferrata_advance::served_update_of_open(&update, config, committee)
+            else {
+                continue;
+            };
+            let Verdict::Useful(p) = self.evaluate(store, &decoded) else {
+                continue;
+            };
+            let digest: Root = Sha256::digest(&raw).into();
+            if !self.known.contains_key(&digest) {
+                self.metrics.updates_from_chain += 1;
+                self.log(&format!(
+                    "learned from another party's Open on chain: the update finalizing slot {} (attested slot {}, \
+                     signature slot {}), job 0x{}",
+                    p.update.finalized_header.beacon.slot,
+                    p.update.attested_header.beacon.slot,
+                    p.update.signature_slot,
+                    &hex::encode(p.jid)[..16]
+                ));
+                self.remember(period_update, &raw, Self::lands_of(&p), p.update.signature_slot);
+            }
+        }
+    }
+
     /// How `p`'s update ranks on `store` ([`Rank`]).
     fn rank_of(store: &CompactStore, p: &Planned) -> Rank {
         (
@@ -1763,6 +1876,7 @@ impl Updater {
         state: &InstanceState,
         own: &Root,
     ) -> Result<Vec<(KnownJob, Option<(u32, Step)>)>> {
+        self.learn_from_chain(ledger, store);
         let seen = state_turn(state);
         if self.known_jobs.0 != seen {
             self.known_jobs = (seen, BTreeMap::new());
@@ -1846,7 +1960,9 @@ impl Updater {
             self.wait_start = None;
             self.in_wait = false;
         }
-        let round = self.round;
+        // Counted on the turn clock ([`Updater::read_clock`]: the chain's blocks), as the deferral is.
+        let round = self.clock;
+        let unit = self.clock_unit();
         // How far each kind of job has moved.
         let mut most: BTreeMap<(bool, Root), u32> = BTreeMap::new();
         for (k, read) in &others {
@@ -1895,7 +2011,7 @@ impl Updater {
                     self.metrics.stalled_jobs_passed += 1;
                     self.log(&format!(
                         "job 0x{} (finalized slot {}, {steps} step(s) applied) leads this store's job 0x{} but has not \
-                         moved for {still} rounds (policy.join_wait_rounds {wait}): passed",
+                         moved for {still} {unit} (policy.join_wait_rounds {wait}): passed",
                         &hex::encode(k.jid)[..16],
                         k.rank.1,
                         &hex::encode(chosen.jid)[..16]
@@ -1944,7 +2060,7 @@ impl Updater {
             }
             self.metrics.wait_caps += 1;
             self.log(&format!(
-                "{} of job 0x{}: this updater has waited {cap} rounds on this state of the instance for jobs that lead \
+                "{} of job 0x{}: this updater has waited {cap} {unit} on this state of the instance for jobs that lead \
                  its own (JOIN_WAIT_CAP {JOIN_WAIT_CAP} x policy.join_wait_rounds {wait}): sent",
                 step.name(),
                 &hex::encode(chosen.jid)[..16]
@@ -1953,7 +2069,7 @@ impl Updater {
         }
         self.in_wait = true;
         let what = match steps {
-            Some(n) => format!("{n} step(s) applied, last moved {still} round(s) ago"),
+            Some(n) => format!("{n} step(s) applied, last moved {still} {unit} ago"),
             None => {
                 self.metrics.unreadable_waits += 1;
                 "its account not readable now (a transaction of it not final yet)".into()
@@ -1962,7 +2078,7 @@ impl Updater {
         Ok(Some(JoinOrWait::Wait(
             format!(
                 "job 0x{} (finalized slot {}, {what}), open on this store, leads job 0x{} (finalized slot {}, {} step(s) \
-                 applied): waiting for it (at most {wait} rounds after it last moves)",
+                 applied): waiting for it (at most {wait} {unit} after it last moves)",
                 &hex::encode(k.jid)[..16],
                 k.rank.1,
                 &hex::encode(chosen.jid)[..16],
@@ -2323,7 +2439,7 @@ impl Updater {
                     // (an internal review's L2); without a new turn, every round.
                     let whole = self.policy.defer_window.saturating_sub(1);
                     self.first_due
-                        .insert((state_digest(&action.store_seen), action.step), (self.round + 1, Some(whole)));
+                        .insert((state_digest(&action.store_seen), action.step), (self.clock + 1, Some(whole)));
                     // A refused step: the chain is read again. Done or moot: a race. Still due (no other party's
                     // transaction came first, the store did not move): sent again it would meet the same state.
                     // Unreadable after every attempt: unknown, held for a while (review of the fixes, L4: a failed read
@@ -2646,13 +2762,15 @@ impl Updater {
             ));
         }
         let behind = self.metrics.sources_head.saturating_sub(self.metrics.finalized_slot);
-        let still = self.round.saturating_sub(self.metrics.progress_round);
+        // Counted on the turn clock, as the deferral the alarm leaves room for is.
+        let still = self.metrics.turn_clock.saturating_sub(self.metrics.progress_clock);
         let left_behind = self.metrics.progress_round > 0 && behind > self.policy.max_lag_slots;
         if left_behind && still >= self.stall_rounds() {
             why.push(format!(
-                "no progress: the instance's finalized slot {} has not moved for {still} rounds while the sources serve \
+                "no progress: the instance's finalized slot {} has not moved for {still} {} while the sources serve \
                  updates {behind} slots past it{}",
                 self.metrics.finalized_slot,
+                self.clock_unit(),
                 if still >= self.stall_down_rounds() { "" } else { " (down after twice as many)" }
             ));
         }
@@ -2682,14 +2800,15 @@ impl Updater {
         (status, why)
     }
 
-    /// Rounds without progress after which `/health` says so: room for every step of a job (`Open`, `Miller`, two
-    /// `Adopt` parts, `Finish`) each waiting its full deferral, and ten more.
+    /// Turns of the clock ([`Metrics::turn_clock`]: the chain's blocks, or rounds) without progress after which `/health`
+    /// says so: room for every step of a job (`Open`, `Miller`, two `Adopt` parts, `Finish`) each waiting its full
+    /// deferral, and ten more.
     pub fn stall_rounds(&self) -> u64 {
         self.policy.defer_window.saturating_mul(6).saturating_add(10)
     }
 
-    /// Rounds without progress (while the sources serve updates past the instance) after which `/health` says `down`:
-    /// twice [`Updater::stall_rounds`].
+    /// Turns of the clock without progress (while the sources serve updates past the instance) after which `/health`
+    /// says `down`: twice [`Updater::stall_rounds`].
     pub fn stall_down_rounds(&self) -> u64 {
         self.stall_rounds().saturating_mul(2)
     }
@@ -2739,6 +2858,9 @@ impl Updater {
         let _ = writeln!(o, "ferrata_updater_stalled_jobs_passed_total{{{l}}} {}", m.stalled_jobs_passed);
         let _ = writeln!(o, "ferrata_updater_join_waits_capped_total{{{l}}} {}", m.wait_caps);
         let _ = writeln!(o, "ferrata_updater_waits_for_unreadable_jobs_total{{{l}}} {}", m.unreadable_waits);
+        let _ = writeln!(o, "ferrata_updater_updates_from_chain_total{{{l}}} {}", m.updates_from_chain);
+        let _ = writeln!(o, "ferrata_updater_turn_clock{{{l}}} {}", m.turn_clock);
+        let _ = writeln!(o, "ferrata_updater_turn_clock_is_height{{{l}}} {}", u8::from(m.turn_clock_height));
         let _ = writeln!(o, "ferrata_updater_jobs_finished_total{{{l}}} {}", m.jobs_finished);
         let _ = writeln!(o, "ferrata_updater_finalized_slot{{{l}}} {}", m.finalized_slot);
         let _ = writeln!(o, "ferrata_updater_sources_head_slot{{{l}}} {}", m.sources_head);

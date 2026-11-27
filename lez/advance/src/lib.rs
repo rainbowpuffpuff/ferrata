@@ -89,6 +89,110 @@ pub fn decode_finality_update(b: &[u8], config: &Config) -> Result<(LightClientU
     Ok((update, LcFork::Electra))
 }
 
+/// Whether a light-client header is an offset field of an SSZ container in `layout`: Capella's to Electra's carry an
+/// execution payload header, whose `extra_data` varies in length; Altair's and Gloas's are of fixed size.
+fn header_is_variable(layout: LcFork) -> bool {
+    matches!(layout, LcFork::Capella | LcFork::Deneb | LcFork::Electra)
+}
+
+/// An SSZ container: each field's encoding in the fixed part, or, for a variable field (`true`), its offset there and
+/// its encoding after the fixed part, in order.
+fn ssz_container(fields: &[(bool, Vec<u8>)]) -> Vec<u8> {
+    let fixed: usize = fields.iter().map(|(var, b)| if *var { 4 } else { b.len() }).sum();
+    let (mut out, mut tail) = (Vec::new(), Vec::new());
+    for (var, b) in fields {
+        if *var {
+            out.extend_from_slice(&u32::try_from(fixed + tail.len()).expect("small").to_le_bytes());
+            tail.extend_from_slice(b);
+        } else {
+            out.extend_from_slice(b);
+        }
+    }
+    out.extend_from_slice(&tail);
+    out
+}
+
+fn ssz_roots(roots: &[Root]) -> Vec<u8> {
+    roots.concat()
+}
+
+/// The SSZ of `update` as the `updates` endpoint serves it, in `layout`: the inverse of [`decode_update`] (SSZ has one
+/// encoding per value, so the bytes a beacon node served come back). Used for an update read from another party's
+/// `Open` (`CompactUpdate`, its next committee completed from the full committee whose summary it carries).
+pub fn encode_update(update: &LightClientUpdate, layout: LcFork) -> Vec<u8> {
+    let var = header_is_variable(layout);
+    let mut committee = update.next_sync_committee.pubkeys.concat();
+    committee.extend_from_slice(&update.next_sync_committee.aggregate_pubkey);
+    ssz_container(&[
+        (var, ferrata_core::witness::encode_light_client_header(&update.attested_header, layout)),
+        (false, committee),
+        (false, ssz_roots(&update.next_sync_committee_branch)),
+        (var, ferrata_core::witness::encode_light_client_header(&update.finalized_header, layout)),
+        (false, ssz_roots(&update.finality_branch)),
+        (false, ferrata_core::witness::encode_sync_aggregate(&update.sync_aggregate)),
+        (false, update.signature_slot.to_le_bytes().to_vec()),
+    ])
+}
+
+/// The SSZ of the `LightClientFinalityUpdate` that `update` stands for (its committee fields empty), in `layout`: the
+/// inverse of [`decode_finality_update`].
+pub fn encode_finality_update(update: &LightClientUpdate, layout: LcFork) -> Vec<u8> {
+    let var = header_is_variable(layout);
+    ssz_container(&[
+        (var, ferrata_core::witness::encode_light_client_header(&update.attested_header, layout)),
+        (var, ferrata_core::witness::encode_light_client_header(&update.finalized_header, layout)),
+        (false, ssz_roots(&update.finality_branch)),
+        (false, ferrata_core::witness::encode_sync_aggregate(&update.sync_aggregate)),
+        (false, update.signature_slot.to_le_bytes().to_vec()),
+    ])
+}
+
+/// The update an `Open` carries (`Message::Open`'s compact encoding, in the layout its first byte names), as a source
+/// would serve it: a period update (its next committee present: the full committee `committee` gives for the summary's
+/// keys root; `None` if it gives none) or a finality update, with its bytes in the layout a beacon node serves it in
+/// ([`encode_update`], [`encode_finality_update`]). `None` for an encoding that does not decode, or a layout no beacon
+/// node serves the update in (an `Open` may name a layout past the one served, `layout_for`'s store layout): such an
+/// `Open` names no update a source serves.
+pub fn served_update_of_open(
+    compact: &[u8],
+    config: &Config,
+    committee: impl Fn(&Root) -> Option<SyncCommittee>,
+) -> Option<(bool, Vec<u8>, LightClientUpdate)> {
+    let n = config.sync_committee_size as usize;
+    let layout = CompactUpdate::layout_of(compact).ok()?;
+    let c = CompactUpdate::decode(compact, layout, n).ok()?;
+    let served = served_layout(&config.spec(), c.attested_header.beacon.slot)?;
+    if served != layout {
+        return None;
+    }
+    let (period, next) = match &c.next_sync_committee {
+        Some(summary) => {
+            let full = committee(&summary.pubkeys_root)?;
+            if ferrata_core::witness::CommitteeSummary::of(&full) != *summary {
+                return None;
+            }
+            (true, full)
+        }
+        None => (false, SyncCommittee::empty(n)),
+    };
+    let update = LightClientUpdate {
+        attested_header: c.attested_header,
+        next_sync_committee: next,
+        next_sync_committee_branch: c.next_sync_committee_branch,
+        finalized_header: c.finalized_header,
+        finality_branch: c.finality_branch,
+        sync_aggregate: c.sync_aggregate,
+        signature_slot: c.signature_slot,
+    };
+    let raw = if period { encode_update(&update, layout) } else { encode_finality_update(&update, layout) };
+    // The bytes decode back to the same update (they are what a source serving it would serve).
+    let back = if period { decode_update(&raw, config) } else { decode_finality_update(&raw, config) };
+    match back {
+        Ok((u, l)) if u == update && l == layout => Some((period, raw, update)),
+        _ => None,
+    }
+}
+
 /// A committee as a list of keys: the keys, then the aggregate key (48 bytes each).
 pub fn decode_committee(b: &[u8]) -> Result<SyncCommittee> {
     ensure!(!b.is_empty() && b.len().is_multiple_of(48), "a committee file of {} bytes", b.len());

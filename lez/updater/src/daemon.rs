@@ -75,6 +75,12 @@ impl Ledger for MachineClock {
     fn now_ms(&self) -> Option<u64> {
         self.0.now_ms().or_else(machine_now_ms)
     }
+    fn height(&self) -> Option<u64> {
+        self.0.height()
+    }
+    fn messages_to(&self, root: Actor, after: u64) -> Result<Option<(Vec<Vec<u8>>, u64)>> {
+        self.0.messages_to(root, after)
+    }
 }
 
 /// A path of the configuration, relative to its file's directory `base`.
