@@ -17,10 +17,11 @@ without them those checks are skipped, and say so. Nothing else is built or inst
 ```sh
 git clone https://github.com/rainbowpuffpuff/ferrata && cd ferrata
 python3 -I scripts/verify.py --list            # every check: its family, mode, requirement rows and EVIDENCE rows
-python3 -I scripts/verify.py --all             # the 92 quick offline checks: about 6 minutes
+python3 -I scripts/verify.py --all             # the 98 quick offline checks: about 6 minutes
 python3 -I scripts/test_verify.py              # the tamper tests: about 30 seconds
 python3 -I scripts/test_verify_lc.py           # the light-client records' tamper tests: seconds
 python3 -I scripts/test_verify_bridge.py       # the bridge records' tamper tests: seconds
+python3 -I scripts/test_verify_bridge_rows.py  # the remaining bridge-row records' tamper tests: seconds
 ```
 
 Each check prints one block, for example:

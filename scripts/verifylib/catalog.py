@@ -20,8 +20,8 @@ import tempfile
 from .core import REGISTRY, CheckFailed, Ctx, check, command, fail_if, run_script, scratch_env
 from .rows import status_rows
 
-CHECK_MODULES = ("checks_hashes", "checks_seals", "checks_sigs", "checks_lc", "checks_bridge", "checks_online",
-                 "runrecord")
+CHECK_MODULES = ("checks_hashes", "checks_seals", "checks_sigs", "checks_lc", "checks_bridge", "checks_bridge_rows",
+                 "checks_online", "runrecord")
 
 
 def _py(id, script, *args, **kw):
