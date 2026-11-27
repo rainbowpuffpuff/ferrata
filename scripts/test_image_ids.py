@@ -4,7 +4,7 @@ docs/image-ids.md names each program once and its first table lists the 14 guest
 records are held to the bridge program they deployed (`ferrata_bridge`, under "Superseded") and a run of the bridge program since milestone B1 to `ferrata_bridge_b1`, by
 scripts/verify-sepolia.py's "image ids" check, run here on the committed records of crown-live-3 and crown-live-4 with
 every socket refused and an RPC stand-in that answers only the chain's id and head; scripts/reproduce/compare_ids.py
-holds this tree's rebuilt bridge program to `ferrata_bridge_f13` (since ADR 0046), as the crown runner and the crown
+holds this tree's rebuilt bridge program to `ferrata_bridge_lezfee` (since ADR 0048), as the crown runner and the crown
 driver hold a bundle's; and every pin of this tree's bridge program is that row's. Standard library only; scratch in a temporary directory under $TMPDIR.
 """
 
@@ -94,7 +94,8 @@ class ImageIds(unittest.TestCase):
         self.tmp = tempfile.mkdtemp(prefix="test-image-ids-")
         self.deployed = entry("ferrata_bridge")[0]
         self.b1 = entry("ferrata_bridge_b1")[0]
-        self.tree = entry("ferrata_bridge_f13")[0]
+        self.tree = entry("ferrata_bridge_lezfee")[0]
+        self.adr_0046 = entry("ferrata_bridge_f13")[0]
 
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
@@ -162,7 +163,7 @@ class ImageIds(unittest.TestCase):
         rc, text = self.compare(self.tree)
         self.assertEqual(rc, 0, text)
         # The crown run's attestation program is this tree's; its bridge (before B1) and its four Ethereum-side programs
-        # (RISC Zero 3.0.5) are not: this tree builds `ferrata_bridge_f13` and the `*_31` rows.
+        # (RISC Zero 3.0.5) are not: this tree builds `ferrata_bridge_lezfee` and the `*_31` rows.
         self.assertIn("1 of 6 ids of the crown run's programs equal the recorded ones; bridge: this tree's own", text)
         for k in ("bridge", "checkpoint_b", "checkpoint", "segment", "release"):
             self.assertIn(f"{k}: this tree's own (docs/image-ids.md), equal", text)
@@ -171,11 +172,13 @@ class ImageIds(unittest.TestCase):
         self.assertEqual(rc, 1, text)
         rc, text = self.compare(self.b1)  # nor B1's, before ADR 0046
         self.assertEqual(rc, 1, text)
+        rc, text = self.compare(self.adr_0046)  # nor ADR 0046's, before ADR 0048
+        self.assertEqual(rc, 1, text)
         rc, text = self.compare(self.tree, release="0x" + "22" * 32)
         self.assertEqual(rc, 1, text)
 
     def test_every_pin_of_this_trees_bridge_is_its_row(self):
-        b1, sha = entry("ferrata_bridge_f13")
+        b1, sha = entry("ferrata_bridge_lezfee")
         app = open(os.path.join(ROOT, "e2e", "crown", "cloud", "app.py"), encoding="utf-8").read()
         self.assertIn(f'"bridge": "{b1}"', app)
         seqnet = open(os.path.join(ROOT, "e2e", "seqnet", "drive.sh"), encoding="utf-8").read()
@@ -184,13 +187,13 @@ class ImageIds(unittest.TestCase):
         self.assertIn(f'BRIDGE_SHA256="{sha}"', day1)
         self.assertIn(f'BRIDGE_IMAGE="{b1[2:]}"', day1)
         real = open(os.path.join(HERE, "privacy", "real.sh"), encoding="utf-8").read()
-        self.assertIn("BRIDGE_ENTRY=ferrata_bridge_f13", real)
+        self.assertIn("BRIDGE_ENTRY=ferrata_bridge_lezfee", real)
         crown = open(os.path.join(ROOT, "lez", "crown", "driver", "src", "crown.rs"), encoding="utf-8").read()
         self.assertIn(f'pub const BRIDGE_IMAGE_ID: &str = "{b1[2:]}";', crown)
 
     def test_the_crown_runner_wants_this_trees_lez_programs(self):
         """e2e/crown/cloud/drive.py's pre-flight: the bundle's LEZ programs must be docs/image-ids.md's `ferrata_lez` and
-        `ferrata_bridge_f13` (its function run alone: the module itself starts a run when imported)."""
+        `ferrata_bridge_lezfee` (its function run alone: the module itself starts a run when imported)."""
         import ast
         src = open(os.path.join(ROOT, "e2e", "crown", "cloud", "drive.py"), encoding="utf-8").read()
         fn = next(n for n in ast.parse(src).body if isinstance(n, ast.FunctionDef) and n.name == "tree_lez_programs")

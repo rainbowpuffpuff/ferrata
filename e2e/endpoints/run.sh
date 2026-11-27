@@ -33,7 +33,7 @@
 #
 # Inputs (put on the box with mrun --put): U9_BUNDLE (a crown LEZ bundle: sequencer_service, the node, r0vm, the
 # attestation program; default spike/tmp/crown-fresh/lez/bundle.tar.zst, as checkpoint/attestor/zone-bridge.sh's) and
-# U9_BRIDGE_BIN (this tree's bridge program of docs/image-ids.md, ferrata_bridge_f13, sha256 c84fe2db…, as scripts/reproduce-image-ids.sh builds
+# U9_BRIDGE_BIN (this tree's bridge program of docs/image-ids.md, ferrata_bridge_lezfee, sha256 9cd9d357…, as scripts/reproduce-image-ids.sh builds
 # it; default inputs/ferrata_bridge.bin in the scratch directory U9_TMP), which replaces the bundle's.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -44,7 +44,7 @@ T="${U9_TMP:-$SPIKE/tmp/endpoints}"
 TGT="$T/target-lez"
 BUNDLE="${U9_BUNDLE:-$SPIKE/tmp/crown-fresh/lez/bundle.tar.zst}"
 BRIDGE_IN="${U9_BRIDGE_BIN:-$T/inputs/ferrata_bridge.bin}"
-BRIDGE_SHA256=c84fe2dbbc008c1a94c096fb6c598eb1580da2996b6b1e54ae807d0041e08fdc            # docs/image-ids.md ferrata_bridge_f13 (this tree's; B1's before ADR 0046)
+BRIDGE_SHA256=9cd9d3573562cb5a8452e413ee17b402bbf963d753e2c55294708a23c29d2aed            # docs/image-ids.md ferrata_bridge_lezfee (this tree's since ADR 0048; ADR 0046's and B1's before)
 LOGOS_SHORT="$SPIKE/tmp/u9s"                                                          # Logos Core's sockets: 62 bytes at most
 CHANNEL=0101010101010101010101010101010101010101010101010101010101010101
 FUND=2e03b2eff5a45478e7e79668d2a146cf2c5c7925bce927f2b1c67f2ab4fc0d26                # the dev node's funded key (compose default)
@@ -214,7 +214,7 @@ zone() {
   local B="$W/bundle"; mkdir -p "$B" "$W/bedrock" "$W/inputs"
   zstd -q -d -c "$BUNDLE" | tar -C "$B" -xf -
   ( cd "$B" && sha256sum -c --quiet SHA256SUMS ) || die "bundle SHA256SUMS"
-  [ "$(sha256sum "$BRIDGE_IN" | cut -c1-64)" = "$BRIDGE_SHA256" ] || die "$BRIDGE_IN is not this tree's bridge program (ferrata_bridge_f13, sha256 $BRIDGE_SHA256)"
+  [ "$(sha256sum "$BRIDGE_IN" | cut -c1-64)" = "$BRIDGE_SHA256" ] || die "$BRIDGE_IN is not this tree's bridge program (ferrata_bridge_lezfee, sha256 $BRIDGE_SHA256)"
   cp "$BRIDGE_IN" "$B/program/ferrata_bridge.bin"
   BIN="$B/bin"; local NODE="$B/node/logos-blockchain-node"; chmod +x "$BIN"/* "$NODE"
   export PATH="$BIN:$PATH" RISC0_SERVER_PATH="$BIN/r0vm" XDG_CACHE_HOME="$B/xdg-cache"

@@ -164,7 +164,7 @@ ATTEST="$(jq -r .attestation.account "$SA")"; BRIDGE="$(jq -r .bridge.header "$S
 [ "$(jq -r .attestation.imageId "$SA")" = "$(docs_id ferrata_lez)" ] || die "the attestation program is not docs/image-ids.md's ferrata_lez"
 # FERRATA_CI_BRIDGE_ROW: the docs/image-ids.md row the deployed bridge program must be (CI: this tree's; a rehearsal of
 # the test network's program sets ferrata_bridge_b1 and puts that binary in place: e2e/rc3-roundtrip/run.sh).
-BRIDGE_ROW="${FERRATA_CI_BRIDGE_ROW:-ferrata_bridge_f13}"
+BRIDGE_ROW="${FERRATA_CI_BRIDGE_ROW:-ferrata_bridge_lezfee}"
 [ -n "$(docs_id "$BRIDGE_ROW")" ] || die "docs/image-ids.md has no row $BRIDGE_ROW"
 [ "$(jq -r .bridge.imageId "$SA")" = "$(docs_id "$BRIDGE_ROW")" ] || die "the bridge program is not docs/image-ids.md's $BRIDGE_ROW"
 ok "attestation program $(jq -r .attestation.imageId "$SA" | cut -c1-12)… and bridge program $(jq -r .bridge.imageId "$SA" | cut -c1-12)… deployed through LEZ's loader; stand-in instance $(jq -r .instance.id "$SA" | cut -c1-12)… (bootstrap slot $STAND_IN_SLOT); zone tip $(jq -r .tip.id "$SA")"
