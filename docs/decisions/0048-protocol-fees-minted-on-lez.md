@@ -67,7 +67,9 @@ anyone at `config(cid)`, attests the vault's `lezFees(token)` slot under the con
 sends `AccrueFees` (32) to the new account `fees(cid, token)` (a PDA keyed by the configuration and the token, state
 `FeesState { config_id, token, collected }`), which mints the part of the attested total it has not minted yet, at
 most `limit`, and keeps the new count: a total below the count (an older record) is refused (`IMPORT_MISMATCH`), as is
-a collection with nothing due (`ALREADY_WRITTEN`). It sends `MintFees` (33) to `token(cid, token)`, which applies the
+a collection with nothing due (`ALREADY_WRITTEN`). The total and the count are 256-bit (the slot's word), so they never
+wrap; one collection mints at most `limit`, a `u128` and a whole number of LEZ units, and a larger amount due takes
+several. It sends `MintFees` (33) to `token(cid, token)`, which applies the
 token's mint freeze and bucket and has `config(cid)` apply the global ones (`Admit`), as a claim's `Issue` does, then
 credits the amount (`Credit`) to the configuration's fee recipient (`Controls::fee_recipient`, fixed at `Init` and
 committed by `configId`). `Claim`, `ClaimPrivately` and `Issue` are as since ADR 0046 (the denomination to the
@@ -75,11 +77,14 @@ destination, the registered relay fee to the relayer); `Burn` debits exactly one
 the new account state are appended, so every message and account the B1 program encodes reads the same.
 
 **The clients.** `ferrata_wallet::fees` builds and dry-runs `CollectFees`; `ferrata-relayer collect-fees` sends it
-under the newest record (the record's block checked against the Ethereum endpoint, as for a root import). This tree's
-program is `ferrata_bridge_lezfee` (`docs/image-ids.md`); `ferrata`, the bridge module, the chain service and the
-relayer read which program a zone runs and build B1's claims for B1 (the test network) and this layout for
-`ferrata_bridge_lezfee`, refusing any other program (ADR 0046's included, never deployed) before anything is sent, and
-refusing `CollectFees` on a B1 zone (B1 has no such instruction).
+under the newest record the admin's inbound depth allows, or the one `--record-slot` names (the record's block checked
+against the Ethereum endpoint, as for a root import), and refuses before sending on a B1 zone (B1 has no such
+instruction), for a token not registered, and for an amount that is not whole LEZ units; with nothing due it sends
+nothing. This tree's program is `ferrata_bridge_lezfee` (`docs/image-ids.md`). `ferrata` and the relayer read which
+program a zone runs (the image id its program loader names for the bridge account; the chain service, as `ferrata`
+does, before it signs a module's claim), the bridge module the one it records for its deployment (checked against the
+program account at open); each builds B1's claims for B1 (the test network) and this layout for
+`ferrata_bridge_lezfee`, and refuses any other program (ADR 0046's included, never deployed) before anything is sent.
 
 ## How each part of the clause is met
 

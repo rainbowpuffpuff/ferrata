@@ -91,6 +91,21 @@ plaintext claim 2,029 (24 shorter); a claim's execution gas steps by 4,366 per p
 gas is 511,932; Ethereum deposits cost 172 more gas (the vault of ADR 0046 credits the mint fee at the deposit); the
 informational claim → burn rate is 4.8% (one record drew a wrong singleton set; the rate moves with the build's ids).
 
+**Regenerated on 27 November 2026 (ADR 0048).** The protocol fees are escrowed by the vault and minted on LEZ by
+`CollectFees` (image `9d02d54d…a321`, `ferrata_bridge_lezfee` in [`../image-ids.md`](../image-ids.md)). The suite's
+deposits and releases run under schedule 0 (no mint or burn fee), so its records change through the ids and the
+vault's code only: the configuration id and every value derived from it, and the Ethereum gas (deposits 791 more,
+releases 3,136 more: a release now keeps its burn fee in escrow, through the registry library). The suite's balance
+reader (`vault/test/PrivacySuite.t.sol`) now skips Foundry's delegatecall records: a call into that library reports
+the vault's own balance under the library's address, which the vault's record already holds. `generated/` is
+`scripts/privacy/run.sh`'s run on the build box (dev mode); the gate's 29 substantive checks passed on it before the
+tables were committed (the four "published" checks had compared it with ADR 0046's tables), and the negative controls
+(`scripts/privacy/controls.py`) passed on its data (no detector fires on it; 272 of 272 planted leaks caught; 16 of 16
+weakened detectors miss one). Claims and burns keep their sizes (8,889 and 7,857 bytes); a claim's execution gas steps
+by 4,360 per position; the private burn's execution gas is 511,906; the releases' calldata gas is one value (it was
+two: EIP-2028 prices the calldata's zero bytes, a function of public data); the informational claim → burn rate is
+4.5% (two records drew a wrong singleton set).
+
 ## Results in brief
 
 | check | default private path | linkable variants |
@@ -102,7 +117,7 @@ informational claim → burn rate is 4.8% (one record drew a wrong singleton set
 | recovery from the seed alone, after 10 claims and 10 releases | unclaimed deposits **10 of 10**, unreleased burns **10 of 10**; claimed and released ones seen as such, 10 and 10; no other user's item taken; recovered `NOut` equal to the vault's for 20 of 20 | – |
 
 Informational: deposit → release over the round trip, 5.0%; claim → burn on LEZ (the same private
-accounts), 4.8%. Including the order-bearing state the main adversary leaves out (below) changes none of
+accounts), 4.5%. Including the order-bearing state the main adversary leaves out (below) changes none of
 the rates.
 
 ## Method
@@ -196,7 +211,7 @@ memo, checks `COut` and computes `NOut` (v1, the release guest's).
 | outbound, private (default) | 5.0% | 0 of 20 | 20: 20 | 5.0% | 5.0% | 5.0% |
 | outbound, naive NOut = burnId | 100.0% | 20 of 20 | 1: 20 | 5.0% | 100.0% | 5.0% |
 | round trip: deposit to release | 5.0% | 0 of 20 | 20: 20 | 5.0% | 5.0% | 5.0% |
-| on LEZ: claim to burn | 4.8% | 0 of 20 | 1: 1, 20: 19 | 4.8% | 4.8% | 5.0% |
+| on LEZ: claim to burn | 4.5% | 0 of 20 | 1: 2, 20: 18 | 4.5% | 4.5% | 5.0% |
 
 "Order only" pairs the k-th of each side in time order: what the client's delay has to defeat, at
 chance here because the orders are random by construction. The naive variants are found only through a
@@ -206,12 +221,12 @@ adversary computes them.
 ### Receipts
 
 Gas is public, and it varies; every variation follows the operation's position, not its user:
-- **LEZ claims.** Execution gas, minus the first claim's: `[0, 4366, 4366, …]` by position (4,377 at `847a4336…`, 4,335 at `ccde6171…`, `4720` on image `cf41b7e5`), the same
+- **LEZ claims.** Execution gas, minus the first claim's: `[0, 4360, 4360, …]` by position (4,366 at `ffb47f6e…`, 4,377 at `847a4336…`, 4,335 at `ccde6171…`, `4720` on image `cf41b7e5`), the same
   sequence in the private and the plaintext universe, whose users stand in different orders, so it is the
   shared public part (Issue, Admit, Spend, the mints) that varies, with the state the claims before it left.
   Storage gas is constant (224,063 private, 2,029 plaintext).
 - **LEZ burns.** Every burn costs the same.
-- **Ethereum releases.** The first costs 105,461 gas, the 19 others 80,461: 25,000 more, the EVM's charge
+- **Ethereum releases.** The first costs 108,597 gas, the 19 others 83,597: 25,000 more, the EVM's charge
   for a value transfer that creates an account, here the relayer's (a fresh address) on its first relay
   fee. The naive releases show the same.
 - **Ethereum deposits.** Gas follows the leaf index: 139,740 for leaf 0; 100,062 to 100,428 for leaves 1, 3,
