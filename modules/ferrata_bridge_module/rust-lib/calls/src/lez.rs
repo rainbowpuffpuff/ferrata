@@ -508,7 +508,7 @@ pub(crate) fn sequencer() -> Option<String> {
 
 /// The path of the copy of wallet config `config` that names `sequencer`: beside the config the session opened,
 /// `<stem>.seq-<first 16 hex of the URL's SHA-256>.json`, where `<stem>` is that config's file name without `.json` and
-/// without the `.seq-<8 hex>` of an earlier switch (so copies never nest; only the file name's own suffix is taken off).
+/// without the `.seq-<16 hex>` of an earlier switch (so copies never nest; only the file name's own suffix is taken off).
 fn config_copy(config: &str, sequencer: &str) -> String {
     let hash = hex(&ferrata_bridge_core::sha256(sequencer.trim().as_bytes()));
     let tag: String = hash.trim_start_matches("0x").chars().take(16).collect();

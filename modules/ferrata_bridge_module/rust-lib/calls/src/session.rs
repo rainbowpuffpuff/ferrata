@@ -551,11 +551,16 @@ fn set_endpoints(params: &Value) -> Result<Value, String> {
     // names; switched with the chain service's (`crate::lez::switch_sequencer`) and put back with it.
     let lez_on = crate::lez::active();
     let seq_owner = if lez_on { format!("{SEQUENCER_OWNER} and lez_core's wallet") } else { SEQUENCER_OWNER.to_string() };
-    let kept = |why: &str| format!("not switched: {why}. Kept: Ethereum RPC {eth_cur} ({}), LEZ sequencer {seq_cur} ({seq_owner})", owner.label());
-    let eth_new = eth_want.filter(|u| *u != eth_cur);
     // lez_core's own sequencer is compared too, not only the chain service's: a switch the chain service took while its
     // answer was lost, or a put-back that failed, leaves lez_core elsewhere, and the same request then moves lez_core alone.
     let lez_cur = if lez_on { crate::lez::sequencer() } else { None };
+    // "LEZ sequencer X (who holds it)", naming lez_core's own when it is elsewhere.
+    let seq_in_use = match lez_cur.as_deref().filter(|l| !crate::lez::same_sequencer(l, &seq_cur)) {
+        Some(l) => format!("LEZ sequencer {seq_cur} ({SEQUENCER_OWNER}), lez_core's wallet on {l}"),
+        None => format!("LEZ sequencer {seq_cur} ({seq_owner})"),
+    };
+    let kept = |why: &str| format!("not switched: {why}. Kept: Ethereum RPC {eth_cur} ({}), {seq_in_use}", owner.label());
+    let eth_new = eth_want.filter(|u| *u != eth_cur);
     let lez_new = seq_want.clone().filter(|u| lez_on && !lez_cur.as_deref().is_some_and(|c| crate::lez::same_sequencer(c, u)));
     let seq_new = seq_want.filter(|u| *u != seq_cur);
     let svc_eth = if matches!(owner, EthOwner::Service) { eth_new.clone() } else { None };
@@ -648,8 +653,8 @@ fn set_endpoints(params: &Value) -> Result<Value, String> {
                     String::new()
                 };
                 return Err(format!(
-                    "not switched: lez_core's wallet did not take the LEZ sequencer {u}: {e}. Put back: LEZ sequencer {seq_cur} \
-                     ({seq_owner}){back}, Ethereum RPC {eth_cur} ({})",
+                    "not switched: lez_core's wallet did not take the LEZ sequencer {u}: {e}. Put back: {seq_in_use}{back}, \
+                     Ethereum RPC {eth_cur} ({})",
                     owner.label()
                 ));
             }
@@ -667,7 +672,7 @@ fn set_endpoints(params: &Value) -> Result<Value, String> {
             let lez_back = lez_prev.as_ref().map_or_else(String::new, |p| {
                 crate::lez::put_back(p).map_or_else(|e| format!(" (putting lez_core's wallet back failed: {e})"), |()| String::new())
             });
-            format!("not switched: {why}. Put back: Ethereum RPC {eth_cur} ({}){eth_back}, LEZ sequencer {seq_cur} ({seq_owner}){seq_back}{lez_back}", owner.label())
+            format!("not switched: {why}. Put back: Ethereum RPC {eth_cur} ({}){eth_back}, {seq_in_use}{seq_back}{lez_back}", owner.label())
         };
         if let Err(e) = patch_endpoint(*chain_id, u) {
             return Err(undo(format!("eth_rpc_module did not take {u}: {e}")));
