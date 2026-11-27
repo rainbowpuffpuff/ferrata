@@ -412,9 +412,20 @@ stage_zone() {
   fi
   log "the stand-in beacon chain's bootstrap slot: $CROWN_STAND_IN_SLOT (CROWN_STAND_IN_SLOT)"
 
+  # -- the selected token's arguments, before session A: session A's identity records the configuration's salt, which
+  # commits to its caps, and the caps are sized from the token. On a fresh local anvil the deployer's nonce is 0, so
+  # the test token is its creation 4 (verifier, stop, registry, vault, token); the anvil section checks that.
+  local DEPLOYER TOKEN_ADDR=0x0000000000000000000000000000000000000000 TOKEN_ARGS=(--token "$SELECTED_TOKEN")
+  DEPLOYER="$(cast to-check-sum-address "0x$(cast keccak "${ZB_DEPLOYER_LABEL:-ferrata/zone-bridge/anvil-deployer}" | cut -c27-66)")"
+  if [ "$SELECTED_TOKEN" = test-token ]; then
+    TOKEN_ADDR="$(cast compute-address "$DEPLOYER" --nonce 4 | awk '{print $NF}')"
+    TOKEN_ARGS+=(--token-address "$TOKEN_ADDR")
+  fi
+
   # -- session A on the zone: crown-driver against seq-0 (transactions gossip to the turn's sequencer)
   local D=(--rpc "http://127.0.0.1:19300" --run-dir "$W/driver" --program-bin "$B/program/ferrata_lez.bin"
-           --bridge-bin "$B/program/ferrata_bridge.bin" --chain stand-in --fixture "$B/fixture" --sequencer-log "$W/logs/seq-0.log")
+           --bridge-bin "$B/program/ferrata_bridge.bin" --chain stand-in --fixture "$B/fixture" --sequencer-log "$W/logs/seq-0.log"
+           "${TOKEN_ARGS[@]}")
   curl -fsS -m 5 -o "$W/channel.json" "$API/channel/$CHANNEL"
   log "crown-a: $(jq -c '{keys: (.accredited_keys | length), posting_timeframe, configuration_threshold}' "$W/channel.json")"
   export FERRATA_DROP_AFTER_BLOCKS=40
@@ -436,17 +447,15 @@ stage_zone() {
     --dump-state "$W/anvil-state.json" --state-interval 15 > "$W/logs/anvil.log" 2>&1 &
   ANVIL_PID=$!
   for i in $(seq 1 60); do cast chain-id --rpc-url "$R" > /dev/null 2>&1 && break; sleep 1; done
-  local DEPLOYER N VAULT CID GS Z=0x0000000000000000000000000000000000000000000000000000000000000000
-  DEPLOYER="$(cast to-check-sum-address "0x$(cast keccak "${ZB_DEPLOYER_LABEL:-ferrata/zone-bridge/anvil-deployer}" | cut -c27-66)")"
+  local N VAULT CID GS Z=0x0000000000000000000000000000000000000000000000000000000000000000
   cast rpc anvil_setBalance "$DEPLOYER" 0x3635C9ADC5DEA00000 --rpc-url "$R" > /dev/null
   N="$(cast nonce "$DEPLOYER" --rpc-url "$R")"
   VAULT="$(cast compute-address "$DEPLOYER" --nonce $(( N + 3 )) | awk '{print $NF}')"   # verifier N, stop N+1, registry N+2
-  local TOKEN_ADDR=0x0000000000000000000000000000000000000000 TOKEN_ARGS=(--token "$SELECTED_TOKEN")
   if [ "$SELECTED_TOKEN" = test-token ]; then
-    TOKEN_ADDR="$(cast compute-address "$DEPLOYER" --nonce $(( N + 4 )) | awk '{print $NF}')"
-    TOKEN_ARGS+=(--token-address "$TOKEN_ADDR") # token N+4; stage deploy checks this against its actual record
+    # token N+4; session A was given the address at nonce 0 + 4, and stage deploy checks it against its actual record
+    [ "$(cast compute-address "$DEPLOYER" --nonce $(( N + 4 )) | awk '{print $NF}')" = "$TOKEN_ADDR" ] \
+      || die "the deployer's nonce is $N, not 0: the test token would not be at $TOKEN_ADDR, session A's"
   fi
-  D+=("${TOKEN_ARGS[@]}")
   CID="$("$DRV" config-id --identity "$W/session-a.json" --vault "$VAULT" "${TOKEN_ARGS[@]}" | jq -r .configId)"
   GS="$(python3 -I "$REPO/e2e/crown/identity.py" genesis-state --tip-id "$T0" --tip-hash "$T0H" --keys "$KEYS" \
         --posting-timeframe "$PT" --config-tip-hash "$CTH")"
