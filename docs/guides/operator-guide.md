@@ -145,7 +145,7 @@ two-hour cadence (§2).
   ([`attestation.md`](../design/attestation.md) §9). `ferrata-updater` counts `W` in blocks, so `Δ/W` is `1/W`; with
   LEZ's 10-s blocks ([`lez/lab/README.md`](../../lez/lab/README.md)) a window of `W` blocks is `W × 10` s:
 
-  | `W` | mean added latency (`W/2`) | `n` = 2 | 3 | 5 | 10 |
+  | `W` | mean added latency of one step (about `W/2`) | `n` = 2 | 3 | 5 | 10 |
   |---:|---:|---:|---:|---:|---:|
   | 60 s | 30 s | 0.306 | 0.421 | 0.598 | 0.838 |
   | 120 s | 60 s | 0.160 | 0.230 | 0.353 | 0.581 |
@@ -168,8 +168,8 @@ two-hour cadence (§2).
   interval late, and counts a turn from the block after its previous reading (at most one block back), which can be
   before the step fell due: reading every 1.5 blocks the two about cancel, reading every third block it notices late
   more often than it gains and pays less (in process 0.329 against 0.671). An operator whose beacon sources serve a new
-  update sooner finds its `Open` due sooner, by as many blocks as they lead (seconds, between honest beacon nodes: under a
-  block). Before this, the window counted each daemon's own polling rounds, so an operator polling more often waited
+  update sooner finds its `Open` due sooner, by as many blocks as they lead (not measured here: in every run below one
+  replay served both daemons at once). Before this, the window counted each daemon's own polling rounds, so an operator polling more often waited
   fewer seconds and sent first more often (a daemon that never deferred, polling
   every 2 s against 4, applied 93 of 99 steps: run G2 below). In process (`lez/updater/results/gate-polls.txt`, CI's
   `recorded.rs`), honest updaters reading the chain three times and once a block pay 0.533 and 0.467 of the honest fees
@@ -217,12 +217,13 @@ two-hour cadence (§2).
   ([`perf-gate-sequencer-join.md`](../../lez/results/perf-gate-sequencer-join.md), `bench/perf/gate_abandoned.py`).
 - **Join or wait** (`policy.join_wait_rounds`, built since; [ADR 0047](../decisions/0047-updater-join-or-wait.md),
   [`lez/updater/README.md`](../../lez/updater/README.md) item 7). Just before sending a step, the updater reads which jobs
-  of the updates it was served are open on the instance's store. A job leads another when the chain holds more of its
+  of the updates it was served, or read from other parties' `Open`s on chain (ADR 0049), are open on the instance's
+  store. A job leads another when the chain holds more of its
   steps (so any open job leads an `Open`), at as many when its update is newer. A leading copy of its own update (the
   same finalized header and adoption) it joins, sending that job's next step; another leading job it waits for while the
-  steps of jobs of its kind keep growing within `join_wait_rounds` rounds (default `2 × defer_window + 10`); on one state
-  of the instance it stops waiting three times that after its first wait there, so join or wait adds at most 85 rounds
-  on a state at the defaults (with the turn that restarts when a wait ends), and a party that opens jobs delays it a
+  steps of jobs of its kind keep growing within `join_wait_rounds` turns (blocks of the chain since ADR 0049; rounds on a
+  backend that gives no height; default `2 × defer_window + 10`); on one state of the instance it stops waiting three
+  times that after its first wait there, so join or wait adds at most 85 turns on a state at the defaults (with the turn that restarts when a wait ends), and a party that opens jobs delays it a
   bounded time.
   Two builds of it reran G6 and G7 on the sequencer, each built once for both windows
   ([`perf-gate-sequencer-join.md`](../../lez/results/perf-gate-sequencer-join.md)): G8 and G9 the first (commit
