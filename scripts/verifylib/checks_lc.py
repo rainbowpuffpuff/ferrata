@@ -825,7 +825,7 @@ def lc_fixture_hashes(ctx):
     problems = []
     base = ctx.path("crates/ferrata-spectests/fixtures")
     manifests = sorted(base.rglob("SHA256SUMS"))
-    _expect(problems, len(manifests) == 11, f"fixtures: found {len(manifests)} SHA256SUMS files, not 11")
+    _expect(problems, len(manifests) == 12, f"fixtures: found {len(manifests)} SHA256SUMS files, not 12")
     listed_total = 0
     provenance_exceptions = []
     for manifest in manifests:
