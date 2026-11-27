@@ -23,8 +23,13 @@ fn bls_fuzz_corpus_replays_without_a_disagreement() {
     assert!(files.len() >= 50, "{} inputs in {}", files.len(), dir.display());
     let mut spec_path: BTreeMap<String, usize> = BTreeMap::new();
     let mut checked_ok = 0;
+    let mut with_x0 = 0;
     for path in &files {
         let data = fs::read(path).unwrap();
+        let case = bls::parse(&data);
+        if case.committee.pubkeys.iter().chain([&case.committee.aggregate_pubkey]).any(bls::is_x0) {
+            with_x0 += 1;
+        }
         let v = std::panic::catch_unwind(|| bls::run(&data)).unwrap_or_else(|_| {
             panic!("{} (replay: fuzz/target/x86_64-unknown-linux-gnu/release/bls <file>)", path.display())
         });
@@ -34,10 +39,13 @@ fn bls_fuzz_corpus_replays_without_a_disagreement() {
         }
     }
     println!(
-        "bls corpus: {} inputs; fast_aggregate_verify verdicts {spec_path:?}; {checked_ok} accepted by every aggregation",
+        "bls corpus: {} inputs; fast_aggregate_verify verdicts {spec_path:?}; {checked_ok} accepted by every aggregation; \
+         {with_x0} with an x = 0 key",
         files.len()
     );
-    // The corpus reaches verify_checked's acceptance under every aggregation (and so the split and Auto checks).
+    // The corpus reaches the documented x = 0 exception (B1), and verify_checked's acceptance under every
+    // aggregation (and so the split and Auto checks).
+    assert!(with_x0 > 0, "no input with an x = 0 key: the exception is never reached");
     assert!(checked_ok > 0, "no input accepted by every aggregation of verify_checked");
     // The corpus reaches acceptance and the refusals on the spec path.
     for verdict in ["Ok(())", "Err(PubkeyInvalid)", "Err(SignatureInvalid)", "Err(SignatureMalformed)"] {
