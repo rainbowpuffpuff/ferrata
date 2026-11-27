@@ -694,16 +694,17 @@ mod tests {
         assert_eq!(r["verdict"], "locked", "{r}");
         assert!(r["action"].as_str().unwrap().contains("unlock_wallet"), "{r}");
         assert!(!lock(&SEEN).iter().any(|(_, m, _)| m == "unlock"), "nothing unlocked while the wallet is locked");
-        // The approver unlocked the wallet: the manager lists the account, and custody unlocks it for tx_sender_module.
+        // The approver unlocked the wallet: the keystore writes the held key again and answers ok (e83a899,
+        // keystore.rs 383-397), the manager lists the account, and custody unlocks it for tx_sender_module.
         script(&[
-            ("import_private_key", json!({ "ok": false, "error": "this key is here already (k_f5b0180a8ebeb6ac333788ab4c53b4ae)" })),
+            ("import_private_key", json!({ "ok": true, "address": a })),
             ("accounts", json!({ "ok": true, "accounts": [{ "id": a.to_lowercase(), "address": a, "family": "evm", "signer": "keystore_module" }] })),
             ("unlock", json!({ "ok": true, "account": a, "expiresInMs": 3600000, "countLeft": null })),
             ("history", json!({ "ok": true, "address": a, "transactions": [] })),
         ]);
         let r = custody(fake, &req);
         assert_eq!(r["verdict"], "ok", "{r}");
-        assert_eq!(r["imported"], "held already", "{r}");
+        assert_eq!(r["imported"]["ok"], true, "{r}");
         assert_eq!(r["historyOpen"], true);
         // Another refusal that only mentions "already" and "locked" is not a key held already: refused at the import,
         // with the keystore's own reason, and no wallet is said to be locked.

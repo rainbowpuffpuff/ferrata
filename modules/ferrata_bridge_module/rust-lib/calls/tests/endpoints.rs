@@ -273,6 +273,8 @@ struct Service {
     good_eths: HashSet<String>,
     /// The next `module.set_endpoints` (not a dry run) switches, then its answer is lost.
     lose_next_switch: bool,
+    /// Sequencers the service refuses to switch to outside a dry run (one that stopped answering: a put-back to it).
+    refuse_switch_to: HashSet<String>,
 }
 
 fn chain_service(state: Arc<Mutex<Service>>) -> String {
@@ -304,6 +306,9 @@ fn chain_service(state: Arc<Mutex<Service>>) -> String {
                 }
                 if let Some(u) = eth.as_ref().filter(|u| !st.good_eths.contains(*u)) {
                     refused.push(format!("the Ethereum RPC {u}: not this deployment's"));
+                }
+                if let Some(u) = seq.as_ref().filter(|u| p["dry_run"] != true && st.refuse_switch_to.contains(*u)) {
+                    refused.push(format!("the LEZ sequencer {u}: it does not answer"));
                 }
                 if p["dry_run"] == true {
                     Ok(json!({ "dry_run": true, "refused": refused, "checks": {} }))
@@ -369,6 +374,7 @@ fn endpoints_switch_through_their_owners_and_stay_on_failure() {
         good_seqs: [seq_a.clone(), seq_b.clone(), LEZ_DOWN.to_string()].into(),
         good_eths: [e_a.clone(), e_b.clone()].into(),
         lose_next_switch: false,
+        refuse_switch_to: HashSet::new(),
     }));
     let svc = chain_service(state.clone());
     let in_service = |s: &Arc<Mutex<Service>>| {
@@ -538,9 +544,23 @@ fn endpoints_switch_through_their_owners_and_stay_on_failure() {
     assert_eq!(i["endpoints"]["sequencer"]["lez_core"], json!(format!("{LEZ_DOWN}/")), "info says where lez_core is: {i}");
     let r = ok("set_endpoints", json!({ "sequencer": seq_a }));
     assert_eq!((in_service(&state).1, lez_wallet().1), (seq_a.clone(), seq_a.clone()), "healed by the same request: {r}");
-    // The endpoint in use given again, differing only in host case and a bare `/`: nothing new, nothing switched.
-    let r = ok("set_endpoints", json!({ "sequencer": format!("{}/", seq_a.replace("127.0.0.1", "127.0.0.1")) }));
+    // The endpoint in use given again with a bare `/` (the form `url::Url` prints): nothing new, nothing switched. (An
+    // upper-case scheme is refused by the endpoint check before any comparison.)
+    let r = ok("set_endpoints", json!({ "sequencer": format!("{seq_a}/") }));
     assert_eq!(r["switched"], json!({ "eth_rpc": false, "sequencer": false }), "{r}");
+    // The chain service passes the dry run, then refuses the switch itself: "refused", not "did not answer".
+    state.lock().unwrap().refuse_switch_to.insert(seq_b.clone());
+    refused("set_endpoints", json!({ "sequencer": seq_b }), &["not switched", "the chain service refused the switch", "it had not switched"]);
+    state.lock().unwrap().refuse_switch_to.clear();
+    assert_eq!((in_service(&state).1, lez_wallet().1), (seq_a.clone(), seq_a.clone()));
+    // lez_core does not take the new sequencer and the chain service refuses its put-back (the old sequencer stopped
+    // answering): they end apart, and the refusal names where each is rather than "both on the old one".
+    state.lock().unwrap().refuse_switch_to.insert(seq_a.clone());
+    refused("set_endpoints", json!({ "sequencer": LEZ_DOWN }), &["not switched", "reads no block", "not put back: its LEZ sequencer is", LEZ_DOWN, &format!("lez_core's wallet on {seq_a}/")]);
+    state.lock().unwrap().refuse_switch_to.clear();
+    assert_eq!((in_service(&state).1, lez_wallet().1), (LEZ_DOWN.to_string(), seq_a.clone()), "apart, as the refusal says");
+    ok("set_endpoints", json!({ "sequencer": seq_a }));
+    assert_eq!((in_service(&state).1, lez_wallet().1), (seq_a.clone(), seq_a.clone()), "and together again");
     ok("set_endpoints", json!({ "eth_rpc": e_a }));
     assert_eq!(registry().endpoints.get(&CHAIN), Some(&e_a));
     ok("lez", json!({ "via": "plain" }));
@@ -564,6 +584,7 @@ fn endpoints_switch_through_their_owners_and_stay_on_failure() {
         good_seqs: [seq_a.clone()].into(),
         good_eths: [e_y.clone(), e_y2.clone()].into(),
         lose_next_switch: false,
+        refuse_switch_to: HashSet::new(),
     }));
     let svc_y = chain_service(y.clone());
     let patched = registry().patched.len();

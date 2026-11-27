@@ -29,14 +29,17 @@ reached its cap).
 | Step | Fault | What happened (the relayer's or monitor's own lines) | Checked on the chain |
 |---|---|---|---|
 | K0 | none | a rule (B) checkpoint sent through `tx_sender_module` | one `submitCandidate` |
-| K1 | `finalizeAttested`'s broadcast trapped before the node; every module host SIGKILLed (7) | after the restart the approver unlocked the two locked wallets and `custody` was ok; the relayer found its request forgotten by the restarted `tx_sender_module` (`inflight-request-forgotten`), judged it lost (`inflight-lost`) and sent it again at its nonce, 1 (`inflight-resent`), mined | one `finalizeAttested`, nothing in flight |
+| K1 | `finalizeAttested`'s broadcast trapped before the node; the 7 hosts of the send stack and Ferrata's modules SIGKILLed (Logos Core's own core hosts and its daemon kept) | after the restart the approver unlocked the two locked wallets and `custody` was ok; the relayer found its request forgotten by the restarted `tx_sender_module` (`inflight-request-forgotten`), judged it lost (`inflight-lost`) and sent it again at its nonce, 1 (`inflight-resent`), mined | one `finalizeAttested`, nothing in flight |
 | K2 | a release's broadcast forwarded and its answer held 25 s; the relayer module's host alone SIGKILLed | after the restart, `inflight-found` (mined while held), the job booked, then the fees | one `release` (the recipient paid once: 0.0989 ETH, the denomination less the relay and checkpoint fees), one `claimOwed` |
 | K3 | a checkpoint broadcast and pending (anvil not mining); the whole Logos Core SIGKILLed (the daemon and all 13 hosts) | a block mined; after the restart the round found it mined and booked it | two `submitCandidate` in all |
 | K4 | the endpoint down for a whole round (every call 503 or cut) | the round ended on the endpoint's error, nothing sent; the next round finalised | two `finalizeAttested` in all |
 | K5 | a checkpoint's broadcast answered 503 at once and delivered to the node 8 s later | the first round deferred it with its record kept; the next round found it mined (`inflight-found`), not sent again | three `submitCandidate` in all |
-| M1 | the monitor's `cancelCandidate` trapped before the node; every module host SIGKILLed | after the restart the restarted `tx_sender_module` burnt the lost request's number (0), so its new cancel (1) waited behind a gap; the monitor filled the gap the plain way at 0 (`gapFill`), and the module's cancel then reverted (`UnknownCandidate`), changing nothing | one successful cancel, the candidate gone, at most one reverted extra call, the watcher's nonces 0–1 without a gap, nothing queued |
+| M1 | the monitor's `cancelCandidate` trapped before the node; the same 7 hosts SIGKILLed | after the restart the restarted `tx_sender_module` burnt the lost request's number (0), so its new cancel (1) waited behind a gap; the monitor filled the gap the plain way at 0 (`gapFill`), and the module's cancel then reverted (`UnknownCandidate`), changing nothing | one successful cancel, the candidate gone, at most one reverted extra call, the watcher's nonces 0–1 without a gap, nothing queued |
 
-At the end: the relayer's 7 transactions for 7 effects, nonces 0–6 without a gap, every receipt successful, every job
+`tx_sender_module`'s own history of the relayer's account (`run/tx_sender-history.json`) still lists the requests
+of nonces 1, 2 and 6, the ones a kill or a lost answer interrupted, as sent but never acknowledged, although all three
+are mined: the module does not reconcile its history with the chain, and the relayer settles them from the chain
+itself. At the end: the relayer's 7 transactions for 7 effects, nonces 0–6 without a gap, every receipt successful, every job
 in `done/`, the inbox empty, no in-flight record after K5, the vault's final state the second checkpoint's.
 
 **What run 1 found (fixed before this run).** With every module host killed (K1), the relayer stayed blocked after the

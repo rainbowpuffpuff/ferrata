@@ -877,7 +877,7 @@ Rectangle {
                         PlainLabel { text: "(within the recovery window of 8 accounts)"; color: "#4a5563" }
                     }
                     CheckBox { objectName: "deposit.delay"; text: "Hold the claim for a random delay (recommended): " + delayHours + " h"; checked: delayOn; onClicked: delayOn = checked }
-                    CheckBox { objectName: "deposit.relayer"; text: "Claim through a permissionless relayer that pays the LEZ fee: not in the mini-app yet (your own private account pays it; the ferrata tool's gas drop does this)"; checked: relayerOn; enabled: false }
+                    CheckBox { objectName: "deposit.relayer"; text: "Claim through a permissionless relayer that pays the LEZ fee: not in the mini-app yet (your own account pays it: the private one that proves a private claim, a plaintext claim's public one; the ferrata tool's gas drop does this)"; checked: relayerOn; enabled: false }
                 }
                 LeakList {
                     objectName: "deposit.leaks"; summaryName: "deposit.leaks.summary"
@@ -1310,7 +1310,7 @@ Rectangle {
                 objectName: "page.privacy"
                 spacing: 8
                 Heading { text: "What is public and what is private" }
-                Note { text: "The defaults are the recommended choices: fixed denominations, a private destination, a random delay before the claim, a relayer for the release where the path has one, a fresh recipient. Not yet in the mini-app: a relayer that pays the claim's LEZ fee (the ferrata tool's gas drop); here your own private account pays it, which can link the claim to where its native LEZ came from. What stays linkable even then: the token, the denomination and the time window; a public account's history; a recipient you reuse." + (logosEth() ? " On this path (Ethereum through Logos Core's send stack) the release is sent from your own release account, not by a relayer: that account is linked to the recipient on Ethereum." : "") }
+                Note { text: "The defaults are the recommended choices: fixed denominations, a private destination, a random delay before the claim, a relayer for the release where the path has one, a fresh recipient. Not yet in the mini-app: a relayer that pays the claim's LEZ fee (the ferrata tool's gas drop); here your own account pays it (the private one that proves a private claim, a plaintext claim's public one), which can link the claim to where its native LEZ came from. What stays linkable even then: the token, the denomination and the time window; a public account's history; a recipient you reuse." + (logosEth() ? " On this path (Ethereum through Logos Core's send stack) the release is sent from your own release account, not by a relayer: that account is linked to the recipient on Ethereum." : "") }
                 RowLayout { StepTable { step: "deposit" } StepTable { step: "claim" } }
                 RowLayout { StepTable { step: "burn" } StepTable { step: "release"; ownRelease: logosEth(); tableName: "privacy.steps.release" } }
                 Item { Layout.fillHeight: true }

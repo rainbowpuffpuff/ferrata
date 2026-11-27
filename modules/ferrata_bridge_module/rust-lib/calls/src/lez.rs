@@ -486,8 +486,16 @@ pub(crate) fn switch_sequencer(sequencer: &str) -> Result<(Value, Switched), Str
                 // lez_core is back on its config: the copy this failed switch wrote is in nobody's use (it is never the
                 // config in use: `config_copy`), and goes.
                 Ok(()) => std::fs::remove_file(&copy).map_or_else(|e| format!("; its copy {copy} could not be removed: {e}"), |()| String::new()),
-                // lez_core may still have the copy open: kept, and named.
-                Err(e) => format!("; putting lez_core back on {} failed: {e}; the copy {copy} is kept", prev.config),
+                // lez_core may still have the copy open: kept, and named; when lez_core names the new sequencer, the copy is
+                // its config now (the next switch copies and puts back from it).
+                Err(e) => {
+                    with(|l| {
+                        if l.wallet["sequencer"].as_str().is_some_and(|n| same_sequencer(n, sequencer)) {
+                            l.wallet["config"] = json!(copy);
+                        }
+                    });
+                    format!("; putting lez_core back on {} failed: {e}; the copy {copy} is kept", prev.config)
+                }
             };
             log(json!({ "kind": "switch", "from": prev.sequencer, "to": sequencer, "error": why, "after": back }));
             Err(format!("{why}{back}"))
@@ -498,7 +506,11 @@ pub(crate) fn switch_sequencer(sequencer: &str) -> Result<(Value, Switched), Str
 /// After a put-back that failed: what `lez_core`'s wallet names now, recorded as the session's (null when it names
 /// none), so that `info`, the next switch and the refusal say where it is rather than where it was.
 fn resync() -> Option<String> {
-    let addr = call("get_sequencer_addr", &json!([]), READ_MS).ok().map(|(a, _)| a.trim().to_string()).filter(|a| !a.is_empty());
+    // Unread is not "none": recorded as unknown, which no sequencer compares equal to, so the next request moves it.
+    let addr = match call("get_sequencer_addr", &json!([]), READ_MS) {
+        Ok((a, _)) => Some(a.trim().to_string()).filter(|a| !a.is_empty()),
+        Err(e) => Some(format!("unknown (lez_core did not answer: {e})")),
+    };
     with(|l| {
         l.wallet["sequencer"] = addr.clone().map_or(Value::Null, Value::from);
         l.log.push(json!({ "kind": "resync", "sequencer": addr }));

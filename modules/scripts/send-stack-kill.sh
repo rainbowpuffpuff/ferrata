@@ -342,7 +342,7 @@ done
 sleep 1; f3=$(inflight); pend=$(cast rpc --rpc-url "$up" txpool_status | jq -r '.pending')
 STEP=K3 kill_core
 note "K3 killed: $(killed K3)"
-check K3-killed-with-its-transaction-broadcast-and-pending "yes 0x1" "$( [ "$(jq -r '.hash // "null"' <<< "$f3" 2>/dev/null)" != null ] && echo yes || echo no) $pend"
+check K3-killed-with-its-transaction-broadcast-and-pending "yes 0x1" "$( [ -n "$(jq -r '.hash // empty' <<< "$f3" 2>/dev/null)" ] && echo yes || echo no) $pend"
 check K3-daemon-and-every-host-killed "daemon 1" "$(killed K3 | cut -d' ' -f1-2)"
 check K3-nothing-of-the-session-left "" "$(session_pids | paste -sd, -)"
 note "K3: broadcast and pending (txpool $pend); in flight: $f3; Logos Core SIGKILLed (daemon and hosts)"
@@ -376,7 +376,7 @@ rm -f "$CTL.hit"; echo "late eth_sendRawTransaction 8" > "$CTL"
 round K5a > "$R/K5.log" 2>&1
 check K5-fault-fired yes "$(wait_hit 30 && echo yes || echo no)"
 for _ in $(seq 300); do grep -q 'late forward answered' "$R/proxy.jsonl" 2>/dev/null && break; sleep 0.1; done
-late_n=$(grep -c 'late forward answered' "$R/proxy.jsonl" 2>/dev/null); late_n=${late_n:-0}
+late_n=$(jq -s '[.[] | select(.action == "late forward answered" and .status == 200 and ((.answer // "") | test("\"error\"") | not))] | length' "$R/proxy.jsonl" 2>/dev/null); late_n=${late_n:-0}   # forwarded and accepted by the node
 check K5-delivered-late-to-the-node yes "$( [ "$late_n" -ge 1 ] && echo yes || echo no)"
 note "K5: the broadcast answered 503 and forwarded late: $late_n late forward(s); the first round: $(events K5a); in flight: $(inflight)"
 echo pass > "$CTL"
@@ -408,6 +408,7 @@ mon_wait() { # STEP
     sleep 0.5
   done
   printf '%s\n' "$st" > "$R/$1-status.json"
+  [ "$(jq -r '.running' <<< "$st" 2>/dev/null)" = false ] || check "$1-monitor-ended" false "$(jq -r '.running // "unread"' <<< "$st" 2>/dev/null || echo unread)"
 }
 cancels() { txs_of "$watcher" "$R/watcher-txs.jsonl"; jq -s --argjson st "$1" '[.[] | select(.call == "cancelCandidate" and .status == $st)] | length' "$R/watcher-txs.jsonl"; }
 cast send --unlocked --from "$prover" --rpc-url "$up" "$vault" \
