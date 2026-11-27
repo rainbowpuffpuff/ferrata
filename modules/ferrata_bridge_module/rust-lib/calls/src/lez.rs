@@ -462,12 +462,14 @@ pub(crate) fn switch_sequencer(sequencer: &str) -> Result<(Value, Switched), Str
     let (config, prev_seq) = with(|l| (l.wallet["config"].as_str().map(str::to_string), l.wallet["sequencer"].as_str().unwrap_or("").to_string()))
         .ok_or("the session's LEZ does not go through lez_core")?;
     let config = config.ok_or("lez_core's wallet names no config")?;
-    let prev = Switched { config: config.clone(), sequencer: prev_seq };
     let text = std::fs::read_to_string(&config).map_err(|e| format!("reading lez_core's wallet config {config}: {e}"))?;
     let mut cfg: Value = serde_json::from_str(&text).map_err(|e| format!("lez_core's wallet config {config}: not JSON ({e})"))?;
     if !cfg["sequencer"].is_object() {
         return Err(format!("lez_core's wallet config {config} has no `sequencer` object"));
     }
+    // A put-back reopens that config, so it expects the sequencer that config names (the record's may be unknown).
+    let own = cfg["sequencer"]["sequencer_addr"].as_str().map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+    let prev = Switched { config: config.clone(), sequencer: own.unwrap_or(prev_seq) };
     cfg["sequencer"]["sequencer_addr"] = json!(sequencer.trim());
     let copy = config_copy(&config, sequencer);
     write_private(&copy, &serde_json::to_vec_pretty(&cfg).map_err(|e| e.to_string())?)?;
@@ -525,6 +527,11 @@ pub(crate) fn put_back(prev: &Switched) -> Result<(), String> {
         Ok(read) => read,
         Err(e) => {
             let now = resync();
+            // Back on the sequencer it left (the config opened, its read failing): that config is its config again, not
+            // the copy it left (an undo after a switch that was taken).
+            if now.as_deref().is_some_and(|n| same_sequencer(n, &prev.sequencer)) {
+                with(|l| l.wallet["config"] = json!(prev.config));
+            }
             return Err(format!("{e} (lez_core's wallet now names {})", now.as_deref().unwrap_or("no sequencer")));
         }
     };

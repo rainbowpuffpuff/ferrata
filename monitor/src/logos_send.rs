@@ -677,7 +677,8 @@ mod tests {
 
     // After a restart of Logos Core the keystore holds the key in a locked wallet and the manager lists no account of it
     // until an approver unlocks it: custody says so ("locked", the approver's step) and unlocks nothing; once the wallet
-    // is unlocked, the same call goes on as for a key held already.
+    // is unlocked, the same call goes on: the keystore writes the held key again and answers ok (e83a899, keystore.rs
+    // 383-397), as for a fresh import.
     #[test]
     fn custody_after_a_restart_names_the_approvers_unlock_then_goes_on_once_it_is_done() {
         let _g = lock(&SERIAL);

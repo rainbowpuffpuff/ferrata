@@ -232,7 +232,8 @@ Rectangle {
     // pass" (which also moves anvil's clock); in Logos it is the wall clock alone.
     property real clockOffset: 0
     // Whether a relayer pays the claim's LEZ fee. On every path of the module the claim names no relayer and no gas drop:
-    // the private account that proves pays it (js/privacy.js OWN_FEE). Off, and its box disabled, until the module asks
+    // the user's own account pays it, the private account that proves a private claim or a plaintext claim's public
+    // account (js/privacy.js OWN_FEE). Off, and its box disabled, until the module asks
     // the network's gas-drop relayer as the `ferrata` tool does by default (RFP-022 U.05 stays in part until then).
     property bool relayerOn: false
     property var heldUntil: ({})

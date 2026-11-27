@@ -542,6 +542,17 @@ fn endpoints_switch_through_their_owners_and_stay_on_failure() {
     assert_eq!((in_service(&state).1, lez_wallet().1), (seq_a.clone(), LEZ_DOWN.to_string()), "the chain service put back, lez_core not");
     let i = ok("info", json!({}));
     assert_eq!(i["endpoints"]["sequencer"]["lez_core"], json!(format!("{LEZ_DOWN}/")), "info says where lez_core is: {i}");
+    // An undo from there: lez_core takes seq_b, the Ethereum RPC's reading fails after its switch, and lez_core's
+    // put-back reopens the config it left but reads no block through it: the record names that config again, not the
+    // copy for seq_b, so a later put-back goes where lez_core is.
+    let (cfg_down, _) = lez_wallet();
+    registry().required = true;
+    refused("set_endpoints", json!({ "eth_rpc": e_fork, "sequencer": seq_b }), &["not switched", "after the switch", "putting lez_core's wallet back failed", "reads no block"]);
+    registry().required = false;
+    assert_eq!(lez_wallet(), (cfg_down.clone(), LEZ_DOWN.to_string()), "lez_core reopened the config it left");
+    assert_eq!(in_service(&state).1, seq_a, "the chain service put back");
+    let w = ok("lez_report", json!({}));
+    assert_eq!(w["wallet"]["config"], json!(cfg_down), "the record names the config lez_core has open: {w}");
     let r = ok("set_endpoints", json!({ "sequencer": seq_a }));
     assert_eq!((in_service(&state).1, lez_wallet().1), (seq_a.clone(), seq_a.clone()), "healed by the same request: {r}");
     // The endpoint in use given again with a bare `/` (the form `url::Url` prints): nothing new, nothing switched. (An
