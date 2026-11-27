@@ -16,9 +16,13 @@ Both or neither: every new endpoint is read before anything switches, so a refus
 when the reading through `eth_rpc_module`'s own route fails after its switch (on a chain set to `required`, the
 proof-backed reads wait for it), its endpoint and a sequencer switched with it are put back. A refusal names the
 endpoint, the reason and the endpoints kept. While a private claim or burn is being proven (a job), the module refuses.
-While the session's LEZ goes through Logos Core's `lez_core` (`wallet lez`), whose wallet holds its own connection, a
-sequencer change is refused with that reason (switching `lez_core`'s sequencer is not built), so inside Logos Core the
-sequencer is switched only through the stand-in. The view shows the endpoints in use (`info`, read from each owner) and
+While the session's LEZ goes through Logos Core's `lez_core` (`wallet lez`), whose wallet holds its own connection (the
+sequencer its wallet config names, `sequencer.sequencer_addr`; `lez_core` has no method that sets it), the switch moves
+it too: after the chain service has read the new sequencer and switched, `lez_core` opens the session's wallet again on
+a copy of that config naming the new sequencer (`<config>.seq-<8 hex>.json`, mode 0600; the config in use is never
+written), and the switch is kept only if `lez_core` then names the new sequencer and reads a block through it; otherwise
+`lez_core` is opened again on the config it had and the chain service's endpoints are put back (both or neither;
+`calls/src/lez.rs` `switch_sequencer`, `put_back`). Scenario Z of `run.sh live` runs it live (below). The view shows the endpoints in use (`info`, read from each owner) and
 who holds each. The Ethereum and LEZ paths belong to the deployment the session was opened on: opened on another one
 (another chain service or configuration), the session drops them (`open`'s `paths_reset`), so that no switch writes
 another chain's record of `eth_rpc_module`.
@@ -62,7 +66,8 @@ The live run:
 
 ## Stand-ins, named
 
-The chain service stands in for Logos Core's own LEZ module (`lez_core`'s sequencer switch is not built); on scenario L
+The chain service stands in for Logos Core's own LEZ module on scenarios L and E (scenario Z switches `lez_core`'s wallet
+too, `lez_core` built from its source with our patch, `modules/patches/lez_core-*.patch`); on scenario L
 anvil is Ethereum and a committee the driver holds finalizes its blocks for LEZ; leader proofs are in dev mode (as every
 LEZ devnet here). The view runs in a Qt Quick Test runner over a headless Logos Core, not in Basecamp (no sandbox, no
 20 s cut of a call). Real: the four sequencers and their zone, the programs, the vault, `eth_rpc_module` (built from its

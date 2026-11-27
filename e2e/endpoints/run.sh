@@ -28,11 +28,12 @@
 #      and a local sequencer (its zone does not hold that configuration). Nothing is sent to any network: the session
 #      reads, and no transaction is built.
 #   4. Scenario Z (U9_LEZCORE=DIR: lez_core's patched .lgx, e2e/seqnet/run.sh build-lezcore): the session's LEZ through
-#      Logos Core's own LEZ module, lez_core (the user's LEZ wallet opened inside it, as hook-lezcore.sh does), then the
-#      call the view's "Apply and test" makes (wallet set_endpoints): the chain service's sequencer and lez_core's wallet
-#      switched together between sequencers 0, 1 and 2 (lez_core's wallet opened again on a copy of its config naming
-#      the new one, read back through it), refused for a closed port (both kept), reads through lez_core after each
-#      switch compared with the chain service's (lez_report), and back. Records in lezcore/ (calls.jsonl, checks.txt).
+#      Logos Core's own LEZ module, lez_core (the user's LEZ wallet opened inside it, as hook-lezcore.sh does). The view
+#      (test_3_lezcore) then switches the chain service's sequencer and lez_core's wallet together with "Apply and test"
+#      (sequencers 1 and 2, a closed port refused with both kept, back to 0; lez_core's wallet opened again on a copy of
+#      its config naming the new one and read back through it); then lezcore_scenario makes the same call from the shell
+#      with reads through lez_core after each switch compared with the chain service's (lez_report). Records in lezcore/
+#      (calls.jsonl, checks.txt) and the view's screenshots 10-13.
 #   Every module call of the view is recorded (calls.jsonl, the runner's logosctl calls), each owner's state is read
 #   independently after each step (ops.sh: the chain service's module.endpoints, eth_rpc_module's get_chain_config), and
 #   the Endpoints tab is grabbed at each state.
@@ -357,9 +358,7 @@ chain_service() {
 # module call the view's "Apply and test" makes. Every call in $RUN/lezcore/calls.jsonl; each check in checks.txt.
 lezcore_scenario() {
   local Z="$RUN/lezcore" n=0 zfail=0 ZR=""; mkdir -p "$Z"; : > "$Z/checks.txt"
-  ctl install "$U9_LEZCORE"/*.lgx -y >> "$W/logs/logos-daemon.log" 2>&1 && ctl module load lez_core >> "$W/logs/logos-daemon.log" 2>&1 \
-    || { say "scenario Z: lez_core did not install or load"; return 1; }
-  ( cd "$U9_LEZCORE" && sha256sum ./*.lgx ) | scrub > "$Z/lez_core-lgx-sha256.txt"
+  ( cd "$U9_LEZCORE" && sha256sum ./*.lgx ) | scrub > "$Z/lez_core-lgx-sha256.txt"   # installed and loaded before the view's test
   zc() { # METHOD PARAMS: one wallet call of ferrata_bridge_module; its reply in ZR
     local req; n=$((n + 1)); req="$W/z-req-$n.json"
     jq -c -n --arg m "$1" --argjson p "$2" '{method: $m, params: $p}' > "$req"
@@ -375,7 +374,6 @@ lezcore_scenario() {
   local s0=http://127.0.0.1:19300 s1=http://127.0.0.1:19301 s2=http://127.0.0.1:19302 sc=http://127.0.0.1:19399
   zc open '{"chain": "http://127.0.0.1:18700/"}'
   zc set_endpoints "$(jq -c -n --arg s "$s0" '{sequencer: $s}')"   # the view's test may have left another sequencer in use
-  rm -rf "$W/lezcore-wallet"; cp -r "$W/chain-local/lez-wallet" "$W/lezcore-wallet"
   zc lez "$(jq -c -n --arg c "$W/lezcore-wallet/wallet_config.json" --arg s "$W/lezcore-wallet/storage.json" --arg p "$W/lez.pass" \
     --arg b "$W/bundle/program/ferrata_bridge.bin" '{via: "lez_core", wallet: {config: $c, storage: $s, password_file: $p}, program_bin: $b}')"
   zcheck "lez_core opened the user's wallet, on sequencer 0" "true $s0/" "$(jq -r '[.ok, .result.wallet.sequencer] | map(tostring) | join(" ")' <<< "$ZR")"
@@ -453,7 +451,16 @@ live() {
   cat > "$W/ops-env.sh" <<ENV
 LOGOSCTL="$LOGOSCTL"; S="$S"; LOGOS_SHORT="$LOGOS_SHORT"; RUN="$RUN"; CHAIN_ID=$CHAIN_ID
 ENV
-  say "the view (Qt Quick Test, offscreen): scenario L$( [ "${U9_PUBLIC:-0}" = 1 ] && echo ' and scenario E (read only)')"
+  # Scenario Z (U9_LEZCORE): lez_core beside the module, and the copy of the user's LEZ wallet it opens (the view's
+  # test_3_lezcore, then lezcore_scenario below).
+  local LZ_CONFIG="" LZ_STORAGE="" LZ_PROGRAM=""
+  if [ -n "${U9_LEZCORE:-}" ]; then
+    ctl install "$U9_LEZCORE"/*.lgx -y >> "$W/logs/logos-daemon.log" 2>&1 && ctl module load lez_core >> "$W/logs/logos-daemon.log" 2>&1 \
+      || die "lez_core: install, load"
+    rm -rf "$W/lezcore-wallet"; cp -r "$W/chain-local/lez-wallet" "$W/lezcore-wallet"
+    LZ_CONFIG="$W/lezcore-wallet/wallet_config.json" LZ_STORAGE="$W/lezcore-wallet/storage.json" LZ_PROGRAM="$W/bundle/program/ferrata_bridge.bin"
+  fi
+  say "the view (Qt Quick Test, offscreen): scenario L$( [ "${U9_PUBLIC:-0}" = 1 ] && echo ' and scenario E (read only)')$( [ -n "${U9_LEZCORE:-}" ] && echo ' and scenario Z (lez_core)')"
   local t0 qrc; t0=$(date +%s)
   ( cd "$REPO/modules/ferrata_bridge_ui/qmltest-logos" && env QT_QPA_PLATFORM=offscreen LOGOSCTL="$LOGOSCTL" LOGOS_SESSION="$S" \
       TMPDIR="$LOGOS_SHORT" SEQNET_TMP="$W" SEQNET_CALL_LOG="$RUN/calls.jsonl" SEQNET_OPS="bash $HERE/ops.sh $W/ops-env.sh" \
@@ -462,6 +469,7 @@ ENV
       U9_SEQ0="http://127.0.0.1:19300" U9_SEQ1="http://127.0.0.1:19301" U9_SEQ2="http://127.0.0.1:19302" U9_SEQ_CLOSED="http://127.0.0.1:19399" \
       U9_ETH_A="$R" U9_ETH_B="$R2" U9_CLOSED="$closed" U9_LIVE_LEZ="$LIVE_LEZ" U9_SEPOLIA_A="$SEPOLIA_A" U9_SEPOLIA_B="$SEPOLIA_B" \
       U9_HOODI="$HOODI" U9_LOCAL_CID="$CID" U9_LIVE_CID=0x3773b58836d2fa242e16b3eb580a15630de2a437218a432f52e5b01152ae67cd \
+      U9_LEZCORE_CONFIG="$LZ_CONFIG" U9_LEZCORE_STORAGE="$LZ_STORAGE" U9_LEZCORE_PASSWORD="$W/lez.pass" U9_LEZCORE_PROGRAM="$LZ_PROGRAM" \
       "$T/bin/ferrata_miniapp_logos" -input tst_endpoints_logos.qml -o "$RUN/qmltest.txt,txt" -o "$RUN/qmltest.xml,xunitxml" -maxwarnings 0 ) \
     > "$W/logs/qmltest.log" 2>&1 && qrc=0 || qrc=$?
   say "qmltest: exit $qrc in $(( $(date +%s) - t0 )) s: $(grep -E '^Totals' "$RUN/qmltest.txt" 2>/dev/null)"
