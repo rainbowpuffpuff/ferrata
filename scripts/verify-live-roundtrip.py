@@ -65,7 +65,8 @@ DEFAULT_RPC = "https://ethereum-sepolia-rpc.publicnode.com"
 CHAIN_ID = 11155111
 VAULT = "0x19499061cec0bac2a3e1869ba5ae6b403aa82787"
 ETH = "0x" + "00" * 20
-BRIDGE_IDL = os.path.join(ROOT, "idl", "ferrata_bridge.idl.json")
+# The test network runs ferrata_bridge_b1: its interface, frozen before ADR 0046 (idl/deployed/README.md).
+BRIDGE_IDL = os.path.join(ROOT, "idl", "deployed", "ferrata_bridge_b1.idl.json")
 # The round trip's transactions, in order. Sepolia: the deposit, the checkpoint's submission and finalisation (rule B),
 # the release and the relayer's claim of the checkpoint fee it was owed. LEZ: the fee schedule's import, the root's
 # import (and a second sender's import of the same root, refused in the same block), the claim and the burn.

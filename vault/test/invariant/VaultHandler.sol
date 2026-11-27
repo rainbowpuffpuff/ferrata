@@ -137,8 +137,10 @@ contract HandlerCodec {
 ///         finalisations, cancellations, attempts to finalise checkpoints that break monotonicity or were cancelled,
 ///         revocations, retirement, refunds, releases (some to payees that cannot receive), owed claims, nullifier
 ///         and refund replays, direct donations, time, freezes and admin changes, fee announcements (v5, D13), and
-///         keeps ghost accounting for the invariants, including a model of the LEZ side: claims mint what the attested
-///         fee schedule of the leaf says, burns take one denomination out of the wrapped supply, releases pay burns. Calls the vault rejects simply revert the handler call, which also discards the ghost updates.
+///         keeps ghost accounting for the invariants, including a model of the LEZ side: deposits pay the in-force mint
+///         fee on Ethereum; claims mint one denomination and its fixed relay fee; burns take one denomination out of the
+///         wrapped supply; releases pay burns. Calls the vault rejects simply revert the handler call, which also discards
+///         the ghost updates.
 ///         Calls that have nothing to do are discarded (vm.assume), so in the run table "calls - reverts - discards"
 ///         of finalizePending, cancelPending, finalizeRejected, revoke, refund and release counts exactly the
 ///         finalisations, cancellations, refusals observed, revocations, refunds and releases.
@@ -187,7 +189,7 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
     // ---- v5 (D13): the fee model and the LEZ supply model
     mapping(address token => Schedule[]) internal _schedules; // in force, by index
     mapping(address token => Schedule) internal _pending;
-    mapping(uint64 leafIndex => uint256) internal _escrowOf; // what each deposit escrowed (measured)
+    mapping(uint64 leafIndex => uint256) internal _escrowOf; // denomination + relay fee escrowed by each deposit
     mapping(uint64 leafIndex => bool) internal _claimed;
     Burn[] internal _pendingBurns;
     /// Wrapped supply on LEZ, the escrow of deposits neither claimed nor refunded, burns not yet released.
@@ -209,10 +211,15 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
     address[] internal _recipients; // EOAs and two contracts that accept ETH only when open
     ToggleRecipient[] internal _toggles;
 
-    mapping(address token => uint256) public ghostDeposited;
+    mapping(address token => uint256) public ghostDeposited; // escrow only: denomination + relay fee
     mapping(address token => uint256) public ghostReleased;
     mapping(address token => uint256) public ghostRefunded;
     mapping(address token => uint256) public ghostDonated;
+    /// Mint fees expected from every successful deposit's in-force schedule, and the two actual cumulative credit
+    ///      deltas observed in owed[feeRecipient] and totalOwed. Later release fees and owed claims do not alter them.
+    mapping(address token => uint256) public ghostDepositMintFees;
+    mapping(address token => uint256) public ghostMintFeeCredits;
+    mapping(address token => uint256) public ghostMintFeeTotalOwed;
     uint256 public ghostDepositCount;
     uint256 public ghostReleaseCount;
     uint256 public ghostDoubleSpends;
@@ -392,17 +399,39 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         uint8 denomIndex = uint8(denomSeed % _denoms(token).length); // < 8: a token has at most 8 denominations
         if (commitment == bytes32(0)) commitment = bytes32(uint256(1));
         uint64 leafIndex = vault.nextLeafIndex();
-        // The model's fees: a due change is in force first (D13), then the denomination, mint and relay fee.
+        // The model's fees: a due change is in force first (D13). The payer sends all three amounts; escrow and the
+        // LEZ claim contain only denomination + relay, and both pull-payment ledgers gain the mint fee.
         _applyDue(token);
-        uint256 total = _denoms(token)[denomIndex] + _current(token).mintFees[denomIndex] + _relayFee(token, denomIndex);
-        uint256 escrowed = _callDeposit(actor, token, denomIndex, commitment, total);
-        if (escrowed == type(uint256).max) return; // refused for a different amount: counted
-        if (escrowed != total) ghostFeeMismatches++;
-        _escrowOf[leafIndex] = escrowed;
-        ghostDeposited[token] += escrowed;
-        ghostUnminted[token] += escrowed;
+        uint256 denomination = _denoms(token)[denomIndex];
+        uint256 mintFee = _current(token).mintFees[denomIndex];
+        uint256 total = denomination + mintFee + _relayFee(token, denomIndex);
+        uint256 owedBefore = vault.owed(feeRecipient, token);
+        uint256 totalOwedBefore = vault.totalOwed(token);
+        uint256 paid = _callDeposit(actor, token, denomIndex, commitment, total);
+        if (paid == type(uint256).max) return; // refused for a different amount: counted
+        _recordDepositModel(leafIndex, actor, token, denomIndex, commitment, denomination, total - mintFee);
+        uint256 credited = vault.owed(feeRecipient, token) - owedBefore;
+        uint256 totalCredited = vault.totalOwed(token) - totalOwedBefore;
+        if (paid != total || credited != mintFee || totalCredited != mintFee) ghostFeeMismatches++;
+        ghostDepositMintFees[token] += mintFee;
+        ghostMintFeeCredits[token] += credited;
+        ghostMintFeeTotalOwed[token] += totalCredited;
+    }
+
+    function _recordDepositModel(
+        uint64 leafIndex,
+        address actor,
+        address token,
+        uint8 denomIndex,
+        bytes32 commitment,
+        uint256 denomination,
+        uint256 escrow
+    ) internal {
+        _escrowOf[leafIndex] = escrow;
+        ghostDeposited[token] += escrow;
+        ghostUnminted[token] += escrow;
         ghostDepositCount++;
-        _leaves.push(ReferenceMerkle.leafHash(leafIndex, actor, token, _denoms(token)[denomIndex], commitment));
+        _leaves.push(ReferenceMerkle.leafHash(leafIndex, actor, token, denomination, commitment));
         _leafData.push(LeafData(actor, token, denomIndex, commitment));
     }
 
@@ -571,7 +600,7 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
             if (waitForOpening && block.timestamp < opensAt) vm.warp(opensAt);
         }
         LeafData memory l = _leafData[leafIndex];
-        uint256 amount = _escrowOf[leafIndex]; // v5: a refund returns the leaf's whole escrow, fees included
+        uint256 amount = _escrowOf[leafIndex]; // refund the escrow: denomination + relay, not the collected mint fee
         bool allowed = found && leafIndex >= boundary && block.timestamp >= opensAt && _retired
             && block.timestamp >= _releasesFrozenUntil && _releaseCapsAllow(l.token, amount); // v4 (D13): caps
         bool payable_ = allowed && !_leafRefunded[leafIndex]
@@ -621,7 +650,9 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
             token: b.token,
             denomIndex: b.denomIndex,
             recipient: _recipients[recipientSeed % _recipients.length],
-            relayer: (recipientSeed >> 128) % 2 == 0 ? address(0) : _recipients[(recipientSeed >> 64) % _recipients.length],
+            relayer: (recipientSeed >> 128) % 2 == 0
+                ? address(0)
+                : _recipients[(recipientSeed >> 64) % _recipients.length],
             relayFee: withFee ? _relayFee(b.token, b.denomIndex) : 0,
             burnRoot: _acceptedRoots[rootSeed % _acceptedRoots.length],
             nullifier: b.nullifier
@@ -650,10 +681,9 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         _pendingBurns.pop();
     }
 
-    /// @dev LEZ model: claims a deposit below the settled import count (so never refundable), minting what LEZ mints:
-    ///      the denomination, the mint fee of the schedule of its leaf index and the relay fee. Checks first that the
-    ///      vault publishes that schedule's hash at its slot and that the next slot is published only if the model has
-    ///      that schedule in force (what LEZ's Register and ImportFees attest).
+    /// @dev LEZ model after F.13's change: claims a deposit below the settled import count (so never refundable) and
+    ///      mints only its denomination and fixed relay fee; its mint fee was collected on Ethereum. The model still
+    ///      checks publication of the current schedule and the next slot, which remain part of the vault's interface.
     function claim(uint256 leafSeed) external {
         uint64 settled = _codec.settledImported(vault);
         vm.assume(settled != 0);
@@ -662,14 +692,13 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         LeafData memory l = _leafData[leafIndex];
         Schedule[] storage list = _schedules[l.token];
         uint256 index = list.length - 1;
-        while (list[index].fromLeaf > leafIndex) index--;
         Schedule storage s = list[index];
         bytes32 published = vm.load(address(vault), _codec.feeSlot(l.token, index));
         bytes32 next = vm.load(address(vault), _codec.feeSlot(l.token, index + 1));
         if (published != _scheduleHash(l.token, index, s) || (next != bytes32(0)) != (index + 1 < list.length)) {
             ghostPublishedMismatches++;
         }
-        uint256 minted = _denoms(l.token)[l.denomIndex] + s.mintFees[l.denomIndex] + _relayFee(l.token, l.denomIndex);
+        uint256 minted = _denoms(l.token)[l.denomIndex] + _relayFee(l.token, l.denomIndex);
         ghostSupply[l.token] += minted;
         ghostUnminted[l.token] -= _escrowOf[leafIndex];
         _claimed[leafIndex] = true;
@@ -837,7 +866,6 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         uint256 choice = capacitySeed % 8;
         if (choice == 0) capacity = UNLIMITED;
         else if (choice == 1) capacity = 0; // closed, rarely
-
         else capacity = _bound(capacitySeed, largest, largest * 20);
         uint256 refill = _bound(refillSeed, 0, largest / 60);
         FerrataVault.Direction direction = isDeposit ? FerrataVault.Direction.Deposit : FerrataVault.Direction.Release;

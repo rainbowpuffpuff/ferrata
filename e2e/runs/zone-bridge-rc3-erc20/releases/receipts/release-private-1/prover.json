@@ -1,0 +1,14 @@
+{
+  "name": "1-release-private-1",
+  "kind": "release",
+  "image_id": "0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd",
+  "ok": true,
+  "seconds": 232.4,
+  "call_id": "fc-01M8DAMDFQR1PM3DD975VAR3ZX",
+  "attempts": 1,
+  "resumed": false,
+  "prover": {
+    "exit_code": 0,
+    "wall_s": 8.380761861801147
+  }
+}

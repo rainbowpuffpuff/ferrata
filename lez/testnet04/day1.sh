@@ -19,7 +19,7 @@
 #                            (c) start the updater daemon (lez/updater, the public job path) following Sepolia,
 #                            detached, with its own key; (d) one attestation of the live Sepolia vault 0x04eE…e44c's
 #                            slots 0 and 1 under the instance's newest record; (e) with FERRATA_DAY1_BRIDGE=1, the
-#                            bridge program (image 0x847a4336…, B1 since ADR 0032) and the owner-side Sepolia step for its vault, prepared
+#                            bridge program (image 0xffb47f6e…, since ADR 0046; B1's 0x847a4336… before) and the owner-side Sepolia step for its vault, prepared
 #                            (not sent). Every transaction is signed once and kept beside the keys
 #                            (KEYS/tx/<stage>/NN.tx); after a restart the same bytes are sent again, never a new
 #                            transaction that could apply beside them. The deployments are guarded by the chain too
@@ -55,8 +55,8 @@ VAULT="0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c"      # FerrataVault v5 on Sep
 VAULT_SLOTS="0,1"                                       # depositRoot, nextLeafIndex
 PROGRAM_SHA256="ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9"   # docs/image-ids.md
 PROGRAM_IMAGE="816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df"
-BRIDGE_SHA256="537cbe7a4c6900419b54e556b9741a9e37d86adf53f5e65683aa2b22c8e9a036"   # docs/image-ids.md ferrata_bridge_b1 (since ADR 0032, 22 Nov 2026)
-BRIDGE_IMAGE="847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515"
+BRIDGE_SHA256="c84fe2dbbc008c1a94c096fb6c598eb1580da2996b6b1e54ae807d0041e08fdc"   # docs/image-ids.md ferrata_bridge_f13 (since ADR 0046, 27 Nov 2026; B1's before)
+BRIDGE_IMAGE="ffb47f6eaec6ef13f49505e5e80209f73d38ea53792e77656994f8069dde7675"
 FETCH_PY="$REPO/lez-v03/scripts/fetch.py"               # public beacon and execution APIs, generic User-Agent
 T04="${FERRATA_DAY1_HOME:-$BESIDE/tmp/testnet04}"           # the day-one kit's own folder (tests use one of theirs)
 TOOL_DIR="${FERRATA_DAY1_BIN:-$T04/bin}"
@@ -101,7 +101,7 @@ need_tools() {
 check_programs() { # the binaries are the final programs of docs/image-ids.md, byte for byte
   echo "$PROGRAM_SHA256  $PROGRAMS/ferrata_lez.bin" | sha256sum -c --quiet - || die "$PROGRAMS/ferrata_lez.bin is not the final attestation program"
   if [ "${FERRATA_DAY1_BRIDGE:-0}" = 1 ]; then
-    echo "$BRIDGE_SHA256  $PROGRAMS/ferrata_bridge.bin" | sha256sum -c --quiet - || die "$PROGRAMS/ferrata_bridge.bin is not the bridge program since milestone B1 (docs/image-ids.md ferrata_bridge_b1; one built before B1 is the live runs' program)"
+    echo "$BRIDGE_SHA256  $PROGRAMS/ferrata_bridge.bin" | sha256sum -c --quiet - || die "$PROGRAMS/ferrata_bridge.bin is not this tree's bridge program (docs/image-ids.md ferrata_bridge_f13, since ADR 0046; B1's is the test network's, one built before B1 the live runs')"
   fi
   if command -v r0vm > /dev/null; then
     [ "$(r0vm --elf "$PROGRAMS/ferrata_lez.bin" --id | tail -n 1)" = "$PROGRAM_IMAGE" ] || die "image id of ferrata_lez.bin"

@@ -96,8 +96,8 @@ check("trace: roundtrip runs cli/tests/roundtrip_b.rs (through e2e/ci/run.sh, in
       runs("roundtrip", "cli/tests/roundtrip_b.rs"))
 check("trace: roundtrip runs cli/tests/e2e.rs (through cli/tests/e2e.sh, which sets FERRATA_E2E)",
       runs("roundtrip", "cli/tests/e2e.rs"))
-check("trace: roundtrip does not run cli/src/privacy.rs's unit tests (only --test targets)",
-      not runs("roundtrip", "cli/src/privacy.rs"))
+check("trace: roundtrip runs cli/src/privacy.rs's unit tests (the unfiltered --lib suite)",
+      runs("roundtrip", "cli/src/privacy.rs"))
 check("trace: vault runs vault/test/Migration.t.sol", runs("vault", "vault/test/Migration.t.sol"))
 check("trace: vault runs VaultInvariantsB.t.sol (its invariants inherited)",
       runs("vault", "vault/test/invariant/VaultInvariantsB.t.sol"))
@@ -109,6 +109,8 @@ check("trace: lez-harness runs lez/harness/tests/public_path.rs (through scripts
       runs("lez-harness", "lez/harness/tests/public_path.rs"))
 check("trace: lez-harness runs lez/updater/tests/recorded.rs (updater-gate shard)",
       runs("lez-harness", "lez/updater/tests/recorded.rs"))
+check("trace: lez-harness runs the updater daemon process demo (updater-gate shard)",
+      runs("lez-harness", "lez/updater/dev/demo.sh"))
 check("trace: lez-harness runs lez/updater/tests/refusals.rs (updater-privacy shard)",
       runs("lez-harness", "lez/updater/tests/refusals.rs"))
 check("trace: lez-harness runs vault/test/PrivacySuite.t.sol (updater-privacy shard via scripts/privacy/run.sh)",
@@ -267,7 +269,7 @@ for sname in shard_map["shards"]:
             planned_cargos.append((step["cwd"], step["argv"]))
 traced_cargos = [
     (c.cwd, c.argv) for c in ci_model.trace(jobs["lez-harness"], tracked)
-    if c.argv and c.argv[0] == "cargo" and "--no-run" not in c.argv
+    if c.argv and c.argv[0] == "cargo" and "test" in c.argv and "--no-run" not in c.argv
     and "scripts/privacy/run.sh" not in c.origin
 ]
 check("trace: lez-harness traced cargo commands equal check-lez-shards.py build_shard_plan across all shards",
@@ -478,6 +480,226 @@ check("jobs: lez-harness-full runs unsharded in lez-full.yml on schedule and wor
       and "schedule" in LHF.triggers and "workflow_dispatch" in LHF.triggers
       and ci_model.step_guard(LHF, lhf_last) is None)
 
+# ── The justfile runs the CI jobs' commands (docs/cli-coverage.md, G17) ─────────────────────────────
+# `just` itself need not be installed (and is not, on the machine that wrote this): the justfile is parsed
+# here, and each job recipe's commands are compared with the job's `run:` steps as run_steps reads them
+# from the workflows, so a recipe cannot drift from its job: not the command text, nor the directory it runs
+# in, the environment the workflow sets for it, or the shell options it runs under (a command added, dropped,
+# a step's working-directory, a step environment, a shell without pipefail — review round 3, M5).
+
+
+def justfile_parts(text):
+    """The justfile read as just reads it, as far as these recipes need: its assignments (name -> text, the
+    exported names apart), its `set shell` line, and its recipes (name -> params and command lines, `@` and
+    shell comments out)."""
+    assigns, exports, recipes, set_shell, current = {}, set(), {}, "", None
+    for line in text.split("\n"):
+        if not line.strip():
+            continue
+        if line[0] in " \t":  # a recipe's body
+            if current is None:
+                raise AssertionError(f"justfile: an indented line outside any recipe: {line!r}")
+            body = line.strip()
+            if body.startswith("#"):  # passed to the shell, which takes it for a comment
+                continue
+            if body.startswith("@"):  # just's "quiet" marker, not part of the command
+                body = body[1:].lstrip()
+            current["lines"].append(body)
+            continue
+        if current is not None:
+            recipes[current["name"]] = current
+            current = None
+        if line.startswith("#") or line.startswith("set "):
+            if line.startswith("set shell"):
+                set_shell = line.partition("set shell")[2].partition(":=")[2].strip()
+            continue
+        if ":=" in line:  # an assignment (`set shell := …` was caught above)
+            lhs, _, value = line.partition(":=")
+            lhs = lhs.strip()
+            if lhs.startswith("export "):
+                lhs = lhs[len("export "):].strip()
+                exports.add(lhs)
+            assigns[lhs] = value.strip()
+            continue
+        if line.endswith(":"):  # a recipe header
+            m = re.match(r"^([A-Za-z_][A-Za-z0-9_-]*)(.*)$", line[:-1].strip())
+            if not m:
+                raise AssertionError(f"justfile: an unparsable recipe header: {line!r}")
+            current = {"name": m.group(1), "params": (m.group(2) or "").split(), "lines": []}
+            continue
+        raise AssertionError(f"justfile: an unparsable line: {line!r}")
+    if current is not None:
+        recipes[current["name"]] = current
+    return assigns, exports, recipes, set_shell
+
+
+assigns, exports, recipes, set_shell = justfile_parts((ROOT / "justfile").read_text(encoding="utf-8"))
+check("justfile: every recipe of the file is parsed (update this list when a recipe is added)",
+      set(recipes) == {"default", "bench", "bench-user", "m0", "release", "release-verify", "deploy-testnet",
+                       "halmos-long", "verify", "lez-read", "ci-commands", "idl", "admin", "links",
+                       "ci-verify", "lez-harness"})
+check("justfile: RUNNER_TEMP is exported with a local default (the links job's record check writes there)",
+      "RUNNER_TEMP" in exports and "env_var_or_default" in assigns.get("RUNNER_TEMP", ""))
+check("justfile: FOUNDRY_OFFLINE is exported as the workflows set it for the whole file (ci.yml's env)",
+      "FOUNDRY_OFFLINE" in exports and assigns.get("FOUNDRY_OFFLINE", "").strip("\"'") == "false")
+# The shell every recipe line runs under: the file's `set shell := ["bash", "-euo", "pipefail", "-c"]`.
+shell_words = re.findall(r'"([^"]*)"', set_shell)
+JUST_ERREXIT = any(re.fullmatch(r"-[a-z]*e[a-z]*", w) for w in shell_words[1:])
+JUST_PIPEFAIL = "pipefail" in shell_words
+check("justfile: every recipe line runs under bash with errexit and pipefail (the file's `set shell`)",
+      shell_words[:1] == ["bash"] and shell_words[-1] == "-c" and JUST_ERREXIT and JUST_PIPEFAIL)
+
+# What a recipe line and a CI step's command line each run with, beyond the text: the directory, the
+# environment set for it, and the shell options. GitHub's runner provides GITHUB_WORKSPACE and RUNNER_TEMP to
+# every step, and the justfile exports RUNNER_TEMP as its local stand-in. Ignore only those implicit defaults:
+# an explicit workflow/job/step override belongs to that job and must be compared like any other environment.
+RUNNER_PROVIDES = {"GITHUB_WORKSPACE", "RUNNER_TEMP"}
+
+
+def job_entries(job):
+    """The job's `run:` commands as a recipe must run them: one entry per command line, each with its own
+    step's directory, environment and shell options, as ci_model.run_steps reads them from the workflow."""
+    out = []
+    for step in ci_model.run_steps(job):
+        explicit = set(job.env) | set(job.steps[step["step"] - 1].get("env") or {})
+        env = {k: v for k, v in step["env"].items() if k not in RUNNER_PROVIDES or k in explicit}
+        for line in step["text"].splitlines():
+            if line.strip():
+                out.append({"text": line.strip(), "cwd": step["cwd"], "env": dict(env),
+                            "errexit": step["errexit"], "pipefail": step["pipefail"]})
+    return out
+
+
+def just_entries(lines):
+    """A recipe's lines as `just` runs them: from the repository root, with the justfile's own exported
+    variables, under the file's `set shell` options."""
+    env = {n: assigns[n].strip().strip("\"'") for n in exports if n not in RUNNER_PROVIDES}
+    return [{"text": line, "cwd": ".", "env": dict(env), "errexit": JUST_ERREXIT, "pipefail": JUST_PIPEFAIL}
+            for line in lines]
+
+
+def entry_drift(want, got):
+    """Where two lists of execution entries differ, each difference named: the command itself, the directory
+    it runs in, the environment set for it, or the shell options (errexit, pipefail). Empty means no drift."""
+    out = []
+    for i in range(max(len(want), len(got))):
+        w = want[i] if i < len(want) else None
+        g = got[i] if i < len(got) else None
+        if w is None or g is None:
+            out.append(f"entry {i}: {'the job runs it' if w else 'only the recipe does'}: "
+                       f"{(w or g)['text']!r}")
+        elif w["text"] != g["text"]:
+            out.append(f"entry {i}: the job runs {w['text']!r}, the recipe {g['text']!r}")
+        else:
+            if w["cwd"] != g["cwd"]:
+                out.append(f"entry {i} ({w['text']!r}): the job runs it in {w['cwd']!r}, the recipe in {g['cwd']!r}")
+            if w["env"] != g["env"]:
+                out.append(f"entry {i} ({w['text']!r}): the job's environment {w['env']} != the recipe's {g['env']}")
+            if (w["errexit"], w["pipefail"]) != (g["errexit"], g["pipefail"]):
+                out.append(f"entry {i} ({w['text']!r}): the job's shell (errexit {w['errexit']}, pipefail "
+                           f"{w['pipefail']}) != the recipe's (errexit {g['errexit']}, pipefail {g['pipefail']})")
+    return out
+
+
+def recipe_drift(job, recipe):
+    """The drift between a recipe that runs a whole CI job and the job itself: the command text, the
+    directory each line runs in, the environment set for it, and the shell options. None (no recipe) is its
+    own drift. This is the one comparison the four whole-job recipes are held to, and the one the drift tests
+    below plant counter-examples into, so a weaker comparison cannot pass both."""
+    if recipe is None:
+        return ["no such recipe"]
+    return entry_drift(job_entries(job), just_entries(recipe["lines"]))
+
+
+# The recipe that runs a whole CI job, and the job it runs (`ci-verify` because `verify` passes ARGS through
+# to scripts/verify.py itself). Each recipe line is one command line of the job, in order, with the step's
+# directory, environment and shell; `uses:` steps are the runner's setup and no recipe's business.
+for recipe_name, job_name in (("idl", "idl"), ("admin", "admin"), ("links", "links"), ("ci-verify", "verify")):
+    job = jobs.get(job_name)
+    check(f"justfile: the recipe {recipe_name} names a job the workflows define", job is not None)
+    if job is None:
+        continue
+    check(f"justfile: the recipe {recipe_name} takes no argument (the job's commands are fixed)",
+          recipe_name in recipes and not recipes[recipe_name]["params"])
+    drift = recipe_drift(job, recipes.get(recipe_name))
+    check(f"justfile: the recipe {recipe_name} runs the {job_name} job's commands as the job does: the text, "
+          f"the directory, the environment and the shell options", not drift)
+    for d in drift[:4]:
+        print(f"     {d}")
+
+# The drift the recipe comparison must refuse, each planted in a workflow of its own (review round 3, M5):
+# a step's working-directory, a step's environment, and a default-shell pipeline — GitHub's default step shell
+# is `bash -e` without pipefail, so `false | true` succeeds there while the recipe's bash -euo pipefail
+# aborts on it; a recipe may not silently run commands under different semantics than its job.
+
+
+def job_of(text):
+    doc = ci_model.load_yaml(text)
+    name, spec = next(iter(doc["jobs"].items()))
+    return ci_model.Job(pathlib.Path("drift.yml"), name, spec, doc)
+
+
+def recipe_of(*lines):
+    return {"name": "j", "params": [], "lines": list(lines)}
+
+
+DRIFT_WORKFLOW = """\
+name: drift
+on: push
+env:
+  FOUNDRY_OFFLINE: "false"
+jobs:
+  j:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - run: make check
+"""
+check("recipes: the same command, directory, environment and shell options is no drift",
+      recipe_drift(job_of(DRIFT_WORKFLOW), recipe_of("make check")) == [])
+other_dir = recipe_drift(job_of(DRIFT_WORKFLOW.replace(
+    "      - run: make check", "      - run: make check\n        working-directory: vault")), recipe_of("make check"))
+check("recipes: a step's working directory the recipe does not run in is drift",
+      len(other_dir) == 1 and "the job runs it in 'vault'" in other_dir[0])
+other_env = recipe_drift(job_of(DRIFT_WORKFLOW.replace(
+    "      - run: make check", "      - run: make check\n        env:\n          FOO: bar")), recipe_of("make check"))
+check("recipes: a step's environment the recipe does not set is drift",
+      len(other_env) == 1 and "the job's environment" in other_env[0] and "'FOO': 'bar'" in other_env[0])
+for reserved_name, reserved_value in (("RUNNER_TEMP", "/chosen/runner-temp"),
+                                      ("GITHUB_WORKSPACE", "/chosen/workspace")):
+    reserved_env = recipe_drift(job_of(DRIFT_WORKFLOW.replace(
+        "      - run: make check",
+        f"      - run: make check\n        env:\n          {reserved_name}: {reserved_value}")), recipe_of("make check"))
+    check(f"recipes: an explicit step {reserved_name} override the recipe does not set is drift",
+          len(reserved_env) == 1 and "the job's environment" in reserved_env[0]
+          and f"'{reserved_name}': '{reserved_value}'" in reserved_env[0])
+pipeline = recipe_drift(job_of(DRIFT_WORKFLOW.replace(
+    "    defaults:\n      run:\n        shell: bash\n", "").replace("make check", "false | true")),
+    recipe_of("false | true"))
+check("recipes: a default-shell pipeline (false | true) is drift, and the drift names pipefail",
+      len(pipeline) == 1 and "pipefail" in pipeline[0])
+just_side = recipe_drift(job_of(DRIFT_WORKFLOW), recipe_of("make check", "make again"))
+check("recipes: a command the recipe adds beyond the job's is drift",
+      len(just_side) == 1 and "only the recipe does" in just_side[0])
+check("recipes: a job the recipe does not name is drift",
+      recipe_drift(job_of(DRIFT_WORKFLOW), None) == ["no such recipe"])
+# `just lez-harness SHARD`: the job's test step, with the recipe's argument for the matrix value. The steps
+# before it are the runner's setup (toolchains, upstream sources, libraries) and the job's own build step.
+LH_STEPS = {}
+for step in ci_model.run_steps(jobs["lez-harness"]):
+    LH_STEPS.setdefault(repr(step["combo"]), []).append(step)
+check("justfile: the recipe lez-harness takes the shard as its one argument",
+      "lez-harness" in recipes and recipes["lez-harness"]["params"] == ["shard"])
+for combo, steps in LH_STEPS.items():
+    shard = steps[0]["combo"]["shard"]
+    last = steps[-1]  # the step that runs the shard's tests (the one after the build step)
+    want = last["text"].replace('"$SHARD"', shard)
+    got = (recipes.get("lez-harness", {}).get("lines") or [""])[0].replace('"$1"', shard)
+    check(f"justfile: the recipe lez-harness runs the job's test step of shard {shard}",
+          got == want and last["text"].endswith('lez-harness.sh --shard "$SHARD"'))
+
 # ── check-row-tests.py refuses false claims ────────────────────────────────────────────────────────
 checker = HERE / "check-row-tests.py"
 real = (HERE / "row-tests.toml").read_text(encoding="utf-8")
@@ -515,8 +737,8 @@ check("checker: an unknown kind is refused", rc == 1 and "is none of test, recor
 rc, out = run_checker(real, "--list")
 check("checker: the real map, RFP-022: 66 of 68 hard rows with a test CI runs",
       "RFP-022: 68 hard rows; 66 with a test CI runs; 2 without one" in out)
-check("checker: the real map, RFP-021: 55 of 59 hard rows with a test CI runs",
-      "RFP-021: 59 hard rows; 55 with a test CI runs; 4 without one" in out)
+check("checker: the real map, RFP-021: 56 of 59 hard rows with a test CI runs",
+      "RFP-021: 59 hard rows; 56 with a test CI runs; 3 without one" in out)
 listed = re.findall(r"^    (RFP-02[12] (?:VS|Sec|Priv|F|U|R|P|S)\.\d+): (\S+)$", out, re.M)
 rows022 = [rid for rid, _ in listed if rid.startswith("RFP-022 ")]
 check("checker: --list gives every hard row its status", len(listed) == 59 + 68 and len(rows022) == 68)

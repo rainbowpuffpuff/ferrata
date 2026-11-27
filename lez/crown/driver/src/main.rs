@@ -9,7 +9,7 @@
 //!             Sepolia instance (Init and the repository fixture's updates, or the stand-in's
 //!             bootstrap), then write `--identity-out` (session-a.json) at the last final block
 //!   crown-b   session B: the captures' updates and finality updates, the bridge's Init (pairing),
-//!             Register ETH, ImportRoot n=1, n=2, Claim (public), ClaimPrivately (real proof), Burn
+//!             Register of the selected token, ImportRoot n=1, n=2, Claim (public), ClaimPrivately (real proof), Burn
 //!             (public), Burn (private, real proof); then `--session-out` and `--notes-out`
 //!   export    the records of the run into `--out` (blocks.borsh, chain.tsv, segments.tsv, ...)
 //!   gas-drop-keys, gas-drop-prepare, gas-drop-credit, gas-drop-claim
@@ -30,7 +30,8 @@
 //! Common options: --program-bin FILE (attestation program), --bridge-bin FILE (merged bridge),
 //! --chain sepolia|stand-in, --fixture DIR (a checkpoint fixture: crates/ferrata-spectests/fixtures/sepolia-2026-11-12),
 //! --run-dir DIR (the driver's state: wallet, follower, manifest), --out DIR, --gas-limit N,
-//! --wait-final yes|no, --sequencer-log FILE.
+//! --wait-final yes|no, --sequencer-log FILE; --token eth|test-token (default eth) on capture-slots, config-id,
+//! check, crown-a and crown-b; test-token also takes --token-address ADDR (the run's deploy.json `.token`).
 //! crown-a: --channel FILE (the node's /channel/<id> answer), --genesis FILE (deployment
 //! settings), --identity-out FILE, [--vault ADDR], [--fork-digest HEX] (a zone on Logos Blockchain 0.3.5-rc.1: the
 //! node's fork digest becomes the configuration's bedrockGenesisId, as the checkpoint guests of guests-0-3-5 require).
@@ -129,6 +130,22 @@ fn base_chain(args: &Args) -> Result<crown::Chain> {
         "sepolia" => crown::sepolia_base(&args.path("fixture")?),
         "stand-in" => crown::stand_in_base(),
         other => bail!("--chain {other}: sepolia or stand-in"),
+    }
+}
+
+/// The asset moved by this invocation. The TestToken's CREATE address comes from the run's deployment record (or its
+/// precomputed deployer nonce before deployment); all other registry and schedule values are `_tokenParams`'s.
+fn selected_token(args: &Args) -> Result<crown::BridgeToken> {
+    match args.get("token").unwrap_or("eth") {
+        "eth" => {
+            ensure!(args.get("token-address").is_none(), "--token-address is only for --token test-token");
+            Ok(crown::BridgeToken::eth())
+        }
+        "test-token" => {
+            let at = args.get("token-address").ok_or_else(|| anyhow!("--token test-token needs --token-address 0x<20 bytes> from deploy.json"))?;
+            crown::BridgeToken::test_token(crown::address(at)?)
+        }
+        other => bail!("--token {other}: eth or test-token"),
     }
 }
 
@@ -274,7 +291,8 @@ async fn export(live: &mut Live, program: &GuestBinary, bridge: &GuestBinary, ch
 }
 
 async fn run(args: Args) -> Result<()> {
-    crown::try_controls()?;
+    let token = selected_token(&args)?;
+    crown::try_controls_for(&token)?;
     match args.command.as_str() {
         "new-role-keys" => {
             println!("{}", serde_json::to_string_pretty(&crown::new_role_keys(&args.path("out")?)?)?);
@@ -284,7 +302,7 @@ async fn run(args: Args) -> Result<()> {
             let identity = crown::Identity::load(&args.path("identity")?)?;
             crown::check_bridge_image(identity.bridge_image_id)?;
             let vault = crown::address(args.get("vault").ok_or_else(|| anyhow!("--vault is required"))?)?;
-            println!("{}", serde_json::to_string_pretty(&identity.config_json(vault))?);
+            println!("{}", serde_json::to_string_pretty(&identity.config_json_for(vault, &token))?);
             return Ok(());
         }
         "destinations" => {
@@ -294,7 +312,7 @@ async fn run(args: Args) -> Result<()> {
             return Ok(());
         }
         "capture-slots" => {
-            println!("{}", serde_json::to_string_pretty(&crown::capture_slots())?);
+            println!("{}", serde_json::to_string_pretty(&crown::capture_slots_for(&token))?);
             return Ok(());
         }
         "check" => {
@@ -304,7 +322,7 @@ async fn run(args: Args) -> Result<()> {
                 Some(p) => Some(crown::Identity::load(Path::new(p))?),
                 None => None,
             };
-            return crown::check(&chain, &program, &bridge, identity.as_ref(), args.get("operator-only") == Some("yes"));
+            return crown::check_for(&chain, &program, &bridge, identity.as_ref(), args.get("operator-only") == Some("yes"), &token);
         }
         _ => {}
     }
@@ -314,6 +332,7 @@ async fn run(args: Args) -> Result<()> {
         "crown-a" => {
             let chain = base_chain(&args)?;
             let a = crown::SessionA {
+                token,
                 channel: args.path("channel")?,
                 genesis: args.path("genesis")?,
                 identity_out: args.path("identity-out")?,
@@ -325,6 +344,7 @@ async fn run(args: Args) -> Result<()> {
         "crown-b" => {
             let chain = full_chain(&args)?;
             let b = crown::SessionB {
+                token,
                 identity: crown::Identity::load(&args.path("identity")?)?,
                 claim_time_offset_s: args.get("claim-time-offset-s").map(str::parse).transpose()?.unwrap_or(-30),
                 eth_fees_at: args.get("eth-fees-at").map(str::parse).transpose()?,
@@ -342,6 +362,7 @@ async fn run(args: Args) -> Result<()> {
             export(&mut live, &program, &bridge, &chain).await?;
         }
         "gas-drop-keys" | "gas-drop-prepare" | "gas-drop-credit" | "gas-drop-claim" => {
+            ensure!(token.is_eth(), "the gas-drop workflow is ETH-only");
             #[cfg(feature = "lez-rc3")]
             crown::gasdrop::run(&mut live, &args, &bridge).await?;
             #[cfg(not(feature = "lez-rc3"))]

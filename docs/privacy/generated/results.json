@@ -18,7 +18,7 @@
   },
   "claim, plaintext": {
    "pass": false,
-   "detail": "lez:claim:plaintext:01 vs lez:claim:plaintext:00: part tx differs at byte 5 of 1837/1837 after the cut (000700000039015e41407ca96e2441eb35f8b801223bcbf25fb39d7230 / 00070000001033fd3104506274fc30fac4e7631f764636a5cf32ff5255)"
+   "detail": "lez:claim:plaintext:01 vs lez:claim:plaintext:00: part tx differs at byte 133 of 1813/1813 after the cut (6994f8069dde7675997b35e8944091a762c184a89e5165fdb033d018fde55918 / 6994f8069dde7675bd8b565ef9cebf55e3cefbfd6ad765c9abfdd6f2bdea62d9)"
   },
   "burn, private holding": {
    "pass": true,
@@ -119,22 +119,22 @@
    "with_order_state": 0.05000000000000001
   },
   "on LEZ: claim to burn (informational)": {
-   "success": 0.04500000000000001,
+   "success": 0.047500000000000014,
    "chance": 0.05,
    "exactly_identified": 0,
    "candidate_set_sizes": [
     [
      1,
-     2
+     1
     ],
     [
      20,
-     18
+     19
     ]
    ],
    "max_score": 2.995732273553991,
-   "without_derived_identifiers": 0.04500000000000001,
-   "with_order_state": 0.04500000000000001
+   "without_derived_identifiers": 0.047500000000000014,
+   "with_order_state": 0.047500000000000014
   }
  },
  "order_only": {
@@ -565,14 +565,6 @@
     "B6": "denomination"
    },
    {
-    "field": "boundary[].out.message.Issue.range",
-    "bytes": 24,
-    "across records": "constant",
-    "class": "constant",
-    "what": "the fee schedule's leaf range the claim names",
-    "B6": null
-   },
-   {
     "field": "boundary[].out.message.Issue.leaf_count",
     "bytes": 8,
     "across records": "constant",
@@ -742,7 +734,7 @@
    },
    {
     "field": "proof.claim",
-    "bytes": 4524,
+    "bytes": 4500,
     "across records": "20 distinct",
     "class": "a function of public data",
     "what": "the receipt's claim: ReceiptClaim::ok(circuit id, journal), the journal the frame of the transaction's message (checked from the public bytes)",
@@ -821,22 +813,6 @@
     "B6": null
    },
    {
-    "field": "state: the account in `derived.nullifier_account`",
-    "bytes": 0,
-    "across records": "one per record (20 distinct)",
-    "class": "nullifier",
-    "what": "created or changed by this record only",
-    "B6": "N"
-   },
-   {
-    "field": "state: holder(the relayer) (its wrapped balance: relay fees)",
-    "bytes": 0,
-    "across records": "changed in every record, contents vary",
-    "class": "time / order",
-    "what": "cumulative state (order)",
-    "B6": null
-   },
-   {
     "field": "state: the harness's fee payer (refund_to)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
@@ -846,6 +822,22 @@
    },
    {
     "field": "state: LEZ fee inbox",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
+   },
+   {
+    "field": "state: the account in `derived.nullifier_account`",
+    "bytes": 0,
+    "across records": "one per record (20 distinct)",
+    "class": "nullifier",
+    "what": "created or changed by this record only",
+    "B6": "N"
+   },
+   {
+    "field": "state: holder(the relayer) (its wrapped balance: relay fees)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -983,14 +975,6 @@
     "B6": null
    },
    {
-    "field": "root.message.Claim.range",
-    "bytes": 24,
-    "across records": "constant",
-    "class": "constant",
-    "what": "the fee schedule's leaf range the claim names",
-    "B6": null
-   },
-   {
     "field": "root.message.Claim.relayer",
     "bytes": 32,
     "across records": "constant",
@@ -1095,22 +1079,6 @@
     "B6": null
    },
    {
-    "field": "state: holder(a public destination) (plaintext universe)",
-    "bytes": 0,
-    "across records": "one per record (20 distinct)",
-    "class": "UNCLASSIFIED",
-    "what": "created or changed by this record only",
-    "B6": null
-   },
-   {
-    "field": "state: holder(the relayer) (its wrapped balance: relay fees)",
-    "bytes": 0,
-    "across records": "changed in every record, contents vary",
-    "class": "time / order",
-    "what": "cumulative state (order)",
-    "B6": null
-   },
-   {
     "field": "state: the account in `derived.nullifier_account`",
     "bytes": 0,
     "across records": "one per record (20 distinct)",
@@ -1135,6 +1103,14 @@
     "B6": null
    },
    {
+    "field": "state: holder(the relayer) (its wrapped balance: relay fees)",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
+   },
+   {
     "field": "state: config(cid) (global gate, time)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
@@ -1148,6 +1124,14 @@
     "across records": "changed in every record, contents vary",
     "class": "time / order",
     "what": "cumulative state (order)",
+    "B6": null
+   },
+   {
+    "field": "state: holder(a public destination) (plaintext universe)",
+    "bytes": 0,
+    "across records": "one per record (20 distinct)",
+    "class": "UNCLASSIFIED",
+    "what": "created or changed by this record only",
     "B6": null
    }
   ],
@@ -1473,6 +1457,14 @@
     "B6": null
    },
    {
+    "field": "state: the account in `derived.burn_record_account`",
+    "bytes": 0,
+    "across records": "one per record (20 distinct)",
+    "class": "fresh randomness",
+    "what": "created or changed by this record only",
+    "B6": "the burn note"
+   },
+   {
     "field": "state: the harness's fee payer (refund_to)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
@@ -1495,14 +1487,6 @@
     "class": "time / order",
     "what": "cumulative state (order)",
     "B6": null
-   },
-   {
-    "field": "state: the account in `derived.burn_record_account`",
-    "bytes": 0,
-    "across records": "one per record (20 distinct)",
-    "class": "fresh randomness",
-    "what": "created or changed by this record only",
-    "B6": "the burn note"
    },
    {
     "field": "state: token(cid, ETH) (token gate, time)",
@@ -1893,6 +1877,14 @@
     "B6": null
    },
    {
+    "field": "state: root(cid, 20)",
+    "bytes": 0,
+    "across records": "changed in every record",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
     "field": "state: the harness's fee payer (refund_to)",
     "bytes": 0,
     "across records": "changed in every record",
@@ -1902,14 +1894,6 @@
    },
    {
     "field": "state: LEZ fee inbox",
-    "bytes": 0,
-    "across records": "changed in every record",
-    "class": "constant",
-    "what": "",
-    "B6": null
-   },
-   {
-    "field": "state: root(cid, 20)",
     "bytes": 0,
     "across records": "changed in every record",
     "class": "constant",
@@ -1928,16 +1912,16 @@
    100
   ],
   "claim, private (default)": [
-   8937,
-   8937
+   8889,
+   8889
   ],
   "claim, naive nullifier N = fid": [
-   8937,
-   8937
+   8889,
+   8889
   ],
   "claim, plaintext": [
-   2053,
-   2053
+   2029,
+   2029
   ],
   "burn, private holding": [
    7857,
@@ -1962,32 +1946,32 @@
      "fake"
     ],
     "prove_s": {
-     "min": 0.815711405,
-     "median": 0.85364358,
-     "max": 0.874313266,
-     "sum": 17.071003875,
+     "min": 0.839964172,
+     "median": 0.857746335,
+     "max": 0.887764621,
+     "sum": 17.193767558,
      "n": 20
     },
     "proof_bytes": {
-     "min": 4525,
-     "median": 4525.0,
-     "max": 4525,
-     "sum": 90500,
+     "min": 4501,
+     "median": 4501.0,
+     "max": 4501,
+     "sum": 90020,
      "n": 20
     },
     "tx_bytes": {
-     "min": 8937,
-     "median": 8937.0,
-     "max": 8937,
-     "sum": 178740,
+     "min": 8889,
+     "median": 8889.0,
+     "max": 8889,
+     "sum": 177780,
      "n": 20
     },
     "seal_words": null,
     "journal_bytes": {
-     "min": 4399,
-     "median": 4399.0,
-     "max": 4399,
-     "sum": 87980,
+     "min": 4375,
+     "median": 4375.0,
+     "max": 4375,
+     "sum": 87500,
      "n": 20
     },
     "claim_is_ok_of_journal": [
@@ -2006,7 +1990,7 @@
      "proof.claim": {
       "distinct": 20,
       "bytes": [
-       4524
+       4500
       ],
       "class": "a function of public data"
      },
@@ -2057,10 +2041,10 @@
      "fake"
     ],
     "prove_s": {
-     "min": 0.523050836,
-     "median": 0.530237006,
-     "max": 0.549997093,
-     "sum": 10.625071581,
+     "min": 0.523732643,
+     "median": 0.5339161895,
+     "max": 0.54846818,
+     "sum": 10.713163796,
      "n": 20
     },
     "proof_bytes": {
@@ -2253,47 +2237,47 @@
  "receipts_by_position": {
   "claims private": [
    0,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366
   ],
   "claims plaintext": [
    0,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377,
-   4377
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366,
+   4366
   ],
   "burns": [
    0,
@@ -2369,48 +2353,48 @@
  ],
  "gas": {
   "deposit A by leaf index": [
-   139740,
-   100062,
-   80162,
-   100184,
-   80162,
-   80284,
-   80284,
-   100306,
-   80162,
-   80284,
-   80284,
-   80406,
-   80284,
-   80406,
-   80406,
-   100428,
-   80162,
-   80284,
-   80284,
-   80406
+   139912,
+   100234,
+   80334,
+   100356,
+   80334,
+   80456,
+   80456,
+   100478,
+   80334,
+   80456,
+   80456,
+   80578,
+   80456,
+   80578,
+   80578,
+   100600,
+   80334,
+   80456,
+   80456,
+   80578
   ],
   "deposit B by leaf index": [
-   139740,
-   100062,
-   80162,
-   100184,
-   80162,
-   80284,
-   80284,
-   100306,
-   80162,
-   80284,
-   80284,
-   80406,
-   80284,
-   80406,
-   80406,
-   100428,
-   80162,
-   80284,
-   80284,
-   80406
+   139912,
+   100234,
+   80334,
+   100356,
+   80334,
+   80456,
+   80456,
+   100478,
+   80334,
+   80456,
+   80456,
+   80578,
+   80456,
+   80578,
+   80578,
+   100600,
+   80334,
+   80456,
+   80456,
+   80578
   ],
   "deposit A equals B": true,
   "release distinct values": [
@@ -2425,50 +2409,50 @@
  "lez_receipts": {
   "claim, private (default)": {
    "receipt.gas_exec": [
-    552979,
-    557356
+    552814,
+    557180
    ],
    "receipt.cycles": [
-    143215,
-    147592
+    143050,
+    147416
    ],
    "receipt.gas_stor": [
     224063
    ],
    "receipt.fee_base": [
-    6216336,
-    6251352
+    6215016,
+    6249944
    ]
   },
   "burn, private holding": {
    "receipt.gas_exec": [
-    511731
+    511932
    ],
    "receipt.cycles": [
-    101967
+    102168
    ],
    "receipt.gas_stor": [
     224063
    ],
    "receipt.fee_base": [
-    5886352
+    5887960
    ]
   },
   "claim, plaintext": {
    "receipt.gas_exec": [
-    261772,
-    266149
+    261007,
+    265373
    ],
    "receipt.cycles": [
-    261772,
-    266149
+    261007,
+    265373
    ],
    "receipt.gas_stor": [
-    2053
+    2029
    ],
    "receipt.fee_base": [
-    2110600,
-    2145616
+    2104288,
+    2139216
    ]
   }
  }

@@ -6,7 +6,7 @@
 //! * [`release`]: the release rule (the newest accepted burn root whose release delay has passed)
 //!   and, with the `prove` feature, the release guest run through r0vm;
 //! * [`claim`]: a deposit's claim, plaintext (`Claim`) or private (`ClaimPrivately`), with the bridge
-//!   program's own checks, and the fee-schedule range a wallet names;
+//!   program's own checks (since ADR 0046 a claim names no fee schedule);
 //! * [`import`]: the relayer's `ImportRoot` of a deposit root from the vault's `eth_getProof` proofs,
 //!   dry-run with the attestation and bridge programs' own functions.
 //!

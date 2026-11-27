@@ -1,4 +1,4 @@
-# ADR 0046: Updaters join or wait for a job open on the instance's store instead of opening another
+# ADR 0047: Updaters join or wait for a job open on the instance's store instead of opening another
 
 - **Date:** 27 November 2026
 - **Status:** accepted; built

@@ -35,7 +35,7 @@ The page's Content-Security-Policy allows scripts, styles and connections to its
 ## Tests
 
 ```sh
-node --test test/*.test.mjs                       # 41: LEZ's pinned vectors, recorded Attest messages, SPEC-v2 and IDL vectors, the PWA list, the review's findings
+node --test test/*.test.mjs                       # 48: LEZ's pinned vectors, recorded Attest messages, SPEC-v2 and IDL vectors, the PWA list, the review's findings
 bash test/box.sh build                            # LEZ rc3's sequencer + wallet CLI (LEZ's source beside the repository)
 bash test/box.sh e2e NAME                         # with Foundry and vault/lib present, the bridge steps too
 ```
@@ -66,7 +66,8 @@ machine that saves only some directories between runs, point `WALLET_WORK` at on
   804,088). It also shows LEZ refusing a credit to a never-used account named without its key. (`local-7`, 55 of 55, ran
   before the app lock and PWA files existed.)
 - `test/fork_bridge.py`: the bridge tab against the deployed Sepolia vault on an anvil fork of Sepolia (nothing reaches
-  Sepolia; `--fork-url`, `--deployment vault/deployments/sepolia-31-B.json` (on main since `b9057be6`), `--config-id`):
+  Sepolia; `--fork-url`, `--deployment vault/deployments/sepolia-31-B.json` (on main since `b9057be6`),
+  `--config-id`, and `--out`, the directory the record is written to; all four are required):
   deposits refused while `bridge.lezReady` is false and when `bridge.configId` is not the vault's `lezConfigId`; an ETH
   deposit and a test-token deposit (mint, exact approval, deposit), each checked against the fork's state. Record
   `test/results/fork-31B-2026-11-23/record.json`: **22 of 22**.

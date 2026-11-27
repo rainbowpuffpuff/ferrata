@@ -45,10 +45,12 @@ test('an empty tree is zero[32]; one leaf at index 0 with zero siblings', () => 
   assert.deepEqual(t.path, cl.zeros().slice(0, 32));
 });
 
-// The program's own borsh (idl/vectors/ferrata_bridge.vectors.json, written by lez/bridge-wire/tests/idl_vectors.rs from
+// The deployed program's own borsh (this page speaks the test network's ferrata_bridge_b1: its vectors frozen before ADR
+// 0046 in idl/deployed/ferrata_bridge_b1.vectors.json; idl/vectors/ is this tree's program), written by
+// lez/bridge-wire/tests/idl_vectors.rs from
 // the Rust types): each Claim, ImportRoot and ImportFees(None) vector decoded with the IDL's layout and encoded again by
 // the page's encoders gives the same bytes.
-const iv = JSON.parse(readFileSync(new URL('../../../../../idl/vectors/ferrata_bridge.vectors.json', import.meta.url))).vectors;
+const iv = JSON.parse(readFileSync(new URL('../../../../../idl/deployed/ferrata_bridge_b1.vectors.json', import.meta.url))).vectors;
 const vecs = (prefix) => iv.filter((x) => x.name.startsWith(prefix));
 const vv = (r) => r.vec((x) => x.bytes());
 

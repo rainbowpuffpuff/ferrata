@@ -49,6 +49,14 @@ e2e/crown.sh updater crown-NAME --bin PATH/ferrata-updater --minutes N [--restar
 e2e/crown.sh updater-status crown-NAME; e2e/crown.sh updater-stop crown-NAME; e2e/crown.sh updater-fetch crown-NAME DIR
 ```
 
+CI runs the process demo in `lez-harness`'s `updater-gate` shard: from `lez/`, `RISC0_DEV_MODE=1
+updater/dev/demo.sh target/updater-demo`, using recorded data and a loopback listener with no public endpoint
+configured. The demo fails unless `/health` is HTTP 200 with status `ok`, `/metrics` is populated, the unknown route is
+HTTP 404 and SIGTERM exits
+0. The `sequencer-attest` build stage (LEZ v0.4.0-rc3) compiles both this workspace's `ferrata-updater` and
+`ferrata-day1` with `cargo +1.98.1 build --release --locked`; it builds the sequencer backend but does not run that
+backend against the job's sequencer.
+
 One file configures everything: `ferrata-updater.example.toml` lists every field with its
 default. In short:
 
@@ -141,7 +149,7 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    refusal for good, by the program or out of gas, leaves it at once).
    With `finish_own_jobs = false` each round takes the best update, and a job left behind keeps the
    steps already paid for it.
-   **Join or wait** (`policy.join_wait_rounds`, RFP-021 R.9; `tests/join_wait.rs`; [ADR 0046](../../docs/decisions/0046-updater-join-or-wait.md)).
+   **Join or wait** (`policy.join_wait_rounds`, RFP-021 R.9; `tests/join_wait.rs`; [ADR 0047](../../docs/decisions/0047-updater-join-or-wait.md)).
    A job finishes only on the store it began on, so of two jobs open on one store the steps of the one that does not
    finish are paid for nothing (on a running sequencer, gate runs G6 and G7 of 26 November: 23 and 15 jobs abandoned,
    127.0M and 72.7M execution gas). Just before sending a step (its turn come, item 8), the updater reads which jobs are

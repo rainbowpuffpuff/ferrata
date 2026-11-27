@@ -1,0 +1,10 @@
+{
+  "label": "STAND-IN Ethereum side: a local anvil (no fork, Sepolia chain id because crown-driver pins it), W and the release delay warped; the zone, its programs and proofs are real",
+  "chainId": 11155111,
+  "vault": "0xbF355Ff9F0096A9879A73D4C985DBB67385399Cc",
+  "configId": "0xb4bcc86c5c2d7dbef67c9a3ba52ee0c5225b05f67788b3ff63d99f9ada107c00",
+  "genesisState": "0x6e80187c70e4ff1c7fd6059f58b2637c46424d743c10f40a85b6ee1e16895c7b",
+  "delta": 3600,
+  "deployer": "0x2a87a5a5790163476f9c892D7212e8ee41c3aFb3",
+  "forkDigest": "c025c6d2ea30f6338c463b115af83f926ed1211dbfcad685a96a5384513558ac"
+}

@@ -192,7 +192,7 @@ two-hour cadence (§2).
   72.7M against 13.7M): a daemon that lost a race opens a job for the next update on the store the winner is about to change. In
   each of those abandoned jobs, the later of the two `Open`s was sent after the block of the earlier one was published
   ([`perf-gate-sequencer-join.md`](../../lez/results/perf-gate-sequencer-join.md), `bench/perf/gate_abandoned.py`).
-- **Join or wait** (`policy.join_wait_rounds`, built since; [ADR 0046](../decisions/0046-updater-join-or-wait.md),
+- **Join or wait** (`policy.join_wait_rounds`, built since; [ADR 0047](../decisions/0047-updater-join-or-wait.md),
   [`lez/updater/README.md`](../../lez/updater/README.md) item 7). Just before sending a step, the updater reads which jobs
   of the updates it was served are open on the instance's store. A job leads another when the chain holds more of its
   steps (so any open job leads an `Open`), at as many when its update is newer. A leading copy of its own update (the

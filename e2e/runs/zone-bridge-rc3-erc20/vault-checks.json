@@ -1,0 +1,42 @@
+{
+  "finalState": "0x569874366e0aa271f38b794cec6296457cd05e69dd1fc8d23d6066c8c818d626",
+  "burnRoot": "0x851c5e7fa13305fdf2b64eb0048fd54314b8cc844eee2b8d96159b9e51d58653",
+  "burnRootAccepted": true,
+  "releases": [
+    {
+      "recipient": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+      "nullifier": "0xcdd5b0c9a7191f52623487f21722c58aea6896ecd090101e89c4a3afcf4f4263",
+      "paidWei": "99900000",
+      "token": "0x5f356a60d8b4bd88145763e5998f7cc21b82f540",
+      "relayer": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+      "relayFeeUnits": "0"
+    },
+    {
+      "recipient": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+      "nullifier": "0x15e1be63b72976c04d652838574ea74b7106d9b2716a9d97132abd8339490148",
+      "paidWei": "99900000",
+      "token": "0x5f356a60d8b4bd88145763e5998f7cc21b82f540",
+      "relayer": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+      "relayFeeUnits": "0"
+    }
+  ],
+  "replaysRefused": [
+    {
+      "what": "release-0",
+      "transaction": "0x813ee5e4fc65418205d0693372dc86a908ed439acf6b8167853fb4321fc004b2",
+      "refused": "NullifierAlreadyUsed"
+    },
+    {
+      "what": "release-1",
+      "transaction": "0x059ded20aca50ed93f6d704f17eb80a42da0e380a8fb69e4e1d339f4017c80af",
+      "refused": "NullifierAlreadyUsed"
+    },
+    {
+      "what": "submit",
+      "transaction": "0xf50b89f37ce233baa46af8d471ef1cee53b9ddf2f4a7676b40e375032b7e6eff",
+      "refused": "ParentNotFinal"
+    }
+  ],
+  "token": "0x5f356a60d8b4bd88145763e5998f7cc21b82f540",
+  "vaultTokenBalanceAfter": "700000"
+}

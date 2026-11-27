@@ -14,7 +14,7 @@ libraries that already exist:
 | Part | Library |
 |---|---|
 | Commitments, nullifiers, trees, the claim and release statements, recovery | `ferrata-bridge-core` (`bridge/crates/`) |
-| The bridge program's messages, states, accounts and checks (`verify_claim`, fees, ranges) | `ferrata-lez-bridge-wire` (`lez/bridge-wire/`) |
+| The bridge program's messages, states, accounts and checks (`verify_claim`, fixed relay fees) | `ferrata-lez-bridge-wire` (`lez/bridge-wire/`) |
 | The attestation program's accounts and records | `ferrata-lez-wire` (`lez/wire/`), `ferrata-core` |
 | LEZ: keys, the encrypted wallet, signing, private execution, the sequencer's RPC | LEZ v0.4.0-rc1's own `wallet` crate (`WalletCore`), as `lez/live/driver` uses it |
 | Ethereum: keystore files, signing, JSON-RPC, the vault's ABI | `alloy` 1.x |
@@ -339,9 +339,9 @@ ferrata claim --leaf 0 --no-delay --plaintext --i-accept-plaintext-links-deposit
 ```
 
 It picks the deposit (`--leaf`, or the oldest claimable one whose claim delay has passed), finds the
-newest imported root that covers it, builds the claim (the path, the opening of `C`, the fee schedule's
-range, `--relayer` if a relayer is to be paid) and runs the program's checks before anything is sent:
-`verify_claim`; the token and its denominations; the fee range; the destination's kind; whether the
+newest imported root that covers it, builds the claim (the path, the opening of `C`, `--relayer` if a
+relayer is to be paid) and runs the program's checks before anything is sent:
+`verify_claim`; the token and its denominations; its fixed relay fee; the destination's kind; whether the
 deposit is already claimed, decided from the zone's history the tool downloads whole (a plaintext claim's
 nullifier, or the nullifier account a private claim names), never by asking the sequencer for this deposit's
 nullifier account, which would name the deposit to it before the claim (review M-2 of 22 November 2026). A
@@ -394,12 +394,12 @@ deposit still in its claim delay is held (refused with the block it opens at) un
   burn, no setting, behind the test network's gateway) by `e2e/seqnet/run.sh gasdrop`. `ferrata-relayer --gas-drops-only`
   runs drops with no Ethereum key (the test network's `ferrata-gasdrop.service`).
 - **Anonymity set** (RFP-022 F.8): the `anonymity` line counts the deposits a private claim cannot be told apart from
-  on chain: those of the same token and amount, under the root it reads and within the fee schedule range it names,
+  on chain: those of the same token and amount under the root it reads, on either side of a fee change,
   less those a plaintext claim has already published (its witness names the leaf and `s`, under any configuration of
   the program, and a claim refused on chain publishes it too: LEZ keeps a refused transaction in its block; an observer
   sees which deposit it spent) (`ferrata_wallet::claim::anonymity_set`). When your own deposit is one of those (say a
-  plaintext claim of it met a full bucket), the line says 1: its nullifier follows from the published witness. A fee change starts
-  a new range. When the deposit is the only one there, the line says that its amount alone links the claim to it
+  plaintext claim of it met a full bucket), the line says 1: its nullifier follows from the published witness. A fee change does
+  not split the set. When the deposit is the only one there, the line says that its amount alone links the claim to it
   (above: the test's only deposit of 1 ETH). A plaintext claim names its deposit, so its set is 1, and it takes its
   deposit out of every later claim's set: `e2e/both-halves/results/randomised.md` measures both ways.
 
@@ -408,8 +408,8 @@ claim on LEZ (configuration 0xa9d67b71ac74fe9bad38696f91d539f82bc21b953b96dee046
   deposit      1 ETH (…) to your private account /0, under root(cid, 17)
   would send   ClaimPrivately, proven locally by LEZ's wallet (the witness stays in the proof) to the bridge program 0x0d9450db…a38e
   nullifier N  0xf2eeae6fc870ecda4f224349e5be620584f48adb1984c880e6bf38f151703286
-  anonymity    1 deposit of 1 ETH (…) under root(cid, 17) in leaves 0..17: the only one, so its amount alone links this claim to it; a later root with more deposits of the amount widens the set
-  cost         nothing more in ETH: the mint fee 0 ETH (…) and the relay fee 0.001 ETH (…) were paid with the deposit; the LEZ fee is paid inside the proof, by the private account that proves
+  anonymity    1 deposit of 1 ETH (…) under root(cid, 17): the only one, so its amount alone links this claim to it; a later root with more deposits of the amount widens the set
+  relay fee    0.001 ETH (…) minted here (paid with the deposit on Ethereum); the LEZ fee is paid inside the proof, by the private account that proves
   delay        5 h after the deposit: from Ethereum block 1531 (now 1531), passed
 what becomes public (Claim (LEZ)):
   public on Ethereum: nothing
@@ -419,12 +419,12 @@ privacy of these choices: Minimal: only the residual correlations (token, denomi
   ok Private claim: proven without saying which deposit it spends (no leaf index, no depositor).
   ok Private destination: the account and its balance stay private.
   ok The LEZ fee is paid inside the proof (or by a relayer): no public fee payment ties the claim to you.
-public: private claim: N, the token, the denomination, the fee schedule's range, the root read, the relayer, when (its block); not the deposit, the path, s or the private destination
+public: private claim: N, the token, the denomination, the root read, the relayer, when (its block); not the deposit, the path, s, the private destination or a fee schedule range
 not sent: a dry run (add --send --yes to sign and send)
 ```
 
-**Reveals.** Private claim: `N`, the token, the denomination, the fee schedule's range, the root read,
-the relayer and the time; not the deposit, the path, `s` or a private destination. Plaintext claim: the
+**Reveals.** Private claim: `N`, the token, the denomination, the root read, the relayer and the time;
+not the deposit, the path, `s`, a private destination or a fee schedule range. Plaintext claim: the
 whole witness, which links the mint to its deposit for everyone.
 
 ### `ferrata burn`
@@ -675,7 +675,7 @@ RECOVERY: 12 deposits (2 claimed, 10 unclaimed), 12 burns (2 released), holdings
 - **Freezes** are checked before sending (releases) and decoded (all), but the test vault's freeze
   authority has no key, so no frozen state is exercised.
 - **Timing in the anonymity-set view.** `ferrata claim`'s `anonymity` line (F.8) counts deposits by token, amount, root
-  and fee schedule range, not by how soon after its deposit the claim comes; the claim delay spreads that.
+  and root, not by how soon after its deposit the claim comes; the claim delay spreads that.
 - **Deployments of the bridge program before milestone B1.** The tool addresses B1's accounts (`holder(cid, account)`,
   `nullifier(cid, chain, vault, N)`) and does not check which program it talks to: against a deployment of the earlier
   program (the live runs of November 2026, `docs/image-ids.md` `ferrata_bridge`) `scan` misses that program's private

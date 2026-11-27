@@ -23,7 +23,7 @@ use ferrata_lez_bridge_wire::{
     nullifier_seed, own_actor, registry_slot, root_actor, root_seed, token_actor, token_seed, word_of_u128,
     BridgeConfig, BridgeMessage, BridgeState, BurnRecord, CapParams, ClaimWitness, ConfigState, Controls,
     CosignedAction, FeeSchedule, FreezeAuthority, HolderState, Holding, Note, NullifierState, RootState,
-    ScheduleRange, TimeRecord, TokenEntry, HEADER_MARKER, MAX_FREEZE_MS, SLOT_RETIRED,
+    TimeRecord, TokenEntry, HEADER_MARKER, MAX_FREEZE_MS, SLOT_RETIRED,
 };
 use ferrata_lez_wire::{header_actor, header_seed, RecordState};
 use ferrata_spectests::execkit::header_rlp;
@@ -32,7 +32,7 @@ use harness::{
         catalog, config, controls, eth_entry, eth_schedule_one, fee_recipient, private_claim_transitions,
         private_keys, private_post_state, registry_slots, relayer, role_account, role_key, schedule_zero, t3_entry,
         Block, Deposit, Vault, VaultSlots, World, ADMIN_SEED, ANNOUNCED_1, CHAIN_ID, DENOMINATIONS, ETH, FLOOR,
-        FREEZE_SEED, INSTANCE, LEZ_UNIT, MINT_FEES_1, OUTSIDER_SEED, RELAY_FEES, T3, TOKEN_CAP, VAULT_B,
+        FREEZE_SEED, INSTANCE, LEZ_UNIT, OUTSIDER_SEED, RELAY_FEES, T3, TOKEN_CAP, VAULT_B,
     },
     ferrata_account, private::PrivateRun, scripted_account, settle::LeeTransaction, TxReport,
 };
@@ -178,14 +178,10 @@ fn leaf6(w: &World) -> ClaimWitness {
     w.vault_a.witness(&w.payer_deposit.clone(), 8)
 }
 
-fn range6(w: &World) -> ScheduleRange {
-    w.range(&w.cid_a, &ETH, 6)
-}
-
-/// The base claim with `witness` and `range` (the mutation is in them), relayer R.
-fn claim_a8(w: &mut World, label: &str, witness: ClaimWitness, range: ScheduleRange) -> TxReport {
+/// The base claim with `witness` (the mutation is in it), relayer R.
+fn claim_a8(w: &mut World, label: &str, witness: ClaimWitness) -> TxReport {
     let (cid, va) = (w.cid_a, w.vault_a.address);
-    w.claim_with(label, &cid, 8, &va, witness, range, Some(*relayer().value()))
+    w.claim_with(label, &cid, 8, &va, witness, Some(*relayer().value()))
 }
 
 fn claim_leaf2(w: &mut World, label: &str) -> TxReport {
@@ -562,12 +558,12 @@ fn clm() {
         let (cid, va, payer) = (w.cid_a, w.vault_a.address, w.chain.payer);
         let n = w.payer_deposit.nullifier(CHAIN_ID, &va);
         let before = (w.balance(payer, &cid), w.balance(fee_recipient(), &cid), w.balance(relayer(), &cid));
-        let (wit, range) = (leaf6(&w), range6(&w));
-        let rep = claim_a8(&mut w, "Claim A's leaf 6 under root(A, 8)", wit, range);
+        let wit = leaf6(&w);
+        let rep = claim_a8(&mut w, "Claim A's leaf 6 under root(A, 8)", wit);
         observe(&w, &rep, base_note, |w| {
             let mut f = Vec::new();
             want(&mut f, "holder(dest) +denomination", w.balance(payer, &cid) - before.0, D2);
-            want(&mut f, "fee recipient +mint fee", w.balance(fee_recipient(), &cid) - before.1, MINT_FEES_1[2]);
+            want(&mut f, "fee recipient +no mint fee", w.balance(fee_recipient(), &cid) - before.1, 0);
             want(&mut f, "R +relay fee", w.balance(relayer(), &cid) - before.2, RELAY_FEES[2]);
             want(&mut f, "nullifier(chain, V, N)", w.nullifier(&cid, &va, &n), Some(NullifierState { config_id: cid, token: ETH, leaf_count: 8, amount: D2 }));
             f
@@ -576,9 +572,9 @@ fn clm() {
     // BR-CLM-02: the same claim again.
     r.run("BR-CLM-02", || {
         let mut w = base();
-        let (wit, range) = (leaf6(&w), range6(&w));
-        ok(&claim_a8(&mut w, "setup: the base claim", wit.clone(), range));
-        let rep = claim_a8(&mut w, "the same Claim again", wit, range);
+        let wit = leaf6(&w);
+        ok(&claim_a8(&mut w, "setup: the base claim", wit.clone()));
+        let rep = claim_a8(&mut w, "the same Claim again", wit);
         Observed::of_report(&rep, base_note)
     });
     // BR-CLM-03: a public deposit at leaf 8, made after root(A, 8)'s record, claimed against root(A, 8).
@@ -588,11 +584,10 @@ fn clm() {
         let d = public(8, [0xc3; 20], ETH, D0, [0x03; 32], payer);
         let (i, ext) = extend_a(&mut w, std::slice::from_ref(&d));
         ok(&w.import_fees("setup: ImportFees ETH (A): no schedule 2 at 9 leaves", &cid, i, ETH, 2, None, &va));
-        let range = w.range(&cid, &ETH, 8);
-        let rep = w.claim_with("Claim leaf 8 against root(A, 8)", &cid, 8, &va, ext.witness(&d, 9), range, Some(*relayer().value()));
-        Observed::of_report(&rep, &format!("vault A's 9th leaf (public, 0.1 ETH; its record not imported), path from the 9-leaf tree, range {range:?}"))
+        let rep = w.claim_with("Claim leaf 8 against root(A, 8)", &cid, 8, &va, ext.witness(&d, 9), Some(*relayer().value()));
+        Observed::of_report(&rep, "vault A's 9th leaf (public, 0.1 ETH; its record not imported), path from the 9-leaf tree")
     });
-    // BR-CLM-04 … BR-CLM-13, BR-CLM-32: one field of the base claim's witness changed, its range kept.
+    // BR-CLM-04 … BR-CLM-13, BR-CLM-32: one field of the base claim's witness changed.
     type Mutation = fn(&mut ClaimWitness);
     let mutations: [(&str, &str, Mutation); 9] = [
         ("BR-CLM-04", "witness.s with one bit flipped", |w| w.s[31] ^= 1),
@@ -611,9 +606,9 @@ fn clm() {
     for (id, what, mutate) in mutations.iter() {
         r.run(id, || {
             let mut w = base();
-            let (mut wit, range) = (leaf6(&w), range6(&w));
+            let mut wit = leaf6(&w);
             mutate(&mut wit);
-            let rep = claim_a8(&mut w, &format!("Claim: {what}"), wit, range);
+            let rep = claim_a8(&mut w, &format!("Claim: {what}"), wit);
             Observed::of_report(&rep, &format!("{base_note}; mutation: {what}"))
         });
     }
@@ -626,8 +621,7 @@ fn clm() {
         let n = open_extended(&mut w, i, &ext);
         let mut wit = ext.witness(&d, n);
         wit.amount = word_of_u128(D1);
-        let range = w.range(&cid, &ETH, 8);
-        let rep = w.claim_with("Claim leaf 8 (a d0 deposit) with amount d1", &cid, n, &va, wit, range, Some(*relayer().value()));
+        let rep = w.claim_with("Claim leaf 8 (a d0 deposit) with amount d1", &cid, n, &va, wit, Some(*relayer().value()));
         Observed::of_report(&rep, "vault A extended by a d0 deposit at leaf 8; root(A, 9) imported")
     });
     // BR-CLM-12: a second token (T3) registered in A; the base claim's witness names it.
@@ -635,33 +629,21 @@ fn clm() {
         let mut w = base();
         let (cid, va) = (w.cid_a, w.vault_a.address);
         ok(&w.register("setup: Register T3 (A) at block 100", &cid, 0, &t3_entry(), &va));
-        let (mut wit, range) = (leaf6(&w), range6(&w));
+        let mut wit = leaf6(&w);
         wit.token = T3;
-        let rep = claim_a8(&mut w, "Claim: witness.token = T3", wit, range);
-        Observed::of_report(&rep, &format!("{base_note}; T3 registered in A; ETH's range kept"))
+        let rep = claim_a8(&mut w, "Claim: witness.token = T3", wit);
+        Observed::of_report(&rep, &format!("{base_note}; T3 registered in A"))
     });
     // BR-CLM-14: leaf_count = 8 + 7, no root(A, 15).
     r.run("BR-CLM-14", || {
         let mut w = base();
         let (cid, va) = (w.cid_a, w.vault_a.address);
-        let (wit, range) = (leaf6(&w), range6(&w));
-        let rep = w.claim_with("Claim at root(A, 15), never imported", &cid, 15, &va, wit, range, Some(*relayer().value()));
+        let wit = leaf6(&w);
+        let rep = w.claim_with("Claim at root(A, 15), never imported", &cid, 15, &va, wit, Some(*relayer().value()));
         Observed::of_report(&rep, &format!("{base_note}; leaf_count 15 (admission evidence for the empty root PDA)"))
     });
-    // BR-CLM-15: range {0, 0, 6} for leaf 6.
-    r.run("BR-CLM-15", || {
-        let mut w = base();
-        let wit = leaf6(&w);
-        let rep = claim_a8(&mut w, "Claim leaf 6 with range {0, 0, 6}", wit, ScheduleRange { index: 0, from_leaf: 0, until_leaf: 6 });
-        Observed::of_report(&rep, base_note)
-    });
-    // BR-CLM-16: range {5, 6, 8} (schedule 5 never imported; the range covers the leaf).
-    r.run("BR-CLM-16", || {
-        let mut w = base();
-        let wit = leaf6(&w);
-        let rep = claim_a8(&mut w, "Claim leaf 6 with range {5, 6, 8}", wit, ScheduleRange { index: 5, from_leaf: 6, until_leaf: 8 });
-        Observed::of_report(&rep, &format!("{base_note}; range {{index 5, from_leaf 6, until_leaf 8}}"))
-    });
+    // Former BR-CLM-15/16 concerned only malformed schedule ranges. The field no longer exists;
+    // BR-CLM-03/09/10 still check the imported-root leaf bound and BR-CLM-04…13 the witness/path.
     // BR-CLM-17: the private-kind deposit (leaf 5) by the plaintext path, its correct opening.
     r.run("BR-CLM-17", || {
         let mut w = base();
@@ -720,8 +702,8 @@ fn clm() {
         let time = w.time;
         let res = w.chain.prove_and_settle_private(&prover, me, borsh::to_vec(&message).unwrap(), publics, &catalog(), RESERVE, time);
         assert!(res.as_ref().is_ok_and(|run| run.charge.revert.is_none()), "setup: the private claim settles: {:?}", res.as_ref().err());
-        let (wit, range) = (leaf6(&w), range6(&w));
-        let rep = claim_a8(&mut w, "plaintext Claim of leaf 6 after its private claim", wit, range);
+        let wit = leaf6(&w);
+        let rep = claim_a8(&mut w, "plaintext Claim of leaf 6 after its private claim", wit);
         Observed::of_report(&rep, "leaf 6 claimed privately by private account 0x51 first")
     });
     // BR-CLM-21: ETH's mints frozen (token freeze) for an hour after block 102's time.
@@ -731,8 +713,8 @@ fn clm() {
         let t0 = w.blocks[2].time_ms();
         let f = freeze(cid, Some(ETH), true, false, t0 + HOUR_MS, w.blocks[2].time_record());
         ok(&w.role("setup: Freeze ETH (A) mints for an hour", FREEZE_SEED, &f, token_actor(program, &cid, &ETH)));
-        let (wit, range) = (leaf6(&w), range6(&w));
-        let rep = claim_a8(&mut w, "the base claim while ETH (A) mints are frozen", wit, range);
+        let wit = leaf6(&w);
+        let rep = claim_a8(&mut w, "the base claim while ETH (A) mints are frozen", wit);
         Observed::of_report(&rep, base_note)
     });
     // BR-CLM-22: A's mints frozen (global freeze).
@@ -742,33 +724,33 @@ fn clm() {
         let t0 = w.blocks[2].time_ms();
         let f = freeze(cid, None, true, false, t0 + HOUR_MS, w.blocks[2].time_record());
         ok(&w.role("setup: Freeze all mints of A for an hour", FREEZE_SEED, &f, config_actor(program, &cid)));
-        let (wit, range) = (leaf6(&w), range6(&w));
-        let rep = claim_a8(&mut w, "the base claim while A's mints are frozen", wit, range);
+        let wit = leaf6(&w);
+        let rep = claim_a8(&mut w, "the base claim while A's mints are frozen", wit);
         Observed::of_report(&rep, base_note)
     });
-    // BR-CLM-23: ETH's mint cap set to the floor with the bucket drained (cap 10.06 ETH, drained by the base
+    // BR-CLM-23: ETH's mint cap set to the floor with the bucket drained (cap 10.01 ETH, drained by the base
     // claim, then the floor); a valid claim of leaf 2.
     r.run("BR-CLM-23", || {
         let mut w = base();
         let (cid, program) = (w.cid_a, w.program);
         let eth = token_actor(program, &cid, &ETH);
-        let exact = CapParams { capacity: 10_060_000_000, refill_per_second: FLOOR.refill_per_second };
-        ok(&w.role("setup: SetCap ETH (A) mints 10.06 ETH", ADMIN_SEED, &set_cap(cid, Some(ETH), true, exact), eth));
-        let (wit, range) = (leaf6(&w), range6(&w));
-        ok(&claim_a8(&mut w, "setup: the base claim (10.06 ETH: drains the bucket)", wit, range));
+        let exact = CapParams { capacity: 10_010_000_000, refill_per_second: FLOOR.refill_per_second };
+        ok(&w.role("setup: SetCap ETH (A) mints 10.01 ETH", ADMIN_SEED, &set_cap(cid, Some(ETH), true, exact), eth));
+        let wit = leaf6(&w);
+        ok(&claim_a8(&mut w, "setup: the base claim (10.01 ETH: drains the bucket)", wit));
         ok(&w.role("setup: SetCap ETH (A) mints to the floor", ADMIN_SEED, &set_cap(cid, Some(ETH), true, FLOOR), eth));
         let level = w.token_state(&cid, &ETH).map(|t| t.gate.mint.level);
         let rep = claim_leaf2(&mut w, "Claim leaf 2 (1.001 ETH) with ETH's mint bucket drained at the floor");
         Observed::of_report(&rep, &format!("token mint bucket level before: {level:?}"))
     });
-    // BR-CLM-24: A's global mint bucket drained (cap 10.06 ETH, drained by the base claim); a valid claim.
+    // BR-CLM-24: A's global mint bucket drained (cap 10.01 ETH, drained by the base claim); a valid claim.
     r.run("BR-CLM-24", || {
         let mut w = base();
         let (cid, program) = (w.cid_a, w.program);
-        let exact = CapParams { capacity: 10_060_000_000, refill_per_second: FLOOR.refill_per_second };
-        ok(&w.role("setup: SetCap A global mints 10.06 ETH", ADMIN_SEED, &set_cap(cid, None, true, exact), config_actor(program, &cid)));
-        let (wit, range) = (leaf6(&w), range6(&w));
-        ok(&claim_a8(&mut w, "setup: the base claim (drains the global bucket)", wit, range));
+        let exact = CapParams { capacity: 10_010_000_000, refill_per_second: FLOOR.refill_per_second };
+        ok(&w.role("setup: SetCap A global mints 10.01 ETH", ADMIN_SEED, &set_cap(cid, None, true, exact), config_actor(program, &cid)));
+        let wit = leaf6(&w);
+        ok(&claim_a8(&mut w, "setup: the base claim (drains the global bucket)", wit));
         let level = config_gate(&w, &cid).map(|g| g.mint.level);
         let rep = claim_leaf2(&mut w, "Claim leaf 2 with A's global mint bucket drained");
         Observed::of_report(&rep, &format!("global mint bucket level before: {level:?}"))
@@ -778,11 +760,11 @@ fn clm() {
         let mut w = base();
         let (cid, va, payer) = (w.cid_a, w.vault_a.address, w.chain.payer);
         let before = (w.balance(payer, &cid), w.balance(fee_recipient(), &cid), w.balance(relayer(), &cid));
-        let (wit, range) = (leaf6(&w), range6(&w));
-        let rep = w.claim_with("the base claim with relayer None", &cid, 8, &va, wit, range, None);
+        let wit = leaf6(&w);
+        let rep = w.claim_with("the base claim with relayer None", &cid, 8, &va, wit, None);
         observe(&w, &rep, base_note, |w| {
             let mut f = Vec::new();
-            want(&mut f, "fee recipient +mint fee +relay fee", w.balance(fee_recipient(), &cid) - before.1, MINT_FEES_1[2] + RELAY_FEES[2]);
+            want(&mut f, "fee recipient +relay fee only", w.balance(fee_recipient(), &cid) - before.1, RELAY_FEES[2]);
             want(&mut f, "dest +denomination", w.balance(payer, &cid) - before.0, D2);
             want(&mut f, "R unchanged", w.balance(relayer(), &cid), before.2);
             f
@@ -791,11 +773,11 @@ fn clm() {
     // BR-CLM-26: the base claim with a flipped path bit (refused), then the correct one.
     r.run("BR-CLM-26", || {
         let mut w = base();
-        let (wit, range) = (leaf6(&w), range6(&w));
+        let wit = leaf6(&w);
         let mut bad = wit.clone();
         bad.path[3][0] ^= 1;
-        let first = claim_a8(&mut w, "the base claim, one path bit flipped", bad, range);
-        let rep = claim_a8(&mut w, "the correct base claim", wit, range);
+        let first = claim_a8(&mut w, "the base claim, one path bit flipped", bad);
+        let rep = claim_a8(&mut w, "the correct base claim", wit);
         Observed::of_report(&rep, &format!("{base_note}; the first claim: exit {:?}", first.exit_code))
     });
     // BR-CLM-27 and BR-CLM-28: A's leaf 8 the victim's deposit, leaf 9 the attacker's copy of its C.
@@ -844,7 +826,7 @@ fn clm() {
             let after = w.chain.actor_state(target).to_vec();
             if after != before {
                 let (b, a) = (borsh::from_slice::<BridgeState>(&before), borsh::from_slice::<BridgeState>(&after));
-                let diff = match (b, a) {
+                match (b, a) {
                     (Ok(BridgeState::Config(ConfigState::Ready { gate: g0, .. })), Ok(BridgeState::Config(mut s1))) => {
                         let gate1 = match &mut s1 {
                             ConfigState::Ready { gate, .. } => {
@@ -855,15 +837,15 @@ fn clm() {
                             other => panic!("not ready: {other:?}"),
                         };
                         let rest_equal = BridgeState::Config(s1) == borsh::from_slice::<BridgeState>(&before).unwrap();
-                        format!(
-                            "still a ready configuration; global mint bucket level {} -> {} (this claim's value, Admit); \
-                             everything else equal: {rest_equal}",
-                            g0.mint.level, gate1.mint.level
-                        )
+                        want(
+                            &mut f,
+                            "only the global mint bucket changes, by denomination + fixed relay fee",
+                            (g0.mint.level - gate1.mint.level, rest_equal),
+                            ((D0 + RELAY_FEES[0]) / LEZ_UNIT, true),
+                        );
                     }
-                    (b, a) => format!("before {b:?}, after {a:?}"),
-                };
-                f.push(format!("config(A)'s state changed: {diff}"));
+                    (b, a) => f.push(format!("unexpected configuration state: before {b:?}, after {a:?}")),
+                }
             }
             want(&mut f, "holder(config(A) id) credited", w.balance(target.account_id, &cid), D0);
             f
@@ -878,8 +860,7 @@ fn clm() {
         let root7 = w.vault_b.root(7);
         ok(&w.import("setup: ImportRoot B n=7", &cid_b, i, root7, 7, &VAULT_B));
         let wit = w.vault_b.witness(&w.deposit_b.clone(), 7);
-        let range = w.range(&cid_b, &ETH, 3);
-        let rep = w.claim_with("Claim{config A, leaf_count 7} of B's deposit", &cid_a, 7, &VAULT_B, wit, range, Some(*relayer().value()));
+        let rep = w.claim_with("Claim{config A, leaf_count 7} of B's deposit", &cid_a, 7, &VAULT_B, wit, Some(*relayer().value()));
         Observed::of_report(&rep, "delivered at root(A, 7) (empty; admission evidence supplied); only root(B, 7) exists")
     });
     // BR-CLM-31: a deposit of token U (never registered in A) at A's leaf 8, leaf and root valid.
@@ -890,9 +871,8 @@ fn clm() {
         let (i, ext) = extend_a(&mut w, std::slice::from_ref(&d));
         let n = open_extended(&mut w, i, &ext);
         let wit = ext.witness(&d, n);
-        let range = w.range(&cid, &U, 8);
         let actors = claim_actors_of(&w, &cid, n, &va, &wit, Some(*relayer().value()));
-        let message = BridgeMessage::Claim { config_id: cid, leaf_count: n, witness: wit, range, relayer: Some(*relayer().value()) };
+        let message = BridgeMessage::Claim { config_id: cid, leaf_count: n, witness: wit, relayer: Some(*relayer().value()) };
         let evidence = vec![PublicAccountEvidence::Pda { program, seed: token_seed(&cid, &U) }];
         let rep = w.submit("Claim leaf 8 (token U, not registered in A)", actors[0], &message, actors, evidence);
         Observed::of_report(&rep, "vault A extended by a 0.1-unit deposit of U at leaf 8, root(A, 9) imported; admission evidence for token(A, U) supplied")
@@ -1136,7 +1116,7 @@ fn int() {
         let mut w = base();
         let (cid, va, program, payer) = (w.cid_a, w.vault_a.address, w.program, w.chain.payer);
         let n = [0x5e; 32];
-        let issue = BridgeMessage::Issue { config_id: cid, token: ETH, nullifier: n, amount: D0, range: ScheduleRange { index: 0, from_leaf: 0, until_leaf: 6 }, leaf_count: 8, mint_to: Some(*payer.value()), relayer: None };
+        let issue = BridgeMessage::Issue { config_id: cid, token: ETH, nullifier: n, amount: D0, leaf_count: 8, mint_to: Some(*payer.value()), relayer: None };
         let at = token_actor(program, &cid, &ETH);
         let actors = vec![at, config_actor(program, &cid), nullifier_actor(program, &cid, CHAIN_ID, &va, &n), holder_actor(program, &cid, payer), holder_actor(program, &cid, fee_recipient())];
         let rep = w.send("Issue sent to token(A, ETH) by the payer", at, &issue, actors);
@@ -1257,8 +1237,8 @@ fn ctl() {
         let until = w.token_state(&cid, &ETH).map(|t| t.gate.mints_until);
         let later = w.finalize(t14 / 1000 + 13 * 3600);
         ok(&w.tick("setup: Tick ETH (A): a record 13 h later", &cid, Some(ETH), later));
-        let (wit, range) = (leaf6(&w), range6(&w));
-        let rep = claim_a8(&mut w, "the base claim 13 h after the pause", wit, range);
+        let wit = leaf6(&w);
+        let rep = claim_a8(&mut w, "the base claim 13 h after the pause", wit);
         Observed::of_report(&rep, &format!("pause: applied {} exit {:?}; mints_until after it {until:?} (freeze end {})", p.ok(), p.exit_code, t14 + 20 * DAY_MS))
     });
     // BR-CTL-07: an ordinary account sends Pause{A, ETH, mints}.
@@ -1374,8 +1354,8 @@ fn ctl() {
         let mut w = base();
         let (cid, program) = (w.cid_a, w.program);
         ok(&w.role("setup: Sunset A (freeze authority)", FREEZE_SEED, &BridgeMessage::Sunset { config_id: cid }, config_actor(program, &cid)));
-        let (wit, range) = (leaf6(&w), range6(&w));
-        let rep = claim_a8(&mut w, "the base claim after Sunset", wit, range);
+        let wit = leaf6(&w);
+        let rep = claim_a8(&mut w, "the base claim after Sunset", wit);
         Observed::of_report(&rep, "")
     });
     // BR-CTL-20: A's gate read block 102 (t2); Tick with block 100's record (t1 < t2).
@@ -1430,8 +1410,8 @@ fn ctl() {
         ok(&w.role("setup: Freeze ETH (A) mints until u", FREEZE_SEED, &freeze(cid, Some(ETH), true, false, u, w.blocks[2].time_record()), token_actor(program, &cid, &ETH)));
         let at_u = w.finalize(u / 1000);
         ok(&w.tick("setup: Tick ETH (A) with a record at time u", &cid, Some(ETH), at_u));
-        let (wit, range) = (leaf6(&w), range6(&w));
-        let rep = claim_a8(&mut w, "the base claim at attested time u", wit, range);
+        let wit = leaf6(&w);
+        let rep = claim_a8(&mut w, "the base claim at attested time u", wit);
         Observed::of_report(&rep, "record time = u exactly")
     });
     // BR-CTL-25 … BR-CTL-27: H holds d0; Transfers at H's own actor.
@@ -1533,7 +1513,7 @@ fn reg() {
         });
     }
     // BR-REG-11: configuration D (its own vault: four public 1 ETH deposits; ETH's schedule 1 from leaf k = 2
-    // imported); the deposit at leaf k - 1 = 1 claimed with schedule 0's range.
+    // imported); the old-schedule deposit at leaf k - 1 = 1 still pays only the fixed relay fee.
     r.run("BR-REG-11", || {
         const VD: [u8; 20] = [0xd4; 20];
         let mut w = base();
@@ -1556,15 +1536,13 @@ fn reg() {
         ok(&w.import_fees("setup: ImportFees ETH (D) schedule 1 (from leaf 2)", &cid, y, ETH, 1, Some(one), &VD));
         ok(&w.import_fees("setup: ImportFees ETH (D): no schedule 2 at 4 leaves", &cid, y, ETH, 2, None, &VD));
         ok(&w.import("setup: ImportRoot D n=4", &cid, y, vault.root(4), 4, &VD));
-        let range = w.range(&cid, &ETH, k - 1);
         let fee_before = w.balance(fee_recipient(), &cid);
         let rel_before = w.balance(relayer(), &cid);
         let wit = vault.witness(&deps[(k - 1) as usize], 4);
-        let rep = w.claim_with("Claim D's leaf 1 under root(D, 4) with schedule 0's range", &cid, 4, &VD, wit, range, Some(*relayer().value()));
-        let note = format!("A's leaf k-1 = 5 is private-kind, which a plaintext Claim cannot take: read on configuration D; range {range:?}");
+        let rep = w.claim_with("Claim D's leaf 1 under root(D, 4)", &cid, 4, &VD, wit, Some(*relayer().value()));
+        let note = "A's leaf k-1 = 5 is private-kind, which a plaintext Claim cannot take: read on configuration D";
         observe(&w, &rep, &note, |w| {
             let mut f = Vec::new();
-            want(&mut f, "the range is schedule 0's", range, ScheduleRange { index: 0, from_leaf: 0, until_leaf: 2 });
             want(&mut f, "fee recipient +schedule 0's mint fee (0)", w.balance(fee_recipient(), &cid) - fee_before, 0);
             want(&mut f, "R +relay fee", w.balance(relayer(), &cid) - rel_before, RELAY_FEES[1]);
             f
@@ -1743,8 +1721,8 @@ fn prv() {
     // BR-PRV-02: the base plaintext claim; s and the leaf index searched in the transaction.
     r.run("BR-PRV-02", || {
         let mut w = base();
-        let (wit, range) = (leaf6(&w), range6(&w));
-        let rep = claim_a8(&mut w, "the base plaintext claim", wit.clone(), range);
+        let wit = leaf6(&w);
+        let rep = claim_a8(&mut w, "the base plaintext claim", wit.clone());
         observe(&w, &rep, "the leaf index looked for as its witness encoding (u64 little-endian, inside the borsh witness)", |w| {
             let mut f = Vec::new();
             let tx = &w.txs.last().unwrap().1;
@@ -1775,8 +1753,8 @@ fn prv() {
             return obs;
         }
         let mut f = Vec::new();
-        want(&mut f, "identical (mint fee, relay fee) in both claims", fees[0], fees[1]);
-        want(&mut f, "schedule 1's fees of d0", fees[0], (MINT_FEES_1[0], RELAY_FEES[0]));
+        want(&mut f, "identical (zero mint fee, relay fee) in both claims", fees[0], fees[1]);
+        want(&mut f, "only d0's fixed relay fee", fees[0], (0, RELAY_FEES[0]));
         if f.is_empty() { Observed::Accepted { note: format!("fees {fees:?}") } } else { Observed::EffectMismatch { note: f.join("; ") } }
     });
     // BR-PRV-04: a refused claim (a flipped path bit), a repeat claim, a capped claim; their outputs.
@@ -1785,24 +1763,23 @@ fn prv() {
         let (cid, va, program) = (w.cid_a, w.vault_a.address, w.program);
         let r_ = Some(*relayer().value());
         let mut runs: Vec<(TxReport, bool, usize)> = Vec::new();
-        let mut refused = |w: &mut World, label: &str, n: u64, wit: ClaimWitness, range: ScheduleRange| {
+        let mut refused = |w: &mut World, label: &str, n: u64, wit: ClaimWitness| {
             let actors = claim_actors_of(w, &cid, n, &va, &wit, r_);
             let before = snapshot(w, &actors);
-            let rep = w.claim_with(label, &cid, n, &va, wit, range, r_);
+            let rep = w.claim_with(label, &cid, n, &va, wit, r_);
             let unchanged = snapshot(w, &actors) == before;
             let events = rep.events.len();
             runs.push((rep, unchanged, events));
         };
-        let (wit6, range6_) = (leaf6(&w), range6(&w));
+        let wit6 = leaf6(&w);
         let mut bad = wit6.clone();
         bad.path[3][0] ^= 1;
-        refused(&mut w, "a claim with a flipped path bit", 8, bad, range6_);
+        refused(&mut w, "a claim with a flipped path bit", 8, bad);
         let wit2 = w.vault_a.witness(&w.vector.clone(), 5);
-        let range2 = w.range(&cid, &ETH, 2);
-        ok(&w.claim_with("setup: Claim leaf 2", &cid, 5, &va, wit2.clone(), range2, r_));
-        refused(&mut w, "the same claim of leaf 2 again", 5, wit2, range2);
+        ok(&w.claim_with("setup: Claim leaf 2", &cid, 5, &va, wit2.clone(), r_));
+        refused(&mut w, "the same claim of leaf 2 again", 5, wit2);
         ok(&w.role("setup: SetCap ETH (A) mints to the floor (1 ETH)", ADMIN_SEED, &set_cap(cid, Some(ETH), true, FLOOR), token_actor(program, &cid, &ETH)));
-        refused(&mut w, "the base claim (10.06 ETH) over the 1 ETH bucket", 8, wit6, range6_);
+        refused(&mut w, "the base claim (10.01 ETH) over the 1 ETH bucket", 8, wit6);
         let codes: Vec<Option<u32>> = runs.iter().map(|(rep, _, _)| rep.exit_code).collect();
         let reverts: Vec<String> = runs.iter().map(|(rep, _, _)| format!("{:?}", rep.charge.revert)).collect();
         let note = format!("exit codes {codes:?}; LEZ's revert strings {reverts:?}");

@@ -1,0 +1,54 @@
+{
+  "attestations": [
+    {
+      "attestation_key": "0x95d5cf37a227108c4ef90d4b48165c0065434f16321850ebe89cf095d8258fa6",
+      "certificate": "0x10eb51b373405fcb7cc81f495a569dd133cb83f96f432f58e2f39e8bdac3eb63b401e7c9d6aeef9018abdb304604dadce835481de5400c9a0a5f8a0783f3bb0e",
+      "channel_key": "0xfce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+      "file": "final.json",
+      "signature": "0x3e012ab2fc7afe533e62c95b7e08d0cab82672f25b979c5814eddbe378254187fb0697e99f8d48389b1a82c64f4d1b9a2852d06c1c2424059f0039465a68c30d",
+      "tip_id": 143
+    },
+    {
+      "attestation_key": "0x4387b3c80fb8ea0ce8e1a6f6a43ddfe403090e60d1b56f383bc4312a451f0960",
+      "certificate": "0x0db91a675c7fc89837008c33cfb411ae46309db43cba3c8acd31cbfb36a1db65fdc960aa237d10654a9ed20fb25e4fb5e564debc814ab7a31e5202c960aff10b",
+      "channel_key": "0x99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+      "file": "final.json",
+      "signature": "0xc006585150870f4d468bcb9a87f9d3a96a8c51f2b4ae360fb900e3e845ad060879cec3924e58407978bbe992b5ded150ba8f4eccc91e0064078788b782b38d03",
+      "tip_id": 143
+    },
+    {
+      "attestation_key": "0xd2bec9568f0de73e2678830b1f9f0a2b6baac0cbe421e163870f39f21910e6bc",
+      "certificate": "0xd6e311ed7d6e09ef2a542451686237f3b988e8c7be43203435a23834eb43d38f4cf97ba6deef51245b21c8a75c2fc45629e0e2ac0597e6c45827b066ce5b4d09",
+      "channel_key": "0x6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+      "file": "final.json",
+      "signature": "0xe2cdbfb5da9bdf163bfbb2cace78108b189e14fd35353633db784e347fcc23833da24dd804034746d897428d8816651f4cd5723d0bc31bc0e5fcd4dcd0c2240d",
+      "tip_id": 143
+    }
+  ],
+  "channel_tip_is_last_final_block": true,
+  "config_tip_hash": "0xe502602b81aa7b2ae5bca4f003303c26d00848b3d1339b56bc05fa5be654224c",
+  "deployment": {
+    "channel_id": "0x0101010101010101010101010101010101010101010101010101010101010101",
+    "evm_chain_id": 11155111,
+    "lez_config_id": "0x7175c8485e6fb05d72df5718dfd6d1c379dfa843be6ba261821c3c31c045b72e",
+    "vault": "0xcca3a68498f6b37176d67d530b917428c6ffb420"
+  },
+  "final_msg_id": "0x025e050de18cb12044d07474f0946203b54923c30ca762631eb5f005b139491f",
+  "key_set": [
+    "0xfce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+    "0x6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+    "0x90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+    "0x99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3"
+  ],
+  "key_set_hash": "0xa300aec501d6fa09b60964a4e85ca7fe91cd4d21f2689199176441254dd03469",
+  "last_final_block": 144,
+  "lib_slot": 2562614,
+  "n": 4,
+  "posting_timeframe": 60,
+  "t": 3,
+  "tip_hash": "0xa0dc2cfe0ed3212143053593705668f9c8c860e25d6ccdd63989e91a8f2e8a12",
+  "tip_id": 143,
+  "tip_node_block": "7add21bfe42f18b214ac8f22e275106a208c61a2ad2401c235648e69d6713a11",
+  "tip_node_slot": 2562611,
+  "what": "zone attestors: each sequencer's channel key certified one attestation key (ferrata_attestor certify); each attestor read the node's final tier and signed the final-tier message v2 for T1 (ferrata_attestor attest); the records were checked here for this deployment, key set and tip"
+}

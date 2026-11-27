@@ -156,6 +156,89 @@ pub fn wallet_as(caller: &str, request: &str) -> String {
     session::wallet_as(caller, request)
 }
 
+/// Drive `call wallet FILE`: one JSON `{"method", "params"}` per nonempty, non-comment line, with the
+/// `client`, `as` and `raw` fields documented by `examples/call.rs`. Returns one printed reply per input line.
+///
+/// A network session's approval id is random, so a calls file may write `"pending_id": "$previous"` after a
+/// claim or burn and `"id": "$previous"` after `confirm`. With `"wait": true` on `confirm`, the same client polls
+/// its job privately before the next input line; the following `job` line therefore returns its terminal state.
+pub fn wallet_calls(calls: &str) -> Vec<String> {
+    let mut clients: std::collections::HashMap<String, ViewClient> = std::collections::HashMap::new();
+    let mut previous = Value::Null;
+    let mut printed = Vec::new();
+    for line in calls.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with('#')) {
+        let v: Value = match serde_json::from_str(line) {
+            Ok(v) => v,
+            Err(_) => {
+                printed.push(wallet(line));
+                previous = Value::Null;
+                continue;
+            }
+        };
+        let caller = v["as"].as_str().unwrap_or("module:ferrata_bridge_ui").to_string();
+        let method = v["method"].as_str().unwrap_or("");
+        let reply = if v["raw"] == true {
+            let body = json!({ "method": method, "params": v["params"] }).to_string();
+            wallet_as(&caller, &body)
+        } else if let Some(name) = v["client"].as_str() {
+            let client = clients.entry(name.to_string()).or_insert_with(|| ViewClient::new(&caller));
+            if method == "open_network" {
+                let mut params = v["params"].clone();
+                let phrase =
+                    params.get("phrase").and_then(|p| p.as_str()).map(|p| zeroize::Zeroizing::new(p.to_string()));
+                if let Some(o) = params.as_object_mut() {
+                    o.remove("phrase");
+                }
+                let (reply, words) = client.open(&params, phrase.as_deref().map(|p| p.as_str()));
+                match words {
+                    Some(w) => format!(
+                        "{reply} (a new phrase of {} words, opened by the client, not printed)",
+                        w.split(' ').count()
+                    ),
+                    None => reply,
+                }
+            } else {
+                let mut params = v["params"].clone();
+                if params["pending_id"] == "$previous" {
+                    params["pending_id"] = previous["result"]["to_approve"]["pending_id"].clone();
+                }
+                if params["id"] == "$previous" {
+                    params["id"] = previous["result"]["job"]["id"].clone();
+                }
+                let wait = method == "confirm" && params.get("wait").and_then(Value::as_bool) == Some(true);
+                if let Some(o) = params.as_object_mut() {
+                    o.remove("wait");
+                }
+                let reply = client.call(method, &params);
+                if wait {
+                    if let Some(id) =
+                        serde_json::from_str::<Value>(&reply).ok().and_then(|r| r["result"]["job"]["id"].as_u64())
+                    {
+                        let until = std::time::Instant::now() + std::time::Duration::from_secs(190);
+                        loop {
+                            let job: Value =
+                                serde_json::from_str(&client.call("job", &json!({ "id": id }))).unwrap_or(Value::Null);
+                            let done = job["result"]["running"].as_bool() == Some(false)
+                                || (job["ok"].as_bool() == Some(false) && job.get("error").is_some());
+                            if done || std::time::Instant::now() >= until {
+                                break;
+                            }
+                            std::thread::sleep(std::time::Duration::from_millis(10));
+                        }
+                    }
+                }
+                reply
+            }
+        } else {
+            wallet(line)
+        };
+        previous =
+            serde_json::from_str(reply.split(" (a new phrase of ").next().unwrap_or(&reply)).unwrap_or(Value::Null);
+        printed.push(reply);
+    }
+    printed
+}
+
 /// A public method's request. One that names keys (`keys`) is refused: the network session's keys serve only the
 /// session's own calls (`wallet`, from its view, each with its MAC; review round 2, MF1).
 fn parse(request: &str) -> Result<Value, String> {
@@ -410,7 +493,6 @@ fn claim_message(
     config_id: &Hash,
     leaf_count: u64,
     w: &ClaimWitness,
-    range: [u64; 3],
     relayer: Option<Hash>,
     private: bool,
 ) -> Vec<u8> {
@@ -424,11 +506,10 @@ fn claim_message(
         kind: w.kind as u8,
         dest: w.dest,
     };
-    let range = bw::ScheduleRange { index: range[0], from_leaf: range[1], until_leaf: range[2] };
     let message = if private {
-        BridgeMessage::ClaimPrivately { config_id: *config_id, leaf_count, witness, range, relayer }
+        BridgeMessage::ClaimPrivately { config_id: *config_id, leaf_count, witness, relayer }
     } else {
-        BridgeMessage::Claim { config_id: *config_id, leaf_count, witness, range, relayer }
+        BridgeMessage::Claim { config_id: *config_id, leaf_count, witness, relayer }
     };
     borsh::to_vec(&message).expect("borsh")
 }
@@ -477,7 +558,7 @@ fn claim_of(req: &Value) -> Result<Value, String> {
     // The bridge program's claim, sent at `root(cid, n)`: plaintext `Claim` for a public destination,
     // `ClaimPrivately` (run in a private execution of the LEZ wallet) for a private one or with
     // `private`. With LEZ's state (`root_state`, `token_state`) the claim goes through the tool's code
-    // instead (`wallet::claim_with_state`): the program's checks, the fees and the accounts.
+    // instead (`wallet::claim_with_state`): the program's checks, the fixed relay fee and the accounts.
     if !req["config_id"].is_null() {
         let private = req["private"].as_bool().unwrap_or(w.kind != DestKind::Public);
         if !private && w.kind != DestKind::Public {
@@ -489,14 +570,8 @@ fn claim_of(req: &Value) -> Result<Value, String> {
                 (_, Some(ls)) => ls.len() as u64,
                 _ => return Err("the request needs `leaf_count` (the imported root's leaf count) or `leaves`".into()),
             };
-            let r = &req["range"];
-            let range = if r.is_null() {
-                [0, 0, u64::MAX]
-            } else {
-                [uint(&r["index"], "range.index")?, uint(&r["from_leaf"], "range.from_leaf")?, uint(&r["until_leaf"], "range.until_leaf")?]
-            };
             let relayer = if req["relayer"].is_null() { None } else { Some(fixed::<32>(&req["relayer"], "relayer")?) };
-            let m = claim_message(&config_id, leaf_count, &w, range, relayer, private);
+            let m = claim_message(&config_id, leaf_count, &w, relayer, private);
             out["variant"] = json!(if private { "ClaimPrivately" } else { "Claim" });
             out["message"] = json!(hex(&m));
             out["message_bytes"] = json!(m.len());
@@ -912,7 +987,7 @@ mod tests {
         let out: Value = serde_json::from_str(&claim(&c.to_string())).unwrap();
         assert_eq!(out["verdict"], "claimable", "{out}");
         assert_eq!(out["nullifier"], owned[1].1);
-        assert_eq!(out["message_bytes"], 1 + 32 + 8 + 20 + 20 + 32 + 8 + 4 + 32 * 32 + 32 + 1 + 32 + 24 + 1);
+        assert_eq!(out["message_bytes"], 1 + 32 + 8 + 20 + 20 + 32 + 8 + 4 + 32 * 32 + 32 + 1 + 32 + 1);
         // A wrong amount gives another leaf: refused.
         c["amount"] = json!("999");
         c.as_object_mut().unwrap().remove("leaves");

@@ -56,9 +56,23 @@ def run_check(map_data, harness_dir=mod.DEFAULT_HARNESS_DIR, updater_dir=mod.DEF
 # 1. Real map passes
 probs, summary = mod.check_shards()
 check("real map passes guard", not probs, "; ".join(probs))
-check("real map discovers 54 harness binaries (44 active + 10 feature-gated: names and names_review run in job `names`, the 3 messages tests in job `msg`) and 14 updater binaries",
-      summary.get("harness_total") == 54 and summary.get("harness_feature_gated") == 10 and summary.get("updater_total") == 14,
+check("real map discovers 55 harness binaries (45 active + 10 feature-gated: names and names_review run in job `names`, the 3 messages tests in job `msg`) and 14 updater binaries",
+      summary.get("harness_total") == 55 and summary.get("harness_feature_gated") == 10 and summary.get("updater_total") == 14,
       str(summary))
+
+# 1b. The updater process demo belongs to exactly one shard and runs in dev mode after its recorded tests.
+gate_plan = mod.build_shard_plan(REAL_MAP, "updater-gate")
+check("updater-gate plans the daemon process demo in dev mode",
+      gate_plan[-1]["dev_mode"] and gate_plan[-1]["argv"][1].endswith("updater/dev/demo.sh"),
+      str(gate_plan[-1]))
+m = copy.deepcopy(REAL_MAP)
+del m["shards"]["updater-gate"]["updater_demo"]
+probs, _ = run_check(m)
+check("missing updater process demo fails guard", any("updater_demo" in p for p in probs), "; ".join(probs))
+m = copy.deepcopy(REAL_MAP)
+m["shards"]["updater-privacy"]["updater_demo"] = True
+probs, _ = run_check(m)
+check("duplicate updater process demo fails guard", any("updater_demo" in p for p in probs), "; ".join(probs))
 
 # 2. Scratch copy with an extra test file in lez/harness/tests/ -> fails
 with tempfile.TemporaryDirectory() as d:
@@ -313,7 +327,7 @@ with tempfile.TemporaryDirectory() as td:
     copy_pkg(mod.DEFAULT_HARNESS_DIR, stub_repo / "lez" / "harness")
     copy_pkg(mod.DEFAULT_UPDATER_DIR, stub_repo / "lez" / "updater")
 
-    # Stub cargo, scripts/privacy/run.sh, and scripts/privacy/check-results.py.
+    # Stub cargo, the updater process demo, scripts/privacy/run.sh, and scripts/privacy/check-results.py.
     # Each drains stdin to prove commands in the loop cannot consume remaining plan lines (L2).
     cargo_stub = stub_bin / "cargo"
     cargo_stub.write_text(
@@ -348,6 +362,10 @@ with tempfile.TemporaryDirectory() as td:
     )
     run_stub.chmod(0o755)
 
+    demo_stub = stub_repo / "lez" / "updater" / "dev" / "demo.sh"
+    demo_stub.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(run_stub, demo_stub)
+
     gate_stub = stub_repo / "scripts" / "privacy" / "check-results.py"
     gate_stub.write_text(
         "import json, os, sys\n"
@@ -358,6 +376,7 @@ with tempfile.TemporaryDirectory() as td:
         '"argv": ["python3", "-I", sys.argv[0], *sys.argv[1:]]}) + "\\n")\n',
         encoding="utf-8",
     )
+    shutil.copy2(gate_stub, stub_repo / "scripts" / "privacy" / "controls.py")
 
     def run_stub_shard(extra_args, extra_env=None):
         log_file = base / "calls.jsonl"

@@ -22,12 +22,11 @@
 //!   configuration take the new deposits. Then RISC Zero's emergency stop is tripped: releases and refunds stop on the
 //!   old vault, nothing else moves (Sec.9's stop-only failsafe), and the new vault goes on.
 //! * `fee_schedules_over_both_halves` (F.13, F.8): the admin announces protocol fees on the vault; seven days later
-//!   they are in force and attested on LEZ (`ImportFees`). Every claim mints its deposit's escrow: the denomination,
-//!   the mint fee of its leaf's schedule (to the fee recipient on LEZ) and the relay fee; every release pays the
-//!   denomination less the burn and checkpoint fees of the schedule in force, credited on the vault. Fees are equal
-//!   for every claim and release of a denomination under one schedule; the client's anonymity set of a claim counts
-//!   the deposits of its schedule's range, so a fee change splits the set, and the test records by how much (before
-//!   any claim, and at each plaintext claim, which publishes its deposit).
+//!   they are in force and attested on LEZ (`ImportFees`). The vault credits the mint fee at deposit. Every claim
+//!   mints only the denomination and the fixed relay fee; every release pays the denomination less the burn and
+//!   checkpoint fees of the schedule in force, credited on the vault. The client's anonymity set of a claim counts
+//!   equal-token, equal-amount deposits under the root on both sides of the fee change (before any claim, and at each
+//!   plaintext claim, which publishes its deposit).
 //!
 //! Runs only with `FERRATA_E2E=1` and the built tools in `FERRATA_CI_ZONE`, `FERRATA_CI_CHECKPOINT_B_ELF` and
 //! `FERRATA_CI_RELEASE_ELF` (`e2e/both-halves/run.sh` builds and sets them). Writes `e2e/both-halves/results/`.
@@ -238,7 +237,8 @@ fn scratch(name: &str) -> PathBuf {
 fn results_dir() -> PathBuf {
     let dir = std::env::var("FERRATA_BOTH_HALVES_OUT")
         .map(PathBuf::from)
-        .unwrap_or_else(|_| Path::new(env!("CARGO_MANIFEST_DIR")).join("../e2e/both-halves/results"));
+        // This tree's programs (ADR 0046) record under results/f13/; results/*.md are the earlier program's records.
+        .unwrap_or_else(|_| Path::new(env!("CARGO_MANIFEST_DIR")).join("../e2e/both-halves/results/f13"));
     std::fs::create_dir_all(&dir).unwrap();
     dir
 }
@@ -450,7 +450,16 @@ async fn deploy(
     // anvil for an hour, never mined (not even by evm_mine), while forge waited for their receipts.
     let out = Command::new("timeout")
         .current_dir(Path::new(env!("CARGO_MANIFEST_DIR")).join("../vault"))
-        .args(["900", "forge", "script", "script/CiRoundTrip.s.sol:CiRoundTrip", "--rpc-url", rpc, "--broadcast", "--slow"])
+        .args([
+            "900",
+            "forge",
+            "script",
+            "script/CiRoundTrip.s.sol:CiRoundTrip",
+            "--rpc-url",
+            rpc,
+            "--broadcast",
+            "--slow",
+        ])
         .args(["--unlocked", "--sender", &deployer.to_string()])
         .env("FERRATA_CID", hx(&cid))
         .env("FERRATA_GENESIS_STATE", genesis_state.to_string())
@@ -536,7 +545,9 @@ async fn deposit(
     )
     .await?;
     let leaf = eth::view(p, vault, IVault::nextLeafIndexCall {}, None).await? - 1;
-    side.unminted.insert(leaf, price.total);
+    // ADR 0046: the vault escrows the denomination and the relay fee; the mint fee is credited to the fee recipient
+    // (owed) at the deposit, so it is not part of what the zone will mint.
+    side.unminted.insert(leaf, price.total - price.mint_fee);
     Ok(leaf)
 }
 
@@ -615,9 +626,8 @@ async fn claim(
     ensure!(matches!(row.state, DepositState::Claimable { .. }), "leaf {leaf} is claimable: {:?}", row.state);
     let history = lez::history_of(&*zone, &side.ctx).await?;
     let plan = lez::plan_claim(&*zone, &side.ctx, &leaves, &row.owned, &history, false, None, None).await?;
-    let BridgeMessage::Claim { range, .. } = &plan.call.message else { bail!("a plaintext claim") };
     let d = &row.owned.deposit;
-    // F.8: the deposits of the same token and amount under the root and range the claim names, less those that earlier
+    // F.8: the deposits of the same token and amount under the root, less those that earlier
     // plaintext claims published, applied or refused on chain (`History.opened` from the zone's blocks: its leaves among
     // the vault's deposits must be exactly those this test sent a plaintext claim of). A deposit whose own earlier claim
     // was refused is published already: the client shows 1 (`flow::claim`). Beside it, the set had every earlier claim
@@ -635,10 +645,10 @@ async fn claim(
         log.reclaimed += 1;
         1
     } else {
-        ferrata_wallet::claim::anonymity_set(&list.deposits, &history.opened, &d.token, &d.amount, plan.leaf_count, range)
+        ferrata_wallet::claim::anonymity_set(&list.deposits, &history.opened, &d.token, &d.amount, plan.leaf_count)
     };
     let set_private =
-        ferrata_wallet::claim::anonymity_set(&list.deposits, &HashSet::new(), &d.token, &d.amount, plan.leaf_count, range);
+        ferrata_wallet::claim::anonymity_set(&list.deposits, &HashSet::new(), &d.token, &d.amount, plan.leaf_count);
     ensure!(1 <= set && set <= set_private, "the deposit's own set: {set}, {set_private}");
     if forge {
         let mut tampered = plan.call.clone();
@@ -656,9 +666,9 @@ async fn claim(
         return Ok(None);
     }
     let amount = ferrata_cli::units::word_to_u128(&d.amount)?;
-    side.minted += amount + plan.mint_fee + plan.relay_fee;
+    side.minted += amount + plan.relay_fee;
     let escrow = side.unminted.remove(&leaf).context("an unminted deposit")?;
-    ensure!(escrow == amount + plan.mint_fee + plan.relay_fee, "the claim mints exactly the deposit's escrow");
+    ensure!(escrow == amount + plan.relay_fee, "the claim mints denomination + relay fee; the vault kept the mint fee");
     if forge {
         let r = zone.settle(&plan.call);
         ensure!(matches!(r.exit_code, Some(250 | 255)), "a replayed claim: {:?}", r.exit_code);
@@ -903,14 +913,13 @@ fn guard() -> Result<bool> {
 }
 
 fn new_zone(user: &Seed) -> Result<HarnessLedger> {
-    let mut zone =
-        HarnessLedger {
-            world: hb::World::new(),
-            applied: Vec::new(),
-            refused: Vec::new(),
-            keys: HashMap::new(),
-            txs: Vec::new(),
-        };
+    let mut zone = HarnessLedger {
+        world: hb::World::new(),
+        applied: Vec::new(),
+        refused: Vec::new(),
+        keys: HashMap::new(),
+        txs: Vec::new(),
+    };
     for a in user.public_accounts(8)? {
         zone.keys.insert(a.id, a.key.clone());
     }
@@ -1066,7 +1075,7 @@ async fn randomised_runs_keep_supply_within_holdings() -> Result<()> {
          unminted at the end | unreleased at the end | invariant checks |\n|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n{report}\n\
          ## Anonymity sets of the claims (F.8)\n\nFor each claim, the set a private claim of its deposit would have at \
          that moment (`ferrata_wallet::claim::anonymity_set`, what `ferrata claim` shows for a private claim: the \
-         deposits of the same token and amount under the root and fee schedule range it names, less those a plaintext \
+         deposits of the same token and amount under the root, on either side of a fee change, less those a plaintext \
          claim has published, applied or refused on chain: a refused transaction stays in its block, witness and all), \
          by denomination over every run. Every claim of these runs is plaintext, for which the client shows 1 (it names \
          its deposit), and each leaves every later set, as does a claim the bucket refused, whose deposit's own later \
@@ -1438,7 +1447,7 @@ async fn fee_schedules_over_both_halves() -> Result<()> {
         s1.checkpoint_fees
     );
 
-    // Schedule 1: three more deposits, each escrowing the denomination, the new mint fee and the relay fee.
+    // Schedule 1: three more deposits; the vault credits the new mint fee and escrows denomination + relay fee.
     for (k, who) in [ANVIL1, ANVIL2, ANVIL3].into_iter().enumerate() {
         leaves.push(deposit(&p, &mut a, &user, who, 3 + k as u32, 1).await?);
     }
@@ -1483,7 +1492,7 @@ async fn fee_schedules_over_both_halves() -> Result<()> {
     a.imported = n;
 
     // The set a private claim of each deposit has once the six are imported and none is claimed (a private claim
-    // publishes nothing, so this is every private claim's): the deposits of 1 ETH in its schedule's range.
+    // publishes nothing, so this is every private claim's): every 1 ETH deposit under the root, across the fee change.
     let mut pre_sets: BTreeMap<u64, usize> = BTreeMap::new();
     {
         let (list, leaves_now, rows_now) = rows(&p, &zone, &a, &user).await?;
@@ -1492,7 +1501,6 @@ async fn fee_schedules_over_both_halves() -> Result<()> {
         for leaf in &leaves {
             let row = rows_now.iter().find(|r| r.owned.deposit.leaf_index == *leaf).context("the user's deposit")?;
             let plan = lez::plan_claim(&zone, &a.ctx, &leaves_now, &row.owned, &history, false, None, None).await?;
-            let BridgeMessage::Claim { range, .. } = &plan.call.message else { bail!("a plaintext claim") };
             let d = &row.owned.deposit;
             let set = ferrata_wallet::claim::anonymity_set(
                 &list.deposits,
@@ -1500,15 +1508,19 @@ async fn fee_schedules_over_both_halves() -> Result<()> {
                 &d.token,
                 &d.amount,
                 plan.leaf_count,
-                range,
             );
             pre_sets.insert(*leaf, set);
         }
     }
 
-    // Claims: each mints its deposit's escrow; the fees are those of its leaf's schedule.
+    ensure!(
+        pre_sets.values().all(|&set| set == 6),
+        "the fee change does not split the pre-claim anonymity set: {pre_sets:?}"
+    );
+
+    // Claims: each mints denomination + relay fee; the vault took the mint fee at deposit.
     let mut table = String::from(
-        "| leaf | schedule | mint fee (wei, to the fee recipient on LEZ) | relay fee (wei) | set before any claim | set at this claim |\n|---:|---:|---:|---:|---:|---:|\n",
+        "| leaf | schedule at deposit | relay fee (wei) | set before any claim | set at this claim |\n|---:|---:|---:|---:|---:|\n",
     );
     let fee_holder = hb::fee_recipient();
     let mut by_schedule: BTreeMap<u64, Vec<(u128, u128, usize)>> = BTreeMap::new();
@@ -1516,15 +1528,13 @@ async fn fee_schedules_over_both_halves() -> Result<()> {
         let before = zone.world.balance(fee_holder, &cid);
         let set = claim(&p, &mut zone, &mut a, &user, *leaf, k % 3 == 0, &mut log).await?.context("no cap reached")?;
         let schedule = u64::from(*leaf >= from_leaf);
-        let fees = zone.world.balance(fee_holder, &cid) - before;
-        let mint_fee = if schedule == 1 { s1.mint_fees[1] } else { 0 };
-        let relay_fee = fees - mint_fee;
+        let relay_fee = zone.world.balance(fee_holder, &cid) - before;
         ensure!(
             relay_fee == 1_000_000 * 1_000_000_000,
-            "the relay fee of 1 ETH (to the fee recipient: no relayer named)"
+            "the relay fee of 1 ETH (to the fee recipient: no relayer named); no mint fee on LEZ"
         );
-        by_schedule.entry(schedule).or_default().push((mint_fee, relay_fee, pre_sets[leaf]));
-        let _ = writeln!(table, "| {leaf} | {schedule} | {mint_fee} | {relay_fee} | {} | {set} |", pre_sets[leaf]);
+        by_schedule.entry(schedule).or_default().push((0, relay_fee, pre_sets[leaf]));
+        let _ = writeln!(table, "| {leaf} | {schedule} | {relay_fee} | {} | {set} |", pre_sets[leaf]);
         invariants(&p, &zone, &mut a, &user).await?;
     }
     for (schedule, claims) in &by_schedule {
@@ -1537,10 +1547,10 @@ async fn fee_schedules_over_both_halves() -> Result<()> {
     out.push_str(&table);
     let _ = writeln!(
         out,
-        "\nWithin a schedule every claim of 1 ETH mints the same fees, and before any claim a private claim of any of its \
-         deposits has the same anonymity set ({} with the change; {} deposits of 1 ETH under the root): the fee change \
-         splits the set at leaf {from_leaf}. These claims are plaintext, so each publishes its deposit and the next claim \
-         of the schedule has one fewer (\"set at this claim\"); private claims would leave it whole.\n",
+        "\nEvery claim of 1 ETH mints the same fixed relay fee and no mint fee. Before any claim, a private claim of any \
+         deposit has the same anonymity set ({} on both sides of the change; {} deposits of 1 ETH under the root): the \
+         fee change does not split the set at leaf {from_leaf}. These claims are plaintext, so each publishes its deposit \
+         and the next claim has one fewer (\"set at this claim\"); private claims would leave it whole.\n",
         by_schedule.values().map(|v| v[0].2.to_string()).collect::<Vec<_>>().join(" and "),
         leaves.len()
     );

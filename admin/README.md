@@ -125,6 +125,32 @@ ADMIN_KEY=<anvil account 0's published key> FREEZE_KEY=<any key> \
 node ../admin/dump.mjs http://127.0.0.1:8545 <the vault> 0
 ```
 
+The same sequence runs as one script, on a free local port, with the report compared against the
+committed record. Normalisation is field-specific: only deployed addresses, run-dependent
+code/transaction/schedule/beacon hashes, block tags, timestamps with their relative labels (`now`, `in 7d`) and
+the tables' column widths, the port, code byte counts, and the freeze authority (the committed record's and the run's,
+each named) are masked. Deposit roots, configuration ids, commitments, registry-entry hashes and the other roles are
+compared literally. Negative controls alter the deposit root and admin role and require both comparisons to fail; a
+positive control shifts one relative label and requires the comparison to pass.
+
+The script then drives every admin, freeze-authority and watcher action through
+[`../vault/script/admin.sh`](../vault/script/admin.sh). This includes `set-releases-frozen true` and
+`false`, and a successful `revoke-from 0`: the existing candidate is finalised through the mock verifier,
+then revoked within its window, with the restored parent state, revoked flag and incremented revocation
+epoch checked before the candidate is resubmitted for the watcher's cancellation test. All mint, relay,
+burn and checkpoint fee words are checked at announcement and application. A cross-account `apply-roles`
+race checks that `--send` refuses a mined status-0 receipt, including when `CAST_ASYNC=1` is exported.
+`status` is checked through its actual cast invocations: its block timestamp, every vault getter and token
+metadata read use the one selected block; chain id and block number use their own metadata RPCs.
+
+```sh
+admin/tools/anvil-scenario.sh OUT_DIR     # tested by vault/script/test-admin.sh (CI's vault job)
+```
+
+`vault/script/test-admin.sh` reports **193 checks passed** on the current tree. Its lightweight checks also
+cover mismatched `--from`/keystore signers before the dry run, mixed-case `eth`, and malformed non-ETH
+amounts and fee lists against an endpoint nothing listens on, proving lexical validation happens first.
+
 [`results/local-anvil-scenario.txt`](results/local-anvil-scenario.txt): 91 read-only requests; the
 candidate "PENDING, waiting", its wait ending 602 s after submission (delta 600 s plus (t − 1) turns of
 2 s), and the rule (A) beacon its submission recorded;

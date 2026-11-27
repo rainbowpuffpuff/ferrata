@@ -20,8 +20,8 @@ import tempfile
 from .core import REGISTRY, CheckFailed, Ctx, check, command, fail_if, run_script, scratch_env
 from .rows import status_rows
 
-CHECK_MODULES = ("checks_hashes", "checks_seals", "checks_sigs", "checks_lc", "checks_online",
-                 "runrecord", "checks_zone", "checks_evidence")
+CHECK_MODULES = ("checks_hashes", "checks_seals", "checks_sigs", "checks_lc", "checks_f13", "checks_f7", "checks_bridge",
+                 "checks_bridge_rows", "checks_online", "runrecord", "checks_zone", "checks_evidence")
 
 
 def _py(id, script, *args, **kw):
@@ -34,9 +34,11 @@ def _py(id, script, *args, **kw):
 UNIT_NEEDS = {"unit-deploy-sepolia": ("python3", "anvil", "cast", "forge"),
               "unit-netfault-autoresume": ("python3", "anvil", "cast"),
               "unit-names-claims": ("python3", "node"),
+              "unit-site-manifest": ("python3", "git"),
               "unit-v03-guards": ("bash", "python3", "curl", "jq", "anvil", "cast"),
               "unit-crown-guards": ("bash", "python3", "anvil", "cast"),
-              "unit-seqnet-late-credit": ("bash", "python3", "jq")}
+              "unit-seqnet-late-credit": ("bash", "python3", "jq"),
+              "unit-basecamp-release": ("bash", "python3", "ssh-keygen", "sha256sum")}
 
 
 def _register_wrappers() -> None:
@@ -193,6 +195,8 @@ def _register_wrappers() -> None:
              "pubnet.py's resume rules after a failure (the journal, the fence)"),
             ("unit-updater-mutants", "lez/updater/dev/test_mutants.py", (223, 226), (),
              "The updater's mutation runner"),
+            ("unit-site-manifest", "scripts/test_site_manifest.py", (239,), (),
+             "The site's manifest check against a stand-in host (altered, missing, extra and unpinned files)"),
             ("unit-names-claims", "names/e2e/claims.py", (235,), (), "The names program's documented claims and fees"),
             ("unit-attestor-resources", "checkpoint/attestor/test_resources.py", (266,), (),
              "The attestors' resources summary (checkpoint/attestor/resources.py) on made-up records"),
@@ -204,6 +208,9 @@ def _register_wrappers() -> None:
         _py(cid, script, family="unit", mode="offline", evidence=ev, rows=rows, title=title,
             needs=UNIT_NEEDS.get(cid, ("python3",)),
             what=f"{script}'s cases", against="the behaviour the script's docstring states")
+    _py("unit-trust-build", "deploy/testnet/web/trust/build.py", "--check", family="unit", mode="offline",
+        evidence=(240,), rows=(), title="The test network's trust pages, rebuilt from their sources",
+        what="the nine generated trust pages", against="the committed pages, byte for byte")
     _py("unit-site", "site/test_site.py", "--skip-freshness", family="unit", mode="offline",
         title="The site's requirement pages and their evidence links (as CI runs it: the bundle's freshness against "
               "this tree is the integration's step)", what="site/test_site.py's cases",
@@ -232,6 +239,19 @@ def _register_wrappers() -> None:
              "deploy/testnet/web/explorer/test/eth.test.mjs deploy/testnet/web/explorer/test/alarms.test.mjs",
              (242,), ("RFP-021 S.7",), "The explorer's decoders (blocks, IDLs, Ethereum proofs) and the status page's "
              "alarm rules"),
+            ("unit-basecamp-release", "rm -rf .scratch/basecamp-release-test && bash "
+             "modules/scripts/test-basecamp-release.sh .scratch/basecamp-release-test", (241, 256),
+             ("RFP-021 S.9", "RFP-021 S.10", "RFP-022 S.2"),
+             "The Basecamp release verifier's synthetic signed releases and refusal cases"),
+            ("unit-explorer-replay", "set -e; node deploy/testnet/web/explorer/test/fixtures.mjs; "
+             "out=deploy/testnet/web/explorer/test/out; "
+             "python3 -I deploy/testnet/web/explorer/test/replay_rpc.py --port 18750 --hold 1 "
+             "> \"$out/replay-agents.log\" 2>&1 & server=$!; trap 'kill \"$server\" 2>/dev/null || true' EXIT; "
+             "for _ in $(seq 50); do curl -sf http://127.0.0.1:18750/config.json > /dev/null && break; sleep 0.2; done; "
+             "python3 -I deploy/testnet/web/explorer/agents/ferrata_check.py http://127.0.0.1:18750/; "
+             "node deploy/testnet/web/explorer/agents/ferrata_check.mjs http://127.0.0.1:18750/",
+             (242,), ("RFP-021 S.7",),
+             "The explorer's offline world and both agents against its loopback replay"),
     ):
         needs = UNIT_NEEDS.get(cid) or (("node", "bash", "python3") if "node" in shell else ("bash", "python3"))
         command(id=cid, shell=shell, family="unit", mode="offline", evidence=ev, rows=rows, title=title,

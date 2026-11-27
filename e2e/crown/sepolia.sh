@@ -8,9 +8,11 @@
 #          forge run, each limit the node's estimate x margin), the Groth16 verifier reused (<run>/identity.json
 #          .groth16Verifier; without one, DeployVault deploys it first); then the deployed vault is checked against
 #          <run>/identity.json.
-# deposit, submit, finalize, release: vault/script/Crown.s.sol, one transaction each; forge asks the node for
-#          eth_estimateGas right before it signs (--skip-simulation: Foundry's EVM does not price Sepolia's state gas)
-#          and the limit is that estimate x FERRATA_GAS_MARGIN_PCT / 100; a stage the node cannot price sends nothing.
+# deposit, submit, finalize, release: vault/script/Crown.s.sol. ETH deposit and every other stage are one transaction
+#          each; an ERC-20 deposit is three transactions (mint, approve, deposit). Every transaction is individually
+#          journaled and included in the manifest. Forge asks the node for eth_estimateGas right before each signature
+#          (--skip-simulation: Foundry's EVM does not price Sepolia's state gas) and the limit is that estimate x
+#          FERRATA_GAS_MARGIN_PCT / 100; a stage the node cannot price sends nothing.
 #
 # Environment: SEPOLIA_RPC_URL, ETH_FROM; the key through Foundry's own ETH_KEYSTORE + ETH_PASSWORD (files), or
 # FERRATA_UNLOCKED=1 on a local fork that impersonates ETH_FROM. FERRATA_GAS_MARGIN_PCT (default 125).
@@ -70,11 +72,12 @@ record() {
   say "$name: $(jq length <<<"$rows") transaction(s) mined, in the manifest: $(jq -r 'map(.hash) | join(" ")' <<<"$rows")"
 }
 
-crown() { # crown <signature> [args]: one transaction of Crown.s.sol (state-checked: a step already on chain is skipped)
+crown() { # crown <signature> [args]: a Crown.s.sol stage (three transactions for an ERC-20 deposit, one otherwise)
   local sig="$1"; shift
   local name="${sig%%(*}${1:+-$1}" rc=0
-  # The fate of everything sent so far first; then, one transaction per stage: if the journal holds this stage's
-  # mined transaction, the stage is done whatever an endpoint answers now (PUBNET_NO_JOURNAL_SKIP=1, for tests only:
+  # The fate of everything sent so far first; then use this stage's journal (one mined transaction for an ETH deposit,
+  # three for an ERC-20 deposit): any successful transaction already there skips replanning, whatever an endpoint
+  # answers now (PUBNET_NO_JOURNAL_SKIP=1, for tests only:
   # plan again, on the reads alone).
   pubnet_resolve || { rc=$?; [ "$rc" = 3 ] && die "$name: an earlier transaction did not succeed (above): a human looks, then pubnet.py ack"
     die_transient "$name: an earlier transaction's fate is still unknown"; }

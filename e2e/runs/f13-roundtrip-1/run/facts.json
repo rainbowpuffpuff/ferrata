@@ -1,0 +1,79 @@
+{
+  "fees": {
+    "bridgeProgram": {
+      "row": "ferrata_bridge_f13",
+      "imageId": "0xffb47f6eaec6ef13f49505e5e80209f73d38ea53792e77656994f8069dde7675"
+    },
+    "feeRecipient": "0x000000000000000000000000000000005e9de901",
+    "relayFeeWei": "2000000000000",
+    "schedule0": {
+      "depositTx": "0x2705d2c4bb064e645133f15858403cf4ee483184b0601a329a0db56137c89419",
+      "mintFeeWei": "0",
+      "escrowDeltaWei": "1002000000000000",
+      "feeRecipientCreditDeltaWei": "0",
+      "claim": {
+        "tx": "ec31a6ad3cce52d57ee2cd3bd74b297108ca7a097b5e093dce879063767011d2",
+        "mintedToDestinationWei": "1000000000000000",
+        "paidToRelayerWei": "2000000000000"
+      }
+    },
+    "schedule1": {
+      "depositTx": "0x67313d6ef3c63b6fe44c792172bffaa04f4cb18359b44d237bd6ec3266dcf514",
+      "mintFeeWei": "5000000000000",
+      "escrowDeltaWei": "1002000000000000",
+      "feeRecipientCreditDeltaWei": "5000000000000",
+      "owedCreditedEventsWei": "5000000000000",
+      "claim": {
+        "tx": "f3bee10ece2911dc24b6c3278394a3101790063d2877ed1473c188335a7869eb",
+        "mintedToDestinationWei": "1000000000000000",
+        "paidToRelayerWei": "2000000000000"
+      }
+    }
+  },
+  "fork": {
+    "block": 12220225,
+    "hash": "0x41406f5730fa07a92e7a1a0c813be88939cf125384be90e446086517dc936601",
+    "time": "2026-11-27T01:24:36Z",
+    "ageS": 1003,
+    "maxAgeS": 3600,
+    "rpc": "https://ethereum-sepolia-rpc.publicnode.com"
+  },
+  "standInSlot": 11665472,
+  "vault": "0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516",
+  "configId": "0x3be8f71ad9d2b61c67e99d045de817fc67e91023e7af45c68693a7eaca844c96",
+  "deposit": {
+    "tx": "0x2705d2c4bb064e645133f15858403cf4ee483184b0601a329a0db56137c89419",
+    "denominationWei": "1000000000000000"
+  },
+  "claim": {
+    "tx": "ec31a6ad3cce52d57ee2cd3bd74b297108ca7a097b5e093dce879063767011d2",
+    "holdingAfterClaim": "1000000000000000"
+  },
+  "burn": {
+    "tx": "610d32757de5a313f31499c4e98fd3ab7e6f2ad94a93d50a48e53e62c45efdf4",
+    "recipient": "0x28E77c15720bD320D1879B5F86eF86D526565c01",
+    "holdingAfterBurn": "1000000000000000"
+  },
+  "checkpoint": {
+    "burnRoot": "0xd56c121cb25ccd49feda76e95e1228d5727a116a968ea3d78317da28024ccfee",
+    "burnCount": "1",
+    "newState": "0xb90413c6219d23fc13eb8c59d64692e1bc951d7c71cd90d8dc48fe071645a057",
+    "tipId": "35",
+    "vaultFinalState": "0xb90413c6219d23fc13eb8c59d64692e1bc951d7c71cd90d8dc48fe071645a057",
+    "burnRootAccepted": true
+  },
+  "release": {
+    "tx": "0xa85bf2c9354abe648509eefb193a57263b661d6213a6905d9ab2fb89950041af",
+    "amountWei": "1000000000000000",
+    "relayFeeWei": "2000000000000",
+    "creditedFeesWei": "1000000000000",
+    "recipientBalanceWei": "997000000000000",
+    "nullifier": "0x13bae80c15b269ee50e54aaf9767e62842b646f7a514fb14719426e0301bce79",
+    "replay": {
+      "callExit": 1,
+      "revertSelector": "0xcad2ae02",
+      "nullifierUsed": true
+    },
+    "replayRefused": true
+  }
+}

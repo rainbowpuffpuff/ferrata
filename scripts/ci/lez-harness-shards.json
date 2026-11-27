@@ -34,6 +34,7 @@
       "harness_tests": [
         "attest_cli",
         "attest_public",
+        "bridge_f13",
         "bridge_inbound",
         "bridge_private",
         "captured_committee_exposure",
@@ -75,6 +76,7 @@
       ]
     },
     "updater-gate": {
+      "updater_demo": true,
       "updater_splits": [
         {
           "test": "recorded",

@@ -58,8 +58,9 @@ env:
 
 jobs:
   # RFP-021 Supportability #2. Stages, one step each: the Sepolia checkpoint (fetched first), the build (the guests
-  # from the committed tree, then LEZ v0.4.0-rc3's standalone sequencer and the live driver against rc3, with the
-  # checked native archives), the newest finality update and the facts under its block (fetched until it advances the
+  # from the committed tree, then LEZ v0.4.0-rc3's standalone sequencer and the live driver against rc3, plus the
+  # updater's sequencer backend and ferrata-day1 locked release binaries against rc3, with the checked native archives),
+  # the newest finality update and the facts under its block (fetched until it advances the
   # checkpoint's store, refused if older than the freshness bound), the run (deploy; instance A follows Sepolia; the
   # twin's refusals; the attestation consumed publicly and, with a real proof the sequencer verifies, privately), the
   # check of every outcome (exact counts), the job summary.
@@ -106,7 +107,7 @@ jobs:
           # Saved by a passing run on main only, restored on every ref (the caches comment above).
           save-if: ${{ github.ref == 'refs/heads/main' }}
           cache-on-failure: false
-      - name: Build (the guests; LEZ v0.4.0-rc3's standalone sequencer; the live driver; native archives checked)
+      - name: Build (the guests; LEZ rc3's sequencer, live driver, updater backend and day-one CLI; native archives checked)
         timeout-minutes: 170
         run: scripts/ci/sequencer-attest.sh e2e/runs/ci-sequencer-attest build
       - name: Sepolia finality update and the facts under its block (public endpoints, checked natively and for age)

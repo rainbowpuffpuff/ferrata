@@ -8,6 +8,8 @@ scripts/ci/check-portable.py (which scripts does the macOS workflow run?).
   YAML: no anchors, aliases, tags or multi-document streams. `python3 -I scripts/ci/ci_model.py --compare-yq`
   checks it against yq (mikefarah, v4) on every workflow of the repository.
 - `jobs`: every job of .github/workflows/*.yml with its workflow's triggers, defaults, environment and steps.
+- `run_steps` (`--steps JOB…`): the job's `run:` steps as a terminal can run them (the justfile's job recipes run
+  exactly these); `uses:` steps are the runner's setup and are left out.
 - `trace`: the commands a job runs, from its `run:` steps and, recursively, the shell scripts they call
   (`bash X.sh`, `./X.sh`, `source X`), each with the directory it runs in and the variables set before it.
   A static reading. Commands under a step's or job's `if:` (unless always true) or `continue-on-error`, run
@@ -695,9 +697,13 @@ def _subst_matrix(text: str, combo: dict) -> str:
     return re.sub(r"\$\{\{\s*matrix\.([A-Za-z0-9_-]+)\s*\}\}", repl, text)
 
 
-def trace(job: Job, tracked: set | None = None):
-    """Every command the job runs: its steps' `run:` text and, recursively, the scripts they call."""
-    tracked = tracked if tracked is not None else tracked_paths()
+def run_steps(job: Job) -> list[dict]:
+    """The job's `run:` steps as a terminal can run them, one entry per matrix combination, in order: the
+    step's text with the matrix values substituted, the repository-relative directory it runs in, the
+    variables set before it (the workflow's and the step's) and the step's shell options (errexit,
+    pipefail: GitHub's default step shell is `bash -e`, `shell: bash` adds pipefail). A step with `uses:`
+    is the runner's setup, not a command, and is left out; `if:` and `continue-on-error:` stay in the
+    entry's `guard`, for the caller to judge. `trace` reads the same entries, so the two cannot disagree."""
     out = []
     for combo in _matrix_combos(job):
         base_env = {k: _subst_matrix(str(v), combo) for k, v in job.env.items()}
@@ -711,15 +717,24 @@ def trace(job: Job, tracked: set | None = None):
             cwd = os.path.normpath(cwd)
             env = {**base_env, **{k: _subst_matrix(str(v), combo) for k, v in (step.get("env") or {}).items()}}
             env.setdefault("GITHUB_WORKSPACE", str(ROOT))
-            # GitHub runs a step with `bash -e {0}` (no shell named), `bash --noprofile --norc -eo pipefail {0}`
-            # (`shell: bash`) or `sh -e {0}` (`shell: sh`); a custom shell string gets only the options it names.
             shell = str(step.get("shell") or (job.spec.get("defaults") or {}).get("run", {}).get("shell") or "")
             errexit = shell in ("", "bash", "sh") or bool(re.search(r"(?:^|\s)-[a-z]*e", shell))
             pipefail = shell == "bash" or "pipefail" in shell
-            run_src = _subst_matrix(str(step["run"]), combo)
-            tag = f"{job.workflow.name} job {job.name}" + (f" [{combo}]" if combo else "") + f" step {number}"
-            _run_text(run_src, cwd, env, tag, out, tracked, 0,
-                      guard=step_guard(job, step_eval), errexit=errexit, pipefail=pipefail)
+            out.append({"text": _subst_matrix(str(step["run"]), combo), "cwd": cwd, "env": env, "combo": combo,
+                        "step": number, "shell": shell, "errexit": errexit, "pipefail": pipefail,
+                        "guard": step_guard(job, step_eval)})
+    return out
+
+
+def trace(job: Job, tracked: set | None = None):
+    """Every command the job runs: its steps' `run:` text and, recursively, the scripts they call."""
+    tracked = tracked if tracked is not None else tracked_paths()
+    out = []
+    for entry in run_steps(job):
+        tag = (f"{job.workflow.name} job {job.name}"
+               + (f" [{entry['combo']}]" if entry["combo"] else "") + f" step {entry['step']}")
+        _run_text(entry["text"], entry["cwd"], entry["env"], tag, out, tracked, 0,
+                  guard=entry["guard"], errexit=entry["errexit"], pipefail=entry["pipefail"])
     return out
 
 
@@ -1798,9 +1813,25 @@ def compare_yq() -> int:
     return 1 if bad else 0
 
 
+def print_steps(names: list[str]) -> int:
+    """Print each job's `run:` steps as a terminal can run them (what the justfile's job recipes run)."""
+    all_jobs = jobs()
+    for name in names or sorted(all_jobs):
+        for entry in run_steps(all_jobs[name]):
+            where = f" [cwd={entry['cwd']}]" if entry["cwd"] != "." else ""
+            combo = f" [{entry['combo']}]" if entry["combo"] else ""
+            print(f"{name}: step {entry['step']}{combo}{where}:")
+            for line in entry["text"].splitlines():
+                if line.strip():
+                    print(f"    {line.rstrip()}")
+    return 0
+
+
 if __name__ == "__main__":
     if sys.argv[1:] == ["--compare-yq"]:
         sys.exit(compare_yq())
+    if sys.argv[1:2] == ["--steps"]:
+        sys.exit(print_steps(sys.argv[2:]))
     if sys.argv[1:2] == ["--trace"]:
         all_jobs = jobs()
         tracked = tracked_paths()

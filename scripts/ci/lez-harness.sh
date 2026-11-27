@@ -3,10 +3,12 @@
 # .github/workflows/lez-full.yml; docs/guides/ci.md): the attestation and bridge
 # programs driven through LEZ v0.4.0-rc1's state machine and fee settlement in the harness, every target of
 # `lez/harness` and `lez/updater` that `cargo test -p` runs without an optional feature (lib unit tests, bin unit
-# tests, integration test binaries including red-team suites, doc-tests), and the privacy suite end to end
+# tests, integration test binaries including red-team suites, doc-tests), updater-gate's daemon process demo, and the
+# privacy suite end to end
 # (scripts/privacy/run.sh: the LEZ half, the vault's PrivacySuite, the adversary) with its gate
 # (scripts/privacy/check-results.py: the differential gate, chance-level pairing, nothing hidden found, recovery from
-# the seed, the published tables reproduced). The guests run in RISC Zero dev mode: executed in the zkVM, no proof.
+# the seed, the published tables reproduced) and its negative controls (scripts/privacy/controls.py). The guests run in
+# RISC Zero dev mode: executed in the zkVM, no proof.
 # Nothing is sent to any network but the dependency fetches of cargo and forge.
 #
 # Needs: Rust 1.98.1 (lez/rust-toolchain.toml), RISC Zero's rzup toolchains with guest Rust 1.91.1 in
@@ -146,4 +148,5 @@ RISC0_DEV_MODE=1 cargo test -p ferrata-updater --features harness --locked -- --
 stamp "the privacy suite end to end, then its gate, into $privacy_out"
 bash "$repo/scripts/privacy/run.sh" "$privacy_out"
 python3 -I "$repo/scripts/privacy/check-results.py" "$privacy_out"
+python3 -I "$repo/scripts/privacy/controls.py" "$privacy_out" "$privacy_out-controls"
 stamp "passed"

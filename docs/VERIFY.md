@@ -9,7 +9,8 @@ Nothing here is audited. The test network is ours, not a network Logos runs (LEZ
 
 ## 1. Ten minutes: clone, then every offline check
 
-You need git and Python 3.11 or later; Node 20 or later for six of the checks, Foundry (anvil, cast, forge) for four,
+You need git and Python 3.11 or later; Node 20 or later for seven of the checks, OpenSSH's `ssh-keygen` and
+`sha256sum` for the Basecamp release check, Foundry (anvil, cast, forge) for four,
 and for one of those, the deploy tool's, the vault built first (`cd vault && forge install --no-git
 foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0 && forge build`):
 without them those checks are skipped, and say so. Nothing else is built or installed.
@@ -17,10 +18,14 @@ without them those checks are skipped, and say so. Nothing else is built or inst
 ```sh
 git clone https://github.com/rainbowpuffpuff/ferrata && cd ferrata
 python3 -I scripts/verify.py --list            # every check: its family, mode, requirement rows and EVIDENCE rows
-python3 -I scripts/verify.py --all             # the 91 quick offline checks: about 6 minutes
+python3 -I scripts/verify.py --all             # the @@QUICK@@ quick offline checks: about 6 minutes
 python3 -I scripts/test_verify.py              # the tamper tests: about 30 seconds
 python3 -I scripts/test_verify_lc.py           # the light-client records' tamper tests: seconds
 python3 -I scripts/test_verify_zone.py         # the four-key rc3 run's tamper tests: seconds
+python3 -I scripts/test_verify_f13.py          # the ADR-0046 fee records' tamper tests: seconds
+python3 -I scripts/test_verify_f7.py           # the F.7 runs' records' tamper tests: seconds
+python3 -I scripts/test_verify_bridge.py       # the bridge records' tamper tests: seconds
+python3 -I scripts/test_verify_bridge_rows.py  # the remaining bridge-row records' tamper tests: seconds
 ```
 
 Each check prints one block, for example:
@@ -39,7 +44,9 @@ and the run ends with `N checks in T s: N PASS, 0 FAIL, 0 SKIP`. The exit status
 otherwise; `--strict` makes a skip a failure too (CI's `verify` job runs `--all --offline --strict`). A check holds a
 row's wording to its record: `lc-stage4-attest-costs`, for one, holds RFP-021 P.1's "at most 32.4% of LEZ's 5M target"
 to the largest recorded case, 1,619,960 cycles, which is 32.3992% (it failed on the row's earlier "at most 32%" until
-the row was corrected).
+the row was corrected); `bridge-import-claim-costs` holds RFP-022 P.2's stated B1 harness range, 231,635–237,169, to
+the B1 record's four applied `ImportRoot` cases (it failed on the earlier "237,140", below the vault-B import's
+237,169).
 
 What the offline checks re-check, by family (`--list` gives each check):
 
@@ -69,7 +76,7 @@ python3 -I scripts/verify.py --coverage        # every row of docs/requirements-
 ## 2. The online checks (read-only)
 
 ```sh
-python3 -I scripts/verify.py --all --online    # the 20 online checks: about 20 minutes
+python3 -I scripts/verify.py --all --online    # the 22 online checks: about 20 minutes
 ```
 
 They send only reads (`eth_call`, `eth_getCode`, receipts and logs on Ethereum; `getBlockRange`, `getAccountView` on
@@ -90,6 +97,8 @@ our test network's address is in `scripts/reproduce/deployed-programs.json` (`--
 | `run-record-beacon` | Sepolia beacon APIs | every header the light client applied is Sepolia's canonical block |
 | `updater-live-sepolia-beacon` | a Sepolia beacon API | the updater's 8 h live run of 12-13 November, every applied root canonical |
 | `site-manifest-online` | the live site | the site serves the files the repository holds |
+| `day1-discover-online` | our test network | the day-one kit's read-only probe of the endpoint: health, head, fees, programs, channel, the clock, v0.4 or not |
+| `sourcify-status-online` | sourcify.dev | what Sourcify holds for every contract of the crown-live-3 round trip (12 exact matches of EVIDENCE row 122) |
 | `sepolia-31-vault`, `sepolia-verifiers` | Sepolia | the RISC Zero 3.1 vault against its deployment record; each vault's verifier 3.1.0, or 3.0.0 only behind closed caps |
 | `basecamp-packages-online`, `catalog-index-online` | our test network, GitHub | every Basecamp package served equals its signed sum and carries its two signatures; the module catalog's index names the released packages |
 | `gasdrop-terms-online`, `faucet-terms-online` | our test network | the gas drop's published terms and guest; the faucet's published balance equal to the chain's |

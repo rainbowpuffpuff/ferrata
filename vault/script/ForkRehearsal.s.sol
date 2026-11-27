@@ -20,12 +20,12 @@ contract RehearsalAcceptAllVerifier is IRiscZeroVerifierFull {
 /// @notice The deposit and refund paths on a local fork, against a deployment of script/deploy.sh (FERRATA_OUT names
 ///         its record). script/fork-rehearsal.sh runs the steps and moves the fork's clock between them:
 ///         deposits()           msg.sender deposits 0.001 ETH (leaf 0) and 100 test tokens (leaf 1), with their fees
-///         checkDeposits(d)     escrow = denomination + mint + relay fee of each; the tree's root is the reference's
+///         checkDeposits(d)     escrow = denomination + relay; owed = mint; balance covers both; root is the reference's
 ///         sunset()             rule (B): the freeze authority retires the vault and submits a sunset candidate that
 ///                              imported no leaf
 ///         finalizeSunset()     after the wait: finalizeAttested
 ///         refunds(d)           after the revoke window: anyone refunds both leaves to their depositor
-///         checkRefunds(d, b)   each deposit came back whole (denomination and fees), no escrow is left
+///         checkRefunds(d, b)   each escrow came back (denomination + relay), no escrow is left; mint fees stay owed
 contract ForkRehearsal is Script {
     address internal constant ETH = address(0);
     bytes32 internal constant COMMITMENT_ETH = keccak256("ferrata fork rehearsal: ETH deposit");
@@ -41,18 +41,19 @@ contract ForkRehearsal is Script {
         token = TestToken(vm.parseJsonAddress(record, ".token"));
     }
 
-    /// @dev Denomination 0 of `t` and what a deposit of it escrows: it plus the mint and relay fees in force.
-    function _total(address t) internal view returns (uint256 denom, uint256 total) {
+    /// @dev Denomination 0 of `t`, the whole amount its deposit pays, and the mint fee credited on Ethereum.
+    function _total(address t) internal view returns (uint256 denom, uint256 total, uint256 mintFee) {
         (,,,, uint256[] memory denoms) = vault.tokenConfig(t);
         (uint64 current,) = vault.feeState(t);
-        (uint256 mintFee, uint256 relayFee,,) = vault.fees(t, current, 0);
+        uint256 relayFee;
+        (mintFee, relayFee,,) = vault.fees(t, current, 0);
         denom = denoms[0];
         total = denom + mintFee + relayFee;
     }
 
     function _leaves(address depositor) internal view returns (bytes32[] memory leaves) {
-        (uint256 ethDenom,) = _total(ETH);
-        (uint256 tokenDenom,) = _total(address(token));
+        (uint256 ethDenom,,) = _total(ETH);
+        (uint256 tokenDenom,,) = _total(address(token));
         leaves = new bytes32[](2);
         leaves[0] = ReferenceMerkle.leafHash(0, depositor, ETH, ethDenom, COMMITMENT_ETH);
         leaves[1] = ReferenceMerkle.leafHash(1, depositor, address(token), tokenDenom, COMMITMENT_TOKEN);
@@ -61,8 +62,8 @@ contract ForkRehearsal is Script {
     function deposits() external {
         _load();
         require(vault.nextLeafIndex() == 0, "rehearsal: the vault is not fresh");
-        (, uint256 ethTotal) = _total(ETH);
-        (, uint256 tokenTotal) = _total(address(token));
+        (, uint256 ethTotal,) = _total(ETH);
+        (, uint256 tokenTotal,) = _total(address(token));
         vm.startBroadcast(msg.sender);
         vault.depositETH{value: ethTotal}(0, COMMITMENT_ETH, 0);
         token.mint(msg.sender, tokenTotal);
@@ -73,18 +74,22 @@ contract ForkRehearsal is Script {
 
     function checkDeposits(address depositor) external {
         _load();
-        (uint256 ethDenom, uint256 ethTotal) = _total(ETH);
-        (uint256 tokenDenom, uint256 tokenTotal) = _total(address(token));
-        require(ethTotal > ethDenom && tokenTotal > tokenDenom, "rehearsal: no fee escrowed");
-        require(vault.escrowed(ETH) == ethTotal && address(vault).balance == ethTotal, "rehearsal: ETH escrow");
+        (uint256 ethDenom, uint256 ethTotal, uint256 ethMintFee) = _total(ETH);
+        (uint256 tokenDenom, uint256 tokenTotal, uint256 tokenMintFee) = _total(address(token));
+        uint256 ethEscrow = ethTotal - ethMintFee;
+        uint256 tokenEscrow = tokenTotal - tokenMintFee;
+        require(ethEscrow > ethDenom && tokenEscrow > tokenDenom, "rehearsal: no relay fee escrowed");
+        require(vault.escrowed(ETH) == ethEscrow && address(vault).balance == ethTotal, "rehearsal: ETH accounting");
+        require(vault.totalOwed(ETH) == ethMintFee, "rehearsal: ETH mint fee credit");
         require(
-            vault.escrowed(address(token)) == tokenTotal && token.balanceOf(address(vault)) == tokenTotal,
-            "rehearsal: token escrow"
+            vault.escrowed(address(token)) == tokenEscrow && token.balanceOf(address(vault)) == tokenTotal,
+            "rehearsal: token accounting"
         );
+        require(vault.totalOwed(address(token)) == tokenMintFee, "rehearsal: token mint fee credit");
         require(vault.nextLeafIndex() == 2, "rehearsal: leaf count");
         require(vault.depositRoot() == ReferenceMerkle.root(_leaves(depositor)), "rehearsal: deposit root");
-        console2.log("FERRATA_OK deposits, ETH denomination and escrow (wei):", ethDenom, ethTotal);
-        console2.log("FERRATA_OK deposits, token denomination and escrow (base units):", tokenDenom, tokenTotal);
+        console2.log("FERRATA_OK deposits, ETH denomination and escrow (wei):", ethDenom, ethEscrow);
+        console2.log("FERRATA_OK deposits, token denomination and escrow (base units):", tokenDenom, tokenEscrow);
     }
 
     function _sunsetCheckpoint() internal view returns (FerrataVault.Checkpoint memory c) {
@@ -136,13 +141,17 @@ contract ForkRehearsal is Script {
 
     function checkRefunds(address depositor, uint256 ethBalanceBefore) external {
         _load();
-        (, uint256 ethTotal) = _total(ETH);
-        (, uint256 tokenTotal) = _total(address(token));
+        (, uint256 ethTotal, uint256 ethMintFee) = _total(ETH);
+        (, uint256 tokenTotal, uint256 tokenMintFee) = _total(address(token));
+        uint256 ethEscrow = ethTotal - ethMintFee;
+        uint256 tokenEscrow = tokenTotal - tokenMintFee;
         require(vault.refunded(0) && vault.refunded(1), "rehearsal: not refunded");
         require(vault.escrowed(ETH) == 0 && vault.escrowed(address(token)) == 0, "rehearsal: escrow left");
-        require(depositor.balance == ethBalanceBefore + ethTotal, "rehearsal: ETH refund amount");
-        require(token.balanceOf(depositor) == tokenTotal, "rehearsal: token refund amount");
-        console2.log("FERRATA_OK refunds, ETH returned to the depositor (wei):", ethTotal);
-        console2.log("FERRATA_OK refunds, tokens returned to the depositor (base units):", tokenTotal);
+        require(depositor.balance == ethBalanceBefore + ethEscrow, "rehearsal: ETH refund amount");
+        require(token.balanceOf(depositor) == tokenEscrow, "rehearsal: token refund amount");
+        require(vault.totalOwed(ETH) == ethMintFee, "rehearsal: ETH mint fee is not refunded");
+        require(vault.totalOwed(address(token)) == tokenMintFee, "rehearsal: token mint fee is not refunded");
+        console2.log("FERRATA_OK refunds, ETH returned to the depositor (wei):", ethEscrow);
+        console2.log("FERRATA_OK refunds, tokens returned to the depositor (base units):", tokenEscrow);
     }
 }

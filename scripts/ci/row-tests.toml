@@ -69,7 +69,7 @@ tests = [
   { path = "crates/ferrata-spectests/tests/mainnet_e2e.rs", kind = "test", ci = "test" },
   { path = "vectors/acc-leaf.json", kind = "record" },
   { path = "lez/harness/tests/attest_native.rs", kind = "test", ci = "lez-harness" },
-  { path = "lez/wire-class/src/lib.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-lez-wire-class --locked" },
+  { path = "lez/wire-class/src/lib.rs", kind = "test", ci = "msg" },
 ]
 note = "identifiers equal an independent derivation; the nullifier-safety classes come from a second build of the program (lez/wire-class), not the deployed one"
 
@@ -194,7 +194,7 @@ note = "advance, config and the attestations of a finalized Sepolia block, every
 id = "RFP-021 U.3"
 tests = [
   { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "lez-harness" },
-  { path = "lez/updater/dev/demo.sh", kind = "test", ci = "box", run = "lez/updater/dev/demo.sh" },
+  { path = "lez/updater/dev/demo.sh", kind = "test", ci = "lez-harness", run = "cd lez && RISC0_DEV_MODE=1 updater/dev/demo.sh OUT" },
   { path = "modules/scripts/test_live_testnet.py", kind = "test", ci = "links" },
   { path = "modules/results/live-testnet-2026-11-23/README.md", kind = "record" },
   { path = "lez/updater/README.md", kind = "document" },
@@ -205,12 +205,12 @@ note = "the daemon and its Logos module follow Sepolia from the checkpoint, defe
 id = "RFP-021 U.4"
 tests = [
   { path = "idl/check.py", kind = "test", ci = "idl" },
-  { path = "lez/bridge-wire/tests/idl_vectors.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-lez-bridge-wire --locked --test idl_vectors" },
+  { path = "lez/bridge-wire/tests/idl_vectors.rs", kind = "test", ci = "msg" },
   { path = "idl/results/spel-check.txt", kind = "record" },
   { path = "idl/spel-v2/run.sh", kind = "test", ci = "box", run = "RECORDED=... bash idl/spel-v2/run.sh" },
   { path = "idl/generated/spel-v2.txt", kind = "record" },
 ]
-note = "waits on Logos: SPEL's v0.4 line is an open pull request, not a release; its generator makes the attestation program's messages and types, 0 differences (EVIDENCE row 194). Shown instead: a hand-written IDL in SPEL's format that decodes every instruction (19 vectors for the attestation program), parsed and decoded by SPEL's own crate; the idl job checks the committed vectors in CI"
+note = "waits on Logos: SPEL's v0.4 line is an open pull request, not a release; its generator makes the attestation program's messages and types, 0 differences (EVIDENCE row 194). Shown instead: a hand-written IDL in SPEL's format that decodes every instruction (19 vectors for the attestation program), parsed and decoded by SPEL's own crate; the idl job decodes the committed vectors in CI and msg's bridge-wire tests require them to equal what the wire writes"
 
 [[row]]
 id = "RFP-021 U.5"
@@ -274,7 +274,7 @@ note = "the program restores its compact store from its own state without re-che
 id = "RFP-021 R.5"
 tests = [
   { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "lez-harness" },
-  { path = "monitor/attest/tests/monitor.rs", kind = "test", ci = "box", run = "cd monitor/attest && cargo test --locked" },
+  { path = "monitor/attest/tests/monitor.rs", kind = "test", ci = "monitor" },
   { path = "cli/tests/attest_faults.rs", kind = "test", ci = "roundtrip" },
   { path = "modules/ferrata_attest_module/rust-lib/calls/tests/failing_endpoint.rs", kind = "test", ci = "modules-resolve" },
   { path = "lez/updater/README.md", kind = "document" },
@@ -501,7 +501,7 @@ tests = [
 id = "RFP-021 S.5"
 tests = [
   { path = "lez/harness/src/bin/ferrata-attest.rs", kind = "test", ci = "box", run = "cd lez && cargo build -p harness --locked --bin ferrata-attest && RISC0_DEV_MODE=1 target/debug/ferrata-attest status --then slot --send ..." },
-  { path = "lez/updater/dev/demo.sh", kind = "test", ci = "box", run = "lez/updater/dev/demo.sh" },
+  { path = "lez/updater/dev/demo.sh", kind = "test", ci = "lez-harness", run = "cd lez && RISC0_DEV_MODE=1 updater/dev/demo.sh OUT" },
 ]
 note = "the four documents are first drafts here: lez/ATTEST-CLI.md, docs/guides/operator-guide.md, docs/guides/consumer-guide.md, lez/updater/README.md; the journeys they describe are exercised by the CLI (row 56) and the updater demo (row 81); final with check-guides.py on the branch. No CI test in this tree: the documents are first drafts here; on branch rfp-docs-final scripts/check-guides.py (links job) keeps the final guides in step with the code (entry below)"
 
@@ -531,7 +531,7 @@ tests = [
   { path = "lez/results/stage1-refusals.md", kind = "record" },
   { path = "lez/lab/README.md", kind = "document" },
   { path = "docs/guides/operator-guide.md", kind = "document" },
-  { path = "monitor/attest/tests/monitor.rs", kind = "test", ci = "box", run = "cd monitor/attest && cargo test --locked" },
+  { path = "monitor/attest/tests/monitor.rs", kind = "test", ci = "monitor" },
 ]
 note = "the operator's refusals measured (5,981 to 31,919 cycles for a replayed or spoofed step, 2.19M for a duplicate first step), cadence the lab's session every two hours, concurrency R.9's gate, deferral R.10; the stall and weak-subjectivity alarms built and tested (attest-monitor, EVIDENCE row 193); the operator guide's stall-detection section (§3.5) describes attest-monitor's alarms, thresholds, defaults and the operator's action on each. No CI test: a document (the operator guide); what it describes is tested in CI elsewhere: permissionless submission (F.11), concurrent operators and deferral (R.9, R.10: lez/updater/tests/recorded.rs's gate)"
 
@@ -613,7 +613,7 @@ tests = [
   { path = "lez/harness/tests/captured_committee_exposure.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/captured-committee-exposure.md", kind = "record" },
   { path = "docs/trust.md", kind = "document" },
-  { path = "monitor/attest/tests/monitor.rs", kind = "test", ci = "box", run = "cd monitor/attest && cargo test --locked" },
+  { path = "monitor/attest/tests/monitor.rs", kind = "test", ci = "monitor" },
 ]
 note = "trust.md 2.2 (what a captured committee can do; the attestation side's monitor, its alarms and what they cannot see) and 6 (failure classes, what bounds the loss); the exposure bound a consumer sizes is its caps; the monitor's critical alarms built and tested on altered states against recorded answers (EVIDENCE row 193), not run against public providers; captured_committee_exposure.rs (CI, lez-harness) plays the consumer side of trust.md 2.2 and 6 through the bridge program: a record of a block Ethereum never finalized holds ten invented deposits; their claims mint until the per-token cap (3 claims a window) and the global cap (4, below the two tokens' 6) refuse them with 255 CAPPED, one more window's worth after the window rolls on attested time, nothing while the freeze authority's freeze holds (242 FROZEN, also under a second fabricated record and a far-future one), and the minted total stays within cap per window until the freeze (lez/results/captured-committee-exposure.md)"
 
@@ -697,6 +697,7 @@ note = "burns from a public holding (a signed top-level call) and from a private
 id = "RFP-022 F.7"
 tests = [
   { path = "vault/test/Checkpoint.t.sol", kind = "test", ci = "vault" },
+  { path = "vault/test/CrownDeposit.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/real/ZoneBridge.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/real/RuleBMulti.t.sol", kind = "test", ci = "vault" },
   { path = "e2e/runs/zone-rc3-four-keys/README.md", kind = "record" },
@@ -732,6 +733,7 @@ note = "from the seed alone: exactly the 7 own deposits among 100,000 natively; 
 [[row]]
 id = "RFP-022 F.10"
 tests = [
+  { path = "vault/script/test-admin.sh", kind = "test", ci = "vault" },
   { path = "vault/test/Admin.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/Release.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/Listing.t.sol", kind = "test", ci = "vault" },
@@ -744,6 +746,7 @@ note = "write-once registry on both sides; the LEZ entry written by attesting th
 [[row]]
 id = "RFP-022 F.11"
 tests = [
+  { path = "vault/script/test-admin.sh", kind = "test", ci = "vault" },
   { path = "vault/test/Caps.t.sol", kind = "test", ci = "vault" },
   { path = "lez/harness/tests/bridge_controls.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/harness/tests/bridge_time.rs", kind = "test", ci = "lez-harness" },
@@ -763,18 +766,23 @@ note = "outbound wait refused one second before W and accepted at it for t = 2, 
 [[row]]
 id = "RFP-022 F.13"
 tests = [
+  { path = "vault/script/test-admin.sh", kind = "test", ci = "vault" },
   { path = "vault/test/Fees.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/invariant/VaultInvariants.t.sol", kind = "test", ci = "vault" },
   { path = "cli/tests/both_halves.rs", kind = "test", ci = "box", run = "e2e/both-halves/run.sh" },
   { path = "e2e/both-halves/results/fees.md", kind = "record" },
   { path = "lez/harness/tests/bridge_inbound.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/harness/tests/bridge_vault_storage.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/harness/tests/bridge_f13.rs", kind = "test", ci = "lez-harness" },
+  { path = "e2e/both-halves/results/f13/fees.md", kind = "record" },
+  { path = "e2e/runs/f13-roundtrip-1/F13.md", kind = "record" },
 ]
-note = "fixed fees per token and denomination, in the wrapped token only, at most 1% (fuzzed), in force seven days after announcement, a deposit keeping its leaf index's schedule; invariants balance = escrow + owed + donations and LEZ supply = escrow - unminted - unreleased; live on Sepolia (rows 41, 91)"
+note = "fixed fees per token and denomination, at most 1% (fuzzed), in force seven days after announcement; since ADR 0046 the mint fee is taken on Ethereum at the deposit (credited to the fee recipient) and a claim names no schedule, minting the denomination and the registered relay fee (bridge_f13.rs; both halves across a fee change: one set of 6, results/f13/fees.md; on an rc3 sequencer: e2e/runs/f13-roundtrip-1); invariants balance = escrow + owed + donations and LEZ supply = escrow - unminted - unreleased; live on Sepolia (rows 41, 91)"
 
 [[row]]
 id = "RFP-022 F.14"
 tests = [
+  { path = "vault/script/test-admin.sh", kind = "test", ci = "vault" },
   { path = "vault/test/Freeze.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/Checkpoint.t.sol", kind = "test", ci = "vault" },
   { path = "lez/harness/tests/bridge_controls.rs", kind = "test", ci = "lez-harness" },
@@ -842,12 +850,12 @@ note = "the relayer and monitor as binaries and Logos modules (rows 43-48, 96, 1
 id = "RFP-022 U.4"
 tests = [
   { path = "idl/check.py", kind = "test", ci = "idl" },
-  { path = "lez/bridge-wire/tests/idl_vectors.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-lez-bridge-wire --locked --test idl_vectors" },
+  { path = "lez/bridge-wire/tests/idl_vectors.rs", kind = "test", ci = "msg" },
   { path = "idl/spel-v2/run.sh", kind = "test", ci = "box", run = "RECORDED=... bash idl/spel-v2/run.sh" },
   { path = "idl/generated/spel-v2.txt", kind = "record" },
   { path = "idl/spel-v2/upstream-pr/PR.md", kind = "document" },
 ]
-note = "waits on Logos: SPEL's v0.4 line is an open pull request; with our tuple patch its generator makes the bridge's messages and types, 0 differences (EVIDENCE row 194); the patch is ready as a pull request for SPEL's v0.4 line, not opened: 21 of 21 of SPEL's idl_gen suite with it, 14 before (row 270; in SPEL's tree at c90ca0b, git am the patch, then cargo test --locked -p spel-framework-core --features idl-gen,decode --test idl_gen: idl/spel-v2/upstream-pr/PR.md). Shown instead: the hand-written IDL decodes every instruction, type and variant of the bridge program (37 vectors), parsed and decoded by SPEL's own crate (EVIDENCE row 55); the idl job checks the committed vectors in CI"
+note = "waits on Logos: SPEL's v0.4 line is an open pull request; with our tuple patch its generator makes the bridge's messages and types, 0 differences (EVIDENCE row 194); the patch is ready as a pull request for SPEL's v0.4 line, not opened: 21 of 21 of SPEL's idl_gen suite with it, 14 before (row 270; in SPEL's tree at c90ca0b, git am the patch, then cargo test --locked -p spel-framework-core --features idl-gen,decode --test idl_gen: idl/spel-v2/upstream-pr/PR.md). Shown instead: the hand-written IDL decodes every instruction, type and variant of the bridge program (37 vectors), parsed and decoded by SPEL's own crate (EVIDENCE row 55); the idl job decodes the committed vectors in CI and msg's bridge-wire tests require them to equal what the wire writes"
 
 [[row]]
 id = "RFP-022 U.5"
@@ -870,6 +878,7 @@ id = "RFP-022 U.6"
 tests = [
   { path = "cli/tests/e2e.rs", kind = "test", ci = "roundtrip" },
   { path = "modules/ferrata_bridge_ui/scripts/box-test.sh", kind = "test", ci = "box", run = "modules/ferrata_bridge_ui/scripts/box-test.sh" },
+  { path = "modules/ferrata_bridge_module/rust-lib/calls/tests/network_session.rs", kind = "test", ci = "modules-resolve" },
 ]
 note = "private execution and destination preselected in the tool and the mini-app; a public destination, a plaintext claim and a public burn each need their own acknowledgement and print a WARNING (rows 62, 84-86)"
 
@@ -877,9 +886,9 @@ note = "private execution and destination preselected in the tool and the mini-a
 id = "RFP-022 U.7"
 tests = [
   { path = "cli/tests/e2e.rs", kind = "test", ci = "roundtrip" },
-  { path = "cli/src/privacy.rs", kind = "test", ci = "box", run = "cd cli && cargo test --locked --lib privacy" },
+  { path = "cli/src/privacy.rs", kind = "test", ci = "roundtrip" },
 ]
-note = "every dry run prints what the step makes public on each chain and what stays private (the B6 table), run by the tool's end-to-end test in CI's roundtrip job; privacy.rs's own unit tests run with the library's tests, which no CI job runs (roundtrip runs only the e2e and roundtrip_b targets); the user guide's section 10 carries the table; first drafts here, final with check-guides.py on branch rfp-docs-final (next entry)"
+note = "every dry run prints what the step makes public on each chain and what stays private (the B6 table), run by the tool's end-to-end test in CI's roundtrip job; privacy.rs's own unit tests run with the now-unfiltered library tests in CI roundtrip; the user guide's section 10 carries the table; first drafts here, final with check-guides.py on branch rfp-docs-final (next entry)"
 
 [[row]]
 id = "RFP-022 U.7"
@@ -935,7 +944,7 @@ note = "refused claims end with their own exit codes and spend nothing; a privat
 id = "RFP-022 R.2"
 tests = [
   { path = "lez/harness/tests/bridge_burn.rs", kind = "test", ci = "lez-harness" },
-  { path = "bridge/evm-verify/test/v2/VaultV2.t.sol", kind = "test", ci = "box", run = "cd bridge/evm-verify && forge test -vv" },
+  { path = "bridge/evm-verify/test/v2/VaultV2.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/PullPayment.t.sol", kind = "test", ci = "vault" },
 ]
 note = "a burn debits through synchronous messages only, so a non-reverted burn both destroys tokens and publishes the note; the tests assert the refusals burned nothing; a failed release leaves N_out unused and a recipient that cannot receive is credited"
@@ -1235,6 +1244,7 @@ note = "token buckets per token and globally on both sides with the immutable fl
 [[row]]
 id = "RFP-022 Sec.5"
 tests = [
+  { path = "vault/script/test-admin.sh", kind = "test", ci = "vault" },
   { path = "vault/test/Freeze.t.sol", kind = "test", ci = "vault" },
   { path = "lez/harness/tests/bridge_roles.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/harness/tests/bridge_time.rs", kind = "test", ci = "lez-harness" },
@@ -1273,7 +1283,7 @@ tests = [
   { path = "cli/tests/both_halves.rs", kind = "test", ci = "box", run = "e2e/both-halves/run.sh" },
   { path = "e2e/both-halves/results/migration.md", kind = "record" },
   { path = "vault/MIGRATION.md", kind = "document" },
-  { path = "bridge/evm-verify/test/v2/VaultV2.t.sol", kind = "test", ci = "box", run = "cd bridge/evm-verify && forge test -vv" },
+  { path = "bridge/evm-verify/test/v2/VaultV2.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/Refund.t.sol", kind = "test", ci = "vault" },
   { path = "lez/harness/tests/bridge_roles.rs", kind = "test", ci = "lez-harness" },
   { path = "scripts/verify-sepolia.py", kind = "test", ci = "local", run = "python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-3" },

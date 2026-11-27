@@ -169,6 +169,11 @@ const snap = JSON.parse(readFileSync(join(HERE, "live-snapshot.json"), "utf8"));
   world.snapshot_blocks = [world.head - snap.txs.length + 1, world.head];
 }
 world.fee_state.height = world.head;
+// Eight hours after the recorded finalized Ethereum block: the mock provider (3 epochs ahead of the instance) is
+// 72 epochs behind this fixed wall clock, producing exactly the provider-lag warning the browser test expects.
+// Keep every time-dependent fixture and the browser on this clock, rather than depending on the day the test runs.
+const fixtureNow = Number(eb.timestamp) + 8 * 3600;
+world.test_now_ms = fixtureNow * 1000;
 
 // a user: the first signer in the blocks, funded
 const signer = blocks.flatMap((b) => b.transactions).map((t) => signerAccounts(t)[0]).find(Boolean);
@@ -217,7 +222,7 @@ writeFileSync(join(OUT, "programs.json"), JSON.stringify({
 // the host's status files in deploy/testnet/host/bin/ferrata-status's format (SYNTHETIC values, one point a minute
 // for 24 h, a finality stall of 40 minutes in the middle), for the operator panel and its charts
 {
-  const now = Math.floor(Date.now() / 1000);
+  const now = fixtureNow;
   const hist = [];
   for (let i = 1439; i >= 0; i--) {
     const t = now - i * 60;

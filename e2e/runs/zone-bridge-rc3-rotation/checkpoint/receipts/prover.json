@@ -1,0 +1,14 @@
+{
+  "name": "0-checkpoint",
+  "kind": "checkpoint-b",
+  "image_id": "0x8917f58e76aa805dedc04fc5e2b70404f5078b66b271ec44aaa0c78d9f5eaf04",
+  "ok": true,
+  "seconds": 193.8,
+  "call_id": "fc-01M8DFW9BYV18T4E65VHPZN5HT",
+  "attempts": 1,
+  "resumed": true,
+  "prover": {
+    "exit_code": 0,
+    "wall_s": 110.50680327415466
+  }
+}

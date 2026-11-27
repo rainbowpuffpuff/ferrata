@@ -1,6 +1,6 @@
 # Privacy suite: generated results
 
-Bridge program image `847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515`; vault `0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0` on chain 1; configuration `0xc1120119d1de64d0f47ec468471657ad1fbc454ac7f1d9b24fb19b63b7f49f9b`; 20 users per direction; proofs: **dev** (LEZ's privacy-preserving circuit `8fc948d117c11d55f2036748013b3dc599d6995545f0b020d090f544081cf257`). Written by `scripts/privacy/adversary.py`.
+Bridge program image `ffb47f6eaec6ef13f49505e5e80209f73d38ea53792e77656994f8069dde7675`; vault `0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0` on chain 1; configuration `0x5548e1a7987a6a7ee25b242c2540cefc4a5d4877894112c3851e17f16c44457d`; 20 users per direction; proofs: **dev** (LEZ's privacy-preserving circuit `8fc948d117c11d55f2036748013b3dc599d6995545f0b020d090f544081cf257`). Written by `scripts/privacy/adversary.py`.
 
 ## The differential gate
 
@@ -8,9 +8,9 @@ Bridge program image `847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99c
 |---|---|---|
 | deposit (A: private destinations) | 100-100 | yes |
 | deposit (B: public destinations) | 100-100 | yes |
-| claim, private (default) | 8,937-8,937 | yes |
-| claim, naive nullifier N = fid | 8,937-8,937 | yes |
-| claim, plaintext | 2,053-2,053 | NO: lez:claim:plaintext:01 vs lez:claim:plaintext:00: part tx differs at byte 5 of 1837/1837 after the cut (000700000039015e41407ca96e2441eb35f8b801223bcbf25fb39d7230 / 00070000001033fd3104506274fc30fac4e7631f764636a5cf32ff5255) |
+| claim, private (default) | 8,889-8,889 | yes |
+| claim, naive nullifier N = fid | 8,889-8,889 | yes |
+| claim, plaintext | 2,029-2,029 | NO: lez:claim:plaintext:01 vs lez:claim:plaintext:00: part tx differs at byte 133 of 1813/1813 after the cut (6994f8069dde7675997b35e8944091a762c184a89e5165fdb033d018fde55918 / 6994f8069dde7675bd8b565ef9cebf55e3cefbfd6ad765c9abfdd6f2bdea62d9) |
 | burn, private holding | 7,857-7,857 | yes |
 | release, NOut of the release statement | 324-324 | yes |
 | release, naive NOut = burnId | 324-324 | yes |
@@ -27,7 +27,7 @@ Chance is 1/20 = 5.0%. Success = mean over the right-hand records of 1/|best can
 | outbound, private (default) | 5.0% | 0 of 20 | 20: 20 | 5.0% | 5.0% | 5.0% |
 | outbound, naive NOut = burnId | 100.0% | 20 of 20 | 1: 20 | 5.0% | 100.0% | 5.0% |
 | round trip: deposit to release (informational) | 5.0% | 0 of 20 | 20: 20 | 5.0% | 5.0% | 5.0% |
-| on LEZ: claim to burn (informational) | 4.5% | 0 of 20 | 1: 2, 20: 18 | 4.5% | 4.5% | 5.0% |
+| on LEZ: claim to burn (informational) | 4.8% | 0 of 20 | 1: 1, 20: 19 | 4.8% | 4.8% | 5.0% |
 
 ## Recovery from the seed alone (after 10 claims and 10 releases)
 
@@ -40,15 +40,15 @@ Private actions proven against the newest commitment-set root: 80 of 80.
 
 ## Receipts
 
-- Ethereum gas used, deposits by leaf index (universe A): [139740, 100062, 80162, 100184, 80162, 80284, 80284, 100306, 80162, 80284, 80284, 80406, 80284, 80406, 80406, 100428, 80162, 80284, 80284, 80406]; the same in universe B (other commitments, public destinations): True
+- Ethereum gas used, deposits by leaf index (universe A): [139912, 100234, 80334, 100356, 80334, 80456, 80456, 100478, 80334, 80456, 80456, 80578, 80456, 80578, 80578, 100600, 80334, 80456, 80456, 80578]; the same in universe B (other commitments, public destinations): True
 - Ethereum gas used, releases: distinct values [80461, 105461] (NOut of the release statement), [80461, 105461] (naive)
-- execution gas by position, minus the first: private claims [0, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377]; plaintext claims [0, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377, 4377]; burns [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; releases (Ethereum) [0, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000]
+- execution gas by position, minus the first: private claims [0, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366]; plaintext claims [0, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366, 4366]; burns [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; releases (Ethereum) [0, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000]
 - LEZ claims: the same gas steps by position in both universes (users in different orders): yes
 - LEZ burns: only the first differs: yes
 - Ethereum releases: only the first differs, by 25,000 (the relayer's account created): yes
-- LEZ, claim, private (default): gas_exec 552979, 557356; cycles 143215, 147592; gas_stor 224063; fee_base 6216336, 6251352
-- LEZ, burn, private holding: gas_exec 511731; cycles 101967; gas_stor 224063; fee_base 5886352
-- LEZ, claim, plaintext: gas_exec 261772, 266149; cycles 261772, 266149; gas_stor 2053; fee_base 2110600, 2145616
+- LEZ, claim, private (default): gas_exec 552814, 557180; cycles 143050, 147416; gas_stor 224063; fee_base 6215016, 6249944
+- LEZ, burn, private holding: gas_exec 511932; cycles 102168; gas_stor 224063; fee_base 5887960
+- LEZ, claim, plaintext: gas_exec 261007, 265373; cycles 261007, 265373; gas_stor 2029; fee_base 2104288, 2139216
 
 ## Proofs
 
@@ -56,7 +56,7 @@ What the collectors recorded about each proof (not public: proving time, the che
 
 | step | receipt kind | proof bytes | transaction bytes | seal words | proving time, s (min / median / max; sum) | journal = the message's frame | claim = ok(circuit, journal) | seal outputs = claim digest |
 |---|---|---|---|---|---|---|---|---|
-| claim, private (default) | fake | 4,525 | 8,937 | - | 0.8 / 0.9 / 0.9; 17 | 20 of 20 | 20 of 20 | - |
+| claim, private (default) | fake | 4,501 | 8,889 | - | 0.8 / 0.9 / 0.9; 17 | 20 of 20 | 20 of 20 | - |
 | burn, private holding | fake | 3,985 | 7,857 | - | 0.5 / 0.5 / 0.5; 11 | 20 of 20 | 20 of 20 | - |
 | release, NOut of the release statement | - | - | - | - | - | - | - | - |
 | release, naive NOut = burnId | - | - | - | - | - | - | - | - |
@@ -65,7 +65,7 @@ The three check columns are computed by this script from the public bytes alone 
 
 | step | proof field | bytes | distinct across the records | class |
 |---|---|---|---:|---|
-| claim, private (default) | `proof.claim` | 4,524 | 20 of 20 | a function of public data |
+| claim, private (default) | `proof.claim` | 4,500 | 20 of 20 | a function of public data |
 | claim, private (default) | `proof.kind` | 1 | 1 of 20 | constant |
 | claim, private (default) | `proof.length` | 4 | 1 of 20 | constant |
 | claim, private (default) | `witness_set.signatures` | 4 | 1 of 20 | constant |

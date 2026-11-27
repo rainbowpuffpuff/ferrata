@@ -15,13 +15,13 @@ use checkpoint_core::{
 };
 use ferrata_lez_bridge_wire::{
     self as bw, code, config_actor, own_actor, token_actor, BridgeMessage, CapParams, ConfigState, FeeSchedule, Note,
-    ScheduleRange, TokenEntry, MAX_FREEZE_MS,
+    TokenEntry, MAX_FREEZE_MS,
 };
 use harness::{
     bridge::{
         eth_entry, eth_schedule_one, fee_recipient, relayer, render, schedule_zero, t2_entry, t3_entry, World,
-        ADMIN_SEED, DENOMINATIONS, ETH, FLOOR, FREEZE_SEED, GLOBAL_CAP, LEZ_UNIT, MINT_FEES_1, OUTSIDER_SEED,
-        RELAY_FEES, T2, T2_DENOMINATIONS, T3, VAULT_B,
+        ADMIN_SEED, DENOMINATIONS, ETH, FLOOR, FREEZE_SEED, GLOBAL_CAP, LEZ_UNIT, OUTSIDER_SEED, RELAY_FEES, T2,
+        T2_DENOMINATIONS, T3, VAULT_B,
     },
     render_transitions, TxReport,
 };
@@ -174,21 +174,9 @@ fn registry_fees_caps_freezes_and_sunset() {
         run(&mut reports, r, None);
     }
 
-    // --- Fees by leaf index (F.13) --------------------------------------------------------------
+    // --- Mirrored fees (F.13); claims no longer read their schedules ---------------------------
     let leaf6 = w.vault_a.witness(&w.payer_deposit.clone(), 8);
     let vector = w.vault_a.witness(&w.vector.clone(), 5);
-    let me = Some(*relayer().value());
-    let range = |index, from_leaf, until_leaf| ScheduleRange { index, from_leaf, until_leaf };
-    let r = w.claim_with(
-        "Claim leaf 6 before its schedule is known: range [0, 8)",
-        &cid_a,
-        8,
-        &va,
-        leaf6.clone(),
-        range(0, 0, 8),
-        me,
-    );
-    run(&mut reports, r, Some(code::LEAF_NOT_IMPORTED));
     let r = w.import_fees(
         "ImportFees ETH (A) schedule 1 at block 100 (not there yet)",
         &cid_a,
@@ -207,16 +195,6 @@ fn registry_fees_caps_freezes_and_sunset() {
     assert_eq!(w.token_state(&cid_a, &ETH).unwrap().known_until, 6, "below schedule 1's first leaf");
     let r = w.import_fees("ImportFees ETH (A) schedule 1 again", &cid_a, 1, ETH, 1, Some(eth_schedule_one()), &va);
     run(&mut reports, r, Some(code::IMPORT_MISMATCH));
-    let r = w.claim_with(
-        "Claim leaf 6 in schedule 1's range [6, 8) before it is closed",
-        &cid_a,
-        8,
-        &va,
-        leaf6.clone(),
-        range(1, 6, 8),
-        me,
-    );
-    run(&mut reports, r, Some(code::LEAF_NOT_IMPORTED));
     let r = w.import_fees("ImportFees ETH (A): no schedule 2 at block 101 (8 leaves)", &cid_a, 1, ETH, 2, None, &va);
     run(&mut reports, r, None);
     assert_eq!(w.token_state(&cid_a, &ETH).unwrap().known_until, 8);
@@ -225,19 +203,6 @@ fn registry_fees_caps_freezes_and_sunset() {
     run(&mut reports, r, Some(code::BAD_MESSAGE));
     let r = w.import_fees("ImportFees T3 (A) schedule 1: a 2% mint fee", &cid_a, 2, T3, 1, Some(high), &va);
     run(&mut reports, r, Some(code::BAD_MESSAGE));
-    let r =
-        w.claim_with("Claim leaf 6 under schedule 0's range [0, 6)", &cid_a, 8, &va, leaf6.clone(), range(0, 0, 6), me);
-    run(&mut reports, r, Some(code::LEAF_NOT_IMPORTED));
-    let r = w.claim_with(
-        "Claim leaf 2 under schedule 1's range [6, 8)",
-        &cid_a,
-        5,
-        &va,
-        vector.clone(),
-        range(1, 6, 8),
-        me,
-    );
-    run(&mut reports, r, Some(code::LEAF_NOT_IMPORTED));
 
     // --- Caps (F.11): token and global, mints and burns, on attested time ----------------------
     let eth_a_actor = token_actor(program, &cid_a, &ETH);
@@ -267,7 +232,7 @@ fn registry_fees_caps_freezes_and_sunset() {
     );
     run(&mut reports, r, Some(code::NOT_AUTHORIZED));
     let r = w.claim(
-        "Claim leaf 6: 10 ETH to the payer, 0.05 mint fee, 0.01 relay fee (10.06 ETH of the cap)",
+        "Claim leaf 6: 10 ETH to the payer, no mint fee, 0.01 relay fee (10.01 ETH of the cap)",
         &cid_a,
         8,
         &va,
@@ -275,9 +240,9 @@ fn registry_fees_caps_freezes_and_sunset() {
     );
     run(&mut reports, r, None);
     assert_eq!(w.balance(payer, &cid_a), DENOMINATIONS[2], "the user gets exactly the denomination");
-    assert_eq!(w.balance(fee_recipient(), &cid_a), MINT_FEES_1[2]);
+    assert_eq!(w.balance(fee_recipient(), &cid_a), 0, "the vault took the mint fee at deposit");
     assert_eq!(w.balance(relayer(), &cid_a), RELAY_FEES[2]);
-    let r = w.claim("Claim leaf 2 (1.001 ETH) with 0.94 ETH left in the bucket", &cid_a, 5, &va, vector.clone());
+    let r = w.claim("Claim leaf 2 (1.001 ETH) with 0.99 ETH left in the bucket", &cid_a, 5, &va, vector.clone());
     run(&mut reports, r, Some(code::CAPPED));
     assert!(w.nullifier(&cid_a, &va, &w.vector_n).is_none(), "a capped claim leaves its deposit claimable");
     let ten_s = w.finalize(t0 / 1000 + 10);

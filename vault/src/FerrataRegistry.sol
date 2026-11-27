@@ -144,12 +144,11 @@ library FerrataRegistry {
 
     /// @notice The leaf checks of the vault's `refund` (documented there) and the escrow it returns: the leaf exists,
     ///         its token and denomination are registered, and `path` folds it to `depositRoot` (direction bits = the
-    ///         bits of `leafIndex`); the escrow is the denomination plus the mint and relay fees of its schedule.
+    ///         bits of `leafIndex`); the escrow is the denomination plus the token's registered relay fee. The mint fee
+    ///         was credited to `feeRecipient` at deposit and is not refunded, so no fee-schedule lookup is needed.
     /// @dev Reads the leaf count and the root at their fixed slots (1 and 0, part of the cross-chain interface).
     function refundAmount(
         mapping(address token => FerrataVault.TokenConfig) storage tokens,
-        mapping(address token => FerrataVault.FeeState) storage states,
-        mapping(address token => mapping(uint256 index => FerrataVault.FeeSchedule)) storage schedules,
         uint64 leafIndex,
         address depositor,
         address token,
@@ -167,30 +166,7 @@ library FerrataRegistry {
             node = ((leafIndex >> h) & 1) == 1 ? _hashNode(path[h], node) : _hashNode(node, path[h]);
         }
         if (node != _depositRoot()) revert FerrataVault.InvalidMerklePath();
-        amount += _inboundFeesOfLeaf(states, schedules, token, leafIndex, denomIndex);
-    }
-
-    /// @dev The mint and relay fees a deposit at `leafIndex` escrowed with its denomination: those of the last
-    ///      schedule in force from a leaf at or below it (a deposit keeps the schedule of its leaf index, D13).
-    ///      Binary search over the token's schedules 0..current, whose `fromLeaf` never decreases. Schedule 0 starts
-    ///      at the leaf count of the registration, so every leaf of the token finds one.
-    function _inboundFeesOfLeaf(
-        mapping(address token => FerrataVault.FeeState) storage states,
-        mapping(address token => mapping(uint256 index => FerrataVault.FeeSchedule)) storage schedules,
-        address token,
-        uint64 leafIndex,
-        uint8 denomIndex
-    ) private view returns (uint256) {
-        mapping(uint256 index => FerrataVault.FeeSchedule) storage list = schedules[token];
-        uint256 low = 0;
-        uint256 high = uint256(states[token].current) + 1;
-        while (low < high) {
-            uint256 mid = (low + high) / 2;
-            if (list[mid].fromLeaf <= leafIndex) low = mid + 1;
-            else high = mid;
-        }
-        uint256 inbound = list[low - 1].inbound[denomIndex];
-        return (inbound >> 128) + uint128(inbound);
+        amount += cfg.relayFees[denomIndex];
     }
 
     /// @notice Updates a token's bucket (the vault's `setTokenCap` documents the rules); a release bucket stays at
@@ -474,9 +450,7 @@ library FerrataRegistry {
 
     /// @dev Fee schedule 0 (D13): no mint or burn fee ("protocol fees start at zero"), the registered relay fees and
     ///      the given checkpoint fees; in force from the current leaf count, announced and effective now.
-    function _initFees(FerrataVault.FeeSchedule storage s, address token, FerrataVault.TokenParams calldata p)
-        private
-    {
+    function _initFees(FerrataVault.FeeSchedule storage s, address token, FerrataVault.TokenParams calldata p) private {
         uint256 k = p.denominations.length;
         if (p.checkpointFees.length != k) revert FerrataVault.FeeCountMismatch();
         for (uint256 i = 0; i < k; i++) {

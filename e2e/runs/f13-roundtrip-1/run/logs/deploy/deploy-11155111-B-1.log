@@ -1,0 +1,20 @@
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+  deployer 0x000000000000000000000000000000005e9de901, rule B, gas rule eip8037, cap 200000000, block gas limit 200000000
+  FERRATA_STEP groth16Verifier
+  FERRATA_GAS groth16Verifier estimate 1179974 limit 1474967 cap 200000000
+  FERRATA_CREATED groth16Verifier 0x25Fa4286d401bdc4AC7657bc7a1ebdE1B737F4b1
+
+SKIPPING ON CHAIN SIMULATION.
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: <repo>/vault/broadcast/DeployVault.s.sol/11155111/run-latest.json
+
+Sensitive values saved to: <repo>/vault/cache/DeployVault.s.sol/11155111/run-latest.json
+

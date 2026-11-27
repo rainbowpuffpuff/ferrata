@@ -31,8 +31,8 @@ use ferrata_core::{
 use ferrata_lez_bridge_wire::{
     self as bw, code, config_actor, config_seed, fee_slot, own_actor, register_slots, registry_slot, root_actor,
     root_seed, token_actor, BridgeConfig, BridgeMessage, BridgeState, CapParams, ClaimWitness, Controls, FeeSchedule,
-    HolderState, ImportProof, NullifierState, PairingProof, RootState, ScheduleRange, TimeRecord, TokenEntry,
-    TokenState, VaultProof, Word, SLOT_CONFIG_ID, SLOT_COUNT, SLOT_ROOT,
+    HolderState, ImportProof, NullifierState, PairingProof, RootState, TimeRecord, TokenEntry, TokenState, VaultProof,
+    Word, SLOT_CONFIG_ID, SLOT_COUNT, SLOT_ROOT,
 };
 use ferrata_lez_wire::{header_actor, RecordState};
 use ferrata_spectests::execkit::{account_rlp, enc, header_rlp, keccak, Trie};
@@ -989,19 +989,6 @@ impl World {
         self.submit(label, config, &message, vec![config, header, token_actor(self.program, cid, &token)], evidence)
     }
 
-    /// The fee schedule range a wallet names for a claim of `leaf` of `token`: the schedule the
-    /// leaf falls under and the widest range the token's state allows (the whole known range).
-    pub fn range(&self, cid: &Hash, token: &[u8; 20], leaf: u64) -> ScheduleRange {
-        match self.token_state(cid, token) {
-            None => ScheduleRange { index: 0, from_leaf: 0, until_leaf: u64::MAX },
-            Some(t) => {
-                let j = t.schedules.iter().rposition(|s| s.from_leaf <= leaf).unwrap_or(0);
-                let until = t.schedules.get(j + 1).map_or(t.known_until, |s| s.from_leaf);
-                ScheduleRange { index: j as u64, from_leaf: t.schedules[j].from_leaf, until_leaf: until }
-            }
-        }
-    }
-
     /// The public actors of a claim beyond its first: the token, the configuration, the
     /// nullifier, the public destination, the fee recipient and the relayer (each once).
     pub fn claim_actors(
@@ -1025,10 +1012,9 @@ impl World {
     }
 
     /// The plaintext `Claim` of `witness` at `root(cid, n)` (the nullifier of `vault`'s deposit),
-    /// with the wallet's range and the world's relayer.
+    /// with the world's relayer.
     pub fn claim(&mut self, label: &str, cid: &Hash, n: u64, vault: &[u8; 20], witness: ClaimWitness) -> TxReport {
-        let range = self.range(cid, &witness.token, witness.leaf_index);
-        self.claim_with(label, cid, n, vault, witness, range, Some(*relayer().value()))
+        self.claim_with(label, cid, n, vault, witness, Some(*relayer().value()))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1039,7 +1025,6 @@ impl World {
         n: u64,
         vault: &[u8; 20],
         witness: ClaimWitness,
-        range: ScheduleRange,
         relayer: Option<Hash>,
     ) -> TxReport {
         let root = root_actor(self.program, cid, n);
@@ -1048,16 +1033,14 @@ impl World {
         let mut actors = vec![root];
         actors.extend(self.claim_actors(cid, &witness.token, nullifier, Some(AccountId::new(witness.dest)), relayer));
         let evidence = self.evidence(root, root_seed(cid, n));
-        let message = BridgeMessage::Claim { config_id: *cid, leaf_count: n, witness, range, relayer };
+        let message = BridgeMessage::Claim { config_id: *cid, leaf_count: n, witness, relayer };
         self.submit(label, root, &message, actors, evidence)
     }
 
-    /// A `ClaimPrivately` of `witness` under `root(cid, n)`, with the wallet's range and the
-    /// world's relayer.
+    /// A `ClaimPrivately` of `witness` under `root(cid, n)`, with the world's relayer.
     pub fn claim_privately(&self, cid: &Hash, n: u64, witness: ClaimWitness) -> BridgeMessage {
-        let range = self.range(cid, &witness.token, witness.leaf_index);
         let relayer = Some(*relayer().value());
-        BridgeMessage::ClaimPrivately { config_id: *cid, leaf_count: n, witness, range, relayer }
+        BridgeMessage::ClaimPrivately { config_id: *cid, leaf_count: n, witness, relayer }
     }
 
     /// The public actors of a private claim of `deposit` (of `vault`) under `root(cid, n)`.

@@ -52,6 +52,10 @@ def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page(viewport={"width": 1360, "height": 900})
+        if world:
+            # The fixture's mock providers deliberately represent a fixed point eight hours after the recorded block.
+            # Freeze the browser there too; wall-clock time would add period and weak-subjectivity alarms as it ages.
+            page.clock.install(time=world["test_now_ms"])
         errors = []
         page.on("pageerror", lambda e: errors.append(f"pageerror: {e}"))
         # a 429 is the gateway's "slow down", which the page waits out and retries: not an error

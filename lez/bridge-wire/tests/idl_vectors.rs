@@ -408,10 +408,6 @@ fn witness() -> bw::ClaimWitness {
     }
 }
 
-fn range() -> bw::ScheduleRange {
-    bw::ScheduleRange { index: 1, from_leaf: 10, until_leaf: 20 }
-}
-
 fn freeze_authority(n: u8) -> bw::FreezeAuthority {
     bw::FreezeAuthority { members: vec![r(n), r(n + 1)], threshold: 2 }
 }
@@ -496,9 +492,9 @@ fn bridge_vectors() -> Vec<Vector> {
             record_slot: 11_547_100,
             proof: bw::PairingProof { account: vec![vec![6]], config_slot: vec![vec![7, 8]] },
         },
-        Claim { config_id: r(60), leaf_count: 16, witness: witness(), range: range(), relayer: Some(r(67)) },
-        Claim { config_id: r(60), leaf_count: 16, witness: witness(), range: range(), relayer: None },
-        ClaimPrivately { config_id: r(60), leaf_count: 16, witness: witness(), range: range(), relayer: None },
+        Claim { config_id: r(60), leaf_count: 16, witness: witness(), relayer: Some(r(67)) },
+        Claim { config_id: r(60), leaf_count: 16, witness: witness(), relayer: None },
+        ClaimPrivately { config_id: r(60), leaf_count: 16, witness: witness(), relayer: None },
         Read,
         WriteRoot { root: root_state() },
         Spend {
@@ -551,7 +547,6 @@ fn bridge_vectors() -> Vec<Vector> {
             token: a(40),
             nullifier: r(68),
             amount: 1_000_000,
-            range: range(),
             leaf_count: 16,
             mint_to: None,
             relayer: Some(r(67)),
@@ -684,13 +679,7 @@ fn bridge_vectors() -> Vec<Vector> {
                 bw::Holding { config_id: r(60), token: a(40), amount: 5 },
                 bw::Holding { config_id: r(60), token: a(73), amount: 6 },
             ],
-            pending: Some(bw::PendingClaim {
-                config_id: r(60),
-                leaf_count: 16,
-                witness: witness(),
-                range: range(),
-                relayer: None,
-            }),
+            pending: Some(bw::PendingClaim { config_id: r(60), leaf_count: 16, witness: witness(), relayer: None }),
         }),
         bw::BridgeState::Holder(bw::HolderState { holdings: vec![], pending: None }),
         bw::BridgeState::Burn(bw::BurnRecord {

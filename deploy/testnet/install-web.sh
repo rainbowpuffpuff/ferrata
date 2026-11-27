@@ -66,7 +66,9 @@ fi
 install -m 644 "$HERE/host/www/status.html" "$WWW/health.html"; install -m 644 "$HERE/host/www/health.js" "$WWW/health.js"
 install -m 644 "$HERE/host/www/style.css" "$HERE/host/www/robots.txt" "$WWW/"
 install -d -m 755 "$WWW/idl"
-install -m 644 "$REPO"/idl/ferrata_attestation.idl.json "$REPO"/idl/ferrata_bridge.idl.json "$WWW/idl/"
+# The test network runs ferrata_bridge_b1: its frozen interface is the one the explorer decodes with (idl/deployed/).
+install -m 644 "$REPO"/idl/ferrata_attestation.idl.json "$WWW/idl/"
+install -m 644 "$REPO"/idl/deployed/ferrata_bridge_b1.idl.json "$WWW/idl/ferrata_bridge.idl.json"
 [ -f /var/lib/ferrata/status/programs.json ] && install -m 644 /var/lib/ferrata/status/programs.json "$WWW/programs.json"
 [ -f "$WWW/programs.json" ] || echo '{"status": "being deployed"}' > "$WWW/programs.json"
 cp "$WWW/programs.json" "$WWW/status/programs.json"

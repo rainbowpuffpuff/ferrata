@@ -10,7 +10,7 @@ runs were made on 26 and 27 November 2026), `bash bench/perf/gate-sequencer.sh N
 GATE_STEP=60 GATE_POLL=4 GATE_ADVERSARY=0 GATE_DEADLINE_MIN=150` and the window `GATE_WINDOW` 8 or 30 (each run's
 `machine.txt`). What differs from G6 and G7 is the updater: it now joins or waits (`policy.join_wait_rounds`, default
 `2 × defer_window + 10`; [`lez/updater/README.md`](../updater/README.md) item 7, [ADR
-0046](../../docs/decisions/0046-updater-join-or-wait.md)). Two builds ran, each built once on the window-8 box and
+0047](../../docs/decisions/0047-updater-join-or-wait.md)). Two builds ran, each built once on the window-8 box and
 copied to the window-30 box, so each pair compares the windows on one binary: `gate-g8` and `gate-g9` the first build
 (commit `b9377f5f`, updater sha256 `d42374d3…`), `gate-g10` and `gate-g11` the final one (commit `39a87ce4`,
 updater sha256 `0354a758…`). The first build differed from the final policy: at as many steps the older update's
