@@ -1,8 +1,8 @@
 {
- "commit": "fd9a91420e7b16e66d8f49d285cd7bf38d0e1894",
+ "commit": "4cb3c3de960c4f0ca269582adb0026eb931ceb6c",
  "date": "2026-11-27",
  "dirty": false,
- "statuses_from": "fd9a91420e7b16e66d8f49d285cd7bf38d0e1894",
+ "statuses_from": "4cb3c3de960c4f0ca269582adb0026eb931ceb6c",
  "hard": {
   "RFP-021": {
    "shown": 50,
@@ -12,8 +12,8 @@
    "total": 59
   },
   "RFP-022": {
-   "shown": 48,
-   "in part": 17,
+   "shown": 47,
+   "in part": 18,
    "not yet": 1,
    "waits on Logos": 2,
    "total": 68
