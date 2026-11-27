@@ -496,7 +496,7 @@ pub async fn bridge_program<L: Ledger>(ledger: &L, ctx: &Context) -> Result<Brid
 
 /// Refuses a private call's program binary (`--bridge-program`) whose image id `binary` is not `zone`'s, the image the
 /// zone's loader names for the bridge account: the sequencer would refuse the proof, after minutes of proving.
-pub fn check_program_binary(path: &Path, binary: &[u8; 32], zone: &[u8; 32]) -> Result<()> {
+pub fn check_program_binary(path: &std::path::Path, binary: &[u8; 32], zone: &[u8; 32]) -> Result<()> {
     if binary == zone {
         return Ok(());
     }
