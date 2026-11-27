@@ -68,7 +68,7 @@
   {
    "check": "step 6a: \"Deposited: leaf N in block M\", and anvil's vault logged it",
    "ok": true,
-   "detail": "Deposited: leaf 0 in block 12 (0x9262f3e53b305c903ee945c47637e6f3046c776d5e3ea2d80aea6e4d3b1e5b3a). Next: the claim on LEZ, once the zone imports the vault's deposits."
+   "detail": "Deposited: leaf 0 in block 12 (0x63b7a30200564a42365a74e11d6ce3f59386a57e618f07237c23c1bfb381d000). Next: the claim on LEZ, once the zone imports the vault's deposits."
   },
   {
    "check": "choosing the private account says what its claim needs and links the testers' step 6e",
@@ -83,7 +83,7 @@
   {
    "check": "a deposit to the wallet's private account /0 (step 6e's first half)",
    "ok": true,
-   "detail": "Deposited: leaf 1 in block 13 (0xc0450cf64b563a998b430d594b2dde12321abb29cc2f28b7b4b5a149c79eddb3). Next: the claim on LEZ, once the zone imports the vault's deposits."
+   "detail": "Deposited: leaf 1 in block 13 (0x478fe67fb79a2b3243ead9c8a76483db28c942f02835da4cdbde1da60c4efbb4). Next: the claim on LEZ, once the zone imports the vault's deposits."
   },
   {
    "check": "no Sepolia ETH: refused at the review in plain words, nothing to sign, nothing deposited",
@@ -98,7 +98,7 @@
   {
    "check": "the private deposit links the steps of a private claim",
    "ok": true,
-   "detail": "0.1 ETH \u2192 private LEZ account ZftM5bjK\u2026 \u00b7 deposited \u00b7 leaf 1\nj = 1\nC 0xe1ab1f02481d5359dad691e0fd16f53348dc587b261580614fc768efb4587bf4 \u00b7 0xc0450cf64b563a998b430d594b2dde12321abb29cc2f28b7b4b5a149c79eddb3 \u00b7 claim privately with the ferrata tool (same phrase): a private claim needs a proof made with "
+   "detail": "0.1 ETH \u2192 private LEZ account BVSH39cY\u2026 \u00b7 deposited \u00b7 leaf 1\nj = 1\nC 0x67a713f72631f49083f5c51af26e01d5e119c41b3db464a6ed5be60561fa7511 \u00b7 0x478fe67fb79a2b3243ead9c8a76483db28c942f02835da4cdbde1da60c4efbb4 \u00b7 claim privately with the ferrata tool (same phrase): a private claim needs a proof made with "
   },
   {
    "check": "every request went to the page's own origin (GitHub's badges and API aside, which the build page names)",
