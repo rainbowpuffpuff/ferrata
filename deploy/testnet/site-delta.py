@@ -69,7 +69,7 @@ done < EXPECT
 # back from the backup (or removed, where the manifest said absent) and nothing stays installed.
 mkdir -p "$BACKUP"
 staged=()
-unstage() {{ set +e; for s in "${{staged[@]}}"; do rm -f "$s"; done; echo "staging failed: nothing installed"; exit 1; }}
+unstage() {{ set +e; for s in ${{staged[@]+"${{staged[@]}}"}}; do rm -f "$s"; done; echo "staging failed: nothing installed"; exit 1; }}
 while read -r want path; do
   [ "$want" = absent ] || install -D -m 644 "$WWW/$path" "$BACKUP/$path" || unstage
   install -D -o "${{OWNER%%:*}}" -g "${{OWNER##*:}}" -m 644 "www/$path" "$WWW/$path.site-delta-new" || unstage
@@ -78,22 +78,23 @@ done < EXPECT
 moved=()
 putback() {{
   set +e; left=0   # every file is tried; any that stays new is named
-  for m in "${{moved[@]}}"; do
-    if [ -f "$BACKUP/$m" ]; then
+  for mw in ${{moved[@]+"${{moved[@]}}"}}; do
+    w="${{mw%% *}}"; m="${{mw#* }}"
+    if [ "$w" = absent ]; then
+      rm -f "$WWW/$m" || {{ echo "still present: $m"; left=1; }}
+    else
       {{ install -o "${{OWNER%%:*}}" -g "${{OWNER##*:}}" -m 644 "$BACKUP/$m" "$WWW/$m.site-delta-old" && mv -f "$WWW/$m.site-delta-old" "$WWW/$m"; }} \
         || {{ rm -f "$WWW/$m.site-delta-old"; echo "still new: $m"; left=1; }}
-    else
-      rm -f "$WWW/$m" || {{ echo "still present: $m"; left=1; }}
     fi
   done
-  for s in "${{staged[@]}}"; do rm -f "$s"; done
+  for s in ${{staged[@]+"${{staged[@]}}"}}; do rm -f "$s"; done
   if [ "$left" = 0 ]; then echo "a rename failed: the files already renamed were put back; nothing installed"
   else echo "a rename failed and the files above could not be put back: bash rollback.sh $BACKUP"; fi
   exit 1
 }}
 while read -r want path; do
   mv -f "$WWW/$path.site-delta-new" "$WWW/$path" || putback
-  moved+=("$path")
+  moved+=("$want $path")
 done < EXPECT
 echo "installed $(wc -l < EXPECT) file(s) from {ref12}; the replaced ones are in $BACKUP"
 """
@@ -108,9 +109,18 @@ HERE="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" && pwd)"
 WWW="${{WWW:-/srv/ferrata/www}}"; OWNER="${{OWNER:-root:root}}"
 BACKUP="${{1:?usage: bash rollback.sh BACKUP}}"
 [ -d "$BACKUP" ] || {{ echo "no backup directory $BACKUP: nothing put back"; exit 1; }}
+BACKUP="$(cd "$BACKUP" && pwd)"
 cd "$HERE"
+# The whole backup first: every file to put back present and the one the manifest names, or nothing changes.
+bad=0
+while read -r want path; do
+  [ "$want" = absent ] && continue
+  [ "$(sha256sum "$BACKUP/$path" 2>/dev/null | cut -d' ' -f1)" = "$want" ] || {{ echo "not in this backup as the manifest names it: $path"; bad=1; }}
+done < EXPECT
+[ "$bad" = 0 ] || {{ echo "this is not the backup of this package's install: nothing put back"; exit 1; }}
 left=0
 while read -r want path; do
+  rm -f "$WWW/$path.site-delta-new"   # a staged file an interrupted install left
   if [ "$want" = absent ]; then
     rm -f "$WWW/$path" || {{ echo "could not remove: $path"; left=1; }}
   elif [ -f "$BACKUP/$path" ]; then
@@ -146,6 +156,8 @@ def blobs(ref: str, paths) -> dict:
         size = int(head.split()[2])
         got[p] = out[pos:pos + size]
         pos += size + 1
+    if pos != len(out):
+        raise SystemExit("site-delta: git's answer does not match the paths asked (a path with a newline?)")
     return got
 
 
@@ -182,9 +194,11 @@ def plan(manifest: dict, ref: str, parts) -> dict:
     build_files = set(json.loads(head[f"{BUILD}/build.json"])["files"])
     entries = manifest.get("files") or []
     for e in entries:   # git reads `REF:repo_path` lines, and install.sh reads paths unquoted: nothing else gets through
+        if not re.fullmatch(r"[0-9a-f]{64}", str(e.get("sha256", ""))):
+            raise SystemExit(f"site-delta: the manifest's sha256 for {e.get('path')!r} is not 64 hex digits")
         for key in ("path", "repo_path"):
             v = str(e.get(key, "")).lstrip("/")
-            if not PATH_OK.match(v) or ".." in v.split("/"):
+            if not PATH_OK.fullmatch(v) or ".." in v.split("/"):
                 raise SystemExit(f"site-delta: an unexpected {key} in the manifest: {e.get(key)!r}")
     served = {e["path"]: e for e in entries}
     want = {}   # served path -> repository path, for every file this ref would serve from the parts it knows
@@ -200,13 +214,14 @@ def plan(manifest: dict, ref: str, parts) -> dict:
     for path in sorted(want):
         repo_path, entry = want[path], served.get(path)
         if repo_path not in files:
-            if entry:
-                out["gone"].append((path, repo_path))
+            if not entry:   # listed by build.json or sw.js, yet not in the commit: the host would serve a broken list
+                raise SystemExit(f"site-delta: {path} is listed by the bundle (build.json or sw.js) but {repo_path} is not at {ref[:12]}")
+            out["gone"].append((path, repo_path))
             continue
         data = files[repo_path]
         if entry and hashlib.sha256(data).hexdigest() == entry["sha256"]:
             continue
-        if not PATH_OK.match(path.lstrip("/")) or ".." in path.split("/"):
+        if not PATH_OK.fullmatch(path.lstrip("/")) or ".." in path.split("/"):
             raise SystemExit(f"site-delta: an unexpected path: {path!r}")
         item = (path, entry["sha256"] if entry else None, data, part_of(path, build_files), repo_path)
         out["install" if item[3] in parts else "left_out"].append(item)

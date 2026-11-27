@@ -77,6 +77,26 @@ class Plan(unittest.TestCase):
             sd.plan(m, HEAD, {"build"})
         self.assertIn("unexpected repo_path", str(cm.exception))
 
+    def test_a_trailing_newline_is_refused_not_shifted(self):
+        for key in ("path", "repo_path"):
+            m, _, _ = served_now()
+            m["files"][0][key] += "\n"
+            with self.assertRaises(SystemExit, msg=key) as cm:
+                sd.plan(m, HEAD, set(sd.PARTS))
+            self.assertIn(f"unexpected {key}", str(cm.exception))
+
+    def test_a_file_the_bundle_lists_but_the_commit_lacks_is_refused(self):
+        m, _, _ = served_now()
+        m["files"] = [e for e in m["files"] if e["path"] != "/wallet/app.js"]
+        saved = sd.blobs
+        try:   # the commit as if app.js were listed by sw.js but never committed
+            sd.blobs = lambda ref, paths: {k: v for k, v in saved(ref, paths).items() if k != f"{sd.WALLET}/app.js"}
+            with self.assertRaises(SystemExit) as cm:
+                sd.plan(m, HEAD, {"build", "wallet"})
+        finally:
+            sd.blobs = saved
+        self.assertIn("/wallet/app.js is listed by the bundle", str(cm.exception))
+
     def test_a_path_install_sh_could_misread_is_refused(self):
         m, _, _ = served_now()
         m["files"].append({"path": "/a b.html", "sha256": "4" * 64, "repo_path": f"{sd.BUILD}/index.html"})
@@ -188,6 +208,19 @@ class Pack(unittest.TestCase):
         self.assertFalse((self.www / "testers/index.html").exists())
         r = subprocess.run(["bash", str(self.pkg / "rollback.sh"), str(self.d / "no-such-backup")], env=env, capture_output=True, text=True)
         self.assertEqual(r.returncode, 1)
+
+    def test_rollback_with_another_backup_changes_nothing(self):
+        self.assertEqual(self.install().returncode, 0)
+        other = self.d / "other-backup"
+        (other / "wallet").mkdir(parents=True)
+        (other / "index.html").write_text("another deploy's index")
+        (other / "wallet/bridge.js").write_bytes(self.old["/wallet/bridge.js"])
+        before = {p: p.read_bytes() for p in self.www.rglob("*") if p.is_file()}
+        env = dict(os.environ, WWW=str(self.www), OWNER=ME)
+        r = subprocess.run(["bash", str(self.pkg / "rollback.sh"), str(other)], env=env, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn("nothing put back", r.stdout)
+        self.assertEqual({p: p.read_bytes() for p in self.www.rglob("*") if p.is_file()}, before)
 
     def test_a_damaged_package_installs_nothing(self):
         p = self.pkg / "www/index.html"
