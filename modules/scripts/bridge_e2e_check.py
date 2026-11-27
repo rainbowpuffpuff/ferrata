@@ -60,8 +60,8 @@ g = "registry"
 tok = r.get("token", {})
 check(g, "token(cid, ETH) decoded: the deposit's amount is a denomination", d0.get("amount") in tok.get("entry", {}).get("denominations", []),
       f"denominations {tok.get('entry', {}).get('denominations')}, relay fees {tok.get('entry', {}).get('relay_fees')}")
-check(g, "a claim of leaf 0: range from the token's schedules, mint and relay fees", r.get("range", {}).get("from_leaf") == 0
-      and "mint_fee" in r.get("claim", {}), f"range {r.get('range')}, claim {r.get('claim')}")
+check(g, "a claim quotes only the fixed relay fee and its cap value", "range" not in r
+      and "mint_fee" not in r.get("claim", {}) and "relay_fee" in r.get("claim", {}), f"claim {r.get('claim')}")
 check(g, "config(cid) decoded; configId recomputed from it equals the devnet's",
       r.get("config", {}).get("phase") == "ready" and r.get("config", {}).get("config_id") == info.get("config_id"),
       f"instance {str(r.get('config', {}).get('instance_id'))[:18]}…")
@@ -73,7 +73,8 @@ for k in (0, 1):
     c, s = rep(f"claim{k}"), rep(f"dev_submit_claim{k}")
     check(g, f"deposit {k}: the tool's claim (ferrata-wallet): claimable, ClaimPrivately, root = the private account's own actor",
           c.get("verdict") == "claimable" and c.get("variant") == "ClaimPrivately" and kinds(c)[:1] == ["private_self"]
-          and c.get("leaf_count") == 2, f"{c.get('message_bytes')} bytes, {len(c.get('accounts', []))} accounts, mint fee {c.get('mint_fee')}")
+          and c.get("leaf_count") == 2 and "range" not in c and "mint_fee" not in c,
+          f"{c.get('message_bytes')} bytes, {len(c.get('accounts', []))} accounts, relay fee {c.get('relay_fee')}")
     check(g, f"deposit {k}: proven and settled privately on the zone", s.get("settled") is True and s.get("private") is True,
           f"proof {s.get('proof', {}).get('mode')}, prove {s.get('proof', {}).get('prove_ms')} ms, balance {s.get('balance')}")
 again = rep("claim0_again")

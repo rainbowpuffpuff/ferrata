@@ -153,7 +153,11 @@ impl HarnessLedger {
             let call = Applied { to: root.to, message: root.message.clone() };
             // LEZ keeps a refused transaction in its block, message and all (a refused plaintext claim publishes its
             // witness): as `Sequencer::included` reads it.
-            if report.ok() { self.applied.push(call) } else { self.refused.push(call) }
+            if report.ok() {
+                self.applied.push(call)
+            } else {
+                self.refused.push(call)
+            }
         }
     }
 
@@ -748,7 +752,7 @@ impl Devnet {
         }))
     }
 
-    /// The stand-in relayer: imports the vault's current root on the zone (and the fee range).
+    /// The stand-in relayer: imports the vault's current root and fee schedule mirror on the zone.
     async fn relay(&mut self) -> Result<Value> {
         let n = eth::view(&self.p, self.vault, IVault::nextLeafIndexCall {}, None).await?;
         let root = eth::view(&self.p, self.vault, IVault::depositRootCall {}, None).await?;
@@ -892,7 +896,7 @@ impl Devnet {
                 "root_leaf_count": plan.leaf_count,
                 "balance": self.private[a].held(&self.cid, &row.owned.deposit.token).to_string(),
                 "proof": self.proof_json(&run),
-                "public_on_lez": ["the nullifier N (its account)", "the token and denomination", "the root read", "the fee schedule's range", "the relayer"],
+                "public_on_lez": ["the nullifier N (its account)", "the token and denomination", "the root read", "the relayer"],
                 "hidden": ["the destination account (an alias appears)", "the leaf index", "the depositor", "the private balance"],
                 "stand_in": "the private account's native balance for LEZ fees was put in the state by the devnet on its first private transaction",
             }));
@@ -1545,8 +1549,10 @@ impl Devnet {
         let included = self.zone.included(program).await?;
         let calls = |list: &[Applied]| {
             list.iter()
-                .map(|a| json!({ "program": hx(a.to.program_account_id.value()), "account": hx(a.to.account_id.value()),
-                                 "message": hx(&a.message) }))
+                .map(|a| {
+                    json!({ "program": hx(a.to.program_account_id.value()), "account": hx(a.to.account_id.value()),
+                                 "message": hx(&a.message) })
+                })
                 .collect::<Vec<_>>()
         };
         Ok(json!({

@@ -305,8 +305,13 @@ pub async fn deposit(
         resend = again;
     } else if let Some(s) = &store {
         if let Ok(j) = s.peek() {
-            for e in j.open.iter().filter(|e| e.chain_id == ask.chain_id && e.vault == ask.vault && e.depositor == depositor) {
-                out.line(format!("deposit journal: open: {} (resolved from the chain when a deposit is sent)", e.describe()));
+            for e in
+                j.open.iter().filter(|e| e.chain_id == ask.chain_id && e.vault == ask.vault && e.depositor == depositor)
+            {
+                out.line(format!(
+                    "deposit journal: open: {} (resolved from the chain when a deposit is sent)",
+                    e.describe()
+                ));
             }
         }
     }
@@ -439,7 +444,11 @@ pub async fn deposit(
         None => eth::send(&signer.p, depositor, eth.vault, input, value, o.confirmations).await?,
         Some(l) => {
             // Recorded before it is signed, with the nonce it takes (an earlier run's that never left: the same one).
-            let tx = TransactionRequest::default().with_from(depositor).with_to(eth.vault).with_input(input).with_value(value);
+            let tx = TransactionRequest::default()
+                .with_from(depositor)
+                .with_to(eth.vault)
+                .with_input(input)
+                .with_value(value);
             if let Err(e) = signer.p.call(tx.clone()).await {
                 match eth::refusal_of(&e, "eth_call before sending") {
                     Some(r) => bail!(r),
@@ -480,7 +489,13 @@ pub async fn deposit(
     if leaf != Some(next_leaf) {
         out.line("note: another deposit landed first, so this deposit's claim delay differs from the one printed (`ferrata scan` shows it)");
     }
-    Ok(Deposited { commitment, nullifier: Some(nullifier), j, sent: Some((Some(receipt.transaction_hash), leaf)), earlier: false })
+    Ok(Deposited {
+        commitment,
+        nullifier: Some(nullifier),
+        j,
+        sent: Some((Some(receipt.transaction_hash), leaf)),
+        earlier: false,
+    })
 }
 
 // ---- claim ---------------------------------------------------------------------------------------
@@ -525,8 +540,7 @@ fn claim_input(ctx: &Context, plan: &lez::ClaimPlan) -> Result<ferrata_bridge_co
     let ferrata_lez_bridge_wire::BridgeMessage::ClaimPrivately { witness: w, .. } = &plan.call.message else {
         bail!("a gas drop pays a private claim's fee: this claim is not private");
     };
-    let siblings: [Hash; 32] =
-        w.path.clone().try_into().map_err(|_| anyhow!("the claim's path is not 32 siblings"))?;
+    let siblings: [Hash; 32] = w.path.clone().try_into().map_err(|_| anyhow!("the claim's path is not 32 siblings"))?;
     let kind = DestKind::from_byte(w.kind).ok_or_else(|| anyhow!("the claim's destination kind {}", w.kind))?;
     Ok(ClaimInput {
         root: plan.root,
@@ -665,28 +679,16 @@ pub async fn claim_row<L: Ledger>(
         hx(ctx.program.value())
     ));
     out.line(format!("  nullifier N  {}", hx(&plan.nullifier)));
-    // F.8: the deposits this claim cannot be told apart from on chain (the same token and amount under the root and
-    // the fee schedule range it names, less those plaintext claims have published); a plaintext claim names its own.
-    let range = match &plan.call.message {
-        ferrata_lez_bridge_wire::BridgeMessage::Claim { range, .. }
-        | ferrata_lez_bridge_wire::BridgeMessage::ClaimPrivately { range, .. } => *range,
-        _ => bail!("a claim plan holds a claim"),
-    };
+    // F.8: the deposits this claim cannot be told apart from on chain (the same token and amount under the root,
+    // less those plaintext claims have published); a plaintext claim names its own. Fee changes do not split the set.
     let own_opened =
         history.opened.contains(&inbound::deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment));
     let set =
-        ferrata_wallet::claim::anonymity_set(&list.deposits, &history.opened, &d.token, &d.amount, plan.leaf_count, &range);
-    let among = format!(
-        "of {} under root(cid, {}) in leaves {}..{}",
-        show(amount),
-        plan.leaf_count,
-        range.from_leaf,
-        range.until_leaf.min(plan.leaf_count)
-    );
+        ferrata_wallet::claim::anonymity_set(&list.deposits, &history.opened, &d.token, &d.amount, plan.leaf_count);
+    let among = format!("of {} under root(cid, {})", show(amount), plan.leaf_count);
     out.line(anonymity_line(private, own_opened, set, &among));
     out.line(format!(
-        "  cost         nothing more in {symbol}: the mint fee {} and the relay fee {} were paid with the deposit; the LEZ fee is paid {}",
-        show(plan.mint_fee),
+        "  relay fee    {} minted here (paid with the deposit on Ethereum); the LEZ fee is paid {}",
         show(plan.relay_fee),
         match (private, drop) {
             (true, Some(_)) => "inside the proof, by a one-time private account the relayer's gas drop funds",

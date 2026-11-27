@@ -48,7 +48,7 @@ pub trait FerrataBridgeModule: Send + 'static {
     fn import_root(&mut self, request: String) -> String;
 
     /// The bridge program's registry as LEZ holds it (`token(cid, token)`, `config(cid)`,
-    /// `root(cid, n)`), decoded, with a claim's schedule range and fees. JSON in and out.
+    /// `root(cid, n)`), decoded, with a denomination's fixed relay fee and claim cap value. JSON in and out.
     fn registry(&mut self, request: String) -> String;
 
     /// The mini-app's calls (`{"method", "params"}`: open, info, registry, price, deposit, scan, claim,
@@ -101,7 +101,8 @@ fn eth_rpc_module_raw_rpc(chain_id: i64, method: &str, params: &str, timeout_ms:
 /// `lez_core` (calls/src/lez.rs): the bridge's actor states, the wallet's private account and the private
 /// claim and burn.
 fn lez_core_call(method: &str, args: &str, timeout_ms: u64) -> Result<String, String> {
-    let args: serde_json::Value = serde_json::from_str(args).map_err(|e| format!("lez_core.{method}: arguments: {e}"))?;
+    let args: serde_json::Value =
+        serde_json::from_str(args).map_err(|e| format!("lez_core.{method}: arguments: {e}"))?;
     let v = logos_rust_sdk::LogosModuleSDK::new()
         .plugin("lez_core")
         .call_json_with_timeout(method, &args, std::time::Duration::from_millis(timeout_ms.max(1)))

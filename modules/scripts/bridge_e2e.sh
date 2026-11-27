@@ -7,7 +7,7 @@
 #
 #   import_root     the vault's root (2 deposits) from a block the devnet records, dry-run, submitted;
 #                   a wrong leaf count refused by the dry run and by the program with the same code
-#   registry        token(cid, ETH), config(cid), root(cid, 2) decoded; a claim's range and fees
+#   registry        token(cid, ETH), config(cid), root(cid, 2) decoded; a claim's fixed relay fee
 #   claim (private) both deposits claimed privately (ClaimPrivately, proven and settled privately);
 #                   a second claim of the first refused (ALREADY_CLAIMED) from the nullifier's state
 #   release         two private burns, a checkpoint over the first (its delay passed) and one over both

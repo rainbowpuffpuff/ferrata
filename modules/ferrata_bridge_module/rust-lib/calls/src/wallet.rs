@@ -11,7 +11,7 @@
 //! * `prove_release`: the release guest run through r0vm on that input (the tool's `release --prove`);
 //! * `import_root`: the relayer's `ImportRoot` from the vault's `eth_getProof` proofs, dry-run with the
 //!   attestation and bridge programs' functions (`ferrata_wallet::import`);
-//! * `registry`: `token(cid, token)`, `config(cid)` and `root(cid, n)` decoded, with the range and fees
+//! * `registry`: `token(cid, token)`, `config(cid)` and `root(cid, n)` decoded, with the fixed relay fee
 //!   of a claim.
 
 use borsh::BorshDeserialize as _;
@@ -110,10 +110,6 @@ pub(crate) fn mentions_json(mentions: &[Mention]) -> Value {
     )
 }
 
-fn range_json(r: &bw::ScheduleRange) -> Value {
-    json!({ "index": r.index, "from_leaf": r.from_leaf, "until_leaf": r.until_leaf })
-}
-
 fn leaves_of(req: &Value) -> Result<Vec<Hash>, String> {
     let leaves = req["leaves"].as_array().ok_or("the request needs `leaves` (the vault's deposit leaves, in order)")?;
     leaves.iter().enumerate().map(|(i, l)| fixed::<32>(l, &format!("leaves[{i}]"))).collect()
@@ -206,8 +202,6 @@ pub(crate) fn claim_with_state(req: &Value) -> Result<Value, String> {
                 "deposit_id": hex(&deposit_id),
                 "kind": kind_name(k),
                 "path": path_json(&plan.path),
-                "range": range_json(&plan.range),
-                "mint_fee": plan.mint_fee.to_string(),
                 "relay_fee": plan.relay_fee.to_string(),
             })
         }
@@ -265,14 +259,17 @@ pub(crate) fn release_by_rule(req: &Value) -> Result<Result<(Value, ReleasePlan)
     let scan = outbound::recover_burns(&keys, &cid, &chain, &vault, &burns, gap);
     let i = uint(&req["i"], "i")?;
     let Some(owned) = scan.owned.iter().find(|o| o.i == i) else {
-        return Ok(Err(json!({ "verdict": "refused", "code": null, "error": format!("no burn with counter {i} of this seed among the burns given") })));
+        return Ok(Err(
+            json!({ "verdict": "refused", "code": null, "error": format!("no burn with counter {i} of this seed among the burns given") }),
+        ));
     };
     let roots = roots_of(req)?;
     let now = uint(&req["now"], "now")?;
     let (root, delay) = match release::pick_root(&roots, owned.burn.burn_index, now) {
         Ok(x) => x,
         Err(r) => {
-            let mut v = json!({ "verdict": "refused", "code": null, "error": r.name(), "burn_index": owned.burn.burn_index });
+            let mut v =
+                json!({ "verdict": "refused", "code": null, "error": r.name(), "burn_index": owned.burn.burn_index });
             if let release::RootRefusal::DelayNotElapsed { first_open } = r {
                 v["first_open"] = json!(first_open);
             }
@@ -280,7 +277,8 @@ pub(crate) fn release_by_rule(req: &Value) -> Result<Result<(Value, ReleasePlan)
         }
     };
     let relayer: Address = if req["relayer"].is_null() { [0; 20] } else { fixed(&req["relayer"], "relayer")? };
-    let relay_fee = if req["relay_fee"].is_null() { 0 } else { word_u128(&u256(&req["relay_fee"], "relay_fee")?, "relay_fee")? };
+    let relay_fee =
+        if req["relay_fee"].is_null() { 0 } else { word_u128(&u256(&req["relay_fee"], "relay_fee")?, "relay_fee")? };
     let plan = match release::plan(&cid, &chain, &vault, &burns, owned, root.root, root.count, relayer, relay_fee) {
         Ok(p) => p,
         Err(r) => return Ok(Err(refused(r))),
@@ -339,17 +337,24 @@ pub(crate) fn prove_release_of(req: &Value) -> Result<Value, String> {
     let t0 = std::time::Instant::now();
     let proven = match release::prove(&elf, &input, &journal) {
         Ok(p) => p,
-        Err(e) => return Ok(json!({ "verdict": "failed", "error": e, "journal_sha256": out["journal_sha256"].clone() })),
+        Err(e) => {
+            return Ok(json!({ "verdict": "failed", "error": e, "journal_sha256": out["journal_sha256"].clone() }))
+        }
     };
     out["verdict"] = json!("proven");
     out["image_id"] = json!(hex(&proven.image_id));
     out["dev_mode"] = json!(proven.dev_mode);
-    out["receipt"] = json!(if proven.dev_mode { "fake (RISC0_DEV_MODE: executed, not proven)" } else { "succinct, verified against the image id" });
+    out["receipt"] = json!(if proven.dev_mode {
+        "fake (RISC0_DEV_MODE: executed, not proven)"
+    } else {
+        "succinct, verified against the image id"
+    });
     out["receipt_bytes"] = json!(proven.receipt.len());
     out["receipt_sha256"] = json!(hex(&sha256(&proven.receipt)));
     out["prove_ms"] = json!(t0.elapsed().as_millis() as u64);
     if !req["expected_image_id"].is_null() {
-        out["image_id_matches"] = json!(fixed::<32>(&req["expected_image_id"], "expected_image_id")? == proven.image_id);
+        out["image_id_matches"] =
+            json!(fixed::<32>(&req["expected_image_id"], "expected_image_id")? == proven.image_id);
     }
     if !req["receipt_out"].is_null() {
         let path = crate::text(&req["receipt_out"], "receipt_out")?;
@@ -420,7 +425,11 @@ pub(crate) fn import_root_of(req: &Value) -> Result<Value, String> {
     let mut read = None;
     let read_gp;
     let gp = if !req["get_proof"].is_null() {
-        if req["get_proof"]["result"].is_object() { &req["get_proof"]["result"] } else { &req["get_proof"] }
+        if req["get_proof"]["result"].is_object() {
+            &req["get_proof"]["result"]
+        } else {
+            &req["get_proof"]
+        }
     } else {
         let block = uint(&req["block"], "block (get_proof absent: the block the vault's proofs are read at)")?;
         let timeout = if req["timeout_ms"].is_null() { 20_000 } else { uint(&req["timeout_ms"], "timeout_ms")? };
@@ -567,22 +576,16 @@ pub(crate) fn registry_of(req: &Value) -> Result<Value, String> {
             other => return Err(format!("token_state: not a token(cid, token) state: {other:?}")),
         };
         out["token"] = token_json(&t);
-        if !req["leaf_index"].is_null() {
-            let leaf = uint(&req["leaf_index"], "leaf_index")?;
-            let range = claim::range_for(&t, leaf);
-            out["range"] = range_json(&range);
-            if !req["amount"].is_null() {
-                let amount = word_u128(&u256(&req["amount"], "amount")?, "amount")?;
-                out["claim"] = match t.fees_for(amount, &range) {
-                    Ok((mint_fee, relay_fee)) => json!({
-                        "denomination_index": t.entry.index_of(amount),
-                        "mint_fee": mint_fee.to_string(),
-                        "relay_fee": relay_fee.to_string(),
-                        "value": t.entry.value(amount).map(|v| v.to_string()),
-                    }),
-                    Err(code) => json!({ "refused": code, "error": code_name(code) }),
-                };
-            }
+        if !req["amount"].is_null() {
+            let amount = word_u128(&u256(&req["amount"], "amount")?, "amount")?;
+            out["claim"] = match t.relay_fee_for(amount) {
+                Ok(relay_fee) => json!({
+                    "denomination_index": t.entry.index_of(amount),
+                    "relay_fee": relay_fee.to_string(),
+                    "value": amount.checked_add(relay_fee).and_then(|minted| t.entry.value(minted)).map(|v| v.to_string()),
+                }),
+                Err(code) => json!({ "refused": code, "error": code_name(code) }),
+            };
         }
     }
     if !req["config_state"].is_null() {
@@ -643,7 +646,8 @@ mod tests {
         let burns: Vec<PublishedBurn> = (0..3u64)
             .map(|i| PublishedBurn { burn_index: i, note: BurnNote::create(&keys, &cid, i, &target, [0; 20], amount) })
             .collect();
-        let leaf = |b: &PublishedBurn| burn_leaf(&cid, b.burn_index, &b.note.token, &b.note.amount, &b.note.c_out, &b.note.r);
+        let leaf =
+            |b: &PublishedBurn| burn_leaf(&cid, b.burn_index, &b.note.token, &b.note.amount, &b.note.c_out, &b.note.r);
         let leaves: Vec<Hash> = burns.iter().map(leaf).collect();
         let root_at = |n: usize| Tree::from_leaves(leaves[..n].to_vec()).unwrap().root();
         let request = |i: u64, now: u64| {

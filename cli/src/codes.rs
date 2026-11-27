@@ -54,7 +54,7 @@ pub const PROGRAM_CODES: [(u32, &str, &str); 16] = [
     (245, "NOT_FOUND", "no configuration, or no imported root at this leaf count"),
     (246, "PAIRING_MISMATCH", "the vault's slot 2 does not hold the configuration's id"),
     (247, "IMPORT_MISMATCH", "the attested facts are not the vault's slots holding what the message says"),
-    (248, "LEAF_NOT_IMPORTED", "the leaf index is at or above the imported root's leaf count, or outside the fee schedule range the claim names"),
+    (248, "LEAF_NOT_IMPORTED", "the leaf index is at or above the imported root's leaf count"),
     (249, "CLAIM_INVALID", "the opening, the leaf and the path do not hash to the root (a wrong leaf, path or destination); the deposit stays claimable: claim it with the seed that made it, to the destination it commits to (`ferrata scan` lists this seed's deposits)"),
     (250, "ALREADY_CLAIMED", "the deposit's nullifier is spent: it was claimed already"),
     (251, "NOT_REGISTERED", "the token has no registry entry in this configuration, or the amount is not one of its denominations"),

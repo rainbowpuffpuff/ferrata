@@ -210,17 +210,9 @@ fn the_bridge_reads_the_vaults_own_registry_fees_and_tree() {
     let fee_of = |d: &Deposit| {
         let t = tokens.iter().find(|t| t.token == d.token).unwrap();
         let k = t.index_of(u128::from_be_bytes(d.amount[16..].try_into().unwrap())).unwrap();
-        let s = schedules
-            .iter()
-            .zip(&schedule_tokens)
-            .filter(|(s, tok)| **tok == d.token && s.from_leaf <= d.leaf_index)
-            .max_by_key(|(s, _)| s.index)
-            .unwrap()
-            .0;
-        (k, t.relay_fees[k], s.mint_fees[k], t.denominations[k])
+        (t.relay_fees[k], t.denominations[k])
     };
     let mut expected_relay: Vec<([u8; 20], u128)> = Vec::new();
-    let mut expected_mint: Vec<([u8; 20], u128)> = Vec::new();
     let add =
         |list: &mut Vec<([u8; 20], u128)>, token: [u8; 20], x: u128| match list.iter_mut().find(|(t, _)| *t == token) {
             Some((_, sum)) => *sum += x,
@@ -228,12 +220,11 @@ fn the_bridge_reads_the_vaults_own_registry_fees_and_tree() {
         };
     let mut claim_all = |w: &mut World, run: &mut dyn FnMut(TxReport, Option<u8>), n: u64, from: u64| {
         for d in deposits.iter().filter(|d| d.leaf_index >= from && d.leaf_index < n) {
-            let (_, relay, mint, denomination) = fee_of(d);
+            let (relay, denomination) = fee_of(d);
             let label = format!("Claim leaf {} ({}, under root(n = {n}))", d.leaf_index, name(&d.token));
             run(w.claim(&label, &cid, n, &vault, tree.witness(d, n)), None);
             assert_eq!(w.balance_of(AccountId::new(d.dest), &cid, &d.token), denomination, "exactly the denomination");
             add(&mut expected_relay, d.token, relay);
-            add(&mut expected_mint, d.token, mint);
         }
     };
     claim_all(&mut w, &mut run, n_p, 0);
@@ -259,10 +250,9 @@ fn the_bridge_reads_the_vaults_own_registry_fees_and_tree() {
     for (token, sum) in &expected_relay {
         assert_eq!(w.balance_of(relayer(), &cid, token), *sum, "{}: the registered relay fees", name(token));
     }
-    for (token, sum) in &expected_mint {
-        assert_eq!(w.balance_of(fee_recipient(), &cid, token), *sum, "{}: the mint fees by leaf index", name(token));
+    for t in &tokens {
+        assert_eq!(w.balance_of(fee_recipient(), &cid, &t.token), 0, "{}: no LEZ mint fee", name(&t.token));
     }
-    assert!(expected_mint.iter().any(|(t, sum)| *t == ETH && *sum > 0), "a claim under schedule 1 paid its mint fee");
 
     let table = render(&reports);
     let transitions = render_transitions(&reports);
