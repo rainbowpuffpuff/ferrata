@@ -597,7 +597,14 @@ rc_args() { # realblocks-crown's arguments over the run's records (attestation f
 }
 n_att() { find "$RUN/zone" -maxdepth 1 -name 'attestor-*' -type d | wc -l; }
 t_of() { python3 -I -c 'import sys; n = int(sys.argv[1]); print(max(1, min(-(-2 * n // 3), n - 1)))' "$1"; }
-left_out() { echo "${ZB_LEAVE_OUT:-$(( $(n_att) - 1 ))}"; }
+# The attestor left out: the last by default; after a rotation (ZB_ROTATE=1) the first, because the last is the key the
+# rotation accredited, whose earliest round predates its accreditation, and stage input's stale-tip refusal needs a real
+# earlier-round attestation by a key of the span's parent set.
+left_out() {
+  if [ -n "${ZB_LEAVE_OUT:-}" ]; then echo "$ZB_LEAVE_OUT"
+  elif [ -f "$RUN/zone/channel-after-rotation.json" ]; then echo 0
+  else echo $(( $(n_att) - 1 )); fi
+}
 all_but_one() { local i out=""; for i in $(seq 0 $(( $(n_att) - 1 ))); do [ "$i" = "$(left_out)" ] && continue; out="$out,$RUN/zone/attestor-$i/final.json"; done; echo "${out#,}"; }
 cname() { echo "zone-$(jq -r .tip.id "$RUN/lez/session-a/session-a.json")-$(tip_of_attestors)"; }
 

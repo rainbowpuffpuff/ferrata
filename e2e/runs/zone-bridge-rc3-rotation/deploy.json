@@ -1,0 +1,57 @@
+{
+  "chainId": 11155111,
+  "complete": true,
+  "delta": 3600,
+  "deployer": "0x2a87a5a5790163476f9c892D7212e8ee41c3aFb3",
+  "designDelta": 3600,
+  "emergencyStop": "0x5936F81CC947D52f29defc6C25F872459A1e9F47",
+  "ethDailyCap": 10000000000000000000,
+  "feeRecipient": "0x2a87a5a5790163476f9c892D7212e8ee41c3aFb3",
+  "freezeAuthority": "0xC820e2326A3371a3569E0131b93dC0D40698129f",
+  "gas": {
+    "emergencyStop": {
+      "estimate": 451756,
+      "limit": 564695
+    },
+    "groth16Verifier": {
+      "estimate": 1179974,
+      "limit": 1474967
+    },
+    "registerETH": {
+      "estimate": 760590,
+      "limit": 950737
+    },
+    "registerToken": {
+      "estimate": 761260,
+      "limit": 951575
+    },
+    "registry": {
+      "estimate": 2819839,
+      "limit": 3524798
+    },
+    "renounceStopOwner": {
+      "estimate": 30324,
+      "limit": 37905
+    },
+    "token": {
+      "estimate": 508036,
+      "limit": 635045
+    },
+    "vault": {
+      "estimate": 5751522,
+      "limit": 7189402
+    }
+  },
+  "gasMarginPct": 125,
+  "gasRule": "eip8037",
+  "globalDailyValue": 1030000000000,
+  "groth16Verifier": "0x6Ab669E71D25d0918D3F0c7278e006501B2b3B87",
+  "lastStep": "done",
+  "mode": "B",
+  "registry": "0x375a4Fc74b0C7D471a0c819AEBF645Ac5DD2a410",
+  "releaseFloorDailyValue": 300000000,
+  "token": "0x7F39093d0BA3504B4F70AaFD8856055E34148dE8",
+  "tokenDailyCap": 1000000000000,
+  "uncapped": false,
+  "vault": "0xbF355Ff9F0096A9879A73D4C985DBB67385399Cc"
+}

@@ -1,0 +1,4 @@
+zone-32-176-refuse-below-t: refused: Core(InsufficientAttestations { have: 2, need: 4 })
+zone-32-176-refuse-outsider: refused: Core(NotAccredited)
+zone-32-176-refuse-repeated: refused: Core(DuplicateAttestor)
+zone-32-176-refuse-stale-tip: refused: Core(NotADescendant { tip_id: 33 })

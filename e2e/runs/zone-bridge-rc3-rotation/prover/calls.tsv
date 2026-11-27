@@ -1,0 +1,4 @@
+request	call id spawned	call id answered	attempts	resumed	ok	seconds
+0-checkpoint	fc-01M8DFW9BYV18T4E65VHPZN5HT	fc-01M8DFW9BYV18T4E65VHPZN5HT	1	true	true	193.8
+1-release-private-1	fc-01M8DG2CXG9TPACYAB2QAZXT2J	fc-01M8DG2CXG9TPACYAB2QAZXT2J	1	false	true	14.4
+1-release-public-0	fc-01M8DG2THN82TJ9EWJQF5YRG0K	fc-01M8DG2THN82TJ9EWJQF5YRG0K	1	false	true	18.9

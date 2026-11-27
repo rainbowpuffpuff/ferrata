@@ -1,0 +1,20 @@
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+  deployer 0x2a87a5a5790163476f9c892D7212e8ee41c3aFb3, rule B, gas rule eip8037, cap 100000000, block gas limit 100000000
+  FERRATA_STEP token
+  FERRATA_GAS token estimate 508036 limit 635045 cap 100000000
+  FERRATA_CREATED token 0x7F39093d0BA3504B4F70AaFD8856055E34148dE8
+
+SKIPPING ON CHAIN SIMULATION.
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: vault/broadcast/DeployVault.s.sol/11155111/run-latest.json
+
+Sensitive values saved to: vault/cache/DeployVault.s.sol/11155111/run-latest.json
+
