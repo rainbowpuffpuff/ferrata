@@ -162,18 +162,20 @@ two-hour cadence (§2).
   27 November 2026): the newest block the daemon's reads reflect (the sequencer backend: its follower's last block, final
   on Bedrock), the same for every operator reading the chain, and one no operator can bring sooner. A step falls due
   when a block applies the previous step (or when an update is served, between two blocks), and a turn is counted from
-  the block after the daemon's previous reading, so two daemons find a step due at the same height and reach their turns
-  at the heights their draws give, however often each polls. Polling more often only notices a turn sooner, within the
+  the block after the daemon's previous reading (at most one block before its reading), so two daemons find a step due
+  at the same height and reach their turns at the heights their draws give, however often each polls. Polling more often only notices a turn sooner, within the
   blocks between two readings: an operator polling less often than once a block notices some turns up to its poll
   interval late, and counts a turn from the block after its previous reading (at most one block back), which can be
   before the step fell due: reading every 1.5 blocks the two about cancel, reading every third block it notices late
-  more often than it gains and pays less (in process 0.329 against 0.671). An operator whose beacon sources serve a new update sooner finds its `Open` due
-  sooner, by as many blocks as they lead (seconds, between honest beacon nodes: under a block). Before this, the window counted each daemon's own polling rounds, so an
-  operator polling more often waited fewer seconds and sent first more often (a daemon that never deferred, polling
+  more often than it gains and pays less (in process 0.329 against 0.671). An operator whose beacon sources serve a new
+  update sooner finds its `Open` due sooner, by as many blocks as they lead (seconds, between honest beacon nodes: under a
+  block). Before this, the window counted each daemon's own polling rounds, so an operator polling more often waited
+  fewer seconds and sent first more often (a daemon that never deferred, polling
   every 2 s against 4, applied 93 of 99 steps: run G2 below). In process (`lez/updater/results/gate-polls.txt`, CI's
   `recorded.rs`), honest updaters reading the chain three times and once a block pay 0.533 and 0.467 of the honest fees
   (counted in rounds, as before: 0.847 and 0.153); one reading every 1.5 blocks against one reading twice a block pays
-  0.549 (the slower, here), one reading every third block 0.329; A3's whole gate with its adversary and the honest pair reading once and three times a block meets A3's limits.
+  0.549 (the slower, here), one reading every third block 0.329; A3's whole gate with its adversary and the honest pair
+  reading once and three times a block meets A3's limits.
   What still counts rounds is the failure handling (a step held after a refusal, the breaker, a demoted source), which
   decides nothing between daemons whose steps land. Operators should poll at least once a block (`poll_secs` at most
   the chain's block interval); the example configuration's 12 s, a beacon slot, is a little slower than LEZ's 10-s
