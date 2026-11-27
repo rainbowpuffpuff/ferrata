@@ -428,8 +428,9 @@ over whole: that bound limits parsing, not memory); a provider's message reaches
 `_tx_total{step,result=applied|refused|rejected}`, `_refused_by_code_total{code}`,
 `_refusals_total{cause=window|gas|program|other,after=race|due|unread}`, `_held_steps`, `_sending_paused`,
 `_failing_sends`, `_failed_rounds`, `_past_weak_subjectivity` (1: the instance or its checkpoint is
-past its weak-subjectivity period), `_sources_head_slot`, `_rounds_without_progress`,
-`_gas_total{result}`, `_fee_total{result}`, `_budget_remaining`, `_transport_errors_total`,
+past its weak-subjectivity period), `_sources_head_slot`, `_rounds_without_progress` (polling rounds; the stall alarm
+counts blocks of the turn clock, item 7), `_turn_clock` (the clock's last reading) and `_turn_clock_is_height` (1: the
+chain's height, item 8; 0: the updater's rounds), `_gas_total{result}`, `_fee_total{result}`, `_budget_remaining`, `_transport_errors_total`,
 `_retries_total`, `_deferrals_total`, `_steps_done_by_others_total`, `_jobs_finished_total`, join or wait's
 `_waits_for_other_jobs_total` (rounds a step whose turn had come waited for another job), of them
 `_waits_for_unreadable_jobs_total`, `_jobs_joined_total`, `_stalled_jobs_passed_total` and `_join_waits_capped_total`,
