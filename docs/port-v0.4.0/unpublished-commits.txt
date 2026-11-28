@@ -1,0 +1,52 @@
+# Commit ids of the port's unpublished development history
+#
+# The LEZ v0.4.0 port was developed on branches that were not published and was published as one commit,
+# 6a539b7f, on fb27c1e2. docs/port-v0.4.0.md and the port's run records name commits of that history (where a
+# change was built, or the tree a run used); their content is all in 6a539b7f, but these ids are not in the
+# public history. lez040-catalogue accepts a building commit listed here when 6a539b7f is in the clone.
+# id, the branch it was made on
+09caeffe lez-040-verify
+13f70f91 lez-040-clients
+1ad82a04 lez-040-zone
+26811f28 lez-040-zone
+284a97d0 lez-040-verify
+2c190e7f lez-040-zone
+2cb8b03c lez-040-clients
+35e5fb81 lez-040-core
+3f33ca59 lez-040-verify
+41614cfe lez-040-core
+5214ae68 lez-040-core
+531fd807 lez-040-zone
+5781824f lez-040-clients
+673c8d50 lez-040-verify
+6e163884 lez-040-clients
+73c8fa30 lez-040-zone
+786975f8 lez-040-clients
+873e7adc lez-040-clients
+8a9b5441 lez-040-core
+8c5139fa lez-040-verify
+9d74124a lez-040-clients
+a665ce8d lez-040-verify
+a7a45cb6 lez-040-verify
+aab990a6 lez-040-verify
+ab7d51c4 lez-040-core
+b24aff0d lez-040-core
+b2de7a2c lez-040-clients
+b553b331 lez-040-verify
+b8380685 lez-040-clients
+bbfc61aa lez-040-clients
+bc9a19b6 lez-040-clients
+c36a60c4 lez-040-core
+c6b22e9c lez-040-zone
+cb05bef5 lez-040-core
+cc896a14 lez-040-zone
+cec9d834 lez-040-verify
+d0991d33 lez-040-core
+db4bacb6 lez-040-zone
+e251e2a9 lez-040-verify
+eda32739 lez-040-zone
+f0f40fcb lez-040-zone
+f4ebbc88 lez-040-zone
+fa4a37df lez-040-zone
+fc5da3e8 lez-040-zone
+ff900dde lez-040-zone

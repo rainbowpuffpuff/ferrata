@@ -81,6 +81,22 @@ def _inputs(root: Path, crates: list) -> list:
     return rels + [f for f in FIXED_INPUTS]
 
 
+# What cargo does not compile when it builds a crate as a dependency (or a guest as a binary): its integration tests,
+# benches and examples. A change there (e.g. a replay block in crates/ferrata-spectests/tests/) cannot change an id.
+NOT_BUILT = ("tests", "benches", "examples")
+
+
+def _built(root: Path, paths: list, f: str) -> bool:
+    """Whether file `f` (repository-relative) under the inputs `paths` is part of a crate's build: not under the
+    tests/, benches/ or examples/ directory of the innermost crate holding it."""
+    crates = [p for p in paths if (root / p / "Cargo.toml").is_file()]
+    holders = [c for c in crates if f.startswith(c.rstrip("/") + "/")]
+    if not holders:
+        return True
+    rel = Path(f).relative_to(max(holders, key=len))
+    return rel.parts[0] not in NOT_BUILT
+
+
 def _tree_at(ctx, commit: str, paths: list) -> dict:
     """{path: blob} of the files under `paths` at `commit`, from the repository's git objects."""
     p = subprocess.run(["git", "cat-file", "-e", f"{commit}^{{commit}}"], cwd=_git(ctx), capture_output=True)
@@ -172,6 +188,8 @@ def lez040_image_ids(ctx):
             continue
         paths = _inputs(ctx.root, list(b.get("crates", [])))
         then, now = _tree_at(ctx, commit, paths), _tree_here(ctx.root, paths)
+        then = {f: b for f, b in then.items() if _built(ctx.root, paths, f)}
+        now = {f: b for f, b in now.items() if _built(ctx.root, paths, f)}
         for f in sorted(set(then) | set(now)):
             if f not in now:
                 problems.append(f"{name}: {f} is in the build's source ({commit[:12]}) and not in this tree")

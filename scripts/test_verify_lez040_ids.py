@@ -87,6 +87,16 @@ class ImageIdRecord(unittest.TestCase):
         p.write_bytes(p.read_bytes().replace(b"\n", b"\n\n", 1))
         self.assertStatus("FAIL", "crates/ferrata-core/Cargo.toml differs")
 
+    def test_a_reached_crates_tests_are_no_build_input(self):
+        """A dependency's integration tests are not compiled into a guest: a change there leaves the ids standing, a
+        change in the same crate's src/ does not."""
+        p = self.copy / "crates/ferrata-spectests/tests/helios_step_oracle.rs"
+        p.write_bytes(p.read_bytes() + b"\n// one more line\n")
+        self.assertStatus("PASS")
+        q = self.copy / "crates/ferrata-spectests/src/lib.rs"
+        q.write_bytes(q.read_bytes() + b"\n// one more line\n")
+        self.assertStatus("FAIL", "crates/ferrata-spectests/src/lib.rs differs")
+
     def test_a_file_added(self):
         (self.copy / "lez/rebate-wire/src/extra.rs").write_text("pub const X: u8 = 1;\n")
         self.assertStatus("FAIL", "lez/rebate-wire/src/extra.rs is in this tree and was not")

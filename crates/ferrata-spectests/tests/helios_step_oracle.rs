@@ -1118,7 +1118,8 @@ fn helios_pin_is_unmodified_0_12_0() {
 /// Explicit exclusions for tracked `.ssz` files that are intentionally NOT replayable mainnet or
 /// Sepolia light-client fixtures (for example synthetic/corrupted fixtures or non-light-client SSZ
 /// files). Add `(repo_relative_path, reason)` entries here only when a file cannot be replayed in
-/// `every_recorded_real_update_in_repo_agrees_with_helios_on_step_path`.
+/// `every_recorded_real_update_in_repo_agrees_with_helios_on_step_path`, or, for a real record made after the
+/// differential's corpus and not replayed yet, with that reason (the v0.4.0 rehearsal's, until its replay block exists).
 const NON_REPLAY_SSZ: &[(&str, &str)] = &[
     ("e2e/runs/ci-sequencer-attest-v040/fresh/attest/finality_update.ssz", V040_REHEARSAL),
     ("e2e/runs/ci-sequencer-attest-v040/fresh/checkpoint/bootstrap.ssz", V040_REHEARSAL),

@@ -324,6 +324,31 @@ class Lez040VerifyTamperTests(unittest.TestCase):
         self._altered("lez040-catalogue",
                       lambda root: _catalogue_row(root, "C2", "building", f"branch `{missing}`"), "not a commit")
 
+    def test_46_catalogue_unpublished_commit_listed_passes(self):
+        """The port's unpublished ids (docs/port-v0.4.0/unpublished-commits.txt) count while 6a539b7f is in the clone,
+        so GitHub's clone, which has none of them, passes; an id in neither still fails (test_44)."""
+        fake = "2222222222222222222222222222222222222222"
+        with tempfile.TemporaryDirectory(prefix="lez040-catalogue-", dir=SCRATCH) as temporary:
+            root = self._copy("lez040-catalogue", Path(temporary))
+            with open(root / checks_lez040.UNPUBLISHED, "a", encoding="utf-8") as f:
+                f.write(f"{fake} lez-040-core\n")
+            _catalogue_row(root, "C2", "building", f"branch `{fake}`")
+            result = self._run("lez040-catalogue", root)
+        self.assertEqual(result.status, "PASS", result.lines)
+
+    def test_47_catalogue_unpublished_commit_needs_the_published_one(self):
+        """A listed unpublished id does not count when the published commit is absent from the clone."""
+        fake = "2222222222222222222222222222222222222222"
+        with tempfile.TemporaryDirectory(prefix="lez040-catalogue-", dir=SCRATCH) as temporary:
+            root = self._copy("lez040-catalogue", Path(temporary))
+            with open(root / checks_lez040.UNPUBLISHED, "a", encoding="utf-8") as f:
+                f.write(f"{fake} lez-040-core\n")
+            _catalogue_row(root, "C2", "building", f"branch `{fake}`")
+            with mock.patch.object(checks_lez040, "PUBLISHED_PORT", "3333333333333333333333333333333333333333"):
+                result = self._run("lez040-catalogue", root)
+        self.assertEqual(result.status, "FAIL", result.lines)
+        self.assertTrue(any("not a commit" in line for line in result.lines), result.lines)
+
     def test_45_catalogue_tested_command_paths_are_checked(self):
         def edit(root):
             _catalogue_row(root, "C3", "tested on v0.4.0", "`python3 -I scripts/no-such-check.py`")

@@ -459,14 +459,28 @@ def _commit_exists(git_dir: Path, commit: str) -> bool:
     return p.returncode == 0
 
 
+# The port's unpublished development history: ids the catalogue and records name, published as one commit.
+UNPUBLISHED = "docs/port-v0.4.0/unpublished-commits.txt"
+PUBLISHED_PORT = "6a539b7f"
+
+
+def _unpublished_ids(root: Path) -> set:
+    path = root / UNPUBLISHED
+    if not path.is_file():
+        return set()
+    return {line.split()[0] for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.startswith("#")}
+
+
 @check(id="lez040-catalogue", family="docs", mode="offline", rows=(), evidence=(),
        title="The v0.4.0 port catalogue's statuses held to the evidence they name",
-       what="rows C1-C20 and S1-S3 present, each with an allowed status; building commits in git, tested commands and "
+       what="rows C1-C20 and S1-S3 present, each with an allowed status; building commits in git (or the port's listed unpublished "
+            "history, published as 6a539b7f), tested commands and "
             "their paths (one of them about v0.4.0), recorded-run paths that are a run's record another lez040 check "
             "actually reads, and the page's status line",
        against="docs/port-v0.4.0.md, this clone's git objects, the cited files and the lez040 checks' declared inputs",
        needs=("python3", "git"),
-       inputs=(PORT_DOC,) + tuple(_spel_paths(tree)[0] for _, tree in SPEL_RUNS) + CI_FILES)
+       inputs=(PORT_DOC, UNPUBLISHED) + tuple(_spel_paths(tree)[0] for _, tree in SPEL_RUNS) + CI_FILES)
 def lez040_catalogue(ctx):
     text = (ctx.root / PORT_DOC).read_text(encoding="utf-8")
     problems = []
@@ -482,6 +496,7 @@ def lez040_catalogue(ctx):
     if needs_git and (shutil.which("git") is None or not (git_dir / ".git").exists()):
         raise Skipped(f"building rows need git and the repository objects at {git_dir}")
     checked_commits = {}
+    unpublished = _unpublished_ids(ctx.root)
     other_inputs = {rel for cid, registered in REGISTRY.items()
                     if cid.startswith("lez040-") and cid != "lez040-catalogue" for rel in registered.inputs}
     for row_id, status, evidence in rows:
@@ -495,9 +510,12 @@ def lez040_catalogue(ctx):
                 problems.append(f"{row_id}: building evidence names no backticked commit id")
             for commit in commits:
                 if commit not in checked_commits:
-                    checked_commits[commit] = _commit_exists(git_dir, commit)
+                    # A commit of the unpublished history counts when its published commit is in the clone.
+                    checked_commits[commit] = _commit_exists(git_dir, commit) or (
+                        commit in unpublished and _commit_exists(git_dir, PUBLISHED_PORT))
                 if not checked_commits[commit]:
-                    problems.append(f"{row_id}: building commit {commit} is not a commit in this repository")
+                    problems.append(f"{row_id}: building commit {commit} is not a commit in this repository nor one of "
+                                    f"{UNPUBLISHED} (published as {PUBLISHED_PORT})")
         elif status == "tested on v0.4.0":
             commands = re.findall(r"`((?:python3|node|cargo|bash|just|forge) [^`]*)`", evidence)
             if not commands:
