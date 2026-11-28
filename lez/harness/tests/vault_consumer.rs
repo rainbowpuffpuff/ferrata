@@ -27,7 +27,7 @@ use harness::{
     *,
 };
 use lee::{Actor, PublicAccountEvidence};
-use lee_core::program::{ReceiveInput, StateReply};
+use lee_core::program::StateReply;
 
 /// 0.001 ETH, each deposit's amount.
 const AMOUNT: u128 = 1_000_000_000_000_000;
@@ -130,23 +130,16 @@ fn holder_state(v: &RealVault, pool: &VaultPool, dest: &[u8; 32]) -> Option<Hold
 fn private_transitions(v: &RealVault, account: lee::AccountId, message: &ConsumerMessage, slot: u64) -> Vec<Executed> {
     let elf = consumer_program();
     let actor = Actor::new(account, consumer_account());
-    let call = ReceiveInput {
-        receiver: actor,
-        from: None,
-        is_authorized: true,
-        pre_state: Default::default(),
-        message: borsh::to_vec(message).unwrap(),
-    };
+    let call = compat::receive_input(actor, None, true, Default::default(), borsh::to_vec(message).unwrap());
     let first = execute("ClaimDepositPrivately (sends Read)", elf.elf(), &call);
     let Some(transition) = &first.transition else { return vec![first] };
     let header = harness::vault::header_of(&pool(v), slot);
-    let reply = ReceiveInput {
-        receiver: actor,
-        from: Some(header),
-        is_authorized: true,
-        pre_state: transition.response.post_state.clone().expect("the claim is kept for the reply"),
-        message: borsh::to_vec(&StateReply { state: v.w.chain.actor_state(header) }).unwrap(),
-    };
+    let reply = compat::reply_input(
+        actor,
+        header,
+        transition.response.post_state.clone().expect("the claim is kept for the reply"),
+        borsh::to_vec(&StateReply { state: v.w.chain.actor_state(header) }).unwrap(),
+    );
     let second = execute("the record's reply (verifies the deposit, sends Spend)", elf.elf(), &reply);
     vec![first, second]
 }

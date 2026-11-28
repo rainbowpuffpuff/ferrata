@@ -12,6 +12,7 @@ use ferrata_cli::{
     eth::IVault,
     flow, gasdrop_net, hx,
     lez::{self, Context, Ledger as _, Sequencer},
+    lezver,
     seed::{Seed, DEFAULT_GAP},
     units,
 };
@@ -252,6 +253,9 @@ enum Command {
     /// run with the program's codes unless --send --yes (`src/attest.rs`, `lez/ATTEST-CLI.md`).
     #[cfg(feature = "lez-wallet")]
     Attest(ferrata_cli::attest::AttestArgs),
+    /// The LEZ version of the sequencer (--sequencer) against the one this ferrata is built for: exit 0 when they
+    /// match, 1 with the refusal every sending command gives (`src/lezver.rs`). Reads one status call; signs nothing.
+    LezVersion,
     /// The vault's registry, fees, caps and freezes, and the zone's configuration and newest root.
     Status {
         /// Tokens to show (repeatable; default ETH).
@@ -296,6 +300,8 @@ async fn zone(
     bridge_program: Option<PathBuf>,
 ) -> Result<(Sequencer, Context)> {
     let rpc = need(&c.sequencer, "--sequencer (or FERRATA_SEQUENCER: the LEZ sequencer's RPC endpoint)")?;
+    // The network's LEZ before the wallet is opened or anything is built (LEZ v0.4.0 changed the formats).
+    lezver::require(&rpc).await?;
     let wallet = lez::open_wallet(
         &need(&c.lez_wallet, "--lez-wallet (or FERRATA_LEZ_WALLET: the LEZ wallet's home)")?,
         &rpc,
@@ -366,6 +372,19 @@ async fn run(cli: Cli, out: &mut flow::Out) -> Result<(&'static str, serde_json:
             let code = ferrata_cli::attest::run(a, c.sequencer.clone(), c.chain_id).await?;
             std::process::exit(code);
         }
+        Command::LezVersion => {
+            let rpc = need(&c.sequencer, "--sequencer (or FERRATA_SEQUENCER: the LEZ sequencer's RPC endpoint)")?;
+            let network = lezver::probe(&rpc).await?;
+            let named = match network {
+                lezver::NetworkLez::V040 => "v0.4.0",
+                lezver::NetworkLez::BeforeV040 => "before v0.4.0 (v0.4.0-rc3 or earlier)",
+            };
+            out.line(format!("this ferrata: LEZ {}", lezver::BUILT_FOR));
+            out.line(format!("the sequencer at {rpc}: LEZ {named}"));
+            lezver::check_for(lezver::BUILT_FOR, network, &rpc)?;
+            out.line("match: this ferrata may sign and send there");
+            ("lez-version", json!({ "built_for": lezver::BUILT_FOR, "network": named, "match": true }))
+        }
         Command::Keys { accounts, show_secrets } => {
             let seed = seed_of(c)?;
             out.line("LEZ public accounts (wallet key tree, /a):");
@@ -391,6 +410,8 @@ async fn run(cli: Cli, out: &mut flow::Out) -> Result<(&'static str, serde_json:
         }
 
         Command::Deposit { token, denomination, kind, i_accept_public_account, account: a, from, approve, send } => {
+            // The deposit's destination is an account of this build's LEZ key tree: the network's LEZ first.
+            let lez = lezver::require_for_deposit(c.sequencer.as_deref(), send.send).await?;
             let seed = seed_of(c)?;
             let e = eth_side(c).await?;
             let signer = signer_of(c, &send)?;
@@ -415,6 +436,7 @@ async fn run(cli: Cli, out: &mut flow::Out) -> Result<(&'static str, serde_json:
                         d.to_path_buf()
                     }
                 }),
+                lez,
             };
             let d = flow::deposit(&e, &seed, signer.as_ref(), &o, out).await?;
             let result = json!({

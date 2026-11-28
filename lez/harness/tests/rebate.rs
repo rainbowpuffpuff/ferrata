@@ -16,7 +16,8 @@ use std::{borrow::Cow, fs};
 
 use ferrata_lez_rebate_wire::{code as rb, pool_actor, pool_seed, Pool, RebateMessage, RebateState, Terms};
 use harness::{
-    exit_name, render, render_transitions, results_dir, scenarios::World, settle::LeeTransaction, JobRun, TxReport,
+    compat, exit_name, render, render_transitions, results_dir, scenarios::World, settle::LeeTransaction, JobRun,
+    TxReport,
 };
 use lee::{program::Program, AccountId, Actor, PublicAccountEvidence, V03State};
 use lee_core::{account::Account, native_token::Message as NativeMessage};
@@ -39,10 +40,16 @@ fn world() -> World {
     let state = std::mem::replace(&mut w.chain.state, V03State::new());
     let state =
         state.with_public_accounts([(OP1, Account::funded(1)), (OP2, Account::funded(1)), (OP3, Account::funded(1))]);
-    w.chain.state = state.with_genesis_programs([(
-        Program::new_unchecked(methods_rebate::FERRATA_REBATE_ID, Cow::Borrowed(methods_rebate::FERRATA_REBATE_ELF)),
-        true,
-    )]);
+    w.chain.state = compat::genesis_programs(
+        state,
+        [(
+            Program::new_unchecked(
+                methods_rebate::FERRATA_REBATE_ID,
+                Cow::Borrowed(methods_rebate::FERRATA_REBATE_ELF),
+            ),
+            true,
+        )],
+    );
     w
 }
 

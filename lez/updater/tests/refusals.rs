@@ -33,10 +33,11 @@ use ferrata_updater::{
         MAX_REFUSAL_BACKOFF, REFUSAL_BACKOFF, WINDOW_MARGIN_MS,
     },
 };
-use lee::{Actor, PrivateKey};
+use lee::Actor;
+use ferrata_updater::lez::PayerKey;
 
-fn key(b: u8) -> PrivateKey {
-    PrivateKey::try_new([b; 32]).unwrap()
+fn key(b: u8) -> PayerKey {
+    ferrata_updater::lez::payer_key([b; 32])
 }
 
 fn no_sleep(_: u64) {}
@@ -63,7 +64,7 @@ impl Rec {
     fn updater(
         &self,
         label: &str,
-        payer: PrivateKey,
+        payer: PayerKey,
         sources: Vec<Box<dyn Source>>,
         state: Option<PathBuf>,
     ) -> Updater {
@@ -348,7 +349,7 @@ impl Ledger for Shared {
     fn actor_state(&self, actor: Actor) -> anyhow::Result<Vec<u8>> {
         self.0.lock().unwrap().actor_state(actor)
     }
-    fn submit(&mut self, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> anyhow::Result<TxOutcome> {
+    fn submit(&mut self, payer: &PayerKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> anyhow::Result<TxOutcome> {
         self.0.lock().unwrap().submit(payer, tx, gas_limit, max_fee)
     }
     fn now_ms(&self) -> Option<u64> {
@@ -461,7 +462,7 @@ impl Ledger for Flaky {
         }
         self.inner.actor_state(actor)
     }
-    fn submit(&mut self, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> anyhow::Result<TxOutcome> {
+    fn submit(&mut self, payer: &PayerKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> anyhow::Result<TxOutcome> {
         if self.refuse > 0 && tx.label.ends_with(self.suffix) {
             self.refuse -= 1;
             self.refused += 1;
@@ -554,7 +555,7 @@ impl Ledger for ReadFailsAfterRefusal {
         }
         self.chain.actor_state(actor)
     }
-    fn submit(&mut self, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> anyhow::Result<TxOutcome> {
+    fn submit(&mut self, payer: &PayerKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> anyhow::Result<TxOutcome> {
         let out = self.chain.submit(payer, tx, gas_limit, max_fee)?;
         if !out.applied && !out.rejected {
             self.fail.set(self.fails);

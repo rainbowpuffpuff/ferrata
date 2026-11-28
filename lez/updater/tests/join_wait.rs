@@ -20,10 +20,11 @@ use ferrata_updater::{
     source::{lab_record, load_entries, Clock, Entry, Recorded, Source},
     updater::{leads, Instance, Plan, Step, Updater},
 };
-use lee::{Actor, PrivateKey};
+use lee::Actor;
+use ferrata_updater::lez::PayerKey;
 
-fn key(b: u8) -> PrivateKey {
-    PrivateKey::try_new([b; 32]).unwrap()
+fn key(b: u8) -> PayerKey {
+    ferrata_updater::lez::payer_key([b; 32])
 }
 
 fn no_sleep(_: u64) {}
@@ -45,12 +46,12 @@ impl Fx {
         Self { config, dir, checkpoint, entries, clock: Clock::new(1) }
     }
 
-    fn updater(&self, label: &str, payer: PrivateKey, join_wait_rounds: Option<u64>) -> Updater {
+    fn updater(&self, label: &str, payer: PayerKey, join_wait_rounds: Option<u64>) -> Updater {
         let source = Recorded::open("a", &self.dir, &self.config, self.clock.clone()).unwrap();
         self.updater_with(label, payer, join_wait_rounds, Box::new(source))
     }
 
-    fn updater_with(&self, label: &str, payer: PrivateKey, join_wait: Option<u64>, source: Box<dyn Source>) -> Updater {
+    fn updater_with(&self, label: &str, payer: PayerKey, join_wait: Option<u64>, source: Box<dyn Source>) -> Updater {
         let inst = Instance::new("mainnet", HarnessLedger::program(), self.config.clone(), self.checkpoint);
         let policy = Policy { defer_window: 1, retry_base_ms: 0, join_wait_rounds: join_wait, ..Policy::default() };
         let mut u = Updater::new(label, inst, payer, Fees::default(), policy, vec![source], None).unwrap();
@@ -570,7 +571,7 @@ impl Ledger for Unreadable {
         }
         self.inner.actor_state(actor)
     }
-    fn submit(&mut self, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> anyhow::Result<TxOutcome> {
+    fn submit(&mut self, payer: &PayerKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> anyhow::Result<TxOutcome> {
         self.inner.submit(payer, tx, gas_limit, max_fee)
     }
 }
@@ -633,7 +634,7 @@ fn updaters_released_together_take_their_turns_again() {
     for pair in 0..4u8 {
         let (kb, kc, opener) = (key(0x90 + pair), key(0xa0 + pair), key(0xb0 + pair));
         let mut l = HarnessLedger::new(&[kb.clone(), kc.clone(), opener.clone()]);
-        let mk = |label: String, k: PrivateKey| {
+        let mk = |label: String, k: PayerKey| {
             let inst = Instance::new("mainnet", HarnessLedger::program(), fx.config.clone(), fx.checkpoint);
             let policy = Policy { defer_window: 8, retry_base_ms: 0, join_wait_rounds: Some(12), ..Policy::default() };
             let source = Recorded::open("a", &fx.dir, &fx.config, fx.clock.clone()).unwrap();

@@ -9,8 +9,13 @@
 
 use std::{fs, path::PathBuf};
 
+#[cfg(not(feature = "lez-040"))]
+use checkpoint_core::lez::{parse_block, Actor as CpActor, Origin, TxKind, Visitor};
+#[cfg(feature = "lez-040")]
+use checkpoint_core::lez_0_4_0::{parse_block, Actor as CpActor, Origin, TxKind, Visitor};
+#[cfg(feature = "lez-040")]
+mod lez_block040;
 use checkpoint_core::{
-    lez::{parse_block, Actor as CpActor, Origin, TxKind, Visitor},
     wire::BridgeMessage as CpMessage,
 };
 use ferrata_bridge_core::{
@@ -71,6 +76,7 @@ fn note(keys: &BridgeKeys, cid: &Hash, vault: &[u8; 20], i: u64, token: [u8; 20]
 /// A LEZ block (`borsh(Block)`) holding `txs` (each `borsh(LeeTransaction)`), `reverted` the
 /// positions of reverted ones. The hash fields are not filled: `parse_block` reads, it does not
 /// link (the checkpoint's `link_block` does, from the inscription).
+#[cfg(not(feature = "lez-040"))]
 fn block(txs: &[&[u8]], reverted: &[u64]) -> Vec<u8> {
     let mut b = Vec::new();
     b.extend_from_slice(&7u64.to_le_bytes());
@@ -87,6 +93,12 @@ fn block(txs: &[&[u8]], reverted: &[u64]) -> Vec<u8> {
     }
     b.push(2);
     b
+}
+
+/// [`block`] in LEZ v0.4.0's layout (tests/lez_block040).
+#[cfg(feature = "lez-040")]
+fn block(txs: &[&[u8]], reverted: &[u64]) -> Vec<u8> {
+    lez_block040::block(7, 1_700_000_000_000, txs, reverted)
 }
 
 /// The checkpoint's view: every call to the bridge program a block shows in the clear.
@@ -343,7 +355,10 @@ fn burns_and_what_the_checkpoint_collects() {
     let bytes = block(&txs, &reverted);
     let mut visitor = Calls { bridge: *program.value(), calls: Vec::new() };
     let summary = parse_block(&bytes, &mut visitor).expect("the checkpoint parses the block");
+    #[cfg(not(feature = "lez-040"))]
     assert_eq!(summary.tx_count as usize, rows.len());
+    #[cfg(feature = "lez-040")]
+    assert_eq!(summary.tx_count as usize, rows.len() + lez_block040::SYSTEM_TXS, "the rows and the system transactions");
     let mut table = String::from(
         "| transaction | origin | message bytes | checkpoint's decoder | collected |\n|---|---|---:|---|---|\n",
     );

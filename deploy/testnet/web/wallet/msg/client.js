@@ -1,5 +1,5 @@
-// client.js: ferrata_msg over LEZ's JSON-RPC, with the wallet's rc3 public core (../wallet/lez.js): read an actor's
-// mailbox, and sign and send the program's messages as public transactions. Used by the CLI; the wallet can import it.
+// client.js: ferrata_msg over LEZ's JSON-RPC: read an actor's mailbox, and sign and send the program's messages as
+// public transactions. Existing callers default to rc3; the page passes its selected net object for v0.4.0.
 import * as lez from '../lez.js'; // the messages library's client.js as the wallet took it, importing this directory's lez.js
 import * as M from './ferrata-msg.js';
 
@@ -23,19 +23,17 @@ export async function actorState(seq, account, program) {
 export async function mailbox(seq, account, program) { return M.decodeMailbox(await actorState(seq, account, program)); }
 
 /** Sign `data` to the signer's own actor of `program` (with `others`' actors), pay with the signer, send it. */
-export async function call(seq, { node, program, data, others = [], gasLimit, nonce = null }) {
+export async function call(seq, { node, program, data, others = [], gasLimit, nonce = null, net = null, gate = null }) {
   const feeState = await seq.feeState();
   if (nonce == null) nonce = lez.big((await seq.nonces([node.accountId]))[0]);
+  // `gate` (the page's version re-read) runs after the reads, right before signing: nothing is awaited in between.
+  if (gate && !(await gate())) throw new Error(net?.error ?? 'the network\'s LEZ version could not be read, so nothing is signed');
   const actors = [actorOf(node.accountId, program), ...others.map((o) => actorOf(o, program))];
-  const m = (maxFee) => ({
-    actors, signers: [node.accountId], to: actorOf(node.accountId, program), data,
-    fee: { payer: node.accountId, gasLimit, tip: 0n, maxFee }, nonces: [[node.accountId, nonce]], evidence: [],
-  });
-  const size = lez.encodePublicTransaction(lez.encodeMessage(m(0n)), [{ sig: new Uint8Array(64), pk: node.pk }]).length + 1;
-  const { maxFee, reserve } = lez.feeFor({ gasLimit, size, feeState });
-  const messageBytes = lez.encodeMessage(m(maxFee));
-  const sig = lez.sign(node.ssk, lez.messageHash(messageBytes));
-  const tx = lez.wrapPublic(lez.encodePublicTransaction(messageBytes, [{ sig, pk: node.pk }]));
+  const args = { payer: node, to: actorOf(node.accountId, program), actors, data, nonce, gasLimit, evidence: [] };
+  const build = net ? (a) => net.buildCall(a) : lez.buildCall;
+  const probe = build({ ...args, maxFee: 0n });
+  const { maxFee, reserve } = lez.feeFor({ gasLimit, size: probe.size, feeState });
+  const tx = build({ ...args, maxFee });
   const hash = await seq.send(tx.wire);
   return { hash: typeof hash === 'string' ? hash : tx.hash, size: tx.size, reserve, maxFee };
 }

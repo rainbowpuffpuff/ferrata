@@ -1,0 +1,639 @@
+2026-11-28T07:28:16.225600Z  INFO sequencer_service: Starting with config config={"home":"<scratch>/run/sequencer_home","max_num_tx_in_block":20,"mempool_max_size":1000,"mempool_max_per_account":16,"block_create_timeout":"3s","retry_pending_blocks_timeout":"5s","bedrock_config":{"channel_id":"0101010101010101010101010101010101010101010101010101010101010101","node_url":"http://127.0.0.1:18080/","auth":null,"priority_fee_percent":12,"stale_refund_slots":300,"backfill_batch_slots":10000},"genesis":{"channel_params":{"minimum_sequencer_stake":149,"posting_timeframe":300,"posting_timeout":25,"max_block_size":1048576,"finality_depth":35},"actions":[{"supply_account":{"recipient":{"identified":{"key":"00346980052d24464b9669f2bd0cdec4d441c3ff3b358ffcc9477a5247a096f84c"}},"balance":10000000000000}},{"supply_account":{"recipient":{"identified":{"key":"001ad39d12ff0cd1562c4095f8f937c35292ae1955661e781dba1a6f0f7c3b99a6"}},"balance":20000000000000}},{"supply_private_account":{"address":"44KVvzvh2ephQU9aR5snboGUXKgS1FnPYh1W4KZKwmhm","balance":10000000000000}},{"supply_private_account":{"address":"478hD6LXFTYu5gRRkWkCyXPRsWgCwAfRredoCUfxr5b9","balance":20000000000000}}]},"metrics_listen_address":"127.0.0.1:9000","gossip":{"listen_addr":"/ip4/127.0.0.1/udp/0/quic-v1","bootstrap_peers":[]}} channel_signing_key_file=<scratch>/run/sequencer_home/channel_signing_key funding_public_key=2e03b2eff5a45478e7e79668d2a146cf2c5c7925bce927f2b1c67f2ab4fc0d26
+2026-11-28T07:28:16.250346Z  INFO sequencer_service: Storage Actor spawned
+2026-11-28T07:28:16.250456Z  INFO sequencer_service: Bedrock Sharding Pool Actor spawned
+2026-11-28T07:28:16.250694Z  INFO sequencer_service: Channel signing key loaded public_key=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:28:16.250965Z  INFO sequencer_service: Stake Config PubSub Actor spawned
+2026-11-28T07:28:16.251119Z  INFO sequencer_service: Slasher Actor spawned
+2026-11-28T07:28:16.251156Z  INFO sequencer_service: Channel Signing Actor spawned
+2026-11-28T07:28:16.433048Z  INFO sequencer_genesis: Genesis fingerprint fingerprint=0b74f01afbc90b4b8b1701ebca7e84cd1c5f2094e019e3d6e4ff518f11f706c7
+2026-11-28T07:28:16.433142Z  INFO sequencer_executor_actor::actor::state: No stored channel view; starting on the final tier
+2026-11-28T07:28:16.433742Z  INFO sequencer_executor_actor::actor::state: Channel does not exist yet; starting it as channel creator
+2026-11-28T07:28:16.622343Z  INFO sequencer_genesis: Genesis fingerprint fingerprint=0b74f01afbc90b4b8b1701ebca7e84cd1c5f2094e019e3d6e4ff518f11f706c7
+2026-11-28T07:28:17.952016Z  INFO sequencer_executor_actor::actor::state::online: Producer reward account (stake ownership) reward_account=HPPS8DbwGvrTRW9KZtvuzNv8HhnVR66QX4VH1cW9kyZK
+2026-11-28T07:28:17.952561Z  INFO sequencer_service: Executor Actor spawned
+2026-11-28T07:28:17.955450Z  INFO libp2p_swarm: local_peer_id=12D3KooWRxGw4eW6VFVF6wKjevJ18EpTXWrtr4NyXDJVmuhcDkkt
+2026-11-28T07:28:17.955846Z  INFO sequencer_gossip_actor::actor: Gossip listening listen_addrs=[/ip4/127.0.0.1/udp/20508/quic-v1] peer_id=12D3KooWRxGw4eW6VFVF6wKjevJ18EpTXWrtr4NyXDJVmuhcDkkt
+2026-11-28T07:28:17.956057Z  INFO sequencer_service: Gossip network started peer_id=12D3KooWRxGw4eW6VFVF6wKjevJ18EpTXWrtr4NyXDJVmuhcDkkt
+2026-11-28T07:28:17.956131Z  INFO sequencer_service: Gossip Actor spawned
+2026-11-28T07:28:17.956204Z  INFO sequencer_rpc_server_actor::actor: Starting RPC server addr=127.0.0.1:3040
+2026-11-28T07:28:17.956226Z  INFO sequencer_service: RPC Server Actor spawned
+2026-11-28T07:28:17.956236Z  INFO sequencer_service: Block production scheduler started
+2026-11-28T07:28:21.013463Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=d48345d91a189ada7d3a16093d55d8e3dbc3aab74c5952e3ede5c3c31b90717d
+2026-11-28T07:28:21.166821Z  INFO sequencer_core: Created block transactions=3 elapsed=208.710929ms
+2026-11-28T07:28:21.166914Z  INFO sequencer_core: Publishing block block_id=2 pin=1566ce5b36d6baeb690e8801151975d85cf15eb7ea49d4e059ac12379f464b00
+2026-11-28T07:28:21.377664Z  INFO sequencer_executor_actor::actor: Block created block_id=2 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:28:24.013034Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=2aa4dfeffc67f5abca3a16bc1ecdaa09b9f3b9e31661bd08f69c5aabc180e5aa
+2026-11-28T07:28:24.161719Z  INFO sequencer_core: Created block transactions=3 elapsed=203.47635ms
+2026-11-28T07:28:24.161963Z  INFO sequencer_core: Publishing block block_id=3 pin=bb0ea7fc98270797fc49c3cc025c0ae562b9f13f1c37de4121875b374def0776
+2026-11-28T07:28:24.367920Z  INFO sequencer_executor_actor::actor: Block created block_id=3 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:28:27.015401Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=28d57a57bbcfd50a6598261a9ebed5bfeb72a77dcfddbf34720eb1a4e90ade64
+2026-11-28T07:28:27.170466Z  INFO sequencer_core: Created block transactions=3 elapsed=212.626668ms
+2026-11-28T07:28:27.170676Z  INFO sequencer_core: Publishing block block_id=4 pin=62cb999f935c5cc36bc27198600abcfbe04a98667b665abcad36b52ef7305edf
+2026-11-28T07:28:27.383566Z  INFO sequencer_executor_actor::actor: Block created block_id=4 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:28:30.013628Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=56c1c44949c9c79246ed5a4e68675985b49de683a5952ded185c33cb4651b677
+2026-11-28T07:28:30.171693Z  INFO sequencer_core: Created block transactions=3 elapsed=214.238787ms
+2026-11-28T07:28:30.171930Z  INFO sequencer_core: Publishing block block_id=5 pin=be2b38444f134010b691a30ecfa132a75623d949af65808d78bfed03c0b91837
+2026-11-28T07:28:30.397229Z  INFO sequencer_executor_actor::actor: Block created block_id=5 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:28:33.018873Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=cf7a47c62117ec3c514662b70fc56c73ed4705c67fa53d885de25bce9935cbb9
+2026-11-28T07:28:33.187715Z  INFO sequencer_core: Created block transactions=3 elapsed=229.411537ms
+2026-11-28T07:28:33.187946Z  INFO sequencer_core: Publishing block block_id=6 pin=50a558a4c7e8bb8528108c57b7e767368938bd1bb69e23b7bb9a4078497efc41
+2026-11-28T07:28:33.408606Z  INFO sequencer_executor_actor::actor: Block created block_id=6 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:28:36.018198Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=f765b5452dcafb27804bac35a0c0dbde74448deffefd6f73aab16bb3d7a943e4
+2026-11-28T07:28:36.190854Z  INFO sequencer_core: Created block transactions=3 elapsed=233.329762ms
+2026-11-28T07:28:36.191071Z  INFO sequencer_core: Publishing block block_id=7 pin=6dcfe477ebedf515b4af86c4f081d7ffd24e04151bffd7c49d6e17140f38b0d8
+2026-11-28T07:28:36.417236Z  INFO sequencer_executor_actor::actor: Block created block_id=7 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:28:39.012293Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=aabaf9d09575819cb6f93c13e12639c27f3905a549344b05324757d1fec3240d
+2026-11-28T07:28:39.189524Z  INFO sequencer_core: Created block transactions=3 elapsed=231.912846ms
+2026-11-28T07:28:39.189806Z  INFO sequencer_core: Publishing block block_id=8 pin=d384835be27822e51c1c1b6aff625e424167e398a3cc39b8f9f0a7bf78de3577
+2026-11-28T07:28:39.412553Z  INFO sequencer_executor_actor::actor: Block created block_id=8 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:28:42.075853Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=14ea90bc73ea061caa11e91bf04e58bd3f12e3b459fc7c6cfff21ebbad1b01f6
+2026-11-28T07:28:42.231043Z  INFO sequencer_core: Created block transactions=3 elapsed=273.304863ms
+2026-11-28T07:28:42.231098Z  INFO sequencer_core: Publishing block block_id=9 pin=01ca21e5124936ed460f82b294c80914f3ab7ae4ce95cdf3c25c1a8f4be4c5d2
+2026-11-28T07:28:42.510206Z  INFO sequencer_executor_actor::actor: Block created block_id=9 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:28:45.005431Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=46e1e8accca430f0b97ae61f3a4cf240fe7f81e618cff8ccfa88bfc730b06600
+2026-11-28T07:28:45.161203Z  INFO sequencer_core: Created block transactions=3 elapsed=203.479123ms
+2026-11-28T07:28:45.161281Z  INFO sequencer_core: Publishing block block_id=10 pin=d79f14a84f822ef0e424c8e180d7f0afc9448b0151a6aa3c8d2787f201a74492
+2026-11-28T07:28:45.376332Z  INFO sequencer_executor_actor::actor: Block created block_id=10 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:28:48.008572Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=e4630c94ba78c71363b0d045ae0a48841e16545cf6374650b37a1a6b75408654
+2026-11-28T07:28:48.169468Z  INFO sequencer_core: Created block transactions=3 elapsed=211.098234ms
+2026-11-28T07:28:48.169700Z  INFO sequencer_core: Publishing block block_id=11 pin=db96b5715ff5ba07b32d241c3adcdf1ce0bd01bf586f4742446bbb09341a6894
+2026-11-28T07:28:48.393431Z  INFO sequencer_executor_actor::actor: Block created block_id=11 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:28:51.012717Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=1f2807e183af761149574cd354d26b764172556ca59fc9e4f674b5ac8d720e89
+2026-11-28T07:28:51.174497Z  INFO sequencer_core: Created block transactions=3 elapsed=216.543618ms
+2026-11-28T07:28:51.174705Z  INFO sequencer_core: Publishing block block_id=12 pin=38b94509ce97926c3dab141d9f10bcc25106031e6e8e99f362be9bcd1b563728
+2026-11-28T07:28:51.396741Z  INFO sequencer_executor_actor::actor: Block created block_id=12 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:28:54.011185Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=dc473a079bc39d3a60972424691ede8a9ab261484f157ae72619add27937ac19
+2026-11-28T07:28:54.170460Z  INFO sequencer_core: Created block transactions=3 elapsed=212.824067ms
+2026-11-28T07:28:54.170662Z  INFO sequencer_core: Publishing block block_id=13 pin=9aa71ff337a89c5b55889ce886819f09c71b24cad938a27229d4b35325f7e0cf
+2026-11-28T07:28:54.391582Z  INFO sequencer_executor_actor::actor: Block created block_id=13 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:28:57.013058Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=effbf86cf5de7f8f57bd77b9d018dbbf3b1c58e008799d69a2ee07a1efc6531d
+2026-11-28T07:28:57.168425Z  INFO sequencer_core: Created block transactions=3 elapsed=210.011118ms
+2026-11-28T07:28:57.168641Z  INFO sequencer_core: Publishing block block_id=14 pin=2af70bd0231fa43e927ba0510bf578678cf158526fdc175ecdaabe13cd2a614a
+2026-11-28T07:28:57.397551Z  INFO sequencer_executor_actor::actor: Block created block_id=14 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:29:00.010492Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=b0571620d73cb0a2b92f0258121cfe2f23a52cf4435b81320d99fcf6322907d5
+2026-11-28T07:29:00.170971Z  INFO sequencer_core: Created block transactions=3 elapsed=212.748786ms
+2026-11-28T07:29:00.171195Z  INFO sequencer_core: Publishing block block_id=15 pin=8261b74bd9c32d71a4a52bbe09a5ef822ee6fe4d70c7258d4e9d1e342e1701e3
+2026-11-28T07:29:00.397256Z  INFO sequencer_executor_actor::actor: Block created block_id=15 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:29:03.010631Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=1ff790ec12b7de945dddb3a27243226836e30dde27390335c23e6254c9127d5e
+2026-11-28T07:29:03.172412Z  INFO sequencer_core: Created block transactions=3 elapsed=215.016112ms
+2026-11-28T07:29:03.172623Z  INFO sequencer_core: Publishing block block_id=16 pin=3da3309fefc3f89d0e56fdf55b2cabf452cd162a247d7c3d969d17be1457bf9f
+2026-11-28T07:29:03.405179Z  INFO sequencer_executor_actor::actor: Block created block_id=16 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:29:06.078677Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=0856f9ed0449dcd6fa839cef625e3674cc5c639483e20e771f8372590a5cdfba
+2026-11-28T07:29:06.232921Z  INFO sequencer_core: Created block transactions=3 elapsed=275.50326ms
+2026-11-28T07:29:06.232967Z  INFO sequencer_core: Publishing block block_id=17 pin=39b72681ac4a4dcbbfdad63f6adb08b8a5afb14b57ff4a094f662ee62f61112a
+2026-11-28T07:29:06.533544Z  INFO sequencer_executor_actor::actor: Block created block_id=17 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:29:09.009963Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=7f54df9ff9bff1aaebf1450750b2062e6aaee6d852d5bf7661c5192b4109305a
+2026-11-28T07:29:09.166272Z  INFO sequencer_core: Created block transactions=3 elapsed=208.389577ms
+2026-11-28T07:29:09.166413Z  INFO sequencer_core: Publishing block block_id=18 pin=1d8ffdf7ee8e7a4e06adb0bedecaea70d5b0f97cc0c3a313deef17fdeb569523
+2026-11-28T07:29:09.395595Z  INFO sequencer_executor_actor::actor: Block created block_id=18 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:29:12.012057Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=da152a317f6936b82be86201e0a17c1c7961a7ef86034374b7d9213bd42aa0c9
+2026-11-28T07:29:12.176105Z  INFO sequencer_core: Created block transactions=3 elapsed=218.371234ms
+2026-11-28T07:29:12.176355Z  INFO sequencer_core: Publishing block block_id=19 pin=d7e25d43f0bca12b4400aeea2ef4f0af8db152df2e3b6c7b81771045a8857778
+2026-11-28T07:29:12.418516Z  INFO sequencer_executor_actor::actor: Block created block_id=19 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:29:15.013678Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=d859e87bde5178306633d869f991af533f77a15f3e2dcb84fc1183ffb33da8b8
+2026-11-28T07:29:15.182038Z  INFO sequencer_core: Created block transactions=3 elapsed=223.565626ms
+2026-11-28T07:29:15.182252Z  INFO sequencer_core: Publishing block block_id=20 pin=5f8c4c7ac3c2c6d4c70977cad41d244ef54b23b7bd2033d93b00c142d280f61b
+2026-11-28T07:29:15.421183Z  INFO sequencer_executor_actor::actor: Block created block_id=20 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:29:18.044331Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=5047931fa95ce40ade5e87ecdb0528590250e47ebe33eaf901b30ce0c2eb02c4
+2026-11-28T07:29:18.223380Z  INFO sequencer_core: Created block transactions=3 elapsed=265.418463ms
+2026-11-28T07:29:18.223443Z  INFO sequencer_core: Publishing block block_id=21 pin=2ead839de3b74ba083d496d4fda99c4fcd7e96e59329027454511f9227400d3d
+2026-11-28T07:29:18.504812Z  INFO sequencer_executor_actor::actor: Block created block_id=21 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:29:21.226655Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=a5ac4a4a8e56357edbacb879e8eb6147fac4fd856af44822979349abf2d947a8
+2026-11-28T07:29:21.414119Z  INFO sequencer_core: Created block transactions=3 elapsed=456.423697ms
+2026-11-28T07:29:21.414183Z  INFO sequencer_core: Publishing block block_id=22 pin=05b1aa182e7f6d4d3950f359640b6f0b782af9c478ea60947dc55907accd8a9c
+2026-11-28T07:29:21.893419Z  INFO sequencer_executor_actor::actor: Block created block_id=22 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:29:24.257515Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=c3a4abe03940afbf3c9d562076cac84d7bce747b0fa42b9f1cacd2228558fde0
+2026-11-28T07:29:24.420566Z  INFO sequencer_core: Created block transactions=3 elapsed=462.23923ms
+2026-11-28T07:29:24.420666Z  INFO sequencer_core: Publishing block block_id=23 pin=8420ef1ec5d75d1f2d77eff5cf7807951939e3b55c9e9de495f4844b87c77c96
+2026-11-28T07:29:24.901121Z  INFO sequencer_executor_actor::actor: Block created block_id=23 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:29:27.449694Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=a2dc77991d2ee18c13149d47d185f72f96cbd3e27d55250a3b715ed6d65e2922
+2026-11-28T07:29:27.617630Z  INFO sequencer_core: Created block transactions=3 elapsed=660.185268ms
+2026-11-28T07:29:27.617725Z  INFO sequencer_core: Publishing block block_id=24 pin=acf19c6e243263039a92bd7d6dedb5ca09e2248e186536e65a0d2d0a6a67be95
+2026-11-28T07:29:28.309945Z  INFO sequencer_executor_actor::actor: Block created block_id=24 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:29:30.346190Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=6a6b4ae65a7088dabef73bfdfe84c1b85bb5a56ecb8382080a6649c77d9374ae
+2026-11-28T07:29:30.515194Z  INFO sequencer_core: Created block transactions=3 elapsed=556.934888ms
+2026-11-28T07:29:30.515290Z  INFO sequencer_core: Publishing block block_id=25 pin=b7d3a8c1cb15ba9bc4d545077c9848e4ffa0d6b790244fe05ff4b81252ff4c91
+2026-11-28T07:29:31.122555Z  INFO sequencer_executor_actor::actor: Block created block_id=25 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:29:33.261486Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=d4f18e3ef0b98968f47ea7ed448176d8ff26a942667b8d90da146c306a9a3b01
+2026-11-28T07:29:33.441636Z  INFO sequencer_core: Created block transactions=3 elapsed=483.763395ms
+2026-11-28T07:29:33.441696Z  INFO sequencer_core: Publishing block block_id=26 pin=f30c29e1650a82671ba52f2d775f87a0e98f3915869aeed5496a8b84201e2c63
+2026-11-28T07:29:33.927504Z  INFO sequencer_executor_actor::actor: Block created block_id=26 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:29:36.230168Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=0e02bcb7325b7c4d7f509fb2b3f600c4cda4098b6e1f9bc4a517c791b4705969
+2026-11-28T07:29:36.405099Z  INFO sequencer_core: Created block transactions=3 elapsed=447.490463ms
+2026-11-28T07:29:36.405185Z  INFO sequencer_core: Publishing block block_id=27 pin=50f92a014d161a75f6c2b8aa3f0fc00afff1f8071d83dd4b02651fcaf8959b76
+2026-11-28T07:29:36.878967Z  INFO sequencer_executor_actor::actor: Block created block_id=27 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:29:39.280400Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=f127339e3307b387f77f08ea6e83138dc0eace73a1b4f049d77cc082c2a3fce4
+2026-11-28T07:29:39.445248Z  INFO sequencer_core: Created block transactions=3 elapsed=488.018519ms
+2026-11-28T07:29:39.445349Z  INFO sequencer_core: Publishing block block_id=28 pin=694937e96a20de9cc75b706eaca0c1c0be1d6c90f51887e857bc45447e7fd055
+2026-11-28T07:29:39.942947Z  INFO sequencer_executor_actor::actor: Block created block_id=28 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:29:42.390550Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=6dfe05ecc59d81f9fcc17c2680bdeb5767712ae1e845549a995347b51246cf43
+2026-11-28T07:29:42.555187Z  INFO sequencer_core: Created block transactions=3 elapsed=596.787316ms
+2026-11-28T07:29:42.555264Z  INFO sequencer_core: Publishing block block_id=29 pin=1a11c6504c867ed97720532beb6d5d501635523281b90c9dcf6c2ab4905a463c
+2026-11-28T07:29:43.216035Z  INFO sequencer_executor_actor::actor: Block created block_id=29 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:29:45.340207Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=c7f843b06b3869bba9cf38a7b5602a627c454b4bc8bf2cbd32508bb5cc79bfe3
+2026-11-28T07:29:45.511667Z  INFO sequencer_core: Created block transactions=3 elapsed=553.554383ms
+2026-11-28T07:29:45.511757Z  INFO sequencer_core: Publishing block block_id=30 pin=b0e44366d0bebc81ff8372a28183382de5fccfdbaede2cbb6501a4eb9133d324
+2026-11-28T07:29:46.067045Z  INFO sequencer_executor_actor::actor: Block created block_id=30 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:29:48.246680Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=f42590afdaf1574460b8b9710e27a6c86548d09d8d5aff5b2524d8a0ebb54e18
+2026-11-28T07:29:48.401171Z  INFO sequencer_core: Created block transactions=3 elapsed=443.631211ms
+2026-11-28T07:29:48.401221Z  INFO sequencer_core: Publishing block block_id=31 pin=e565551c13adb46cb632f190b5874603bf7565c205bdb851b4a1ad23e7f46063
+2026-11-28T07:29:48.873730Z  INFO sequencer_executor_actor::actor: Block created block_id=31 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:29:51.498818Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=85c9d8d98bb1f0d3abbe413dca43cc10b8bbbd6d3dc5fba94e61111f37ec7504
+2026-11-28T07:29:51.663656Z  INFO sequencer_core: Created block transactions=3 elapsed=705.850581ms
+2026-11-28T07:29:51.663716Z  INFO sequencer_core: Publishing block block_id=32 pin=4af8c08306e580afd93f47cf602bddb9c812af41b1983cfb9a653069f81586b4
+2026-11-28T07:29:52.375415Z  INFO sequencer_executor_actor::actor: Block created block_id=32 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:29:54.127351Z  INFO sequencer_core: Created block transactions=2 elapsed=170.372616ms
+2026-11-28T07:29:54.127396Z  INFO sequencer_core: Publishing block block_id=33 pin=2a8f2060409dc3169f0c1cf00187d6a24764be9b4d0e919446516d62c5807961
+2026-11-28T07:29:54.305791Z  INFO sequencer_executor_actor::actor: Block created block_id=33 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:29:57.230863Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=b2d684227a61bfb35c57ae3a57e8293aa5bbbece37aecdc3e7fbcfdb386db152
+2026-11-28T07:29:57.400291Z  INFO sequencer_core: Created block transactions=3 elapsed=442.424657ms
+2026-11-28T07:29:57.400346Z  INFO sequencer_core: Publishing block block_id=34 pin=74d804811e32dbabcd84daaed846ab7b3d077ac921e21ba68be95ea21d04f95e
+2026-11-28T07:29:57.888468Z  INFO sequencer_executor_actor::actor: Block created block_id=34 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:30:00.132817Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=2c8b273fa6e7c10190b85c4ba795019b14823e0098c5df446e46b765e08de394
+2026-11-28T07:30:00.341396Z  INFO sequencer_core: Created block transactions=3 elapsed=383.761473ms
+2026-11-28T07:30:00.341520Z  INFO sequencer_core: Publishing block block_id=35 pin=1995e45c804f2ab94af9b43149663fa33456418edc32e137fa26d2a4e9e2c96d
+2026-11-28T07:30:00.703299Z  INFO sequencer_executor_actor::actor: Block created block_id=35 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:30:03.239706Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=14ccc4a5f45c97383b6efcafe3e3da147d657699b5714bea683d1f4453255298
+2026-11-28T07:30:03.425209Z  INFO sequencer_core: Created block transactions=3 elapsed=467.251859ms
+2026-11-28T07:30:03.425311Z  INFO sequencer_core: Publishing block block_id=36 pin=683f421bf4d2ac0c50b9a06f7ca8948969667101d1023c5f6c5f239390e9ea63
+2026-11-28T07:30:03.881998Z  INFO sequencer_executor_actor::actor: Block created block_id=36 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:30:06.471905Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=279ada32320fc246f28789986b604f5fd98e9eb99a78ad9f22da800d14a17335
+2026-11-28T07:30:06.636367Z  INFO sequencer_core: Created block transactions=3 elapsed=676.767977ms
+2026-11-28T07:30:06.636461Z  INFO sequencer_core: Publishing block block_id=37 pin=88cd5bce54bdc9c462c7b58073010a6abefa71d93113308faac7553d79842ee1
+2026-11-28T07:30:07.315391Z  INFO sequencer_executor_actor::actor: Block created block_id=37 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:30:09.368162Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=fe65b0def9defb7e190352480945de46ef53bae46e39149f9e6dc9f86ce85c25
+2026-11-28T07:30:09.540184Z  INFO sequencer_core: Created block transactions=3 elapsed=582.506992ms
+2026-11-28T07:30:09.540278Z  INFO sequencer_core: Publishing block block_id=38 pin=cca79018c34e3c63d078addad9bfce523f1dc42cdbbc2bc0f68457c35c2e16c5
+2026-11-28T07:30:10.108439Z  INFO sequencer_executor_actor::actor: Block created block_id=38 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:30:12.303774Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=22cfb53d514af85f3c29df6a0357a744f5a8be05b0fca4c07298eb6780f57408
+2026-11-28T07:30:12.480758Z  INFO sequencer_core: Created block transactions=3 elapsed=522.315586ms
+2026-11-28T07:30:12.480850Z  INFO sequencer_core: Publishing block block_id=39 pin=e81549761e0fe2b52176207b8ba4c223754e00dde7fdaf4ae1625b2ca0e853ef
+2026-11-28T07:30:12.976729Z  INFO sequencer_executor_actor::actor: Block created block_id=39 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:30:15.231920Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=75a8ee7d6b61aaec4213f03d6a009e6e0b1ccc1e46ab465ca66e85236d02a5b7
+2026-11-28T07:30:15.400209Z  INFO sequencer_core: Created block transactions=3 elapsed=442.31075ms
+2026-11-28T07:30:15.400318Z  INFO sequencer_core: Publishing block block_id=40 pin=16cd570fa35cfb2286bc61f0fe930ecf8908eea5e6ef5d8015549ab76e2853fe
+2026-11-28T07:30:15.878633Z  INFO sequencer_executor_actor::actor: Block created block_id=40 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:30:18.258694Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=d7cf791b3de9947c3ddead24faa4ca77bf15357593d8621e4cea23e466f9add4
+2026-11-28T07:30:18.450062Z  INFO sequencer_core: Created block transactions=3 elapsed=492.441525ms
+2026-11-28T07:30:18.450165Z  INFO sequencer_core: Publishing block block_id=41 pin=5244240333f0edcb9fe9c53b9ff6c1628048fd12743ed1ac70107d82f763cea7
+2026-11-28T07:30:18.942154Z  INFO sequencer_executor_actor::actor: Block created block_id=41 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:30:21.399713Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=68d8fcfd6c16fd5fe591b496b5a63002f9aee043d38c959abdfcb6880a8517ed
+2026-11-28T07:30:21.578484Z  INFO sequencer_core: Created block transactions=3 elapsed=620.596558ms
+2026-11-28T07:30:21.578551Z  INFO sequencer_core: Publishing block block_id=42 pin=cfccdecb43107775e00bb1132a0f69c54d1281086613cc79ed09e0578816fc69
+2026-11-28T07:30:22.241346Z  INFO sequencer_executor_actor::actor: Block created block_id=42 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:30:24.191985Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=e82126b037c0a4f3e7fe3729f7a73c37841e212ef91b6a04de9e68c9d1bc3e98
+2026-11-28T07:30:24.375999Z  INFO sequencer_core: Created block transactions=3 elapsed=418.540474ms
+2026-11-28T07:30:24.376087Z  INFO sequencer_core: Publishing block block_id=43 pin=d30a33d9edecd32cbcf6de3dd5570864ee1771b0ccfad5725d5a2671dd9ee317
+2026-11-28T07:30:24.803276Z  INFO sequencer_executor_actor::actor: Block created block_id=43 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:30:27.339986Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=eb613655e75c74d26cc0f321171430af958b8e155b56f0450e423dc727c041ca
+2026-11-28T07:30:27.503188Z  INFO sequencer_core: Created block transactions=3 elapsed=545.662866ms
+2026-11-28T07:30:27.503282Z  INFO sequencer_core: Publishing block block_id=44 pin=2513900e9271e915e312625de20e9004733ea0a1e179dc5673bf9b6637917cc1
+2026-11-28T07:30:28.095533Z  INFO sequencer_executor_actor::actor: Block created block_id=44 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:30:30.289396Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=deb8a4e508dff1712c83f0d7d8b82e013c2e233fdf0b329ba9d4103729d58566
+2026-11-28T07:30:30.464721Z  INFO sequencer_core: Created block transactions=3 elapsed=507.013226ms
+2026-11-28T07:30:30.464817Z  INFO sequencer_core: Publishing block block_id=45 pin=f86ce6f3c838aa0a471e0a5d563c82194e6c1c80eeefed92c7983e825b5ae918
+2026-11-28T07:30:30.993332Z  INFO sequencer_executor_actor::actor: Block created block_id=45 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:30:33.290523Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=9a39bbc617e530e85be3a1a2dfaf79c5bda5505f6cf7a2b47779b79e9cc3653e
+2026-11-28T07:30:33.462886Z  INFO sequencer_core: Created block transactions=3 elapsed=505.80996ms
+2026-11-28T07:30:33.462950Z  INFO sequencer_core: Publishing block block_id=46 pin=4a60e355547de8d5de666b4bb815cc1d1be9894b0834bcbecdd26d895256ff29
+2026-11-28T07:30:33.974022Z  INFO sequencer_executor_actor::actor: Block created block_id=46 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:30:36.127597Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=af6f1e30aeeb625df06db19f07b5d35d7d03d42043ec5cfe9cc945d24cfe6286
+2026-11-28T07:30:36.309926Z  INFO sequencer_core: Created block transactions=3 elapsed=352.52873ms
+2026-11-28T07:30:36.309987Z  INFO sequencer_core: Publishing block block_id=47 pin=c84945e6150dc70900772d36f8ae5392fa79bdde88b038d706c692cc39b231e1
+2026-11-28T07:30:36.662232Z  INFO sequencer_executor_actor::actor: Block created block_id=47 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:30:39.176426Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=8921d7b1de1319f3885a934b70ef0af776e92fa62069290c890de4e3184df393
+2026-11-28T07:30:39.357414Z  INFO sequencer_core: Created block transactions=3 elapsed=399.373278ms
+2026-11-28T07:30:39.357473Z  INFO sequencer_core: Publishing block block_id=48 pin=2ad91b647d3f90d125e7ed83904999879ee9d748b374b61679a1e0e234dd8f8a
+2026-11-28T07:30:39.779897Z  INFO sequencer_executor_actor::actor: Block created block_id=48 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:30:42.185798Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=87ff5fb84e70f282bb359d25bbf06653baaaa3edd14296376596712a0054c1ae
+2026-11-28T07:30:42.362201Z  INFO sequencer_core: Created block transactions=3 elapsed=404.590706ms
+2026-11-28T07:30:42.362263Z  INFO sequencer_core: Publishing block block_id=49 pin=f9b2e7bbaa48eaea0c377b4c8b4395eeb2b9ccb0878005670cbcad92d438b53f
+2026-11-28T07:30:42.781290Z  INFO sequencer_executor_actor::actor: Block created block_id=49 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:30:45.172972Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=aa755d75bf7f9d5f2776313656e1f5d9170b552468b7c43ddc15c4b60400a8d0
+2026-11-28T07:30:45.344411Z  INFO sequencer_core: Created block transactions=3 elapsed=386.522632ms
+2026-11-28T07:30:45.344473Z  INFO sequencer_core: Publishing block block_id=50 pin=2af16f2095dec9bf798f567df6afb73e75fd82e846053aab50fdcbe6f8f18e00
+2026-11-28T07:30:45.750127Z  INFO sequencer_executor_actor::actor: Block created block_id=50 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:30:48.179825Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=238e0a99e85990c90d8c233fbdb0a8c35dbe2d8798d8df2636f19d9d743629a6
+2026-11-28T07:30:48.352660Z  INFO sequencer_core: Created block transactions=3 elapsed=394.842244ms
+2026-11-28T07:30:48.352722Z  INFO sequencer_core: Publishing block block_id=51 pin=c40ba7052d5638acc68ed736ff9c12799314a30fdcfcd93f06ede8f2985061a8
+2026-11-28T07:30:48.768195Z  INFO sequencer_executor_actor::actor: Block created block_id=51 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:30:51.122587Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=8feb7f62f0aa815d6dc9b61f6f19fbce373cf4048fb2a161ff63e8ab4e2237e1
+2026-11-28T07:30:51.298853Z  INFO sequencer_core: Created block transactions=3 elapsed=341.337127ms
+2026-11-28T07:30:51.298905Z  INFO sequencer_core: Publishing block block_id=52 pin=1091a72d1815b4a13ba4b63de75484484366648c0b677b037c633ff2d52aea12
+2026-11-28T07:30:51.658950Z  INFO sequencer_executor_actor::actor: Block created block_id=52 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:30:54.118667Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=c1cee3039b4cf551e219d9a7142f46a099e2db4cae43caa608437024aff72471
+2026-11-28T07:30:54.296873Z  INFO sequencer_core: Created block transactions=3 elapsed=339.266177ms
+2026-11-28T07:30:54.296929Z  INFO sequencer_core: Publishing block block_id=53 pin=c663a7fc0e0ccafbc2091a61679a26b24275b008bec0a0db4d023046b3fa52de
+2026-11-28T07:30:54.659164Z  INFO sequencer_executor_actor::actor: Block created block_id=53 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:30:57.230886Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=c314d4d4ebd4e1d44c78aade3c3fc1098d10dd43c2e775f42b55a82c91015cb3
+2026-11-28T07:30:57.397019Z  INFO sequencer_core: Created block transactions=3 elapsed=438.40437ms
+2026-11-28T07:30:57.397072Z  INFO sequencer_core: Publishing block block_id=54 pin=6a9316269e62277c8f690c0a2c95230f6bbd8a05511ea20672de5f68ebb5cb5c
+2026-11-28T07:30:57.857884Z  INFO sequencer_executor_actor::actor: Block created block_id=54 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:31:00.238643Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=6576771bd060311039cd8ae38642195bf2e72869a8284a70e8213385b2ef4d14
+2026-11-28T07:31:00.415493Z  INFO sequencer_core: Created block transactions=3 elapsed=457.330848ms
+2026-11-28T07:31:00.415617Z  INFO sequencer_core: Publishing block block_id=55 pin=5b24937eb572ce9b2df1589f75e16fc7f11c9c5d2249e540a4a401cb57f7e0a3
+2026-11-28T07:31:00.884928Z  INFO sequencer_executor_actor::actor: Block created block_id=55 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:31:03.436387Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=f8506c2c0a0a70302971f2bd0dcf782ab86a020f4ff9deb952a5336279cad5ad
+2026-11-28T07:31:03.605865Z  INFO sequencer_core: Created block transactions=3 elapsed=648.123518ms
+2026-11-28T07:31:03.605976Z  INFO sequencer_core: Publishing block block_id=56 pin=1d523f4453f1cb9500ba9249b9e070f896b3747c44daf459913b2393eaf14c94
+2026-11-28T07:31:04.288358Z  INFO sequencer_executor_actor::actor: Block created block_id=56 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:31:06.368059Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=41f7f19a551eda06ec2345c36bab9c253f234d0ee7a359549f3ad320559d3230
+2026-11-28T07:31:06.545331Z  INFO sequencer_core: Created block transactions=3 elapsed=587.731568ms
+2026-11-28T07:31:06.545419Z  INFO sequencer_core: Publishing block block_id=57 pin=d7b550bc41ac0d4ab8e12f4d578b943569c4c2d46c5808c72cab17eddc0ecd8b
+2026-11-28T07:31:07.162804Z  INFO sequencer_executor_actor::actor: Block created block_id=57 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:31:09.291879Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=c0c749d3e2cf630d089690a3354cf61a8ef378e646304fbf7814dd6afa39fec8
+2026-11-28T07:31:09.487563Z  INFO sequencer_core: Created block transactions=3 elapsed=530.193871ms
+2026-11-28T07:31:09.487621Z  INFO sequencer_core: Publishing block block_id=58 pin=e92e3fdd09daa4e6a6170effee868124c3d2ea9550ade42ddad44b6bfbcf5917
+2026-11-28T07:31:10.050620Z  INFO sequencer_executor_actor::actor: Block created block_id=58 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:31:12.322832Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=edef557ad3c618ae7a1086f42ee9c1ba430132c84486923b0cd3543d9976819d
+2026-11-28T07:31:12.507342Z  INFO sequencer_core: Created block transactions=3 elapsed=549.846339ms
+2026-11-28T07:31:12.507449Z  INFO sequencer_core: Publishing block block_id=59 pin=16522140bdf4e1f9de33d3b2036af2348c13c612370764d1a1641fb2371047cd
+2026-11-28T07:31:13.022063Z  INFO sequencer_executor_actor::actor: Block created block_id=59 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:31:15.289810Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=8a22d61699d75f2d28e9651efe2cfa2f4c8fda40254a81e91b2b2038cb3b9514
+2026-11-28T07:31:15.485490Z  INFO sequencer_core: Created block transactions=3 elapsed=527.504949ms
+2026-11-28T07:31:15.485582Z  INFO sequencer_core: Publishing block block_id=60 pin=f9272b63f2e20e4101bf542a3f90f357f608b3b72c53374c96c56787b1cd66af
+2026-11-28T07:31:16.021236Z  INFO sequencer_executor_actor::actor: Block created block_id=60 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:31:18.308047Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=fc56ecfd92827353ae2cc07557d8f0680b3348ed06016ed3b59f2c96bb64ff49
+2026-11-28T07:31:18.503693Z  INFO sequencer_core: Created block transactions=3 elapsed=545.479507ms
+2026-11-28T07:31:18.503776Z  INFO sequencer_core: Publishing block block_id=61 pin=576f44de4f89ff96e67f8d8bfbda26f43d80d3241ed1f701fff3aa1cd9cf93d4
+2026-11-28T07:31:19.100126Z  INFO sequencer_executor_actor::actor: Block created block_id=61 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:31:21.129398Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=c6d591a3a98d205feaa566f58011341a5259cfa2f2f269195f44d7a8163721eb
+2026-11-28T07:31:21.319289Z  INFO sequencer_core: Created block transactions=3 elapsed=361.000164ms
+2026-11-28T07:31:21.319347Z  INFO sequencer_core: Publishing block block_id=62 pin=a99a61cd6862d073f3ab56688fa36e34929e67dfb61208fd1a70f2ea7098b150
+2026-11-28T07:31:21.684139Z  INFO sequencer_executor_actor::actor: Block created block_id=62 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:31:24.303584Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=978c36e354889e4f865af0f769a7f5a10a268a0423d2c48837cee29e042edea7
+2026-11-28T07:31:24.480129Z  INFO sequencer_core: Created block transactions=3 elapsed=522.422291ms
+2026-11-28T07:31:24.480180Z  INFO sequencer_core: Publishing block block_id=63 pin=4d9bda0b34c96488d9b344ebb1b23220653622ee4aed9012d3768d1ea83dee4f
+2026-11-28T07:31:25.007310Z  INFO sequencer_executor_actor::actor: Block created block_id=63 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:31:27.329173Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=fdc91bd99b9d1a1dbe0a51618e69d218d3c49c5744ec41f2ae7717f4cbc5ee2e
+2026-11-28T07:31:27.532815Z  INFO sequencer_core: Created block transactions=3 elapsed=575.815335ms
+2026-11-28T07:31:27.532910Z  INFO sequencer_core: Publishing block block_id=64 pin=14a3f00b72e5f39338a360cbf70342ac113b9424b62fe0866f51afd6cd0a3909
+2026-11-28T07:31:28.077254Z  INFO sequencer_executor_actor::actor: Block created block_id=64 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:31:30.546218Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=27fa5133e4c4fadfa6625305924eb656ae2c7b33626e10a7090e05036475dedb
+2026-11-28T07:31:30.740632Z  INFO sequencer_core: Created block transactions=3 elapsed=782.361064ms
+2026-11-28T07:31:30.740801Z  INFO sequencer_core: Publishing block block_id=65 pin=2507a008eb6175bb71dfb5da04e4938754751208f8445bd8c23008653fb2ba84
+2026-11-28T07:31:31.552379Z  INFO sequencer_executor_actor::actor: Block created block_id=65 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:31:33.131858Z  INFO sequencer_core: Created block transactions=2 elapsed=173.638559ms
+2026-11-28T07:31:33.131919Z  INFO sequencer_core: Publishing block block_id=66 pin=0cdb7539691c37a51641b67dffa19e279a824c2681a8e874c0f42de78d85a060
+2026-11-28T07:31:33.334090Z  INFO sequencer_executor_actor::actor: Block created block_id=66 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:31:36.289131Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=fcc349e7e94afdbe5fbbb4a1f0fc13a0aea1673e1452bfb921b6871dbd44e218
+2026-11-28T07:31:36.457548Z  INFO sequencer_core: Created block transactions=3 elapsed=499.225385ms
+2026-11-28T07:31:36.457691Z  INFO sequencer_core: Publishing block block_id=67 pin=07238e0b2a0257800dd36fc676b6c4829aeb48528d5ad21f08308d21fef0ce34
+2026-11-28T07:31:36.985335Z  INFO sequencer_executor_actor::actor: Block created block_id=67 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:31:39.354391Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=3c3262bb0cc55450e938d1f731c3cf85c13e95776d37505b22634d380b30f628
+2026-11-28T07:31:39.558437Z  INFO sequencer_core: Created block transactions=3 elapsed=600.145855ms
+2026-11-28T07:31:39.558537Z  INFO sequencer_core: Publishing block block_id=68 pin=6cfb572248f1911a825b5e6a8e9bf84217bbc6089381153ba66498ab25bc5091
+2026-11-28T07:31:40.150955Z  INFO sequencer_executor_actor::actor: Block created block_id=68 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:31:42.397204Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=a31fc348d60880f6fe542d6718b7281353919a0ad1b03739fca751fc45818c03
+2026-11-28T07:31:42.574182Z  INFO sequencer_core: Created block transactions=3 elapsed=616.715503ms
+2026-11-28T07:31:42.574278Z  INFO sequencer_core: Publishing block block_id=69 pin=c9e5d50a62895cbcde4c007a7a736b1e8be6c9fd0b4a2a1a22164143fe91b663
+2026-11-28T07:31:43.178281Z  INFO sequencer_executor_actor::actor: Block created block_id=69 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:31:45.142468Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=c62bc6dfb1885a3cce3a85101ea1d5471ee2e2d99773635650eea3f7d9729dde
+2026-11-28T07:31:45.309638Z  INFO sequencer_core: Created block transactions=3 elapsed=351.778616ms
+2026-11-28T07:31:45.309689Z  INFO sequencer_core: Publishing block block_id=70 pin=895fb50be4cd9f8f71995e57291b34adfdda91c8aed411ed2a05c1133b563c8a
+2026-11-28T07:31:45.654638Z  INFO sequencer_executor_actor::actor: Block created block_id=70 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:31:48.289488Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=2ad8777e4d07b67d0005a8e42776d601fc874f148f085e29a88913fe8a845d33
+2026-11-28T07:31:48.454068Z  INFO sequencer_core: Created block transactions=3 elapsed=495.702407ms
+2026-11-28T07:31:48.454126Z  INFO sequencer_core: Publishing block block_id=71 pin=5506c18532c10d195589b153407e161b525cd59f3c411cd7c3e436bcf18e438b
+2026-11-28T07:31:48.965882Z  INFO sequencer_executor_actor::actor: Block created block_id=71 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:31:51.119583Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=f20e245e000fcf71ca331ead53271c1763dc5414a2557b54b39abb2e1ac420cd
+2026-11-28T07:31:51.294455Z  INFO sequencer_core: Created block transactions=3 elapsed=336.414835ms
+2026-11-28T07:31:51.294504Z  INFO sequencer_core: Publishing block block_id=72 pin=6f9f2d3175e9e9a2780a6b535b07bf3c7ef7636df2e74c5025f3e12ba02b2df9
+2026-11-28T07:31:51.660718Z  INFO sequencer_executor_actor::actor: Block created block_id=72 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:31:54.508427Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=53f866621bc7bde0d86168a049db17c2e9e6fee8ab5901d4835a1a99329642d4
+2026-11-28T07:31:54.694608Z  INFO sequencer_core: Created block transactions=3 elapsed=736.912969ms
+2026-11-28T07:31:54.694661Z  INFO sequencer_core: Publishing block block_id=73 pin=73f5d3f00882a5b19cbeef160d0932c5fae115a9d0f883b389640792681db278
+2026-11-28T07:31:55.479116Z  INFO sequencer_executor_actor::actor: Block created block_id=73 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:31:57.115472Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=b8364a1f49206cbab294590b791dc02d3bcdc525abeed679d596c43f78e39483
+2026-11-28T07:31:57.295905Z  INFO sequencer_core: Created block transactions=3 elapsed=337.966102ms
+2026-11-28T07:31:57.295955Z  INFO sequencer_core: Publishing block block_id=74 pin=f25f98abac17f251f595cc7fe415dab85c2be872d137e574218ce17b1de00e0f
+2026-11-28T07:31:57.694659Z  INFO sequencer_executor_actor::actor: Block created block_id=74 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:32:00.146237Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=594b01631b828fd8367882867f14733a90d2d393767f24406d7bf7f028cb55a8
+2026-11-28T07:32:00.320878Z  INFO sequencer_core: Created block transactions=3 elapsed=362.738097ms
+2026-11-28T07:32:00.321019Z  INFO sequencer_core: Publishing block block_id=75 pin=ed482d42446a708390b549f0483b569bc37a67b3f225509a0e1a3bc3b54139ff
+2026-11-28T07:32:00.675976Z  INFO sequencer_executor_actor::actor: Block created block_id=75 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:32:03.116942Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=3ce5066d885f945737ee33a5eb6cc15c04c8f56406255832ea6ec0f28ffab366
+2026-11-28T07:32:03.277313Z  INFO sequencer_core: Created block transactions=3 elapsed=319.414938ms
+2026-11-28T07:32:03.277386Z  INFO sequencer_core: Publishing block block_id=76 pin=af56e86e295d33e5bba536c01f3f7bc18a7b1ccbc50a127ac6e2424f1b0f43ca
+2026-11-28T07:32:03.612483Z  INFO sequencer_executor_actor::actor: Block created block_id=76 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:32:06.113639Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=3170ec3917051006ac0d2e932a0af9b5be9708989595fdf9d54424cedc460724
+2026-11-28T07:32:06.271334Z  INFO sequencer_core: Created block transactions=3 elapsed=314.00214ms
+2026-11-28T07:32:06.271387Z  INFO sequencer_core: Publishing block block_id=77 pin=ee380f42aaa16d4692cacf4deacb1e6ce75e9dd28709077bb57b46e3ff0a81ef
+2026-11-28T07:32:06.600360Z  INFO sequencer_executor_actor::actor: Block created block_id=77 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:32:09.123861Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=312cd45cfaa1e4a7382cfec68711d457c78a7b51b89384f177fe5839d2c3c25a
+2026-11-28T07:32:09.283012Z  INFO sequencer_core: Created block transactions=3 elapsed=324.96663ms
+2026-11-28T07:32:09.283068Z  INFO sequencer_core: Publishing block block_id=78 pin=a4ecbfc271940d49c8fb3195d6c9a0a87da37c9bcf1e0cce2e44ad642e896ee0
+2026-11-28T07:32:09.615013Z  INFO sequencer_executor_actor::actor: Block created block_id=78 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:32:12.109161Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=67f0cd7dd665057d0a29ee77f7c1d345dba8d957a41fe8ed9070113f76de5b86
+2026-11-28T07:32:12.264742Z  INFO sequencer_core: Created block transactions=3 elapsed=306.435985ms
+2026-11-28T07:32:12.264817Z  INFO sequencer_core: Publishing block block_id=79 pin=431e42aec2bd446b3115ae89ef3af5b4dd2a3ef83a5b75ecbe952837daf12c0b
+2026-11-28T07:32:12.576661Z  INFO sequencer_executor_actor::actor: Block created block_id=79 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:32:15.108287Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=0392ec60278d59403b5696b4f7705d53ac9360fc2861955354e1627050cd196c
+2026-11-28T07:32:15.268974Z  INFO sequencer_core: Created block transactions=3 elapsed=310.776914ms
+2026-11-28T07:32:15.269037Z  INFO sequencer_core: Publishing block block_id=80 pin=0f112f47ed66f4b7193c3d1e1d4bd76a5620eaa31a821284acaf07e788ab875f
+2026-11-28T07:32:15.582490Z  INFO sequencer_executor_actor::actor: Block created block_id=80 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:32:18.109480Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=d27e891abd2ffaa6dd03404848cc87596e00642d82f7cd9bf30b1e2a9672d5c6
+2026-11-28T07:32:18.262674Z  INFO sequencer_core: Created block transactions=3 elapsed=304.602755ms
+2026-11-28T07:32:18.262745Z  INFO sequencer_core: Publishing block block_id=81 pin=84438d2a5efe86d278241c9835a21ae198e49de423ff70070b6195261843bd09
+2026-11-28T07:32:18.588057Z  INFO sequencer_executor_actor::actor: Block created block_id=81 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:32:21.113641Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=57ce75b525fe688e5d1b2d8d08debff238fc2319eb2ed01264aa1df8b46ab750
+2026-11-28T07:32:21.263134Z  INFO sequencer_core: Created block transactions=3 elapsed=305.225037ms
+2026-11-28T07:32:21.263195Z  INFO sequencer_core: Publishing block block_id=82 pin=852aed1a1f08b31dc388bd400d65ff7035b94104a8077103f4a77018c40c9831
+2026-11-28T07:32:21.579137Z  INFO sequencer_executor_actor::actor: Block created block_id=82 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:32:24.013231Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=609c4b0afe03265e913c006a74ea4293f475f8e0b0eddca65d0bd1bc812b3794
+2026-11-28T07:32:24.174903Z  INFO sequencer_core: Created block transactions=3 elapsed=217.569639ms
+2026-11-28T07:32:24.175063Z  INFO sequencer_core: Publishing block block_id=83 pin=ecb104a5e2f393a2b27205e3bf9513d1d6b45f1e3c57a85f6c204390290e7e47
+2026-11-28T07:32:24.405054Z  INFO sequencer_executor_actor::actor: Block created block_id=83 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:32:27.010990Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=feee7c9676c152990470a1c78a93e4d7bd0ece52087ac85da2a99dc20b2192d9
+2026-11-28T07:32:27.163476Z  INFO sequencer_core: Created block transactions=3 elapsed=205.607096ms
+2026-11-28T07:32:27.163678Z  INFO sequencer_core: Publishing block block_id=84 pin=70a3c57b7b322b2ef9070e3ba596c6b649533268205d7d2884a3c063029953b7
+2026-11-28T07:32:27.384159Z  INFO sequencer_executor_actor::actor: Block created block_id=84 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:32:30.012606Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=521fa4c54eec1d0635259c991927e1e8d33cacd31e9a5e1417a3b7e6a57d2416
+2026-11-28T07:32:30.173481Z  INFO sequencer_core: Created block transactions=3 elapsed=215.829523ms
+2026-11-28T07:32:30.173721Z  INFO sequencer_core: Publishing block block_id=85 pin=1fafdd58614bb1ec42bb33ed1282b88bf9888039d36c22b03912ceaa74283e4d
+2026-11-28T07:32:30.401413Z  INFO sequencer_executor_actor::actor: Block created block_id=85 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:32:33.012794Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=972da288ed8879428f4ec06aaec8ec01c1d6350158bf521b764f3319eb651b80
+2026-11-28T07:32:33.171086Z  INFO sequencer_core: Created block transactions=3 elapsed=212.859819ms
+2026-11-28T07:32:33.171303Z  INFO sequencer_core: Publishing block block_id=86 pin=1782d95ee976a01b06fe49b11b7fda04b61cc31ee94b7e8fde7cb0feb9078735
+2026-11-28T07:32:33.400745Z  INFO sequencer_executor_actor::actor: Block created block_id=86 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:32:36.012072Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=e5ca4b0142fb6446f86c7bab9c375fa2b00a9a4304d1920e6d7fbbd52dfae0cd
+2026-11-28T07:32:36.171067Z  INFO sequencer_core: Created block transactions=3 elapsed=213.194029ms
+2026-11-28T07:32:36.171294Z  INFO sequencer_core: Publishing block block_id=87 pin=2629aa2630bf6c0579475d157ba0b08fa72a13ee7c5a2c9625c553608599f1ef
+2026-11-28T07:32:36.403687Z  INFO sequencer_executor_actor::actor: Block created block_id=87 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:32:39.068610Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=a1bbfcd94bab2e7d3b1cedd854f46b26f1b53fc71c3e5501dca42104b4d741f6
+2026-11-28T07:32:39.240673Z  INFO sequencer_core: Created block transactions=3 elapsed=282.93151ms
+2026-11-28T07:32:39.240732Z  INFO sequencer_core: Publishing block block_id=88 pin=55e59f69039c44cd7ef6123857974c3be3afa0dc04b31642717d1b1c008951ae
+2026-11-28T07:32:39.539811Z  INFO sequencer_executor_actor::actor: Block created block_id=88 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:32:42.344473Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=78ac40a0703d8c4219f6f1c8ac78206514316d86a97184de4f164c2c5a4f676b
+2026-11-28T07:32:42.528251Z  INFO sequencer_core: Created block transactions=3 elapsed=570.012306ms
+2026-11-28T07:32:42.528320Z  INFO sequencer_core: Publishing block block_id=89 pin=a5ab39ba4afa3b904adc5aea31f2d47c3543e1eeebd4805be924b84470e17385
+2026-11-28T07:32:43.140347Z  INFO sequencer_executor_actor::actor: Block created block_id=89 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:32:45.312469Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=1277faae3c32060686deb20f19bf6f3e1878bb3f493cf6b081356a10c7becd55
+2026-11-28T07:32:45.481363Z  INFO sequencer_core: Created block transactions=3 elapsed=524.110208ms
+2026-11-28T07:32:45.481426Z  INFO sequencer_core: Publishing block block_id=90 pin=4ac0f7fa2ff4e8d6afd282c68c8eeaf90dd849476afcb95b290eb9c2a0535d10
+2026-11-28T07:32:46.012146Z  INFO sequencer_executor_actor::actor: Block created block_id=90 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:32:48.393890Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=8bd3bafae40491ce985ab71fb63f77a42e0528e6975142c876200388771142db
+2026-11-28T07:32:48.562289Z  INFO sequencer_core: Created block transactions=3 elapsed=604.526713ms
+2026-11-28T07:32:48.562378Z  INFO sequencer_core: Publishing block block_id=91 pin=31e70c6c03c4e9c6e59b04bf436fd05da71d2e4d48c95a32b2a0f242f213320c
+2026-11-28T07:32:49.224258Z  INFO sequencer_executor_actor::actor: Block created block_id=91 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:32:51.113109Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=295a6c65da6fea7e35b83da83ccfd26b169610f777e1fd05b6aeacd83c76f4ff
+2026-11-28T07:32:51.290736Z  INFO sequencer_core: Created block transactions=3 elapsed=332.716433ms
+2026-11-28T07:32:51.290831Z  INFO sequencer_core: Publishing block block_id=92 pin=eb2142f4b0eea17ef3c868c41d70715018ccbe3696fa8a0db192b160fdb4b904
+2026-11-28T07:32:51.629578Z  INFO sequencer_executor_actor::actor: Block created block_id=92 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:32:54.129431Z  INFO sequencer_core: Created block transactions=2 elapsed=170.612412ms
+2026-11-28T07:32:54.129477Z  INFO sequencer_core: Publishing block block_id=93 pin=fd039fc9276387256c515c7e1ebf9b63c805fca90ef146de340b0749b122a960
+2026-11-28T07:32:54.314948Z  INFO sequencer_executor_actor::actor: Block created block_id=93 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:32:57.127557Z  INFO sequencer_core: Created block transactions=2 elapsed=169.319917ms
+2026-11-28T07:32:57.127615Z  INFO sequencer_core: Publishing block block_id=94 pin=854e2041aa406bd8b39a59213450de63dc68cef2a2d2fc070ee25c6d7823a27d
+2026-11-28T07:32:57.311729Z  INFO sequencer_executor_actor::actor: Block created block_id=94 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:33:00.131993Z  INFO sequencer_core: Created block transactions=2 elapsed=173.778446ms
+2026-11-28T07:33:00.132075Z  INFO sequencer_core: Publishing block block_id=95 pin=b55d7518a2e22d03b3cfdbd4a94ac268b101e12d0878e0dd320ac708caf5ba65
+2026-11-28T07:33:00.319253Z  INFO sequencer_executor_actor::actor: Block created block_id=95 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:33:03.153222Z  INFO sequencer_core: Created block transactions=2 elapsed=196.059595ms
+2026-11-28T07:33:03.153282Z  INFO sequencer_core: Publishing block block_id=96 pin=f95a80e9d3499a561c27169bf4baa6213c085c9491a999f3a5a45eb77a6fdd6a
+2026-11-28T07:33:03.369019Z  INFO sequencer_executor_actor::actor: Block created block_id=96 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:33:06.162980Z  INFO sequencer_core: Created block transactions=2 elapsed=204.731802ms
+2026-11-28T07:33:06.163059Z  INFO sequencer_core: Publishing block block_id=97 pin=51f794f938118a985ce6645d1ebf288b2aa228e0753ef2f91c6514aa2073d029
+2026-11-28T07:33:06.375680Z  INFO sequencer_executor_actor::actor: Block created block_id=97 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:33:09.144042Z  INFO sequencer_core: Created block transactions=2 elapsed=186.519582ms
+2026-11-28T07:33:09.144111Z  INFO sequencer_core: Publishing block block_id=98 pin=ef948b97b3efd79a1db647a4122d26a3433d3525d36152b6eb0b7475a13a0cc0
+2026-11-28T07:33:09.346791Z  INFO sequencer_executor_actor::actor: Block created block_id=98 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:33:12.143296Z  INFO sequencer_core: Created block transactions=2 elapsed=185.768083ms
+2026-11-28T07:33:12.143349Z  INFO sequencer_core: Publishing block block_id=99 pin=9cad8b9d85f3e3443d9d1ff40f856e1433ab971ae63293ed8c14e5f87cf034f4
+2026-11-28T07:33:12.344432Z  INFO sequencer_executor_actor::actor: Block created block_id=99 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:33:15.146187Z  INFO sequencer_core: Created block transactions=2 elapsed=187.801166ms
+2026-11-28T07:33:15.146232Z  INFO sequencer_core: Publishing block block_id=100 pin=404ceed96817b98512cd7549ed2a821bf016dc2177efbca43fc13e4ed0176f63
+2026-11-28T07:33:15.346733Z  INFO sequencer_executor_actor::actor: Block created block_id=100 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:33:17.956889Z  WARN libp2p_kad::behaviour: Failed to trigger bootstrap: No known peers.
+2026-11-28T07:33:18.136315Z  INFO sequencer_core: Created block transactions=2 elapsed=179.336451ms
+2026-11-28T07:33:18.136368Z  INFO sequencer_core: Publishing block block_id=101 pin=5bdb37105bad1771c9721fb92dc40707b007951151cbd626af35773fddb1b6e8
+2026-11-28T07:33:18.319478Z  INFO sequencer_executor_actor::actor: Block created block_id=101 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:33:21.131326Z  INFO sequencer_core: Created block transactions=2 elapsed=173.049241ms
+2026-11-28T07:33:21.131370Z  INFO sequencer_core: Publishing block block_id=102 pin=774a947f56d22978b26a590422e5019bf1cb30c08a9e390b0fc86145457681a1
+2026-11-28T07:33:21.315080Z  INFO sequencer_executor_actor::actor: Block created block_id=102 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:33:24.131662Z  INFO sequencer_core: Created block transactions=2 elapsed=173.312313ms
+2026-11-28T07:33:24.131714Z  INFO sequencer_core: Publishing block block_id=103 pin=d47df98f29276fa7d21f5d6e9d4f071938fa1869a86f861f3d895d9198686080
+2026-11-28T07:33:24.318567Z  INFO sequencer_executor_actor::actor: Block created block_id=103 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:33:27.131112Z  INFO sequencer_core: Created block transactions=2 elapsed=173.103261ms
+2026-11-28T07:33:27.131175Z  INFO sequencer_core: Publishing block block_id=104 pin=4bf0369f8c2dea15081c3c991406229b6e8dd5597404535f229b846773da35b7
+2026-11-28T07:33:27.307097Z  INFO sequencer_executor_actor::actor: Block created block_id=104 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:33:30.150177Z  INFO sequencer_core: Created block transactions=2 elapsed=192.854802ms
+2026-11-28T07:33:30.150228Z  INFO sequencer_core: Publishing block block_id=105 pin=edbcf5b869ded85288628e0edcf9ccd272385e013aa68631710790cab1f89249
+2026-11-28T07:33:30.341597Z  INFO sequencer_executor_actor::actor: Block created block_id=105 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:33:33.131163Z  INFO sequencer_core: Created block transactions=2 elapsed=173.869799ms
+2026-11-28T07:33:33.131209Z  INFO sequencer_core: Publishing block block_id=106 pin=197bd2d30596e2ea95175035c8b3e9308406a675cc1c1d69b564f2c15247c8c0
+2026-11-28T07:33:33.317292Z  INFO sequencer_executor_actor::actor: Block created block_id=106 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:33:36.134276Z  INFO sequencer_core: Created block transactions=2 elapsed=175.883777ms
+2026-11-28T07:33:36.134317Z  INFO sequencer_core: Publishing block block_id=107 pin=ea2d73b1a5323dfd6ce20079d694313d566872b715c697e43124f9ba2b1e294e
+2026-11-28T07:33:36.320569Z  INFO sequencer_executor_actor::actor: Block created block_id=107 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:33:39.137092Z  INFO sequencer_core: Created block transactions=2 elapsed=178.666803ms
+2026-11-28T07:33:39.137143Z  INFO sequencer_core: Publishing block block_id=108 pin=9746a8315204604e34571791984f3d9c5b4cc89afef0317f03ec45d3f0bb26dd
+2026-11-28T07:33:39.315879Z  INFO sequencer_executor_actor::actor: Block created block_id=108 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:33:42.130406Z  INFO sequencer_core: Created block transactions=2 elapsed=172.436534ms
+2026-11-28T07:33:42.130448Z  INFO sequencer_core: Publishing block block_id=109 pin=ea11bd4c56cbee2bf72352bcb510ab7a2e989257d2297d58f4d589c3c70c052d
+2026-11-28T07:33:42.310579Z  INFO sequencer_executor_actor::actor: Block created block_id=109 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:33:45.129561Z  INFO sequencer_core: Created block transactions=2 elapsed=171.642911ms
+2026-11-28T07:33:45.129600Z  INFO sequencer_core: Publishing block block_id=110 pin=314315994ec745005c48e64954eef0f9e7d123fee837530366257b0b1ebc8327
+2026-11-28T07:33:45.315667Z  INFO sequencer_executor_actor::actor: Block created block_id=110 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:33:48.130254Z  INFO sequencer_core: Created block transactions=2 elapsed=171.961364ms
+2026-11-28T07:33:48.130301Z  INFO sequencer_core: Publishing block block_id=111 pin=4d37afcda0c0e6b4bde2d0de07e82b5722ed46e8502ea27cff17cca15c14c726
+2026-11-28T07:33:48.312609Z  INFO sequencer_executor_actor::actor: Block created block_id=111 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:33:51.132198Z  INFO sequencer_core: Created block transactions=2 elapsed=174.760026ms
+2026-11-28T07:33:51.132265Z  INFO sequencer_core: Publishing block block_id=112 pin=ff3b183d1804a120cc9e084a1dc74ef2fe3fd79b747a03fd55238bcc45bb85c5
+2026-11-28T07:33:51.319157Z  INFO sequencer_executor_actor::actor: Block created block_id=112 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:33:54.120532Z  INFO sequencer_core: Created block transactions=2 elapsed=162.363864ms
+2026-11-28T07:33:54.120578Z  INFO sequencer_core: Publishing block block_id=113 pin=609e9b4ea6de1a387575f84d5576219e4ada92b1da8658396d608c90ae385697
+2026-11-28T07:33:54.310095Z  INFO sequencer_executor_actor::actor: Block created block_id=113 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:33:57.122217Z  INFO sequencer_core: Created block transactions=2 elapsed=164.604091ms
+2026-11-28T07:33:57.122264Z  INFO sequencer_core: Publishing block block_id=114 pin=58ce4c1c703210b30f83c99a9e32ca54fee383479395d8d327af311b0cd2e1b4
+2026-11-28T07:33:57.299678Z  INFO sequencer_executor_actor::actor: Block created block_id=114 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:34:00.113091Z  INFO sequencer_core: Created block transactions=2 elapsed=154.410484ms
+2026-11-28T07:34:00.113163Z  INFO sequencer_core: Publishing block block_id=115 pin=263680c3982d72173b11a4a141167ce099249d91d9eb5908c696a50c8e2731d1
+2026-11-28T07:34:00.280865Z  INFO sequencer_executor_actor::actor: Block created block_id=115 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:34:03.125509Z  INFO sequencer_core: Created block transactions=2 elapsed=167.386333ms
+2026-11-28T07:34:03.125553Z  INFO sequencer_core: Publishing block block_id=116 pin=9d966b40447067d6043b52f70844ba508331ba84823984101b3de6b9051c19da
+2026-11-28T07:34:03.291885Z  INFO sequencer_executor_actor::actor: Block created block_id=116 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:34:06.117142Z  INFO sequencer_core: Created block transactions=2 elapsed=158.330422ms
+2026-11-28T07:34:06.117185Z  INFO sequencer_core: Publishing block block_id=117 pin=92a3ac3fc926ca5d80fadf9283ef39a41bacd43fb4da1395ef20ba79032cde91
+2026-11-28T07:34:06.282513Z  INFO sequencer_executor_actor::actor: Block created block_id=117 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:34:09.127152Z  INFO sequencer_core: Created block transactions=2 elapsed=168.87324ms
+2026-11-28T07:34:09.127214Z  INFO sequencer_core: Publishing block block_id=118 pin=03d5c80628ef3a17ca6c64c52636fff0db906ef9a89e600f2a99d52cf25795f6
+2026-11-28T07:34:09.308015Z  INFO sequencer_executor_actor::actor: Block created block_id=118 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:34:12.133491Z  INFO sequencer_core: Created block transactions=2 elapsed=175.113875ms
+2026-11-28T07:34:12.133546Z  INFO sequencer_core: Publishing block block_id=119 pin=56943a494bdc02edd9fddc175ee19b63a1d710754419ea3718b9989549503731
+2026-11-28T07:34:12.322735Z  INFO sequencer_executor_actor::actor: Block created block_id=119 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:34:15.125484Z  INFO sequencer_core: Created block transactions=2 elapsed=167.127661ms
+2026-11-28T07:34:15.125553Z  INFO sequencer_core: Publishing block block_id=120 pin=cf14d03823d42e8d661e9cbb4e30ac8bf91471c89975a345dd5e593589e7b5a8
+2026-11-28T07:34:15.299453Z  INFO sequencer_executor_actor::actor: Block created block_id=120 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:34:18.122336Z  INFO sequencer_core: Created block transactions=2 elapsed=164.767512ms
+2026-11-28T07:34:18.122421Z  INFO sequencer_core: Publishing block block_id=121 pin=8d01843470c5d6954fb94cf010638dec79ab2ebd10536cba9dbef893e873ff7a
+2026-11-28T07:34:18.297825Z  INFO sequencer_executor_actor::actor: Block created block_id=121 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:34:21.133348Z  INFO sequencer_core: Created block transactions=2 elapsed=176.095993ms
+2026-11-28T07:34:21.133412Z  INFO sequencer_core: Publishing block block_id=122 pin=f8dcdb7512f189f3ccd4dae270226a62a737530033a2279ccf4a6f9cc96cd148
+2026-11-28T07:34:21.317078Z  INFO sequencer_executor_actor::actor: Block created block_id=122 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:34:24.132368Z  INFO sequencer_core: Created block transactions=2 elapsed=175.143392ms
+2026-11-28T07:34:24.132442Z  INFO sequencer_core: Publishing block block_id=123 pin=0724abfb3e74b04f4e0d610bc8669128f4ebf977a3f9ea659e7c25dd121d0081
+2026-11-28T07:34:24.319320Z  INFO sequencer_executor_actor::actor: Block created block_id=123 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:34:27.126493Z  INFO sequencer_core: Created block transactions=2 elapsed=168.38724ms
+2026-11-28T07:34:27.126566Z  INFO sequencer_core: Publishing block block_id=124 pin=c687cf5b2f346c31d258f7f9b54da813f69deafe9e4001f4aef33a907916b50e
+2026-11-28T07:34:27.309800Z  INFO sequencer_executor_actor::actor: Block created block_id=124 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:34:30.126168Z  INFO sequencer_core: Created block transactions=2 elapsed=168.11531ms
+2026-11-28T07:34:30.126208Z  INFO sequencer_core: Publishing block block_id=125 pin=8724d0ade5ae986b789869804198eb0326b34e22c2a995819248f4e194060942
+2026-11-28T07:34:30.307804Z  INFO sequencer_executor_actor::actor: Block created block_id=125 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:34:33.127361Z  INFO sequencer_core: Created block transactions=2 elapsed=169.672687ms
+2026-11-28T07:34:33.127408Z  INFO sequencer_core: Publishing block block_id=126 pin=f6e9c22a664923f83fda95f8aaa68f3c1a964fb411354f80c42fe5bfa8b3f3dd
+2026-11-28T07:34:33.299278Z  INFO sequencer_executor_actor::actor: Block created block_id=126 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:34:36.132725Z  INFO sequencer_core: Created block transactions=2 elapsed=174.622704ms
+2026-11-28T07:34:36.132812Z  INFO sequencer_core: Publishing block block_id=127 pin=86e537eb053e3c29d11bccbfa0d13ec9857ac4eecdb50483ac6b3eac88acadf9
+2026-11-28T07:34:36.316999Z  INFO sequencer_executor_actor::actor: Block created block_id=127 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:34:39.155627Z  INFO sequencer_core: Created block transactions=2 elapsed=197.990402ms
+2026-11-28T07:34:39.155680Z  INFO sequencer_core: Publishing block block_id=128 pin=edb8194a98c82d78de822dadf9ae2428de5f2340419fe900f290055cb72d3fbf
+2026-11-28T07:34:39.347621Z  INFO sequencer_executor_actor::actor: Block created block_id=128 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:34:42.133266Z  INFO sequencer_core: Created block transactions=2 elapsed=175.312504ms
+2026-11-28T07:34:42.133335Z  INFO sequencer_core: Publishing block block_id=129 pin=5cd0a1e5f7ea9dbd8e67b92413a185e7a82ed3346651bd7bb637977d5340eb7c
+2026-11-28T07:34:42.323205Z  INFO sequencer_executor_actor::actor: Block created block_id=129 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:34:45.130398Z  INFO sequencer_core: Created block transactions=2 elapsed=172.473121ms
+2026-11-28T07:34:45.130453Z  INFO sequencer_core: Publishing block block_id=130 pin=c05a5e05b01490d2d788f1547a30bf978ae5a8820fe212e53cc651caf711ede2
+2026-11-28T07:34:45.306965Z  INFO sequencer_executor_actor::actor: Block created block_id=130 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:34:48.127102Z  INFO sequencer_core: Created block transactions=2 elapsed=168.413695ms
+2026-11-28T07:34:48.127144Z  INFO sequencer_core: Publishing block block_id=131 pin=e07990e89be7bd69ad51f3e36d3b70a817c8362fccc3fd1bea7273e071f8e946
+2026-11-28T07:34:48.307751Z  INFO sequencer_executor_actor::actor: Block created block_id=131 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:34:51.126848Z  INFO sequencer_core: Created block transactions=2 elapsed=168.30371ms
+2026-11-28T07:34:51.126921Z  INFO sequencer_core: Publishing block block_id=132 pin=7006faf7745a6e54028164af96e5ad449674389883e69fe6e368863051065188
+2026-11-28T07:34:51.305147Z  INFO sequencer_executor_actor::actor: Block created block_id=132 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:34:54.122412Z  INFO sequencer_core: Created block transactions=2 elapsed=164.522005ms
+2026-11-28T07:34:54.122462Z  INFO sequencer_core: Publishing block block_id=133 pin=87260c619267d2aad816d7e3b8a6ea90406ffbbc313844c4056efb57148cd2ff
+2026-11-28T07:34:54.308243Z  INFO sequencer_executor_actor::actor: Block created block_id=133 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:34:57.130572Z  INFO sequencer_core: Created block transactions=2 elapsed=172.542698ms
+2026-11-28T07:34:57.130619Z  INFO sequencer_core: Publishing block block_id=134 pin=5c8d014ba642c87e0dd351f7e03a616476159554fa91bd18ec8d08fdfe2cc5bf
+2026-11-28T07:34:57.309541Z  INFO sequencer_executor_actor::actor: Block created block_id=134 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:35:00.120578Z  INFO sequencer_core: Created block transactions=2 elapsed=162.717013ms
+2026-11-28T07:35:00.120628Z  INFO sequencer_core: Publishing block block_id=135 pin=717c16292240c00ec951c23253c18f71926f8c20eb8f3d719c1b9a979300891f
+2026-11-28T07:35:00.301338Z  INFO sequencer_executor_actor::actor: Block created block_id=135 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:35:03.133409Z  INFO sequencer_core: Created block transactions=2 elapsed=175.95466ms
+2026-11-28T07:35:03.133487Z  INFO sequencer_core: Publishing block block_id=136 pin=4e773338296c7c12404d8530e9598ce80de81ea4b3a343451ab40c6699725b78
+2026-11-28T07:35:03.319118Z  INFO sequencer_executor_actor::actor: Block created block_id=136 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:35:06.126959Z  INFO sequencer_core: Created block transactions=2 elapsed=169.726108ms
+2026-11-28T07:35:06.126994Z  INFO sequencer_core: Publishing block block_id=137 pin=c4e3259dd0983505a323851d65980b1412bc4003db7553406ef33f431df552f1
+2026-11-28T07:35:06.312694Z  INFO sequencer_executor_actor::actor: Block created block_id=137 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:35:09.135077Z  INFO sequencer_core: Created block transactions=2 elapsed=177.812708ms
+2026-11-28T07:35:09.135162Z  INFO sequencer_core: Publishing block block_id=138 pin=95186f25533b4ae0a27ea14119e6844bdcab82ffa00566d4730d7730e0dec926
+2026-11-28T07:35:09.327811Z  INFO sequencer_executor_actor::actor: Block created block_id=138 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:35:12.137005Z  INFO sequencer_core: Created block transactions=2 elapsed=178.520647ms
+2026-11-28T07:35:12.137078Z  INFO sequencer_core: Publishing block block_id=139 pin=cf81902686608a6265b10030ad31fab1ceedb55ea424535a627733cfafee2f0d
+2026-11-28T07:35:12.332450Z  INFO sequencer_executor_actor::actor: Block created block_id=139 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:35:15.134403Z  INFO sequencer_core: Created block transactions=2 elapsed=175.731801ms
+2026-11-28T07:35:15.134452Z  INFO sequencer_core: Publishing block block_id=140 pin=73d159733815800f403841ff0a90b838098b034ec87b950da07a25b2b5be77c4
+2026-11-28T07:35:15.322261Z  INFO sequencer_executor_actor::actor: Block created block_id=140 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:35:18.136348Z  INFO sequencer_core: Created block transactions=2 elapsed=178.221421ms
+2026-11-28T07:35:18.136429Z  INFO sequencer_core: Publishing block block_id=141 pin=5eb557f47353a3ab89f2a7477a366c5250a2ff9f31305d59e570b3c24a973877
+2026-11-28T07:35:18.331310Z  INFO sequencer_executor_actor::actor: Block created block_id=141 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:35:21.125128Z  INFO sequencer_core: Created block transactions=2 elapsed=166.695493ms
+2026-11-28T07:35:21.125172Z  INFO sequencer_core: Publishing block block_id=142 pin=c7ff0f8f7fc476a88723ac83bdf4951548d3421dceaf66f32ee550e70d6cb094
+2026-11-28T07:35:21.303621Z  INFO sequencer_executor_actor::actor: Block created block_id=142 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:35:24.142655Z  INFO sequencer_core: Created block transactions=2 elapsed=184.288889ms
+2026-11-28T07:35:24.142705Z  INFO sequencer_core: Publishing block block_id=143 pin=b6306de64902697152da07356e63bed0b6f287674bb44fec86434f466b23acbb
+2026-11-28T07:35:24.325818Z  INFO sequencer_executor_actor::actor: Block created block_id=143 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:35:27.126460Z  INFO sequencer_core: Created block transactions=2 elapsed=168.411647ms
+2026-11-28T07:35:27.126599Z  INFO sequencer_core: Publishing block block_id=144 pin=ac5d93e3deeb23cb9dee0266ad359a448c2ae60e7607ceed001270d3e1d21913
+2026-11-28T07:35:27.300747Z  INFO sequencer_executor_actor::actor: Block created block_id=144 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:35:30.120082Z  INFO sequencer_core: Created block transactions=2 elapsed=162.700493ms
+2026-11-28T07:35:30.120142Z  INFO sequencer_core: Publishing block block_id=145 pin=9215c82e5e882278fd634c5e0b047cb0643e3708cc21fc118efef0e39a41d547
+2026-11-28T07:35:30.294126Z  INFO sequencer_executor_actor::actor: Block created block_id=145 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:35:33.130036Z  INFO sequencer_core: Created block transactions=2 elapsed=172.284309ms
+2026-11-28T07:35:33.130100Z  INFO sequencer_core: Publishing block block_id=146 pin=148a4179d17079978fdb6c3dfa0565953b18530ff8694c5e31da4d5a431a62e6
+2026-11-28T07:35:33.317719Z  INFO sequencer_executor_actor::actor: Block created block_id=146 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:35:36.126269Z  INFO sequencer_core: Created block transactions=2 elapsed=167.379439ms
+2026-11-28T07:35:36.126312Z  INFO sequencer_core: Publishing block block_id=147 pin=b7a33bd44e8641f6bcbf553ce0f9555ac9d42e840bd7d2e706c679bb8d5df2b0
+2026-11-28T07:35:36.304603Z  INFO sequencer_executor_actor::actor: Block created block_id=147 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:35:39.134060Z  INFO sequencer_core: Created block transactions=2 elapsed=175.603477ms
+2026-11-28T07:35:39.134130Z  INFO sequencer_core: Publishing block block_id=148 pin=42daf0e0f406a08737068f9a38aefca1774ee8aeda20ce339a892b538be63da0
+2026-11-28T07:35:39.329689Z  INFO sequencer_executor_actor::actor: Block created block_id=148 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:35:42.165583Z  INFO sequencer_core: Created block transactions=2 elapsed=208.206487ms
+2026-11-28T07:35:42.165630Z  INFO sequencer_core: Publishing block block_id=149 pin=579af9a533a1b94bbdffed83e2a125005a8a1b358904f75ac66aa63c5f06710f
+2026-11-28T07:35:42.369061Z  INFO sequencer_executor_actor::actor: Block created block_id=149 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:35:45.128613Z  INFO sequencer_core: Created block transactions=2 elapsed=170.421891ms
+2026-11-28T07:35:45.128654Z  INFO sequencer_core: Publishing block block_id=150 pin=414e64ca7aaeb68fc533738605e208527e34ec489c742377c9f4010acd7c41dc
+2026-11-28T07:35:45.308226Z  INFO sequencer_executor_actor::actor: Block created block_id=150 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:35:48.134032Z  INFO sequencer_core: Created block transactions=2 elapsed=175.629955ms
+2026-11-28T07:35:48.134070Z  INFO sequencer_core: Publishing block block_id=151 pin=d14f48e9141a9aecc8e3e57cd98d2c83b9d6801e87d7d30634c7067e79db3d8f
+2026-11-28T07:35:48.315722Z  INFO sequencer_executor_actor::actor: Block created block_id=151 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:35:51.118732Z  INFO sequencer_core: Created block transactions=2 elapsed=161.029149ms
+2026-11-28T07:35:51.118821Z  INFO sequencer_core: Publishing block block_id=152 pin=935a332402030290dab2169284482c786e4585df27e630a4c4dfc4efdd6ffc3e
+2026-11-28T07:35:51.293043Z  INFO sequencer_executor_actor::actor: Block created block_id=152 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:35:54.107088Z  INFO sequencer_core: Created block transactions=2 elapsed=148.847848ms
+2026-11-28T07:35:54.107141Z  INFO sequencer_core: Publishing block block_id=153 pin=a8074e0a205cfa7299634cb1761ac217c3ecc9511951a6c093764e41aca4801d
+2026-11-28T07:35:54.268769Z  INFO sequencer_executor_actor::actor: Block created block_id=153 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:35:57.120665Z  INFO sequencer_core: Created block transactions=2 elapsed=162.880055ms
+2026-11-28T07:35:57.120717Z  INFO sequencer_core: Publishing block block_id=154 pin=cb96e62eb8aa8baa66258fe7807c6aef38bf3cea4a97038daea877d4f0742a2b
+2026-11-28T07:35:57.296672Z  INFO sequencer_executor_actor::actor: Block created block_id=154 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:36:00.103454Z  INFO sequencer_core: Created block transactions=2 elapsed=145.774022ms
+2026-11-28T07:36:00.103498Z  INFO sequencer_core: Publishing block block_id=155 pin=f28d78e026c31107090a9f0628783c8ed44211947af2dc4da6ae71170e80f82c
+2026-11-28T07:36:00.267029Z  INFO sequencer_executor_actor::actor: Block created block_id=155 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:36:03.129650Z  INFO sequencer_core: Created block transactions=2 elapsed=171.703104ms
+2026-11-28T07:36:03.129746Z  INFO sequencer_core: Publishing block block_id=156 pin=2f568ffdc64bededae7d4affd74f4273e149caa5c4067dab9851379dd6bc2b8b
+2026-11-28T07:36:03.308435Z  INFO sequencer_executor_actor::actor: Block created block_id=156 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:36:06.135169Z  INFO sequencer_core: Created block transactions=2 elapsed=177.09573ms
+2026-11-28T07:36:06.135258Z  INFO sequencer_core: Publishing block block_id=157 pin=49a21818adcab49e783552354ca720f967fe0c33460e8b715742bc13cf3070e4
+2026-11-28T07:36:06.338403Z  INFO sequencer_executor_actor::actor: Block created block_id=157 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:36:09.119472Z  INFO sequencer_core: Created block transactions=2 elapsed=160.974907ms
+2026-11-28T07:36:09.119523Z  INFO sequencer_core: Publishing block block_id=158 pin=731ff84f2770059885bdbf7ca6ec560ba66346e859a5c80958452069cc693370
+2026-11-28T07:36:09.289012Z  INFO sequencer_executor_actor::actor: Block created block_id=158 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:36:12.133125Z  INFO sequencer_core: Created block transactions=2 elapsed=174.790851ms
+2026-11-28T07:36:12.133175Z  INFO sequencer_core: Publishing block block_id=159 pin=cf27a9f8cd5e4628d06e003899986ee303b4f627a1914d7ee9cfa38f7ac1f33b
+2026-11-28T07:36:12.322444Z  INFO sequencer_executor_actor::actor: Block created block_id=159 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:36:15.111897Z  INFO sequencer_core: Created block transactions=2 elapsed=153.922794ms
+2026-11-28T07:36:15.111944Z  INFO sequencer_core: Publishing block block_id=160 pin=f664499dc5d8a859b95b62af31edbaf6e87b1e621d28e009cd0ac9b521444b82
+2026-11-28T07:36:15.269327Z  INFO sequencer_executor_actor::actor: Block created block_id=160 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:36:18.115676Z  INFO sequencer_core: Created block transactions=2 elapsed=157.699163ms
+2026-11-28T07:36:18.115786Z  INFO sequencer_core: Publishing block block_id=161 pin=97a048e915976950a66878cfe8747e55672c7a5d82c8c74daaac7ef6b810a299
+2026-11-28T07:36:18.280592Z  INFO sequencer_executor_actor::actor: Block created block_id=161 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:36:21.133359Z  INFO sequencer_core: Created block transactions=2 elapsed=175.426741ms
+2026-11-28T07:36:21.133402Z  INFO sequencer_core: Publishing block block_id=162 pin=3c5a5d1309dc50a5b762eb04303188d91d1acfca32e3527bf3107e820ed97baf
+2026-11-28T07:36:21.316568Z  INFO sequencer_executor_actor::actor: Block created block_id=162 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:36:24.110881Z  INFO sequencer_core: Created block transactions=2 elapsed=152.343722ms
+2026-11-28T07:36:24.110919Z  INFO sequencer_core: Publishing block block_id=163 pin=9d3e37a1cfac1b5418e6da739802cba1ba05d7e5bc0e0c1cd687e5469cf42bcf
+2026-11-28T07:36:24.282699Z  INFO sequencer_executor_actor::actor: Block created block_id=163 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:36:27.107843Z  INFO sequencer_core: Created block transactions=2 elapsed=150.511385ms
+2026-11-28T07:36:27.107888Z  INFO sequencer_core: Publishing block block_id=164 pin=d4f200c584bada1418924885a4a34b5ba72fdfdfe22b11c164c01ce0951c783c
+2026-11-28T07:36:27.268603Z  INFO sequencer_executor_actor::actor: Block created block_id=164 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:36:30.132787Z  INFO sequencer_core: Created block transactions=2 elapsed=174.180465ms
+2026-11-28T07:36:30.132846Z  INFO sequencer_core: Publishing block block_id=165 pin=c7f5f254e04d067b2277df6dd266edf9e339b5a7b7a1f0d5cf6191d6208cdb59
+2026-11-28T07:36:30.311798Z  INFO sequencer_executor_actor::actor: Block created block_id=165 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:36:32.978039Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=a9fb4bb93852403e9aa4e045131268c3f64ef684721fee55533c344cbf7b6f48
+2026-11-28T07:36:33.135840Z  INFO sequencer_core: Created block transactions=3 elapsed=178.465225ms
+2026-11-28T07:36:33.136283Z  INFO sequencer_core: Publishing block block_id=166 pin=fba282912da6a041106279c43a218a6de504459b930a5ab07466613c03740be7
+2026-11-28T07:36:33.320578Z  INFO sequencer_executor_actor::actor: Block created block_id=166 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:36:36.104304Z  INFO sequencer_core: Created block transactions=2 elapsed=146.112224ms
+2026-11-28T07:36:36.104358Z  INFO sequencer_core: Publishing block block_id=167 pin=902a3049d763bc91ea011ae7482d1ac9b2cd8942991ae5c8126a6edebe9332b2
+2026-11-28T07:36:36.259029Z  INFO sequencer_executor_actor::actor: Block created block_id=167 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:36:39.156839Z  INFO sequencer_core: Created block transactions=2 elapsed=198.756045ms
+2026-11-28T07:36:39.156900Z  INFO sequencer_core: Publishing block block_id=168 pin=952b0b005fa592284d0ee890688331d08c0cf40e3bb6c10c287472df403fc477
+2026-11-28T07:36:39.318081Z  INFO sequencer_executor_actor::actor: Block created block_id=168 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:36:42.107986Z  INFO sequencer_core: Created block transactions=2 elapsed=149.725593ms
+2026-11-28T07:36:42.108047Z  INFO sequencer_core: Publishing block block_id=169 pin=9f194e1088304db69f372ab2a3d08b78dd34036ae8e865e9595822d3aefc0b35
+2026-11-28T07:36:42.265480Z  INFO sequencer_executor_actor::actor: Block created block_id=169 producer=efc1b791fbeaf7ffc3b1abd6a2d0065184fdee751d7804c3bcbd352ee8ef0c0d
+2026-11-28T07:36:44.597387Z  INFO sequencer_service: Received SIGTERM
+2026-11-28T07:36:44.597453Z  INFO sequencer_service: Shutting down sequencer
+2026-11-28T07:36:44.597556Z  INFO sequencer_service::actor_handle: Stopping actor actor="kameo_actors::scheduler::Scheduler#9"
+2026-11-28T07:36:44.597689Z  INFO sequencer_service::actor_handle: Actor stopped actor="kameo_actors::scheduler::Scheduler#9"
+2026-11-28T07:36:44.597706Z  INFO sequencer_service::actor_handle: Killing actor actor="kameo_actors::scheduler::Scheduler#9"
+2026-11-28T07:36:44.597716Z  INFO sequencer_service::actor_handle: Stopping actor actor="sequencer_rpc_server_actor::actor::RpcServerActor#10"
+2026-11-28T07:36:44.597886Z  INFO sequencer_service::actor_handle: Actor stopped actor="sequencer_rpc_server_actor::actor::RpcServerActor#10"
+2026-11-28T07:36:44.597909Z  INFO sequencer_service::actor_handle: Killing actor actor="sequencer_rpc_server_actor::actor::RpcServerActor#10"
+2026-11-28T07:36:44.597922Z  INFO sequencer_service::actor_handle: Stopping actor actor="sequencer_gossip_actor::actor::GossipActor#3"
+2026-11-28T07:36:44.598447Z  INFO sequencer_service::actor_handle: Actor stopped actor="sequencer_gossip_actor::actor::GossipActor#3"
+2026-11-28T07:36:44.598468Z  INFO sequencer_service::actor_handle: Killing actor actor="sequencer_gossip_actor::actor::GossipActor#3"
+2026-11-28T07:36:44.598499Z  INFO sequencer_service::actor_handle: Stopping actor actor="sequencer_service::supervisor::SequencerSupervisor#6"
+2026-11-28T07:36:44.599791Z  INFO sequencer_service::actor_handle: Actor stopped actor="sequencer_service::supervisor::SequencerSupervisor#6"
+2026-11-28T07:36:44.599803Z  INFO sequencer_service::actor_handle: Killing actor actor="sequencer_service::supervisor::SequencerSupervisor#6"
+2026-11-28T07:36:44.599818Z  INFO sequencer_service::actor_handle: Stopping actor actor="sequencer_slasher_actor::actor::SlasherActor<sequencer_storage_actor::actor::StorageActor>#4"
+2026-11-28T07:36:44.599926Z  INFO sequencer_service::actor_handle: Actor stopped actor="sequencer_slasher_actor::actor::SlasherActor<sequencer_storage_actor::actor::StorageActor>#4"
+2026-11-28T07:36:44.599959Z  INFO sequencer_service::actor_handle: Killing actor actor="sequencer_slasher_actor::actor::SlasherActor<sequencer_storage_actor::actor::StorageActor>#4"
+2026-11-28T07:36:44.599976Z  INFO sequencer_service::actor_handle: Stopping actor actor="sharding_pool_actor::actor::ShardingPoolActor<sequencer_bedrock_actor::mock::MockBedrockActor, logos_blockchain_core::mantle::ops::channel::ChannelId>#1"
+2026-11-28T07:36:44.600239Z  INFO sequencer_service::actor_handle: Actor stopped actor="sharding_pool_actor::actor::ShardingPoolActor<sequencer_bedrock_actor::mock::MockBedrockActor, logos_blockchain_core::mantle::ops::channel::ChannelId>#1"
+2026-11-28T07:36:44.600261Z  INFO sequencer_service::actor_handle: Killing actor actor="sharding_pool_actor::actor::ShardingPoolActor<sequencer_bedrock_actor::mock::MockBedrockActor, logos_blockchain_core::mantle::ops::channel::ChannelId>#1"
+2026-11-28T07:36:44.600282Z  INFO sequencer_service::actor_handle: Stopping actor actor="sequencer_storage_actor::actor::StorageActor#0"
+2026-11-28T07:36:44.602627Z  INFO sequencer_service::actor_handle: Actor stopped actor="sequencer_storage_actor::actor::StorageActor#0"
+2026-11-28T07:36:44.602644Z  INFO sequencer_service::actor_handle: Killing actor actor="sequencer_storage_actor::actor::StorageActor#0"
+2026-11-28T07:36:44.602659Z  INFO sequencer_service: Sequencer shutdown complete

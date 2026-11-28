@@ -136,7 +136,7 @@
 
   <div id="t-send" class="tab card" hidden>
     <h2>Send</h2>
-    <label>To <input id="send-to" placeholder="account id, public key, or receive code" autocomplete="off" spellcheck="false" data-testid="send-to"></label>
+    <label>To <input id="send-to" placeholder="account id, admission key, or receive code" autocomplete="off" spellcheck="false" data-testid="send-to"></label>
     <div class="row"><button id="send-scan" class="small" data-testid="send-scan">Scan a QR code</button>
       <label class="button small file">From a photo<input type="file" accept="image/*" id="send-scan-file" data-testid="send-scan-file"></label></div>
     <p id="scan-msg" class="msg" role="status" data-testid="scan-msg"></p>
@@ -147,7 +147,7 @@
     <div id="send-confirm" hidden class="review" data-testid="send-confirm">
       <h3>Check, then sign</h3>
       <dl id="send-summary"></dl>
-      <div class="privacy"><b>Public:</b> sender, recipient, amount, fee, nonce, time; the recipient's public key if this is
+      <div class="privacy"><b>Public:</b> sender, recipient, amount, fee, nonce, time; the recipient's admission key if this is
         their first transfer. <b>Private:</b> nothing in a public transfer: use a private account for that.</div>
       <div class="row"><button id="send-cancel">Cancel</button><button id="send-go" class="primary" data-testid="send-go">Sign and send</button></div>
     </div>
@@ -156,15 +156,16 @@
 
   <div id="t-receive" class="tab card" hidden>
     <h2>Receive</h2>
-    <p>Give the sender your <b>receive code</b>. It holds your account id and your public key: LEZ needs the key the first
-      time an account is credited (as admission evidence), after that the id alone is enough.</p>
+    <p>Give the sender your <b>receive code</b>. It holds your account id and the network's admission key: LEZ needs that key
+      the first time an account is credited, after that the id alone is enough.</p>
+    <p class="fine" id="recv-form"></p>
     <div class="qr" id="recv-qr" data-testid="recv-qr"></div>
     <label>Ask for an amount (optional) <span class="unit-wrap"><input id="recv-amount" inputmode="decimal" placeholder="0.0" autocomplete="off" data-testid="recv-amount"><span class="unit" id="recv-unit">LGO</span></span></label>
     <p class="err" id="recv-err" role="alert"></p>
     <div class="row"><button id="recv-copy" class="small" data-testid="recv-copy">Copy the code</button><button id="recv-share" class="small" hidden data-testid="recv-share">Share</button></div>
     <div class="kv"><span>Receive code</span><code id="recv-code" class="copy wrap" data-testid="recv-code"></code></div>
     <div class="kv"><span>Account id</span><code id="recv-id" class="copy wrap" data-testid="recv-id"></code></div>
-    <div class="kv"><span>Public key</span><code id="recv-pk" class="copy wrap" data-testid="recv-pk"></code></div>
+    <div class="kv"><span id="recv-pk-label">Admission key</span><code id="recv-pk" class="copy wrap" data-testid="recv-pk"></code></div>
     <p class="fine">LEZ's own wallet CLI: <code id="recv-cli"></code></p>
   </div>
 

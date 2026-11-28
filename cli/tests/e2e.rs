@@ -43,7 +43,9 @@ use ferrata_cli::{
 };
 use ferrata_lez_bridge_wire::{fee_slot, registry_slot, BridgeMessage, BridgeState, FeeSchedule, HolderState, Holding};
 use harness::{bridge as hb, private::PrivateAccount, TxReport};
-use lee::{test_utils::TestPrivateKeys, AccountId, PrivateKey, PublicAccountEvidence};
+use lee::{test_utils::TestPrivateKeys, AccountId, PublicAccountEvidence};
+// The harness\'s key type for the tag (a private key up to rc3, the account secret from v0.4.0: LEZ #1135).
+use harness::compat::AccountKey;
 use lee_core::account::Actor;
 
 sol! {
@@ -104,7 +106,7 @@ struct HarnessLedger {
     world: hb::World,
     applied: Vec<Applied>,
     refused: Vec<Applied>,
-    keys: HashMap<AccountId, PrivateKey>,
+    keys: HashMap<AccountId, AccountKey>,
     /// The wallet's private accounts: their secret keys (ask, d, z) and their state as LEZ's wallet
     /// holds it after decrypting it from the zone (stand-in: the harness keeps the state the chain
     /// committed, checked against the commitment after every private transaction).
@@ -258,7 +260,7 @@ impl HarnessLedger {
                 }
             }
         }
-        let signers: Vec<&PrivateKey> = call
+        let signers: Vec<&AccountKey> = call
             .mentions
             .iter()
             .filter_map(|m| match m {
@@ -266,8 +268,8 @@ impl HarnessLedger {
                 _ => None,
             })
             .collect();
-        let signers: Vec<PrivateKey> = signers.into_iter().cloned().collect();
-        let refs: Vec<&PrivateKey> = signers.iter().collect();
+        let signers: Vec<AccountKey> = signers.into_iter().cloned().collect();
+        let refs: Vec<&AccountKey> = signers.iter().collect();
         let report = self.world.submit_signed(&call.what, root, &call.message, actors, evidence, &refs);
         self.record(&report);
         report
@@ -636,9 +638,49 @@ fn word(n: u64) -> [u8; 32] {
     w
 }
 
+/// Deposits read the network's LEZ first (src/lezver.rs: a deposit commits to an account of the build's key tree):
+/// a loopback stand-in answering `getSequencerStatus` as this build's LEZ does (v0.4.0's status, or an earlier
+/// sequencer's -32601), given to every deposit as FERRATA_SEQUENCER. The zone itself is the harness, through the library.
+fn lez_status_stand_in() -> &'static str {
+    static URL: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    URL.get_or_init(|| {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("a loopback port");
+        let url = format!("http://{}/", listener.local_addr().expect("its address"));
+        std::thread::spawn(move || {
+            use std::io::{Read as _, Write as _};
+            let body = if cfg!(feature = "lez-040") {
+                r#"{"jsonrpc":"2.0","id":1,"result":{"state":"online","height":1,"isOurTurn":true}}"#
+            } else {
+                r#"{"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"Method not found"}}"#
+            };
+            for stream in listener.incoming() {
+                let Ok(mut s) = stream else { continue };
+                let mut buf = [0u8; 8192];
+                let _ = s.read(&mut buf);
+                let reply = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                let _ = s.write_all(reply.as_bytes());
+            }
+        });
+        url
+    })
+}
+
+/// The `ferrata` binary with `args`; a deposit is given the stand-in sequencer above.
+fn binary(args: &[&str]) -> Command {
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_ferrata"));
+    cmd.args(args);
+    if args.contains(&"deposit") {
+        cmd.env("FERRATA_SEQUENCER", lez_status_stand_in());
+    }
+    cmd
+}
+
 /// Runs the `ferrata` binary; returns its stdout.
 fn ferrata(args: &[&str]) -> Result<String> {
-    let out = Command::new(env!("CARGO_BIN_EXE_ferrata")).args(args).output()?;
+    let out = binary(args).output()?;
     let stdout = String::from_utf8_lossy(&out.stdout).to_string();
     ensure!(out.status.success(), "ferrata {}: {}\n{stdout}", args.join(" "), String::from_utf8_lossy(&out.stderr));
     Ok(stdout)
@@ -646,7 +688,9 @@ fn ferrata(args: &[&str]) -> Result<String> {
 
 /// Runs the `ferrata` binary with `--json`; returns whether it succeeded and the one JSON object it printed.
 fn ferrata_json(args: &[&str]) -> Result<(bool, serde_json::Value)> {
-    let out = Command::new(env!("CARGO_BIN_EXE_ferrata")).arg("--json").args(args).output()?;
+    let mut all = vec!["--json"];
+    all.extend_from_slice(args);
+    let out = binary(&all).output()?;
     let stdout = String::from_utf8_lossy(&out.stdout).to_string();
     let v: serde_json::Value =
         serde_json::from_str(stdout.trim()).with_context(|| format!("not one JSON object: {stdout}"))?;

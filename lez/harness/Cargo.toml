@@ -66,15 +66,18 @@ ferrata-lez-msg-v2-wire = { path = "../msg-v2-wire" }
 [dev-dependencies]
 # The checkpoint program's own block parser and message decoder, to check what it would collect
 # from the bridge program's transactions (tests/bridge_burn.rs).
-checkpoint-core = { path = "../../checkpoint/crates/checkpoint-core" }
+# With its LEZ v0.4.0 decoder (feature lez-0-4-0, additive: the tests use it under lez-040, the release candidates'
+# tests the default `checkpoint_core::lez`).
+checkpoint-core = { path = "../../checkpoint/crates/checkpoint-core", features = ["lez-0-4-0"] }
 
 [features]
 # The calls whose LEZ API differs between the tags this crate builds against. The default is set
 # with the path dependencies by ../scripts/lez-select.sh (none: v0.4.0-rc1; `lez-rc2`: v0.4.0-rc2;
-# `lez-rc3`: v0.4.0-rc3, which has rc2's API changes too).
+# `lez-rc3`: v0.4.0-rc3, which has rc2's API changes too; `lez-040`: v0.4.0, which implies `lez-rc3`).
 default = [] # lez-select
 lez-rc2 = []
 lez-rc3 = ["lez-rc2"]
+lez-040 = ["lez-rc3"]
 # The experimental one-transaction update (tests/residue_experimental.rs, bench/RESIDUE.md).
 residue-experimental = ["dep:methods-residue-experimental", "dep:residue", "dep:residue-agg"]
 # The attestation program's second build at `CLASSED` (tests/history_hops.rs, docs/design/attestation.md §5.7).

@@ -1,0 +1,64 @@
+{
+  "what": "LEZ's v0.4.0 tags as GitHub lists them, and LEZ's RISC Zero workspace pins at each tag's commit",
+  "read_at": "2026-11-28T02:15:41Z",
+  "command": "git ls-remote --tags https://github.com/logos-blockchain/logos-execution-zone 'refs/tags/v0.4.0*'",
+  "ls_remote": [
+    "a255b42c0fc80d1cb219454a3a1f5ec3b5d92115\trefs/tags/v0.4.0",
+    "1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21\trefs/tags/v0.4.0-rc1",
+    "e3edf47402a82557103ca719b30d0bd2684338d1\trefs/tags/v0.4.0-rc2",
+    "bafd07be0701398f9bc435f73ab05e9a7936c301\trefs/tags/v0.4.0-rc3",
+    "313d2a72b70a7113f8a56ad58f90e05de86f5db4\trefs/tags/v0.4.0-rc4",
+    "cee9f7a7db7d5abb742e3cf1c2efb806b3690407\trefs/tags/v0.4.0-rc5"
+  ],
+  "pins_from": "the root Cargo.toml at each commit (git show <commit>:Cargo.toml in a clone of the repository); null where the clone did not hold the commit",
+  "tags": {
+    "v0.4.0": {
+      "commit": "a255b42c0fc80d1cb219454a3a1f5ec3b5d92115",
+      "risc0": {
+        "risc0-zkvm": "3.1.0",
+        "risc0-build": "3.0.7",
+        "risc0-zkos-v1compat": "2.2.3"
+      }
+    },
+    "v0.4.0-rc1": {
+      "commit": "1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21",
+      "risc0": {
+        "risc0-zkvm": "3.0.5",
+        "risc0-build": "3.0.5",
+        "risc0-zkos-v1compat": "2.2.2"
+      }
+    },
+    "v0.4.0-rc2": {
+      "commit": "e3edf47402a82557103ca719b30d0bd2684338d1",
+      "risc0": {
+        "risc0-zkvm": "3.0.5",
+        "risc0-build": "3.0.5",
+        "risc0-zkos-v1compat": "2.2.2"
+      }
+    },
+    "v0.4.0-rc3": {
+      "commit": "bafd07be0701398f9bc435f73ab05e9a7936c301",
+      "risc0": {
+        "risc0-zkvm": "3.0.5",
+        "risc0-build": "3.0.5",
+        "risc0-zkos-v1compat": "2.2.2"
+      }
+    },
+    "v0.4.0-rc4": {
+      "commit": "313d2a72b70a7113f8a56ad58f90e05de86f5db4",
+      "risc0": {
+        "risc0-zkvm": "3.1.0",
+        "risc0-build": "3.0.7",
+        "risc0-zkos-v1compat": "2.2.3"
+      }
+    },
+    "v0.4.0-rc5": {
+      "commit": "cee9f7a7db7d5abb742e3cf1c2efb806b3690407",
+      "risc0": {
+        "risc0-zkvm": "3.1.0",
+        "risc0-build": "3.0.7",
+        "risc0-zkos-v1compat": "2.2.3"
+      }
+    }
+  }
+}

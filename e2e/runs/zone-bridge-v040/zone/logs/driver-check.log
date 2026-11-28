@@ -1,0 +1,8 @@
+[check] crown STAND-IN: instance 0x354976d2d031bba2ae24b3967e62b3a7f0f41b6a25be01416731ca80b86fb170 of the attestation program at 684PdhZNKPHXDSjz3PPp2G4KGozBpCgPVzLMhdvoNeTF; bridge at FtiweXVVe2W4nhq9jEYUxLeekcPbs1JNQhp11Q5FiB2Z
+[check] crown STAND-IN: bootstrap slot 11673664 (period 1425, Gloas layout, store_fork 4), checkpoint 0xa30d467fdc51f02f969a72cde1fa59b558a91a41caafb3924b55c28cc99ff249: accepted by the native store
+[check] after session A's 0 update(s): finalized slot 11673664, next sync committee UNKNOWN
+[check] session B: valid until slot 11786720 (2026-12-13T15:04:00Z), the weak-subjectivity end of slot 11673664; now 2026-11-28T04:04:07Z: inside
+[check] stage 1: finalized slot 11673728 binds block 9 (timestamp 1795838643); 1 deposit(s) open to the run; ETH entry matches the vault; schedule 0 time Some(1795838640)
+[check] stage 1: configId 0xbaa5af860825ad539fcf627dba90f1872bfa8f6d3e651dac81bfc067ccbd7b54 in slot 2; pairing, import and register requests accepted natively
+[check] stage 2: finalized slot 11673792 binds block 10 (timestamp 1795838645); 2 deposit(s) open to the run; ETH entry matches the vault; schedule 0 time Some(1795838640)
+[check] stage 2: configId 0xbaa5af860825ad539fcf627dba90f1872bfa8f6d3e651dac81bfc067ccbd7b54 in slot 2; pairing, import and register requests accepted natively

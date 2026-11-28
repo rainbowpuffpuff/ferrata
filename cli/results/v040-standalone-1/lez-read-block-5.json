@@ -1,0 +1,90 @@
+{
+ "block": 5,
+ "lez": "v0.4.0",
+ "hash": "45bc8ae442b1eff4e3c27b54e2c2dd5a97e9e4ffb9ce537cbc91a172a119f4df",
+ "hash_recomputed": "45bc8ae442b1eff4e3c27b54e2c2dd5a97e9e4ffb9ce537cbc91a172a119f4df",
+ "hash_ok": true,
+ "prev": "8714d2ff65becda64f0a1b1039a5237b412b90ec85425126f8409e46b4a8437d",
+ "time_utc": "2026-11-28T04:13:46Z",
+ "bedrock_status": "Pending",
+ "bytes": 1377,
+ "transactions": [
+  {
+   "hash": "74d26c9ac9201fd54071953332e1b8c4f2eca67480e50bd1773ed24b391670d6",
+   "kind": "Public",
+   "size": 587,
+   "signers": [
+    "7VDm7YRPvimbZgCzuFqCGf6RwPsTV3XY5W9DzT71oain"
+   ],
+   "nonces": [
+    {
+     "account": "7VDm7YRPvimbZgCzuFqCGf6RwPsTV3XY5W9DzT71oain",
+     "nonce": 2
+    }
+   ],
+   "outcome": "applied",
+   "fee": {
+    "gas_exec": 0,
+    "gas_stor": 588,
+    "fee_base": 4704,
+    "tip": 0,
+    "refund": 0
+   },
+   "call": {
+    "program": "11111111111111111111111111111111",
+    "program_name": "native token",
+    "account": "7VDm7YRPvimbZgCzuFqCGf6RwPsTV3XY5W9DzT71oain",
+    "message_bytes": 49,
+    "instruction": "transfer",
+    "args": {
+     "to": "af0b60ec10779251ac52d66cbc4ef40b12473b4801b1980a7af221eb7bc49b20",
+     "amount": 777
+    }
+   }
+  },
+  {
+   "hash": "eb3776cf5608d60cade43b369405d3e91f66babdde33e2a38fd05e75990c8b8b",
+   "kind": "Public",
+   "size": 454,
+   "signers": [],
+   "nonces": [],
+   "outcome": "system",
+   "call": {
+    "program": "A4mG7xw3u7HTf93mshirDTaxTNRe1XoxsNULwTdHEagv",
+    "program_name": "fee",
+    "account": "3zLMBxW8DGD76NmhqdMtrNo4GPop39D9AWZzSp23MvdK",
+    "message_bytes": 97,
+    "instruction": "distribute",
+    "args": {
+     "summary": {
+      "gas_used_exec": 0,
+      "gas_used_stor": 588,
+      "revenue_base": 4704,
+      "revenue_tip": 0
+     },
+     "payout": 282,
+     "producer": "9762d38042f615fa8681f31333e17f68537ef94f19c76cd751c5abca09245120"
+    }
+   }
+  },
+  {
+   "hash": "361e3caad9681a3ea363b62c6899754b15becf7eb79a95aaebb5533a6da3906f",
+   "kind": "Public",
+   "size": 179,
+   "signers": [],
+   "nonces": [],
+   "outcome": "system",
+   "call": {
+    "program": "7timEoFDdtDAjQdKWNB5GFAHBAtZy6j1hfu6UKvjoki2",
+    "program_name": "clock",
+    "account": "4BdcjoXkq786TMWcBGGHqcxeLYMZmn17rL4eM9ZyRWNT",
+    "message_bytes": 17,
+    "instruction": "tick",
+    "args": {
+     "timestamp": 1795839226872,
+     "block_id": 5
+    }
+   }
+  }
+ ]
+}

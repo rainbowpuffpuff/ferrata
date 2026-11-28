@@ -54,6 +54,8 @@ fn variant(message: &[u8]) -> String {
 #[tokio::main]
 async fn main() -> Result<()> {
     let a = Args::parse();
+    // Blocks are read with this build's decoder: the network's LEZ first (LEZ v0.4.0 changed the formats).
+    ferrata_cli::lezver::require(&a.sequencer).await?;
     let bridge = account(&a.bridge_account)?;
     let attest = a.attest_account.as_deref().map(account).transpose()?;
     let native = lee_core::native_token::NATIVE_TOKEN_PROGRAM_ID;
@@ -100,14 +102,14 @@ async fn main() -> Result<()> {
             let applied: Vec<String> = txs[..user]
                 .iter()
                 .enumerate()
-                .filter(|(i, _)| !block.body.reverted.contains(&(*i as u64)))
+                .filter(|(i, _)| !block.body.is_reverted(*i))
                 .map(|(_, tx)| borsh::to_vec(tx).map(|b| format!("0x{}", hex::encode(b))))
                 .collect::<Result<_, _>>()?;
             if !applied.is_empty() {
                 applied_blocks.push(applied);
             }
             for (i, tx) in block.body.transactions.iter().enumerate() {
-                let reverted = block.body.reverted.contains(&(i as u64));
+                let reverted = block.body.is_reverted(i);
                 let (kind, program, var, visible, publics) = match tx {
                     LeeTransaction::Public(t) => {
                         let root = &t.message.execution.root;

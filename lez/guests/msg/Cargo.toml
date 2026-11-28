@@ -7,6 +7,12 @@ publish = false
 
 [workspace]
 
+# The program's source; on LEZ v0.4.0 its generated twin src/main_lez040.rs (lez/scripts/lez040-sources.py: LEZ #1144's API),
+# which lez/scripts/lez-select.sh points the marked line at. The release candidates build src/main.rs itself.
+[[bin]]
+name = "ferrata_msg"
+path = "src/main.rs" # lez-select
+
 [dependencies]
 ferrata-lez-msg-wire = { path = "../../msg-wire" }
 # LEZ v0.4.0-rc3 (the test network's release). The guest ABI (ReceiveInput, Response, Transition) is the same as

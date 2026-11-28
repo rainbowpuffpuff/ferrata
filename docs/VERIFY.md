@@ -19,10 +19,13 @@ without them those checks are skipped, and say so. Nothing else is built or inst
 ```sh
 git clone https://github.com/rainbowpuffpuff/ferrata && cd ferrata
 python3 -I scripts/verify.py --list            # every check: its family, mode, requirement rows and EVIDENCE rows
-python3 -I scripts/verify.py --all             # the 124 quick offline checks: about 6 minutes
+python3 -I scripts/verify.py --all             # the 135 quick offline checks: about 6 minutes
 python3 -I scripts/test_verify.py              # the tamper tests: a few minutes (201 s on a laptop)
 python3 -I scripts/test_verify_lc.py           # the light-client records' tamper tests: seconds
 python3 -I scripts/test_verify_zone.py         # the four-key rc3 run's tamper tests: seconds
+python3 -I scripts/test_verify_lez040.py       # the LEZ v0.4.0 port's checks' tamper tests: seconds
+python3 -I scripts/test_verify_lez040_ids.py   # the v0.4.0 image-id records' tamper tests: seconds
+python3 -I scripts/test_verify_lez040_runs.py  # the v0.4.0 zone runs' tamper tests: seconds
 python3 -I scripts/test_verify_f13.py          # the F.13 fee records' tamper tests (ADR 0046's and ADR 0048's): seconds
 python3 -I scripts/test_verify_f7.py           # the F.7 runs' records' tamper tests: seconds
 python3 -I scripts/test_verify_bridge.py       # the bridge records' tamper tests: seconds
@@ -65,6 +68,30 @@ The tamper tests run each family's checks on a copy of the repository with one p
 seal, a transaction hash, a recorded number, a manifest hash, a signature) and require a failure, so a check that
 passes whatever its input is caught.
 
+The port to LEZ v0.4.0 ([port-v0.4.0.md](port-v0.4.0.md)) has checks of its own, `lez040-*`, most of them selected by
+EVIDENCE rows 301 to 305 (`verify.py evidence:302`; `lez040-selector`, `lez040-catalogue` and `lez040-run-harness` by
+their ids). They change no requirement's status: the test network still runs LEZ
+v0.4.0-rc3, and the port is in progress. One adds to a row's evidence: `lez040-spel` backs RFP-021 U.4 and RFP-022 U.4
+with SPEL's run on v0.4.0 (row 301).
+
+| Check | Re-checks | Against |
+|---|---|---|
+| `lez040-selector` | `lez/scripts/lez-select.sh`: the four tags' commits, LEZ's RISC Zero pins at each, the `lez-040` feature, the committed selection (rc1), the lockfile patches | LEZ's tags as GitHub listed them on 28 November 2026 ([`port-v0.4.0/lez-tags.json`](port-v0.4.0/lez-tags.json)), the manifests, the lockfiles |
+| `lez040-image-ids` | each image-id record of guests built on v0.4.0 ([`port-v0.4.0/image-ids/`](port-v0.4.0/image-ids/)) | git's blobs at the commit it was built from, for every input of that build: the ids are this tree's |
+| `lez040-spel` | the records of SPEL's run on LEZ v0.4.0 (`idl/generated/*-lez-a255b42c*`): the generated IDLs message by message and type by type, the logs' figures | the hand-written IDLs, the same run on rc3 at the same tree, the committed vectors |
+| `lez040-run-standalone`, `lez040-run-four-keys`, `lez040-run-vote-1`, `lez040-run-vote-2` | the zone runs on LEZ v0.4.0 (`e2e/runs/zone-v040-*/`): blocks, receipts, fees, inscriptions, the committee's vote, a stake released under L1 finality | the runs' raw blocks (decoded, hashes recomputed), node answers and logs, counted independently of the runs' own tools; the image-id record for the deployed program |
+| `lez040-run-cli-e2e` | the `ferrata` CLI's end-to-end round trip on LEZ v0.4.0 in dev mode (`cli/results/v040-e2e-1/`) | its README against cargo's test logs (a log record: the run is not repeated offline) |
+| `lez040-run-harness` | CI's v0.4.0 harness and updater shards run on a laptop, before and after the core's fixes ([`port-v0.4.0/harness-a7a45cb6/`](port-v0.4.0/harness-a7a45cb6/README.md), [`port-v0.4.0/harness-cec9d834/`](port-v0.4.0/harness-cec9d834/README.md)): per-shard counts, every failed or ignored test named, the updater shards' results | its README against the record's cargo lines (a log record: the run is not repeated offline) |
+| `lez040-run-clients` | the clients on LEZ v0.4.0's standalone sequencer (`cli/results/v040-standalone-1/`): two transfers the web wallet's v0.4.0 codec signed, the second on a rotated key, and a third through the page's network layer | the blocks as served (hashes recomputed), the receipts, lez-read's output (`scripts/test_lez040_decode.py`'s `LiveRun`) |
+| `lez040-catalogue` | the catalogue's statuses (rows C1-C20 and S1-S3 present) | the commits, commands and records each status names; a tested row needs a command about v0.4.0; a recorded run must be a run's record that another `lez040-*` check reads |
+
+`lez040-selector-online` re-reads the tags and v0.4.0's pins from GitHub (section 2); `lez040-image-ids-rebuild`
+rebuilds each recorded guest at its commit in a clean worktree beside the repository and compares the ids and the
+binaries (`--tests`; `bash scripts/verify-lez040-ids.sh`, minutes, needs LEZ v0.4.0 beside the repository and RISC
+Zero's LEZ home); `lez040-spel-rerun` runs SPEL's generator and decoder again on LEZ v0.4.0 and diffs what they
+write against the committed records (`--tests`; needs SPEL's tree and LEZ v0.4.0 beside the repository, as
+[`idl/README.md`](../idl/README.md) says).
+
 One requirement row, one EVIDENCE row, one family, or the coverage of every row:
 
 ```sh
@@ -77,7 +104,7 @@ python3 -I scripts/verify.py --coverage        # every row of docs/requirements-
 ## 2. The online checks (read-only)
 
 ```sh
-python3 -I scripts/verify.py --all --online    # the 22 online checks: about 20 minutes
+python3 -I scripts/verify.py --all --online    # the 23 online checks: about 20 minutes
 ```
 
 They send only reads (`eth_call`, `eth_getCode`, receipts and logs on Ethereum; `getBlockRange`, `getAccountView` on
@@ -104,6 +131,7 @@ our test network's address is in `scripts/reproduce/deployed-programs.json` (`--
 | `basecamp-packages-online`, `catalog-index-online` | our test network, GitHub | every Basecamp package served equals its signed sum and carries its two signatures; the module catalog's index names the released packages |
 | `gasdrop-terms-online`, `faucet-terms-online` | our test network | the gas drop's published terms and guest; the faucet's published balance equal to the chain's |
 | `github-ci-runs` | GitHub's public API | each GitHub Actions run the documents cite concluded as they say (two are recorded failures) |
+| `lez040-selector-online` | GitHub (`git ls-remote`, LEZ's `Cargo.toml` at v0.4.0) | the selector's four LEZ tags are GitHub's, and v0.4.0's RISC Zero pins the selector's; a newer tag is reported, not failed |
 
 `run-record-online` reads the network's blocks from block 1 to the record's as-of block (about 40 MB the first
 time, a few minutes at the gateway's per-client rate); the blocks it read are kept in `.scratch/verify-cache/` and

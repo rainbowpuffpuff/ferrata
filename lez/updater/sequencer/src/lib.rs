@@ -20,6 +20,7 @@ mod plan;
 #[path = "../../../live/driver/src/programs.rs"]
 mod programs;
 
+mod compat;
 pub mod day1;
 pub mod ledger;
 
@@ -27,12 +28,13 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, bail, Result};
 use ferrata_updater::{config::File, daemon::at, ledger::Ledger};
+use ferrata_updater::lez::PayerKey;
 use lee::{AccountId, PrivateKey};
 
 /// The opener for `ferrata_updater::daemon` ([`ferrata_updater::daemon::OpenLedger`]): `sequencer` (the running LEZ
 /// sequencer of `[sequencer]`, connected and followed up to its last final block before the daemon's first round);
 /// `harness` is refused here (the in-process chain is `ferrata_updater::daemon::open_ledger`, feature `harness`).
-pub fn open_ledger(file: &File, base: &Path, payer: &PrivateKey) -> Result<(Box<dyn Ledger>, AccountId)> {
+pub fn open_ledger(file: &File, base: &Path, payer: &PayerKey) -> Result<(Box<dyn Ledger>, AccountId)> {
     match file.daemon.ledger.as_str() {
         "sequencer" => {
             let s = file.sequencer.as_ref().ok_or_else(|| anyhow!("daemon.ledger = \"sequencer\" needs [sequencer]"))?;
@@ -78,7 +80,13 @@ pub(crate) fn utc() -> String {
 /// The faucet of the rehearsal (`day1 fund`): one of the two keys LEZ's Justfile imports (`wallet-import-test-accounts`),
 /// funded by the genesis of LEZ's `lez/sequencer/service/networks/local.json` (`../../live/driver/src/keys.rs`).
 pub(crate) fn keys_local_test() -> Result<PrivateKey> {
-    let bytes: [u8; 32] = hex::decode("f434f8741720014586ae43356d2aec6257da086222f604ddb75d69733b86fc4c")?
+    // From LEZ v0.4.0 the account's secret (its Justfile imports it with `account import public --secret`, LEZ #1135).
+    let hex_key = if cfg!(feature = "lez-040") {
+        "717940b1cc55e5d6b2066dbf1d9a3f26f212f4db08d02388177fcfedd8a9be1b"
+    } else {
+        "f434f8741720014586ae43356d2aec6257da086222f604ddb75d69733b86fc4c"
+    };
+    let bytes: [u8; 32] = hex::decode(hex_key)?
         .try_into()
         .map_err(|_| anyhow!("the test key is not 32 bytes"))?;
     PrivateKey::try_new(bytes).map_err(|e| anyhow!("the test key is not a scalar: {e}"))

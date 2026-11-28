@@ -24,7 +24,14 @@ use crate::Refusal;
 
 /// `ferrata_bridge_lezfee`'s image id: this tree's bridge program (`docs/image-ids.md`, ADR 0048). The name of the
 /// constant is the claim layout it builds (since ADR 0046: no fee schedule in a claim).
+#[cfg(not(feature = "lez-040"))]
 pub const F13_IMAGE_ID: [u8; 32] = hex32("9d02d54d56b026079e94c8d9b12db69f3a96b7acccd11283f68e5bc343bfa321");
+/// The same program built for LEZ v0.4.0 (RISC Zero 3.1.0, LEZ #1124: another image id): lez/guests/bridge's v0.4.0
+/// twin, built from source and recorded as `ferrata_bridge` in lez/results/v0.4.0/ids-v0.4.0.tsv (lez-040-core
+/// 35e5fb81) and docs/port-v0.4.0/image-ids/laptop-d632aa82/ids.tsv (lez-040-verify a665ce8d). A later change to the
+/// guest, its lockfile or the selector changes it; the test below holds it to the records.
+#[cfg(feature = "lez-040")]
+pub const F13_IMAGE_ID: [u8; 32] = hex32("7e39359d8d447d6e98696a4a64266c0d12aaa2a2bdcfd0a3704545fbbfbc26e0");
 /// `ferrata_bridge_b1`'s image id: the program the test network runs (`docs/image-ids.md`, "Superseded";
 /// `scripts/reproduce/deployed-programs.json`).
 pub const B1_IMAGE_ID: [u8; 32] = hex32("847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515");
@@ -405,7 +412,30 @@ mod tests {
         assert!(BridgeProgram::of_image_id(&adr_0046).unwrap_err().contains("does not know"));
     }
 
+    /// On v0.4.0: the bridge program's id is the v0.4.0 build's, as lez-040-core records it in
+    /// lez/results/v0.4.0/ids-v0.4.0.tsv (`ferrata_bridge`; required), and as any of P4's records under
+    /// docs/port-v0.4.0/image-ids/*/ids.tsv in the tree say (`ferrata_bridge`'s column 3).
+    #[cfg(feature = "lez-040")]
+    #[test]
+    fn the_v040_image_id_is_the_recorded_one() {
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
+        let want = format!("0x{}", hex(&F13_IMAGE_ID));
+        let core = std::fs::read_to_string(format!("{root}/lez/results/v0.4.0/ids-v0.4.0.tsv"))
+            .expect("lez/results/v0.4.0/ids-v0.4.0.tsv (lez-040-core's record of the v0.4.0 image ids)");
+        let row =
+            core.lines().find(|l| l.split('\t').next() == Some("ferrata_bridge")).expect("its ferrata_bridge row");
+        assert_eq!(row.split('\t').nth(1), Some(want.as_str()), "{row}");
+        let dir = std::path::Path::new(root).join("docs/port-v0.4.0/image-ids");
+        for e in std::fs::read_dir(&dir).into_iter().flatten().flatten() {
+            let Ok(tsv) = std::fs::read_to_string(e.path().join("ids.tsv")) else { continue };
+            for line in tsv.lines().filter(|l| l.split('\t').nth(1) == Some("ferrata_bridge")) {
+                assert_eq!(line.split('\t').nth(2), Some(want.as_str()), "{}: {line}", e.path().display());
+            }
+        }
+    }
+
     /// The constants are the ids `docs/image-ids.md` records (this tree's program) and the deployed list names (B1).
+    #[cfg(not(feature = "lez-040"))]
     #[test]
     fn the_image_ids_are_the_recorded_ones() {
         let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");

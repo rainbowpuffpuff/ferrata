@@ -3,20 +3,21 @@
 #
 #   provision.sh base VOLUME_ID   packages, chrony on Amazon Time Sync, the data volume on /var/lib/ferrata,
 #                                 the ferrata user, AWS CLI v2, CloudWatch agent, Caddy
-#   provision.sh toolchain        rustup (1.98.1, 1.93.0, wasm32), rzup 0.5.2 + RISC Zero 3.0.5 (scripts/ci/install-risc0.sh),
-#                                 cargo-leptos
-#   provision.sh fetch BUCKET     LEZ v0.4.0-rc3 (bafd07be) from GitHub; this repository and the program binaries
+#   provision.sh toolchain        rustup (1.98.1, 1.93.0, wasm32), rzup 0.5.2 + the selected LEZ's RISC Zero
+#                                 (scripts/ci/install-risc0.sh), cargo-leptos
+#   provision.sh fetch BUCKET     the selected LEZ (v0.4.0-rc3 by default, v0.4.0 with FERRATA_LEZ_TAG) from GitHub;
+#                                 this repository and the program binaries
 #                                 from the artifact bucket (bundle/ferrata-src.tar.gz, bundle/programs.tar.gz)
 #   provision.sh build-zone       LEZ's sequencer_service and wallet; the Logos Blockchain node LEZ pins (its resolver)
 #   provision.sh build-explorer   LEZ's indexer_service (feature prove, as LEZ's Dockerfile) and explorer_service
-#   provision.sh build-ferrata    ferrata-day1, ferrata-updater (against rc3: lez-select.sh), attest-monitor
+#   provision.sh build-ferrata    ferrata-day1, ferrata-updater (against the selected tag: lez-select.sh), attest-monitor
 #   provision.sh install          binaries, configuration, systemd units, Caddy, the site; keys made on the host
 #
 # Logs: /var/log/ferrata/provision-<stage>.log. Nothing here prints a key.
 set -euo pipefail
 STAGE="${1:?stage}"; shift || true
-LEZ_TAG=v0.4.0-rc3
-LEZ_COMMIT=bafd07be0701398f9bc435f73ab05e9a7936c301
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$HERE/lez-tag.sh"
 OPT=/opt/ferrata
 SRC=$OPT/src
 BUILD=$OPT/build
@@ -89,14 +90,14 @@ toolchain() {
   command -v rzup >/dev/null || cargo +1.98.1 install --locked rzup --version 0.5.2
   RISC0_HOME_LEZ=/root/risc0-home-lez bash "$SRC/ferrata/scripts/ci/install-risc0.sh"
   command -v cargo-leptos >/dev/null || cargo +1.98.1 install --locked cargo-leptos --version 0.3.12
-  local r0; r0="$(ls -d /root/.risc0/extensions/v3.0.5-cargo-risczero-*/r0vm | head -1)"
+  local r0; r0="$(lez_find_r0vm /root/.risc0 /root/risc0-home-lez)"
   install -m 755 "$r0" "$OPT/bin/r0vm"
   "$OPT/bin/r0vm" --version
 }
 
 fetch() {
   local bucket="${1:?artifact bucket}"
-  local lez="$SRC/upstream/lez-$LEZ_TAG"
+  local lez="$LEZ_SRC"
   if [ ! -d "$lez/.git" ]; then
     git clone -q --depth 1 --branch "$LEZ_TAG" https://github.com/logos-blockchain/logos-execution-zone "$lez"
   fi
@@ -110,12 +111,12 @@ fetch() {
   # The site bundle, when the operator uploaded one (deploy.sh bundle with WEB_TGZ): install.sh installs it.
   aws s3 cp --only-show-errors "s3://$bucket/bundle/web.tar.gz" "$OPT/web.tar.gz" 2>/dev/null || true
   ( cd "$OPT/programs" && sha256sum -c SHA256SUMS )
-  # Ferrata's LEZ crates against rc3 (manifests, features, lockfiles), as the rehearsal built them.
+  # Ferrata's LEZ crates against the selected tag (manifests, features, lockfiles); the rc3 path is what the rehearsal built.
   "$SRC/ferrata/lez/scripts/lez-select.sh" "$LEZ_TAG"
 }
 
 build_zone() {
-  local lez="$SRC/upstream/lez-$LEZ_TAG"
+  local lez="$LEZ_SRC"
   ( cd "$lez" && CARGO_TARGET_DIR="$BUILD/target-lez" cargo build --release --locked -p sequencer_service -p wallet )
   install -m 755 "$BUILD/target-lez/release/sequencer_service" "$BUILD/target-lez/release/wallet" "$OPT/bin/"
   # The node LEZ pins, by LEZ's resolver (a release whose tag, asset checksum and commit match, or a build).
@@ -126,16 +127,19 @@ build_zone() {
 }
 
 build_explorer() {
-  local lez="$SRC/upstream/lez-$LEZ_TAG"
+  local lez="$LEZ_SRC"
   # Feature `prove` builds risc0-circuit-recursion, whose build script downloads recursion_zkr.zip from RISC Zero's
-  # bucket; that answered 403 from this host (23 Nov 2026). The same file (risc0 v3.0.5's src/recursion_zkr.zip) is
-  # given through RECURSION_SRC_PATH from the artifact bucket when it is there; the build script checks its sha256.
+  # bucket; that answered 403 from this host (23 Nov 2026). On rc3, that release's src/recursion_zkr.zip is given
+  # through RECURSION_SRC_PATH from the artifact bucket when it is there; the build script checks its sha256. On
+  # v0.4.0, leave resolution to the selected dependency tree rather than supplying rc3's RISC Zero 3.0.5 archive.
   local zkr="$OPT/cache/recursion_zkr.zip"
-  if [ ! -f "$zkr" ] && [ -n "${FERRATA_BUCKET:-}" ]; then
-    aws s3 cp --only-show-errors "s3://$FERRATA_BUCKET/bundle/recursion_zkr.zip" "$zkr" || rm -f "$zkr"
-  fi
-  if [ -f "$zkr" ]; then
-    echo "744b999f0a35b3c86753311c7efb2a0054be21727095cf105af6ee7d3f4d8849  $zkr" | sha256sum -c - && export RECURSION_SRC_PATH="$zkr"
+  if [ "$LEZ_TAG" = v0.4.0-rc3 ]; then
+    if [ ! -f "$zkr" ] && [ -n "${FERRATA_BUCKET:-}" ]; then
+      aws s3 cp --only-show-errors "s3://$FERRATA_BUCKET/bundle/recursion_zkr.zip" "$zkr" || rm -f "$zkr"
+    fi
+    if [ -f "$zkr" ]; then
+      echo "744b999f0a35b3c86753311c7efb2a0054be21727095cf105af6ee7d3f4d8849  $zkr" | sha256sum -c - && export RECURSION_SRC_PATH="$zkr"
+    fi
   fi
   ( cd "$lez" && CARGO_TARGET_DIR="$BUILD/target-indexer" cargo build --release --locked -p indexer_service --features prove --bin indexer_service )
   install -m 755 "$BUILD/target-indexer/release/indexer_service" "$OPT/bin/"
@@ -150,9 +154,9 @@ build_ferrata() {
   ( cd "$repo/lez/updater/sequencer" && RISC0_HOME=/root/risc0-home-lez CARGO_TARGET_DIR="$BUILD/target-ferrata" \
       cargo build --release --locked --bin ferrata-day1 --bin ferrata-updater )
   install -m 755 "$BUILD/target-ferrata/release/ferrata-day1" "$BUILD/target-ferrata/release/ferrata-updater" "$OPT/bin/"
-  # attest-monitor links lee_core by path and lez-select.sh does not rewrite its manifest: point it at the rc3 tree
+  # attest-monitor links lee_core by path and lez-select.sh does not rewrite its manifest: point it at the selected tree
   # (lee/state_machine/core is the same in rc1 and rc3: account.rs and Cargo.toml compared, no difference).
-  sed -i 's#upstream/lez-v0.4.0-rc1/#upstream/lez-v0.4.0-rc3/#' "$repo/monitor/attest/Cargo.toml"
+  sed -i "s#upstream/lez-v0.4.0-rc1/#upstream/lez-$LEZ_TAG/#" "$repo/monitor/attest/Cargo.toml"
   ( cd "$repo/monitor/attest" && CARGO_TARGET_DIR="$BUILD/target-monitor" cargo build --release --locked )
   install -m 755 "$BUILD/target-monitor/release/attest-monitor" "$OPT/bin/"
   sha256sum "$OPT/bin/ferrata-day1" "$OPT/bin/ferrata-updater" "$OPT/bin/attest-monitor" | tee "$OPT/bin/ferrata.sha256"

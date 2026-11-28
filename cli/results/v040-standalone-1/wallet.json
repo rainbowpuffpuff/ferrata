@@ -1,0 +1,152 @@
+{
+ "url": "http://127.0.0.1:19390",
+ "checks": [
+  {
+   "ok": true,
+   "what": "getSequencerStatus: the network runs LEZ v0.4.0"
+  },
+  {
+   "ok": true,
+   "what": "transfer 1: sendTransaction answers its hash (13cfde13485e8766\u2026), nonce 0"
+  },
+  {
+   "ok": true,
+   "what": "transfer 1: receipt success (fee base 4968, storage gas 621)"
+  },
+  {
+   "ok": true,
+   "what": "transfer 1: block 3's hash recomputed by the wallet's and the explorer's decoders"
+  },
+  {
+   "ok": true,
+   "what": "transfer 1: the block's receipt for it says applied"
+  },
+  {
+   "ok": true,
+   "what": "transfer 1: its witness at nonce 0 is 129 bytes (initial key only at nonce 0)"
+  },
+  {
+   "ok": true,
+   "what": "transfer 1: it rotates the payer to its nonce-1 key"
+  },
+  {
+   "ok": true,
+   "what": "transfer 2: sendTransaction answers its hash (01f89add3ae29bff\u2026), nonce 1"
+  },
+  {
+   "ok": true,
+   "what": "transfer 2: receipt success (fee base 4432, storage gas 554)"
+  },
+  {
+   "ok": true,
+   "what": "transfer 2: block 4's hash recomputed by the wallet's and the explorer's decoders"
+  },
+  {
+   "ok": true,
+   "what": "transfer 2: the block's receipt for it says applied"
+  },
+  {
+   "ok": true,
+   "what": "transfer 2: its witness at nonce 1 is 96 bytes (initial key only at nonce 0)"
+  },
+  {
+   "ok": true,
+   "what": "transfer 2: it rotates the payer to its nonce-2 key"
+  },
+  {
+   "ok": true,
+   "what": "the page's connect(): v0.4.0, signing allowed"
+  },
+  {
+   "ok": true,
+   "what": "the page imports the secret as the same account"
+  },
+  {
+   "ok": true,
+   "what": "the receive code's admission key names the fresh account"
+  },
+  {
+   "ok": true,
+   "what": "transfer 3 (the page's path, nonce 2): net.outcome reads its receipt: applied"
+  },
+  {
+   "ok": true,
+   "what": "the recipient's balance rose by 3345 (0 -> 3345)"
+  },
+  {
+   "ok": true,
+   "what": "the fresh account holds 777"
+  }
+ ],
+ "version": "v0.4.0",
+ "status": {
+  "state": "online",
+  "height": 2,
+  "isOurTurn": true
+ },
+ "payer": "7VDm7YRPvimbZgCzuFqCGf6RwPsTV3XY5W9DzT71oain",
+ "recipient": "E6Mb7gptmMnFDmL7r4fxeAvYwcWf6hpBFDVi5xUd9ddC",
+ "fee_state": {
+  "height": "2",
+  "base_fee_exec": "8",
+  "base_fee_stor": "8",
+  "next_base_fee_exec_floor": "8",
+  "next_base_fee_exec_ceiling": "9",
+  "next_base_fee_stor_floor": "8",
+  "next_base_fee_stor_ceiling": "9",
+  "max_gas_exec": "10000000",
+  "max_gas_stor": "1000000"
+ },
+ "sends": [
+  {
+   "hash": "13cfde13485e87665ef8b407e0d068d460521f2160fdf8ced69904a56df36ff0",
+   "nonce": "0",
+   "amount": "1000",
+   "block": 3,
+   "receipt": {
+    "success": true,
+    "fee": {
+     "gas_exec": 0,
+     "gas_stor": 621,
+     "fee_base": 4968,
+     "tip": 0,
+     "refund": 0
+    }
+   }
+  },
+  {
+   "hash": "01f89add3ae29bff79e5c7c73b78ea8e3fb0d000175095a1cf938d4d55f56312",
+   "nonce": "1",
+   "amount": "2345",
+   "block": 4,
+   "receipt": {
+    "success": true,
+    "fee": {
+     "gas_exec": 0,
+     "gas_stor": 554,
+     "fee_base": 4432,
+     "tip": 0,
+     "refund": 0
+    }
+   }
+  },
+  {
+   "hash": "74d26c9ac9201fd54071953332e1b8c4f2eca67480e50bd1773ed24b391670d6",
+   "nonce": "2",
+   "amount": "777",
+   "block": 5,
+   "path": "net.js",
+   "receipt": {
+    "success": true,
+    "fee": {
+     "gas_exec": 0,
+     "gas_stor": 588,
+     "fee_base": 4704,
+     "tip": 0,
+     "refund": 0
+    }
+   }
+  }
+ ],
+ "ok": true
+}

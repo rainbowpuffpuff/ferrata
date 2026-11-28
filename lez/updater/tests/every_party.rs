@@ -39,7 +39,8 @@ use ferrata_updater::{
     updater::{Instance, Plan, Step, Updater},
 };
 use harness::attest::{account_query, fixture_file, Fixture};
-use lee::{AccountId, Actor, PrivateKey, PublicKey};
+use lee::{AccountId, Actor};
+use ferrata_updater::lez::PayerKey;
 
 const GAS: u64 = 4_800_000;
 const MAX_FEE: u128 = 1_000_000_000;
@@ -55,12 +56,12 @@ const WALKED: &[&str] = &[
     "deployer_holds_nothing_after_deployment",
 ];
 
-fn key(b: u8) -> PrivateKey {
-    PrivateKey::try_new([b; 32]).unwrap()
+fn key(b: u8) -> PayerKey {
+    ferrata_updater::lez::payer_key([b; 32])
 }
 
-fn id_of(k: &PrivateKey) -> AccountId {
-    AccountId::from(&PublicKey::new_from_private_key(k))
+fn id_of(k: &PayerKey) -> AccountId {
+    ferrata_updater::lez::payer_account(k)
 }
 
 fn no_sleep(_: u64) {}
@@ -143,7 +144,7 @@ impl Fx {
     fn instance(&self) -> Instance {
         self.instance_at(self.fx.checkpoint)
     }
-    fn updater(&self, label: &str, payer: PrivateKey, sources: Vec<Box<dyn Source>>) -> Updater {
+    fn updater(&self, label: &str, payer: PayerKey, sources: Vec<Box<dyn Source>>) -> Updater {
         updater_for(self.instance(), label, payer, sources)
     }
     /// What a consumer asks: WETH's account and the holder's balance slot at block 26,384,851, bound to `inst`.
@@ -162,7 +163,7 @@ impl Fx {
     }
 }
 
-fn updater_for(inst: Instance, label: &str, payer: PrivateKey, sources: Vec<Box<dyn Source>>) -> Updater {
+fn updater_for(inst: Instance, label: &str, payer: PayerKey, sources: Vec<Box<dyn Source>>) -> Updater {
     let mut u = Updater::new(label, inst, payer, Fees::default(), policy(), sources, None).unwrap();
     u.sleep = no_sleep;
     u
@@ -187,7 +188,7 @@ fn record_at(l: &dyn Ledger, header: Actor) -> Option<RecordState> {
 
 /// The end of every scenario: the consumer's statement is produced. The record of the fixture's finalized slot
 /// exists, the program applies `Attest` on it, and the statement is the native evaluation's.
-fn attestation_produced(l: &mut dyn Ledger, f: &Fx, inst: &Instance, payer: &PrivateKey) -> Attestation {
+fn attestation_produced(l: &mut dyn Ledger, f: &Fx, inst: &Instance, payer: &PayerKey) -> Attestation {
     let header = inst.header(f.fx.finalized_slot);
     let rec = record_at(l, header).expect("a record at the fixture's finalized slot");
     let request = f.request(inst);
@@ -219,7 +220,7 @@ fn refused(l: &HarnessLedger) -> usize {
     l.log.iter().filter(|(_, _, o)| !o.applied).count()
 }
 
-fn sent_by(l: &HarnessLedger, k: &PrivateKey) -> usize {
+fn sent_by(l: &HarnessLedger, k: &PayerKey) -> usize {
     l.log.iter().filter(|(p, _, _)| *p == id_of(k)).count()
 }
 
@@ -607,7 +608,7 @@ impl Ledger for Censoring {
     fn actor_state(&self, actor: Actor) -> Result<Vec<u8>> {
         self.inner.actor_state(actor)
     }
-    fn submit(&mut self, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome> {
+    fn submit(&mut self, payer: &PayerKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome> {
         if id_of(payer) == self.blocked {
             self.left_out += 1;
             return Ok(TxOutcome { rejected: true, note: "left out by the sequencer".into(), ..Default::default() });

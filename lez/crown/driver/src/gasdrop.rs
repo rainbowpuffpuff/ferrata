@@ -163,7 +163,7 @@ fn pending_json(p: &PendingMessage) -> Value {
 
 fn dry_json(report: &DryRunReport) -> Value {
     match report {
-        DryRunReport::Private { fee, quote, cycles, fee_at_head, headroom_blocks, exec_ceiling, stor_ceiling, headroom_reserve, claims, swept } => {
+        DryRunReport::Private { fee, quote, cycles, fee_at_head, headroom_blocks, exec_ceiling, stor_ceiling, headroom_reserve, claims, swept, .. } => {
             json!({
                 "payer": fee.payer.to_string(), "reserve": fee.reserve.to_string(), "refundTo": fee.refund_to.map(|a| a.to_string()),
                 "height": quote.height, "baseFeeExec": quote.base_fee_exec, "baseFeeStor": quote.base_fee_stor,

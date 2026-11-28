@@ -17,7 +17,9 @@ import argparse
 import base64
 import hashlib
 import json
+import os
 import struct
+import sys
 import time
 import urllib.request
 
@@ -62,7 +64,30 @@ def genesis_state(tip_id, tip_hash, keys, timeframe, config_tip_hash):
                           + (0).to_bytes(8, "big") + frontier + (0).to_bytes(8, "big") + b"\x00").digest()
 
 
+def lez_host_tag():
+    """The host's LEZ tag: FERRATA_LEZ_TAG (empty counts as unset), else the tag install.sh records on a v0.4.0 host
+    (/etc/ferrata/lez-tag), else v0.4.0-rc3; a variable that disagrees with the record is refused (as lez-tag.sh does)."""
+    env = os.environ.get("FERRATA_LEZ_TAG") or ""
+    path = os.environ.get("FERRATA_LEZ_TAG_FILE") or "/etc/ferrata/lez-tag"
+    host = ""
+    if os.path.lexists(path):   # a record that exists must name a tag: an empty or damaged one is refused, not taken for rc3
+        try:
+            with open(path) as f:
+                host = "".join(f.read().split())
+        except OSError as e:
+            sys.exit(f"this host's tag record {path} cannot be read: {e}")
+        if host not in ("v0.4.0-rc3", "v0.4.0"):
+            sys.exit(f"this host's tag record {path} holds {host!r}, not v0.4.0-rc3 or v0.4.0")
+    if env and host and env != host:
+        sys.exit(f"FERRATA_LEZ_TAG={env}, but this host runs LEZ {host} ({path})")
+    tag = env or host or "v0.4.0-rc3"
+    if tag not in ("v0.4.0-rc3", "v0.4.0"):
+        sys.exit(f"FERRATA_LEZ_TAG must be v0.4.0-rc3 or v0.4.0 (got {tag!r})")
+    return tag
+
+
 def main():
+    tag = lez_host_tag()
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="/var/lib/ferrata/bridge/identity.json")
     a = ap.parse_args()
@@ -82,7 +107,8 @@ def main():
     inst = progs["instances"]["sepolia"]
     keys = ch["accredited_keys"]
     identity = {
-        "label": "ferrata-testnet: LEZ v0.4.0-rc3 on Logos Blockchain 0.3.5-rc.1, one sequencer (AWS)",
+        "label": "ferrata-testnet: LEZ " + tag + " on Logos Blockchain " + ("0.4.0-rc.2" if tag == "v0.4.0" else "0.3.5-rc.1")
+                 + ", one sequencer (AWS)",
         "chain": "sepolia",
         "tip": {"id": t0["id"], "hash": "0x" + t0["hash"]},
         "channel": {"id": "0x" + CHANNEL, "keys": ["0x" + k for k in keys], "postingTimeframe": ch["posting_timeframe"],

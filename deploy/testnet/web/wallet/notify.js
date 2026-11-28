@@ -78,8 +78,9 @@ export function mountNotify(c, { onInboxChanged }) {
         return;
       }
       if (!msgProgram || !c.lez.equalBytes(d.tx.to.program, msgProgram)) return;
-      const signer = d.tx.signers.find((s) => owner(s));
-      for (const act of d.tx.actors) {
+      const signer = (d.tx.signers ?? d.tx.authorizedAccounts ?? []).find((s) => owner(s));
+      for (const entry of d.tx.actors) {
+        const act = entry.actor ?? entry; // v0.4.0 adds authority around each actor
         const a = owner(act.account);
         if (a && c.lez.equalBytes(act.program, msgProgram) && !signer) got.messages.add(a);
       }
@@ -110,15 +111,16 @@ export function mountNotify(c, { onInboxChanged }) {
     for (let s = from; s <= head; s += CHUNK) {
       const e = Math.min(head, s + CHUNK - 1);
       for (const raw of await c.seq.blockRange(s, e)) {
-        const b = c.lez.decodeBlock(raw);
+        const b = (c.net ? c.net.codec : c.lez).decodeBlock(raw);
+        const id = Number(b.header.id); // v0.4.0 keeps RPC/Borsh u64 values lossless as bigint
         stats.blocks++;
-        if (b.hashOk) stats.hashOk++; else stats.bad.push(`#${b.header.id}: hash`);
-        if (follow.hash && b.header.id === follow.id + 1) {
+        if (b.hashOk) stats.hashOk++; else stats.bad.push(`#${id}: hash`);
+        if (follow.hash && id === follow.id + 1) {
           stats.links++;
-          if (b.header.prevHash === follow.hash) stats.linksOk++; else stats.bad.push(`#${b.header.id}: link`);
+          if (b.header.prevHash === follow.hash) stats.linksOk++; else stats.bad.push(`#${id}: link`);
         }
-        stats.from ??= b.header.id; stats.to = b.header.id;
-        follow = { id: b.header.id, hash: b.computedHash };
+        stats.from ??= id; stats.to = id;
+        follow = { id, hash: b.computedHash };
         if (!c.S.key) return;
         await inspect(b);
       }

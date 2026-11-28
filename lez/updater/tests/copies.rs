@@ -9,6 +9,7 @@
 #![cfg(feature = "harness")]
 
 use std::fs;
+use ferrata_updater::lez::PayerKey;
 
 use sha2::Digest as _;
 
@@ -24,10 +25,10 @@ use ferrata_updater::{
     source::{lab_record, load_entries, Clock, Entry, Recorded, Source},
     updater::{Instance, Plan, Step, Updater},
 };
-use lee::PrivateKey;
 
-fn key(b: u8) -> PrivateKey {
-    PrivateKey::try_new([b; 32]).unwrap()
+
+fn key(b: u8) -> PayerKey {
+    ferrata_updater::lez::payer_key([b; 32])
 }
 
 fn no_sleep(_: u64) {}
@@ -99,7 +100,7 @@ impl Fx {
 
     /// An updater (window 1: no wait; join or wait at its default) whose one source serves the recorded updates, or
     /// (`copies`) a copy of each.
-    fn updater(&self, label: &str, payer: PrivateKey, copies: bool) -> Updater {
+    fn updater(&self, label: &str, payer: PayerKey, copies: bool) -> Updater {
         let mut source = Recorded::open("a", &self.dir, &self.config, self.clock.clone()).unwrap();
         if copies {
             for e in &mut source.entries {
@@ -308,7 +309,7 @@ impl Ledger for NoHistory {
     }
     fn submit(
         &mut self,
-        payer: &PrivateKey,
+        payer: &PayerKey,
         tx: &Tx,
         gas_limit: u64,
         max_fee: u128,

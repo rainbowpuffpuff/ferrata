@@ -1,0 +1,5 @@
+[02:40:15] node up: {"cryptarchia_info":{"lib":"99e4fdba361357efe9db02962ac49157c7aebfc1d73fbbf403ca70cf381d0f5b","lib_slot":0,"tip":"99e4fdba361357efe9db02962ac49157c7aebfc1d73fbbf403ca70cf381d0f5b","slot":0,"height":0,"state":"Bootstrapping"},"phase":"InitialBlockDownload"}
+[02:40:15] seq-0 set up: channel key ed99d1abd7d5b829ea15c4416b72854f0577f47616cbea8aa181d28dc76cd609; Creating the channel stakes that key at genesis.
+[02:40:15] seq-1 set up: channel key b72d9ff60e3be550115689b06d5ba9e5cacacca63f93437158d9adef7f9b89fd; Pass that key to `stake --sequencer-key`.
+[02:40:15] seq-2 set up: channel key 07247f32f8cdfa2a3f891b7e2ac25b133ad1dce013b5f548ded18a0f478185ec; Pass that key to `stake --sequencer-key`.
+[02:40:15] seq-3 set up: channel key 12b8798325cb182af297ca2ff208ee4262a0f592412e63e49f88f87d4c779047; Pass that key to `stake --sequencer-key`.

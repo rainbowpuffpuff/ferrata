@@ -519,7 +519,7 @@ fn place_others(w: &mut World, _cid_a: &[u8; 32], account: lee::AccountId, k: us
 /// under A only (the executor, as `bridge_secfix.rs` checks C-1).
 #[test]
 fn r2_other_configurations_holdings_cost_a_claim_nothing() {
-    use lee_core::program::ReceiveInput;
+    use harness::compat;
 
     let image = b1_program();
     // 6,049: where a claim failed before B1; 12,098: twice that.
@@ -617,13 +617,8 @@ fn r2_other_configurations_holdings_cost_a_claim_nothing() {
     let mut executor =
         String::from("| delivered (the program's executor, no state machine) | exit code |\n|---|---:|\n");
     for (what, receiver, from, message, want) in cases {
-        let input = ReceiveInput {
-            receiver,
-            from: Some(from),
-            is_authorized: false,
-            pre_state: Default::default(),
-            message: borsh::to_vec(&message).unwrap(),
-        };
+        let input =
+            compat::receive_input(receiver, Some(from), false, Default::default(), borsh::to_vec(&message).unwrap());
         let got = harness::attest::execute(what, elf.elf(), &input).exit_code;
         assert_eq!(got, want, "{what}");
         let _ = writeln!(executor, "| {what} | {got} |");
@@ -701,7 +696,7 @@ fn tenant(w: &mut World, log: &mut Vec<TxReport>) -> (BridgeConfig, [u8; 32], Bl
 /// accounts. A's configuration and token state are byte for byte what they were.
 #[test]
 fn separation_another_configurations_roles_and_accounts_reach_nothing() {
-    use lee_core::program::ReceiveInput;
+    use harness::compat;
 
     let image = b1_program();
     let mut w = World::new();
@@ -961,13 +956,8 @@ fn separation_another_configurations_roles_and_accounts_reach_nothing() {
     let elf = harness::bridge::bridge_program();
     let mut executor = String::from("| delivered (the program's executor) | exit code |\n|---|---:|\n");
     for (what, receiver, from, message, want) in cases {
-        let input = ReceiveInput {
-            receiver,
-            from: Some(from),
-            is_authorized: false,
-            pre_state: Default::default(),
-            message: borsh::to_vec(&message).unwrap(),
-        };
+        let input =
+            compat::receive_input(receiver, Some(from), false, Default::default(), borsh::to_vec(&message).unwrap());
         let got = harness::attest::execute(what, elf.elf(), &input).exit_code;
         assert_eq!(got, want, "{what}");
         let _ = writeln!(executor, "| {what} | {got} |");

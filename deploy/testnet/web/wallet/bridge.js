@@ -185,6 +185,16 @@ export function lockGroup(controls) {
  * wallet's connected address. The zero address is refused: nobody could spend what is released to it. A name (ENS or
  * any other) is refused with the reason: the page resolves no names, and the recipient is final once burned.
  */
+/**
+ * A deposit commits to a LEZ account of the page's key tree, which LEZ v0.4.0 changed (a public account's id): before
+ * a deposit is reviewed or sent, the network's LEZ version must have been read (net.js; `c.versionConfirmed` reads it
+ * again when it was not). Nothing is planned or sent while it is unread or another version answered.
+ */
+export async function depositVersionGate(c) {
+  if (c.versionConfirmed && !await c.versionConfirmed()) throw new Error(c.net?.error ?? 'the network\'s LEZ version could not be read');
+  if (c.net?.readOnly) throw new Error(c.net.error);
+}
+
 export function burnRecipient(typed, connected) {
   const t = String(typed ?? '').trim(), to = t || String(connected ?? '').trim();
   if (!to) throw new Error('Type the Ethereum recipient, or connect your browser wallet to use its address.');
@@ -405,12 +415,13 @@ export function mountBridge(root, c) {
       if (B.lezReady === false) throw new Error('Deposits are not open yet: the LEZ side of this bridge is still being set up.');
       if (!c.S.seed) throw new Error('Bridging needs a wallet made from a recovery phrase (the bridge keys derive from it); this one holds only an imported key.');
       await connectWallet(); // the chain, the account and the vault read again at every review
+      await depositVersionGate(c); // the destination below follows the network's LEZ version: read it now
       const i = Number(denom.value || 0);
       const A = asset();
       const a = c.acct();
       const k = KIND[kind.value];
       // Only this phrase's own accounts: a deposit to someone else's account could never be claimed (its owner lacks s).
-      const d = kind.value === 'public' ? a.node.accountId : c.lez.derivePrivate(c.S.seed, [0]).accountId;
+      const d = kind.value === 'public' ? a.node.accountId : (c.baseLez ?? c.lez).derivePrivate(c.S.seed, [0]).accountId;
       const bs = bridgeSeedOf(c.S.seed);
       const s = depositSecret(kAuthOf(bs), B.evmChainId, addrBytes(B.vault), addrBytes(depositor), vault.j);
       const C = commitment(s, k, d);
@@ -472,6 +483,8 @@ export function mountBridge(root, c) {
       let fresh = await readVault(P, B.vault, p.record.depositor, token);
       if (fresh.j.toString() !== p.record.j) throw new Error('Your deposit index changed since the review (another deposit?); nothing was sent. Review again.');
       if (p.approve && fresh.allowance < BigInt(p.record.total)) {
+        // The approval only serves this deposit: the network's version is read right before it is signed too.
+        try { await depositVersionGate(c); } catch (err) { clearDeposit(); throw err; }
         out.textContent = `Waiting for your wallet's signature: approve the vault for ${fmtUnits(p.record.total, p.record.decimals, p.record.symbol)} (1 of 2)…`; out.className = 'msg';
         const ap = await sendAndWait(p.approve, 'Approval (1 of 2)').catch((err) => { throw refusedBy(err, 'The token'); });
         if (!ap.receipt || ap.receipt.status !== '0x1') throw new Error(`The approval ${ap.hash} ${ap.receipt ? 'failed' : 'is not mined yet'}; nothing was deposited.`);
@@ -479,6 +492,10 @@ export function mountBridge(root, c) {
         if (fresh.allowance < BigInt(p.record.total)) throw new Error('The approval is mined but the vault\'s allowance is still short; nothing was deposited.');
         if (fresh.j.toString() !== p.record.j) throw new Error('Your deposit index changed during the approval; nothing was deposited. Review again.');
       }
+      // The deposit commits to a destination of the network's LEZ key tree: its version is read right before the deposit
+      // is handed to the wallet to sign (nothing awaited in between); another version drops the plan.
+      try { await depositVersionGate(c); } catch (err) { clearDeposit(); throw err; }
+      if (p.record.kind === 'public' && p.record.dest !== c.acct().id) { clearDeposit(); throw new Error('The selected LEZ account changed since the review; nothing was sent. Review again.'); }
       out.textContent = `Waiting for your wallet's signature${p.approve ? ' (2 of 2)' : ''}…`; out.className = 'msg';
       const hash = await P.request({ method: 'eth_sendTransaction', params: [p.tx] });
       const rec = { ...p.record, ethTx: hash, sent: Date.now() };
@@ -507,7 +524,7 @@ export function mountBridge(root, c) {
     const logs = await vaultDeposits(P, B.vault, B.fromBlock ?? 0);
     const kAuth = kAuthOf(bridgeSeedOf(c.S.seed));
     const dests = c.S.accounts.map((a) => ({ kind: 'public', id: a.node.accountId, b58: a.id }));
-    const priv = c.lez.derivePrivate(c.S.seed, [0]);
+    const priv = (c.baseLez ?? c.lez).derivePrivate(c.S.seed, [0]);
     dests.push({ kind: 'private', id: priv.accountId, b58: c.lez.idToString(priv.accountId) });
     const kept = (c.S.secret.deposits ??= []);
     let found = 0;
@@ -584,7 +601,7 @@ export function mountBridge(root, c) {
     } catch (e) { if (burnAsset.value === asset) { holdOut.textContent = e?.message ?? String(e); holdOut.className = 'msg bad'; } }
   };
   holdBtn.onclick = busy(holdBtn, refreshHoldings);
-  // The burn: "Review the burn" plans it (nothing signed) and shows everything it binds; "Sign and burn" sends exactly
+  // The burn: "Review the burn" plans it (nothing sent; its size comes from a signed build it discards) and shows everything it binds; "Sign and burn" sends exactly
   // that plan. The recipient is final once burned (it is inside the note), so a mixed-case address must pass EIP-55.
   let burnPlan = null;
   const clearBurn = () => { burnPlan = null; burnGo.disabled = true; burnSum.textContent = ''; };

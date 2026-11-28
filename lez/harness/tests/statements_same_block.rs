@@ -28,7 +28,7 @@ use ferrata_lez_wire::{
 };
 use harness::{
     attest::{Executed, Stage4},
-    consumer_account, grouped,
+    compat, consumer_account, grouped,
     private::{catalog, PrivateAccount, ALIAS_OPENING},
     settle::{classify, opening_fee_state, settle_private_transaction, Charge, LeeTransaction},
     Chain,
@@ -40,7 +40,7 @@ use lee::{
     Actor, BoundaryStep, PrivacyPreservingTransaction, ProvingInput, PublicExecutionContext, SenderPresentation,
     Simulation, TransactionEntry,
 };
-use lee_core::{program::TransactionEvent, Commitment, CommitmentSetDigest, FeeTransfer, Nullifier, RootCall};
+use lee_core::{program::TransactionEvent, Commitment, CommitmentSetDigest, Nullifier, RootCall};
 
 /// The fee every statement submission reserves (the reserve of the private tests:
 /// `tests/private_consumer.rs`, `tests/attest_private.rs`, `tests/vault_consumer.rs`).
@@ -95,14 +95,17 @@ fn prove_private(
     let input = ProvingInput {
         root: TransactionEntry::Sync(RootCall { to: root, message }),
         claims: Vec::new(),
-        fee: Some(FeeTransfer {
-            payer: sender.id(),
-            recipient: system_accounts::fee_inbox_account_id(),
-            amount: reserve,
-            refund_to: Some(chain.payer),
-        }),
-        public_context: PublicExecutionContext::new(public_actors, []),
-        private_witnesses: vec![update_witness(&sender.keys, sender.account.clone(), membership)],
+        fee: Some(compat::fee_transfer(
+            sender.id(),
+            system_accounts::fee_inbox_account_id(),
+            reserve,
+            Some(chain.payer),
+        )),
+        public_context: PublicExecutionContext::new(compat::declared(public_actors, []), []),
+        private_witnesses: vec![compat::authorize_root(
+            update_witness(&sender.keys, sender.account.clone(), membership),
+            root,
+        )],
         dummy_inputs: Vec::new(),
         ciphertext_padding: None,
         recoveries: Vec::new(),

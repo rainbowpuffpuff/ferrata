@@ -137,7 +137,15 @@ export const IMPORT_GAS = 3000000n; // the live Init (one attested vault slot un
 // ------------------------------------------------------------------ the driver: what the Bridge tab's "Claim" runs
 import { keccak, headerRlp, word } from './eth.js';
 import { headerSeed, decodeInstance, decodeRecord, instanceSeed } from './attest.js';
-import { idFromString, idToString, actorStateOf, decodeBlock, buildCall, feeFor, equalBytes, outcomeIn } from './lez.js';
+import { idFromString, idToString, actorStateOf, feeFor, equalBytes,
+  buildCall as rc3BuildCall, decodeBlock as rc3DecodeBlock, outcomeIn as rc3OutcomeIn } from './lez.js';
+const netOf = (c) => c.net ?? {
+  buildCall: c.lez?.buildCall ?? rc3BuildCall,
+  outcome: async (hash, raw) => {
+    const decode = c.lez?.decodeBlock ?? rc3DecodeBlock, outcomeIn = c.lez?.outcomeIn ?? rc3OutcomeIn;
+    return outcomeIn(decode(raw), hash);
+  },
+};
 
 const DEPOSIT_TOPIC = '0x' + hex(keccak(utf8('Deposit(address,uint64,uint64,address,uint256,bytes32)')));
 const bytesOf = (h) => unhex(String(h).replace(/^0x/, '').padStart(64, '0'));
@@ -185,15 +193,16 @@ export async function claimPublic(c, dep, eth, say) {
 
 /** Signs with the selected account, sends, and waits for the block's outcome (reverted: an error). */
 function sender(c, say) {
-  const a = c.acct();
+  const a = c.acct(), net = netOf(c);
   return async (label, to, actors, evidence, data, gasLimit, reviewedMaxFee = null) => {
-    const [info, fs] = await Promise.all([c.seq.nonces([a.node.accountId]), c.seq.feeState()]);
-    const nonce = BigInt(info[0]);
+    const [info, fs, held] = await Promise.all([c.seq.nonces([a.node.accountId]), c.seq.feeState(), c.seq.balance(a.node.accountId)]);
+    const nonce = BigInt(info[0]), bal = BigInt(held);
+    // The network's version is read right before signing: nothing is awaited between that read and the signature.
+    if (c.versionConfirmed && !await c.versionConfirmed()) throw new Error(net.error);
     const args = { payer: a.node, to, actors, data, nonce, gasLimit, evidence };
-    const maxFee = reviewedMaxFee ?? feeFor({ gasLimit, size: buildCall({ ...args, maxFee: 0n }).size, feeState: fs }).maxFee;
-    const bal = BigInt(await c.seq.balance(a.node.accountId));
+    const maxFee = reviewedMaxFee ?? feeFor({ gasLimit, size: net.buildCall({ ...args, maxFee: 0n }).size, feeState: fs }).maxFee;
     if (bal < maxFee) throw new Error(`${label} needs up to ${c.fmt(maxFee)} in LEZ fees; this account holds ${c.fmt(bal)}: use the faucet first.`);
-    const tx = buildCall({ ...args, maxFee });
+    const tx = net.buildCall({ ...args, maxFee });
     say(`${label}: signing and sending…`);
     const hash = await c.seq.send(tx.wire);
     for (let i = 0; i < 90; i++) {
@@ -201,7 +210,7 @@ function sender(c, say) {
       const t = await c.seq.transaction(hash).catch(() => null);
       if (!t) continue;
       const bid = Number(Array.isArray(t) ? t[1] : t.block_id);
-      const o = outcomeIn(decodeBlock(await c.seq.block(bid)), hash);
+      const o = await net.outcome(hash, net.version === 'v0.4.0' ? undefined : await c.seq.block(bid));
       if (o === 'reverted') throw new Error(`${label} was refused by the bridge program in LEZ block ${bid} (its fee was charged). Transaction ${hash}.`);
       if (o === 'missing') throw new Error(`${label}: the RPC places transaction ${hash} in LEZ block ${bid}, but that block does not list it: outcome unknown. Check before trying again.`);
       say(`${label}: done in LEZ block ${bid}.`);
@@ -355,7 +364,7 @@ export const u256word = u256;
  */
 export async function planBurn(c, { kAuth, kView, token, amount, recipient }) {
   const B = c.cfg.bridge, program = idFromString(B.program), cid = unhex(B.configId), vault = unhex(B.vault);
-  const a = c.acct();
+  const a = c.acct(), net = netOf(c);
   const state = async (seed) => decodeBridgeState(actorStateOf(await c.seq.account(forPublicPda(program, seed)), program));
   const tok = await state(seeds.token(cid, token));
   if (!tok || tok.kind !== 'token') throw new Error('This token is not registered on the LEZ side of the bridge.');
@@ -371,7 +380,9 @@ export async function planBurn(c, { kAuth, kView, token, amount, recipient }) {
   const evidence = pdaSeeds.map((seed) => ({ pda: { program, seed } }));
   const data = encodeBurn({ configId: cid, note, token, amount32: u256(amount) });
   const [nonces, fs] = await Promise.all([c.seq.nonces([a.node.accountId]), c.seq.feeState()]);
-  const size = buildCall({ payer: a.node, to: own, actors, data, nonce: BigInt(nonces[0]), gasLimit: BURN_GAS, evidence, maxFee: 0n }).size;
+  // The size comes from a signed (unsent) build: the network's version is read right before it, as before a send.
+  if (c.versionConfirmed && !await c.versionConfirmed()) throw new Error(net.error);
+  const size = net.buildCall({ payer: a.node, to: own, actors, data, nonce: BigInt(nonces[0]), gasLimit: BURN_GAS, evidence, maxFee: 0n }).size;
   const { maxFee } = feeFor({ gasLimit: BURN_GAS, size, feeState: fs });
   return { account: a, i, note, token, amount, recipient, held, to: own, actors, evidence, data, maxFee };
 }

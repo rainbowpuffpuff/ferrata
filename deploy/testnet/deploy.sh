@@ -17,10 +17,12 @@
 # PROGRAMS_DIR: the four program binaries (ferrata_lez.bin, ferrata_bridge_b1.bin, ferrata_holdings.bin,
 # ferrata_consumer.bin), each checked against docs/image-ids.md before upload (scripts/reproduce-image-ids.sh builds them).
 # WEB_TGZ (optional): the site bundle install-web.sh takes (README: Artifacts); fetched to /opt/ferrata/web.tar.gz.
+# FERRATA_LEZ_TAG: LEZ v0.4.0-rc3 (default) or v0.4.0, forwarded to the host's provision and program commands.
 # RECURSION_ZKR (optional): RISC Zero v3.0.5's src/recursion_zkr.zip (sha256 744b999f...), for build-explorer when
 # RISC Zero's own URL refuses the host (it did: 403); provision passes the bucket to the stages as FERRATA_BUCKET.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$HERE/lez-tag.sh"
 REPO="$(cd "$HERE/../.." && pwd)"
 STACK="${STACK:-ferrata-testnet}"
 export AWS_REGION="${AWS_REGION:-us-east-1}"
@@ -40,6 +42,8 @@ ssm() { # ssm 'commands' [timeout]: run as root on the host, print stdout/stderr
     sleep 10
   done
   aws ssm get-command-invocation --command-id "$cid" --instance-id "$id" --query '[Status,StandardOutputContent,StandardErrorContent]' --output text
+  # the command's own end, not the CLI's: a Failed, Cancelled or TimedOut run fails this call
+  [ "$st" = Success ] || { echo "deploy.sh: the host's command ended $st" >&2; return 1; }
 }
 
 case "${1:-}" in
@@ -80,10 +84,23 @@ case "${1:-}" in
     ssm "set -e; command -v aws >/dev/null || snap install aws-cli --classic
 mkdir -p /opt/ferrata/src/ferrata /var/log/ferrata; aws s3 cp --only-show-errors s3://$bucket/bundle/ferrata-src.tar.gz /opt/ferrata/src.tgz
 tar -xzf /opt/ferrata/src.tgz -C /opt/ferrata/src/ferrata; install -m 755 /opt/ferrata/src/ferrata/deploy/testnet/provision.sh /opt/ferrata/provision.sh
-systemd-run --unit=ferrata-chain --collect -E FERRATA_BUCKET=$bucket /bin/bash -c 'P=/opt/ferrata/provision.sh; for s in \"base $vol\" \"fetch $bucket\" toolchain build-zone build-ferrata build-explorer; do \$P \$s || exit 1; done'
+install -m 644 /opt/ferrata/src/ferrata/deploy/testnet/lez-tag.sh /opt/ferrata/lez-tag.sh
+systemd-run --unit=ferrata-chain --collect -E FERRATA_BUCKET=$bucket -E FERRATA_LEZ_TAG=$LEZ_TAG /bin/bash -c 'P=/opt/ferrata/provision.sh; for s in \"base $vol\" \"fetch $bucket\" toolchain build-zone build-ferrata build-explorer; do \$P \$s || exit 1; done'
 echo started" 120 ;;
-  run) shift; ssm "/opt/ferrata/provision.sh fetch $(out ArtifactBucketName) >/dev/null && for s in $*; do /opt/ferrata/src/ferrata/deploy/testnet/provision.sh \$s 2>&1 | tail -n 40; done" ;;
-  programs) ssm "/opt/ferrata/src/ferrata/deploy/testnet/deploy-programs.sh ${2:?plan|fund|run|handover|publish|verify}" 7200 ;;
+  run) shift
+    # On v0.4.0 the host's /opt/ferrata/provision.sh may predate lez-tag.sh (installed by an rc3 `provision`): its fetch
+    # brings this tree, whose provision.sh and lez-tag.sh then replace it, and fetch runs again with them (LEZ v0.4.0's
+    # clone and lez-select.sh v0.4.0). On rc3 the command is what it was.
+    pre=""
+    if [ "$LEZ_TAG" = v0.4.0 ]; then
+      pre="/opt/ferrata/provision.sh fetch $(out ArtifactBucketName) >/dev/null && install -m 755 /opt/ferrata/src/ferrata/deploy/testnet/provision.sh /opt/ferrata/provision.sh && install -m 644 /opt/ferrata/src/ferrata/deploy/testnet/lez-tag.sh /opt/ferrata/lez-tag.sh && "
+    fi
+    if [ -n "$pre" ]; then   # v0.4.0: a failed stage stops the run (pipefail through tail, and the loop exits)
+      ssm "set -o pipefail; ${pre}FERRATA_LEZ_TAG=$LEZ_TAG /opt/ferrata/provision.sh fetch $(out ArtifactBucketName) >/dev/null && for s in $*; do FERRATA_LEZ_TAG=$LEZ_TAG /opt/ferrata/src/ferrata/deploy/testnet/provision.sh \$s 2>&1 | tail -n 40 || exit 1; done"
+    else
+      ssm "${pre}FERRATA_LEZ_TAG=$LEZ_TAG /opt/ferrata/provision.sh fetch $(out ArtifactBucketName) >/dev/null && for s in $*; do FERRATA_LEZ_TAG=$LEZ_TAG /opt/ferrata/src/ferrata/deploy/testnet/provision.sh \$s 2>&1 | tail -n 40; done"
+    fi ;;
+  programs) ssm "FERRATA_LEZ_TAG=$LEZ_TAG /opt/ferrata/src/ferrata/deploy/testnet/deploy-programs.sh ${2:?plan|fund|run|handover|publish|verify}" 7200 ;;
   resize) "$0" stack "${2:?instance type}" ;;
   status)
     aws cloudformation describe-stacks --stack-name "$STACK" --query 'Stacks[0].Outputs' --output table

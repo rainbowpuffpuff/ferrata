@@ -22,7 +22,8 @@
 #   scripts/ci/lez-harness.sh --dry-run [--shard NAME] [build]
 #                                                 print the exact commands for NAME (or every shard)
 #
-# FERRATA_TEST_THREADS (default 4, the cores of GitHub's hosted runner) sets the test threads.
+# FERRATA_TEST_THREADS (default 4, the cores of GitHub's hosted runner) sets the test threads. FERRATA_LEZ_TAG (job
+# `lez-040`) selects another LEZ tag first (lez/scripts/lez-select.sh).
 set -euo pipefail
 repo="$(cd "$(dirname "$0")/../.." && pwd)"
 export PATH="$HOME/.foundry/bin:$HOME/.risc0/bin:$HOME/.cargo/bin:$PATH" FOUNDRY_DISABLE_NIGHTLY_WARNING=1
@@ -93,6 +94,14 @@ fi
 export RISC0_HOME="$lez_home"
 t0=$(date +%s)
 stamp() { echo "[$(( $(date +%s) - t0 )) s] $*"; }
+# FERRATA_LEZ_TAG (job `lez-040`: v0.4.0): the LEZ tag the suites run against, selected first with
+# lez/scripts/lez-select.sh; unset (the release candidates' jobs), the committed v0.4.0-rc1.
+if [ -n "${FERRATA_LEZ_TAG:-}" ]; then
+  stamp "LEZ $FERRATA_LEZ_TAG (lez/scripts/lez-select.sh)"
+  "$repo/lez/scripts/lez-select.sh" "$FERRATA_LEZ_TAG"
+  selected="$("$repo/lez/scripts/lez-select.sh" --show)"
+  [ "$selected" = "$FERRATA_LEZ_TAG" ] || { echo "lez-harness.sh: the manifests are on $selected, not $FERRATA_LEZ_TAG" >&2; exit 1; }
+fi
 
 if [ "$has_shard" = 1 ]; then
   stamp "guard: check scripts/ci/lez-harness-shards.json against lez/harness and lez/updater"

@@ -1,0 +1,52 @@
+{
+  "network": "local anvil, no fork, chain id 11155111 (STAND-IN: not finalized by any beacon chain)",
+  "block": 9,
+  "block_hash": "0xaf2455474daf0fc349d5f4a57a95b59e2d42b90c991444c6259f84d881b93232",
+  "anvil_block_hash": "0xaf2455474daf0fc349d5f4a57a95b59e2d42b90c991444c6259f84d881b93232",
+  "state_root_patched": false,
+  "timestamp": 1795838643,
+  "state_root": "0xfd3e0ccd6ccf700e58c061431c47b3193f2390230f4eb6569a3af74fe03651b9",
+  "storage": [
+    {
+      "address": "0x78c360569aa61a70d8f45d2d940211c863b8d672",
+      "slots": [
+        {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "value": "0x2f4aa31ccfdac11f958a516fe68e6f1066c904069ca0cab49855cd6133060e04"
+        },
+        {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000001",
+          "value": "0x0000000000000000000000000000000000000000000000000000000000000001"
+        },
+        {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000002",
+          "value": "0xbaa5af860825ad539fcf627dba90f1872bfa8f6d3e651dac81bfc067ccbd7b54"
+        },
+        {
+          "slot": "0x2f7d2fc425649f0a2184f57eb1355c97d45240e80cf9b2fa1972b849a0d0433c",
+          "value": "0x898160360b5b4aab318e281b88c160e31bf1f284aba2a0c877c3033809b2ce30"
+        },
+        {
+          "slot": "0x9aa0b42bfab58f5661a89501a520051162e6336036c5c42663bd4f8f1ac012ce",
+          "value": "0xc0c1a4f49170e50d3a9b340d8f9a7fee224da9a35b4887178b5c346e41f1950d"
+        },
+        {
+          "slot": "0x07dbb398239016a117a7e00064fdec5830d1a809cdc146e8228b3d0ed733d432",
+          "value": "0x0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        {
+          "slot": "0x7562a45bac1c8819e729cd0eaeca60a92515a5573de0e2919190dbf5f3f17676",
+          "value": "0x0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      ]
+    }
+  ],
+  "deposits": {
+    "vault": "0x78c360569aa61a70d8f45d2d940211c863b8d672",
+    "from_block": 0,
+    "event": "Deposit(address,uint64,uint64,address,uint256,bytes32)",
+    "topic": "0x83d2d1c34c8825843c9af84bec80378e997084e8c1d6d5a3c2a6e758fe05538e",
+    "count": 1
+  },
+  "updates": []
+}

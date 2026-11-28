@@ -1,0 +1,9 @@
+Voting for ChannelParams { minimum_sequencer_stake: 149, posting_timeframe: 90, posting_timeout: 25, max_block_size: 1048576, finality_depth: 35 }: 84277ed4839c6afef71e883fafd6c13492abbdbed5eeafbdcebee11030539995
+Included in block 58
+1 of the 3 accredited keys these params need have voted for them
+Voting for ChannelParams { minimum_sequencer_stake: 149, posting_timeframe: 90, posting_timeout: 25, max_block_size: 1048576, finality_depth: 35 }: 9fd5fe2f2be448f242b3c7c11bb0f9caed7d534a155edd9372a9f03b00de37f7
+Included in block 61
+2 of the 3 accredited keys these params need have voted for them
+Voting for ChannelParams { minimum_sequencer_stake: 149, posting_timeframe: 90, posting_timeout: 25, max_block_size: 1048576, finality_depth: 35 }: 98b42a6399691b8e1c9542c3beb183dd2f7a21b4aa9fee6b555dcc32532b4110
+Included in block 64
+The channel params are now ChannelParams { minimum_sequencer_stake: 149, posting_timeframe: 90, posting_timeout: 25, max_block_size: 1048576, finality_depth: 35 }, by this vote or others that landed first

@@ -3,6 +3,11 @@
 # to see whether what run.sh shows at c90ca0b still holds there (RFP-021 U.4, RFP-022 U.4). On the build box, with the
 # tree exported beside the repository (git archive of the head into upstream/spel-<rev>):
 #   mrun --put ../upstream/spel-<rev> --put ../upstream/lez-v0.4.0-rc3 -- 'bash idl/spel-v2/run-at.sh <rev>'
+# A second argument names another LEZ tree beside the repository (upstream/<LEZ>; default lez-v0.4.0-rc3, the tag
+# SPEL's head pins) that `lee_core` is patched to, for SPEL on another LEZ release; for LEZ v0.4.0 (a255b42c, a
+# `git archive` with the commit in its COMMIT file):
+#   mrun --put ../upstream/spel-f739d8a --put ../upstream/lez-a255b42c -- 'bash idl/spel-v2/run-at.sh f739d8a lez-a255b42c'
+# Its outputs are named with the tree (at-<rev>-<LEZ>/, spel-v2-<rev>-<LEZ>.txt); the default tree's keep their names.
 # 1. SPEL as that head has it: the programs' IDLs generated, compared with the hand-written ones, the vectors decoded,
 #    the bridge's generation expected to fail on the tuple in BridgeMessage::Spend.
 # 2. That head with patches/spel-c90ca0b-idl-gen-tuples.patch applied (it must apply), the bridge's IDL compared.
@@ -11,19 +16,25 @@
 # copy's options are written that way, nothing else changed. Its Cargo.lock is resolved afresh (not --locked) and kept
 # beside the record as at-<rev>/cargo-lock-resolved.txt. Writes idl/generated/spel-v2-<rev>.txt.
 set -euo pipefail
-REV="${1:?usage: run-at.sh REV (upstream/spel-REV beside the repository)}"
+REV="${1:?usage: run-at.sh REV [LEZ] (upstream/spel-REV and upstream/LEZ beside the repository)}"
+LEZ="${2:-lez-v0.4.0-rc3}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/../.." && pwd)"
 UP="$(cd "$REPO/../upstream" && pwd)"
 SPEL="$UP/spel-$REV"
 [ -d "$SPEL/spel-framework-core" ] || { echo "run-at.sh: no SPEL tree at $SPEL" >&2; exit 1; }
-OUT="$REPO/idl/generated/at-$REV"
-LOG="$REPO/idl/generated/spel-v2-$REV.txt"
+[ -f "$UP/$LEZ/lee/state_machine/core/Cargo.toml" ] || { echo "run-at.sh: no LEZ tree at $UP/$LEZ" >&2; exit 1; }
+LEZ_COMMIT="$(cat "$UP/$LEZ/COMMIT" 2>/dev/null || git -C "$UP/$LEZ" rev-parse HEAD 2>/dev/null || echo 'commit not known')"
+SUF=""; [ "$LEZ" = lez-v0.4.0-rc3 ] || SUF="-$LEZ"
+OUT="$REPO/idl/generated/at-$REV$SUF"
+LOG="$REPO/idl/generated/spel-v2-$REV$SUF.txt"
 mkdir -p "$OUT"
 crate() { # DIR SPEL_TREE: the runner as a crate against SPEL_TREE
   rm -rf "$1"; mkdir -p "$1"
   cp -r "$HERE/src" "$1/"
-  sed -e "s#\.\./\.\./\.\./upstream/spel-c90ca0b/#$2/#" -e "s#\.\./\.\./\.\./upstream/#$UP/#" "$HERE/Cargo.toml" > "$1/Cargo.toml"
+  sed -e "s#\.\./\.\./\.\./upstream/spel-c90ca0b/#$2/#" -e "s#\.\./\.\./\.\./upstream/lez-v0\.4\.0-rc3/#$UP/$LEZ/#" \
+      -e "s#\.\./\.\./\.\./upstream/#$UP/#" "$HERE/Cargo.toml" > "$1/Cargo.toml"
+  grep -q "$UP/$LEZ/lee/state_machine/core" "$1/Cargo.toml" || { echo "run-at.sh: lee_core not patched to $LEZ" >&2; exit 1; }
   if grep -q "pub states: Vec<String>" "$2/spel-framework-core/src/idl_gen.rs"; then
     python3 -I - "$1/src/main.rs" <<'PY'
 import pathlib, sys
@@ -35,9 +46,10 @@ p.write_text(s.replace(old, new))
 PY
   fi
 }
-T="$HERE/target/at-$REV"
+T="$HERE/target/at-$REV$SUF"
 {
   echo "# idl/spel-v2/run-at.sh: SPEL PR #301 at $REV (LEZ $(grep -o 'tag = "[^"]*"' "$SPEL/spel-cli/Cargo.toml" | head -1)) on Ferrata ${FERRATA_REV:-$(git -C "$REPO" rev-parse --short=8 HEAD 2>/dev/null || echo '(tree not named)')}"
+  echo "# lee_core patched to upstream/$LEZ (LEZ commit $LEZ_COMMIT)"
   echo "## 1. SPEL as $REV has it"
 } > "$LOG"
 crate "$T/as-is" "$SPEL"

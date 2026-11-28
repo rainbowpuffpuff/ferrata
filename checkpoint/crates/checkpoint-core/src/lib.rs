@@ -39,3 +39,9 @@ pub type Address = [u8; 20];
 /// the second build, cargo feature `bedrock-0-3-5`, off by default (`bedrock_0_3_5/mod.rs`).
 #[cfg(feature = "bedrock-0-3-5")]
 pub mod bedrock_0_3_5;
+
+/// LEZ v0.4.0's block and transaction layout (receipts, the actor map with authorities, the fee on the message, keyed
+/// witnesses) and the rules over a v0.4.0 zone on Logos Blockchain 0.4.0-rc.2: cargo feature `lez-0-4-0`, which implies
+/// `bedrock-0-3-5`, off by default (`lez_0_4_0/mod.rs`).
+#[cfg(feature = "lez-0-4-0")]
+pub mod lez_0_4_0;

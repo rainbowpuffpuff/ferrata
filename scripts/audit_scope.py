@@ -43,10 +43,20 @@ GROUPS = {
         "LEZ R0BF ferrata_lez (docs/image-ids.md:49)",
         "main dispatches Message",
     ),
+    "lez/guests/bridge/src/main_lez040.rs": (
+        "the bridge program's source for LEZ v0.4.0, generated from main.rs (lez/scripts/lez040-sources.py)",
+        "LEZ R0BF ferrata_bridge on LEZ v0.4.0 (docs/image-ids.md, LEZ v0.4.0; deployed nowhere)",
+        "main dispatches BridgeMessage",
+    ),
     "lez/guests/bridge/src/": (
         "LEZ deposit, burn, balances, clocks, roles and fees",
         "LEZ R0BF ferrata_bridge_lezfee (docs/image-ids.md:50)",
         "main dispatches BridgeMessage",
+    ),
+    "checkpoint/crates/checkpoint-core/src/lez_0_4_0/": (
+        "LEZ v0.4.0 block parsing and the checkpoint rules over it (the LEZ v0.4.0 port)",
+        "feature lez-0-4-0 only; no guest is built with it yet",
+        "library calls (tests only so far)",
     ),
     "checkpoint/crates/checkpoint-core/src/": (
         "LEZ block parsing, checkpoint rules, segments and journals",
@@ -131,10 +141,12 @@ def selected(tracked: set[str], prefixes: tuple[str, ...]) -> list[str]:
 
 
 def group_for(path: str) -> str:
+    """The longest group prefix of the path (a subdirectory's own entry wins over its parent's)."""
     matches = [prefix for prefix in GROUPS if path == prefix or path.startswith(prefix)]
-    if len(matches) != 1:
+    longest = [m for m in matches if len(m) == max((len(x) for x in matches), default=0)]
+    if len(longest) != 1:
         raise AssertionError(f"source has no unique scope group: {path}")
-    return matches[0]
+    return longest[0]
 
 
 def language(path: str) -> str:

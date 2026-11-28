@@ -72,6 +72,24 @@ check "r0vm_of: an r0vm on PATH that reports the version" \
 check "r0vm_of: an r0vm on PATH of another version is refused" \
   not env PATH="$F/bin:/usr/bin:/bin" bash -c '. "$1"; r0vm_of "$2" 3.1.1' _ "$here/sequencer-records.sh" "$F/none"
 
+# sequencer-attest.sh's toolchains(): r0vm 3.0.5 from LEZ's guest home for the release candidates (PATH only, as
+# before), r0vm 3.1.0 for LEZ v0.4.0 (from LEZ's home or ~/.risc0, named by RISC0_SERVER_PATH and first on PATH).
+T=$S/toolchains; rm -rf "$T"; mkdir -p "$T/lez/extensions/v3.0.5-cargo-risczero-x86_64-unknown-linux-gnu" \
+  "$T/home/.risc0/extensions/v3.1.0-cargo-risczero-x86_64-unknown-linux-gnu"
+fake "$T/lez/extensions/v3.0.5-cargo-risczero-x86_64-unknown-linux-gnu/r0vm" 3.0.5
+fake "$T/home/.risc0/extensions/v3.1.0-cargo-risczero-x86_64-unknown-linux-gnu/r0vm" 3.1.0
+toolchains_of() { # tag: RISC0_HOME, RISC0_SERVER_PATH and the first PATH entry toolchains() leaves (its own text, run here)
+  env -i PATH=/usr/bin:/bin HOME="$T/home" RISC0_HOME_LEZ="$T/lez" LEZ_TAG="$1" BESIDE="$T/none" bash -c \
+    '. "$1"; die() { echo "die: $*"; exit 3; }; eval "$(sed -n "/^toolchains() {\$/,/^}\$/p" "$2")"; toolchains;
+     echo "$RISC0_HOME|${RISC0_SERVER_PATH:-unset}|${PATH%%:*}"' _ "$here/sequencer-records.sh" "$here/sequencer-attest.sh"
+}
+check "toolchains: rc3 takes LEZ's home and its r0vm 3.0.5 on PATH, no RISC0_SERVER_PATH" \
+  test "$(toolchains_of v0.4.0-rc3)" = "$T/lez|unset|$T/lez/extensions/v3.0.5-cargo-risczero-x86_64-unknown-linux-gnu"
+check "toolchains: v0.4.0 keeps LEZ's guest home, takes r0vm 3.1.0 from ~/.risc0 (RISC0_SERVER_PATH, PATH)" \
+  test "$(toolchains_of v0.4.0)" = "$T/lez|$T/home/.risc0/extensions/v3.1.0-cargo-risczero-x86_64-unknown-linux-gnu/r0vm|$T/home/.risc0/extensions/v3.1.0-cargo-risczero-x86_64-unknown-linux-gnu"
+rm -rf "$T/home/.risc0"
+check "toolchains: v0.4.0 without an r0vm 3.1.0 stops" bash -c 'case "$1" in die:*3.1.0*) exit 0 ;; *) exit 1 ;; esac' _ "$(toolchains_of v0.4.0)"
+
 # The round trip's fork: the hook's choice of a public Sepolia RPC (its lines, copied from the hook), with a fake cast
 # whose answer depends on the RPC: an error, a block two hours old, a block number that is not a number (it must never
 # reach shell arithmetic), a block 15 minutes old.

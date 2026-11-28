@@ -20,6 +20,11 @@ there.
 - `assets/lez.js`: LEZ v0.4.0-rc3's `Block` and `LeeTransaction` (public and privacy-preserving) in borsh, from the
   tag's sources; block hash and transaction hash; account ids of signers and PDAs; small IDLs of LEZ's built-in
   programs (native token, program loader, clock, fee, bridge, sequencer stake).
+- `assets/lez040.js`: LEZ v0.4.0's (receipts in place of the reverted list, actor authorities, witness entries with key
+  states, the privacy-preserving execution's grants, clear publications and proven-fee tip), with the same object
+  shapes; `assets/rpc.js` picks it when the network answers `getSequencerStatus` (LEZ v0.4.0 added it), rc3's
+  otherwise; a v0.4.0 page shows each transaction's receipt and charged fee (`assets/outcome.js`). Tested on vectors
+  LEZ v0.4.0's crates made: `node --test deploy/testnet/web/explorer/test/decode040.test.mjs`.
 - `assets/idl.js`: SPEL's IDL format (as `idl/check.py`); `idl/` here is a copy of the repository's `idl/`, the bridge's from `idl/deployed/` (the test network runs B1's program; since ADR 0048 the repository's `idl/ferrata_bridge.idl.json` is the next program's, `ferrata_bridge_lezfee`).
 - `assets/ferrata.js`: ferrata-core's `CompactStore` and `HeaderRecord`, the beacon header's `hash_tree_root`, the
   attestation program's PDAs.

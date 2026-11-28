@@ -1,0 +1,1187 @@
+{
+  "messages": [
+    {
+      "docs": "Create `instance(id)` from a bootstrap matching `checkpoint`, and open the job that adopts\nits committee. `bootstrap`: `CompactBootstrap` encoding.",
+      "fields": [
+        {
+          "name": "config",
+          "type": {
+            "defined": "Config"
+          }
+        },
+        {
+          "name": "checkpoint",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "bootstrap",
+          "type": {
+            "vec": "u8"
+          }
+        }
+      ],
+      "name": "Init",
+      "tag": 0
+    },
+    {
+      "docs": "Step 1 of an update, at `instance(id)`: `update` is a `CompactUpdate` encoding, `signers`\na `SignerWitness` encoding. Opens `job(id, job_id)`. The update is in the store's layout,\nor in the layout of a later fork of the instance's schedule that its attested header has\nreached: the job then starts from the store upgraded to that layout, and applying it\nupgrades the instance's store.",
+      "fields": [
+        {
+          "name": "update",
+          "type": {
+            "vec": "u8"
+          }
+        },
+        {
+          "name": "signers",
+          "type": {
+            "vec": "u8"
+          }
+        }
+      ],
+      "name": "Open",
+      "tag": 1
+    },
+    {
+      "docs": "Step 2, at the job: the Miller loops.",
+      "name": "Miller",
+      "tag": 2
+    },
+    {
+      "docs": "One part of the job's committee adoption: `n / parts` uncompressed keys.",
+      "fields": [
+        {
+          "name": "part",
+          "type": "u8"
+        },
+        {
+          "name": "keys",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                96
+              ]
+            }
+          }
+        }
+      ],
+      "name": "Adopt",
+      "tag": 3
+    },
+    {
+      "docs": "Step 3, at the job: the final exponentiation, then `Apply` to the instance.",
+      "name": "Finish",
+      "tag": 4
+    },
+    {
+      "docs": "Reply with this actor's state (`StateReply`), the read idiom of LEZ v0.4.",
+      "name": "Read",
+      "tag": 5
+    },
+    {
+      "docs": "As `Read`, carrying bytes the program ignores: for measuring what a message byte costs\n(`lez/RESULTS.md`, \"What the LEZ v0.4 shell costs\").",
+      "fields": [
+        {
+          "name": "padding",
+          "type": {
+            "vec": "u8"
+          }
+        }
+      ],
+      "name": "ReadPadded",
+      "tag": 6
+    },
+    {
+      "docs": "At `header(id, slot)`: prove the facts of `request` under this record and reply to the\ncaller with an [`attest::Attestation`] (their statement identifiers and values), or refuse\nwith a code. Sent as the root of a transaction, with nobody to reply to, the statement\nidentifiers are emitted as an event ([`ATTESTED_SELECTOR`]). Changes no state.",
+      "fields": [
+        {
+          "name": "request",
+          "type": {
+            "defined": "Request"
+          }
+        }
+      ],
+      "name": "Attest",
+      "tag": 7
+    },
+    {
+      "docs": "The private placement (Stage 2): the whole verification of one update in one call, at any\nactor of this program (meant to run privately). `store` is the instance's `CompactStore`\nencoding; `adoption` the committee's keys when the update adopts one. Sends\n`ApplyVerified` to `instance(id)`.",
+      "fields": [
+        {
+          "name": "config",
+          "type": {
+            "defined": "Config"
+          }
+        },
+        {
+          "name": "checkpoint",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "store",
+          "type": {
+            "vec": "u8"
+          }
+        },
+        {
+          "name": "update",
+          "type": {
+            "vec": "u8"
+          }
+        },
+        {
+          "name": "signers",
+          "type": {
+            "vec": "u8"
+          }
+        },
+        {
+          "name": "adoption",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                96
+              ]
+            }
+          }
+        }
+      ],
+      "name": "VerifyAll",
+      "tag": 8
+    },
+    {
+      "docs": "`instance(id)` → `job(id, job_id)`: the job step 1 produced (`Job` encoding).",
+      "fields": [
+        {
+          "name": "instance_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "job_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "committee_size",
+          "type": "u32"
+        },
+        {
+          "name": "job",
+          "type": {
+            "vec": "u8"
+          }
+        }
+      ],
+      "name": "JobOpen",
+      "tag": 9
+    },
+    {
+      "docs": "`job(id, job_id)` → `instance(id)`: the verified job.",
+      "fields": [
+        {
+          "name": "instance_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "job_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "job",
+          "type": {
+            "vec": "u8"
+          }
+        }
+      ],
+      "name": "Apply",
+      "tag": 10
+    },
+    {
+      "docs": "Any actor of this program → `instance(id)`: a job verified in one call by `VerifyAll`.",
+      "fields": [
+        {
+          "name": "instance_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "job",
+          "type": {
+            "vec": "u8"
+          }
+        }
+      ],
+      "name": "ApplyVerified",
+      "tag": 11
+    },
+    {
+      "docs": "`instance(id)` → `header(id, slot)`: the record to write once (`HeaderRecord` encoding),\nwith the instance's chain id and root id.",
+      "fields": [
+        {
+          "name": "instance_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "slot",
+          "type": "u64"
+        },
+        {
+          "name": "chain_id",
+          "type": "u64"
+        },
+        {
+          "name": "record",
+          "type": {
+            "vec": "u8"
+          }
+        },
+        {
+          "name": "root_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ],
+      "name": "Record",
+      "tag": 12
+    },
+    {
+      "docs": "At `instance(id)`, anyone: create a successor of this instance with `config`, whose\ncheckpoint is this instance's latest record `checkpoint` (its finalized header's root). The\ninstance checks the three invariants: `config` copies every immutable field of its own\nconfiguration except the fork schedule, which must agree on every fork at or before the\ncheckpoint's epoch; `checkpoint` is its latest record; and that record is inside the\nweak-subjectivity period (the transaction is valid only before the period ends). Then it\nsends `Spawn` to `instance(successor_id(root id, id, config, checkpoint))` and emits\n[`SUCCEEDED_SELECTOR`].",
+      "fields": [
+        {
+          "name": "config",
+          "type": {
+            "defined": "Config"
+          }
+        },
+        {
+          "name": "checkpoint",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ],
+      "name": "Succeed",
+      "tag": 13
+    },
+    {
+      "docs": "`instance(parent_id)` → `instance(successor_id(..))`: create the successor, active, with the\nparent's store and root id.",
+      "fields": [
+        {
+          "name": "root_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "parent_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "checkpoint",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "type": {
+            "defined": "Config"
+          }
+        },
+        {
+          "name": "store",
+          "type": {
+            "vec": "u8"
+          }
+        }
+      ],
+      "name": "Spawn",
+      "tag": 14
+    }
+  ],
+  "name": "ferrata_attestation",
+  "state_types": [
+    "InstanceState"
+  ],
+  "types": [
+    {
+      "fields": [
+        {
+          "name": "address",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "proof",
+          "type": {
+            "vec": {
+              "vec": "u8"
+            }
+          }
+        },
+        {
+          "name": "conditions",
+          "type": {
+            "vec": {
+              "defined": "Condition"
+            }
+          }
+        },
+        {
+          "name": "slots",
+          "type": {
+            "vec": {
+              "defined": "SlotQuery"
+            }
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "AccountQuery"
+    },
+    {
+      "fields": [
+        {
+          "name": "instance_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "chain_id",
+          "type": "u64"
+        },
+        {
+          "docs": "The beacon slot of the record the statements rest on.",
+          "name": "slot",
+          "type": "u64"
+        },
+        {
+          "docs": "The execution block the facts were proven at: the record's, or the last hop's.",
+          "name": "block_number",
+          "type": "u64"
+        },
+        {
+          "name": "block_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "docs": "How many EIP-2935 hops lie between the record and that block.",
+          "name": "hops",
+          "type": "u32"
+        },
+        {
+          "name": "statements",
+          "type": {
+            "vec": {
+              "defined": "Statement"
+            }
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "Attestation"
+    },
+    {
+      "kind": "enum",
+      "name": "Cmp",
+      "variants": [
+        {
+          "name": "Eq"
+        },
+        {
+          "name": "Ne"
+        },
+        {
+          "name": "Lt"
+        },
+        {
+          "name": "Le"
+        },
+        {
+          "name": "Gt"
+        },
+        {
+          "name": "Ge"
+        }
+      ]
+    },
+    {
+      "fields": [
+        {
+          "name": "field",
+          "type": {
+            "defined": "Field"
+          }
+        },
+        {
+          "name": "cmp",
+          "type": {
+            "defined": "Cmp"
+          }
+        },
+        {
+          "name": "rhs",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "Condition"
+    },
+    {
+      "fields": [
+        {
+          "docs": "The execution chain id (EIP-155) of the chain. Every record of the instance carries it,\nand every statement identifier is derived from it. The program cannot check that it\nbelongs to `genesis_validators_root`: nothing a light client verifies commits to it. It is\npart of the instance id a consumer pins, and the off-chain checkpoint verification\ncompares the two.",
+          "name": "chain_id",
+          "type": "u64"
+        },
+        {
+          "name": "sync_committee_size",
+          "type": "u32"
+        },
+        {
+          "name": "slots_per_epoch",
+          "type": "u64"
+        },
+        {
+          "name": "epochs_per_sync_committee_period",
+          "type": "u64"
+        },
+        {
+          "name": "min_sync_committee_participants",
+          "type": "u64"
+        },
+        {
+          "docs": "Fork versions, indexed like `ChainSpec::versions`.",
+          "name": "fork_versions",
+          "type": {
+            "array": [
+              {
+                "array": [
+                  "u8",
+                  4
+                ]
+              },
+              9
+            ]
+          }
+        },
+        {
+          "docs": "Fork activation epochs, indexed like `ChainSpec::epochs`.",
+          "name": "fork_epochs",
+          "type": {
+            "array": [
+              "u64",
+              9
+            ]
+          }
+        },
+        {
+          "name": "genesis_validators_root",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "docs": "Unix seconds of slot 0.",
+          "name": "genesis_time",
+          "type": "u64"
+        },
+        {
+          "name": "seconds_per_slot",
+          "type": "u64"
+        },
+        {
+          "docs": "The light-client layout the store starts in, which is the bootstrap's (`LcFork` as\n0 = Altair … 4 = Gloas). The store moves to a later layout when the chain reaches a later\nfork of `fork_epochs` (`ferrata_core::steps::store_for_update`); its current layout is in\nits encoding (`InstanceState::store`).",
+          "name": "store_fork",
+          "type": "u8"
+        },
+        {
+          "docs": "How many transactions a committee adoption is split into (1, 2, 4, …).",
+          "name": "adoption_parts",
+          "type": "u8"
+        },
+        {
+          "docs": "The weak-subjectivity period in epochs (`ferrata_core::ws`), computed off chain from the\ncheckpoint state's total active balance with `ws::compute_weak_subjectivity_period`; not\nzero. Every transaction that creates or extends the instance is valid only before the\nperiod of the instance's finalized header ends, by the sequencer's clock\n([`Config::ws_end_ms`]); a successor must keep it unchanged.",
+          "name": "ws_period_epochs",
+          "type": "u64"
+        }
+      ],
+      "kind": "struct",
+      "name": "Config"
+    },
+    {
+      "kind": "enum",
+      "name": "Fact",
+      "variants": [
+        {
+          "fields": [
+            {
+              "name": "address",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "nonce",
+              "type": "u64"
+            },
+            {
+              "name": "balance",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "storage_root",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "code_hash",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
+          ],
+          "name": "Account"
+        },
+        {
+          "fields": [
+            {
+              "name": "address",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "slot",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "value",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
+          ],
+          "name": "Storage"
+        },
+        {
+          "fields": [
+            {
+              "name": "tx_index",
+              "type": "u64"
+            },
+            {
+              "name": "log_index",
+              "type": "u64"
+            },
+            {
+              "name": "address",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "topics",
+              "type": {
+                "vec": {
+                  "array": [
+                    "u8",
+                    32
+                  ]
+                }
+              }
+            },
+            {
+              "name": "data",
+              "type": {
+                "vec": "u8"
+              }
+            }
+          ],
+          "name": "Log"
+        },
+        {
+          "fields": [
+            {
+              "name": "address",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "slot",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "leaf_index",
+              "type": "u64"
+            },
+            {
+              "name": "leaf",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "root",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
+          ],
+          "name": "AccumulatorLeaf"
+        }
+      ]
+    },
+    {
+      "kind": "enum",
+      "name": "Field",
+      "variants": [
+        {
+          "name": "Nonce"
+        },
+        {
+          "name": "Balance"
+        },
+        {
+          "name": "StorageRoot"
+        },
+        {
+          "name": "CodeHash"
+        },
+        {
+          "name": "Value"
+        },
+        {
+          "name": "Emitter"
+        },
+        {
+          "fields": [
+            {
+              "name": "0",
+              "type": "u8"
+            }
+          ],
+          "name": "Topic"
+        },
+        {
+          "fields": [
+            {
+              "name": "0",
+              "type": "u32"
+            }
+          ],
+          "name": "DataWord"
+        }
+      ]
+    },
+    {
+      "fields": [
+        {
+          "name": "account_proof",
+          "type": {
+            "vec": {
+              "vec": "u8"
+            }
+          }
+        },
+        {
+          "name": "storage_proof",
+          "type": {
+            "vec": {
+              "vec": "u8"
+            }
+          }
+        },
+        {
+          "name": "header",
+          "type": {
+            "vec": "u8"
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "Hop"
+    },
+    {
+      "fields": [
+        {
+          "name": "id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "type": {
+            "defined": "Config"
+          }
+        },
+        {
+          "docs": "False until the initial committee is adopted.",
+          "name": "active",
+          "type": "bool"
+        },
+        {
+          "docs": "`CompactStore` encoding.",
+          "name": "store",
+          "type": {
+            "vec": "u8"
+          }
+        },
+        {
+          "docs": "Jobs applied so far (including the activation).",
+          "name": "applied",
+          "type": "u64"
+        },
+        {
+          "docs": "The root instance id consumers bind to: the instance's own id for an instance `Init`\ncreated, the parent's root id for a successor.",
+          "name": "root_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "docs": "The instance this one succeeds; all zero for a root instance.",
+          "name": "parent_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "InstanceState"
+    },
+    {
+      "fields": [
+        {
+          "name": "instance_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "job_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "committee_size",
+          "type": "u32"
+        },
+        {
+          "docs": "`Job` encoding.",
+          "name": "job",
+          "type": {
+            "vec": "u8"
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "JobState"
+    },
+    {
+      "fields": [
+        {
+          "name": "root",
+          "type": "u32"
+        },
+        {
+          "name": "leaf_index",
+          "type": "u64"
+        },
+        {
+          "name": "leaf",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "path",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "LeafQuery"
+    },
+    {
+      "fields": [
+        {
+          "name": "tx_index",
+          "type": "u64"
+        },
+        {
+          "name": "log_index",
+          "type": "u64"
+        },
+        {
+          "name": "proof",
+          "type": {
+            "vec": {
+              "vec": "u8"
+            }
+          }
+        },
+        {
+          "name": "conditions",
+          "type": {
+            "vec": {
+              "defined": "Condition"
+            }
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "LogQuery"
+    },
+    {
+      "fields": [
+        {
+          "name": "fact",
+          "type": "u32"
+        },
+        {
+          "name": "field",
+          "type": {
+            "defined": "Field"
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "Operand"
+    },
+    {
+      "fields": [
+        {
+          "name": "instance_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "docs": "The instance's chain id (`Config::chain_id`).",
+          "name": "chain_id",
+          "type": "u64"
+        },
+        {
+          "docs": "`HeaderRecord` encoding (`ferrata_core::witness::HeaderRecord`).",
+          "name": "record",
+          "type": {
+            "vec": "u8"
+          }
+        },
+        {
+          "docs": "The root id of the instance that wrote the record (`InstanceState::root_id`): a request\nbound to it is served as well as one bound to `instance_id`.",
+          "name": "root_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "RecordState"
+    },
+    {
+      "fields": [
+        {
+          "name": "left",
+          "type": {
+            "defined": "Operand"
+          }
+        },
+        {
+          "name": "cmp",
+          "type": {
+            "defined": "Cmp"
+          }
+        },
+        {
+          "name": "right",
+          "type": {
+            "defined": "Operand"
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "Relation"
+    },
+    {
+      "fields": [
+        {
+          "docs": "The instance the caller is bound to: a record of another instance refuses.",
+          "name": "instance_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "docs": "The chain id the caller expects: a record of another chain refuses.",
+          "name": "chain_id",
+          "type": "u64"
+        },
+        {
+          "docs": "The RLP header of the record's execution block, for a record that binds a block hash\nonly (a finalized header in the Gloas layout). It must hash to the recorded hash; the\nblock number, the state root and the receipts root are then read from it. `None` for\na record that holds the payload's fields.",
+          "name": "header",
+          "type": {
+            "option": {
+              "vec": "u8"
+            }
+          }
+        },
+        {
+          "docs": "Hops from the record's block to the block the facts are proven at, newest first.",
+          "name": "hops",
+          "type": {
+            "vec": {
+              "defined": "Hop"
+            }
+          }
+        },
+        {
+          "name": "accounts",
+          "type": {
+            "vec": {
+              "defined": "AccountQuery"
+            }
+          }
+        },
+        {
+          "name": "logs",
+          "type": {
+            "vec": {
+              "defined": "LogQuery"
+            }
+          }
+        },
+        {
+          "name": "leaves",
+          "type": {
+            "vec": {
+              "defined": "LeafQuery"
+            }
+          }
+        },
+        {
+          "name": "relations",
+          "type": {
+            "vec": {
+              "defined": "Relation"
+            }
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "Request"
+    },
+    {
+      "fields": [
+        {
+          "name": "slot",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "proof",
+          "type": {
+            "vec": {
+              "vec": "u8"
+            }
+          }
+        },
+        {
+          "name": "conditions",
+          "type": {
+            "vec": {
+              "defined": "Condition"
+            }
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "SlotQuery"
+    },
+    {
+      "fields": [
+        {
+          "name": "id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "fact",
+          "type": {
+            "defined": "Fact"
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "Statement"
+    }
+  ],
+  "version": "2"
+}

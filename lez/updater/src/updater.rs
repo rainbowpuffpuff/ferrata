@@ -26,7 +26,8 @@ use ferrata_core::{
 use ferrata_lez_wire::{
     header_actor, instance_actor, instance_id, instance_seed, job_actor, job_id, Config, InstanceState, Message,
 };
-use lee::{AccountId, Actor, PrivateKey, PublicAccountEvidence, PublicKey};
+use lee::{AccountId, Actor, PublicAccountEvidence};
+use crate::lez::PayerKey;
 use sha2::{Digest, Sha256};
 
 use crate::{
@@ -573,7 +574,7 @@ pub struct Updater {
     /// The daemon's name (logs, metrics).
     pub label: String,
     pub inst: Instance,
-    payer: PrivateKey,
+    payer: PayerKey,
     pub payer_id: AccountId,
     tag: [u8; 32],
     pub fees: Fees,
@@ -683,14 +684,13 @@ impl Updater {
     pub fn new(
         label: &str,
         inst: Instance,
-        payer: PrivateKey,
+        payer: PayerKey,
         fees: Fees,
         policy: Policy,
         sources: Vec<Box<dyn Source>>,
         state_dir: Option<PathBuf>,
     ) -> Result<Self> {
-        let pk = PublicKey::new_from_private_key(&payer);
-        let payer_id = AccountId::from(&pk);
+        let payer_id = crate::lez::payer_account(&payer);
         let tag: [u8; 32] = Sha256::digest(format!("{label}/{payer_id:?}").as_bytes()).into();
         let mut me = Self {
             label: label.to_string(),

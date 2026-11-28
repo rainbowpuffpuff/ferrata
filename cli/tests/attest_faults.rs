@@ -75,7 +75,8 @@ use common::{
 };
 use ferrata_core::witness::CompactStore;
 use ferrata_lez_wire::{header_actor, instance_actor, InstanceState, Message};
-use lee::{AccountId, PrivateKey, PublicKey, V03State};
+use harness::compat::AccountKey;
+use lee::{AccountId, V03State};
 use lee_core::account::Account;
 use serde_json::{json, Value};
 
@@ -102,12 +103,14 @@ fn fixture(name: &str) -> PathBuf {
     Path::new(FIXTURE).join(name)
 }
 
-fn payer_key() -> PrivateKey {
-    PrivateKey::try_new([0x5a; 32]).unwrap()
+/// The payer's key: a private key up to rc3, the account's secret from v0.4.0 (LEZ #1135); the same 32 bytes either
+/// way, as `ferrata attest --key` reads them.
+fn payer_key() -> AccountKey {
+    harness::compat::account_key([0x5a; 32])
 }
 
 fn payer() -> AccountId {
-    AccountId::from(&PublicKey::new_from_private_key(&payer_key()))
+    harness::compat::account_of(&payer_key())
 }
 
 // ---- the zone: LEZ's block application behind the sequencer's JSON-RPC methods ------------------------------------
@@ -144,6 +147,21 @@ struct Zone {
     turned_away: Vec<String>,
 }
 
+#[cfg(not(feature = "lez-040"))]
+fn outcome_block(block_id: u64, prev_block_hash: HashType, timestamp: u64, transactions: Vec<LeeTransaction>, reverted: Vec<u64>) -> HashableBlockData {
+    HashableBlockData { block_id, prev_block_hash, timestamp, transactions, reverted }
+}
+#[cfg(feature = "lez-040")]
+fn outcome_block(
+    block_id: u64,
+    prev_block_hash: HashType,
+    timestamp: u64,
+    transactions: Vec<LeeTransaction>,
+    receipts: Vec<common::block::TransactionReceipt>,
+) -> HashableBlockData {
+    HashableBlockData { block_id, prev_block_hash, timestamp, transactions, receipts }
+}
+
 /// The fee program's payee: LEZ's test block producer (claimed in the genesis state, as LEZ's own tests do).
 fn producer() -> FeePayee {
     FeePayee::Present(common::test_utils::producer_account_for_testing())
@@ -153,9 +171,13 @@ impl Zone {
     /// LEZ's pre-genesis state of a local network, the producer's reward account, the payer funded, and the attestation
     /// program deployed at genesis; then its genesis block (id 1), stamped `clock_ms`.
     fn genesis(clock_ms: u64) -> Self {
-        let mut state = testnet_initial_state::initial_state(false)
-            .with_public_accounts([common::test_utils::producer_seed(), (payer(), Account::funded(1 << 100))])
-            .with_genesis_programs([(harness::ferrata_program(), true)]);
+        // v0.4.0 removed the cross-zone programs, and initial_state's switch for them (LEZ #1147).
+        #[cfg(not(feature = "lez-040"))]
+        let base = testnet_initial_state::initial_state(false);
+        #[cfg(feature = "lez-040")]
+        let base = testnet_initial_state::initial_state();
+        let state = base.with_public_accounts([common::test_utils::producer_seed(), (payer(), Account::funded(1 << 100))]);
+        let mut state = harness::compat::genesis_programs(state, [(harness::ferrata_program(), true)]);
         let genesis = Self::block(&state, 1, HashType::default(), clock_ms, Vec::new()).0;
         apply_block(None, &genesis, &mut state).expect("genesis");
         Self {
@@ -194,13 +216,13 @@ impl Zone {
                 kept.push(tx);
             }
         }
-        let (summary, payout, reverted) = derive_block_summary(state, &kept, id, ts).expect("block summary");
+        // The block's outcomes: the reverted positions up to rc3, a receipt per user transaction from v0.4.0 (LEZ #1107).
+        let (summary, payout, outcomes) = derive_block_summary(state, &kept, id, ts).expect("block summary");
         let mut txs = kept.clone();
         txs.push(LeeTransaction::Public(fee_invocation(summary, payout, producer())));
         txs.push(LeeTransaction::Public(clock_invocation(id, ts)));
         (
-            HashableBlockData { block_id: id, prev_block_hash: prev, timestamp: ts, transactions: txs, reverted }
-                .into_pending_block(),
+            outcome_block(id, prev, ts, txs, outcomes).into_pending_block(),
             kept,
         )
     }
@@ -212,7 +234,7 @@ impl Zone {
         let (block, kept) = Self::block(&self.state, id, self.tip.hash, ts, std::mem::take(&mut self.pending));
         apply_block(Some(&self.tip), &block, &mut self.state).expect("the zone applies its own block");
         for (i, tx) in kept.into_iter().enumerate() {
-            self.included.push((tx.hash().to_string(), id, block.body.reverted.contains(&(i as u64)), tx));
+            self.included.push((tx.hash().to_string(), id, block.body.is_reverted(i), tx));
         }
         self.tip = Tip::from(&block);
         self.blocks.push(block);
@@ -230,6 +252,10 @@ impl Zone {
         let p0 = params.get(0).cloned().unwrap_or(Value::Null);
         let err = |e: serde_json::Error| (-32602, e.to_string());
         match method {
+            // LEZ v0.4.0's status (the tool's version check, src/lezver.rs); an rc sequencer answers -32601, as below.
+            "getSequencerStatus" if cfg!(feature = "lez-040") => {
+                Ok(json!({ "state": "online", "height": self.tip.block_id, "isOurTurn": true }))
+            }
             "getLastBlockId" => Ok(json!(self.tip.block_id)),
             "getBlock" => {
                 let id: u64 = serde_json::from_value(p0).map_err(err)?;

@@ -77,7 +77,8 @@ fn an_update_verified_privately_applies_to_the_public_instance() {
         run.proof_bytes,
     );
     assert!(run.charge.revert.is_none());
-    assert_eq!(run.charge.gas_stor, fee_core::market::PRIVATE_GAS_STOR);
+    let lee_tx = harness::settle::LeeTransaction::PrivacyPreserving(run.tx.clone());
+    assert_eq!(run.charge.gas_stor, compat::private_storage_gas(&lee_tx));
     assert_eq!(run.charge.gas_exec, fee_core::market::PRIVATE_VERIFY_GAS + run.charge.cycles);
 
     // 2. A handoff (update_1 as served: it hands over the period-1901 committee), with the

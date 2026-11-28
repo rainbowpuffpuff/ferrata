@@ -54,6 +54,8 @@
         "bridge_time",
         "history_hops_review",
         "interrupted_operations",
+        "lez040",
+        "lez040_guards",
         "redteam_attest",
         "sepolia",
         "statements_same_block",

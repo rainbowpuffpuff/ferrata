@@ -1,0 +1,105 @@
+2026-11-28T02:18:49.365035Z  INFO sequencer_service: Starting with config config={"home":"work/seq","max_num_tx_in_block":20,"mempool_max_size":1000,"mempool_max_per_account":16,"block_create_timeout":"15s","retry_pending_blocks_timeout":"5s","bedrock_config":{"channel_id":"0101010101010101010101010101010101010101010101010101010101010101","node_url":"http://localhost:18080/","auth":null,"priority_fee_percent":12,"stale_refund_slots":300,"backfill_batch_slots":10000},"genesis":{"channel_params":{"minimum_sequencer_stake":149,"posting_timeframe":300,"posting_timeout":25,"max_block_size":1048576,"finality_depth":35},"actions":[{"supply_account":{"recipient":{"identified":{"key":"00346980052d24464b9669f2bd0cdec4d441c3ff3b358ffcc9477a5247a096f84c"}},"balance":10000000000000}},{"supply_account":{"recipient":{"identified":{"key":"001ad39d12ff0cd1562c4095f8f937c35292ae1955661e781dba1a6f0f7c3b99a6"}},"balance":20000000000000}},{"supply_private_account":{"address":"44KVvzvh2ephQU9aR5snboGUXKgS1FnPYh1W4KZKwmhm","balance":10000000000000}},{"supply_private_account":{"address":"478hD6LXFTYu5gRRkWkCyXPRsWgCwAfRredoCUfxr5b9","balance":20000000000000}}]},"metrics_listen_address":"127.0.0.1:19290","gossip":{"listen_addr":"/ip4/127.0.0.1/udp/19190/quic-v1","bootstrap_peers":[]}} channel_signing_key_file=work/seq/channel_signing_key funding_public_key=2e03b2eff5a45478e7e79668d2a146cf2c5c7925bce927f2b1c67f2ab4fc0d26
+2026-11-28T02:18:49.390592Z  INFO sequencer_service: Storage Actor spawned
+2026-11-28T02:18:49.391377Z  INFO sequencer_service: Bedrock Sharding Pool Actor spawned
+2026-11-28T02:18:49.392158Z  INFO sequencer_service: Channel signing key loaded public_key=00053a79ad53b8bb43b547152b6b32c889aa3dfa7a958fe125ac235609c40a98
+2026-11-28T02:18:49.394620Z  INFO sequencer_service: Stake Config PubSub Actor spawned
+2026-11-28T02:18:49.395150Z  INFO sequencer_service: Slasher Actor spawned
+2026-11-28T02:18:49.395201Z  INFO sequencer_service: Channel Signing Actor spawned
+2026-11-28T02:18:49.560459Z  INFO sequencer_genesis: Genesis fingerprint fingerprint=0b74f01afbc90b4b8b1701ebca7e84cd1c5f2094e019e3d6e4ff518f11f706c7
+2026-11-28T02:18:49.560678Z  INFO sequencer_executor_actor::actor::state: No stored channel view; starting on the final tier
+2026-11-28T02:18:49.561933Z  INFO sequencer_executor_actor::actor::state: Channel does not exist yet; starting it as channel creator
+2026-11-28T02:18:49.720368Z  INFO sequencer_genesis: Genesis fingerprint fingerprint=0b74f01afbc90b4b8b1701ebca7e84cd1c5f2094e019e3d6e4ff518f11f706c7
+2026-11-28T02:18:51.205892Z  INFO sequencer_executor_actor::actor::state::online: Producer reward account (stake ownership) reward_account=GSUpGVn7btQfLohkUTiGbU5BEpSeh5u7przX646JZZro
+2026-11-28T02:18:51.207066Z  INFO sequencer_service: Executor Actor spawned
+2026-11-28T02:18:51.212136Z  INFO libp2p_swarm: local_peer_id=12D3KooW9pSnwQMMoodszu68zbJ4Mv6uaEyALQuGceQAFQQaPPuR
+2026-11-28T02:18:51.213756Z  INFO sequencer_gossip_actor::actor: Gossip listening listen_addrs=[/ip4/127.0.0.1/udp/19190/quic-v1] peer_id=12D3KooW9pSnwQMMoodszu68zbJ4Mv6uaEyALQuGceQAFQQaPPuR
+2026-11-28T02:18:51.214001Z  INFO sequencer_service: Gossip network started peer_id=12D3KooW9pSnwQMMoodszu68zbJ4Mv6uaEyALQuGceQAFQQaPPuR
+2026-11-28T02:18:51.214070Z  INFO sequencer_service: Gossip Actor spawned
+2026-11-28T02:18:51.214644Z  INFO sequencer_rpc_server_actor::actor: Starting RPC server addr=127.0.0.1:19390
+2026-11-28T02:18:51.215000Z  INFO sequencer_service: RPC Server Actor spawned
+2026-11-28T02:18:51.215030Z  INFO sequencer_service: Block production scheduler started
+2026-11-28T02:19:06.394588Z  INFO sequencer_core: Created block transactions=2 elapsed=177.706156ms
+2026-11-28T02:19:06.394810Z  INFO sequencer_core: Publishing block block_id=2 pin=5ecc5140ec14e9d9db9322fff9cc58b75ffd6b6c22c5a89ef03fa183f23bc3e3
+2026-11-28T02:19:06.572430Z  INFO sequencer_executor_actor::actor: Block created block_id=2 producer=00053a79ad53b8bb43b547152b6b32c889aa3dfa7a958fe125ac235609c40a98
+2026-11-28T02:19:21.394483Z  INFO sequencer_core: Created block transactions=3 elapsed=178.88586ms
+2026-11-28T02:19:21.394583Z  INFO sequencer_core: Publishing block block_id=3 pin=c6baccb0a543e34936d1bd54bd0111b00ea33c3326356daabc54c3a9e51bbe35
+2026-11-28T02:19:21.574350Z  INFO sequencer_executor_actor::actor: Block created block_id=3 producer=00053a79ad53b8bb43b547152b6b32c889aa3dfa7a958fe125ac235609c40a98
+2026-11-28T02:19:36.397568Z  INFO sequencer_core: Created block transactions=2 elapsed=181.278626ms
+2026-11-28T02:19:36.397658Z  INFO sequencer_core: Publishing block block_id=4 pin=9002a58476e1be1f160044129b58adb29dcd1409ccbe2a8a360057d1af15ca56
+2026-11-28T02:19:36.586952Z  INFO sequencer_executor_actor::actor: Block created block_id=4 producer=00053a79ad53b8bb43b547152b6b32c889aa3dfa7a958fe125ac235609c40a98
+2026-11-28T02:19:51.422571Z  INFO sequencer_core: Created block transactions=2 elapsed=206.011997ms
+2026-11-28T02:19:51.422623Z  INFO sequencer_core: Publishing block block_id=5 pin=2a6a262bdc275e6b04b51f055ac3d41757fd48bfb51c8ff5afca6dc3a32cde1c
+2026-11-28T02:19:51.621812Z  INFO sequencer_executor_actor::actor: Block created block_id=5 producer=00053a79ad53b8bb43b547152b6b32c889aa3dfa7a958fe125ac235609c40a98
+2026-11-28T02:20:06.455588Z  INFO sequencer_core: Created block transactions=2 elapsed=239.784031ms
+2026-11-28T02:20:06.455665Z  INFO sequencer_core: Publishing block block_id=6 pin=dfe897eb22ddc88d0815f2b0412d184dd8040a079100744eab0d4ffe43a4a956
+2026-11-28T02:20:06.671357Z  INFO sequencer_executor_actor::actor: Block created block_id=6 producer=00053a79ad53b8bb43b547152b6b32c889aa3dfa7a958fe125ac235609c40a98
+2026-11-28T02:20:21.409793Z  INFO sequencer_core: Created block transactions=2 elapsed=193.850235ms
+2026-11-28T02:20:21.409873Z  INFO sequencer_core: Publishing block block_id=7 pin=ba7b306f32572d3879e3517fe287aae8f4ce3d090124a81b3c0be1736a012166
+2026-11-28T02:20:21.646147Z  INFO sequencer_executor_actor::actor: Block created block_id=7 producer=00053a79ad53b8bb43b547152b6b32c889aa3dfa7a958fe125ac235609c40a98
+2026-11-28T02:20:36.391745Z  INFO sequencer_core: Created block transactions=2 elapsed=175.57629ms
+2026-11-28T02:20:36.391821Z  INFO sequencer_core: Publishing block block_id=8 pin=f379abc9f517b56c8aeaa3896a3931bc1fdb50b6b4d36c6c2af4a4aaa55a655a
+2026-11-28T02:20:36.602575Z  INFO sequencer_executor_actor::actor: Block created block_id=8 producer=00053a79ad53b8bb43b547152b6b32c889aa3dfa7a958fe125ac235609c40a98
+2026-11-28T02:20:51.566007Z  INFO sequencer_core: Created block transactions=2 elapsed=350.425106ms
+2026-11-28T02:20:51.566088Z  INFO sequencer_core: Publishing block block_id=9 pin=21cb8e6f2f8410c9a7587a1b4b351c94daefb1e8b53bc496ee865c766baf7ee7
+2026-11-28T02:20:51.785909Z  INFO sequencer_executor_actor::actor: Block created block_id=9 producer=00053a79ad53b8bb43b547152b6b32c889aa3dfa7a958fe125ac235609c40a98
+2026-11-28T02:21:06.418981Z  INFO sequencer_core: Created block transactions=2 elapsed=201.033177ms
+2026-11-28T02:21:06.419062Z  INFO sequencer_core: Publishing block block_id=10 pin=0f86f6080feec3c3ac3588c1fcb94672bbabaa9709d6ee475eff57e53b836435
+2026-11-28T02:21:06.620855Z  INFO sequencer_executor_actor::actor: Block created block_id=10 producer=00053a79ad53b8bb43b547152b6b32c889aa3dfa7a958fe125ac235609c40a98
+2026-11-28T02:21:21.397654Z  INFO sequencer_core: Created block transactions=2 elapsed=182.194676ms
+2026-11-28T02:21:21.397752Z  INFO sequencer_core: Publishing block block_id=11 pin=e8d12297dfebd553fb03428f49b6b5ea168c139388c7b74bff8c6297107c8046
+2026-11-28T02:21:21.579771Z  INFO sequencer_executor_actor::actor: Block created block_id=11 producer=00053a79ad53b8bb43b547152b6b32c889aa3dfa7a958fe125ac235609c40a98
+2026-11-28T02:21:36.418671Z  INFO sequencer_core: Created block transactions=3 elapsed=202.329225ms
+2026-11-28T02:21:36.419164Z  INFO sequencer_core: Publishing block block_id=12 pin=64ada3a629bb7903dcaab41f87d745399e81f21c9e0b02a9ebf2c667b37dfaef
+2026-11-28T02:21:36.645154Z  INFO sequencer_executor_actor::actor: Block created block_id=12 producer=00053a79ad53b8bb43b547152b6b32c889aa3dfa7a958fe125ac235609c40a98
+2026-11-28T02:21:51.419418Z  INFO sequencer_core: Created block transactions=2 elapsed=202.784407ms
+2026-11-28T02:21:51.419511Z  INFO sequencer_core: Publishing block block_id=13 pin=585ce2fcf1f6c10edc2293b9b85ebf39940faf89ec29a2130836991f1d7801fa
+2026-11-28T02:21:51.624265Z  INFO sequencer_executor_actor::actor: Block created block_id=13 producer=00053a79ad53b8bb43b547152b6b32c889aa3dfa7a958fe125ac235609c40a98
+2026-11-28T02:22:06.384396Z  INFO sequencer_core: Created block transactions=3 elapsed=168.800587ms
+2026-11-28T02:22:06.384627Z  INFO sequencer_core: Publishing block block_id=14 pin=3d859c5b7e57f052a059351a115129ea507c16a1b236dbdab3985660eefba175
+2026-11-28T02:22:06.560825Z  INFO sequencer_executor_actor::actor: Block created block_id=14 producer=00053a79ad53b8bb43b547152b6b32c889aa3dfa7a958fe125ac235609c40a98
+2026-11-28T02:22:21.386689Z  INFO sequencer_core: Created block transactions=2 elapsed=170.994058ms
+2026-11-28T02:22:21.386808Z  INFO sequencer_core: Publishing block block_id=15 pin=a24ba37de5e13fdcf29fba8463ee184e0168e0b1ff5098fb9adb692fa26dc99c
+2026-11-28T02:22:21.561926Z  INFO sequencer_executor_actor::actor: Block created block_id=15 producer=00053a79ad53b8bb43b547152b6b32c889aa3dfa7a958fe125ac235609c40a98
+2026-11-28T02:22:36.455166Z  INFO sequencer_core: Created block transactions=3 elapsed=238.971135ms
+2026-11-28T02:22:36.455416Z  INFO sequencer_core: Publishing block block_id=16 pin=7bc247d0478492919d23a20a348f11bd8b14025e70bfc232448db7be7a0ca81e
+2026-11-28T02:22:36.694776Z  INFO sequencer_executor_actor::actor: Block created block_id=16 producer=00053a79ad53b8bb43b547152b6b32c889aa3dfa7a958fe125ac235609c40a98
+2026-11-28T02:22:51.394879Z  INFO sequencer_core: Created block transactions=2 elapsed=179.041809ms
+2026-11-28T02:22:51.394970Z  INFO sequencer_core: Publishing block block_id=17 pin=eed6b21b0a3629c0701fb029546d3a55960abc356d3ea54f489d14e018914224
+2026-11-28T02:22:51.579415Z  INFO sequencer_executor_actor::actor: Block created block_id=17 producer=00053a79ad53b8bb43b547152b6b32c889aa3dfa7a958fe125ac235609c40a98
+2026-11-28T02:23:06.450177Z  INFO sequencer_core: Created block transactions=3 elapsed=234.158523ms
+2026-11-28T02:23:06.450432Z  INFO sequencer_core: Publishing block block_id=18 pin=466d7ef0a74bb30c8233b6bd521e374751e2f3b0164e3c10ef5c84b734050c3a
+2026-11-28T02:23:06.685062Z  INFO sequencer_executor_actor::actor: Block created block_id=18 producer=00053a79ad53b8bb43b547152b6b32c889aa3dfa7a958fe125ac235609c40a98
+2026-11-28T02:23:21.392501Z  INFO sequencer_core: Created block transactions=2 elapsed=177.090769ms
+2026-11-28T02:23:21.392594Z  INFO sequencer_core: Publishing block block_id=19 pin=8dc8b09793de548c2317d3a9a44de903d1d11cc6ef09826158d83d530e55db77
+2026-11-28T02:23:21.582216Z  INFO sequencer_executor_actor::actor: Block created block_id=19 producer=00053a79ad53b8bb43b547152b6b32c889aa3dfa7a958fe125ac235609c40a98
+2026-11-28T02:23:36.475764Z  INFO sequencer_core: Created block transactions=3 elapsed=259.418023ms
+2026-11-28T02:23:36.475877Z  INFO sequencer_core: Publishing block block_id=20 pin=249858ca36584fb062ae02fddb6810f14509496330dca90038c4378e37512d23
+2026-11-28T02:23:36.744484Z  INFO sequencer_executor_actor::actor: Block created block_id=20 producer=00053a79ad53b8bb43b547152b6b32c889aa3dfa7a958fe125ac235609c40a98
+2026-11-28T02:23:51.215185Z  WARN libp2p_kad::behaviour: Failed to trigger bootstrap: No known peers.
+2026-11-28T02:23:51.395582Z  INFO sequencer_core: Created block transactions=2 elapsed=178.592097ms
+2026-11-28T02:23:51.395641Z  INFO sequencer_core: Publishing block block_id=21 pin=5bd9bf8779bb573265a1194bc5fdecd4994bfd49225ad33f2d7a48b7ef32a5d0
+2026-11-28T02:23:51.582443Z  INFO sequencer_executor_actor::actor: Block created block_id=21 producer=00053a79ad53b8bb43b547152b6b32c889aa3dfa7a958fe125ac235609c40a98
+2026-11-28T02:24:01.340253Z  INFO sequencer_service: Received SIGTERM
+2026-11-28T02:24:01.340438Z  INFO sequencer_service: Shutting down sequencer
+2026-11-28T02:24:01.340691Z  INFO sequencer_service::actor_handle: Stopping actor actor="kameo_actors::scheduler::Scheduler#9"
+2026-11-28T02:24:01.341179Z  INFO sequencer_service::actor_handle: Actor stopped actor="kameo_actors::scheduler::Scheduler#9"
+2026-11-28T02:24:01.341206Z  INFO sequencer_service::actor_handle: Killing actor actor="kameo_actors::scheduler::Scheduler#9"
+2026-11-28T02:24:01.341348Z  INFO sequencer_service::actor_handle: Stopping actor actor="sequencer_rpc_server_actor::actor::RpcServerActor#10"
+2026-11-28T02:24:01.341613Z  INFO sequencer_service::actor_handle: Actor stopped actor="sequencer_rpc_server_actor::actor::RpcServerActor#10"
+2026-11-28T02:24:01.341623Z  INFO sequencer_service::actor_handle: Killing actor actor="sequencer_rpc_server_actor::actor::RpcServerActor#10"
+2026-11-28T02:24:01.341653Z  INFO sequencer_service::actor_handle: Stopping actor actor="sequencer_gossip_actor::actor::GossipActor#3"
+2026-11-28T02:24:01.342315Z  INFO sequencer_service::actor_handle: Actor stopped actor="sequencer_gossip_actor::actor::GossipActor#3"
+2026-11-28T02:24:01.342341Z  INFO sequencer_service::actor_handle: Killing actor actor="sequencer_gossip_actor::actor::GossipActor#3"
+2026-11-28T02:24:01.342351Z  INFO sequencer_service::actor_handle: Stopping actor actor="sequencer_service::supervisor::SequencerSupervisor#6"
+2026-11-28T02:24:01.343179Z  INFO sequencer_service::actor_handle: Actor stopped actor="sequencer_service::supervisor::SequencerSupervisor#6"
+2026-11-28T02:24:01.343196Z  INFO sequencer_service::actor_handle: Killing actor actor="sequencer_service::supervisor::SequencerSupervisor#6"
+2026-11-28T02:24:01.343278Z  INFO sequencer_service::actor_handle: Stopping actor actor="sequencer_slasher_actor::actor::SlasherActor<sequencer_storage_actor::actor::StorageActor>#4"
+2026-11-28T02:24:01.343445Z  INFO sequencer_service::actor_handle: Actor stopped actor="sequencer_slasher_actor::actor::SlasherActor<sequencer_storage_actor::actor::StorageActor>#4"
+2026-11-28T02:24:01.343454Z  INFO sequencer_service::actor_handle: Killing actor actor="sequencer_slasher_actor::actor::SlasherActor<sequencer_storage_actor::actor::StorageActor>#4"
+2026-11-28T02:24:01.343465Z  INFO sequencer_service::actor_handle: Stopping actor actor="sharding_pool_actor::actor::ShardingPoolActor<sequencer_bedrock_actor::mock::MockBedrockActor, logos_blockchain_core::mantle::ops::channel::ChannelId>#1"
+2026-11-28T02:24:01.343738Z  INFO sequencer_service::actor_handle: Actor stopped actor="sharding_pool_actor::actor::ShardingPoolActor<sequencer_bedrock_actor::mock::MockBedrockActor, logos_blockchain_core::mantle::ops::channel::ChannelId>#1"
+2026-11-28T02:24:01.343753Z  INFO sequencer_service::actor_handle: Killing actor actor="sharding_pool_actor::actor::ShardingPoolActor<sequencer_bedrock_actor::mock::MockBedrockActor, logos_blockchain_core::mantle::ops::channel::ChannelId>#1"
+2026-11-28T02:24:01.343790Z  INFO sequencer_service::actor_handle: Stopping actor actor="sequencer_storage_actor::actor::StorageActor#0"
+2026-11-28T02:24:01.351503Z  INFO sequencer_service::actor_handle: Actor stopped actor="sequencer_storage_actor::actor::StorageActor#0"
+2026-11-28T02:24:01.351524Z  INFO sequencer_service::actor_handle: Killing actor actor="sequencer_storage_actor::actor::StorageActor#0"
+2026-11-28T02:24:01.351563Z  INFO sequencer_service: Sequencer shutdown complete

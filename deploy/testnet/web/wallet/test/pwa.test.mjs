@@ -94,6 +94,9 @@ test('scanned codes: receive codes (with an amount), ids, keys and names; anythi
   const id = '9mFZ4yVq5b2cX1n3HjK8pQrStUvWxYz12345678', pk = 'ab'.repeat(32);
   assert.deepEqual(parseScanned(`lez:${id}?pk=${pk}`), { to: `lez:${id}?pk=${pk}`, amount: null });
   assert.deepEqual(parseScanned(` lez:${id}?pk=${pk.toUpperCase()}&amount=1.5 `), { to: `lez:${id}?pk=${pk}`, amount: '1.5' });
+  const initial = '00' + 'ab'.repeat(32);
+  assert.deepEqual(parseScanned(`lez:${id}?pk=${initial}`), { to: `lez:${id}?pk=${initial}`, amount: null });
+  assert.equal(parseScanned(`lez:${id}?pk=${'ab'.repeat(32)}0`), null); // an odd 65 hex digits is neither version's key
   assert.deepEqual(parseScanned(`lez:${id}?pk=${pk}&amount=1.1234567891`), { to: `lez:${id}?pk=${pk}`, amount: null });
   assert.deepEqual(parseScanned(`lez:${id}`), { to: id, amount: null });
   assert.equal(parseScanned(`lez:${id}?pk=zz`), null);

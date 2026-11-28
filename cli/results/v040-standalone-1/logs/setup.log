@@ -1,0 +1,4 @@
+<box>/live-out/seq is set up
+  channel signing public key  a84aa6e4c1f1abe5206e964646fc1187c9a0f24496116792b18bdf31112b520e
+`start` creates the channel if it does not exist yet.
+Creating the channel stakes that key at genesis.

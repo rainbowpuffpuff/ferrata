@@ -1,0 +1,120 @@
+    Finished `test` profile [optimized + debuginfo] target(s) in 1m 53s
+     Running tests/e2e.rs (<box>/target-cli-v040/debug/deps/e2e-b82d92268d6ddb28)
+test names_nothing_catches_every_form ... ok
+  ok Fixed denomination: your deposit looks like every other deposit of 10 ETH (10000000000000000000 base units, 18 decimals).
+  ok Delayed claim: held for 3 h, so the claim's time does not point at your deposit.
+  ok Private fee path: the claim's LEZ fee is paid inside its proof (or by a relayer); no fee payment ties the claim to you.
+WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
+  ok Fixed denomination: your deposit looks like every other deposit of 10 ETH (10000000000000000000 base units, 18 decimals).
+  ok Delayed claim: held for 3 h, so the claim's time does not point at your deposit.
+  ok Private fee path: the claim's LEZ fee is paid inside its proof (or by a relayer); no fee payment ties the claim to you.
+WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
+sent: 0xceb0e837046ddcfaa81ec48c9b122ec30edda6cc01c21667e3631ad2f079132b in block 8
+  ok Held by your random delay: the claim will not follow the deposit closely in time.
+WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
+public: PLAINTEXT CLAIM: the whole witness is public — which deposit (leaf, depositor, j), the secret s, the destination; anyone can link this mint to the Ethereum deposit
+WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
+public: PLAINTEXT CLAIM: the whole witness is public — which deposit (leaf, depositor, j), the secret s, the destination; anyone can link this mint to the Ethereum deposit
+WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
+public: PLAINTEXT CLAIM: the whole witness is public — which deposit (leaf, depositor, j), the secret s, the destination; anyone can link this mint to the Ethereum deposit
+sent: plaintext claim of leaf 0 under root(cid, 16) (harness, block 10)
+  ok Released through a relayer: the recipient needs no ETH for gas.
+WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
+public: burn: the holder's account (a public holding), the token, the denomination, the time and the note (r, memo, mac, COut); not the Ethereum recipient (encrypted in the memo)
+  ok Released through a relayer: the recipient needs no ETH for gas.
+WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
+public: burn: the holder's account (a public holding), the token, the denomination, the time and the note (r, memo, mac, COut); not the Ethereum recipient (encrypted in the memo)
+sent: burn with tag counter 0 (harness, block 16)
+sent: 0x8ce3c3e1d302cc8bcdd0b12e435f498ce27bcc9038d6eb41bcd2bff2dc4ab03c in block 42
+test deposit_scan_claim_burn_release_and_recovery has been running for over 60 seconds
+  ok Fixed denomination: your deposit looks like every other deposit of 1 ETH (1000000000000000000 base units, 18 decimals).
+  ok Private destination: the receiving account and its balance stay private on LEZ.
+  ok Delayed claim: held for 9 h, so the claim's time does not point at your deposit.
+  ok Private fee path: the claim's LEZ fee is paid inside its proof (or by a relayer); no fee payment ties the claim to you.
+  ok Fixed denomination: your deposit looks like every other deposit of 1 ETH (1000000000000000000 base units, 18 decimals).
+  ok Private destination: the receiving account and its balance stay private on LEZ.
+  ok Delayed claim: held for 9 h, so the claim's time does not point at your deposit.
+  ok Private fee path: the claim's LEZ fee is paid inside its proof (or by a relayer); no fee payment ties the claim to you.
+sent: 0xaf3a1b46fa89b8e54ab4bac04777d633860aea6a2fc4d1218f58d01e938cf3d9 in block 43
+  ok Private claim: proven without saying which deposit it spends (no leaf index, no depositor).
+  ok Private destination: the account and its balance stay private.
+  ok Held by your random delay: the claim will not follow the deposit closely in time.
+  ok The LEZ fee is paid inside the proof (or by a relayer): no public fee payment ties the claim to you.
+public: private claim: N, the token, the denomination, the root read, the relayer, when (its block); not the deposit, the path, s, the private destination or a fee schedule range
+  ok Private claim: proven without saying which deposit it spends (no leaf index, no depositor).
+  ok Private destination: the account and its balance stay private.
+  ok The LEZ fee is paid inside the proof (or by a relayer): no public fee payment ties the claim to you.
+public: private claim: N, the token, the denomination, the root read, the relayer, when (its block); not the deposit, the path, s, the private destination or a fee schedule range
+  ok Private claim: proven without saying which deposit it spends (no leaf index, no depositor).
+  ok Private destination: the account and its balance stay private.
+  ok The LEZ fee is paid inside the proof (or by a relayer): no public fee payment ties the claim to you.
+public: private claim: N, the token, the denomination, the root read, the relayer, when (its block); not the deposit, the path, s, the private destination or a fee schedule range
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+sent: private claim of leaf 16 under root(cid, 17) (harness, private, block 35)
+  ok Burn from a private account: the holder stays private.
+  ok Fresh recipient address: nothing on Ethereum ties the release to your depositor address.
+  ok Released through a relayer: the recipient needs no ETH for gas.
+public: private burn: the note (r, memo, mac, COut), the token, the denomination and the time; not the holder (a private account, shown as an alias) or the Ethereum recipient (encrypted in the memo)
+  ok Burn from a private account: the holder stays private.
+  ok Fresh recipient address: nothing on Ethereum ties the release to your depositor address.
+  ok Released through a relayer: the recipient needs no ETH for gas.
+public: private burn: the note (r, memo, mac, COut), the token, the denomination and the time; not the holder (a private account, shown as an alias) or the Ethereum recipient (encrypted in the memo)
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+sent: burn with tag counter 11 (harness, private, block 36)
+  ok Released through a relayer: the recipient needs no ETH for gas.
+  ok Fresh recipient address: nothing on Ethereum ties the release to your depositor address.
+  ok Released through a relayer: the recipient needs no ETH for gas.
+  ok Fresh recipient address: nothing on Ethereum ties the release to your depositor address.
+  ok Released through a relayer: the recipient needs no ETH for gas.
+RECOVERY: 12 deposits (2 claimed, 10 unclaimed), 12 burns (2 released), holdings [(Public, 0, 0x0000000000000000000000000000000000000000, 8900000000000000000)]; 17 deposits in the vault
+  ok Fixed denomination: your deposit looks like every other deposit of 1 USDT (1000000 base units, 6 decimals).
+  ok Private destination: the receiving account and its balance stay private on LEZ.
+  ok Delayed claim: held for 5 h, so the claim's time does not point at your deposit.
+  ok Private fee path: the claim's LEZ fee is paid inside its proof (or by a relayer); no fee payment ties the claim to you.
+  ok Fixed denomination: your deposit looks like every other deposit of 1 USDT (1000000 base units, 6 decimals).
+  ok Private destination: the receiving account and its balance stay private on LEZ.
+  ok Delayed claim: held for 5 h, so the claim's time does not point at your deposit.
+  ok Private fee path: the claim's LEZ fee is paid inside its proof (or by a relayer); no fee payment ties the claim to you.
+sent: 0x76e6ab2672f61b4dd5040ebd55cd96a1c4a7a0f8bc016345b1d0de2a7ac69188 in block 2757
+  ok Fresh recipient address: nothing on Ethereum ties the release to your depositor address.
+  ok Released through a relayer: the recipient needs no ETH for gas.
+WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
+public: burn: the holder's account (a public holding), the token, the denomination, the time and the note (r, memo, mac, COut); not the Ethereum recipient (encrypted in the memo)
+sent: burn with tag counter 13 (queued)
+burn counter 13 stays reserved in <box>/e2e/ferrata/cli/../../tmp/cli/e2e/burn-journal/ferrata-burns.json until the burn is on the zone
+COUNTERS in flight: public /0 -> 12, public /1 -> 13 (the zone's next counter 12)
+  ok Fresh recipient address: nothing on Ethereum ties the release to your depositor address.
+  ok Released through a relayer: the recipient needs no ETH for gas.
+WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
+public: burn: the holder's account (a public holding), the token, the denomination, the time and the note (r, memo, mac, COut); not the Ethereum recipient (encrypted in the memo)
+sent: burn with tag counter 15 (queued)
+burn counter 15 stays reserved in <box>/e2e/ferrata/cli/../../tmp/cli/e2e/burn-journal/ferrata-burns.json until the burn is on the zone
+COUNTERS after a kill: the killed burn holds 14, the burn to another recipient takes 15
+  ok Fresh recipient address: nothing on Ethereum ties the release to your depositor address.
+  ok Released through a relayer: the recipient needs no ETH for gas.
+WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
+public: burn: the holder's account (a public holding), the token, the denomination, the time and the note (r, memo, mac, COut); not the Ethereum recipient (encrypted in the memo)
+sent: burn with tag counter 16 (queued)
+burn counter 16 stays reserved in <box>/e2e/ferrata/cli/../../tmp/cli/e2e/burn-journal/ferrata-burns.json until the burn is on the zone
+  ok Fresh recipient address: nothing on Ethereum ties the release to your depositor address.
+  ok Released through a relayer: the recipient needs no ETH for gas.
+WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
+public: burn: the holder's account (a public holding), the token, the denomination, the time and the note (r, memo, mac, COut); not the Ethereum recipient (encrypted in the memo)
+sent: burn with tag counter 18 (harness, block 45)
+burn counter 18 stays reserved in <box>/e2e/ferrata/cli/../../tmp/cli/e2e/burn-journal/ferrata-burns.json until the burn is on the zone
+COUNTERS recovered from the seed: [12, 13, 14, 15, 16, 18], 6 distinct NOut, next counter 19
+RECOVER (N1): the tool's journal (counter 18 open, applied): no line; a journal with 17 refused, 18 applied, 19 not on the zone: ["burn journal: counter 19, 19 base units of 0x0000000000000000000000000000000000000000 from public /0 to 0xE4E4e4e4E4E4e4E4E4e4e4e4E4e4E4E4e4E4E4e4 is reserved and not on the zone (interrupted before it was known to be sent)"]
+JOURNAL (L-C): a damaged journal: recover and release refused in 52 ms: the burn journal <box>/e2e/ferrata/cli/../../tmp/cli/e2e/burn-journal-other/ferrata-burns.json is damaged or not this tool's: it names 18446744073709551615 as this seed's next burn counter, 18446744073709551596 past the zone's next one (19), and the tool reserves at most 10 past the zone's next counter. Nothing was searched or sent. Move the file aside: `ferrata recover` and `ferrata release` find every burn the zone shows without it
+PAIRING (M-1): the zone's configuration 0x2f81fe1bf85daac230c4e95c7ce5b6ec49f70789b6fcdba03f737decd95c5d2b pairs with chain 1, but the Ethereum RPC serves chain 31337: refusing to go on (a burn binds the chain into COut, and no release could open it; use an RPC of chain 1)
+QUIET (M-2): claim send false no_delay true: 4 actor reads, none the nullifier's
+QUIET (M-2): claim send false no_delay false: 4 actor reads, none the nullifier's
+test deposit_scan_claim_burn_release_and_recovery ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 87.14s

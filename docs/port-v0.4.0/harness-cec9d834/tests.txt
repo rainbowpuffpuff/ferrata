@@ -1,0 +1,302 @@
+== harness-1
+-- (cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --no-fail-fast --lib --bins --test attest_native --test bridge_burn --test bridge_delist --test bridge_refusals --test costs_attestation -
+Running unittests src/lib.rs
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+Running unittests src/bin/ferrata-attest.rs
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+Running unittests src/bin/module_e2e.rs
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+Running unittests src/bin/perf_prove.rs
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+Running unittests src/bin/perf_state.rs
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+Running unittests src/bin/prove_attest.rs
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+Running unittests src/bin/prove_bridge.rs
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+Running unittests src/bin/prove_holdings.rs
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+Running unittests src/bin/prove_native_transfer.rs
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+Running unittests src/bin/prove_private.rs
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+Running unittests src/bin/prove_vault.rs
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+Running unittests src/bin/prove_vault_claim.rs
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+Running unittests src/bin/tables.rs
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+Running tests/attest_native.rs
+test the_pool_accepts_exactly_its_deposit ... ok
+test accumulator_leaves_of_the_shared_vectors_through_a_request ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+Running tests/bridge_burn.rs
+test burns_and_what_the_checkpoint_collects ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.31s
+Running tests/bridge_delist.rs
+test delisting_is_mirrored_on_lez_and_takes_no_claim_or_holding ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.33s
+Running tests/bridge_refusals.rs
+test rejected_repeated_and_capped_claims_reveal_no_deposit ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 16.50s
+Running tests/costs_attestation.rs
+test an_update_verified_privately_costs_what_it_is_charged ... ok
+test an_attestation_costs_the_same_whatever_the_chain_holds ... ok
+test init_and_succeed_cost_the_same_whatever_the_chain_holds ... ok
+test the_leaf_statement_costs_the_same_whatever_the_chain_holds ... ok
+test an_update_verified_in_one_call_costs_the_same_whatever_the_chain_holds ... ok
+test the_finality_update_costs_what_the_hourly_row_assumes ... ok
+test the_vault_pattern_costs_the_same_whatever_the_chain_holds ... ok
+test the_per_period_updates_cost_what_the_record_shows_and_do_not_grow ... ok
+test the_reference_consumer_costs_the_same_whatever_the_chain_holds ... ok
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 22.00s
+Running tests/exit_codes.rs
+test every_code_lies_in_a_block_of_its_owner ... ok
+test the_blocks_do_not_overlap ... ok
+test the_tables_name_every_core_code ... ok
+test the_other_programs_codes_are_blocks_of_their_own ... ok
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+Running tests/private_consumer.rs
+test a_private_consumer_calling_the_program_publishes_what_it_sends ... ok
+test a_private_consumer_reads_a_record ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.10s
+Running tests/redteam_bridge.rs
+test imp ... ok
+test init ... ok
+test brn ... ok
+test int ... ok
+test prv ... ok
+test ten ... ok
+test reg ... ok
+test ctl ... ok
+test clm ... ok
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 251.07s
+Running tests/redteam_lc.rs
+test lc_finality_and_headers ... ok
+test lc_init ... ok
+test lc_controls ... ok
+test lc_probe_stale_store_on_the_proven_path ... ok
+test lc_participation_and_slots ... ok
+test lc_newness_and_replays ... ok
+test lc_committees ... ok
+test lc_signatures ... ok
+test lc_steps ... ok
+test lc_synthetic ... ok
+test lc_successors_and_forks ... ok
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 55.29s
+Running tests/state_growth_bridge.rs
+test each_import_claim_and_burn_adds_one_account_of_a_fixed_size ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.53s
+Running tests/tenant.rs
+test r1_a_copied_plaintext_claim_does_not_block_the_owner ... ok
+test r1_the_paired_configuration_claims_after_a_rogue_one ... ok
+test separation_another_configurations_roles_and_accounts_reach_nothing ... ok
+test r2_other_configurations_holdings_cost_a_claim_nothing ... ok
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 26.36s
+-- exit 0
+-- (cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --no-fail-fast --doc -- --test-threads 4)
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+-- exit 0
+== harness-2
+-- (cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --no-fail-fast --test attest_cli --test attest_public --test bridge_f13 --test bridge_inbound --test bridge_private --test captured_commit
+Running tests/attest_cli.rs
+test the_configuration_cannot_be_sent ... ok
+test attesting_a_slot_an_account_and_a_log_and_refusing_a_false_predicate ... ok
+test an_update_is_advanced_and_the_same_one_again_is_refused ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 70.21s
+Running tests/attest_public.rs
+test the_reference_consumer_credits_a_transfer_once ... ok
+test every_kind_of_fact_is_attested_under_the_real_record ... ok
+test the_same_attestations_with_software_keccak_in_the_program ... ok
+test refusals_exit_with_their_codes_and_change_nothing ... ok
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.17s
+Running tests/bridge_f13.rs
+test a_collection_still_mints_after_sunset ... ok
+test a_collection_stays_within_its_configuration ... ok
+test a_collection_waits_for_the_admins_inbound_depth ... ok
+test a_collection_mints_the_attested_total_once ... ok
+test a_limit_splits_a_collection ... ok
+test a_token_not_registered_under_the_configuration_refuses ... ok
+test a_token_bucket_below_what_is_due_refuses_and_a_limit_within_it_succeeds ... ok
+test a_mint_freeze_stops_a_collection_until_it_ends ... ok
+test a_total_that_is_not_whole_lez_units_refuses_and_undoes_the_transaction ... ok
+test nobody_but_the_program_can_accrue_or_mint_fees ... ok
+test claims_stay_uniform_and_one_collection_names_no_user ... ok
+test old_and_new_schedule_private_claims_mint_the_same ... ok
+test old_and_new_schedule_public_claims_mint_the_same_and_an_unregistered_amount_is_refused ... ok
+test without_a_relayer_the_fixed_relay_fee_goes_to_the_fee_recipient ... ok
+test the_configurations_mint_freeze_stops_a_collection ... ok
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 39.27s
+Running tests/bridge_inbound.rs
+test the_bridge_codes_are_its_own_block ... ok
+test inbound_under_a_gloas_record ... ok
+test inbound_configuration_import_and_plaintext_claim ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.86s
+Running tests/bridge_private.rs
+test a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_read ... ok
+test a_private_claim_to_a_public_destination_and_the_refusals ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.06s
+Running tests/captured_committee_exposure.rs
+test a_captured_committee_mints_only_what_the_caps_let_through ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 22.85s
+Running tests/device_workload.rs
+test the_private_attestation_proves_the_work_the_record_measured ... ok
+test the_private_claim_proves_the_work_the_record_measured ... ok
+test the_private_burn_proves_the_work_the_record_measured ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 16.36s
+Running tests/holdings.rs
+test holdings_consumer ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.55s
+Running tests/immutable_program.rs
+thread 'main' (1) panicked at /upstream/lez-v0.4.0/lee/state_machine/core/src/program/mod.rs:772:57:
+message must decode from borsh: Custom { kind: InvalidData, error: "Invalid Option representation: 5. The first byte must be 0 or 1" }
+thread 'main' (1) panicked at /upstream/lez-v0.4.0/lee/state_machine/core/src/program/mod.rs:772:57:
+message must decode from borsh: Custom { kind: InvalidData, error: "Invalid Option representation: 5. The first byte must be 0 or 1" }
+test the_control_a_mutable_deployment_of_the_same_code_can_be_swapped ... ok
+test the_verification_logic_of_the_deployment_cannot_be_replaced ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.68s
+Running tests/stall.rs
+test a_stalled_instance_keeps_attesting_and_resumes_without_repair ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 184.74s
+Running tests/vault.rs
+test accumulator_leaves_through_the_program_on_a_synthetic_vault ... ok
+test the_vault_on_sepolia ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 56.37s
+-- exit 0
+== harness-3
+-- (cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --no-fail-fast --test attest_private --test bridge_burn_tag --test bridge_depth --test bridge_roles --test bridge_time --test history_hops
+Running tests/attest_private.rs
+test a_private_consumer_calling_attest_publishes_its_request ... ok
+test a_private_consumer_attests_a_transfer_and_only_the_read_is_public ... ok
+test a_private_attestation_that_does_not_verify_cannot_be_proven ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.79s
+Running tests/bridge_burn_tag.rs
+test a_burn_tag_is_used_once ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.80s
+Running tests/bridge_depth.rs
+test the_admin_sets_the_inbound_depth_and_no_valid_claim_is_lost ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.03s
+Running tests/bridge_roles.rs
+test a_private_holder_transfers ... ok
+test transfers_handover_multisig_watchers_and_keyless_sunset ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 25.96s
+Running tests/bridge_time.rs
+test freezes_and_caps_follow_attested_time_only ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 19.36s
+Running tests/history_hops_review.rs
+test one_leaf_under_two_slots_of_one_contract_has_two_leaf_identifiers ... ok
+test hop_chain_edges_reuse_loops_order_and_padding ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 55.87s
+Running tests/interrupted_operations.rs
+test a_claim_interrupted_between_its_proof_and_its_sending ... ok
+test a_burn_interrupted_and_a_burn_whose_note_was_never_recorded ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.64s
+Running tests/lez040.rs
+test a_declared_gas_limit_below_private_verification_is_refused ... ok
+test a_declared_payer_absent_from_nonces_and_witness_is_not_fee_authorized ... ok
+test a_declared_fee_and_an_in_proof_fee_are_refused_as_a_double_fee ... ok
+test a_private_transaction_with_a_public_payer_settles_and_charges_only_that_payer ... ok
+test an_in_proof_fee_still_classifies_as_a_private_fee_view ... ok
+test the_fee_program_is_the_system_upgraders_pda_of_its_name ... ok
+test a_private_transaction_pays_storage_for_its_size_with_the_proof_at_proof_bytes ... ok
+test every_receipt_records_what_settlement_charged ... ok
+test a_refused_transaction_has_a_failed_receipt_and_still_pays ... ok
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 27.74s
+Running tests/lez040_guards.rs
+test a_private_native_balance_increase_of_the_bridge_escrow_is_refused ... ignored, on LEZ v0.4.0 in the harness the private transaction's credit to the bridge escrow reverts in execution (Program violated execution rules) and settles, so the bridge guard is not reached; cause not established (box run 28 Nov 2026)
+test a_public_native_balance_increase_does_not_modify_the_system_registry_actor_state ... ignored, on LEZ v0.4.0 in the harness the public native transfer to this system account reverts in execution (Program violated execution rules) before any state guard runs; cause not established (box run 28 Nov 2026)
+test a_public_native_balance_increase_of_the_bridge_escrow_is_accepted ... ignored, on LEZ v0.4.0 in the harness the public native transfer to this system account reverts in execution (Program violated execution rules) before any state guard runs; cause not established (box run 28 Nov 2026)
+test a_public_transfer_to_the_clock_is_refused ... ignored, on LEZ v0.4.0 in the harness the public native transfer to this system account reverts in execution (Program violated execution rules) before any state guard runs; cause not established (box run 28 Nov 2026)
+test a_public_transfer_to_each_fee_account_is_refused_including_the_fee_inbox ... ok
+test result: ok. 1 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 1.04s
+Running tests/redteam_attest.rs
+test acc ... ok
+test hop ... ok
+test id ... ok
+test hdr ... ok
+test bind ... ok
+test consumer ... ok
+test log ... ok
+test rel ... ok
+test sto ... ok
+test leaf ... ok
+test ro_prv ... ok
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 133.41s
+Running tests/sepolia.rs
+test the_upgrade_through_the_proven_path_in_dev_mode ... ok
+test sepolia_through_the_gloas_fork_over_the_public_path ... ok
+test real_sepolia_facts_under_a_gloas_record ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 61.93s
+Running tests/statements_same_block.rs
+test the_second_spend_of_the_same_note_in_one_block_is_refused ... ok
+test private_statements_settle_in_one_block_in_either_order ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.61s
+Running tests/successor.rs
+test prints_the_image_ids ... ok
+test the_weak_subjectivity_bound_on_init_and_open ... ok
+test a_successor_crosses_a_fork_not_in_the_schedule_fixed_at_init ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 11.91s
+-- exit 0
+== harness-4
+-- (cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --no-fail-fast --test bridge_controls --test bridge_secfix --test bridge_vault_storage --test history_hops --test private_placement --test
+Running tests/bridge_controls.rs
+test registry_fees_caps_freezes_and_sunset ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 31.39s
+Running tests/bridge_secfix.rs
+test c1_b_a_claim_cannot_block_register ... ok
+test c1_d_a_claim_cannot_block_an_import ... ok
+test c1_a_a_claim_cannot_block_init ... ok
+test c1_f_a_mint_is_accepted_only_at_its_holder ... ok
+test c1_c_a_claim_cannot_destroy_a_pending_claim ... ok
+test f1_init_refuses_the_admin_as_freeze_authority ... ok
+test h1_a_nested_import_is_refused ... ok
+test h1_b_import_with_a_sender_is_refused ... ok
+test c1_e_a_claim_cannot_block_a_burn ... ok
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.61s
+Running tests/bridge_vault_storage.rs
+test the_bridge_reads_the_vaults_own_registry_fees_and_tree ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.95s
+Running tests/history_hops.rs
+test hop_chains_on_mainnet ... ok
+test hop_chains_on_sepolia ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 58.64s
+Running tests/private_placement.rs
+test a_forged_update_cannot_be_proven ... ok
+test a_private_sender_of_another_program_is_refused ... ok
+test an_update_verified_privately_applies_to_the_public_instance ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.08s
+Running tests/public_path.rs
+test a_finality_update_in_one_public_transaction ... ok
+test a_finality_update_is_three_transactions ... ok
+test shell_costs ... ok
+test mainnet_replay_through_lez ... ok
+test refusals_exit_with_a_code_and_are_charged_what_they_used ... ok
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 28.50s
+Running tests/security_lc.rs
+test vs1_a_fabricated_chain_is_refused_through_the_program ... ok
+test f4_every_comparison_from_the_consumer ... ok
+test u5_every_listed_failure_mode_returns_its_code_through_the_program ... ok
+test vs2_and_f2_forgeries_are_refused_through_the_program ... ok
+test r3_records_stay_valid_after_committee_rotations ... ok
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 86.27s
+Running tests/security_privacy.rs
+test f8_two_deposits_full_diff ... ok
+test r11_several_private_reads_in_one_block ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.05s
+Running tests/validity_after_rotations.rs
+test a_statement_over_a_finalized_header_survives_three_committee_rotations ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 13.55s
+Running tests/vault_claim_hops.rs
+test a_broken_chain_is_refused_and_sends_nothing ... ok
+test a_private_claim_through_one_to_five_hops ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.75s
+Running tests/vault_consumer.rs
+test private_claims_that_do_not_verify_are_refused ... ok
+test a_private_kind_deposit_is_claimed_privately_by_its_destination ... ok
+test a_real_deposit_is_claimed_privately_once ... ok
+test a_real_deposit_is_claimed_publicly_once ... ok
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 75.73s
+Running tests/wallet_padding.rs
+test padded_attestation_claim_and_burn_have_the_wallets_public_shape_and_settle ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 24.66s
+-- exit 0

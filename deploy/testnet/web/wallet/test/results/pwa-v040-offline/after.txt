@@ -1,0 +1,28 @@
+PASS service worker controls the page
+PASS installable (Chrome's Page.getInstallabilityErrors is empty): []
+PASS manifest parsed without errors: []
+PASS offline copy holds every file of the build: 36 of 36
+PASS wallet created: FP2WANpCicP2zhNdXey9w8TWFTDrDGcUZsfbnQgywTz7
+PASS receive QR holds the receive code (zbar reads it back): zbar not installed
+PASS receive QR with an amount asked for: None
+PASS camera scan fills recipient and amount: lez:5YBTsTD1FPEBH6NA4rDQ… 3.25
+PASS camera released after the scan
+PASS photo scan fills the recipient
+PASS PIN set
+PASS passkey (PRF) set; stored: wraps only: created, credId, ct, iv, prfSalt
+PASS unlocked with the passkey
+PASS wrong PIN counted, right PIN unlocks
+PASS the passphrase still unlocks; the next lock offers the quick methods again
+PASS a passkey without PRF is refused, nothing saved: This passkey cannot derive an unlock key (its authenticator has no PRF). Nothing was saved
+PASS locks when the app leaves the screen (setting: right away)
+PASS notifications on (permission granted): ["function", "granted", "Permission: granted. Checks run every 15 s while the wallet is open (every 60 s in the background, where the system allows)."]
+PASS More shows the offline copy's build: Offline copy: build db2b78d0dc6d7b01, 36 files, each checked against its SHA-256 before it was kept.
+PASS offline: the app opens, unlocks and shows the receive QR: RPC unreachable
+PASS a new build shows the banner and reloads into it
+PASS a build whose file does not match its listed SHA-256 is refused: redundant
+PASS config.json {}: the page says it could not read the settings, no script error: This page could not read the network's settings (config.json: rpc is missing). Reload when online.
+PASS config.json null: the page says it could not read the settings, no script error: This page could not read the network's settings (config.json: not a settings object). Reload when online.
+PASS config.json {"rpc": "/rpc", "token": {"symbol": "LGO"}}: the page says it could not read the settings, no script error: This page could not read the network's settings (config.json: token.decimals is not a whole number from 0 to 3
+PASS no request left this origin
+PASS no script errors
+27 of 27

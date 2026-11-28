@@ -47,7 +47,15 @@ use residue_agg::{NonSigners, Sum};
 const EXPERIMENTAL: AccountId = AccountId::new([0x5e; 32]);
 
 /// The deployed light-client program's image id (`docs/image-ids.md`).
+#[cfg(not(feature = "lez-rc3"))]
 const DEPLOYED_ID: &str = "816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df";
+/// On LEZ v0.4.0-rc3 the attestation program's rc3 build (lez/results/v0.4.0-rc3/image-ids.md, `0xefd9aef7…`): the
+/// build embeds the LEZ tag's paths, so it differs from the deployed rc1 build.
+#[cfg(all(feature = "lez-rc3", not(feature = "lez-040")))]
+const DEPLOYED_ID: &str = "efd9aef79f65f57f9fc38c9bba69dc87058de2229de6d1be1e3de76935d23254";
+/// On LEZ v0.4.0 the attestation program's v0.4.0 build (lez/results/v0.4.0/image-ids.md), deployed nowhere yet.
+#[cfg(feature = "lez-040")]
+const DEPLOYED_ID: &str = "95a93abfe4073a7eaad8f86be311af45e7729f1c3dba7f1b0ce016b7b1b8e2f1";
 
 fn experimental_program() -> Program {
     Program::new_unchecked(
@@ -104,7 +112,7 @@ fn signing_committee<'a>(
 fn world_after_update_0() -> World {
     let mut chain = Chain::new();
     let state = std::mem::replace(&mut chain.state, V03State::new());
-    chain.state = state.with_named_programs([(EXPERIMENTAL, experimental_program())]);
+    chain.state = compat::named_programs(state, [(EXPERIMENTAL, experimental_program())]);
     let config = mainnet_config(2);
     let checkpoint = root(TRUSTED_BLOCK_ROOT);
     let bootstrap = mainnet_bootstrap();
@@ -371,7 +379,7 @@ fn a_342_signer_handoff_in_one_transaction() {
 fn a_zero_period_config_is_refused_at_init() {
     let mut chain = Chain::new();
     let state = std::mem::replace(&mut chain.state, V03State::new());
-    chain.state = state.with_named_programs([(EXPERIMENTAL, experimental_program())]);
+    chain.state = compat::named_programs(state, [(EXPERIMENTAL, experimental_program())]);
     let mut config = mainnet_config(2);
     config.epochs_per_sync_committee_period = 0;
     let inst = Instance::new(EXPERIMENTAL, config, root(TRUSTED_BLOCK_ROOT));

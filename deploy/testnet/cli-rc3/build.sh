@@ -21,9 +21,10 @@
 # The binary is linked to glibc and libpcsclite.so.1 (pcsc-lite) of the build machine.
 set -euo pipefail
 SRC="$(cd "${1:?usage: $0 SRC}" && pwd)"; HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-[ -f "$SRC/../upstream/lez-v0.4.0-rc3/Cargo.toml" ] || { echo "LEZ v0.4.0-rc3 not found at $SRC/../upstream/lez-v0.4.0-rc3" >&2; exit 1; }
+LEZ_TAG=v0.4.0-rc3; LEZ="$SRC/../upstream/lez-$LEZ_TAG"
+[ -f "$LEZ/Cargo.toml" ] || { echo "LEZ $LEZ_TAG not found at $LEZ" >&2; exit 1; }
 ( cd "$SRC/lez" && { [ "$(scripts/lez-select.sh --show)" = v0.4.0-rc3 ] || scripts/lez-select.sh v0.4.0-rc3; } )
-grep -rl --include=Cargo.toml 'upstream/lez-v0.4.0-rc1/' "$SRC" | xargs -r sed -i 's#upstream/lez-v0.4.0-rc1/#upstream/lez-v0.4.0-rc3/#'
+grep -rl --include=Cargo.toml 'upstream/lez-v0.4.0-rc1/' "$SRC" | xargs -r sed -i "s#upstream/lez-v0.4.0-rc1/#upstream/lez-$LEZ_TAG/#"
 ( cd "$SRC" && { patch -p1 -R --dry-run -s < "$HERE/cli-rc3.patch" > /dev/null 2>&1 || patch -p1 < "$HERE/cli-rc3.patch"; } )
 install -m 644 "$HERE/Cargo.lock.v0.4.0-rc3" "$SRC/cli/Cargo.lock"
 ( cd "$SRC/cli" && cargo build --release --locked --features lez-rc3 --bin ferrata --bin ferrata-relayer --bin ferrata-gasdrop \

@@ -15,6 +15,72 @@ set -euo pipefail
 VAULT=""
 while [ $# -gt 0 ]; do case "$1" in --vault) VAULT="$2"; shift 2 ;; *) echo "usage: $0 --vault 0x.." >&2; exit 2 ;; esac; done
 [[ "$VAULT" =~ ^0x[0-9a-fA-F]{40}$ ]] || { echo "--vault 0x<40 hex>" >&2; exit 2; }
+# The host's LEZ tag: FERRATA_LEZ_TAG (empty counts as unset), else the tag install.sh records on a v0.4.0 host
+# (/etc/ferrata/lez-tag), else v0.4.0-rc3; a variable that disagrees with the record is refused (as lez-tag.sh does)
+lez_host_tag() {
+  local f="${FERRATA_LEZ_TAG_FILE:-/etc/ferrata/lez-tag}" host="" tag
+  if [ -e "$f" ]; then   # a record that exists must name a tag: an empty or damaged one is refused, never taken for rc3
+    host="$(tr -d '[:space:]' < "$f" 2>/dev/null)" || host=""
+    case "$host" in v0.4.0-rc3|v0.4.0) ;; *) echo "this host's tag record $f holds '$host', not v0.4.0-rc3 or v0.4.0" >&2; return 2 ;; esac
+  fi
+  if [ -n "${FERRATA_LEZ_TAG:-}" ] && [ -n "$host" ] && [ "$FERRATA_LEZ_TAG" != "$host" ]; then
+    echo "FERRATA_LEZ_TAG=$FERRATA_LEZ_TAG, but this host runs LEZ $host ($f)" >&2; return 2
+  fi
+  tag="${FERRATA_LEZ_TAG:-${host:-v0.4.0-rc3}}"
+  case "$tag" in v0.4.0-rc3|v0.4.0) echo "$tag" ;; *) echo "FERRATA_LEZ_TAG must be v0.4.0-rc3 or v0.4.0 (got '$tag')" >&2; return 2 ;; esac
+}
+
+# bridge_rule_ids TAG: "IMG_A IMG_B RELEASE_ID", the programs the vault pins. rc3's: docs/image-ids.md
+# (checkpoint_0_3_5_31, checkpoint_b_0_3_5_31, release). On LEZ v0.4.0 rc3's rule programs read none of its blocks
+# (e2e/runs/zone-v040-four-keys-1): the operator names rule (A)'s and rule (B)'s, and the release and rule (B) ids must be
+# the ones install-bridge.sh gave the prover (its program table, FERRATA_PROVER_PROGRAMS_JSON), so the vault pins what
+# the prover proves with. Refused before anything is made.
+bridge_rule_ids() {
+  if [ "$1" != v0.4.0 ]; then
+    echo 0x9140ec7479debc9b40529b0805095d4cfdef93a1e0500c6687a1d7ec4d7c42de \
+         0x8917f58e76aa805dedc04fc5e2b70404f5078b66b271ec44aaa0c78d9f5eaf04 \
+         0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd
+    return 0
+  fi
+  local a="${FERRATA_CHECKPOINT_IMAGE_A:-}" b="${FERRATA_CHECKPOINT_IMAGE_B:-}"
+  local table="${FERRATA_PROVER_PROGRAMS_JSON:-/etc/ferrata/bridge-prover-programs.json}"
+  [[ "$a" =~ ^0x[0-9a-f]{64}$ && "$b" =~ ^0x[0-9a-f]{64}$ ]] \
+    || { echo "on LEZ v0.4.0, FERRATA_CHECKPOINT_IMAGE_A and FERRATA_CHECKPOINT_IMAGE_B (0x + 64 hex) name the rule (A)/(B) programs" >&2; return 2; }
+  [ -r "$table" ] || { echo "on LEZ v0.4.0 the prover's program table $table is missing: run install-bridge.sh first" >&2; return 2; }
+  python3 -I - "$table" "$a" "$b" <<'PY'
+import json, re, sys
+table, a, b = sys.argv[1:4]
+def bad(why):
+    sys.exit(f"the prover's program table {table}: {why}")
+try:
+    with open(table) as f:
+        t = json.load(f)
+except (OSError, ValueError) as e:
+    bad(f"not readable JSON ({e})")
+if not isinstance(t, dict) or set(t) != {"release", "checkpoint-b"}:
+    bad("not the two programs release and checkpoint-b (as install-bridge.sh writes it)")
+for kind, journal in (("release", "release"), ("checkpoint-b", "checkpoint")):
+    row = t[kind]
+    if not (isinstance(row, list) and len(row) == 4):
+        bad(f"{kind} is not [file, image id, sha256, journal kind]")
+    name, img, sha, j = row
+    if not isinstance(name, str) or not name or "/" in name or name in (".", ".."):
+        bad(f"{kind}'s file {name!r}")
+    if not re.fullmatch(r"0x[0-9a-f]{64}", str(img)):
+        bad(f"{kind}'s image id {img!r}")
+    if not re.fullmatch(r"[0-9a-f]{64}", str(sha)):
+        bad(f"{kind}'s sha256 {sha!r}")
+    if j != journal:
+        bad(f"{kind}'s journal kind {j!r}")
+if t["checkpoint-b"][1] != b:
+    sys.exit(f"FERRATA_CHECKPOINT_IMAGE_B {b} is not the rule (B) program the prover proves with ({t['checkpoint-b'][1]}, {table})")
+print(a, b, t["release"][1])
+PY
+}
+TAG="$(lez_host_tag)" || exit 2
+export FERRATA_LEZ_TAG="$TAG"   # ferrata-bridge-identity below reads the same tag
+IDS="$(bridge_rule_ids "$TAG")" || exit 2
+read -r IMG_A IMG_B REL_ID <<< "$IDS"
 B=/var/lib/ferrata/bridge
 [ -f "$B/identity.json" ] && [ "${FERRATA_REFRESH:-0}" != 1 ] || python3 -I /opt/ferrata/bin/ferrata-bridge-identity --out "$B/identity.json" > /dev/null
 chmod 644 "$B/identity.json"
@@ -23,16 +89,17 @@ CROWN_ADMIN="$(python3 -I -c 'import json; print(json.load(open("/var/lib/ferrat
 CROWN_FREEZE_AUTHORITY="$(python3 -I -c 'import json; print(json.load(open("/var/lib/ferrata/bridge/roles.json"))["freezeAuthority"])')"
 export CROWN_ADMIN CROWN_FREEZE_AUTHORITY
 /opt/ferrata/bin/crown-driver config-id --identity "$B/identity.json" --vault "$VAULT" > "$B/config.json"
-python3 -I - "$B/identity.json" "$B/config.json" "$VAULT" <<'EOF' > "$B/params.json"
+python3 -I - "$B/identity.json" "$B/config.json" "$VAULT" "$TAG" "$IMG_A" "$IMG_B" "$REL_ID" <<'EOF' > "$B/params.json"
 import json, sys
-idn, cfg, vault = json.load(open(sys.argv[1])), json.load(open(sys.argv[2])), sys.argv[3]
+idn, cfg, vault, tag = json.load(open(sys.argv[1])), json.load(open(sys.argv[2])), sys.argv[3], sys.argv[4]
+img_a, img_b, rel_id = sys.argv[5], sys.argv[6], sys.argv[7]
 vp = idn["vaultParams"]
 print(json.dumps({
-    "_source": "ferrata-testnet (AWS, LEZ v0.4.0-rc3): ferrata-bridge-configure for the vault " + vault
+    "_source": "ferrata-testnet (AWS, LEZ " + tag + "): ferrata-bridge-configure for the vault " + vault
                + "; T0 block " + str(idn["tip"]["id"]) + "; vault/script/params/sepolia-31.template.json filled",
-    "checkpointImageIdA": "0x9140ec7479debc9b40529b0805095d4cfdef93a1e0500c6687a1d7ec4d7c42de",
-    "checkpointImageIdB": "0x8917f58e76aa805dedc04fc5e2b70404f5078b66b271ec44aaa0c78d9f5eaf04",
-    "releaseImageId": "0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd",
+    "checkpointImageIdA": img_a,
+    "checkpointImageIdB": img_b,
+    "releaseImageId": rel_id,
     "lezConfigId": cfg["configId"],
     "genesisState": vp["genesisState"],
     "nMin": vp["nMin"], "tMin": vp["tMin"], "postingTimeframe": vp["postingTimeframe"],

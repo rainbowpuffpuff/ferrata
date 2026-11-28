@@ -13,6 +13,7 @@
 use std::{path::PathBuf, process::Command};
 
 use harness::{
+    compat,
     private::{CIPHERTEXT_PAD_SIZE, PADDED_PRIVATE_ACTIONS},
     settle::LeeTransaction,
 };
@@ -61,8 +62,8 @@ fn shape_of(path: &PathBuf) -> PublicShape {
         epk_bytes: sorted(e.private_actions.iter().map(|a| len(&a.encrypted_post_state.epk)).collect()),
         recovery_bindings: sorted(e.recovery_bindings.iter().map(len).collect()),
         async_messages: e.async_messages.len(),
-        refund_named: e.fee.as_ref().expect("a fee").refund_to.is_some(),
-        fee_fallback_bytes: e.fee.as_ref().expect("a fee").fallback.as_ref().map(len),
+        refund_named: compat::proven_fee_details(e).expect("a fee").refund_to.is_some(),
+        fee_fallback_bytes: compat::proven_fee_details(e).expect("a fee").fallback.map(|fallback| fallback.encoded_len),
         public_root: e.public_root.is_some(),
         nonces: tx.message.nonces.len(),
     }

@@ -36,7 +36,8 @@ use ferrata_lez_bridge_wire::{
 };
 use ferrata_lez_wire::{header_actor, RecordState};
 use ferrata_spectests::execkit::{account_rlp, enc, header_rlp, keccak, Trie};
-use lee::{program::Program, Account, AccountId, Actor, PrivateKey, PublicAccountEvidence, PublicKey};
+use lee::{program::Program, Account, AccountId, Actor, PublicAccountEvidence};
+use crate::compat::{self, AccountKey};
 use lee_core::{
     account::ActorState,
     program::{PdaSeed, ReceiveInput},
@@ -179,8 +180,8 @@ pub const TOKEN_CAP: CapParams = CapParams { capacity: 100_000_000_000, refill_p
 pub const GLOBAL_CAP: CapParams = CapParams { capacity: 200_000_000_000, refill_per_second: 10_000_000 };
 
 /// The signing key of a role account (`ADMIN_SEED`, `FREEZE_SEED`, `OUTSIDER_SEED`).
-pub fn role_key(seed: u8) -> PrivateKey {
-    PrivateKey::try_new([seed; 32]).unwrap()
+pub fn role_key(seed: u8) -> AccountKey {
+    compat::account_key([seed; 32])
 }
 pub const ADMIN_SEED: u8 = 0x21;
 pub const FREEZE_SEED: u8 = 0x22;
@@ -188,7 +189,7 @@ pub const FREEZE_SEED: u8 = 0x22;
 pub const OUTSIDER_SEED: u8 = 0x23;
 
 pub fn role_account(seed: u8) -> AccountId {
-    AccountId::from(&PublicKey::new_from_private_key(&role_key(seed)))
+    compat::account_of(&role_key(seed))
 }
 
 /// The fee recipient and a relayer: public accounts without keys (they only receive).
@@ -740,7 +741,7 @@ impl World {
             accounts.push((id, Account::default()));
         }
         let state = std::mem::take(&mut chain.state);
-        chain.state = state.with_public_accounts(accounts).with_genesis_programs([(bridge_program(), true)]);
+        chain.state = compat::genesis_programs(state.with_public_accounts(accounts), [(bridge_program(), true)]);
         Self {
             chain,
             program,
@@ -890,7 +891,7 @@ impl World {
         message: &BridgeMessage,
         actors: Vec<Actor>,
         evidence: Vec<PublicAccountEvidence>,
-        signers: &[&PrivateKey],
+        signers: &[&AccountKey],
     ) -> TxReport {
         let message = borsh::to_vec(message).unwrap();
         let report = self.chain.submit_signed(label, root, message, actors, evidence, self.time, signers);
@@ -1140,7 +1141,7 @@ impl World {
         action: bw::CosignedAction,
     ) -> TxReport {
         let signers: Vec<Hash> = seeds.iter().map(|s| *role_account(*s).value()).collect();
-        let keys: Vec<PrivateKey> = signing.iter().map(|s| role_key(*s)).collect();
+        let keys: Vec<AccountKey> = signing.iter().map(|s| role_key(*s)).collect();
         let mut actors: Vec<Actor> = Vec::new();
         for actor in seeds.iter().map(|s| own_actor(self.program, role_account(*s))) {
             if !actors.contains(&actor) {
@@ -1156,7 +1157,7 @@ impl World {
         }
         let root = actors[0];
         let message = BridgeMessage::Cosigned { config_id: *cid, signers, action };
-        let key_refs: Vec<&PrivateKey> = keys.iter().collect();
+        let key_refs: Vec<&AccountKey> = keys.iter().collect();
         self.submit_signed(label, root, &message, actors, vec![], &key_refs)
     }
 
@@ -1397,24 +1398,23 @@ pub fn private_claim_transitions(
     n: u64,
 ) -> Vec<crate::attest::Executed> {
     let actor = own_actor(w.program, account);
-    let call = ReceiveInput {
-        receiver: actor,
-        from: None,
-        is_authorized: true,
-        pre_state: Default::default(),
-        message: borsh::to_vec(message).unwrap(),
-    };
+    let call = crate::compat::receive_input(
+        actor,
+        None,
+        true,
+        Default::default(),
+        borsh::to_vec(message).unwrap(),
+    );
     let elf = bridge_program();
     let first = crate::attest::execute("ClaimPrivately (sends Read)", elf.elf(), &call);
     let Some(transition) = &first.transition else { return vec![first] };
     let root = root_actor(w.program, cid, n);
-    let reply = ReceiveInput {
-        receiver: actor,
-        from: Some(root),
-        is_authorized: true,
-        pre_state: transition.response.post_state.clone().expect("the claim is kept for the reply"),
-        message: borsh::to_vec(&lee_core::program::StateReply { state: w.chain.actor_state(root) }).unwrap(),
-    };
+    let reply = crate::compat::reply_input(
+        actor,
+        root,
+        transition.response.post_state.clone().expect("the claim is kept for the reply"),
+        borsh::to_vec(&lee_core::program::StateReply { state: w.chain.actor_state(root) }).unwrap(),
+    );
     let second = crate::attest::execute("the root's reply (verifies the claim, sends Issue)", elf.elf(), &reply);
     vec![first, second]
 }
@@ -1426,12 +1426,12 @@ pub fn private_burn_transition(
     pre_state: ActorState,
     message: &BridgeMessage,
 ) -> crate::attest::Executed {
-    let call = ReceiveInput {
-        receiver: own_actor(w.program, account),
-        from: None,
-        is_authorized: true,
+    let call = crate::compat::receive_input(
+        own_actor(w.program, account),
+        None,
+        true,
         pre_state,
-        message: borsh::to_vec(message).unwrap(),
-    };
+        borsh::to_vec(message).unwrap(),
+    );
     crate::attest::execute("Burn at the private holder (debits, sends Burn)", bridge_program().elf(), &call)
 }

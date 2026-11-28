@@ -146,7 +146,7 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ github.workspace }}/../upstream
-          key: upstream-lez-1806e87-e3edf47-logos-blockchain-d480efc6
+          key: upstream-lez-1806e87-e3edf47-bafd07b-a255b42-logos-blockchain-d480efc6
       - name: Fetch the upstream sources
         run: scripts/fetch-upstream.sh
       - name: Cache the vault's libraries
@@ -224,6 +224,8 @@ jobs:
           export RISC0_HOME="$HOME/risc0-home-lez"
           cargo test --locked --lib
           cargo test --locked -p ferrata-wallet
+          # The version check before signing (src/lezver.rs) through the binary, against loopback stand-ins.
+          cargo test --locked --test lez_version
       # The checkpoint and attestor core and the attestor CLI's tests, at the core crates' declared Rust 1.88 minimum.
       # install-risc0.sh installs the guest compiler under ~/.risc0, not as a rustup toolchain callable as cargo +1.88;
       # select its cargo, rustc and rustdoc together (the default host rustdoc cannot read its development build's rlibs).
@@ -282,7 +284,7 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ github.workspace }}/../upstream
-          key: upstream-lez-1806e87-e3edf47-logos-blockchain-d480efc6
+          key: upstream-lez-1806e87-e3edf47-bafd07b-a255b42-logos-blockchain-d480efc6
       - name: Fetch the upstream sources
         run: scripts/fetch-upstream.sh
       - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1
@@ -306,6 +308,114 @@ jobs:
         env:
           SHARD: ${{ matrix.shard }}
         run: scripts/ci/lez-harness.sh --shard "$SHARD"
+
+  # The same LEZ suites on LEZ v0.4.0 (released 27 November 2026; lez/scripts/lez-select.sh v0.4.0, feature lez-040):
+  # the shard map of lez-harness, run after selecting the tag (FERRATA_LEZ_TAG). The release candidates' jobs above
+  # stay on the committed v0.4.0-rc1. Guests on RISC Zero 3.1.0 (LEZ #1124), guest Rust 1.91.1 as LEZ's own builds.
+  # continue-on-error until a GitHub run of it passes: so far these suites ran on the Modal build box
+  # (lez/results/v0.4.0/suites.md) and a laptop, never on GitHub, and a failure here must not turn the release
+  # candidates' CI red.
+  lez-040:
+    name: lez-040 (${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [harness-1, harness-2, harness-3, harness-4, updater-gate, updater-privacy]
+    env:
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+      CARGO_INCREMENTAL: "0"
+      FERRATA_LEZ_TAG: v0.4.0
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Check the LEZ shard map (scripts/ci/check-lez-shards.py)
+        run: python3 -I scripts/ci/check-lez-shards.py
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h .
+      - uses: dtolnay/rust-toolchain@2b28c52cef68d77e9a4de0b428559db37728c04f # 1.93.0
+      - name: Rust 1.98.1 (LEZ v0.4.0's toolchain, as its release candidates')
+        run: rustup toolchain install 1.98.1 --profile minimal
+      - name: Cache RISC Zero's toolchains
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.risc0
+            ~/risc0-home-lez
+          key: risc0-3.1.0-3.0.5-rust-1.88.0-1.91.1-cpp-2024.1.5-${{ hashFiles('scripts/ci/install-risc0.sh') }}
+      - name: RISC Zero toolchains (rzup; r0vm 3.1.0 beside 3.0.5 in the LEZ home)
+        env:
+          GITHUB_TOKEN: ${{ github.token }} # rzup's GitHub API calls: the job's read-only token, not the 60-an-hour limit
+        run: scripts/ci/install-risc0.sh
+      - name: Cache the upstream sources (LEZ v0.4.0-rc1 1806e87 to v0.4.0 a255b42, Logos Blockchain d480efc6)
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ github.workspace }}/../upstream
+          key: upstream-lez-1806e87-e3edf47-bafd07b-a255b42-logos-blockchain-d480efc6
+      - name: Fetch the upstream sources (LEZ v0.4.0 among them)
+        run: scripts/fetch-upstream.sh
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1
+        with:
+          version: v1.3.6
+      - name: Cache the vault's libraries
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: vault/lib
+          key: vault-lib-forge-std-1.10.0-oz-5.4.0-risc0-ethereum-3.1.0
+      - name: Libraries (the privacy suite's Ethereum half)
+        working-directory: vault
+        run: '[ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0'
+      - name: Build on LEZ v0.4.0 (shard ${{ matrix.shard }} and the guests)
+        timeout-minutes: 45
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: scripts/ci/lez-harness.sh --shard "$SHARD" build
+      - name: The LEZ suites on LEZ v0.4.0, dev mode (shard ${{ matrix.shard }})
+        timeout-minutes: 60
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: scripts/ci/lez-harness.sh --shard "$SHARD"
+
+  # Every lez/ guest built against LEZ v0.4.0 (lez/scripts/guest-ids.sh: RISC Zero 3.1.0, guest Rust 1.91.1, through
+  # scripts/guest-rustc), its image ids compared with the recorded ones (lez/results/v0.4.0/ids-v0.4.0.tsv, built on the
+  # Modal build box and reproduced on a laptop); the release candidates' builds and ids are unchanged.
+  # continue-on-error until a GitHub run of it passes.
+  lez-040-guests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h .
+      - uses: dtolnay/rust-toolchain@2b28c52cef68d77e9a4de0b428559db37728c04f # 1.93.0
+      - name: Rust 1.98.1 (LEZ v0.4.0's toolchain)
+        run: rustup toolchain install 1.98.1 --profile minimal
+      - name: Cache RISC Zero's toolchains
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.risc0
+            ~/risc0-home-lez
+          key: risc0-3.1.0-3.0.5-rust-1.88.0-1.91.1-cpp-2024.1.5-${{ hashFiles('scripts/ci/install-risc0.sh') }}
+      - name: RISC Zero toolchains (rzup)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/ci/install-risc0.sh
+      - name: Cache the upstream sources (LEZ v0.4.0-rc1 1806e87 to v0.4.0 a255b42, Logos Blockchain d480efc6)
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ github.workspace }}/../upstream
+          key: upstream-lez-1806e87-e3edf47-bafd07b-a255b42-logos-blockchain-d480efc6
+      - name: Fetch the upstream sources
+        run: scripts/fetch-upstream.sh
+      - name: The lez/ guests on LEZ v0.4.0 and their image ids
+        timeout-minutes: 70
+        run: lez/scripts/guest-ids.sh --tag v0.4.0 --out "$RUNNER_TEMP/lez-040-ids" && cat "$RUNNER_TEMP/lez-040-ids/ids.tsv"
+      - name: The image ids as recorded (lez/results/v0.4.0/ids-v0.4.0.tsv)
+        run: diff lez/results/v0.4.0/ids-v0.4.0.tsv "$RUNNER_TEMP/lez-040-ids/ids.tsv"
 
   # The names program of the test network (names/README.md; scripts/ci/names.sh): its wire crate's tests, the harness
   # suites tests/names.rs and tests/names_review.rs (feature `names`, listed as feature-gated in the shard map, so run
@@ -340,7 +450,7 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ github.workspace }}/../upstream
-          key: upstream-lez-1806e87-e3edf47-logos-blockchain-d480efc6
+          key: upstream-lez-1806e87-e3edf47-bafd07b-a255b42-logos-blockchain-d480efc6
       - name: Fetch the upstream sources
         run: scripts/fetch-upstream.sh
       - name: Build (the names wire crate and suites, and the guests)
@@ -374,6 +484,12 @@ jobs:
         run: node modules/ferrata_bridge_ui/tests/privacy-test.mjs
       - name: The web wallet's bridge tab in plain words (refusals by name, the cost before the signature)
         run: node --test deploy/testnet/web/wallet/test/ux.test.mjs
+      - name: The web wallet's LEZ v0.4.0 codec against vectors made by LEZ v0.4.0's own crates (rc3's lez.js unchanged)
+        run: node --test deploy/testnet/web/wallet/test/conformance040.test.mjs
+      - name: The web wallet's network choice (rc3 as today, v0.4.0 with lez040.js, read-only when unknown), stubbed RPC
+        run: node --test deploy/testnet/web/wallet/test/net.test.mjs
+      - name: The explorer's LEZ v0.4.0 decoder and version choice on the same vectors (rc3's lez.js unchanged)
+        run: node --test deploy/testnet/web/explorer/test/decode040.test.mjs
       - name: The IDLs are what idl/tools/msg_idl.py writes
         run: python3 -I idl/tools/msg_idl.py --check
       - name: Free disk space
@@ -396,7 +512,7 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ github.workspace }}/../upstream
-          key: upstream-lez-1806e87-e3edf47-logos-blockchain-d480efc6
+          key: upstream-lez-1806e87-e3edf47-bafd07b-a255b42-logos-blockchain-d480efc6
       - name: Fetch the upstream sources (the messages guests build against LEZ v0.4.0-rc3)
         run: scripts/fetch-upstream.sh
       - name: The wire crates (logic, the vectors the JS library shares, the IDL's vectors)
@@ -427,7 +543,7 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ github.workspace }}/../upstream
-          key: upstream-lez-1806e87-e3edf47-logos-blockchain-d480efc6
+          key: upstream-lez-1806e87-e3edf47-bafd07b-a255b42-logos-blockchain-d480efc6
       - name: Fetch the upstream sources (the attestation monitor's lee_core)
         run: scripts/fetch-upstream.sh
       - uses: dtolnay/rust-toolchain@2b28c52cef68d77e9a4de0b428559db37728c04f # 1.93.0
@@ -537,7 +653,7 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ github.workspace }}/../upstream
-          key: upstream-lez-1806e87-e3edf47-logos-blockchain-d480efc6
+          key: upstream-lez-1806e87-e3edf47-bafd07b-a255b42-logos-blockchain-d480efc6
       - name: Fetch the upstream sources
         run: scripts/fetch-upstream.sh
       - name: Licences, bans and sources over every workspace; the root, cli and lez checked, not skipped
@@ -563,7 +679,7 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ github.workspace }}/../upstream
-          key: upstream-lez-1806e87-e3edf47-logos-blockchain-d480efc6
+          key: upstream-lez-1806e87-e3edf47-bafd07b-a255b42-logos-blockchain-d480efc6
       - name: Fetch the upstream sources
         run: scripts/fetch-upstream.sh
       - name: Every module's staged crate resolves with its committed Cargo.lock
@@ -648,6 +764,12 @@ jobs:
         run: python3 -I scripts/test_verify_live_roundtrip.py
       - name: The Sepolia fixture's Transfer selection, offline (lez/scripts/test_fetch_attest_fixture.py)
         run: python3 -I lez/scripts/test_fetch_attest_fixture.py
+      # The LEZ tag selector on a copy of lez/'s manifests and lockfiles: v0.4.0-rc1, rc2, rc3 and v0.4.0 and back,
+      # byte for byte; every lez/ manifest with a LEZ path listed; the tags' commits as fetch-upstream.sh pins them.
+      - name: The LEZ tag selector, offline (lez/scripts/test_lez_select.py)
+        run: python3 -I lez/scripts/test_lez_select.py
+      - name: The guest-ids script's plan, offline (lez/scripts/test_guest_ids.py)
+        run: python3 -I lez/scripts/test_guest_ids.py
       # RFP-022 P.5, P.6: the documented performance figures recomputed from the committed records (the live
       # run's stamps, captures and driver log; the daemons' GNU time, samples and RPC byte counts; the provers'
       # run.json files, prove.jsonl and groth16.jsonl) and asserted stated by the documents that document them.
@@ -674,6 +796,11 @@ jobs:
       # (checkpoint/attestor/resources.py; zone-bridge.sh times every round).
       - name: The attestor's resources from a run's records (checkpoint/attestor/test_resources.py)
         run: python3 -I checkpoint/attestor/test_resources.py
+      # The zone scripts' per-tag facts (LEZ rc1, rc3, v0.4.0: commits, r0vm, the Bedrock release and its V2 deployment
+      # settings, finality_depth, both sequencer log formats, the sealed wallet, the configurations) and the checker of
+      # checkpoint/attestor/zone-v040.sh's records (the sequencer workflow's sequencer-zone-v040 job runs it on a run).
+      - name: The zone scripts' tag facts and guards, and the v0.4.0 zone records' checker (checkpoint/attestor/test_zone_lib.py, test_zone_scripts.py, test_zone_inscriptions.py, test_check_zone_v040.py)
+        run: python3 -I checkpoint/attestor/test_zone_lib.py && python3 -I checkpoint/attestor/test_zone_scripts.py && python3 -I checkpoint/attestor/test_zone_inscriptions.py && python3 -I checkpoint/attestor/test_check_zone_v040.py
       # RFP-021 S.8, RFP-022 Sec.1 (no audit yet): the audit scope's inventory is generated from this tree, and the
       # document carries exactly the generated tables (scripts/audit_scope.py).
       - name: The audit scope's source inventory (scripts/test_audit_scope.py)
@@ -687,10 +814,20 @@ jobs:
         run: python3 -I deploy/testnet/tests/test_site_delta.py
       - name: The local server's host layout serves nothing outside its bundle (deploy/testnet/web/wallet/test/test_serve_site.py)
         run: python3 -I deploy/testnet/web/wallet/test/test_serve_site.py
+      - name: lez-read's LEZ v0.4.0 decoder on vectors LEZ v0.4.0's crates made, its version probe, reads only (scripts/test_lez040_decode.py)
+        run: python3 -I scripts/test_lez040_decode.py
+      - name: The modules' staging takes a LEZ tag, rc1 by default (modules/scripts/test_stage_tag.py)
+        run: python3 -I modules/scripts/test_stage_tag.py
       # RFP-022 F.7 on the test network (deploy/testnet/MULTIKEY.md): the zone's configurations for 1 + N sequencers on one
       # host, and the checkpoint builder taking t(n) attestations of one tip from the host's attestors (one key: as before).
       - name: The test network's further sequencer keys and t-of-n checkpoints (deploy/testnet/tests/test_zone_keys.py, test_checkpoint_attestors.py)
         run: python3 -I deploy/testnet/tests/test_zone_keys.py && python3 -I deploy/testnet/tests/test_checkpoint_attestors.py
+      # The test network's scripts on either LEZ tag (deploy/testnet/lez-tag.sh: FERRATA_LEZ_TAG, v0.4.0-rc3 by default or
+      # v0.4.0): the tag's values, the node's loopback configuration, the deployment settings' era, the genesis keys' form.
+      # and the host's block readers (ferrata-status, ferrata-bridge-identity) on the blocks a v0.4.0 sequencer served in a
+      # recorded run (e2e/runs/zone-v040-standalone-*/blocks/).
+      - name: The test network's LEZ tag selection, its block readers on v0.4.0 blocks, the bridge installer's pins, the gateway's methods and the site's config per tag (deploy/testnet/tests/test_lez_tag.py, test_host_blocks.py, test_bridge_tag.py, test_gateway_tag.py, test_web_config.py)
+        run: python3 -I deploy/testnet/tests/test_lez_tag.py && python3 -I deploy/testnet/tests/test_host_blocks.py && python3 -I deploy/testnet/tests/test_bridge_tag.py && python3 -I deploy/testnet/tests/test_gateway_tag.py && python3 -I deploy/testnet/tests/test_web_config.py
       # The build page (site/README.md): a fresh build's counts equal the status document's and every link it emits
       # resolves; the committed bundle's freshness is left to its rebuild (--skip-freshness).
       - name: The build page, built fresh and checked (site/test_site.py --skip-freshness)
@@ -800,7 +937,7 @@ jobs:
       - name: Every offline check of the quick tier
         run: python3 -I scripts/verify.py --all --offline --strict
       - name: The tamper tests of every check family
-        run: python3 -I scripts/test_verify.py && python3 -I scripts/test_verify_lc.py && python3 -I scripts/test_verify_zone.py && python3 -I scripts/test_verify_f13.py && python3 -I scripts/test_verify_f13_lez.py && python3 -I scripts/test_verify_f7.py && python3 -I scripts/test_verify_bridge.py && python3 -I scripts/test_verify_bridge_rows.py && python3 -I scripts/test_verify_sec.py
+        run: python3 -I scripts/test_verify.py && python3 -I scripts/test_verify_lc.py && python3 -I scripts/test_verify_zone.py && python3 -I scripts/test_verify_lez040.py && python3 -I scripts/test_verify_lez040_ids.py && python3 -I scripts/test_verify_lez040_runs.py && python3 -I scripts/test_verify_f13.py && python3 -I scripts/test_verify_f13_lez.py && python3 -I scripts/test_verify_f7.py && python3 -I scripts/test_verify_bridge.py && python3 -I scripts/test_verify_bridge_rows.py && python3 -I scripts/test_verify_sec.py
       - name: The checks and their tests left the tree as they found it
         if: always()
         run: |

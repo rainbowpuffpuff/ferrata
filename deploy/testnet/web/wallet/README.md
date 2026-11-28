@@ -35,7 +35,7 @@ The page's Content-Security-Policy allows scripts, styles and connections to its
 ## Tests
 
 ```sh
-node --test test/*.test.mjs                       # 57: LEZ's pinned vectors, recorded Attest messages, SPEC-v2 and IDL vectors, the PWA list, the review's findings, the bridge tab's plain words
+node --test test/*.test.mjs                       # 108: LEZ's pinned vectors (rc3 and v0.4.0), recorded Attest messages, SPEC-v2 and IDL vectors, the PWA list, the review's findings, the bridge tab's plain words, the v0.4.0 codec (vectors of LEZ v0.4.0's crates, a real v0.4.0 sequencer's blocks) and the network choice (net.js; a failed version read keeps the accounts and signs nothing until a re-read)
 bash test/box.sh build                            # LEZ rc3's sequencer + wallet CLI (LEZ's source beside the repository)
 bash test/box.sh e2e NAME                         # with Foundry and vault/lib present, the bridge steps too
 bash test/box.sh testers NAME                     # the host's layout (serve.py --site): the testers' path from the build page

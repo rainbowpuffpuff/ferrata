@@ -1,0 +1,13 @@
+{
+  "_source": "zone-bridge (checkpoint/attestor/zone-bridge.sh): the zone of four sequencers (lez-v0.4.0), nMin 4, tMin 3",
+  "checkpointImageIdA": "0x9140ec7479debc9b40529b0805095d4cfdef93a1e0500c6687a1d7ec4d7c42de",
+  "checkpointImageIdB": "0x8917f58e76aa805dedc04fc5e2b70404f5078b66b271ec44aaa0c78d9f5eaf04",
+  "releaseImageId": "0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd",
+  "lezConfigId": "0xbaa5af860825ad539fcf627dba90f1872bfa8f6d3e651dac81bfc067ccbd7b54",
+  "genesisState": "0x96989da1469a61bc1d48e677084be510868bdb1e4b831b96199e52b7e27eb3e1",
+  "nMin": 4,
+  "tMin": 3,
+  "postingTimeframe": 0,
+  "ethLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "tokenLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000"
+}

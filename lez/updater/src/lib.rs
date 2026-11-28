@@ -16,6 +16,7 @@ pub mod config;
 pub mod daemon;
 pub mod lc_json;
 pub mod ledger;
+pub mod lez;
 pub mod serve;
 pub mod source;
 pub mod updater;

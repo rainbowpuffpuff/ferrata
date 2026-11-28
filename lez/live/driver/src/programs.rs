@@ -10,9 +10,16 @@ use sha2::{Digest, Sha256};
 
 /// The program header a loader actor state holds: a tagged `LoaderEntry` from LEZ v0.4.0-rc2 on
 /// (#943).
-#[cfg(feature = "lez-rc2")]
+#[cfg(all(feature = "lez-rc2", not(feature = "lez-040")))]
 pub fn program_header(loader_actor_state: &[u8]) -> Option<ProgramHeader> {
     ProgramHeader::from_loader_actor_state(loader_actor_state)
+}
+
+/// The program header a loader actor state holds: v0.4.0 moved the loader's entries to `program_loader_core`
+/// (`LoaderActorState`, LEZ #946), with the same encoding.
+#[cfg(feature = "lez-040")]
+pub fn program_header(loader_actor_state: &[u8]) -> Option<ProgramHeader> {
+    <ProgramHeader as program_loader_core::LoaderActorState>::from_loader_actor_state(loader_actor_state)
 }
 
 /// The program header a loader actor state holds (LEZ v0.4.0-rc1: untagged).

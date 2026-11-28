@@ -1,0 +1,18 @@
+    Finished `test` profile [optimized + debuginfo] target(s) in 5m 33s
+     Running tests/attest_faults.rs (<box>/target-cli-v040/debug/deps/attest_faults-6ea41ca16c6c486c)
+test the_journal_guards ... ok
+test failing_endpoint_and_interruptions_do_nothing_twice ... ok
+test stale_checkpoint_shown_as_code_53 ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 52.76s
+     Running tests/both_halves.rs (<box>/target-cli-v040/debug/deps/both_halves-211a7bcfc60fc62c)
+test randomised_runs_keep_supply_within_holdings ... ok
+test migration_rehearsal_honours_positions_in_flight ... ok
+test fee_schedules_over_both_halves ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+     Running tests/e2e.rs (<box>/target-cli-v040/debug/deps/e2e-b82d92268d6ddb28)
+test names_nothing_catches_every_form ... ok
+test deposit_scan_claim_burn_release_and_recovery ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+     Running tests/roundtrip_b.rs (<box>/target-cli-v040/debug/deps/roundtrip_b-11c9174beafb9ada)
+test deposit_attest_claim_burn_checkpoint_b_release ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s

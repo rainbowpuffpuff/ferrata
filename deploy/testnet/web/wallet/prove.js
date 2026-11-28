@@ -21,6 +21,10 @@ export function mountProve(el, c) {
     return;
   }
   const program = c.lez.idFromString(A.program);
+  const net = c.net ?? {
+    version: 'v0.4.0-rc3', buildCall: c.lez.buildCall, feeFor: c.lez.feeFor,
+    outcome: async (hash, raw) => c.lez.outcomeIn(c.lez.decodeBlock(raw), hash),
+  };
   const sel = h('select', { id: 'prove-instance', 'data-testid': 'prove-instance' });
   A.instances.forEach((ins, i) => sel.append(h('option', { value: i, text: `${ins.name ?? 'instance'} · chain ${ins.chainId} · ${ins.id.slice(0, 10)}…` })));
   const status = h('p', { class: 'fine', 'data-testid': 'prove-record', text: 'Reading the instance…' });
@@ -50,6 +54,7 @@ export function mountProve(el, c) {
       h('b', { text: 'Private: ' }), 'nothing: an attestation is a public statement on LEZ. A private consumer can later use it without saying which (RFP-021 private consumption).'));
   const sync = () => { const k = kind.value; slot.parentElement.hidden = k === 'account'; key.parentElement.hidden = k !== 'mapping'; rhs.parentElement.hidden = !cmp.value; };
   kind.onchange = cmp.onchange = sync; sync();
+  const actorState = (account) => (c.baseLez ?? c.lez).actorStateOf(account, program);
 
   let ctx = null;   // the instance and record read from LEZ
   let ready = null; // the checked request
@@ -61,11 +66,11 @@ export function mountProve(el, c) {
     const id = c.lez.unhex(ins.id);
     try {
       const ia = await c.seq.account(at.instanceAccount(program, id));
-      const st = c.lez.actorStateOf(ia, program);
+      const st = actorState(ia);
       if (!st) throw new Error('the instance is not on this network');
       const inst = at.decodeInstance(st);
       const ra = await c.seq.account(at.headerAccount(program, id, inst.finalizedSlot));
-      const rs = c.lez.actorStateOf(ra, program);
+      const rs = actorState(ra);
       if (!rs) throw new Error(`no record at the instance's finalized slot ${inst.finalizedSlot}`);
       const rec = at.decodeRecord(rs);
       ctx = { ins, id, inst, rec };
@@ -132,12 +137,14 @@ export function mountProve(el, c) {
       const a = c.acct();
       await c.refresh();
       const fs = c.feeState();
+      // The network's version is read right before signing: nothing is awaited between that read and the signature.
+      if (c.versionConfirmed && !await c.versionConfirmed()) throw new Error(net.error);
       const seed = at.headerSeed(ctx.id, ctx.rec.slot);
       const to = { account: at.forPublicPda(program, seed), program };
-      const probe = c.lez.buildCall({ payer: a.node, to, data: ready.data, nonce: a.chain.nonce, gasLimit: at.ATTEST_GAS, maxFee: 0n, evidence: [{ pda: { program, seed } }] });
-      const { maxFee } = c.lez.feeFor({ gasLimit: at.ATTEST_GAS, size: probe.size, feeState: fs });
+      const probe = net.buildCall({ payer: a.node, to, data: ready.data, nonce: a.chain.nonce, gasLimit: at.ATTEST_GAS, maxFee: 0n, evidence: [{ pda: { program, seed } }] });
+      const { maxFee } = net.feeFor({ gasLimit: at.ATTEST_GAS, size: probe.size, feeState: fs });
       if (a.chain.balance < maxFee) throw new Error(`Attesting needs up to ${c.fmt(maxFee)} in fees; this account holds ${c.fmt(a.chain.balance)}. Use the faucet first.`);
-      const tx = c.lez.buildCall({ payer: a.node, to, data: ready.data, nonce: a.chain.nonce, gasLimit: at.ATTEST_GAS, maxFee, evidence: [{ pda: { program, seed } }] });
+      const tx = net.buildCall({ payer: a.node, to, data: ready.data, nonce: a.chain.nonce, gasLimit: at.ATTEST_GAS, maxFee, evidence: [{ pda: { program, seed } }] });
       const hash = await c.seq.send(tx.wire);
       out.textContent = `Sent ${hash}. Waiting for a LEZ block…`;
       for (let i = 0; i < 90; i++) {
@@ -145,8 +152,8 @@ export function mountProve(el, c) {
         const t = await c.seq.transaction(hash).catch(() => null);
         if (!t) continue;
         const bid = Number(Array.isArray(t) ? t[1] : t.block_id);
-        const blk = c.lez.decodeBlock(await c.seq.block(bid));
-        const o = c.lez.outcomeIn(blk, hash);
+        const block = net.version === 'v0.4.0' ? undefined : await c.seq.block(bid);
+        const o = await net.outcome(hash, block);
         if (o === 'reverted') { out.textContent = `Refused by the attestation program in LEZ block ${bid} (the transaction reverted; its fee was charged). Transaction ${hash}.`; out.className = 'msg bad'; return; }
         if (o === 'missing') { out.textContent = `The RPC places transaction ${hash} in LEZ block ${bid}, but that block does not list it: outcome unknown.`; out.className = 'msg warn'; return; }
         out.textContent = `Attested: the attestation program accepted the proof in LEZ block ${bid}. Transaction ${hash}. The statements above are now LEZ's, under the record header(${ctx.ins.id.slice(0, 10)}…, ${ctx.rec.slot}) (account ${c.lez.idToString(to.account)}).`;

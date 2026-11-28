@@ -1,0 +1,7 @@
+PASS service worker controls the page
+PASS installable (Chrome's Page.getInstallabilityErrors is empty): []
+PASS manifest parsed without errors: []
+PASS offline copy holds every file of the build: 36 of 36
+playwright._impl._errors.TimeoutError: Page.wait_for_selector: Timeout 30000ms exceeded.
+  - waiting for locator("#v-main") to be visible
+    65 × locator resolved to hidden <section hidden="" id="v-main">…</section>

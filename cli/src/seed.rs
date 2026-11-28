@@ -21,7 +21,9 @@ use key_protocol::key_management::{
     key_tree::{chain_index::ChainIndex, KeyTreePrivate, KeyTreePublic},
     secret_holders::SeedHolder,
 };
-use lee::{AccountId, PrivateKey};
+use lee::AccountId;
+#[cfg(not(feature = "lez-040"))]
+use lee::PrivateKey;
 
 /// The label of the bridge seed.
 pub const BRIDGE_SEED_LABEL: &[u8] = b"ferrata/bridge-seed/v1";
@@ -36,12 +38,19 @@ pub type PrivateSecrets = ([u8; 32], [u8; 32], [u8; 32]);
 /// The label of a deposit's claim delay under the bridge seed.
 pub const CLAIM_DELAY_LABEL: &[u8] = b"ferrata/claim-delay/v1";
 
+/// A public account's signing secret as LEZ's wallet holds it: its private key up to v0.4.0-rc3; from v0.4.0 the
+/// secret its per-nonce keys derive from (LEZ #1135).
+#[cfg(not(feature = "lez-040"))]
+pub type PublicSecret = PrivateKey;
+#[cfg(feature = "lez-040")]
+pub type PublicSecret = lee::signature::PublicAccountSecret;
+
 /// One public LEZ account of the wallet.
 #[derive(Clone)]
 pub struct PublicAccount {
     pub index: u32,
     pub id: AccountId,
-    pub key: PrivateKey,
+    pub key: PublicSecret,
 }
 
 /// The seed and what the tool derives from it. No `Debug`: it must not end up in a log.
@@ -107,8 +116,14 @@ impl Seed {
                 .generate_new_public_node(&ChainIndex::root())
                 .ok_or_else(|| anyhow!("LEZ's key tree refused public account /{index}"))?;
             let node = tree.get_node(id).ok_or_else(|| anyhow!("public account /{index} is not in the tree"))?;
-            let key: &PrivateKey = node.into();
-            out.push(PublicAccount { index, id, key: key.clone() });
+            #[cfg(not(feature = "lez-040"))]
+            let key: PublicSecret = {
+                let key: &PrivateKey = node.into();
+                key.clone()
+            };
+            #[cfg(feature = "lez-040")]
+            let key: PublicSecret = node.secret.clone();
+            out.push(PublicAccount { index, id, key });
         }
         Ok(out)
     }

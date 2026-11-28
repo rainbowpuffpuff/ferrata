@@ -232,14 +232,14 @@ async fn info(run: &Run) -> Result<()> {
         quote.height, quote.base_fee_exec, quote.base_fee_stor, quote.max_gas_exec, quote.max_gas_stor
     );
     println!(
-        "LEZ constants: wallet default gas limit {}, TARGET_GAS_EXEC {}, MAX_GAS_EXEC {}, TARGET_GAS_STOR {}, MAX_GAS_STOR {}, PRIVATE_VERIFY_GAS {}, PRIVATE_GAS_STOR {}",
+        "LEZ constants: wallet default gas limit {}, TARGET_GAS_EXEC {}, MAX_GAS_EXEC {}, TARGET_GAS_STOR {}, MAX_GAS_STOR {}, PRIVATE_VERIFY_GAS {}, {}",
         wallet::DEFAULT_GAS_LIMIT,
         fee_core::market::TARGET_GAS_EXEC,
         fee_core::market::MAX_GAS_EXEC,
         fee_core::market::TARGET_GAS_STOR,
         fee_core::market::MAX_GAS_STOR,
         fee_core::market::PRIVATE_VERIFY_GAS,
-        fee_core::market::PRIVATE_GAS_STOR
+        private_storage_gas()
     );
     for binary in [&run.program, &run.scripted] {
         println!(
@@ -601,4 +601,18 @@ fn main() -> Result<()> {
     let _ = env_logger::try_init();
     let args = Args::parse()?;
     tokio::runtime::Builder::new_multi_thread().enable_all().build()?.block_on(run(args))
+}
+
+
+/// How a private transaction's storage gas is priced: a fixed amount on the release candidates.
+#[cfg(not(feature = "lez-040"))]
+fn private_storage_gas() -> String {
+    format!("PRIVATE_GAS_STOR {}", fee_core::market::PRIVATE_GAS_STOR)
+}
+
+/// How a private transaction's storage gas is priced: from v0.4.0 its size, the proof counted at `PROOF_BYTES`
+/// (LEZ #1044).
+#[cfg(feature = "lez-040")]
+fn private_storage_gas() -> String {
+    format!("private storage gas by size (PROOF_BYTES {})", fee_core::market::PROOF_BYTES)
 }

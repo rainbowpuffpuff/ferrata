@@ -1,0 +1,10 @@
+[02:19:07] standalone sequencer up: block 2 after 18 s
+[02:19:07] published test account imported by --secret: Public/7VDm7YRPvimbZgCzuFqCGf6RwPsTV3XY5W9DzT71oain
+[02:19:38] public transfer Public/7VDm7YRPvimbZgCzuFqCGf6RwPsTV3XY5W9DzT71oain -> Public/3btKzYghDyWvsdYPBPsHpMSLqhk8WkCzZtWRh645A68P (1000): 693058a41f64d7f08415dc725b5e4c7e4d71f5654eda14ab5d4f5a29fb74bf7c
+[02:19:38] receipt: {"success":true,"fee":{"gas_exec":0,"gas_stor":621,"fee_base":4968,"tip":0,"refund":0}}
+[02:21:59] private transfer Public/7VDm7YRPvimbZgCzuFqCGf6RwPsTV3XY5W9DzT71oain -> Private/9VPUZRm9Uqv54pVFHD33g9hLQH7jRY8WPybcFNVDP1dL (500), proven and sent in 140 s: 431ee48182ad222280eea791636f868b224f24346201e72b319bb955ce83b590
+[02:21:59] private transfer's receipt: {"success":true,"fee":{"gas_exec":409764,"gas_stor":235661,"fee_base":5163400,"tip":0,"refund":0}}
+[02:21:59] the wallet's storage.json is sealed (version, kdf, nonce, ciphertext)
+[02:24:01] deployed ferrata_rebate.bin (image id eddda0baf6daac70d4baf3aa2446b8907578f9f863817ff1353d05511eb18712, 305052 bytes) at header Public/2diWPJ77qp6RzLCzwLgrHaRUEoPsxntt3sAsrbnnb7eH with 3 segments in 121 s
+[02:24:01] standalone sequencer at block 21 after 312 s
+[02:24:01] standalone done

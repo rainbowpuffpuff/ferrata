@@ -1,0 +1,22 @@
+{
+  "ferrata_commit": "d632aa82e1c149096f8203828439ecf13d3e69ca",
+  "lez_tag": "v0.4.0",
+  "lez_commit": "a255b42c0fc80d1cb219454a3a1f5ec3b5d92115",
+  "crates": [
+    "methods",
+    "methods-msg",
+    "methods-names",
+    "methods-program-class",
+    "methods-rebate",
+    "methods-residue-experimental",
+    "methods-statements"
+  ],
+  "date": "2026-11-28T03:09:48Z",
+  "where": "a clean git worktree of the commit beside upstream/lez-v0.4.0, a fresh target directory",
+  "command": "scripts/verify-lez040-ids.sh --record NAME methods methods-msg methods-names methods-program-class methods-rebate methods-residue-experimental methods-statements",
+  "toolchains": {
+    "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+    "guest toolchains in RISC0_HOME": "v1.91.1-rust-x86_64-unknown-linux-gnu v2024.1.5-cpp-x86_64-unknown-linux-gnu",
+    "r0vm (the cross-check column)": "risc0-r0vm 3.0.5"
+  }
+}

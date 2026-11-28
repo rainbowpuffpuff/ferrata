@@ -28,10 +28,11 @@ export function mountPrivate(root, c) {
   const keys = el('div', { 'data-testid': 'private-keys' });
   root.prepend(keys);
   const render = () => {
+    const L = c.baseLez ?? c.lez; // the private key tree is shared by the public codecs
     keys.textContent = '';
     if (!c.S.seed) { if (c.S.key) keys.append(el('p', { class: 'fine', text: 'This wallet was imported from a key: it has no private accounts (they derive from a recovery phrase).' })); return; }
-    const k = c.lez.derivePrivate(c.S.seed, [0]);
-    const id = c.lez.idToString(k.accountId), npk = c.lez.hex(k.npk), vpk = c.lez.hex(k.vpk);
+    const k = L.derivePrivate(c.S.seed, [0]);
+    const id = L.idToString(k.accountId), npk = L.hex(k.npk), vpk = L.hex(k.vpk);
     keys.append(el('h3', { text: 'Your private account /0' }),
       el('p', { class: 'fine', text: 'Derived in this page from your phrase with LEZ\'s own private key tree (checked against LEZ\'s pinned vectors), the same account LEZ\'s wallet and the ferrata tool make first.' }),
       el('div', { class: 'kv' }, el('span', { text: 'Account' }), el('code', { class: 'copy wrap', 'data-testid': 'private-id', text: `Private/${id}` })),

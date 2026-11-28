@@ -5,6 +5,7 @@
 # the ones the zone's genesis staked and the channel accredits. Run from checkpoint/ on the build box:
 #
 #   attestor/zone-attest.sh <zone dir> [<out dir>]   (the zone dir holds answers/ and deployment-settings.yaml)
+#   ZONE_LEZ=../../upstream/lez-v0.4.0 attestor/zone-attest.sh <zone dir> [<out dir>]   (a zone.sh run of LEZ v0.4.0)
 #
 # The records (tier.json, deployment.json, cert-<i>.json, att-<i>.json, the collector's metas and the 3-of-4 input)
 # go to <out dir>, by default the zone dir (a fresh zone run). A replay of a recorded zone gives another directory:
@@ -12,8 +13,15 @@
 # replay writes the same 264 signed bytes (`encoded`) with today's `node` facts (first_block, blocks_checked, fork_digest).
 set -euo pipefail
 z="$(realpath "$1")"; o="$(realpath -m "${2:-$1}")"; mkdir -p "$o"; bin=target/release/ferrata_attestor
-dev="$(realpath ../../upstream/lez-v0.4.0-rc1/lez/configs/docker-all-in-one/devnet)"
-work="${TMPDIR:?}/attestor-zone-attest"; rm -rf "$work"; mkdir -p "$work" fixtures
+# ZONE_LEZ: the LEZ tree whose devnet keys the zone ran (as attestor/zone.sh; default rc1's, the same as rc3's; v0.4.0's
+# devnet keys are regenerated: a zone of ZONE_LEZ=../../upstream/lez-v0.4.0 needs the same here)
+lez="$(realpath "${ZONE_LEZ:-../../upstream/lez-v0.4.0-rc1}")"; dev="$lez/lez/configs/docker-all-in-one/devnet"
+. "$(dirname "${BASH_SOURCE[0]}")/zone-lib.sh"
+TAG="$(zl_tag_of_tree "$lez")" && zl_known_tag "$TAG" || { echo "zone-attest.sh: $lez is not a LEZ tree of a known tag"; exit 2; }
+# The collector's inputs and metas go to fixtures/ (the committed rc1 ones); a v0.4.0 zone's go to <out dir>/fixtures/,
+# never over the committed files
+if zl_is_v040 "$TAG"; then FIX="$o/fixtures"; else FIX=fixtures; fi
+work="${TMPDIR:?}/attestor-zone-attest"; rm -rf "$work"; mkdir -p "$work" "$FIX"
 
 echo "== the node's final tier"
 $bin tier --answers "$z/answers" --out "$o/tier.json"
@@ -41,13 +49,13 @@ $bin verify --deployment "$o/deployment.json" --att "$o/att-0.json" --att "$o/at
 
 echo "== the collector: 3 of 4 (sequencer 3 silent), 4 of 4; 2 of 4 refused"
 $bin collect --base "$work/base.input" --att "$o/att-0.json" --att "$o/att-1.json" --att "$o/att-2.json" \
-  --out fixtures/rbz-zone-n4-t3.input --meta fixtures/rbz-zone-n4-t3.json --name rbz-zone-n4-t3 \
-  --description "rule (B) over a real four-sequencer LEZ v0.4.0-rc1 zone (upstream's devnet keys, round-robin turns): final blocks $from..=$tip, n = 4, t = 3; attestations of sequencers 0, 1, 2 (sequencer 3 silent)"
+  --out "$FIX"/rbz-zone-n4-t3.input --meta "$FIX"/rbz-zone-n4-t3.json --name rbz-zone-n4-t3 \
+  --description "rule (B) over a real four-sequencer LEZ $TAG zone (upstream's devnet keys, round-robin turns): final blocks $from..=$tip, n = 4, t = 3; attestations of sequencers 0, 1, 2 (sequencer 3 silent)"
 $bin collect --base "$work/base.input" --att "$o/att-0.json" --att "$o/att-1.json" --att "$o/att-2.json" --att "$o/att-3.json" \
-  --out fixtures/rbz-zone-n4-all.input --meta fixtures/rbz-zone-n4-all.json --name rbz-zone-n4-all \
+  --out "$FIX"/rbz-zone-n4-all.input --meta "$FIX"/rbz-zone-n4-all.json --name rbz-zone-n4-all \
   --description "as rbz-zone-n4-t3 with all four attestations"
 $bin assemble --base "$work/base.input" --att "$o/att-0.json" --att "$o/att-1.json" \
-  --out fixtures/rbz-refuse-two-of-four.input --meta fixtures/rbz-refuse-two-of-four.json --name rbz-refuse-two-of-four \
+  --out "$FIX"/rbz-refuse-two-of-four.input --meta "$FIX"/rbz-refuse-two-of-four.json --name rbz-refuse-two-of-four \
   --expect InsufficientAttestations --description "must be refused: two attestations where n = 4 needs three"
-cp fixtures/rbz-zone-n4-t3.json fixtures/rbz-zone-n4-all.json fixtures/rbz-refuse-two-of-four.json fixtures/rbz-zone-n4-t3.input "$o/"
+cp "$FIX"/rbz-zone-n4-t3.json "$FIX"/rbz-zone-n4-all.json "$FIX"/rbz-refuse-two-of-four.json "$FIX"/rbz-zone-n4-t3.input "$o/"
 echo "zone attestation done"

@@ -3,11 +3,15 @@
 # the node's state, the sequencer's home and the faucet's ledger are made once and never replaced.
 #
 #   FERRATA_HOSTNAME  the public name (default: the Elastic IP's a-b-c-d.sslip.io, from the instance metadata)
+#   FERRATA_LEZ_TAG   v0.4.0-rc3 (default) or v0.4.0; on v0.4.0, newly generated payer.key files get a
+#                     payer.key.tag marker naming that tag. Existing keys without that exact marker are refused:
+#                     an rc3 private key is not a v0.4.0 public-account secret.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$HERE/lez-tag.sh"
 OPT=/opt/ferrata
 DATA=/var/lib/ferrata
-LEZ="$OPT/src/upstream/lez-v0.4.0-rc3"
+LEZ="$LEZ_SRC"
 LOG=/var/log/ferrata
 WWW=/srv/ferrata/www
 # The node's funded wallet key that LEZ's local stack gives the sequencer (bedrock/node-config.yaml `funding_pk`).
@@ -47,6 +51,17 @@ fi
 for k in faucet operator; do
   if [ ! -f "$DATA/keys/$k/payer.key" ]; then
     as_ferrata "$OPT/bin/ferrata-day1" keygen --keys "$DATA/keys/$k" > /dev/null
+    if [ "$LEZ_TAG" = v0.4.0 ]; then
+      ( umask 077; printf '%s\n' "$LEZ_TAG" > "$DATA/keys/$k/payer.key.tag" )
+      chown ferrata:ferrata "$DATA/keys/$k/payer.key.tag"
+    fi
+  fi
+  if [ "$LEZ_TAG" = v0.4.0 ]; then
+    if [ ! -f "$DATA/keys/$k/payer.key.tag" ] \
+       || [ "$(cat "$DATA/keys/$k/payer.key.tag")" != "$LEZ_TAG" ]; then
+      echo "$k payer.key was not made for LEZ $LEZ_TAG (payer.key.tag missing or different); use fresh $LEZ_TAG keys" >&2
+      exit 1
+    fi
   fi
 done
 # The faucet's key and ledger belong to the gateway's own user ; the other services cannot read them.
@@ -55,17 +70,24 @@ install -d -o ferrata-gw -g ferrata-gw -m 700 "$DATA/faucet"
 chown -R ferrata-gw:ferrata-gw "$DATA/keys/faucet" "$DATA/faucet"; chmod 700 "$DATA/keys/faucet"
 pubkey() { python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["payer_public_key"])' "$DATA/keys/$1/accounts.json"; }
 account() { python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["payer"])' "$DATA/keys/$1/accounts.json"; }
+faucet_pk="$(pubkey faucet)"; operator_pk="$(pubkey operator)"
+for named_key in "faucet:$faucet_pk" "operator:$operator_pk"; do
+  if ! lez_genesis_key_ok "${named_key#*:}"; then
+    echo "${named_key%%:*} payer_public_key is not valid for $LEZ_TAG (64 hex on rc3; 00 plus 64 hex on v0.4.0)" >&2
+    exit 1
+  fi
+done
 
 # ---- the Logos Blockchain node: LEZ's local configuration, listening on loopback only ------------------------------
 if [ ! -f "$DATA/node/node-config.yaml" ]; then
   install -o ferrata -g ferrata -m 640 "$LEZ/bedrock/node-config.yaml" "$LEZ/bedrock/deployment-settings.yaml" "$DATA/node/"
-  sed -i -e 's#listen_address: 0.0.0.0:18080#listen_address: 127.0.0.1:18080#' \
-         -e 's#^    swarm:$#    swarm:\n      host: 127.0.0.1#' "$DATA/node/node-config.yaml"
+  lez_node_config "$DATA/node/node-config.yaml" 18080
 fi
+lez_check_deployment "$DATA/node/deployment-settings.yaml"
 
 # ---- the sequencer: LEZ's local.json, with this network's genesis and fee reserve ---------------------------------
 python3 -I - "$LEZ/lez/sequencer/service/networks/local.json" /etc/ferrata/sequencer_config.json \
-  "$(pubkey faucet)" "$(pubkey operator)" <<'EOF'
+  "$faucet_pk" "$operator_pk" <<'EOF'
 import json, sys
 src, dst, faucet_pk, operator_pk = sys.argv[1:5]
 c = json.load(open(src))
@@ -105,6 +127,13 @@ EOF
 
 # ---- gateway --------------------------------------------------------------------------------------------------------
 [ -f /etc/ferrata/gateway.env ] || : > /etc/ferrata/gateway.env
+# On v0.4.0 the gateway serves the reads only v0.4.0's sequencer answers (host/bin/ferrata-gateway, READ_METHODS)
+# and the host records its tag for every later command run without FERRATA_LEZ_TAG (lez-tag.sh and the host's tools)
+if [ "$LEZ_TAG" = v0.4.0 ]; then
+  if grep -q '^FERRATA_LEZ_TAG=' /etc/ferrata/gateway.env; then sed -i 's/^FERRATA_LEZ_TAG=.*/FERRATA_LEZ_TAG=v0.4.0/' /etc/ferrata/gateway.env
+  else echo FERRATA_LEZ_TAG=v0.4.0 >> /etc/ferrata/gateway.env; fi
+  echo v0.4.0 > /etc/ferrata/lez-tag; chmod 644 /etc/ferrata/lez-tag
+fi
 
 # ---- site and Caddy: the build page, the explorer and wallet bundles, this host's pages (install-web.sh) --------
 if [ -f /opt/ferrata/web.tar.gz ]; then
@@ -133,7 +162,7 @@ if [ ! -f "$DATA/sequencer/.bedrock-split-done" ]; then
   [ "${PIPESTATUS[0]}" = 0 ] && touch "$DATA/sequencer/.bedrock-split-done"
 fi
 systemctl enable --now ferrata-sequencer.service ferrata-topup.timer ferrata-status.timer
-# A fresh chain: LEZ's two published test accounts (funded by rc3's pre-genesis state, keys in LEZ's source) are swept
+# A fresh chain: LEZ's two published test accounts (funded by its pre-genesis state, keys in LEZ's source) are swept
 # into the faucet before the public gateway opens (ferrata-sweep-published). ferrata-status alarms if they
 # hold funds again.
 if [ ! -f "$DATA/sequencer/.published-swept" ]; then

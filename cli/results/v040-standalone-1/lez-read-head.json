@@ -1,0 +1,12 @@
+{
+ "block": 5,
+ "lez": "v0.4.0",
+ "hash": "45bc8ae442b1eff4e3c27b54e2c2dd5a97e9e4ffb9ce537cbc91a172a119f4df",
+ "hash_recomputed": "45bc8ae442b1eff4e3c27b54e2c2dd5a97e9e4ffb9ce537cbc91a172a119f4df",
+ "hash_ok": true,
+ "prev": "8714d2ff65becda64f0a1b1039a5237b412b90ec85425126f8409e46b4a8437d",
+ "time_utc": "2026-11-28T04:13:46Z",
+ "bedrock_status": "Pending",
+ "bytes": 1377,
+ "transactions": 3
+}

@@ -28,6 +28,7 @@ pub mod gasdrop_net;
 #[cfg(feature = "lez-wallet")]
 pub mod flow;
 pub mod lez;
+pub mod lezver;
 pub mod logos_send;
 pub mod privacy;
 pub mod relayer;

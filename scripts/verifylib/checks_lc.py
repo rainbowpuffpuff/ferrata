@@ -676,6 +676,14 @@ def lc_perf_state(ctx):
             "LIMIT: the 9,087-record cadence and the 4.12/20.58/10.09 MB projections are not in perf-state.md: perf-projections derives them again"]
 
 
+# Records made after the differential's corpus (24 Nov 2026) whose .ssz files it does not cover, each with its reason;
+# the R.6 row says the corpus is the repository's .ssz files before them.
+POST_CORPUS = {
+    "e2e/runs/ci-sequencer-attest-v040/": "the LEZ v0.4.0 port's sequencer-attest rehearsal (28 Nov 2026): Sepolia "
+                                          "data it fetched, not run through Helios",
+}
+
+
 def _ssz_files(root: Path) -> tuple[list[str], list[str]]:
     """The .ssz files of the tree as they are on disk (outside build and scratch directories, following the tamper
     tests' symlinks), and, when `root` is a git checkout's top level, only the tracked ones among them plus the
@@ -733,6 +741,8 @@ def lc_helios(ctx):
     output = _text(ctx, ORACLE_TXT)
     doc = _text(ctx, ORACLE_MD)
     ssz, missing = _ssz_files(ctx.root)
+    later = [f for f in ssz if any(f.startswith(d) for d in POST_CORPUS)]
+    ssz = [f for f in ssz if f not in later]
     _expect(problems, not missing, f"R.6: tracked .ssz files missing from the tree: {', '.join(missing[:3])}")
     boot_files = [p for p in ssz if p.rsplit("/", 1)[-1].endswith("bootstrap.ssz")]
     _expect(problems, len(ssz) == 332 and len(boot_files) == 13,
@@ -809,7 +819,9 @@ def lc_helios(ctx):
              "400 CI / 10,000 full", "1,400 CI cases", "11,400 in the full script", "ran 11,392, before the 8 key-root cases",
              "2,000 mainnet mutations", "0 unexpected disagreements")
     fail_if(problems, "Helios oracle record/status mismatch")
-    return [f"SSZ inventory: {len(ssz)} files = {len(boot_files)} bootstraps + {len(ssz)-len(boot_files)} update files; run: 321 updates (multi-update files included)",
+    return [f"SSZ inventory: {len(ssz)} files = {len(boot_files)} bootstraps + {len(ssz)-len(boot_files)} update files; run: 321 updates (multi-update files included)"
+            + (f"; {len(later)} later files outside the corpus: " + "; ".join(f"{d} ({why})" for d, why in POST_CORPUS.items()
+                                                                       if any(f.startswith(d) for f in later)) if later else ""),
             "vectors: 33/111, with 96 two-way = 61 applied + 35 refused and 15 one-way; 467 = 16+439+4+8 and 502 = 467+17+18",
             f"random class sums CI {ci}; full {full}; legacy regions 2,000=1,987+13, lab 108+138=246",
             f"suite arithmetic: recorded {recorded_cases:,}; current CI {ci_cases:,}; current full {ci_cases+full[0]:,}; zero disagreements in run footer",

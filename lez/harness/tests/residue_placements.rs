@@ -59,7 +59,7 @@ fn outcome(r: &TxReport) -> String {
 fn world_after_update_0() -> World {
     let mut chain = Chain::new();
     let state = std::mem::replace(&mut chain.state, V03State::new());
-    chain.state = state.with_named_programs([(EXPERIMENTAL, experimental_program())]);
+    chain.state = compat::named_programs(state, [(EXPERIMENTAL, experimental_program())]);
     let config = mainnet_config(2);
     let checkpoint = root(TRUSTED_BLOCK_ROOT);
     let bootstrap = mainnet_bootstrap();

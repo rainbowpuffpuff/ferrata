@@ -95,6 +95,28 @@ def host_values(stage, served, name):
     return keep(read(os.path.join(stage, "live-configs") if stage else ""), read(served))
 
 
+def lez_host_tag():
+    """The host's LEZ tag: FERRATA_LEZ_TAG (empty counts as unset), else the tag install.sh records on a v0.4.0 host
+    (/etc/ferrata/lez-tag), else v0.4.0-rc3; a variable that disagrees with the record is refused (as lez-tag.sh does)."""
+    env = os.environ.get("FERRATA_LEZ_TAG") or ""
+    path = os.environ.get("FERRATA_LEZ_TAG_FILE") or "/etc/ferrata/lez-tag"
+    host = ""
+    if os.path.lexists(path):   # a record that exists must name a tag: an empty or damaged one is refused, not taken for rc3
+        try:
+            with open(path) as f:
+                host = "".join(f.read().split())
+        except OSError as e:
+            sys.exit(f"this host's tag record {path} cannot be read: {e}")
+        if host not in ("v0.4.0-rc3", "v0.4.0"):
+            sys.exit(f"this host's tag record {path} holds {host!r}, not v0.4.0-rc3 or v0.4.0")
+    if env and host and env != host:
+        sys.exit(f"FERRATA_LEZ_TAG={env}, but this host runs LEZ {host} ({path})")
+    tag = env or host or "v0.4.0-rc3"
+    if tag not in ("v0.4.0-rc3", "v0.4.0"):
+        sys.exit(f"FERRATA_LEZ_TAG must be v0.4.0-rc3 or v0.4.0 (got {tag!r})")
+    return tag
+
+
 def explorer(www, site, progs, range_limit):
     p = os.path.join(www, "config.json")
     if not os.path.exists(p):
@@ -103,7 +125,9 @@ def explorer(www, site, progs, range_limit):
     c.update({"public_rpc": f"{site}/rpc", "site": site, "wallet": "/wallet/", "faucet": "/faucet",
               "faucet_api": "POST /faucet {\"account\": \"<base58 public account id>\", \"public_key\": \"<64 hex, for an account never used>\"}",
               "status_api": "/status/status.json", "range_limit": range_limit})
-    c.setdefault("bedrock", {}).update({"anchored": True, "node_version": "0.3.5-rc.1",
+    # the Logos Blockchain node release the host runs per LEZ tag (lez-tag.sh's BEDROCK_RELEASE)
+    node_version = "0.4.0-rc.2" if lez_host_tag() == "v0.4.0" else "0.3.5-rc.1"
+    c.setdefault("bedrock", {}).update({"anchored": True, "node_version": node_version,
                                         "channel_id": "0101010101010101010101010101010101010101010101010101010101010101"})
     accounts = {k: (v or {}).get("program_account") for k, v in (progs.get("programs") or {}).items()}
     # The catalogue's entries are the programs the explorer reads (their image and IDL): the first versions.
@@ -159,7 +183,8 @@ def wallet(www, progs, stage, served):
     if not os.path.exists(w):
         return
     c = keep(load(w), host_values(stage, served, "wallet-config.json"))
-    c.update({"network": "Ferrata LEZ testnet (rc3)", "rpc": "/rpc", "faucet": "/faucet", "explorer": "/explorer/"})
+    c.update({"network": "Ferrata LEZ testnet (v0.4.0)" if lez_host_tag() == "v0.4.0"
+                  else "Ferrata LEZ testnet (rc3)", "rpc": "/rpc", "faucet": "/faucet", "explorer": "/explorer/"})
     a = account(progs, "ferrata_attestation")
     inst = (progs.get("instances") or {}).get("sepolia")
     if a:

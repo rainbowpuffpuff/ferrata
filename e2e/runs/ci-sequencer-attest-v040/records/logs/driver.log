@@ -1,0 +1,177 @@
+sequencer http://127.0.0.1:3040: head block 1, followed to block 1 (no Bedrock finality: LEZ's mock)
+fee state at height 1: base fee exec 8 / stor 8; block caps exec 10000000 / stor 1000000
+LEZ constants: wallet default gas limit 10000000, TARGET_GAS_EXEC 5000000, MAX_GAS_EXEC 10000000, TARGET_GAS_STOR 500000, MAX_GAS_STOR 1000000, PRIVATE_VERIFY_GAS 409764, private storage gas by size (PROOF_BYTES 223047)
+program: image 95a93abfe4073a7eaad8f86be311af45e7729f1c3dba7f1b0ce016b7b1b8e2f1, 641184 bytes (sha256 66466e83abdfecfca097690b05c5e45eb8ed50bb4f9f5536ca8a02bd9550e761), user ELF 608760 bytes in 7 segment(s)
+scripted: image 0a37d9ba1f59c9abb457f3fd62d6b7bd7e15ccb327d24f847d8cd61f51ce329c, 284236 bytes (sha256 acf5aad4ea41d112a8025dcdbe4ddfd5aabc00e3b98141c2e843e5de935c35e1), user ELF 251812 bytes in 3 segment(s)
+deployments: main 3M25gC1oV7Y4Rn5Rgq5YtMjnMfSshWpGHisFuNKHbFFF, twin BqMwAwgw18MC4VLGEDRV7UuVdycNmbWrneJLAsnYhnqC, scripted 86mjnZoN3ChYur1c7XScfQEZ1jGhV273Jh4uLrVe8BxX
+payer 0: 7VDm7YRPvimbZgCzuFqCGf6RwPsTV3XY5W9DzT71oain holds 10000000000000
+payer 1: 6AtC7ekAeMXh9QgiBoUnsb69SVEnCy9DMhCy4nmJDbkh holds 20000000000000
+payer 2: 7VDm7YRPvimbZgCzuFqCGf6RwPsTV3XY5W9DzT71oain holds 10000000000000
+payer 3: 6AtC7ekAeMXh9QgiBoUnsb69SVEnCy9DMhCy4nmJDbkh holds 20000000000000
+harness tables: 55 rows from <repo>/lez/results
+Transaction hash is d48345d91a189ada7d3a16093d55d8e3dbc3aab74c5952e3ede5c3c31b90717d
+Transaction is included in block 2
+Transaction hash is 2aa4dfeffc67f5abca3a16bc1ecdaa09b9f3b9e31661bd08f69c5aabc180e5aa
+Transaction is included in block 3
+Transaction hash is 28d57a57bbcfd50a6598261a9ebed5bfeb72a77dcfddbf34720eb1a4e90ade64
+Transaction is included in block 4
+Transaction hash is 56c1c44949c9c79246ed5a4e68675985b49de683a5952ded185c33cb4651b677
+Transaction is included in block 5
+Transaction hash is cf7a47c62117ec3c514662b70fc56c73ed4705c67fa53d885de25bce9935cbb9
+Transaction is included in block 6
+Transaction hash is f765b5452dcafb27804bac35a0c0dbde74448deffefd6f73aab16bb3d7a943e4
+Transaction is included in block 7
+Transaction hash is aabaf9d09575819cb6f93c13e12639c27f3905a549344b05324757d1fec3240d
+Transaction is included in block 8
+Transaction hash is 14ea90bc73ea061caa11e91bf04e58bd3f12e3b459fc7c6cfff21ebbad1b01f6
+Transaction is included in block 9
+[deploy] deploy main: WriteSegment 7 of 7 (18936 bytes)             applied   gas         0 +   19661 bytes, block    2
+[deploy] deploy main: WriteSegment 6 of 7 (98304 bytes)             applied   gas     18942 +   99028 bytes, block    3
+[deploy] deploy main: WriteSegment 5 of 7 (98304 bytes)             applied   gas     98342 +   99028 bytes, block    4
+[deploy] deploy main: WriteSegment 4 of 7 (98304 bytes)             applied   gas     98342 +   99028 bytes, block    5
+[deploy] deploy main: WriteSegment 3 of 7 (98304 bytes)             applied   gas     98342 +   99028 bytes, block    6
+[deploy] deploy main: WriteSegment 2 of 7 (98304 bytes)             applied   gas     98342 +   99028 bytes, block    7
+[deploy] deploy main: WriteSegment 1 of 7 (98304 bytes)             applied   gas     98342 +   99028 bytes, block    8
+[deploy] deploy main: CreateHeader (immutable) at 3M25gC1oV7Y4Rn5Rgq5YtMjnMfSshWpGHisFuNKHbFFF applied   gas    608994 +     720 bytes, block    9
+[deploy] main: image 95a93abfe4073a7eaad8f86be311af45e7729f1c3dba7f1b0ce016b7b1b8e2f1 at 3M25gC1oV7Y4Rn5Rgq5YtMjnMfSshWpGHisFuNKHbFFF (computed by the sequencer's loader), immutable
+Transaction hash is 46e1e8accca430f0b97ae61f3a4cf240fe7f81e618cff8ccfa88bfc730b06600
+Transaction is included in block 10
+Transaction hash is e4630c94ba78c71363b0d045ae0a48841e16545cf6374650b37a1a6b75408654
+Transaction is included in block 11
+Transaction hash is 1f2807e183af761149574cd354d26b764172556ca59fc9e4f674b5ac8d720e89
+Transaction is included in block 12
+Transaction hash is dc473a079bc39d3a60972424691ede8a9ab261484f157ae72619add27937ac19
+Transaction is included in block 13
+Transaction hash is effbf86cf5de7f8f57bd77b9d018dbbf3b1c58e008799d69a2ee07a1efc6531d
+Transaction is included in block 14
+Transaction hash is b0571620d73cb0a2b92f0258121cfe2f23a52cf4435b81320d99fcf6322907d5
+Transaction is included in block 15
+Transaction hash is 1ff790ec12b7de945dddb3a27243226836e30dde27390335c23e6254c9127d5e
+Transaction is included in block 16
+Transaction hash is 0856f9ed0449dcd6fa839cef625e3674cc5c639483e20e771f8372590a5cdfba
+Transaction is included in block 17
+[deploy] deploy twin: WriteSegment 7 of 7 (18936 bytes)             applied   gas         0 +   19628 bytes, block   10
+[deploy] deploy twin: WriteSegment 6 of 7 (98304 bytes)             applied   gas     18942 +   99028 bytes, block   11
+[deploy] deploy twin: WriteSegment 5 of 7 (98304 bytes)             applied   gas     98342 +   99028 bytes, block   12
+[deploy] deploy twin: WriteSegment 4 of 7 (98304 bytes)             applied   gas     98342 +   99028 bytes, block   13
+[deploy] deploy twin: WriteSegment 3 of 7 (98304 bytes)             applied   gas     98342 +   99028 bytes, block   14
+[deploy] deploy twin: WriteSegment 2 of 7 (98304 bytes)             applied   gas     98342 +   99028 bytes, block   15
+[deploy] deploy twin: WriteSegment 1 of 7 (98304 bytes)             applied   gas     98342 +   99028 bytes, block   16
+[deploy] deploy twin: CreateHeader (immutable) at BqMwAwgw18MC4VLGEDRV7UuVdycNmbWrneJLAsnYhnqC applied   gas    608994 +     720 bytes, block   17
+[deploy] twin: image 95a93abfe4073a7eaad8f86be311af45e7729f1c3dba7f1b0ce016b7b1b8e2f1 at BqMwAwgw18MC4VLGEDRV7UuVdycNmbWrneJLAsnYhnqC (computed by the sequencer's loader), immutable
+Transaction hash is 7f54df9ff9bff1aaebf1450750b2062e6aaee6d852d5bf7661c5192b4109305a
+Transaction is included in block 18
+Transaction hash is da152a317f6936b82be86201e0a17c1c7961a7ef86034374b7d9213bd42aa0c9
+Transaction is included in block 19
+Transaction hash is d859e87bde5178306633d869f991af533f77a15f3e2dcb84fc1183ffb33da8b8
+Transaction is included in block 20
+Transaction hash is 5047931fa95ce40ade5e87ecdb0528590250e47ebe33eaf901b30ce0c2eb02c4
+Transaction is included in block 21
+[deploy] deploy scripted: WriteSegment 3 of 3 (55204 bytes)         applied   gas         0 +   55896 bytes, block   18
+[deploy] deploy scripted: WriteSegment 2 of 3 (98304 bytes)         applied   gas     55210 +   99028 bytes, block   19
+[deploy] deploy scripted: WriteSegment 1 of 3 (98304 bytes)         applied   gas     98342 +   99028 bytes, block   20
+[deploy] deploy scripted: CreateHeader (immutable) at 86mjnZoN3ChYur1c7XScfQEZ1jGhV273Jh4uLrVe8BxX applied   gas    251894 +     720 bytes, block   21
+[deploy] scripted: image 0a37d9ba1f59c9abb457f3fd62d6b7bd7e15ccb327d24f847d8cd61f51ce329c at 86mjnZoN3ChYur1c7XScfQEZ1jGhV273Jh4uLrVe8BxX (computed by the sequencer's loader), immutable
+[fresh] instance A 0xe31cecf44a35ca387610ca169ad520f65b441bc0281db3734fa788640aa3c9bd of 3M25gC1oV7Y4Rn5Rgq5YtMjnMfSshWpGHisFuNKHbFFF: checkpoint 0x065d112a62a2b7d5249762cdbce437c2155425a8dc232c9b9b7c289af1ac5bb1 (slot 11673600), 1 period update(s), then the finality update of slot 11676352
+[fresh-follow] fresh A Init Init                                          applied        gas    117636 block   22 +  2.4s a5ac4a4a8e56357edbacb879e8eb6147fac4fd856af44822979349abf2d947a8
+[fresh-follow] fresh A Init adopt 1/2                                     applied        gas   3396726 block   23 +  2.8s c3a4abe03940afbf3c9d562076cac84d7bce747b0fa42b9f1cacd2228558fde0
+[fresh-follow] fresh A Init adopt 2/2                                     applied        gas   3481335 block   24 +  3.3s a2dc77991d2ee18c13149d47d185f72f96cbd3e27d55250a3b715ed6d65e2922
+[fresh-follow] fresh A period 1425 update Open (step 1)                   applied        gas   3043685 block   25 +  2.2s 6a6b4ae65a7088dabef73bfdfe84c1b85bb5a56ecb8382080a6649c77d9374ae
+[fresh-follow] fresh A period 1425 update Miller (step 2)                 applied        gas   3309537 block   26 +  2.3s d4f18e3ef0b98968f47ea7ed448176d8ff26a942667b8d90da146c306a9a3b01
+[fresh-follow] fresh A period 1425 update adopt 1/2                       applied        gas   3408091 block   27 +  2.6s 0e02bcb7325b7c4d7f509fb2b3f600c4cda4098b6e1f9bc4a517c791b4705969
+[fresh-follow] fresh A period 1425 update adopt 2/2                       applied        gas   3415283 block   28 +  2.8s f127339e3307b387f77f08ea6e83138dc0eace73a1b4f049d77cc082c2a3fce4
+[fresh-follow] fresh A period 1425 update Finish (step 3)                 applied        gas   3695561 block   29 +  3.1s 6dfe05ecc59d81f9fcc17c2680bdeb5767712ae1e845549a995347b51246cf43
+[fresh] period 1425 update applied: advanced false, adopted true
+[fresh-follow] fresh A finality update Open (step 1)                      applied        gas   3023156 block   30 +  2.4s c7f843b06b3869bba9cf38a7b5602a627c454b4bc8bf2cbd32508bb5cc79bfe3
+[fresh-follow] fresh A finality update Miller (step 2)                    applied        gas   3305354 block   31 +  2.3s f42590afdaf1574460b8b9710e27a6c86548d09d8d5aff5b2524d8a0ebb54e18
+[fresh-follow] fresh A finality update Finish (step 3)                    applied        gas   3723709 block   32 +  3.5s 85c9d8d98bb1f0d3abbe413dca43cc10b8bbbd6d3dc5fba94e61111f37ec7504
+[fresh] instance A holds finalized slot 11676352 with root 0xb4de784c95280f3c85f7c05839b1edbf3d4d77320859f32d49e0c0b7f60f36a5 (the second provider's) and its record
+[fresh-scenarios] fresh twin Init Init                                       applied        gas    117636 block   34 +  4.2s b2d684227a61bfb35c57ae3a57e8293aa5bbbece37aecdc3e7fbcfdb386db152
+[fresh-scenarios] fresh twin Init adopt 1/2 with a 2,000,000 gas limit (the release candidates' wallet default) reverted       gas   2000000 block   35 +  2.4s 2c8b273fa6e7c10190b85c4ba795019b14823e0098c5df446e46b765e08de394
+[fresh-scenarios] fresh twin Init adopt 1/2                                  applied        gas   3396726 block   36 +  2.9s 14ccc4a5f45c97383b6efcafe3e3da147d657699b5714bea683d1f4453255298
+[fresh-scenarios] fresh twin Init adopt 2/2                                  applied        gas   3481335 block   37 +  3.4s 279ada32320fc246f28789986b604f5fd98e9eb99a78ad9f22da800d14a17335
+[fresh-scenarios] fresh twin period 1425 update Open (step 1)                applied        gas   3043685 block   38 +  2.1s fe65b0def9defb7e190352480945de46ef53bae46e39149f9e6dc9f86ce85c25
+[fresh-scenarios] fresh twin period 1425 update Miller (step 2)              applied        gas   3309537 block   39 +  2.4s 22cfb53d514af85f3c29df6a0357a744f5a8be05b0fca4c07298eb6780f57408
+[fresh-scenarios] fresh twin period 1425 update adopt 1/2                    applied        gas   3408091 block   40 +  2.5s 75a8ee7d6b61aaec4213f03d6a009e6e0b1ccc1e46ab465ca66e85236d02a5b7
+[fresh-scenarios] fresh twin period 1425 update adopt 2/2                    applied        gas   3415283 block   41 +  2.8s d7cf791b3de9947c3ddead24faa4ca77bf15357593d8621e4cea23e466f9add4
+[fresh-scenarios] fresh twin period 1425 update Finish (step 3)              applied        gas   3695561 block   42 +  3.2s 68d8fcfd6c16fd5fe591b496b5a63002f9aee043d38c959abdfcb6880a8517ed
+[fresh-scenarios] fresh malformed signature: Open (step 1)                   refused   41 (SignatureMalformed) gas   1208298 block   43 +  2.0s e82126b037c0a4f3e7fe3729f7a73c37841e212ef91b6a04de9e68c9d1bc3e98
+[fresh-scenarios] fresh forged signature: Open (step 1)                      applied        gas   3023282 block   44 +  3.0s eb613655e75c74d26cc0f321171430af958b8e155b56f0450e423dc727c041ca
+[fresh-scenarios] fresh forged signature: Miller (step 2)                    applied        gas   3305354 block   45 +  2.5s deb8a4e508dff1712c83f0d7d8b82e013c2e233fdf0b329ba9d4103729d58566
+[fresh-scenarios] fresh forged signature: Finish (step 3)                    refused   40 (SignatureInvalid) gas   3635464 block   46 +  3.3s 9a39bbc617e530e85be3a1a2dfaf79c5bda5505f6cf7a2b47779b79e9cc3653e
+[fresh-scenarios] fresh Apply sent as the transaction root                   refused   202 (WrongSender) gas     18472 block   47 +  1.6s af6f1e30aeeb625df06db19f07b5d35d7d03d42043ec5cfe9cc945d24cfe6286
+[fresh-scenarios] fresh Apply from another program's actor                   refused   202 (WrongSender) gas     31635 block   48 +  3.1s 8921d7b1de1319f3885a934b70ef0af776e92fa62069290c890de4e3184df393
+[fresh-scenarios] fresh ApplyVerified from another program's actor           refused   202 (WrongSender) gas     28971 block   49 +  2.7s 87ff5fb84e70f282bb359d25bbf06653baaaa3edd14296376596712a0054c1ae
+[fresh-scenarios] fresh JobOpen from another program's actor                 refused   202 (WrongSender) gas     22951 block   50 +  2.7s aa755d75bf7f9d5f2776313656e1f5d9170b552468b7c43ddc15c4b60400a8d0
+[fresh-scenarios] fresh Record from another program's actor                  refused   202 (WrongSender) gas     19651 block   51 +  2.8s 238e0a99e85990c90d8c233fbdb0a8c35dbe2d8798d8df2636f19d9d743629a6
+[fresh-scenarios] fresh Miller at the other deployment's address of the job  refused   205 (NoJob) gas      6028 block   52 +  2.5s 8feb7f62f0aa815d6dc9b61f6f19fbce373cf4048fb2a161ff63e8ab4e2237e1
+[fresh-scenarios] fresh Init of an existing instance                         refused   203 (AlreadyInitialized) gas     17969 block   53 +  2.8s c1cee3039b4cf551e219d9a7142f46a099e2db4cae43caa608437024aff72471
+[fresh-scenarios] fresh other chain Init Init                                applied        gas    117636 block   54 +  3.0s c314d4d4ebd4e1d44c78aade3c3fc1098d10dd43c2e775f42b55a82c91015cb3
+[fresh-scenarios] fresh other chain Init adopt 1/2                           applied        gas   3396726 block   55 +  2.7s 6576771bd060311039cd8ae38642195bf2e72869a8284a70e8213385b2ef4d14
+[fresh-scenarios] fresh other chain Init adopt 2/2                           applied        gas   3481335 block   56 +  3.3s f8506c2c0a0a70302971f2bd0dcf782ab86a020f4ff9deb952a5336279cad5ad
+[fresh-scenarios] fresh other chain period update Open (step 1)              applied        gas   3043685 block   57 +  2.3s 41f7f19a551eda06ec2345c36bab9c253f234d0ee7a359549f3ad320559d3230
+[fresh-scenarios] fresh other chain period update Miller (step 2)            applied        gas   3309537 block   58 +  2.4s c0c749d3e2cf630d089690a3354cf61a8ef378e646304fbf7814dd6afa39fec8
+[fresh-scenarios] fresh other chain period update adopt 1/2                  applied        gas   3408091 block   59 +  2.6s edef557ad3c618ae7a1086f42ee9c1ba430132c84486923b0cd3543d9976819d
+[fresh-scenarios] fresh other chain period update adopt 2/2                  applied        gas   3415283 block   60 +  2.7s 8a22d61699d75f2d28e9651efe2cfa2f4c8fda40254a81e91b2b2038cb3b9514
+[fresh-scenarios] fresh other chain period update Finish (step 3)            refused   40 (SignatureInvalid) gas   3637768 block   61 +  3.1s fc56ecfd92827353ae2cc07557d8f0680b3348ed06016ed3b59f2c96bb64ff49
+[fresh-scenarios] fresh instance B's job id sent to instance C               refused   205 (NoJob) gas      6031 block   62 +  1.8s c6d591a3a98d205feaa566f58011341a5259cfa2f2f269195f44d7a8163721eb
+[fresh-scenarios] fresh late clock Init Init                                 applied        gas    117636 block   63 +  3.2s 978c36e354889e4f865af0f769a7f5a10a268a0423d2c48837cee29e042edea7
+[fresh-scenarios] fresh late clock Init adopt 1/2                            applied        gas   3396726 block   64 +  3.2s fdc91bd99b9d1a1dbe0a51618e69d218d3c49c5744ec41f2ae7717f4cbc5ee2e
+[fresh-scenarios] fresh late clock Init adopt 2/2                            applied        gas   3481335 block   65 +  3.0s 27fa5133e4c4fadfa6625305924eb656ae2c7b33626e10a7090e05036475dedb
+[fresh-scenarios] fresh Open before its signature slot (validity window)     reverted       gas   4000000 block   67 +  4.6s fcc349e7e94afdbe5fbbb4a1f0fc13a0aea1673e1452bfb921b6871dbd44e218
+[fresh-scenarios] fresh finality update Open (step 1)                        applied        gas   3023156 block   68 +  2.4s 3c3262bb0cc55450e938d1f731c3cf85c13e95776d37505b22634d380b30f628
+[fresh-scenarios] fresh duplicate Open (same job)                            refused   207 (JobExists) gas   3017220 block   69 +  3.0s a31fc348d60880f6fe542d6718b7281353919a0ad1b03739fca751fc45818c03
+[fresh-scenarios] fresh Finish before Miller (skipped step)                  refused   81 (StepError::Phase) gas     23376 block   70 +  1.5s c62bc6dfb1885a3cce3a85101ea1d5471ee2e2d99773635650eea3f7d9729dde
+[fresh-scenarios] fresh finality update Miller (step 2)                      applied        gas   3305354 block   71 +  3.2s 2ad8777e4d07b67d0005a8e42776d601fc874f148f085e29a88913fe8a845d33
+[fresh-scenarios] fresh Miller replayed                                      refused   81 (StepError::Phase) gas     20401 block   72 +  2.3s f20e245e000fcf71ca331ead53271c1763dc5414a2557b54b39abb2e1ac420cd
+[fresh-scenarios] fresh finality update Finish (step 3)                      applied        gas   3723709 block   73 +  3.9s 53f866621bc7bde0d86168a049db17c2e9e6fee8ab5901d4835a1a99329642d4
+[fresh-scenarios] fresh Finish replayed after the job applied                refused   205 (NoJob) gas      6031 block   74 +  1.4s b8364a1f49206cbab294590b791dc02d3bcdc525abeed679d596c43f78e39483
+[fresh-scenarios] fresh Open an applied update again                         refused   52 (NotNewer) gas    263902 block   75 +  2.8s 594b01631b828fd8367882867f14733a90d2d393767f24406d7bf7f028cb55a8
+[fresh-consume] fresh Attest: storage slot (Sepolia USDC totalSupply_), with the block header applied        gas    284556 block   76 +  2.3s 3ce5066d885f945737ee33a5eb6cc15c04c8f56406255832ea6ec0f28ffab366
+[fresh] fresh Attest: storage slot (Sepolia USDC totalSupply_), with the block header: applied, 2 statement(s), block 12228553
+[fresh-consume] fresh Attest: an ERC-20 Transfer log (emitter, topic 0, recipient), with the block header applied        gas    180281 block   77 +  2.8s 3170ec3917051006ac0d2e932a0af9b5be9708989595fdf9d54424cedc460724
+[fresh] fresh Attest: an ERC-20 Transfer log (emitter, topic 0, recipient), with the block header: applied, 1 statement(s), block 12228553
+[fresh-consume] fresh Attest: the slot and the log in one request          applied        gas    421259 block   78 +  2.9s 312cd45cfaa1e4a7382cfec68711d457c78a7b51b89384f177fe5839d2c3c25a
+[fresh] fresh Attest: the slot and the log in one request: applied, 3 statement(s), block 12228553
+[fresh-consume] fresh Attest refused: no block header for a record that binds a block hash refused   215 (code 215) gas     38694 block   79 +  2.9s 67f0cd7dd665057d0a29ee77f7c1d345dba8d957a41fe8ed9070113f76de5b86
+[fresh-consume] fresh Attest refused: the block header with one byte changed refused   120 (code 120) gas     53821 block   80 +  2.9s 0392ec60278d59403b5696b4f7705d53ac9360fc2861955354e1627050cd196c
+[fresh-consume] fresh Attest refused: the same proof asked as a mainnet statement (chain id 1) refused   140 (code 140) gas     41049 block   81 +  2.9s d27e891abd2ffaa6dd03404848cc87596e00642d82f7cd9bf30b1e2a9672d5c6
+[fresh-consume] fresh Attest refused: a false value for the slot           refused   130 (code 130) gas    261826 block   82 +  2.8s 57ce75b525fe688e5d1b2d8d08debff238fc2319eb2ed01264aa1df8b46ab750
+Transaction hash is 609c4b0afe03265e913c006a74ea4293f475f8e0b0eddca65d0bd1bc812b3794
+Transaction is included in block 83
+Transaction hash is feee7c9676c152990470a1c78a93e4d7bd0ece52087ac85da2a99dc20b2192d9
+Transaction is included in block 84
+Transaction hash is 521fa4c54eec1d0635259c991927e1e8d33cacd31e9a5e1417a3b7e6a57d2416
+Transaction is included in block 85
+Transaction hash is 972da288ed8879428f4ec06aaec8ec01c1d6350158bf521b764f3319eb651b80
+Transaction is included in block 86
+Transaction hash is e5ca4b0142fb6446f86c7bab9c375fa2b00a9a4304d1920e6d7fbbd52dfae0cd
+Transaction is included in block 87
+Transaction hash is a1bbfcd94bab2e7d3b1cedd854f46b26f1b53fc71c3e5501dca42104b4d741f6
+Transaction is included in block 88
+[fresh-consume] deploy consumer: WriteSegment 5 of 5 (60252 bytes)         applied   gas         0 +   60944 bytes, block   83
+[fresh-consume] deploy consumer: WriteSegment 4 of 5 (98304 bytes)         applied   gas     60258 +   99028 bytes, block   84
+[fresh-consume] deploy consumer: WriteSegment 3 of 5 (98304 bytes)         applied   gas     98342 +   99028 bytes, block   85
+[fresh-consume] deploy consumer: WriteSegment 2 of 5 (98304 bytes)         applied   gas     98342 +   99028 bytes, block   86
+[fresh-consume] deploy consumer: WriteSegment 1 of 5 (98304 bytes)         applied   gas     98342 +   99028 bytes, block   87
+[fresh-consume] deploy consumer: CreateHeader (immutable) at ePJB9Ggv9Es46reiCHaGN8hZ4UoNMJJ6V1d7BgjiVMZ applied   gas    453626 +     720 bytes, block   88
+[deploy] consumer: image 41a36bde4976fb08fafc8df730d0be5dac5520f8eb9081aa42a25c97f01029c2 at ePJB9Ggv9Es46reiCHaGN8hZ4UoNMJJ6V1d7BgjiVMZ (computed by the sequencer's loader), immutable
+[fresh-consume] fresh consumer CallAttest: storage slot                    applied        gas    398277 block   89 +  2.2s 78ac40a0703d8c4219f6f1c8ac78206514316d86a97184de4f164c2c5a4f676b
+[fresh] fresh consumer CallAttest: storage slot: the consumer keeps the program's reply (2 statement(s))
+[fresh-consume] fresh consumer CallAttest: the Transfer log                applied        gas    284153 block   90 +  2.4s 1277faae3c32060686deb20f19bf6f3e1878bb3f493cf6b081356a10c7becd55
+[fresh] fresh consumer CallAttest: the Transfer log: the consumer keeps the program's reply (1 statement(s))
+[fresh-consume] fresh consumer Claim: the ERC-20 Transfer (credits its sender once) applied        gas    306072 block   91 +  2.9s 8bd3bafae40491ce985ab71fb63f77a42e0528e6975142c876200388771142db
+[fresh-consume] fresh consumer Claim again (replay)                        refused   223 (code 223) gas     26987 block   92 +  1.7s 295a6c65da6fea7e35b83da83ccfd26b169610f777e1fd05b6aeacd83c76f4ff
+[fresh] the consumer credited 0x3ec84659862c59619e82f16b787b798bd423d038 with 77433485091956308 of token 0xf6081c62c44e85a025101c99fb9f74afc36b23ca once; the replay refused
+[deploy] consumer: already deployed at ePJB9Ggv9Es46reiCHaGN8hZ4UoNMJJ6V1d7BgjiVMZ
+Latest block is 92
+[fresh] receive a pending credit of 20000000000000 into the private account 478hD6LXFTYu5gRRkWkCyXPRsWgCwAfRredoCUfxr5b9 (#0): executed, proven and sent in 219.3 s
+[fresh-private] receive a pending credit of 20000000000000 into the private account 478hD6LXFTYu5gRRkWkCyXPRsWgCwAfRredoCUfxr5b9 (#0) dropped        gas           block      +  0.0s a9fb4bb93852403e9aa4e045131268c3f64ef684721fee55533c344cbf7b6f48
+Error: receive a pending credit of 20000000000000 into the private account 478hD6LXFTYu5gRRkWkCyXPRsWgCwAfRredoCUfxr5b9 (#0): dropped  not included within 4 blocks; LEZ v0.4.0: a genesis credit received into the note before the session's transactions
+== phase fresh-private FAILED (exit 1)
+blocks: 1..=169
+transactions: 90 sent; 66 applied, 21 refused with an exit code, 2 reverted otherwise, 1 dropped by the sequencer, 0 rejected at its RPC, 0 unfinished
+charged in all: execution gas 125051563, storage gas 2590854, base fees 1021139336
+against the harness tables: 0 transactions have a harness row; execution gas equal in 0, different in 0
+base fee exec over the blocks: min 8, max 8; blocks finalized on Bedrock at export: 0 of 169
+records written to <scratch>/run/export

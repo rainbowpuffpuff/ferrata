@@ -32,12 +32,13 @@ use ferrata_lez_holdings_wire::{holding_actor, Gate, HoldingsState};
 use ferrata_lez_wire::{attest::Address, code, Message};
 use harness::{
     attest::u256,
+    compat::{self, AccountKey},
     ferrata_account, ferrata_program,
     holdings::{holdings_account, Holdings},
     program_header, scripted_account, Chain, TxReport, TWIN,
 };
-use lee::{Account, AccountId, Actor, PrivateKey, PublicKey};
-use lee_core::program::{ProgramHeader, ProgramSegment, PROGRAM_LOADER_ACCOUNT_ID};
+use lee::{Account, AccountId, Actor};
+use lee_core::program::{ProgramHeader, PROGRAM_LOADER_ACCOUNT_ID};
 use test_guest_core::Script;
 
 /// `program_loader`'s message (LEZ v0.4.0-rc1), rebuilt byte-for-byte: the loader is not a
@@ -61,11 +62,11 @@ fn loader_tx(
     label: &str,
     target: AccountId,
     message: &LoaderMessage,
-    signer: Option<&PrivateKey>,
+    signer: Option<&AccountKey>,
     time: u64,
 ) -> TxReport {
     let root = Actor::new(target, PROGRAM_LOADER_ACCOUNT_ID);
-    let signers: Vec<&PrivateKey> = signer.into_iter().collect();
+    let signers: Vec<&AccountKey> = signer.into_iter().collect();
     chain.submit_signed(label, root, borsh::to_vec(message).unwrap(), vec![root], vec![], time, &signers)
 }
 
@@ -91,7 +92,7 @@ fn deployment_accounts(chain: &Chain, account: AccountId) -> Vec<AccountId> {
     let mut next = Some(header_of(chain, account).program_first_segment);
     while let Some(segment_id) = next {
         let state = chain.state.get_account_by_id(segment_id).data.actor_state(PROGRAM_LOADER_ACCOUNT_ID).clone();
-        let segment = ProgramSegment::from_bytes(&state).unwrap_or_else(|| panic!("no segment at {segment_id}"));
+        let segment = compat::program_segment(&state).unwrap_or_else(|| panic!("no segment at {segment_id}"));
         next = segment.next_segment;
         out.push(segment_id);
     }
@@ -284,8 +285,8 @@ fn the_control_a_mutable_deployment_of_the_same_code_can_be_swapped() {
     let user_elf = ferrata_program().user_elf().expect("the attestation program is a program binary");
     let chunks: Vec<&[u8]> = user_elf.chunks(96 * 1024).collect();
     assert!(chunks.len() >= 2, "the attestation program must split into several segments");
-    let keys: Vec<PrivateKey> = (0..chunks.len()).map(|i| PrivateKey::try_new([0x61 + i as u8; 32]).unwrap()).collect();
-    let segments: Vec<AccountId> = keys.iter().map(|k| AccountId::from(&PublicKey::new_from_private_key(k))).collect();
+    let keys: Vec<AccountKey> = (0..chunks.len()).map(|i| compat::account_key([0x61 + i as u8; 32])).collect();
+    let segments: Vec<AccountId> = keys.iter().map(compat::account_of).collect();
     for i in (0..chunks.len()).rev() {
         let r = loader_tx(
             &mut chain,
@@ -297,8 +298,8 @@ fn the_control_a_mutable_deployment_of_the_same_code_can_be_swapped() {
         );
         assert!(r.ok(), "{}: {:?} (exit {:?})", r.label, r.charge.revert, r.exit_code);
     }
-    let header_key = PrivateKey::try_new([0xB1; 32]).unwrap();
-    let mutable = AccountId::from(&PublicKey::new_from_private_key(&header_key));
+    let header_key = compat::account_key([0xB1; 32]);
+    let mutable = compat::account_of(&header_key);
     let r = loader_tx(
         &mut chain,
         "CreateHeader (mutable) at a fresh account",

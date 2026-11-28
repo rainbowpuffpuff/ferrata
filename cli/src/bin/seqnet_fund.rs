@@ -22,7 +22,9 @@ use std::{path::PathBuf, time::Duration};
 use anyhow::{anyhow, ensure, Result};
 use clap::Parser;
 use ferrata_cli::{lez, seed::Seed};
-use lee::{AccountId, PrivateKey, PublicKey};
+use lee::AccountId;
+#[cfg(not(feature = "lez-040"))]
+use lee::{PrivateKey, PublicKey};
 use serde_json::json;
 use wallet::{
     program_facades::{native_token_transfer::NativeTokenTransfer, CreditDelivery},
@@ -30,7 +32,18 @@ use wallet::{
 };
 
 /// local.json's second genesis account (LEZ publishes its key: `wallet-import-test-accounts`).
+#[cfg(not(feature = "lez-040"))]
 const FAUCET_KEY: &str = "f434f8741720014586ae43356d2aec6257da086222f604ddb75d69733b86fc4c";
+/// local.json's second genesis account on LEZ v0.4.0: its account secret (LEZ #1135), as v0.4.0's Justfile imports it
+/// (`account import public --secret`, recipe `wallet-import-test-accounts`).
+#[cfg(feature = "lez-040")]
+const FAUCET_KEY: &str = "717940b1cc55e5d6b2066dbf1d9a3f26f212f4db08d02388177fcfedd8a9be1b";
+
+/// What names the user's public /0 to the faucet: its public key up to rc3, its initial key state from v0.4.0.
+#[cfg(not(feature = "lez-040"))]
+type ForeignKey = PublicKey;
+#[cfg(feature = "lez-040")]
+type ForeignKey = lee_core::signing_key::SigningKeyState;
 
 #[derive(Parser)]
 struct Args {
@@ -77,8 +90,18 @@ fn faucet_wallet(home: &PathBuf, rpc: &str) -> Result<(WalletCore<sequencer_serv
         ),
     )?;
     let bytes: [u8; 32] = hex::decode(FAUCET_KEY)?.try_into().map_err(|_| anyhow!("the faucet key is not 32 bytes"))?;
-    let key = PrivateKey::try_new(bytes).map_err(|e| anyhow!("the faucet key is not a scalar: {e}"))?;
-    let id = AccountId::from(&PublicKey::new_from_private_key(&key));
+    #[cfg(not(feature = "lez-040"))]
+    let (key, id) = {
+        let key = PrivateKey::try_new(bytes).map_err(|e| anyhow!("the faucet key is not a scalar: {e}"))?;
+        let id = AccountId::from(&PublicKey::new_from_private_key(&key));
+        (key, id)
+    };
+    #[cfg(feature = "lez-040")]
+    let (key, id) = {
+        let key = lee::signature::PublicAccountSecret::new(bytes);
+        let id = lee::signature::public_account_id(&key);
+        (key, id)
+    };
     let wallet = if storage.exists() {
         WalletCore::new_update_chain(config, storage, None, "")?
     } else {
@@ -93,9 +116,14 @@ fn faucet_wallet(home: &PathBuf, rpc: &str) -> Result<(WalletCore<sequencer_serv
 #[tokio::main]
 async fn main() -> Result<()> {
     let a = Args::parse();
+    // The sequencer's LEZ before any wallet is opened or anything is signed (src/lezver.rs).
+    ferrata_cli::lezver::require(&a.sequencer).await?;
     let seed = Seed::from_file(&a.seed)?;
     let first = &seed.public_accounts(1)?[0];
+    #[cfg(not(feature = "lez-040"))]
     let (public0, public0_key) = (first.id, PublicKey::new_from_private_key(&first.key));
+    #[cfg(feature = "lez-040")]
+    let (public0, public0_key) = (first.id, lee::signature::initial_key(&first.key));
     let private0 = seed.private_account_ids(1)?[0];
 
     ensure!(!(a.public_only && a.private_only), "--public-only and --private-only exclude each other");
@@ -121,7 +149,7 @@ async fn main() -> Result<()> {
 }
 
 /// 1. The faucet pays the user's public account /0.
-async fn step_faucet(a: &Args, public0: AccountId, public0_key: PublicKey) -> Result<()> {
+async fn step_faucet(a: &Args, public0: AccountId, public0_key: ForeignKey) -> Result<()> {
     let (faucet, faucet_id) = faucet_wallet(&a.faucet_home, &a.sequencer)?;
     let before =
         faucet.get_account_balance(public0).await.map_err(|e| anyhow!("reading the user's public balance: {e}"))?;
@@ -130,7 +158,10 @@ async fn step_faucet(a: &Args, public0: AccountId, public0_key: PublicKey) -> Re
         .transfer(
             AccountIdentity::Public(faucet_id),
             // A public account not used yet is named by its public key (LEZ's wallet CLI: `--to-pk`).
+            #[cfg(not(feature = "lez-040"))]
             AccountIdentity::PublicForeign(public0_key),
+            #[cfg(feature = "lez-040")]
+            AccountIdentity::public_foreign(public0_key).ok_or_else(|| anyhow!("public /0's initial key names no account"))?,
             a.public_amount,
             CreditDelivery::Automatic,
         )

@@ -70,8 +70,12 @@ pub(crate) struct Deployment {
 const B1_IMAGE_ID: &str = "847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515";
 /// `ferrata_bridge_lezfee`, this tree's program (`ferrata_wallet::deployed::F13_IMAGE_ID`, `docs/image-ids.md`):
 /// claims without a range (ADR 0046's layout), protocol fees minted on LEZ by `CollectFees` (ADR 0048).
-#[cfg(test)]
+#[cfg(all(test, not(feature = "lez-040")))]
 const F13_IMAGE_ID: &str = "9d02d54d56b026079e94c8d9b12db69f3a96b7acccd11283f68e5bc343bfa321";
+/// Its LEZ v0.4.0 build (RISC Zero 3.1.0: another image id), as `ferrata_wallet::deployed::F13_IMAGE_ID` with the
+/// wallet's `lez-040` (feature `lez-040` here; modules/scripts/v040-calls.sh enables it).
+#[cfg(all(test, feature = "lez-040"))]
+const F13_IMAGE_ID: &str = "7e39359d8d447d6e98696a4a64266c0d12aaa2a2bdcfd0a3704545fbbfbc26e0";
 
 /// The deployments this module knows: the network's configuration as recorded on 23 November 2026
 /// (`deploy/testnet/web/basecamp/tests/install-test/live-wallet-config.json` and `live-programs.json`). A network that

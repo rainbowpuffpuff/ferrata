@@ -338,9 +338,17 @@ fn import_role_keys(wallet: &mut WalletCore<SequencerClient>, labels: &[String],
     let mut accounts = Vec::new();
     for label in labels {
         let key = derived_key(label);
-        let account = AccountId::from(&lee::PublicKey::new_from_private_key(&key));
+        #[cfg(not(feature = "lez-040"))]
+        let (account, imported) = (AccountId::from(&lee::PublicKey::new_from_private_key(&key)), key);
+        // LEZ v0.4.0: the key's 32 bytes are the account's secret, its id the hash of its nonce-0 key (LEZ #1135), as
+        // lez/live/driver/src/keys.rs's `account_of`.
+        #[cfg(feature = "lez-040")]
+        let (account, imported) = {
+            let secret = lee::signature::PublicAccountSecret::new(*key.value());
+            (lee::signature::public_account_id(&secret), secret)
+        };
         accounts.push(*account.value());
-        wallet.storage_mut().key_chain_mut().add_imported_public_account(key);
+        wallet.storage_mut().key_chain_mut().add_imported_public_account(imported);
         if say {
             eprintln!("seqnet-chain: the LEZ wallet holds the role key {label} (account {account}); its messages wait for approval");
         }
@@ -635,6 +643,8 @@ impl Chain {
     /// configuration names. Two zones on one channel id (two devnets with upstream's default) are told apart only by the
     /// configuration's presence.
     async fn check_sequencer(&self, url: &str) -> Result<Value> {
+        // A candidate runs this build's LEZ, or nothing is switched (LEZ v0.4.0 changed the formats: src/lezver.rs).
+        ferrata_cli::lezver::require_within(url, PROBE).await?;
         let client: SequencerClient =
             SequencerClientBuilder::default().request_timeout(PROBE).build(url).map_err(|e| anyhow!("not a sequencer URL: {e}"))?;
         let head = probe("getLastBlockId", async { client.get_last_block_id().await.map_err(|e| anyhow!("{e}")) }).await?;
@@ -1097,7 +1107,7 @@ impl Chain {
                 for block in client.get_block_range(from, last).await.map_err(|e| anyhow!("get_block_range: {e}"))? {
                     for (i, tx) in block.body.transactions.iter().enumerate() {
                         if tx.hash().to_string() == hash {
-                            return Ok((block.header.block_id, block.body.reverted.contains(&(i as u64)), tx.clone()));
+                            return Ok((block.header.block_id, block.body.is_reverted(i), tx.clone()));
                         }
                     }
                 }
@@ -1244,6 +1254,8 @@ fn main() -> Result<()> {
         ensure!(chain_id == a.chain_id, "the Ethereum RPC serves chain {chain_id}, not {}", a.chain_id);
         let eth = flow::Eth { p, vault: a.vault, chain_id, from_block: a.from_block, chunk: 10_000 };
         let seed = Seed::from_file(&a.seed)?;
+        // The sequencer's LEZ before the wallet is opened or anything is signed (src/lezver.rs).
+        ferrata_cli::lezver::require(&a.sequencer).await?;
         let mut wallet = lez::open_wallet(&a.lez_wallet, &a.sequencer, &a.lez_password_file, &seed)?;
         let password = match &a.lez_role_password_file {
             Some(f) => Some(std::fs::read_to_string(f).with_context(|| format!("--lez-role-password-file {}", f.display()))?),

@@ -1,0 +1,89 @@
+ok rapidsnark 0.0.8: sha256 59bdd709eed96235de061f352893f4650c923b54b591052118593012bb1cd831, 4 files checked, ~/.cache/ferrata/native/rapidsnark-0.0.8-59bdd709eed96235
+ok logos-blockchain-circuits 0.5.7: sha256 92a0c6ad810d486631518b7b9b247a2b66f66af6f8f8ddce381acbbdfedc0f7f, 18 files checked, ~/.cache/ferrata/native/logos-blockchain-circuits-0.5.7-92a0c6ad810d4866
+lez-select: v0.4.0-rc1 -> v0.4.0 (a255b42c0fc80d1cb219454a3a1f5ec3b5d92115)
+   Compiling methods v0.1.0 (<repo>/lez/methods)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2m 23s
+== building LEZ sequencer_service (sequencer_service_standalone) with 16 jobs
+   Compiling lee_core v0.1.0 (../upstream/lez-v0.4.0/lee/state_machine/core)
+   Compiling build_utils v0.1.0 (../upstream/lez-v0.4.0/build_utils)
+   Compiling sequencer_actors_common v0.1.0 (../upstream/lez-v0.4.0/lez/sequencer/actors/common)
+   Compiling sharding_pool_actor v0.1.0 (../upstream/lez-v0.4.0/lez/sequencer/actors/sharding_pool)
+   Compiling mempool v0.1.0 (../upstream/lez-v0.4.0/lez/mempool)
+   Compiling sequencer_channel_signing_actor v0.1.0 (../upstream/lez-v0.4.0/lez/sequencer/actors/channel_signing)
+   Compiling sequencer_executor_actor_metrics v0.1.0 (../upstream/lez-v0.4.0/lez/sequencer/actors/executor/metrics)
+   Compiling logging v0.1.0 (../upstream/lez-v0.4.0/lez/logging)
+   Compiling sequencer_rpc_server_actor_metrics v0.1.0 (../upstream/lez-v0.4.0/lez/sequencer/actors/rpc_server/metrics)
+   Compiling sequencer_service_metrics v0.1.0 (../upstream/lez-v0.4.0/lez/sequencer/service/metrics)
+   Compiling lee v0.1.0 (../upstream/lez-v0.4.0/lee/state_machine)
+   Compiling programs v0.1.0 (../upstream/lez-v0.4.0/lez/programs)
+warning: lee@0.1.0: Generated module at ../tmp/sequencer-v0.4.0/target/release/build/lee-5883f2624a80f6b6/out/lee/privacy_preserving_circuit/mod.rs
+   Compiling program_loader_core v0.1.0 (../upstream/lez-v0.4.0/lee/program_loader)
+   Compiling sequencer_stake_core v0.1.0 (../upstream/lez-v0.4.0/lez/programs/sequencer_stake/core)
+   Compiling fee_core v0.1.0 (../upstream/lez-v0.4.0/lez/programs/fee/core)
+   Compiling clock_core v0.1.0 (../upstream/lez-v0.4.0/lez/programs/clock/core)
+   Compiling system_upgrader_core v0.1.0 (../upstream/lez-v0.4.0/lez/programs/system_upgrader/core)
+warning: programs@0.1.0: Generated module at ../tmp/sequencer-v0.4.0/target/release/build/programs-5da99812dc0beeb6/out/lez/programs/mod.rs
+   Compiling bridge_core v0.1.0 (../upstream/lez-v0.4.0/lez/programs/bridge/core)
+   Compiling system_accounts v0.1.0 (../upstream/lez-v0.4.0/lez/system_accounts)
+   Compiling common v0.1.0 (../upstream/lez-v0.4.0/lez/common)
+   Compiling sequencer_bridge v0.1.0 (../upstream/lez-v0.4.0/lez/sequencer/bridge)
+   Compiling key_protocol v0.1.0 (../upstream/lez-v0.4.0/lee/key_protocol)
+   Compiling chain_state v0.1.0 (../upstream/lez-v0.4.0/lez/chain_state)
+   Compiling sequencer_storage_actor v0.1.0 (../upstream/lez-v0.4.0/lez/sequencer/actors/storage)
+   Compiling sequencer_core_metrics v0.1.0 (../upstream/lez-v0.4.0/lez/sequencer/core/metrics)
+   Compiling sequencer_service_protocol v0.1.0 (../upstream/lez-v0.4.0/lez/sequencer/service/protocol)
+   Compiling sequencer_service_rpc v0.1.0 (../upstream/lez-v0.4.0/lez/sequencer/service/rpc)
+   Compiling sequencer_slasher_actor v0.1.0 (../upstream/lez-v0.4.0/lez/sequencer/actors/slasher)
+   Compiling testnet_initial_state v0.1.0 (../upstream/lez-v0.4.0/lez/testnet_initial_state)
+   Compiling sequencer_bedrock_actor v0.1.0 (../upstream/lez-v0.4.0/lez/sequencer/actors/bedrock)
+   Compiling sequencer_genesis v0.1.0 (../upstream/lez-v0.4.0/lez/sequencer/genesis)
+   Compiling wallet v0.1.0 (../upstream/lez-v0.4.0/lez/wallet)
+   Compiling sequencer_core v0.1.0 (../upstream/lez-v0.4.0/lez/sequencer/core)
+   Compiling sequencer_gossip_actor v0.1.0 (../upstream/lez-v0.4.0/lez/sequencer/actors/gossip)
+   Compiling sequencer_executor_actor v0.1.0 (../upstream/lez-v0.4.0/lez/sequencer/actors/executor)
+   Compiling sequencer_rpc_server_actor v0.1.0 (../upstream/lez-v0.4.0/lez/sequencer/actors/rpc_server)
+   Compiling sequencer_service v0.1.0 (../upstream/lez-v0.4.0/lez/sequencer/service)
+    Finished `release` profile [optimized] target(s) in 5m 39s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+== ../tmp/sequencer-v0.4.0/bin/sequencer_service_standalone (8dce25a8ad4d1ba9a442d6435981c6c332ca061dedde0aa78f1aecbbf729ef3c)
+== building the driver with 16 jobs
+   Compiling lee_core v0.1.0 (../upstream/lez-v0.4.0/lee/state_machine/core)
+   Compiling build_utils v0.1.0 (../upstream/lez-v0.4.0/build_utils)
+   Compiling logging v0.1.0 (../upstream/lez-v0.4.0/lez/logging)
+   Compiling lee v0.1.0 (../upstream/lez-v0.4.0/lee/state_machine)
+   Compiling programs v0.1.0 (../upstream/lez-v0.4.0/lez/programs)
+warning: lee@0.1.0: Generated module at ../tmp/sequencer-v0.4.0/target/release/build/lee-c41178c95c50ba23/out/lee/privacy_preserving_circuit/mod.rs
+   Compiling sequencer_stake_core v0.1.0 (../upstream/lez-v0.4.0/lez/programs/sequencer_stake/core)
+   Compiling program_loader_core v0.1.0 (../upstream/lez-v0.4.0/lee/program_loader)
+   Compiling clock_core v0.1.0 (../upstream/lez-v0.4.0/lez/programs/clock/core)
+   Compiling bridge_core v0.1.0 (../upstream/lez-v0.4.0/lez/programs/bridge/core)
+   Compiling fee_core v0.1.0 (../upstream/lez-v0.4.0/lez/programs/fee/core)
+   Compiling ferrata-lez-wire v0.1.0 (<repo>/lez/wire)
+   Compiling test_guest_core v0.1.0 (../upstream/lez-v0.4.0/test_guest_core)
+   Compiling system_upgrader_core v0.1.0 (../upstream/lez-v0.4.0/lez/programs/system_upgrader/core)
+warning: programs@0.1.0: Generated module at ../tmp/sequencer-v0.4.0/target/release/build/programs-3e82be1df222bdbb/out/lez/programs/mod.rs
+   Compiling ferrata-lez-bridge-wire v0.1.0 (<repo>/lez/live/frozen/bridge-wire)
+   Compiling system_accounts v0.1.0 (../upstream/lez-v0.4.0/lez/system_accounts)
+   Compiling common v0.1.0 (../upstream/lez-v0.4.0/lez/common)
+   Compiling sequencer_service_protocol v0.1.0 (../upstream/lez-v0.4.0/lez/sequencer/service/protocol)
+   Compiling key_protocol v0.1.0 (../upstream/lez-v0.4.0/lee/key_protocol)
+   Compiling chain_state v0.1.0 (../upstream/lez-v0.4.0/lez/chain_state)
+   Compiling sequencer_service_rpc v0.1.0 (../upstream/lez-v0.4.0/lez/sequencer/service/rpc)
+   Compiling testnet_initial_state v0.1.0 (../upstream/lez-v0.4.0/lez/testnet_initial_state)
+   Compiling wallet v0.1.0 (../upstream/lez-v0.4.0/lez/wallet)
+   Compiling live-driver v0.1.0 (<repo>/lez/live/driver)
+    Finished `release` profile [optimized] target(s) in 42.56s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+warning: lee@0.1.0: Generated module at ../tmp/sequencer-v0.4.0/target/release/build/lee-c41178c95c50ba23/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at ../tmp/sequencer-v0.4.0/target/release/build/programs-3e82be1df222bdbb/out/lez/programs/mod.rs
+   Compiling ferrata-lez-wire v0.1.0 (<repo>/lez/wire)
+   Compiling ferrata-advance v0.1.0 (<repo>/lez/advance)
+   Compiling ferrata-lez-bridge-wire v0.1.0 (<repo>/lez/bridge-wire)
+   Compiling ferrata-updater v0.1.0 (<repo>/lez/updater)
+   Compiling ferrata-updater-sequencer v0.1.0 (<repo>/lez/updater/sequencer)
+    Finished `release` profile [optimized] target(s) in 17.90s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+check-build: every build script linked native code only from its own build output, the system library directories, or the checked archives (rapidsnark, logos-blockchain-circuits)

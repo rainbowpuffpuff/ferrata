@@ -594,19 +594,19 @@ pub async fn scenarios(
     for (index, t) in txs.into_iter().enumerate() {
         if index == 1 {
             let detour = Tx {
-                step: format!("{} with the wallet's default gas limit", t.step),
+                step: format!("{} {}", t.step, crate::live::DETOUR_GAS_STEP),
                 harness: None,
                 actors: t.actors.clone(),
                 root: t.root,
                 message: t.message.clone(),
                 payer,
-                gas_limit: Some(wallet::DEFAULT_GAS_LIMIT),
-                note: "LEZ's wallet declares 2,000,000 by default; the step needs more".into(),
+                gas_limit: Some(crate::live::DETOUR_GAS),
+                note: format!("{}; the step needs more", crate::live::DETOUR_GAS_NOTE),
             };
             let out = live.submit(detour).await?;
             ensure!(out.row.status == "reverted", "expected an out-of-gas revert, got {} {}", out.row.status, out.row.note);
             ensure!(
-                out.row.exec_gas == wallet::DEFAULT_GAS_LIMIT.to_string(),
+                out.row.exec_gas == crate::live::DETOUR_GAS.to_string(),
                 "an out-of-gas action is charged its whole gas limit, got {}",
                 out.row.exec_gas
             );
@@ -996,6 +996,8 @@ pub async fn private(
     let client = TapClient::recording(live.wallet.client_owned(), &transcript, &tx_out)?;
     let (mut wallet, me) = private_wallet_at(&dir.join("wallet"), &live.opts.rpc, client, private_account)?;
     let tip = wallet.start_at_chain_tip().await?;
+    #[cfg(feature = "lez-040")]
+    crate::private::receive_native_credits("[fresh]", live, &mut wallet, me).await?;
     let catalog = ProgramCatalog::from([
         (consumer_at, Program::new(Cow::Owned(consumer_bin.bytes.clone()))?),
         (main, Program::new(Cow::Owned(program.bytes.clone()))?),

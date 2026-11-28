@@ -18,7 +18,8 @@
 #               the root the second provider (publicnode's beacon API) reports at its slot, which becomes the
 #               instance's trusted checkpoint, and the best update of every period from the bootstrap's. Three
 #               attempts, two minutes apart; then the run stops: nothing recorded is replayed in its place.
-#   build       the guests from the committed tree (its LEZ v0.4.0-rc1 manifests: the images of docs/image-ids.md,
+#   build       the guests from the committed tree (its LEZ v0.4.0-rc1 manifests: the images of docs/image-ids.md; on
+#               LEZ v0.4.0 with v0.4.0 selected, their ids recorded in guest-ids.tsv for stage check),
 #               which the run checks), then LEZ $LEZ_TAG's sequencer_service with its `standalone` feature (its mock
 #               Bedrock actor: no Logos Blockchain node) and the live driver against $LEZ_TAG
 #               (lez/scripts/lez-select.sh; the manifests are put back afterwards), the updater's sequencer backend and
@@ -148,9 +149,17 @@ toolchains() {
   [ -n "$lez_home" ] || die "no RISC Zero home with guest Rust 1.91.1 for LEZ (set RISC0_HOME_LEZ; scripts/ci/install-risc0.sh)"
   export RISC0_HOME="$lez_home"
   # LEZ's crates (the sequencer, the driver, the wallet's prover) are on risc0-zkvm 3.0.5, which finds its r0vm through
-  # RISC0_HOME; rzup puts it in no bin/ directory, so it goes on PATH too, for what calls `r0vm` by name.
+  # RISC0_HOME; rzup puts it in no bin/ directory, so it goes on PATH too, for what calls `r0vm` by name. LEZ v0.4.0's are
+  # on 3.1.0 (LEZ PR 1124): RISC0_HOME stays LEZ's guest home (guest Rust 1.91.1, whose r0vm is 3.0.5) and the r0vm of
+  # 3.1.0, which scripts/ci/install-risc0.sh puts in ~/.risc0, is named by RISC0_SERVER_PATH (and put first on PATH).
   local r0vm
-  r0vm="$(r0vm_of "$lez_home" 3.0.5)" || die "no r0vm 3.0.5 in $lez_home or on PATH (scripts/ci/install-risc0.sh)"
+  if [ "${LEZ_TAG:-}" = v0.4.0 ]; then
+    r0vm="$(r0vm_of "$lez_home" 3.1.0 || r0vm_of "$HOME/.risc0" 3.1.0)" \
+      || die "no r0vm 3.1.0 in $lez_home, $HOME/.risc0 or on PATH (scripts/ci/install-risc0.sh)"
+    export RISC0_SERVER_PATH="$r0vm"
+  else
+    r0vm="$(r0vm_of "$lez_home" 3.0.5)" || die "no r0vm 3.0.5 in $lez_home or on PATH (scripts/ci/install-risc0.sh)"
+  fi
   export PATH="$(dirname "$r0vm"):$PATH"
 }
 unset RISC0_DEV_MODE   # the sequencer verifies receipts; the private attestation's proof is real
@@ -211,13 +220,27 @@ stage_build() {
   eval "$vars"
   local messages="$FERRATA_LIVE_TMP/cargo-messages.jsonl"
   rm -f "$messages"
-  run_logged "build: the guest programs (lez methods; the committed v0.4.0-rc1 manifests)" \
+  # LEZ v0.4.0's runtime hands a program another input than rc1's (LEZ PR 1144's grants among others): there the guests
+  # are built with v0.4.0 selected (lez-select.sh swaps in their v0.4.0 sources); on the release candidates they are the
+  # committed v0.4.0-rc1 manifests' (docs/image-ids.md's images), as before.
+  local guests_of="the committed v0.4.0-rc1 manifests"
+  if [ "$LEZ_TAG" = v0.4.0 ]; then
+    touch "$SELECT_MARK"
+    SELECTED=1
+    run_logged "select LEZ v0.4.0 for the guests, the sequencer and the driver (lez/scripts/lez-select.sh)" \
+      bash "$REPO/lez/scripts/lez-select.sh" v0.4.0
+    guests_of="LEZ v0.4.0 selected"
+  fi
+  run_logged "build: the guest programs (lez methods; $guests_of)" \
     bash -c 'cd "$1/lez" && RISC0_BUILD_LOCKED=1 RUSTC_WRAPPER="$1/scripts/guest-rustc" cargo build -p methods --locked' _ "$REPO"
   local b
+  : > "$OUT/guest-ids.tsv"
   for b in ferrata_lez.bin scripted.bin ferrata_consumer.bin; do
     say "guest $b: sha256 $(sha256sum "$(guest_bin "$b")" | cut -c1-16)"
+    # the image id r0vm computes for the binary built here: what stage check holds a v0.4.0 run's deployment to
+    printf '%s\t%s\n' "${b%.bin}" "$(r0vm --elf "$(guest_bin "$b")" --id 2>/dev/null | tail -n 1 | sed 's/^0x//')" >> "$OUT/guest-ids.tsv"
   done
-  if [ "$LEZ_TAG" != v0.4.0-rc1 ]; then
+  if [ "$LEZ_TAG" != v0.4.0-rc1 ] && [ -z "$SELECTED" ]; then   # (v0.4.0 is selected already, before its guests)
     touch "$SELECT_MARK"
     SELECTED=1
     run_logged "select LEZ $LEZ_TAG for the sequencer and the driver (lez/scripts/lez-select.sh)" \
@@ -390,7 +413,11 @@ PY
   for p in $periods; do want "fresh A period $p update Finish (step 3)" applied; done
   want "fresh A finality update Finish (step 3)" applied
   # The scenarios, by name.
-  want "fresh twin Init adopt 1/2 with the wallet's default gas limit" reverted
+  if [ "$LEZ_TAG" = v0.4.0 ]; then   # the detour declares rc's 2,000,000 itself there (lez/live/driver DETOUR_GAS_STEP)
+    want "fresh twin Init adopt 1/2 with a 2,000,000 gas limit (the release candidates' wallet default)" reverted
+  else
+    want "fresh twin Init adopt 1/2 with the wallet's default gas limit" reverted
+  fi
   want "fresh twin period ${periods%% *} update Finish (step 3)" applied
   want "fresh malformed signature: Open (step 1)" refused 41
   want "fresh forged signature: Finish (step 3)" refused 40
@@ -413,13 +440,19 @@ PY
   else
     echo "  NOTE: the private attestation was left out (FERRATA_CI_PRIVATE=skip, a local run): this run is incomplete" >&2
   fi
-  # The images: the final programs of docs/image-ids.md, as the sequencer's loader recorded them.
-  local name doc got
+  # The images: the final programs of docs/image-ids.md, as the sequencer's loader recorded them. On LEZ v0.4.0, whose
+  # images docs/image-ids.md does not list yet, the ones r0vm computed for the guests built in stage build (guest-ids.tsv).
+  local name doc got src="docs/image-ids.md"
+  [ "$LEZ_TAG" = v0.4.0 ] && src="this run's v0.4.0 build (guest-ids.tsv)"
   for name in main:ferrata_lez twin:ferrata_lez scripted:scripted consumer:ferrata_consumer; do
-    doc="$(doc_image "${name#*:}")"
+    if [ "$LEZ_TAG" = v0.4.0 ]; then
+      doc="$(awk -F'\t' -v n="${name#*:}" '$1 == n { print $2 }' "$OUT/guest-ids.tsv" 2>/dev/null)"
+    else
+      doc="$(doc_image "${name#*:}")"
+    fi
     got="$(awk -F'\t' -v n="${name%%:*}" '$1 == n { print $3 }' "$RECORDS/programs.tsv")"
-    [ -n "$doc" ] && [ "$got" = "$doc" ] && echo "  ok: ${name%%:*} is ${name#*:} 0x${got:0:8}… (docs/image-ids.md)" \
-      || { echo "  MISSING: ${name%%:*} deployed as ${name#*:} of docs/image-ids.md (0x$doc), got ${got:-none}" >&2; fail=1; }
+    [ -n "$doc" ] && [ "$got" = "$doc" ] && echo "  ok: ${name%%:*} is ${name#*:} 0x${got:0:8}… ($src)" \
+      || { echo "  MISSING: ${name%%:*} deployed as ${name#*:} of $src (0x$doc), got ${got:-none}" >&2; fail=1; }
   done
   check "the consumer deployed through the loader (its header and every segment applied)" consumer_deployed "$RECORDS"
   # A at the finality update's block, with the second provider's root.

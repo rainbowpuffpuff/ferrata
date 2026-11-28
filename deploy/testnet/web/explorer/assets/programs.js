@@ -2,7 +2,8 @@
 // programs named in config.json, and any program whose loader header carries an image id config.json knows
 // (so a fresh deployment is recognised without editing the config).
 
-import { BUILTINS, LOADER_IDL, PROGRAM_LOADER_ID, NATIVE_TOKEN_PROGRAM_ID } from "./lez.js";
+import { LOADER_IDL, PROGRAM_LOADER_ID, NATIVE_TOKEN_PROGRAM_ID } from "./lez.js";
+import { BUILTINS } from "./lez040.js";
 import { hex, fromB58 } from "./util.js";
 import { loadIdl, labels } from "./ui.js";
 import { decodeAttestationState } from "./ferrata.js";

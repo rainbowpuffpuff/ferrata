@@ -1,0 +1,38 @@
+[04:11:52Z] LEZ v0.4.0 tree at <box>/live/ferrata/../upstream/lez-v0.4.0
+[04:11:52Z] build: sequencer_service --features standalone (LEZ's tree, release) and ferrata (cli/v040/build.sh build)
+[04:12:44Z] built: sequencer_service 8dce25a8ad4d1ba9…, ferrata f2b41f4fc69f7b39…
+[04:12:44Z] r0vm: risc0-r0vm 3.1.0 (~/.risc0/extensions/v3.1.0-cargo-risczero-x86_64-unknown-linux-gnu/r0vm)
+[04:13:02Z] sequencer up at http://127.0.0.1:19390: block 2; getSequencerStatus: {"jsonrpc":"2.0","id":1,"result":{"state":"online","height":2,"isOurTurn":true}}
+[04:13:02Z] 1. ferrata lez-version
+this ferrata: LEZ v0.4.0
+the sequencer at http://127.0.0.1:19390: LEZ v0.4.0
+match: this ferrata may sign and send there
+[04:13:02Z] ferrata lez-version: exit 0
+[04:13:02Z] 2. the web wallet's codec: two transfers (live040.mjs)
+ok   getSequencerStatus: the network runs LEZ v0.4.0
+ok   transfer 1: sendTransaction answers its hash (13cfde13485e8766…), nonce 0
+ok   transfer 1: receipt success (fee base 4968, storage gas 621)
+ok   transfer 1: block 3's hash recomputed by the wallet's and the explorer's decoders
+ok   transfer 1: the block's receipt for it says applied
+ok   transfer 1: its witness at nonce 0 is 129 bytes (initial key only at nonce 0)
+ok   transfer 1: it rotates the payer to its nonce-1 key
+ok   transfer 2: sendTransaction answers its hash (01f89add3ae29bff…), nonce 1
+ok   transfer 2: receipt success (fee base 4432, storage gas 554)
+ok   transfer 2: block 4's hash recomputed by the wallet's and the explorer's decoders
+ok   transfer 2: the block's receipt for it says applied
+ok   transfer 2: its witness at nonce 1 is 96 bytes (initial key only at nonce 0)
+ok   transfer 2: it rotates the payer to its nonce-2 key
+ok   the page's connect(): v0.4.0, signing allowed
+ok   the page imports the secret as the same account
+ok   the receive code's admission key names the fresh account
+ok   transfer 3 (the page's path, nonce 2): net.outcome reads its receipt: applied
+ok   the recipient's balance rose by 3345 (0 -> 3345)
+ok   the fresh account holds 777
+[04:13:47Z] live040.mjs: exit 0
+[04:13:47Z] 3. lez-read
+[04:13:47Z] lez-read head: exit 0 
+[04:13:47Z] lez-read block 3: exit 0 
+[04:13:48Z] lez-read block 4: exit 0 
+[04:13:48Z] lez-read block 5: exit 0 
+[04:13:48Z] sequencer at block 5; status {"jsonrpc":"2.0","id":1,"result":{"state":"online","height":5,"isOurTurn":true}}
+[04:13:48Z] done: ok

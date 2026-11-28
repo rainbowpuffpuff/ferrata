@@ -13,9 +13,9 @@ the evidence for our proposal to Logos, [logos-co/rfp #257](https://github.com/l
    requirements of RFP-021 and the 68 of RFP-022, **49 and 48 are shown** under our strict rule; 6 and 17 in part,
    1 and 1 not yet, 3 and 2 wait on Logos (27 November 2026). Each row gives its reason, tests and evidence.
 2. **Verify it in ten minutes:** [docs/VERIFY.md](docs/VERIFY.md). Clone, then `python3 -I scripts/verify.py --all`
-   runs the 124 quick offline checks in minutes, each naming the requirement rows it backs (Python 3.11; the few that
+   runs the 135 quick offline checks in minutes, each naming the requirement rows it backs (Python 3.11; the few that
    also need Node or Foundry say so and skip without them); then `python3 -I scripts/verify.py --all --online` runs
-   the 22 online checks, read-only.
+   the 23 online checks, read-only.
 3. **Try it on our test network:** [the testers' page](https://54-156-116-24.sslip.io/testers/): the faucet, the web
    wallet, a deposit on Sepolia and its claim on LEZ, step by step, with what each step should show; also a private
    claim from the command line, whose step says what still stops it. It is a LEZ v0.4.0-rc3 network we run for the
@@ -277,14 +277,15 @@ The design notes specify these; there is no code for them here. In short (in ful
 No part of this repository has been audited. Four vaults are deployed on a public network, all on Sepolia, with
 testnet parameters ([docs/sepolia.md](docs/sepolia.md)). On a LEZ network Logos runs only the light client's
 experimental v0.3.1 port is deployed, on the public LEZ testnet ([row 150](docs/EVIDENCE.md)); none of the proposal's
-v0.4 programs is: LEZ testnet 0.4 does not exist. LEZ v0.4.0 was released on 27 November 2026 (RISC Zero 3.1.0, so new program image ids, and new transaction and fee formats); everything here ran on its release candidates (rc1 to rc3, RISC Zero 3.0.5), and the port to v0.4.0 has not started. The attestation program and the bridge program at B1 run on a LEZ
+v0.4 programs is: LEZ testnet 0.4 does not exist. LEZ v0.4.0 was released on 27 November 2026 (RISC Zero 3.1.0, so new program image ids, and new transaction and fee formats); every v0.4 program deployed here runs on its release candidates (rc1 to rc3, RISC Zero 3.0.5; the light client's v0.3.1 port above is separate); the port to v0.4.0 is in progress, and has run so far only on LEZ v0.4.0 zones we ran ourselves, none public ([docs/port-v0.4.0.md](docs/port-v0.4.0.md): every LEZ change, what builds, what has run, what is not done). The attestation program and the bridge program at B1 run on a LEZ
 v0.4.0-rc3 network we run that is reachable publicly ([rows 237, 238](docs/EVIDENCE.md)). The deployment for the day it opens
-is one command, built for and rehearsed on our own LEZ v0.4.0-rc3 zone (not yet for v0.4.0) ([lez/testnet04/](lez/testnet04/README.md), [row
+is one command, built for and rehearsed on our own LEZ v0.4.0-rc3 zone (not yet rehearsed on v0.4.0) ([lez/testnet04/](lez/testnet04/README.md), [row
 148](docs/EVIDENCE.md)). The prototypes exist to measure and to test the design; the audit is planned for the code the
 proposal would deliver. A security review by an agent in a separate context (11 November 2026) is not an audit,
 and Slither, Aderyn, Halmos, cargo-audit, cargo-deny and fuzzing are tooling, not an audit. The LEZ side's proofs are made
 with RISC Zero 3.0.5, whose verifiers accept forged claims (RISC Zero's advisories of 11 November 2026); the Ethereum
-side moved to 3.1.0 on 23 November 2026, and the LEZ side's move, the port to LEZ v0.4.0, has not started
+side moved to 3.1.0 on 23 November 2026, and the LEZ side's move, the port to LEZ v0.4.0, is in progress ([docs/port-v0.4.0.md](docs/port-v0.4.0.md)): no
+program of ours built on RISC Zero 3.1 runs on a public network yet
 ([plan](docs/design/risc0-3.1-migration.md); [security note](docs/security/risc0-groth16-advisory-2026-11-21/README.md)). To report a
 vulnerability: [SECURITY.md](SECURITY.md).
 

@@ -4,7 +4,9 @@
 //! chain settled, applied or refused, is `Ok`.
 
 use anyhow::Result;
-use lee::{Actor, PrivateKey, PublicAccountEvidence};
+use lee::{Actor, PublicAccountEvidence};
+
+use crate::lez::PayerKey;
 
 /// One public transaction of the job path, before it is signed.
 #[derive(Clone, Debug)]
@@ -41,7 +43,7 @@ pub trait Ledger {
     fn actor_state(&self, actor: Actor) -> Result<Vec<u8>>;
     /// Sign `tx` with `payer` (at its current nonce), declare `gas_limit` and `max_fee`, send it and
     /// wait until it is settled.
-    fn submit(&mut self, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome>;
+    fn submit(&mut self, payer: &PayerKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome>;
     /// Save what the backend keeps between runs (the sequencer backend: its follower of the chain); the daemon calls
     /// it now and then and when it stops.
     fn flush(&mut self) -> Result<()> {
@@ -93,12 +95,14 @@ mod harness_ledger {
         settle::{classify, opening_fee_state, settle_charged_transaction, LeeTransaction},
         trace::trace_public,
     };
+    use harness::compat;
     use lee::{
-        public_transaction::{Message as PublicMessage, WitnessSet},
-        Account, AccountId, Actor, FeeDeclaration, PrivateKey, PublicKey, PublicTransaction, V03State,
+        public_transaction::Message as PublicMessage, Account, AccountId, Actor, FeeDeclaration, PublicTransaction,
+        V03State,
     };
 
     use super::{Ledger, Tx, TxOutcome};
+    use crate::lez::PayerKey;
 
     /// LEZ v0.4.0-rc1's state machine in process, with its fee program and settlement (as
     /// `harness::Chain`), the Ferrata program at genesis, and one funded account per payer key.
@@ -123,19 +127,18 @@ mod harness_ledger {
     }
 
     impl HarnessLedger {
-        pub fn new(payers: &[PrivateKey]) -> Self {
+        pub fn new(payers: &[PayerKey]) -> Self {
             let mut accounts = vec![
                 (system_accounts::fee_state_account_id(), system_accounts::fee_state_account()),
                 (system_accounts::fee_escrow_account_id(), Account::default()),
                 (system_accounts::fee_inbox_account_id(), Account::default()),
             ];
             for key in payers {
-                accounts.push((AccountId::from(&PublicKey::new_from_private_key(key)), Account::funded(1 << 100)));
+                accounts.push((crate::lez::payer_account(key), Account::funded(1 << 100)));
             }
-            let state = V03State::new()
-                .with_public_accounts(accounts)
-                .with_named_programs([(programs::fee_account_id(), programs::fee())])
-                .with_genesis_programs([(harness::ferrata_program(), true)]);
+            let state = V03State::new().with_public_accounts(accounts);
+            let state = compat::named_programs(state, [(programs::fee_account_id(), programs::fee())]);
+            let state = compat::genesis_programs(state, [(harness::ferrata_program(), true)]);
             Self {
                 state,
                 block_id: 2,
@@ -153,9 +156,9 @@ mod harness_ledger {
             harness::ferrata_account()
         }
 
-        pub fn balance(&self, key: &PrivateKey) -> u128 {
+        pub fn balance(&self, key: &PayerKey) -> u128 {
             self.state
-                .get_account_by_id(AccountId::from(&PublicKey::new_from_private_key(key)))
+                .get_account_by_id(crate::lez::payer_account(key))
                 .data
                 .native_balance()
                 .unwrap_or(0)
@@ -184,23 +187,23 @@ mod harness_ledger {
             Ok(Some((messages, self.block_id.saturating_sub(1).max(after))))
         }
 
-        fn submit(&mut self, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome> {
+        fn submit(&mut self, payer: &PayerKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome> {
             if self.fail_next > 0 {
                 self.fail_next -= 1;
                 bail!("connection reset (injected)");
             }
-            let payer_id = AccountId::from(&PublicKey::new_from_private_key(payer));
+            let payer_id = crate::lez::payer_account(payer);
             let nonce = self.state.get_account_by_id(payer_id).nonce;
             let fee = FeeDeclaration::new(payer_id, gas_limit, 0, max_fee);
             let msg = PublicMessage::new(
                 tx.root,
                 tx.message.clone(),
-                tx.actors.clone(),
+                compat::declared(tx.actors.clone(), [payer_id]),
                 BTreeMap::from([(payer_id, nonce)]),
                 Some(fee),
                 tx.evidence.clone(),
             );
-            let witness_set = WitnessSet::for_message(&msg, &[payer]);
+            let witness_set = compat::sign(&msg, &[payer]);
             let ptx = PublicTransaction::new(msg, witness_set);
             let (transitions, _) = trace_public(&ptx, &self.state, gas_limit);
             let lee_tx = LeeTransaction::Public(ptx);

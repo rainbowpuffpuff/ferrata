@@ -172,6 +172,31 @@ What it does not do: the `spel` binary of the pull request links LEZ v0.4.0-rc3'
 build, so SPEL's encoder (`spel encode`) is not run here; the hand-written IDL's encoding direction is `check.py`'s
 (every vector re-encoded to the same bytes).
 
+### On LEZ v0.4.0
+
+SPEL's head `f739d8a` pins LEZ v0.4.0-rc3; its `spel-framework-core` uses four items of `lee_core` (`AccountId` and
+its two PDA derivations, `PdaSeed`, `NullifierPublicKey`, `ViewingPublicKey`), all with the same definitions in LEZ v0.4.0
+(`a255b42c`, 27 November 2026). [`spel-v2/run-at.sh`](spel-v2/run-at.sh)'s second argument names the LEZ tree
+`lee_core` is patched to; on 28 November 2026 (laptop, Ferrata `b612b652`) it ran twice on the same tree:
+
+```sh
+bash idl/spel-v2/run-at.sh f739d8a lez-a255b42c   # LEZ v0.4.0 (git archive of a255b42c beside the repository)
+bash idl/spel-v2/run-at.sh f739d8a lez-bafd07be   # LEZ v0.4.0-rc3, the same run on rc3 for comparison
+```
+
+On v0.4.0 ([`generated/spel-v2-f739d8a-lez-a255b42c.txt`](generated/spel-v2-f739d8a-lez-a255b42c.txt)): the
+attestation program's IDL generated with **0 differences in 33** messages and types against
+[`ferrata_attestation.idl.json`](ferrata_attestation.idl.json) and 21 of 21 vectors decoded; the bridge program's,
+with the tuples patch, **0 differences in 66** against [`ferrata_bridge.idl.json`](ferrata_bridge.idl.json) and 60
+of 60 vectors decoded; without the patch it stops at `Spend`'s tuple, as on rc3. Both generated files are byte for
+byte the rc3 run's at the same tree ([`generated/at-f739d8a-lez-bafd07be/`](generated/at-f739d8a-lez-bafd07be/),
+[`generated/spel-v2-f739d8a-lez-bafd07be.txt`](generated/spel-v2-f739d8a-lez-bafd07be.txt)), and the two logs differ
+only in the tree's name. The port to v0.4.0 has not changed the programs' core crates (`lez/wire`,
+`lez/bridge-wire`) so far, so these are also the IDLs of the v0.4.0 build of the programs; a change to either crate
+needs this run again. The record of 27 November
+([`generated/spel-v2-f739d8a.txt`](generated/spel-v2-f739d8a.txt), rc3, an earlier tree with 31 bridge messages)
+is kept.
+
 ## Results
 
 Measured on the Modal build box (`mrun`, 11 November 2026) and in CI's command; the counts below

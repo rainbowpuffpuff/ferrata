@@ -31,7 +31,7 @@ use ferrata_lez_wire::{
 };
 use harness::{
     attest::consumer_state,
-    consumer_account, mainnet_config,
+    compat, consumer_account, mainnet_config,
     private::{catalog, PrivateAccount, PrivateRun, Shape},
     settle::{classify, opening_fee_state, settle_private_transaction, LeeTransaction},
     Chain, EXPECTED_FINALIZED,
@@ -259,13 +259,23 @@ fn align(
     let mut log = Vec::new();
     // Public context: the claim actor is N's.
     if let Some(Claims { actor: (ca, cd), .. }) = claims {
+        #[cfg(not(feature = "lez-040"))]
         if out.message.public_context.actors.remove(&cd) {
             out.message.public_context.actors.insert(ca);
             log.push("public_context.actors: claim(pool, N) (the nullifier's address)".to_string());
         }
+        #[cfg(feature = "lez-040")]
+        if let Some(authority) = out.message.public_context.actors.remove(&cd) {
+            out.message.public_context.actors.insert(ca, authority);
+            log.push("public_context.actors: claim(pool, N) (the nullifier's address)".to_string());
+        }
     }
-    let publics = a.message.public_context.actors.clone();
+    let publics = compat::declared_actors(&a.message.public_context.actors);
     let (ea, eo) = (&a.message.execution, &mut out.message.execution);
+    // The fees' views before the private actions are aligned: on LEZ v0.4.0 a fee fallback finds its payer's action by
+    // the nullifier it spends, which the alignment below rewrites.
+    let fee_a = compat::proven_fee_details(ea);
+    let fee_o = compat::proven_fee_details(eo);
     align_boundary("boundary", &ea.boundary, &mut eo.boundary, &publics, claims, &mut log)?;
     // Private actions: nullifiers, commitments and notes of equal sizes (the account's own nullifier
     // and commitment set by the state spent and made, the dummies' fresh, every note fresh); the
@@ -296,20 +306,22 @@ fn align(
     }
     // The fee: the same refund target; its fallback (the payer's transition after the fee
     // transfer alone) is a private action of its own and the payer alias's crossing.
-    match (&ea.fee, &mut eo.fee) {
+    match (&fee_a, &fee_o) {
         (None, None) => {}
         (Some(fa), Some(fo)) => {
             if fa.refund_to != fo.refund_to {
                 return Err("the fee's refund target differs".into());
             }
-            match (&fa.fallback, &mut fo.fallback) {
+            match (&fa.fallback, &fo.fallback) {
                 (None, None) => {}
                 (Some(xa), Some(xo)) => {
-                    align_action("the fee fallback's private action", &xa.action, &mut xo.action)?;
+                    let mut action = xo.action.clone();
+                    align_action("the fee fallback's private action", &xa.action, &mut action)?;
+                    compat::set_proven_fallback_action(eo, &action);
                     align_boundary(
                         "the fee fallback's boundary",
                         &xa.boundary,
-                        &mut xo.boundary,
+                        compat::proven_fallback_boundary_mut(eo).expect("the fallback is present"),
                         &publics,
                         claims,
                         &mut log,
@@ -355,7 +367,7 @@ fn align(
                 borsh::to_vec(&xa.program_image_claims).unwrap(),
                 borsh::to_vec(&xo.program_image_claims).unwrap(),
             ),
-            ("execution.fee", borsh::to_vec(&xa.fee).unwrap(), borsh::to_vec(&xo.fee).unwrap()),
+            ("execution.fee", compat::proven_fee_bytes(xa), compat::proven_fee_bytes(xo)),
             ("nonces", borsh::to_vec(&ma.nonces).unwrap(), borsh::to_vec(&mo.nonces).unwrap()),
             (
                 "admission_evidence",
@@ -382,7 +394,7 @@ fn align_boundary(
     label: &str,
     ba: &[BoundaryStep],
     bo: &mut [BoundaryStep],
-    publics: &BTreeSet<Actor>,
+    publics: &[Actor],
     claims: Option<Claims>,
     log: &mut Vec<String>,
 ) -> Result<(), String> {
@@ -449,6 +461,7 @@ fn align_boundary(
             dd.pda_seeds = da.pda_seeds.clone();
             log.push(format!("{label} step {i}: the PDA seed of claim(pool, N)"));
         }
+        #[cfg(not(feature = "lez-040"))]
         if da.inherited_authorizations != dd.inherited_authorizations {
             if da.inherited_authorizations.len() != dd.inherited_authorizations.len() {
                 return Err(format!("{label} step {i}: inherited authorizations"));
@@ -460,6 +473,17 @@ fn align_boundary(
             }
             dd.inherited_authorizations = da.inherited_authorizations.clone();
             log.push(format!("{label} step {i}: inherited authorizations (the private account's alias)"));
+        }
+        #[cfg(feature = "lez-040")]
+        if da.grants != dd.grants {
+            if da.grants.len() != dd.grants.len() {
+                return Err(format!("{label} step {i}: grants"));
+            }
+            if names_public_actors(&da.grants, publics) || names_public_actors(&dd.grants, publics) {
+                return Err(format!("{label} step {i}: a grant names a public actor"));
+            }
+            dd.grants = da.grants.clone();
+            log.push(format!("{label} step {i}: grants (the private account's alias)"));
         }
     }
     Ok(())
@@ -483,8 +507,15 @@ fn align_action(label: &str, pa: &PrivateAction, po: &mut PrivateAction) -> Resu
 }
 
 /// True if `ids` names the account of an actor of the public context.
-fn names_public(ids: &BTreeSet<AccountId>, publics: &BTreeSet<Actor>) -> bool {
+#[cfg(not(feature = "lez-040"))]
+fn names_public(ids: &BTreeSet<AccountId>, publics: &[Actor]) -> bool {
     ids.iter().any(|id| publics.iter().any(|p| p.account_id == *id))
+}
+
+/// True if a v0.4.0 delivery grants authority over an actor of the public context (LEZ #1144).
+#[cfg(feature = "lez-040")]
+fn names_public_actors(grants: &BTreeSet<Actor>, publics: &[Actor]) -> bool {
+    grants.iter().any(|actor| publics.contains(actor))
 }
 
 /// What `align` takes from one transaction must not carry the account's identity: `t1` and `t2`
@@ -499,10 +530,10 @@ fn names_public(ids: &BTreeSet<AccountId>, publics: &BTreeSet<Actor>) -> bool {
 fn fresh_check(
     t1: &PrivacyPreservingTransaction,
     t2: &PrivacyPreservingTransaction,
-    publics: &BTreeSet<Actor>,
+    publics: &[Actor],
 ) -> Result<Vec<String>, String> {
     let (e1, e2) = (&t1.message.execution, &t2.message.execution);
-    let fallback = |e: &lee_core::ProvenExecution| e.fee.as_ref().and_then(|f| f.fallback.clone());
+    let fallback = |e: &lee_core::ProvenExecution| compat::proven_fee_details(e).and_then(|fee| fee.fallback);
     let (f1, f2) = (fallback(e1), fallback(e2));
     if f1.is_some() != f2.is_some() {
         return Err("the fee fallback is in one proof only".into());
@@ -537,21 +568,39 @@ fn fresh_check(
                 }
                 aliases += usize::from(private_side);
             }
-            if names_public(&d1.inherited_authorizations, publics)
-                || names_public(&d2.inherited_authorizations, publics)
+            #[cfg(not(feature = "lez-040"))]
             {
-                return Err(format!("{label} step {i}: an inherited authorization names a public account"));
+                if names_public(&d1.inherited_authorizations, publics)
+                    || names_public(&d2.inherited_authorizations, publics)
+                {
+                    return Err(format!("{label} step {i}: an inherited authorization names a public account"));
+                }
+                if d1.inherited_authorizations.len() != d2.inherited_authorizations.len() {
+                    return Err(format!("{label} step {i}: inherited authorizations of another count"));
+                }
+                if d1.inherited_authorizations.intersection(&d2.inherited_authorizations).next().is_some() {
+                    return Err(format!(
+                        "{label} step {i}: an inherited authorization repeats in two proofs of one claim"
+                    ));
+                }
+                authorizations += d1.inherited_authorizations.len();
             }
-            if d1.inherited_authorizations.len() != d2.inherited_authorizations.len() {
-                return Err(format!("{label} step {i}: inherited authorizations of another count"));
+            #[cfg(feature = "lez-040")]
+            {
+                if names_public_actors(&d1.grants, publics) || names_public_actors(&d2.grants, publics) {
+                    return Err(format!("{label} step {i}: a grant names a public actor"));
+                }
+                if d1.grants.len() != d2.grants.len() {
+                    return Err(format!("{label} step {i}: grants of another count"));
+                }
+                if d1.grants.intersection(&d2.grants).next().is_some() {
+                    return Err(format!("{label} step {i}: a grant repeats in two proofs of one claim"));
+                }
+                authorizations += d1.grants.len();
             }
-            if d1.inherited_authorizations.intersection(&d2.inherited_authorizations).next().is_some() {
-                return Err(format!("{label} step {i}: an inherited authorization repeats in two proofs of one claim"));
-            }
-            authorizations += d1.inherited_authorizations.len();
         }
     }
-    let actions = |e: &lee_core::ProvenExecution, f: &Option<lee_core::FeeFallback>| -> Vec<PrivateAction> {
+    let actions = |e: &lee_core::ProvenExecution, f: &Option<compat::ProvenFallback>| -> Vec<PrivateAction> {
         e.private_actions.iter().cloned().chain(f.iter().map(|x| x.action.clone())).collect()
     };
     let (p1, p2) = (actions(e1, &f1), actions(e2, &f2));
@@ -652,7 +701,7 @@ fn f8_two_deposits_full_diff() {
     // What was taken is fresh, or the account's own per-state value: X's claim of A proven a second
     // time from the same state.
     let ra2 = dep.claim(&mut s0.clone(), &dep.x, &dep.a);
-    let fresh = fresh_check(&ra.tx, &ra2.tx, &ra.tx.message.public_context.actors)
+    let fresh = fresh_check(&ra.tx, &ra2.tx, &compat::declared_actors(&ra.tx.message.public_context.actors))
         .unwrap_or_else(|e| panic!("a field align takes is neither fresh nor the account's own per-state value: {e}"));
     out.push_str(&format!(
         "## The transactions\n\nBoth are {} bytes (proof field {} bytes). {} of those bytes differ. After taking from A every \

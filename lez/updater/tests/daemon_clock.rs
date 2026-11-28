@@ -13,10 +13,11 @@ use ferrata_updater::{
     ledger::{machine_now_ms, HarnessLedger, Ledger, Tx, TxOutcome},
     source::lab_record,
 };
-use lee::{AccountId, Actor, PrivateKey};
+use lee::{AccountId, Actor};
+use ferrata_updater::lez::PayerKey;
 
 /// Stands in for the sequencer backend: the in-process chain, opened for any `daemon.ledger`.
-fn open_in_process(_: &File, _: &Path, payer: &PrivateKey) -> Result<(Box<dyn Ledger>, AccountId)> {
+fn open_in_process(_: &File, _: &Path, payer: &PayerKey) -> Result<(Box<dyn Ledger>, AccountId)> {
     Ok((Box::new(HarnessLedger::new(std::slice::from_ref(payer))), HarnessLedger::program()))
 }
 
@@ -52,7 +53,7 @@ impl Ledger for Wrapper {
     fn actor_state(&self, actor: Actor) -> Result<Vec<u8>> {
         self.0.actor_state(actor)
     }
-    fn submit(&mut self, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome> {
+    fn submit(&mut self, payer: &PayerKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome> {
         self.0.submit(payer, tx, gas_limit, max_fee)
     }
 }

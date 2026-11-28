@@ -30,7 +30,8 @@ use ferrata_updater::{
     updater::{Instance, Plan, Updater},
 };
 use harness::attest::{account_query, fixture_file, Fixture};
-use lee::{Actor, PrivateKey};
+use lee::Actor;
+use ferrata_updater::lez::PayerKey;
 
 const GAS: u64 = 4_800_000;
 const MAX_FEE: u128 = 1_000_000_000;
@@ -62,7 +63,7 @@ impl Source for FixtureNode {
 fn no_sleep(_: u64) {}
 
 /// An instance of the fixture's checkpoint under `config`, advanced by an updater to the fixture's finalized slot.
-fn advanced(l: &mut HarnessLedger, fx: &Fixture, config: ferrata_lez_wire::Config, payer: PrivateKey) -> Instance {
+fn advanced(l: &mut HarnessLedger, fx: &Fixture, config: ferrata_lez_wire::Config, payer: PayerKey) -> Instance {
     let node = FixtureNode {
         checkpoint: fx.checkpoint,
         bootstrap: fixture_file("bootstrap.ssz"),
@@ -96,7 +97,7 @@ fn request(fx: &Fixture, instance_id: Root) -> Request {
 
 fn attest(
     l: &mut HarnessLedger,
-    payer: &PrivateKey,
+    payer: &PayerKey,
     header: Actor,
     req: &Request,
     time_ms: u64,
@@ -122,9 +123,9 @@ fn native(l: &HarnessLedger, header: Actor, req: &Request) -> Result<Attestation
 fn a_consumer_moves_to_a_replacement_instance() {
     let fx = Fixture::load();
     let (old_op, new_op, consumer_key) = (
-        PrivateKey::try_new([0x51; 32]).unwrap(),
-        PrivateKey::try_new([0x52; 32]).unwrap(),
-        PrivateKey::try_new([0x53; 32]).unwrap(),
+        ferrata_updater::lez::payer_key([0x51; 32]),
+        ferrata_updater::lez::payer_key([0x52; 32]),
+        ferrata_updater::lez::payer_key([0x53; 32]),
     );
     let mut l = HarnessLedger::new(&[old_op.clone(), new_op.clone(), consumer_key.clone()]);
     let time = preset("mainnet", 2).unwrap().slot_start_ms(fx.update.signature_slot) + 24_000;

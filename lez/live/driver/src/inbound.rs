@@ -776,6 +776,8 @@ async fn private_claim(
     let (mut wallet, me) = private_wallet(&dir.join("wallet"), &live.opts.rpc, client)?;
     ensure!(*me.value() == w.dest, "the wallet's private account is not the deposit's destination");
     let tip = wallet.start_at_chain_tip().await?;
+    #[cfg(feature = "lez-040")]
+    crate::private::receive_native_credits("[inbound]", live, &mut wallet, me).await?;
     let catalog = ProgramCatalog::from([(bridge, Program::new(Cow::Owned(bridge_bin.bytes.clone()))?)]);
     let root_pda = Pda { program: bridge, seed: root_seed(&cid, n) };
     let n_pda = Pda { program: bridge, seed: nullifier_seed(terms.evm_chain_id, &terms.vault, &nullifier) };

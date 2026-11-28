@@ -16,6 +16,7 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/../.." && pwd)"
+. "$HERE/lez-tag.sh"
 DATA=/var/lib/ferrata
 URL=http://127.0.0.1:3040
 export FERRATA_DAY1_BIN=/opt/ferrata/bin FERRATA_DAY1_PROGRAMS=/opt/ferrata/programs/day1
@@ -39,11 +40,11 @@ programs_dir() { # the kit's names: ferrata_lez.bin, ferrata_bridge.bin (the B1 
 publish() {
   as_ferrata /opt/ferrata/bin/ferrata-day1 inspect --keys "$FERRATA_DAY1_KEYS" --state "$FERRATA_DAY1_STATE" --rpc "$URL" \
     --bin "$FERRATA_DAY1_PROGRAMS/ferrata_lez.bin" > "$FERRATA_DAY1_STATE/inspect.json" 2>> "$LOG" || true
-  python3 -I - "$FERRATA_DAY1_KEYS" "$FERRATA_DAY1_STATE" "$DATA/status/programs.json" <<'EOF'
+  python3 -I - "$FERRATA_DAY1_KEYS" "$FERRATA_DAY1_STATE" "$DATA/status/programs.json" "$LEZ_TAG" <<'EOF'
 import json, os, sys
-keys, state, out = sys.argv[1:4]
+keys, state, out, tag = sys.argv[1:5]
 acc = json.load(open(os.path.join(keys, "accounts.json")))
-d = {"network": "ferrata-lez-testnet", "lez": "v0.4.0-rc3", "programs": {}, "instances": {}}
+d = {"network": "ferrata-lez-testnet", "lez": tag, "programs": {}, "instances": {}}
 prog = acc.get("program") or {}
 brid = acc.get("bridge") or {}
 def pid(x):

@@ -1,0 +1,1 @@
+harness-lez040_guards exit 0 (5 passed, 0 failed, 0 ignored)

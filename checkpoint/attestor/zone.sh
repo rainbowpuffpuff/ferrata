@@ -17,6 +17,11 @@
 # upstream/lez-v0.4.0-rc1; rc3's is the same), ZONE_BEDROCK the directory of the node's node-config.yaml and
 # deployment-settings.yaml (default the tree's bedrock/; `bundle`: the bundle's lez-config/, as crown-rc3's bundle has).
 #
+# LEZ v0.4.0 (released 27 Nov 2026): ZONE_LEZ=../../upstream/lez-v0.4.0 and a bundle from attestor/zone-bundle.sh v0.4.0
+# (the node 0.4.0-rc.2, deployment settings in the V2 era schema, the sequencers' finality_depth in place of exit_delay,
+# the devnet's own regenerated keys); the tag is read from the tree's directory name and checked against the bundle's
+# lez-config/lez-tag.txt and the configurations (attestor/zone-lib.sh, tested by attestor/test_zone_lib.py).
+#
 # ZONE_DURING is run (bash -c) once the sequencers are started, ZONE_BEFORE_STOP when the <seconds> are over
 # and the sequencers still run (sequencer i's LEZ node answers on 127.0.0.1:1930i: an attestor's last round
 # needs it), ZONE_AFTER once the sequencers have stopped and the answers are saved, while the node still runs;
@@ -25,9 +30,16 @@
 set -euo pipefail
 bundle="$(realpath "$1")"; out="$(realpath -m "$2")"; secs="${3:-300}"
 lez="$(realpath "${ZONE_LEZ:-../../upstream/lez-v0.4.0-rc1}")"; dev="$lez/lez/configs/docker-all-in-one/devnet"
+. "$(dirname "${BASH_SOURCE[0]}")/zone-lib.sh"
+TAG="$(zl_tag_of_tree "$lez")" && zl_known_tag "$TAG" || { echo "zone.sh: $lez is not a LEZ tree of a known tag"; exit 2; }
 work="${TMPDIR:?}/attestor-zone"; rm -rf "$work"; mkdir -p "$work/bundle" "$work/bedrock" "$out"
 zstd -q -d -c "$bundle" | tar -C "$work/bundle" -xf -
 ( cd "$work/bundle" && sha256sum -c --quiet SHA256SUMS )
+# v0.4.0's configurations and binaries go together only with each other (rc1's devnet configuration with an rc3 bundle,
+# as the F.7 runs used, stays allowed: the two are byte-identical)
+btag=""; [ -f "$work/bundle/lez-config/lez-tag.txt" ] && btag="$(zl_tag_of_tree "$work/bundle/lez-config")"
+if { zl_is_v040 "$TAG" || zl_is_v040 "$btag"; } && [ "$btag" != "$TAG" ]; then
+  echo "zone.sh: the bundle is LEZ ${btag:-of no tag (no lez-config/lez-tag.txt)}, the tree $TAG"; exit 2; fi
 BIN="$work/bundle/bin"; NODE="$work/bundle/node/logos-blockchain-node"; chmod +x "$NODE" "$BIN"/*
 export PATH="$BIN:$PATH" RISC0_SERVER_PATH="$BIN/r0vm" XDG_CACHE_HOME="$work/bundle/xdg-cache"
 FUND=2e03b2eff5a45478e7e79668d2a146cf2c5c7925bce927f2b1c67f2ab4fc0d26   # the dev node's funded key (compose default)
@@ -37,8 +49,10 @@ log() { echo "[$(date -u +%H:%M:%S)] $*" | tee -a "$out/zone.log"; }
 
 bedrock_src="${ZONE_BEDROCK:-$lez/bedrock}"; [ "$bedrock_src" = bundle ] && bedrock_src="$work/bundle/lez-config"
 cp "$bedrock_src/node-config.yaml" "$bedrock_src/deployment-settings.yaml" "$work/bedrock/"
-sed -i -e "s#listen_address: 0.0.0.0:18080#listen_address: 127.0.0.1:$PORT#" \
-       -e 's#^    swarm:$#    swarm:\n      host: 127.0.0.1#' "$work/bedrock/node-config.yaml"
+zl_node_loopback "$work/bedrock/node-config.yaml" "$PORT"
+if zl_is_v040 "$TAG"; then
+  [ "$(zl_era_schema "$work/bedrock/deployment-settings.yaml")" = V2 ] || { echo "zone.sh: v0.4.0's deployment settings are not in the V2 era schema"; exit 2; }
+fi
 sha256sum "$work/bedrock/deployment-settings.yaml" | cut -d' ' -f1 > "$out/deployment-settings.sha256"
 cp "$work/bedrock/deployment-settings.yaml" "$out/deployment-settings.yaml"
 ( cd "$work/bedrock" && POL_PROOF_DEV_MODE=true exec "$NODE" node-config.yaml --deployment deployment-settings.yaml ) \
@@ -50,20 +64,11 @@ stop_all() { stop_seqs; kill -TERM "$NODE_PID" 2>/dev/null || true; sleep 3; kil
              mkdir -p "$out/logs"; for f in "$work"/*.log; do tail -n 300 "$f" > "$out/logs/$(basename "$f")"; done; }
 trap stop_all EXIT
 for i in $(seq 1 600); do curl -fsS -m 3 -o /dev/null "$api/cryptarchia/info" 2>/dev/null && break; kill -0 "$NODE_PID"; sleep 0.2; done
-log "node up: $(curl -fsS -m 3 "$api/cryptarchia/info")"
+log "node up (LEZ $TAG): $(curl -fsS -m 3 "$api/cryptarchia/info")"
 
 for i in 0 1 2 3; do
   home="$work/seq-$i"; mkdir -p "$home"; cp "$dev/seq-$i/channel_signing_key" "$home/channel_signing_key"
-  python3 -I - "$dev/sequencer_config.json" "$work/cfg-$i.json" "$api" "$i" <<'EOF'
-import json, sys
-src, dst, api, i = sys.argv[1:5]; i = int(i)
-c = json.load(open(src))
-c["bedrock_config"]["node_url"] = api
-c["gossip"] = {"listen_addr": f"/ip4/127.0.0.1/udp/{19100 + i}/quic-v1",
-               "bootstrap_peers": [f"/ip4/127.0.0.1/udp/{19100 + j}/quic-v1" for j in range(4) if j != i]}
-c["metrics_listen_address"] = f"127.0.0.1:{19200 + i}"
-json.dump(c, open(dst, "w"), indent=2)
-EOF
+  zl_seq_cfg "$dev/sequencer_config.json" - "$work/cfg-$i.json" "$api" "$i" 4 "$TAG"
   flag=""; [ "$i" = 0 ] && flag="--create-channel"
   sequencer_service setup "$home" --config "$work/cfg-$i.json" --funding-public-key "$FUND" $flag > "$work/setup-$i.log" 2>&1 \
     || { log "setup $i failed"; tail -n 20 "$work/setup-$i.log"; exit 2; }

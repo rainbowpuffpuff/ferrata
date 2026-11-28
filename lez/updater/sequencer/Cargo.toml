@@ -57,10 +57,12 @@ env_logger = "0.11"
 
 [features]
 # The calls whose LEZ API differs between the tags the live driver's modules build against: set with the path
-# dependencies by ../../scripts/lez-select.sh (none: v0.4.0-rc1; `lez-rc2`: v0.4.0-rc2; `lez-rc3`: v0.4.0-rc3).
+# dependencies by ../../scripts/lez-select.sh (none: v0.4.0-rc1; `lez-rc2`: v0.4.0-rc2; `lez-rc3`: v0.4.0-rc3; `lez-040`:
+# v0.4.0, which implies `lez-rc3`).
 default = [] # lez-select
 lez-rc2 = []
 lez-rc3 = ["lez-rc2"]
+lez-040 = ["lez-rc3"]
 
 [patch.crates-io]
 keccak = { git = "https://github.com/logos-blockchain/sponges", rev = "3a56e99771beedf04946eab21a4a62adc2951377" }

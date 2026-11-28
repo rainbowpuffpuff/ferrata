@@ -616,12 +616,12 @@ built, and the test or recorded run that shows the mitigation.
   bridge's role actors (`lez/guests/bridge/src/main.rs:1088-1093`), though not the messages they forward (above). Every Ferrata program accepts calls from other actors
   somewhere, and no flag of ours separates them: an instance refusing `ApplyVerified` would still accept `Apply` and
   `Record` in its own actors' names. The fix is LEZ's: a LEZ whose receipt check is sound, a LEZ on
-  risc0 3.1.0 (LEZ `dev` moved at `6aaabe5`; released as LEZ v0.4.0 on 27 November 2026, to which our programs are
-  not ported yet). No live exposure follows today: no v0.4 program of ours runs on a public
+  risc0 3.1.0 (LEZ `dev` moved at `6aaabe5`; released as LEZ v0.4.0 on 27 November 2026, to which the port of our programs is
+  in progress: [port-v0.4.0.md](port-v0.4.0.md)). No live exposure follows today: no v0.4 program of ours runs on a public
   network, and every v0.4 sequencer named in this repository is one we ran.
   **Corrected 23 November 2026:** the first half of that sentence stopped holding on 23 November 2026, when the
   project's own public test network (LEZ v0.4.0-rc3 on RISC Zero 3.0.5, its one sequencer ours, test value only)
-  started running these programs; until that network and our programs move to LEZ v0.4.0 (RISC Zero 3.1; the port has not started) its
+  started running these programs; until that network and our programs move to LEZ v0.4.0 (RISC Zero 3.1; the port is in progress, [port-v0.4.0.md](port-v0.4.0.md)) its
   program state is exposed as this paragraph describes, if LEZ accepts a forged receipt, which has not been tested.
 - **If the proof system is unsound** and RISC Zero publishes the proof, anyone can trip the stop: nothing
   more is released or refunded, owed balances stay claimable, and whatever escrow remains stays in the

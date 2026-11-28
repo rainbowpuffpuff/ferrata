@@ -1411,7 +1411,13 @@ pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Op
         (Some(_), Some(_)) => bail!("give --sequencer or --lez-devnet, not both"),
         (seq, devnet) => {
             let zone = match (seq, devnet) {
-                (Some(rpc), _) => sequencer(&cli, rpc)?,
+                (Some(rpc), _) => {
+                    // The network's LEZ before the relayer opens its wallet (LEZ v0.4.0 changed the formats); a build
+                    // without a LEZ wallet (the relayer module's) refuses --sequencer first, without asking.
+                    #[cfg(feature = "lez-wallet")]
+                    crate::lezver::require(rpc).await?;
+                    sequencer(&cli, rpc)?
+                }
                 (_, Some(url)) => Zone::Devnet(lez::DevnetZone::new(url)?),
                 (None, None) => unreachable!(),
             };

@@ -246,6 +246,39 @@ in `lez/results/messages.md` and `lez/results/messages-v2.md`) and equals `r0vm 
 | encrypted messages, v1, live (`lez/guests/msg`): `ferrata_msg` | `0x04ae1988fe84eef6da472152a75b17e6c7453e6e4775264f12af1a750b945277` | `5b7af994f1169f2b6a905ccfda478f098f5bdef9e09cce0edae07fa8fe733134` | 275,444 |
 | encrypted messages, one account per message (`lez/guests/msg-v2`): `ferrata_msg_v2` | `0x480f5c4eedb3bde85c26e3e408c962d91cdea4941391b3e5ac63aefdb2eb4f59` | `ebcc609a1bd79cb924813f8ce856b6ae6b0465a80d5e3311693ac8e922091e95` | 300,620 |
 
+## LEZ v0.4.0 (the port, in progress; not deployed)
+
+Every guest of `lez/` built on LEZ v0.4.0 (`a255b42c`, RISC Zero 3.1.0) for the port
+([`port-v0.4.0.md`](port-v0.4.0.md)): `lez/scripts/lez-select.sh v0.4.0` in a clean git worktree of commit `d632aa82`
+beside LEZ v0.4.0, a fresh target directory, the seven methods crates built through `scripts/guest-rustc`, on the
+laptop (x86-64), 28 November 2026; r0vm computes the same id from each binary (15 of 15). The guests whose sources read
+an API LEZ v0.4.0 changed build their generated v0.4.0 twins (`*_lez040.rs`, `lez/scripts/lez040-sources.py`); the
+release candidates build the files as before, with the ids of the tables above. None of these programs is deployed:
+the test network runs LEZ v0.4.0-rc3 and the ids above. The names carry `_040` (each program is named once in this
+document). The record and how it was made: [`port-v0.4.0/image-ids/laptop-d632aa82/`](port-v0.4.0/image-ids/laptop-d632aa82/);
+`python3 -I scripts/verify.py lez040-image-ids` holds it, and this table, to the source it was built from (a change to
+any guest, lockfile or the selector needs the build again), and `bash scripts/verify-lez040-ids.sh` rebuilds and
+compares at another path than the record's: all 15 rebuilt there with the same ids and binaries
+([`rebuild-second-path.txt`](port-v0.4.0/image-ids/laptop-d632aa82/rebuild-second-path.txt)).
+
+| Program | Image id | sha256 of the binary | Bytes | sha256 of the user ELF |
+|---|---|---|---:|---|
+| the bridge program since ADR 0048 (`lez/guests/bridge`, its v0.4.0 twin): `ferrata_bridge_040` | `0x7e39359d8d447d6e98696a4a64266c0d12aaa2a2bdcfd0a3704545fbbfbc26e0` | `6c943d7f71392b93bf85073a11341f4e8cfe1287af5b04b54ad6d99cdf7328c9` | 646,252 | `be23fef8a5aa5f5545a67dabad0a262f331b0ce992a3a7a6f5f666d0a72a5906` |
+| the example consumer (`lez/guests/consumer`, its v0.4.0 twin): `ferrata_consumer_040` | `0x41a36bde4976fb08fafc8df730d0be5dac5520f8eb9081aa42a25c97f01029c2` | `6fc67c84d1d9fa8441addc2f919d370bb4f45c3eea96137643bc5f3205e04388` | 485,892 | `b3f869ba4b9a191fd8e0299c83e710fd8e56582a3e313078a4cd29091737c5c8` |
+| the example consumer, accelerated Keccak (`lez/guests/consumer-keccak-accel`): `ferrata_consumer_keccak_accel_040` | `0x52ff31ab56eeade382cc71593d43e11ceb2d9b2bef7b938901945c36c885faa5` | `6fdfe82b15e9b266cb47c83af35d5785ccffdd6763a9b6a2d2dc422217664314` | 482,888 | `b06f0cf7df78ac2c6d3e9386f943dddef4235a28191da2f48db4a6b1d0800185` |
+| the holdings program (`lez/guests/holdings`): `ferrata_holdings_040` | `0x79a7bab4b979842ed2032f8813fcf60208dea4a7a920c642c1b94be74b64f9fb` | `eacdb5db3149860457f5592c4200dc115345df408bdeec3da06f10cd53bf9298` | 322,220 | `dfd75547fb8c82c9ae6939a74644e14421b0d54e68d90f2aca494d49040db184` |
+| the attestation program (`lez/guests/program`): `ferrata_lez_040` | `0x95a93abfe4073a7eaad8f86be311af45e7729f1c3dba7f1b0ce016b7b1b8e2f1` | `66466e83abdfecfca097690b05c5e45eb8ed50bb4f9f5536ca8a02bd9550e761` | 641,184 | `4e6de4d8c45cf8a4c87a7544ca4b36ae3d9f01c4f76fcaadff988c6fcbc45c85` |
+| the attestation program with statement classes (`lez/guests/program-class`): `ferrata_lez_class_040` | `0xa971293b2d597dad6cd7fd7d8aac78c74478e20bed28f00014449effed4836ea` | `855e328a6fdbe25a8e56b2b51dfa122e01cbba381cb74150ca21dcabeb143cd6` | 642,348 | `d8a683b2276697b12d4a9c1b299029bd814d843b52f92d59efc3c174f962f92c` |
+| the attestation program, software Keccak (`lez/guests/program-keccak-soft`): `ferrata_lez_keccak_soft_040` | `0x8acaa28d8d9bc6fbeb203b0883dcc2e1e2e086e017fdf9b163b264008239afcf` | `09bc46b2c6dc48fef5e471783015fcd4579fee9c845df38aba815c7db169ffc4` | 644,412 | `49085a6bca7362f0d468ff1fe35cfd6a2bb5ddb462ca421a1011de94c0cb6559` |
+| the one-transaction update, experimental (`lez/guests/program-residue-experimental`): `ferrata_lez_residue_experimental_040` | `0xc4db35ad583b10ffdc66e0429db14d4512ae7dbdf8a0d3906d5795f09b0e939f` | `79661455036bef803245cb54d501f86926c0b52c0f344bf072eebcf23c6ef245` | 661,620 | `63644f7080a37f1b40e1b398bd60fce0f5ba7e54a8832b7f8c146d96fad79c23` |
+| the messages program v1 (`lez/guests/msg`, its v0.4.0 twin): `ferrata_msg_040` | `0xcefe356029b86d4efd67cd57738cc7010afa8842fd0c35ec12caf7f7eacbe553` | `0bb512045eb65a8c0bb90f7a9a1329b11584f78a3827d48b470f6497dbe268b8` | 290,008 | `c6b6e94e67bc7c9db538679a3da3c47248d01522cdb1c87fc9da7518c74447be` |
+| the messages program v2 (`lez/guests/msg-v2`, its v0.4.0 twin): `ferrata_msg_v2_040` | `0xe3c2b44875ad8c5d9bdc93629e991ec40b3960e2f0403ea625b3a65e9bbc7313` | `df1f18aa682427baeb1e516a1c173c7a5f22fbaa33de8c6ed1aacdbdcaade3c4` | 315,224 | `71cb9379cd66fe0ca27c9c0fc78d516dd5d697dcef8778a0a602c4d91461800d` |
+| the names program (`lez/guests/names`, on the names wire's v0.4.0 twin): `ferrata_names_040` | `0x9339342a2c1251e00321740f8f4cea330a2f3632f99e5c58a555f17d031937a4` | `9f7645c4ac2ba0236c7a71b2dab11052748c0f582f1da68c3c0d1c0d310d39c8` | 321,920 | `70e75c57e21a6313d53fe5615de2dacb42250b4ea624085842cf3e6818f249dd` |
+| the operator rebate (`lez/guests/rebate`): `ferrata_rebate_040` | `0xeddda0baf6daac70d4baf3aa2446b8907578f9f863817ff1353d05511eb18712` | `d20c19ee4210cb87dd5aceb0a9a901669866d91970bd18fa412ad32e9da287a4` | 305,052 | `2d7008c0fcdc6e892180a8967f8e6036308716c916407aea57ba1e0d4a26ef12` |
+| recorded statements (`lez/guests/statements`): `ferrata_statements_040` | `0x513ee15e7bfacc75b44a75a9b096a3adc779683debcfb79701e0b457f89f4b89` | `c1b2ff5bb1539dc353c47b75605ff635870fff15b7dcdfaf5ab5f035cc73a8b1` | 333,132 | `c2ce8411b0d6f33ce5ca98b7515061b3ace2d2587f8444bb9c6e80163afb417e` |
+| their reference reader (`lez/guests/statements-reader`): `ferrata_statements_reader_040` | `0x5086019aba6ce2849ad50d53e47445a934b61fbbff4b8f2dcfc914587a552be2` | `d90084a6400765e2bd3fb0fa3afd5456356aea732ee42691c88d4e8d8671b780` | 330,900 | `3c83f41a9d03aeb1b0a88cf666d8a34db54d02cc8d43e88f725291fd15ab23c2` |
+| the scripted test guest (`lez/guests/scripted`): `scripted_040` | `0x0a37d9ba1f59c9abb457f3fd62d6b7bd7e15ccb327d24f847d8cd61f51ce329c` | `acf5aad4ea41d112a8025dcdbe4ddfd5aabc00e3b98141c2e843e5de935c35e1` | 284,236 | `9c986e6e5fd62bc8957d9a309437a41a86136447b2dc2537c0b8420c9f6c0451` |
+
 ## Superseded: the ids the November vaults and the recorded runs pin
 
 Rows this tree no longer builds, kept under their names because deployments and records pin them: the Ethereum-side

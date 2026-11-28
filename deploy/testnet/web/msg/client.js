@@ -1,7 +1,7 @@
-// client.js: ferrata_msg_v2 over LEZ's JSON-RPC, with the wallet's rc3 public core (../wallet/lez.js): read an account's
-// profile, inbox and envelopes; sign and send the program's messages as public transactions, every actor they reach
-// declared; and read each transaction's outcome from its block (LEZ's RPC serves which transactions reverted, not their
-// exit codes). Used by the CLI; the wallet imports it. ferrata_msg (v1) is read only: legacyMailbox.
+// client.js: ferrata_msg_v2 over LEZ's JSON-RPC: read an account's profile, inbox and envelopes (the actor states are
+// the same on both LEZ versions); sign and send as public transactions through the optional net's selected codec; and
+// read the outcome from rc3's block or v0.4.0's receipt. Existing callers default to rc3's ../wallet/lez.js.
+// Used by the CLI; the wallet imports it. ferrata_msg (v1) is read only: legacyMailbox.
 import * as lez from '../wallet/lez.js';
 import * as M from './ferrata-msg.js';
 
@@ -49,70 +49,80 @@ export async function envelope(seq, program, recipient, sender, n) {
 export async function legacyMailbox(seq, program, account) { return M.decodeLegacyMailbox(await actorState(seq, account, program)); }
 
 /** Every message of `node`'s inbox, decrypted locally (M.openInbox), and the inbox itself. */
-export async function messages(seq, { program, node }) {
+export async function messages(seq, { program, node, net = null }) {
   const ix = await inbox(seq, program, node.accountId);
   const envelopes = new Map();
   for (const e of ix?.entries ?? []) {
     const env = await envelope(seq, program, node.accountId, e.from, e.seq);
     if (env) envelopes.set(String(e.n), env.body);
   }
-  return { inbox: ix, list: M.openInbox({ inbox: ix, envelopes, recipientId: node.accountId, accountSecret: node.ssk }) };
+  const accountSecret = net ? net.messagingSecretOf(node) : node.ssk;
+  return { inbox: ix, list: M.openInbox({ inbox: ix, envelopes, recipientId: node.accountId, accountSecret }) };
 }
 
 /** Sign `data` to the signer's own profile, declaring the actors of `accounts` too, pay with the signer, send it. */
-export async function call(seq, { node, program, data, accounts = [], gasLimit, nonce = null }) {
+export async function call(seq, { node, program, data, accounts = [], gasLimit, nonce = null, net = null, gate = null }) {
   const feeState = await seq.feeState();
   if (nonce == null) nonce = lez.big((await seq.nonces([node.accountId]))[0]);
+  // `gate` (a page's version re-read) runs after the reads, right before signing: nothing is awaited in between.
+  if (gate && !(await gate())) throw new Error(net?.error ?? 'the network\'s LEZ version could not be read, so nothing is signed');
   const actors = [actorOf(node.accountId, program), ...accounts.map((a) => actorOf(a, program))];
-  const m = (maxFee) => ({
-    actors, signers: [node.accountId], to: actorOf(node.accountId, program), data,
-    fee: { payer: node.accountId, gasLimit, tip: 0n, maxFee }, nonces: [[node.accountId, nonce]], evidence: [],
-  });
-  const size = lez.encodePublicTransaction(lez.encodeMessage(m(0n)), [{ sig: new Uint8Array(64), pk: node.pk }]).length + 1;
-  const { maxFee, reserve } = lez.feeFor({ gasLimit, size, feeState });
-  const messageBytes = lez.encodeMessage(m(maxFee));
-  const sig = lez.sign(node.ssk, lez.messageHash(messageBytes));
-  const tx = lez.wrapPublic(lez.encodePublicTransaction(messageBytes, [{ sig, pk: node.pk }]));
+  const args = { payer: node, to: actorOf(node.accountId, program), actors, data, nonce, gasLimit, evidence: [] };
+  // Omitting net is deliberately the old rc3 construction, including its size calculation and witness layout.
+  const build = net ? (a) => net.buildCall(a) : lez.buildCall;
+  const probe = build({ ...args, maxFee: 0n });
+  const { maxFee, reserve } = lez.feeFor({ gasLimit, size: probe.size, feeState });
+  const tx = build({ ...args, maxFee });
   const hash = await seq.send(tx.wire);
   return { hash: typeof hash === 'string' ? hash : tx.hash, size: tx.size, reserve, maxFee, gasLimit };
 }
 
 /**
- * Wait until the transaction is in a block, then read from that block whether it reverted (a refusal by the program,
- * or LEZ's own: the fee is charged and nothing changes). Returns { block, reverted }, or null after `timeoutMs`.
+ * Wait until the transaction is in a block, then read its outcome from that block on rc3 or its receipt on v0.4.0
+ * (a refusal by the program or by LEZ: the fee is charged and nothing changes). Returns { block, reverted }, or null
+ * after `timeoutMs`. Reading the actor states above never needs the selected codec.
  */
-export async function outcome(seq, hash, { timeoutMs = 180_000, everyMs = 1500 } = {}) {
+export async function outcome(seq, hash, { timeoutMs = 180_000, everyMs = 1500, net = null } = {}) {
   const until = Date.now() + timeoutMs;
   while (Date.now() < until) {
     const t = await seq.transaction(hash).catch(() => null);
     if (t) {
       const block = Number(Array.isArray(t) ? t[1] : t.block_id ?? t);
-      const blk = lez.decodeBlock(await seq.block(block));
-      const pos = blk.transactions.findIndex((d) => d.hash === hash);
-      if (pos < 0) throw new Error(`transaction ${hash} is not in block ${block}`);
-      return { block, reverted: blk.reverted.includes(pos) };
+      if (net?.version === 'v0.4.0') {
+        const found = await net.outcome(hash);
+        if (found !== 'missing') return { block, reverted: found === 'reverted' };
+      } else if (net) {
+        const found = await net.outcome(hash, await seq.block(block));
+        if (found === 'missing') throw new Error(`transaction ${hash} is not in block ${block}`);
+        return { block, reverted: found === 'reverted' };
+      } else {
+        const blk = lez.decodeBlock(await seq.block(block));
+        const pos = blk.transactions.findIndex((d) => d.hash === hash);
+        if (pos < 0) throw new Error(`transaction ${hash} is not in block ${block}`);
+        return { block, reverted: blk.reverted.includes(pos) };
+      }
     }
     await new Promise((ok) => setTimeout(ok, everyMs));
   }
   return null;
 }
 
-async function done(seq, sent, wait) {
+async function done(seq, sent, wait, net = null) {
   if (!wait) return sent;
-  const o = await outcome(seq, sent.hash);
+  const o = await outcome(seq, sent.hash, { net });
   if (!o) throw new Error(`transaction ${sent.hash} not in a block after three minutes`);
   return { ...sent, ...o };
 }
 
 // ---------------------------------------------------------------- the owner's actions
-export async function publish(seq, { node, program, epoch = null, hybrid = true, wait = true }) {
+export async function publish(seq, { node, program, epoch = null, hybrid = true, wait = true, net = null, gate = null }) {
   const mine = await profile(seq, program, node.accountId);
   const e = epoch ?? (mine.key ? mine.key.epoch + 1 : 0);
-  const record = M.publicRecord(M.deriveKeys(node.ssk, e), { hybrid });
-  const sent = await call(seq, { node, program, data: M.encodePublish(record), accounts: [M.inboxAccount(program, node.accountId)], gasLimit: gasFor('publish') });
-  return { ...(await done(seq, sent, wait)), record, fingerprint: M.fingerprint(record) };
+  const record = M.publicRecord(M.deriveKeys(net ? net.messagingSecretOf(node) : node.ssk, e), { hybrid });
+  const sent = await call(seq, { node, program, data: M.encodePublish(record), accounts: [M.inboxAccount(program, node.accountId)], gasLimit: gasFor('publish'), net, gate });
+  return { ...(await done(seq, sent, wait, net)), record, fingerprint: M.fingerprint(record) };
 }
-const edit = (data, ids) => async (seq, { node, program, wait = true }) => done(seq, await call(seq, { node, program, data, gasLimit: gasFor('edit', ids) }), wait);
+const edit = (data, ids) => async (seq, { node, program, wait = true, net = null, gate = null }) => done(seq, await call(seq, { node, program, data, gasLimit: gasFor('edit', ids), net, gate }), wait, net);
 export const setPolicy = (seq, o) => edit(M.encodeSetPolicy(M.POLICY[o.policy]), 0)(seq, o);
 const ids = (o) => (o.add ?? []).length + (o.remove ?? []).length;
 const listed = (field, encode) => async (seq, o) => {
@@ -125,7 +135,7 @@ export const contacts = listed('contacts', M.encodeContacts);
 export const block = listed('blocked', M.encodeBlock);
 
 /** Delete messages `ns` (numbers) from `node`'s inbox: their envelopes are emptied too. */
-export async function remove(seq, { node, program, ns, upto = null, wait = true }) {
+export async function remove(seq, { node, program, ns, upto = null, wait = true, net = null, gate = null }) {
   const ix = await inbox(seq, program, node.accountId);
   if (!ix) throw new Error('no inbox yet (publish a key first): nothing to delete');
   const gone = ix.entries.filter((e) => (upto != null ? e.n <= BigInt(upto) : ns.map(BigInt).includes(e.n)));
@@ -135,7 +145,7 @@ export async function remove(seq, { node, program, ns, upto = null, wait = true 
   }
   const accounts = [M.inboxAccount(program, node.accountId), ...gone.map((e) => M.envelopeAccount(program, node.accountId, e.from, e.seq))];
   const data = upto != null ? M.encodeClear(BigInt(upto)) : M.encodeDelete(ns);
-  return { ...(await done(seq, await call(seq, { node, program, data, accounts, gasLimit: gasFor('remove', gone.length) }), wait)), removed: gone.length };
+  return { ...(await done(seq, await call(seq, { node, program, data, accounts, gasLimit: gasFor('remove', gone.length), net, gate }), wait, net)), removed: gone.length };
 }
 
 // ---------------------------------------------------------------- sending
@@ -144,7 +154,7 @@ export async function remove(seq, { node, program, ns, upto = null, wait = true 
  * exists; its fingerprint is `expectKey`, if given (the RPC could otherwise substitute a key); every rule of the
  * program (preflightSend). `nowMs` defaults to a few seconds behind this clock and never before the last send.
  */
-export async function send(seq, { node, program, to, text, expectKey = null, nowMs = null, force = false, wait = true, sentMs = Date.now() }) {
+export async function send(seq, { node, program, to, text, expectKey = null, nowMs = null, force = false, wait = true, sentMs = Date.now(), net = null, gate = null }) {
   const [mine, theirRaw, ix] = await Promise.all([profile(seq, program, node.accountId), actorState(seq, to, program), inbox(seq, program, to)]);
   let theirs;
   try {
@@ -164,6 +174,6 @@ export async function send(seq, { node, program, to, text, expectKey = null, now
   const pre = M.preflightSend({ senderId: node.accountId, recipientId: to, senderProfile: mine, recipientProfile: theirs, recipientInbox: ix, body, nowMs: now, seq: seqNo });
   if (pre && !force) return { refused: pre, fingerprint, why: 'the program would refuse it' };
   const accounts = [to, M.inboxAccount(program, to), M.envelopeAccount(program, to, node.accountId, seqNo)];
-  const sent = await call(seq, { node, program, data: M.encodeSend({ to, nowMs: now, seq: seqNo, body }), accounts, gasLimit: gasFor('send') });
-  return { ...(await done(seq, sent, wait)), fingerprint, preflight: pre, bucket: body.length, version: body[0], seq: seqNo };
+  const sent = await call(seq, { node, program, data: M.encodeSend({ to, nowMs: now, seq: seqNo, body }), accounts, gasLimit: gasFor('send'), net, gate });
+  return { ...(await done(seq, sent, wait, net)), fingerprint, preflight: pre, bucket: body.length, version: body[0], seq: seqNo };
 }

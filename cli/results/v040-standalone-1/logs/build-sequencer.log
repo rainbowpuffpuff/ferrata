@@ -1,0 +1,6 @@
+warning: lee@0.1.0: Generated module at <box>/target-live/lez/release/build/lee-5883f2624a80f6b6/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at <box>/target-live/lez/release/build/programs-5da99812dc0beeb6/out/lez/programs/mod.rs
+    Finished `release` profile [optimized] target(s) in 1.72s
+    Blocking waiting for file lock on package cache
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`

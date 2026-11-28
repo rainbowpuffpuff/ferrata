@@ -71,7 +71,7 @@ use ferrata_lez_wire::{
 use lee::{test_utils::TestPrivateKeys, Account, AccountId, Actor, PublicAccountEvidence, V03State};
 use lee_core::{
     account::ActorState,
-    program::{PdaSeed, ReceiveInput, StateReply},
+    program::{PdaSeed, StateReply},
     AuthorizationSecretKey, Commitment, Nullifier,
 };
 
@@ -340,13 +340,13 @@ pub fn verify_all_private(w: &mut World) -> Proven {
     let private = execute(
         "VerifyAll (private execution)",
         methods::FERRATA_LEZ_ELF,
-        &ReceiveInput {
-            receiver: root_actor,
-            from: None,
-            is_authorized: true,
-            pre_state: Default::default(),
-            message: message.clone(),
-        },
+        &crate::compat::receive_input(
+            root_actor,
+            None,
+            true,
+            Default::default(),
+            message.clone(),
+        ),
     );
     assert_eq!(private.exit_code, 0, "the private execution verifies the update");
     let path_levels = membership_path_levels(&w.chain, &sender);
@@ -974,23 +974,22 @@ fn private_claim_transitions(
 ) -> (u64, u64, ActorState) {
     let elf = consumer_program();
     let actor = Actor::new(account, consumer_account());
-    let call = ReceiveInput {
-        receiver: actor,
-        from: None,
-        is_authorized: true,
+    let call = crate::compat::receive_input(
+        actor,
+        None,
+        true,
         pre_state,
-        message: borsh::to_vec(message).unwrap(),
-    };
+        borsh::to_vec(message).unwrap(),
+    );
     let first = execute("ClaimDepositPrivately (sends Read)", elf.elf(), &call);
     let transition = first.transition.as_ref().expect("the root call passes");
     let header = vw.v.actor();
-    let reply = ReceiveInput {
-        receiver: actor,
-        from: Some(header),
-        is_authorized: true,
-        pre_state: transition.response.post_state.clone().expect("the claim is kept for the reply"),
-        message: borsh::to_vec(&StateReply { state: vw.v.w.chain.actor_state(header) }).unwrap(),
-    };
+    let reply = crate::compat::reply_input(
+        actor,
+        header,
+        transition.response.post_state.clone().expect("the claim is kept for the reply"),
+        borsh::to_vec(&StateReply { state: vw.v.w.chain.actor_state(header) }).unwrap(),
+    );
     let second = execute("the record's reply (verifies the deposit, sends Spend)", elf.elf(), &reply);
     assert_eq!(second.exit_code, 0, "the reply verifies the deposit");
     let kept = second.transition.expect("a transition").response.post_state.expect("the claimant keeps its state");

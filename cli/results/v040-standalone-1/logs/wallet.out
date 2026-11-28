@@ -1,0 +1,19 @@
+ok   getSequencerStatus: the network runs LEZ v0.4.0
+ok   transfer 1: sendTransaction answers its hash (13cfde13485e8766…), nonce 0
+ok   transfer 1: receipt success (fee base 4968, storage gas 621)
+ok   transfer 1: block 3's hash recomputed by the wallet's and the explorer's decoders
+ok   transfer 1: the block's receipt for it says applied
+ok   transfer 1: its witness at nonce 0 is 129 bytes (initial key only at nonce 0)
+ok   transfer 1: it rotates the payer to its nonce-1 key
+ok   transfer 2: sendTransaction answers its hash (01f89add3ae29bff…), nonce 1
+ok   transfer 2: receipt success (fee base 4432, storage gas 554)
+ok   transfer 2: block 4's hash recomputed by the wallet's and the explorer's decoders
+ok   transfer 2: the block's receipt for it says applied
+ok   transfer 2: its witness at nonce 1 is 96 bytes (initial key only at nonce 0)
+ok   transfer 2: it rotates the payer to its nonce-2 key
+ok   the page's connect(): v0.4.0, signing allowed
+ok   the page imports the secret as the same account
+ok   the receive code's admission key names the fresh account
+ok   transfer 3 (the page's path, nonce 2): net.outcome reads its receipt: applied
+ok   the recipient's balance rose by 3345 (0 -> 3345)
+ok   the fresh account holds 777

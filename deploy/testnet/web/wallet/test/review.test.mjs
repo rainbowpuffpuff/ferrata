@@ -8,10 +8,22 @@ import * as lez from '../lez.js';
 import * as eth from '../eth.js';
 import * as ks from '../keystore.js';
 import * as history from '../history.js';
-import { checkConfig } from '../settings.js';
+import { checkConfig, lezVersionText } from '../settings.js';
 import { burnRecipient } from '../bridge.js';
 
 const shim = () => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) }; };
+
+test('settings: rc3 keeps its evidence-based LEZ version label; v0.4.0 and unreadable states are unchanged', () => {
+  const rc3 = { version: 'v0.4.0-rc3', readOnly: false };
+  assert.equal(lezVersionText(rc3, '631f0c96abcdef'), 'v0.4.0-rc2/rc3 (privacy circuit 631f0c96…)');
+  assert.equal(lezVersionText(rc3, '01234567abcdef'), 'see the privacy circuit id');
+  assert.equal(lezVersionText(rc3, null), 'see the privacy circuit id');
+  assert.equal(lezVersionText({ version: 'v0.4.0', readOnly: false }, '631f0c96abcdef'), 'v0.4.0');
+  const unreadable = { version: 'unknown', readOnly: true, accountsAs: 'v0.4.0', error: 'offline' };
+  assert.equal(lezVersionText(unreadable, '631f0c96abcdef'), 'unreadable (accounts shown as on v0.4.0): offline');
+  const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  assert.match(app, /add\('LEZ version', lezVersionText\(net, ppc && lez\.programIdHex\(ppc\)\)\);/);
+});
 
 test('amounts: a point for decimals; a comma is refused, never guessed (L-W3)', () => {
   assert.equal(lez.parseUnits('1.5', 9), 1_500_000_000n);

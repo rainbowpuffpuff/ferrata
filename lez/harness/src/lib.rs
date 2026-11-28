@@ -9,11 +9,13 @@
 pub mod accumulated;
 pub mod attest;
 pub mod bridge;
+pub mod compat;
 pub mod holdings;
 pub mod hops;
 pub mod private;
 pub mod scenarios;
 pub mod sepolia;
+#[cfg_attr(feature = "lez-040", path = "settle040.rs")]
 pub mod settle;
 pub mod trace;
 pub mod vault;
@@ -34,14 +36,12 @@ use ferrata_lez_wire::{
     Message, RecordState,
 };
 use lee::{
-    program::Program,
-    public_transaction::{Message as PublicMessage, WitnessSet},
-    Account, AccountId, Actor, FeeDeclaration, PrivateKey, PublicAccountEvidence, PublicKey, PublicTransaction,
-    V03State,
+    program::Program, public_transaction::Message as PublicMessage, Account, AccountId, Actor, FeeDeclaration,
+    PublicAccountEvidence, PublicTransaction, V03State,
 };
 use lee_core::{
     account::{ActorState, Nonce},
-    program::{ProgramHeader, TransactionEvent},
+    program::TransactionEvent,
 };
 use settle::{classify, opening_fee_state, settle_charged_transaction, Charge, LeeTransaction};
 use sha2::{Digest, Sha256};
@@ -49,7 +49,9 @@ use trace::{trace_public, TransitionTrace};
 
 /// The LEZ tag this harness is built against (`../scripts/lez-select.sh` sets it with the path
 /// dependencies).
-pub const LEZ_TAG: &str = if cfg!(feature = "lez-rc3") {
+pub const LEZ_TAG: &str = if cfg!(feature = "lez-040") {
+    "v0.4.0"
+} else if cfg!(feature = "lez-rc3") {
     "v0.4.0-rc3"
 } else if cfg!(feature = "lez-rc2") {
     "v0.4.0-rc2"
@@ -71,18 +73,8 @@ pub fn results_dir() -> PathBuf {
     dir
 }
 
-/// The program header a loader actor state holds: untagged on v0.4.0-rc1, a tagged `LoaderEntry`
-/// from v0.4.0-rc2 on (LEZ #943).
-#[cfg(feature = "lez-rc2")]
-pub fn program_header(loader_actor_state: &[u8]) -> Option<ProgramHeader> {
-    ProgramHeader::from_loader_actor_state(loader_actor_state)
-}
-
-/// The program header a loader actor state holds (v0.4.0-rc1: untagged).
-#[cfg(not(feature = "lez-rc2"))]
-pub fn program_header(loader_actor_state: &[u8]) -> Option<ProgramHeader> {
-    ProgramHeader::from_bytes(loader_actor_state)
-}
+/// The program header a loader actor state holds (per tag: [`compat::program_header`]).
+pub use compat::program_header;
 
 /// A second deployment of the program's image, at another address: a distinct program for
 /// dispatch and PDA derivation (as `TWIN` in LEZ's own state tests).
@@ -290,7 +282,7 @@ impl TxReport {
 #[derive(Clone)]
 pub struct Chain {
     pub state: V03State,
-    payer_key: PrivateKey,
+    payer_key: compat::AccountKey,
     pub payer: AccountId,
     nonce: u128,
     pub block_id: u64,
@@ -308,23 +300,28 @@ impl Default for Chain {
 
 impl Chain {
     pub fn new() -> Self {
-        let payer_key = PrivateKey::try_new([0x11; 32]).unwrap();
-        let payer = AccountId::from(&PublicKey::new_from_private_key(&payer_key));
-        let state = V03State::new()
-            .with_public_accounts([
-                (system_accounts::fee_state_account_id(), system_accounts::fee_state_account()),
-                (system_accounts::fee_escrow_account_id(), Account::default()),
-                (system_accounts::fee_inbox_account_id(), Account::default()),
-                (payer, Account::funded(1 << 100)),
-            ])
-            .with_named_programs([
+        let payer_key = compat::account_key([0x11; 32]);
+        let payer = compat::account_of(&payer_key);
+        let state = V03State::new().with_public_accounts([
+            (system_accounts::fee_state_account_id(), system_accounts::fee_state_account()),
+            (system_accounts::fee_escrow_account_id(), Account::default()),
+            (system_accounts::fee_inbox_account_id(), Account::default()),
+            (payer, Account::funded(1 << 100)),
+        ]);
+        let state = compat::named_programs(
+            state,
+            [
                 (programs::fee_account_id(), programs::fee()),
                 (TWIN, ferrata_program()),
                 (KECCAK_SOFT, ferrata_keccak_soft_program()),
-            ])
-            .with_genesis_programs([(ferrata_program(), true), (consumer_program(), true), (scripted_program(), true)]);
+            ],
+        );
+        let state = compat::genesis_programs(
+            state,
+            [(ferrata_program(), true), (consumer_program(), true), (scripted_program(), true)],
+        );
         #[cfg(feature = "program-class")]
-        let state = state.with_named_programs([(CLASSED, classed_program())]);
+        let state = compat::named_programs(state, [(CLASSED, classed_program())]);
         Self { state, payer_key, payer, nonce: 0, block_id: 2, reports: Vec::new(), last_tx: Vec::new() }
     }
 
@@ -357,20 +354,21 @@ impl Chain {
         actors: Vec<Actor>,
         evidence: Vec<PublicAccountEvidence>,
         timestamp_ms: u64,
-        signers: &[&PrivateKey],
+        signers: &[&compat::AccountKey],
     ) -> TxReport {
         let gas_limit = market::MAX_GAS_EXEC;
         let fee = FeeDeclaration::new(self.payer, gas_limit, 0, u128::MAX >> 8);
         let message_bytes = message.len();
         let mut nonces = BTreeMap::from([(self.payer, Nonce(self.nonce))]);
         for key in signers {
-            let id = AccountId::from(&PublicKey::new_from_private_key(key));
+            let id = compat::account_of(key);
             nonces.insert(id, self.state.get_account_by_id(id).nonce);
         }
+        let actors = compat::declared(actors, nonces.keys().copied().collect::<Vec<_>>());
         let msg = PublicMessage::new(root, message, actors, nonces, Some(fee), evidence);
         let mut keys = vec![&self.payer_key];
         keys.extend(signers.iter().copied());
-        let witness_set = WitnessSet::for_message(&msg, &keys);
+        let witness_set = compat::sign(&msg, &keys);
         let tx = PublicTransaction::new(msg, witness_set);
         let (transitions, _) = trace_public(&tx, &self.state, gas_limit);
         let lee_tx = LeeTransaction::Public(tx);
@@ -394,7 +392,15 @@ impl Chain {
         let exit_code = transitions.iter().map(|t| t.exit_code).find(|c| *c != 0);
         // LEZ charges what it metered on success and on a coded exit; any other failure (a panic,
         // an unadmitted actor, a validity window) is charged the whole gas limit.
-        if charge.revert.is_none() || exit_code.is_some() {
+        // The native program loader is not traced (it is Rust, not a guest): v0.4.0-rc1 meters it at nothing,
+        // v0.4.0-rc2, rc3 and v0.4.0 at one cycle per byte of loader state it reads (lee's `LOADER_CYCLES_PER_BYTE`,
+        // lee/state_machine/src/validated_state_diff/mod.rs), so from rc2 on a transaction to the loader is not held
+        // to the trace.
+        let untraced_loader =
+            cfg!(feature = "lez-rc2") && root.program_account_id == lee_core::program::PROGRAM_LOADER_ACCOUNT_ID;
+        if untraced_loader {
+            assert!(transitions.is_empty(), "{label}: the loader's transaction runs nothing else");
+        } else if charge.revert.is_none() || exit_code.is_some() {
             assert_eq!(traced, charge.cycles, "{label}: the transitions must sum to the cycles LEZ metered");
         } else {
             assert_eq!(charge.cycles, gas_limit, "{label}: an uncoded failure is charged the gas limit");

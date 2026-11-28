@@ -198,6 +198,8 @@ pub async fn attest_private(
     let client = TapClient::recording(live.wallet.client_owned(), &transcript, &tx_out)?;
     let (mut wallet, me) = private_wallet_at(&dir.join("wallet"), &live.opts.rpc, client, private_account)?;
     let tip = wallet.start_at_chain_tip().await?;
+    #[cfg(feature = "lez-040")]
+    crate::private::receive_native_credits("[attest]", live, &mut wallet, me).await?;
     let catalog = ProgramCatalog::from([
         (consumer_at, Program::new(Cow::Owned(consumer.bytes.clone()))?),
         (attest, Program::new(Cow::Owned(program.bytes.clone()))?),

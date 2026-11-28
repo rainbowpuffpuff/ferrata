@@ -1,0 +1,46 @@
+{
+  "block": 12228553,
+  "blockHash": "0xd1c0498bc8570f9e0849c6bacc46b1caba22e3b52ab9cec717f4ea2be847d9f8",
+  "bootstrapAgeS": 34095,
+  "bootstrapPeriod": 1425,
+  "bootstrapSlot": 11673600,
+  "bootstrapTime": "2026-11-27T22:00:00Z",
+  "chain": "sepolia",
+  "checkedAt": "2026-11-28T07:28:15Z",
+  "checkpoint": "0x065d112a62a2b7d5249762cdbce437c2155425a8dc232c9b9b7c289af1ac5bb1",
+  "finalizedAgeS": 1071,
+  "finalizedRoot": "0xb4de784c95280f3c85f7c05839b1edbf3d4d77320859f32d49e0c0b7f60f36a5",
+  "finalizedSlot": 11676352,
+  "finalizedTime": "2026-11-28T07:10:24Z",
+  "initValidUntil": "2026-12-13T14:51:12Z",
+  "layout": "Gloas",
+  "maxBootstrapAgeS": 115200,
+  "maxFinalizedAgeS": 7200,
+  "periods": [
+    {
+      "adopted": true,
+      "advanced": false,
+      "finalizedSlot": 11673600,
+      "period": 1425
+    }
+  ],
+  "signatureSlot": 11676417,
+  "signers": 474,
+  "statementIds": {
+    "log": "0xe06f1d3bcb0daa5e6db681a75da00e1b67c6029a339cc356b5de8c9ee8b6f12e",
+    "storage": "0xbd9d20d6f36840c214489136f4ee26fe01eae1cf6de3dfa637e9ded36df44fa3"
+  },
+  "storage": {
+    "contract": "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+    "slot": "0x000000000000000000000000000000000000000000000000000000000000000b",
+    "value": "0x0000000000000000000000000000000000000000000000009512c99f57706d09"
+  },
+  "transfer": {
+    "amount": "77433485091956308",
+    "from": "0x3ec84659862c59619e82f16b787b798bd423d038",
+    "logIndex": 0,
+    "to": "0x8b2a1415b29c72bc22c4d74a8b899badef451d18",
+    "token": "0xf6081c62c44e85a025101c99fb9f74afc36b23ca",
+    "txIndex": 4
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "chainId": 11155111,
+  "stages": {
+    "deposit-0": [
+      {
+        "hash": "0x49065dec4b4ce0951dcc4844c6c3312425563e5b99575dbabe55232cd3db8489",
+        "blockNumber": "0x9",
+        "status": "0x1",
+        "gasUsed": "0x38186",
+        "to": null,
+        "contractAddress": null
+      }
+    ],
+    "deposit-1": [
+      {
+        "hash": "0xac3dd3fa80fa86f599a830fe44694018fec4862e904c232093701079c718f91a",
+        "blockNumber": "0xa",
+        "status": "0x1",
+        "gasUsed": "0x2b7a8",
+        "to": null,
+        "contractAddress": null
+      }
+    ]
+  }
+}

@@ -4,19 +4,21 @@
 import { el, badge, blockLink, txLink, accountLink, href } from "./ui.js";
 import { hex, fmtInt, fmtAge, shortHex } from "./util.js";
 import { rootOf, builtinProgramId, NATIVE_TOKEN_PROGRAM_ID, PROGRAM_LOADER_ID } from "./lez.js";
+import { systemProgramId } from "./lez040.js";
+import { receiptFeeText } from "./outcome.js";
 
 const LEZ = "https://github.com/logos-blockchain/logos-execution-zone/blob/v0.4.0-rc3/";
 const src = (path, label) => el("a", { href: LEZ + path, rel: "noopener" }, label || path.replace(/^.*\//, "").replace(/#L\d+$/, ""));
 
 /** The newest transaction in view whose root call goes to `program` (bytes) and satisfies `pred`. */
 function newest(view, program, pred = () => true) {
-  const p = hex(program);
+  const programs = new Set((Array.isArray(program) ? program : [program]).map(hex));
   for (let i = view.length - 1; i >= 0; i--) {
     const b = view[i];
     for (let j = b.transactions.length - 1; j >= 0; j--) {
       const tx = b.transactions[j];
       const r = rootOf(tx);
-      if (r && hex(r.to.program_account_id) === p && pred(tx, r)) return { tx, block: b, index: j };
+      if (r && programs.has(hex(r.to.program_account_id)) && pred(tx, r)) return { tx, block: b, index: j };
     }
   }
   return null;
@@ -32,6 +34,9 @@ const evTx = (hit, text) => (hit ? el("span", {}, text, " ", txLink(hit.tx.hash)
 export function features(ctx) {
   const { view, head, config } = ctx;
   const last = view[view.length - 1];
+  const receiptWire = view.some((b) => Array.isArray(b.receipts));
+  const receiptIndex = last && last.receipts && last.receipts.length ? last.receipts.length - 1 : -1;
+  const lastReceipt = receiptIndex >= 0 ? last.receipts[receiptIndex] : null;
   const fin = [...view].reverse().find((b) => b.bedrock_status === "Finalized");
   const progByKey = (k) => (config.programs || []).find((p) => p.key === k && p.account);
   const repo = config.repo ? `${config.repo}/blob/main/` : null;
@@ -43,8 +48,8 @@ export function features(ctx) {
   const msgSend = msgProg ? newest(view, accountBytes(msgProg.account), (tx, r) => r.message[0] === 4) : null;
   const namesCall = namesProg ? newest(view, accountBytes(namesProg.account)) : null;
   const attest = attProg ? newest(view, accountBytes(attProg.account), (tx, r) => r.message[0] === 7) : null;
-  const tick = newest(view, builtinProgramId("clock"));
-  const feeTx = newest(view, builtinProgramId("fee"));
+  const tick = newest(view, [builtinProgramId("clock"), systemProgramId("clock")]);
+  const feeTx = newest(view, [builtinProgramId("fee"), systemProgramId("fee")]);
   const priv = view.flatMap((b) => b.transactions.map((tx) => ({ tx, block: b }))).filter((x) => x.tx.kind !== "Public");
   const deployed = (config.programs || []).filter((p) => p.account).length;
   const circuit = ctx.ids && ctx.ids.privacy_preserving_circuit;
@@ -87,16 +92,22 @@ export function features(ctx) {
     {
       name: "Program events",
       state: "partial",
-      what: "Programs emit events (names: registered, renewed…; messages: delivered; the attestation program: each finalized header and attestation), but LEZ v0.4.0-rc3's sequencer RPC serves no events and no receipts: this explorer reads outcomes from the blocks and state instead.",
+      what: `Programs emit events (names: registered, renewed…; messages: delivered; the attestation program: each finalized header and attestation), but ${receiptWire ? "LEZ v0.4.0's sequencer RPC serves receipts and no events" : "LEZ v0.4.0-rc3's sequencer RPC serves no events and no receipts"}: this explorer reads outcomes from the blocks and state instead.`,
       live: el("span", { class: "muted" }, "emitted, not served by this version's RPC"),
       sources: [src("lee/state_machine/core/src/program/mod.rs#L730", "ProgramEvent"), src("lez/sequencer/service/rpc/src/lib.rs", "RPC methods")],
     },
     {
       name: "Transaction outcome",
-      state: "partial",
-      what: "No receipts: a block lists which of its charged transactions reverted. The explorer shows applied or refused from that list; exit codes are not on chain.",
-      live: last ? el("span", {}, "reverted list of ", blockLink(Number(last.header.block_id)), `: ${last.reverted.length ? last.reverted.join(", ") : "empty"}`) : "—",
-      sources: [src("lez/common/src/block.rs#L66", "BlockBody.reverted")],
+      state: receiptWire ? "on" : "partial",
+      what: receiptWire
+        ? "One receipt per user transaction records applied or reverted and its charged fee (base + tip) and refund. Trailing system transactions have no receipt; exit codes are not on chain."
+        : "No receipts: a block lists which of its charged transactions reverted. The explorer shows applied or refused from that list; exit codes are not on chain.",
+      live: receiptWire
+        ? lastReceipt ? el("span", {}, "receipt of ", txLink(last.transactions[receiptIndex].hash), " in ", blockLink(Number(last.header.block_id)), `: ${lastReceipt.success ? "applied" : "reverted"}, ${receiptFeeText(lastReceipt, config.native)}`) : last ? el("span", {}, "no user receipt in ", blockLink(Number(last.header.block_id))) : "—"
+        : last ? el("span", {}, "reverted list of ", blockLink(Number(last.header.block_id)), `: ${last.reverted.length ? last.reverted.join(", ") : "empty"}`) : "—",
+      sources: [receiptWire
+        ? el("a", { href: "https://github.com/logos-blockchain/logos-execution-zone/blob/v0.4.0/lez/common/src/block.rs", rel: "noopener" }, "BlockBody.receipts")
+        : src("lez/common/src/block.rs#L66", "BlockBody.reverted")],
     },
     {
       name: "Attested Ethereum state (Ferrata)",

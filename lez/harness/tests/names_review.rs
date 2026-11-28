@@ -14,8 +14,11 @@ use ferrata_lez_names_wire::{
     code, commitment, name_actor, name_seed, sequence_actor, sequence_seed, user_actor, NameRecord, NamesMessage as M,
     UserState, CLOCK_SLACK_MS, COMMIT_SLACK_MS, GRACE_MS, MIN_REVEAL_DELAY_MS, TERM_MS,
 };
-use harness::{grouped, results_dir, Chain, TxReport};
-use lee::{program::Program, Account, AccountId, Actor, PrivateKey, PublicAccountEvidence, PublicKey, V03State};
+use harness::{
+    compat::{self, AccountKey},
+    grouped, results_dir, Chain, TxReport,
+};
+use lee::{program::Program, Account, AccountId, Actor, PublicAccountEvidence, V03State};
 
 const T0: u64 = 1_800_000_000_000;
 
@@ -23,12 +26,12 @@ fn program() -> AccountId {
     AccountId::from_builtin_program(methods_names::FERRATA_NAMES_ID)
 }
 struct User {
-    key: PrivateKey,
+    key: AccountKey,
     id: AccountId,
 }
 fn account(b: u8) -> User {
-    let key = PrivateKey::try_new([b; 32]).unwrap();
-    let id = AccountId::from(&PublicKey::new_from_private_key(&key));
+    let key = compat::account_key([b; 32]);
+    let id = compat::account_of(&key);
     User { key, id }
 }
 struct World {
@@ -39,7 +42,8 @@ fn world(users: &[&User]) -> World {
     let state = std::mem::replace(&mut chain.state, V03State::new());
     let funded: Vec<_> = users.iter().map(|u| (u.id, Account::funded(1))).collect();
     let names = Program::new_unchecked(methods_names::FERRATA_NAMES_ID, Cow::Borrowed(methods_names::FERRATA_NAMES_ELF));
-    chain.state = state.with_public_accounts(funded).with_genesis_programs([(names, true)]);
+    let state = state.with_public_accounts(funded);
+    chain.state = compat::genesis_programs(state, [(names, true)]);
     World { chain }
 }
 impl World {
@@ -286,9 +290,8 @@ fn m4_bad_state_is_reached_with_a_corrupt_record() {
     let state = std::mem::replace(&mut chain.state, V03State::new());
     let corrupt = Account::default().with_actor_state(p, vec![0xff, 0x00, 0x01].into());
     let names = Program::new_unchecked(methods_names::FERRATA_NAMES_ID, Cow::Borrowed(methods_names::FERRATA_NAMES_ELF));
-    chain.state = state
-        .with_public_accounts([(alice.id, Account::funded(1)), (name_actor(p, "broken").account_id, corrupt)])
-        .with_genesis_programs([(names, true)]);
+    let state = state.with_public_accounts([(alice.id, Account::funded(1)), (name_actor(p, "broken").account_id, corrupt)]);
+    chain.state = compat::genesis_programs(state, [(names, true)]);
     let mut w = World { chain };
     let r = w.act("renew `broken`, whose record does not decode", &alice, &M::Renew { name: "broken".into(), now_ms: T0 }, T0 + 2_000);
     assert_eq!(r.exit_code, Some(u32::from(code::BAD_STATE)), "{:?}", r.charge.revert);

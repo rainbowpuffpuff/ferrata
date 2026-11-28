@@ -1,0 +1,56 @@
+{
+ "ok": true,
+ "last_height": 5,
+ "lez": "v0.4.0 a255b42c (standalone sequencer_service, LEZ's tree)",
+ "wallet_ok": true,
+ "sends": [
+  {
+   "hash": "13cfde13485e87665ef8b407e0d068d460521f2160fdf8ced69904a56df36ff0",
+   "nonce": "0",
+   "amount": "1000",
+   "block": 3,
+   "receipt": {
+    "success": true,
+    "fee": {
+     "gas_exec": 0,
+     "gas_stor": 621,
+     "fee_base": 4968,
+     "tip": 0,
+     "refund": 0
+    }
+   }
+  },
+  {
+   "hash": "01f89add3ae29bff79e5c7c73b78ea8e3fb0d000175095a1cf938d4d55f56312",
+   "nonce": "1",
+   "amount": "2345",
+   "block": 4,
+   "receipt": {
+    "success": true,
+    "fee": {
+     "gas_exec": 0,
+     "gas_stor": 554,
+     "fee_base": 4432,
+     "tip": 0,
+     "refund": 0
+    }
+   }
+  },
+  {
+   "hash": "74d26c9ac9201fd54071953332e1b8c4f2eca67480e50bd1773ed24b391670d6",
+   "nonce": "2",
+   "amount": "777",
+   "block": 5,
+   "receipt": {
+    "success": true,
+    "fee": {
+     "gas_exec": 0,
+     "gas_stor": 588,
+     "fee_base": 4704,
+     "tip": 0,
+     "refund": 0
+    }
+   }
+  }
+ ]
+}

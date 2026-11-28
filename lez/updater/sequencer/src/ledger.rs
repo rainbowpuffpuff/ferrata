@@ -10,15 +10,13 @@
 use std::{cell::RefCell, collections::BTreeMap, time::Instant};
 
 use anyhow::{anyhow, ensure, Context as _, Result};
+use ferrata_updater::lez::PayerKey;
 use common::transaction::LeeTransaction;
 use ferrata_updater::{
     ledger::{Ledger, Tx, TxOutcome},
     utc_now,
 };
-use lee::{
-    public_transaction::{Message as PublicMessage, WitnessSet},
-    AccountId, Actor, FeeDeclaration, PrivateKey, PublicKey, PublicTransaction,
-};
+use lee::{public_transaction::Message as PublicMessage, Actor, FeeDeclaration, PublicTransaction};
 use sequencer_service_rpc::ClientError;
 use wallet::WalletSequencerClient as _;
 
@@ -35,13 +33,13 @@ pub struct SequencerLedger {
 impl SequencerLedger {
     /// Connect (a sequencer on this machine only), restore the follower from `run_dir` if it was saved there, and
     /// follow the chain up to its last final block.
-    pub fn open(opts: Options, payer: &PrivateKey) -> Result<Self> {
+    pub fn open(opts: Options, payer: &PayerKey) -> Result<Self> {
         let rt = tokio::runtime::Builder::new_current_thread().enable_all().build()?;
         let started = Instant::now();
         let run_dir = opts.run_dir.clone();
         let mut live = rt.block_on(Live::open(opts, &[])).context("the sequencer")?;
         live.phase = "updater".into();
-        let payer_id = AccountId::from(&PublicKey::new_from_private_key(payer));
+        let payer_id = ferrata_updater::lez::payer_account(payer);
         let (head, balance) =
             rt.block_on(async { Ok::<_, anyhow::Error>((live.head().await?, live.balance(payer_id).await?)) })?;
         eprintln!(
@@ -67,7 +65,7 @@ impl Ledger for SequencerLedger {
         })
     }
 
-    fn submit(&mut self, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome> {
+    fn submit(&mut self, payer: &PayerKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome> {
         let live = self.live.get_mut();
         self.rt.block_on(submit(live, payer, tx, gas_limit, max_fee))
     }
@@ -93,7 +91,7 @@ impl Ledger for SequencerLedger {
         for block in &follower.blocks[start..] {
             let txs = &block.body.transactions;
             for (i, tx) in txs.iter().enumerate().take(txs.len().saturating_sub(2)) {
-                if block.body.reverted.contains(&(i as u64)) {
+                if crate::compat::is_reverted(&block.body, i) {
                     continue;
                 }
                 if let LeeTransaction::Public(ptx) = tx {
@@ -108,11 +106,11 @@ impl Ledger for SequencerLedger {
     }
 }
 
-async fn submit(live: &mut Live, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome> {
+async fn submit(live: &mut Live, payer: &PayerKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome> {
     // A sequencer not on this machine: only the day-one deployment's, with the owner's FERRATA_TESTNET_SEND=yes.
     crate::live::check_send(&live.opts.rpc)?;
     live.sync().await?;
-    let payer_id = AccountId::from(&PublicKey::new_from_private_key(payer));
+    let payer_id = ferrata_updater::lez::payer_account(payer);
     let nonce =
         *live.wallet.get_accounts_nonces(&[payer_id]).await?.first().ok_or_else(|| anyhow!("no nonce served"))?;
     let balance_before = live.balance(payer_id).await?;
@@ -120,12 +118,12 @@ async fn submit(live: &mut Live, payer: &PrivateKey, tx: &Tx, gas_limit: u64, ma
     let msg = PublicMessage::new(
         tx.root,
         tx.message.clone(),
-        tx.actors.clone(),
+        crate::compat::declared(tx.actors.clone(), &[payer_id]),
         BTreeMap::from([(payer_id, nonce)]),
         Some(FeeDeclaration::new(payer_id, gas_limit, 0, max_fee)),
         tx.evidence.clone(),
     );
-    let witness_set = WitnessSet::for_message(&msg, &[payer]);
+    let witness_set = crate::compat::sign_payer(&msg, payer);
     let ltx = LeeTransaction::Public(PublicTransaction::new(msg, witness_set));
     let hash = ltx.hash();
     let sent_at = Instant::now();

@@ -1,0 +1,33 @@
+lez-select: v0.4.0-rc1 -> v0.4.0 (a255b42c0fc80d1cb219454a3a1f5ec3b5d92115)
+   Compiling lee_core v0.1.0 (<box>/live/upstream/lez-v0.4.0/lee/state_machine/core)
+   Compiling build_utils v0.1.0 (<box>/live/upstream/lez-v0.4.0/build_utils)
+   Compiling ferrata-bridge-core v0.2.0 (<box>/live/ferrata/bridge/crates/ferrata-bridge-core)
+   Compiling ferrata-core v0.0.1 (<box>/live/ferrata/crates/ferrata-core)
+   Compiling logging v0.1.0 (<box>/live/upstream/lez-v0.4.0/lez/logging)
+   Compiling lee v0.1.0 (<box>/live/upstream/lez-v0.4.0/lee/state_machine)
+   Compiling programs v0.1.0 (<box>/live/upstream/lez-v0.4.0/lez/programs)
+   Compiling ferrata-spectests v0.0.1 (<box>/live/ferrata/crates/ferrata-spectests)
+warning: lee@0.1.0: Generated module at <box>/target-live/cli/release/build/lee-aa30cc432318f40d/out/lee/privacy_preserving_circuit/mod.rs
+   Compiling sequencer_stake_core v0.1.0 (<box>/live/upstream/lez-v0.4.0/lez/programs/sequencer_stake/core)
+   Compiling program_loader_core v0.1.0 (<box>/live/upstream/lez-v0.4.0/lee/program_loader)
+   Compiling bridge_core v0.1.0 (<box>/live/upstream/lez-v0.4.0/lez/programs/bridge/core)
+   Compiling clock_core v0.1.0 (<box>/live/upstream/lez-v0.4.0/lez/programs/clock/core)
+   Compiling fee_core v0.1.0 (<box>/live/upstream/lez-v0.4.0/lez/programs/fee/core)
+   Compiling ferrata-lez-wire v0.1.0 (<box>/live/ferrata/lez/wire)
+   Compiling system_upgrader_core v0.1.0 (<box>/live/upstream/lez-v0.4.0/lez/programs/system_upgrader/core)
+warning: programs@0.1.0: Generated module at <box>/target-live/cli/release/build/programs-3b3146524bc76f61/out/lez/programs/mod.rs
+   Compiling ferrata-lez-bridge-wire v0.1.0 (<box>/live/ferrata/lez/bridge-wire)
+   Compiling ferrata-advance v0.1.0 (<box>/live/ferrata/lez/advance)
+   Compiling ferrata-wallet v0.1.0 (<box>/live/ferrata/cli/wallet)
+   Compiling system_accounts v0.1.0 (<box>/live/upstream/lez-v0.4.0/lez/system_accounts)
+   Compiling common v0.1.0 (<box>/live/upstream/lez-v0.4.0/lez/common)
+   Compiling sequencer_service_protocol v0.1.0 (<box>/live/upstream/lez-v0.4.0/lez/sequencer/service/protocol)
+   Compiling key_protocol v0.1.0 (<box>/live/upstream/lez-v0.4.0/lee/key_protocol)
+   Compiling chain_state v0.1.0 (<box>/live/upstream/lez-v0.4.0/lez/chain_state)
+   Compiling sequencer_service_rpc v0.1.0 (<box>/live/upstream/lez-v0.4.0/lez/sequencer/service/rpc)
+   Compiling testnet_initial_state v0.1.0 (<box>/live/upstream/lez-v0.4.0/lez/testnet_initial_state)
+   Compiling wallet v0.1.0 (<box>/live/upstream/lez-v0.4.0/lez/wallet)
+   Compiling ferrata-cli v0.1.0 (<box>/live/ferrata/cli)
+    Finished `release` profile [optimized] target(s) in 49.95s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`

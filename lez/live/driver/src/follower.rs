@@ -1,8 +1,9 @@
 //! A follower of the chain: LEZ's own block application over the blocks a sequencer serves.
 //!
-//! The sequencer's RPC has no receipts: a block lists the indices of its reverted transactions
+//! The release candidates' sequencer RPC has no receipts: a block lists the indices of its reverted transactions
 //! and carries the gas totals of the block in its forced fee transaction, nothing per
-//! transaction, and never the reason of a revert. So, as LEZ's indexer does, this replays every
+//! transaction, and never the reason of a revert. (From LEZ v0.4.0, feature `lez-040`, a block carries a receipt per
+//! user transaction instead, LEZ #1107: the follower holds its own settlement of each transaction to it.) So, as LEZ's indexer does, this replays every
 //! block from the pre-genesis state (`testnet_initial_state::initial_state`) with
 //! `chain_state::apply::apply_block` (hash, chain link, the reverted list and the fee
 //! transaction are all checked there), and before that settles the block's user transactions
@@ -123,7 +124,7 @@ impl Follower {
         Self {
             // LEZ's pre-genesis state; a zone with the cross-zone programs (`FERRATA_FOLLOWER_CROSS_ZONE=1`, for a
             // network whose `getProgramIds` lists them: `lez/testnet04/day1.sh discover`) starts from that one.
-            state: testnet_initial_state::initial_state(std::env::var("FERRATA_FOLLOWER_CROSS_ZONE").as_deref() == Ok("1")),
+            state: pre_genesis_state(),
             tip: None,
             blocks: Vec::new(),
             chain: Vec::new(),
@@ -151,7 +152,7 @@ impl Follower {
             timestamp_ms: timestamp,
             transactions: txs.len() as u64,
             user_transactions: user_txs.len() as u64,
-            reverted: block.body.reverted.clone(),
+            reverted: reverted_positions(&block.body),
             base_fee_exec: opening_fees.base_fee_exec,
             base_fee_stor: opening_fees.base_fee_stor,
             gas_exec: 0,
@@ -169,13 +170,14 @@ impl Follower {
             for (index, tx) in user_txs.iter().enumerate() {
                 let before = summary;
                 let pre = scratch.clone();
-                let (events, reverted) =
+                let (events, settled) =
                     settle_transaction(tx, &mut scratch, &opening, block_id, timestamp, index as u64, &mut summary)
                         .map_err(|e| anyhow!("block {block_id}, transaction {index}: {e}"))?;
+                let reverted = check_settled(&block, index, &settled)?;
                 let tx_bytes = borsh::to_vec(tx)?.len() as u64;
                 let (gas_limit, reason) = match tx {
                     LeeTransaction::Public(public_tx) => {
-                        let gas_limit = public_tx.message().execution.fee.map(|fee| fee.gas_limit);
+                        let gas_limit = declared_fee(public_tx.message()).map(|fee| fee.gas_limit);
                         let reason = if reverted {
                             let budget = gas_limit.unwrap_or(fee_core::market::MAX_GAS_EXEC);
                             let (charge, _) = ValidatedStateDiff::from_public_transaction_metered(
@@ -272,4 +274,65 @@ impl Follower {
             receipts: snapshot.receipts.into_iter().map(|r| (r.tx_hash.clone(), r)).collect(),
         })
     }
+}
+
+// The calls whose LEZ API differs between the release candidates and v0.4.0 (feature `lez-040`).
+
+/// LEZ's pre-genesis state; on the release candidates a zone with the cross-zone programs
+/// (`FERRATA_FOLLOWER_CROSS_ZONE=1`, for a network whose `getProgramIds` lists them: `lez/testnet04/day1.sh discover`)
+/// starts from that one.
+#[cfg(not(feature = "lez-040"))]
+fn pre_genesis_state() -> V03State {
+    testnet_initial_state::initial_state(std::env::var("FERRATA_FOLLOWER_CROSS_ZONE").as_deref() == Ok("1"))
+}
+
+/// LEZ's pre-genesis state (v0.4.0 removed cross-zone messaging, LEZ #1147).
+#[cfg(feature = "lez-040")]
+fn pre_genesis_state() -> V03State {
+    testnet_initial_state::initial_state()
+}
+
+/// The positions of a block's reverted user transactions: the block's list on the release candidates.
+#[cfg(not(feature = "lez-040"))]
+fn reverted_positions(body: &common::block::BlockBody) -> Vec<u64> {
+    body.reverted.clone()
+}
+
+/// The positions of a block's reverted user transactions: from v0.4.0 a block carries a receipt per user transaction
+/// in place of the list (LEZ #1107).
+#[cfg(feature = "lez-040")]
+fn reverted_positions(body: &common::block::BlockBody) -> Vec<u64> {
+    body.receipts.iter().enumerate().filter(|(_, receipt)| !receipt.success).map(|(i, _)| i as u64).collect()
+}
+
+/// Whether the transaction at `index` reverted, by its settlement here (the release candidates' settlement says only
+/// that).
+#[cfg(not(feature = "lez-040"))]
+fn check_settled(_block: &Block, _index: usize, reverted: &bool) -> Result<bool> {
+    Ok(*reverted)
+}
+
+/// Whether the transaction at `index` reverted, by its settlement here, which must give the receipt the block carries
+/// for it (LEZ #1107: success, the gas, base fee, tip and refund charged), as LEZ's own `apply_block` then checks.
+#[cfg(feature = "lez-040")]
+fn check_settled(block: &Block, index: usize, settled: &common::block::TransactionReceipt) -> Result<bool> {
+    let stated = block.body.receipts.get(index);
+    ensure!(
+        stated == Some(settled),
+        "block {}, transaction {index}: settling it gives the receipt {settled:?}, the block carries {stated:?}",
+        block.header.block_id
+    );
+    Ok(!settled.success)
+}
+
+/// A public message's declared fee: in its execution on the release candidates.
+#[cfg(not(feature = "lez-040"))]
+fn declared_fee(message: &lee::public_transaction::Message) -> Option<lee::FeeDeclaration> {
+    message.execution.fee
+}
+
+/// A public message's declared fee: in the message itself from v0.4.0 (LEZ #1080).
+#[cfg(feature = "lez-040")]
+fn declared_fee(message: &lee::public_transaction::Message) -> Option<lee::FeeDeclaration> {
+    message.fee
 }

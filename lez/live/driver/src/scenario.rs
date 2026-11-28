@@ -538,19 +538,19 @@ pub async fn scenarios(
         tx.harness = Some(("stage1-replay", harness_init[index].to_string()));
         if index == 1 {
             let detour = Tx {
-                step: format!("{} with the wallet's default gas limit", tx.step),
+                step: format!("{} {}", tx.step, crate::live::DETOUR_GAS_STEP),
                 harness: None,
                 actors: tx.actors.clone(),
                 root: tx.root,
                 message: tx.message.clone(),
                 payer,
-                gas_limit: Some(wallet::DEFAULT_GAS_LIMIT),
-                note: "LEZ's wallet declares 2,000,000 by default; the step needs 3.4M".into(),
+                gas_limit: Some(crate::live::DETOUR_GAS),
+                note: format!("{}; the step needs 3.4M", crate::live::DETOUR_GAS_NOTE),
             };
             let out = live.submit(detour).await?;
             ensure!(out.row.status == "reverted", "expected an out-of-gas revert, got {} {}", out.row.status, out.row.note);
             ensure!(
-                out.row.exec_gas == wallet::DEFAULT_GAS_LIMIT.to_string(),
+                out.row.exec_gas == crate::live::DETOUR_GAS.to_string(),
                 "an out-of-gas action is charged its whole gas limit, got {}",
                 out.row.exec_gas
             );

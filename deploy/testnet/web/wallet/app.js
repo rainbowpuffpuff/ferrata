@@ -1,6 +1,7 @@
 // The wallet's page logic. Keys: made, encrypted and used only here (keystore.js, lez.js). Network: the configured
 // same-origin endpoints only (config.json; the page's Content-Security-Policy allows nothing else).
-import * as lez from './lez.js';
+import * as baseLez from './lez.js';
+import { connect } from './net.js';
 import * as ks from './keystore.js';
 import * as history from './history.js';
 import { mountProve } from './prove.js';
@@ -12,7 +13,7 @@ import { mountPwa, renderPwa, keepStorage, standalone } from './pwa.js';
 import { mountAppLock } from './applock.js';
 import { mountScanner, parseScanned, receiveCode, renderQR } from './qr.js';
 import { mountNotify } from './notify.js';
-import { checkConfig } from './settings.js';
+import { checkConfig, lezVersionText } from './settings.js';
 
 const $ = (id) => document.getElementById(id);
 const show = (id, on = true) => { $(id).hidden = !on; };
@@ -29,7 +30,48 @@ const cfg = await fetch('config.json', { cache: 'no-store' })
     document.querySelector('main')?.prepend(p);
     return new Promise(() => {}); // stop here: nothing below works without the settings
   });
-const seq = new lez.Sequencer(cfg.rpc);
+// The network's LEZ version decides the account tree and the transaction format. If it cannot be read (offline, a rate
+// limit, a sequencer restart), the page still unlocks and shows the accounts as on the version last read from this RPC
+// (kept in localStorage; the test network's v0.4.0-rc3 if none was), and signs nothing until a later read finds the
+// same version (net.js `unconfirmed`): every minute, when the browser comes back online, and before each send.
+const versionStore = (() => { try { return globalThis.localStorage ?? null; } catch { return null; } })();
+const net = await connect(cfg.rpc, { storage: versionStore, fallback: 'v0.4.0-rc3', timeoutMs: 8000 });
+const lez = net.codec ?? baseLez; // pure shared helpers remain available in the read-only version state
+const seq = net.seq;
+let versionBanner = null;
+function showVersionState() {
+  if (!net.readOnly) {
+    versionBanner?.remove(); versionBanner = null;
+    $('net-status').title = '';
+    seq.lastBlockId().then((h) => { $('net-status').textContent = `block ${h}`; $('net-status').className = 'pill ok'; })
+      .catch(() => { $('net-status').textContent = 'RPC unreachable'; $('net-status').className = 'pill bad'; });
+    return;
+  }
+  if (!versionBanner) {
+    versionBanner = document.createElement('p');
+    versionBanner.className = 'msg bad'; versionBanner.dataset.testid = 'version-error';
+    document.querySelector('main')?.prepend(versionBanner);
+  }
+  versionBanner.textContent = net.accountsAs && !net.mismatch
+    ? `${net.error}. Accounts are shown as on LEZ ${net.accountsAs}; sending waits until the network answers.`
+    : net.error;
+  $('net-status').textContent = 'LEZ version unreadable'; $('net-status').className = 'pill bad';
+  $('net-status').title = net.error;
+}
+/** Before every signature (and the faucet's request): read the network's version again (true when signing is allowed). */
+async function versionConfirmed() {
+  const wasReadOnly = net.readOnly;
+  const ok = await net.recheck();
+  if (net.readOnly || net.readOnly !== wasReadOnly) showVersionState();
+  return ok;
+}
+if (net.readOnly) {
+  showVersionState();
+  if (net.accountsAs) {
+    const timer = setInterval(async () => { if (await versionConfirmed() || net.mismatch) clearInterval(timer); }, 60000);
+    addEventListener('online', () => { versionConfirmed(); });
+  }
+}
 // Names (the names program, ferrata_names): on when the network publishes the program.
 let names = cfg.names?.program ? new Names({ rpc: seq, program: cfg.names.program }) : null;
 const NAMES_GAS = 200000n; // the names CLI's limit (names/README.md: a refused call costs at most this)
@@ -53,9 +95,9 @@ const S = { key: null, salt: null, secret: null, seed: null, accounts: [], curre
 const acct = () => S.accounts[S.current];
 
 function materialize() {
-  S.seed = S.secret.mnemonic ? lez.seedOf(S.secret.mnemonic) : null;
+  S.seed = S.secret.mnemonic ? baseLez.seedOf(S.secret.mnemonic) : null;
   S.accounts = S.secret.accounts.map((a) => {
-    const node = a.kind === 'seed' ? lez.deriveNode(S.seed, lez.parsePath(a.path)) : lez.rawKeyNode(a.sk);
+    const node = a.kind === 'seed' ? net.deriveAccount(S.seed, lez.parsePath(a.path)) : net.importAccount(a.sk);
     return { ...a, node, id: lez.idToString(node.accountId) };
   });
   S.current = Math.min(S.secret.current ?? 0, S.accounts.length - 1);
@@ -100,7 +142,7 @@ $('lock').onclick = lock;
 // ------------------------------------------------------------------ onboarding
 let pendingMnemonic = null;
 $('go-create').onclick = () => {
-  pendingMnemonic = lez.newMnemonic();
+  pendingMnemonic = baseLez.newMnemonic();
   const ol = $('mnemonic-words'); ol.textContent = '';
   for (const w of pendingMnemonic.split(' ')) { const li = document.createElement('li'); li.textContent = w; ol.append(li); }
   view('v-create');
@@ -112,7 +154,8 @@ async function startWith(secret, pass, errEl) {
     const { key, salt } = await ks.create(pass, secret);
     appLock.reset();
     Object.assign(S, { key, salt, secret });
-    materialize(); location.hash = '#home'; route(); refresh(); notifier.start();
+    try { materialize(); } catch (e) { forget(); throw e; }
+    location.hash = '#home'; route(); refresh(); notifier.start();
     keepStorage();
   } catch (e) { $(errEl).textContent = e.message; }
 }
@@ -133,20 +176,23 @@ $('import-go').onclick = async () => {
     let secret;
     if (!$('import-phrase-box').hidden) {
       const m = $('import-phrase').value.trim().toLowerCase().split(/\s+/).join(' ');
-      if (!lez.isMnemonic(m)) throw new Error('These words are not a valid BIP-39 phrase.');
+      if (!baseLez.isMnemonic(m)) throw new Error('These words are not a valid BIP-39 phrase.');
       secret = { v: 1, mnemonic: m, accounts: [{ kind: 'seed', path: '/0', label: 'Account 1' }] };
     } else {
       const sk = $('import-key').value.trim().replace(/^0x/, '');
-      lez.rawKeyNode(sk);
+      net.importAccount(sk);
       secret = { v: 1, mnemonic: null, accounts: [{ kind: 'raw', sk, label: 'Imported key' }] };
     }
     await startWith(secret, $('import-pass').value, 'import-err');
     $('import-phrase').value = $('import-key').value = '';
   } catch (e) { $('import-err').textContent = e.message; }
 };
+// The decrypted record stays in S only once its accounts are derived; a failure leaves no key behind the lock screen.
+function forget() { Object.assign(S, { key: null, salt: null, secret: null, seed: null, accounts: [], current: 0 }); }
 function opened(o) {
   Object.assign(S, o);
-  materialize(); if (!location.hash) location.hash = '#home'; route(); refresh(); notifier.start();
+  try { materialize(); } catch (e) { forget(); throw e; }
+  if (!location.hash) location.hash = '#home'; route(); refresh(); notifier.start();
   touch();
   if (standalone()) keepStorage();
 }
@@ -177,11 +223,17 @@ function renderAccount() {
   const a = acct(); if (!a) return;
   $('home-id').textContent = a.id;
   renderName(a);
-  const pkHex = lez.hex(a.node.pk);
-  $('recv-id').textContent = a.id; $('recv-pk').textContent = pkHex;
-  $('recv-code').textContent = `lez:${a.id}?pk=${pkHex}`;
+  const admissionHex = lez.hex(net.admissionKeyOf(a.node));
+  $('recv-id').textContent = a.id; $('recv-pk').textContent = admissionHex;
+  $('recv-pk-label').textContent = net.admissionKind;
+  $('recv-form').textContent = net.is040
+    ? 'This v0.4.0 admission key is the account\'s 33-byte nonce-0 Schnorr key state (not a raw public key). It goes with the account\'s first credit only.'
+    : 'This rc3 admission key is the account\'s 32-byte public key. It goes with the account\'s first credit only.';
+  $('recv-code').textContent = `lez:${a.id}?pk=${admissionHex}`;
   renderReceiveQR();
-  $('recv-cli').textContent = `wallet auth-transfer send --to Public/${a.id} … (or --to-pk ${pkHex} for a first transfer)`;
+  $('recv-cli').textContent = net.is040
+    ? `For a first v0.4.0 credit, give the sender the receive code or this initial key state: ${admissionHex}`
+    : `wallet auth-transfer send --to Public/${a.id} … (or --to-pk ${admissionHex} for a first transfer)`;
 }
 $('account-select').onchange = async (e) => { clearSendReview(); S.current = Number(e.target.value); await persist(); route(); refresh(); };
 $('add-account').onclick = async () => {
@@ -211,10 +263,12 @@ async function namesTx(a, call, label) {
   const out = $('name-msg');
   const [info, fs] = await Promise.all([account(a.node.accountId), seq.feeState()]);
   a.chain = info; feeState = fs;
+  // The network's version is read right before signing: nothing is awaited between that read and the signature.
+  if (!await versionConfirmed()) throw new Error(net.error);
   const args = { payer: a.node, to: call.to, actors: call.actors, data: call.data, evidence: call.evidence ?? [], nonce: info.nonce, gasLimit: NAMES_GAS };
-  const { maxFee } = lez.feeFor({ gasLimit: NAMES_GAS, size: lez.buildCall({ ...args, maxFee: 0n }).size, feeState: fs });
+  const { maxFee } = net.feeFor({ gasLimit: NAMES_GAS, size: net.buildCall({ ...args, maxFee: 0n }).size, feeState: fs });
   if (info.balance < maxFee) throw new Error(`${label} needs up to ${fmt(maxFee)} in fees; use the faucet first.`);
-  const tx = lez.buildCall({ ...args, maxFee });
+  const tx = net.buildCall({ ...args, maxFee });
   const hash = await seq.send(tx.wire);
   out.textContent = `${label}: sent ${hash}; waiting for a block…`;
   const res = await waitApplied(a, hash, info.nonce);
@@ -306,7 +360,7 @@ async function renderNetInfo() {
     if (ch) add('Channel (zone id)', typeof ch === 'string' ? ch : JSON.stringify(ch));
     const ppc = ids && (ids.privacy_preserving_circuit || ids.PRIVACY_PRESERVING_CIRCUIT);
     if (ppc) add('Privacy circuit', lez.programIdHex(ppc));
-    add('LEZ version', ppc && lez.programIdHex(ppc).startsWith('631f0c96') ? 'v0.4.0-rc2/rc3 (privacy circuit 631f0c96…)' : 'see the privacy circuit id');
+    add('LEZ version', lezVersionText(net, ppc && lez.programIdHex(ppc)));
   } catch (e) { add('Error', e.message); }
 }
 
@@ -316,10 +370,12 @@ $('faucet').onclick = async () => {
   if (!cfg.faucet) { msg.textContent = 'This network has no faucet configured.'; msg.className = 'msg warn'; return; }
   $('faucet').disabled = true; msg.className = 'msg'; msg.textContent = 'Asking the faucet…';
   try {
+    if (!await versionConfirmed()) throw new Error(net.error); // the account and its admission key follow the version
     const before = a.chain?.balance ?? 0n;
-    // The test network's gateway: {account} (+ public_key, which LEZ needs to credit an account the first time).
+    // The gateway's public_key field carries the selected version's admission bytes (an initial key state on v0.4.0).
+    const admission = lez.hex(net.admissionKeyOf(a.node));
     const r = await fetch(cfg.faucet, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ account: a.id, account_id: a.id, public_key: lez.hex(a.node.pk) }) });
+      body: JSON.stringify({ account: a.id, account_id: a.id, public_key: admission }) });
     const j = await r.json().catch(() => ({}));
     if (!r.ok || j.ok === false) throw new Error(j.error ? `Faucet: ${j.error}${j.detail ? ' (' + j.detail + ')' : ''}` : `faucet answered HTTP ${r.status}`);
     const h = j.hash || j.tx_hash;
@@ -339,22 +395,22 @@ async function resolveRecipient(s) {
   if (names && /^[a-zA-Z0-9-]{3,32}(\.lez)?$/.test(t) && !/^[1-9A-HJ-NP-Za-km-z]{43,44}$/.test(t)) {
     const r = await names.resolve(t);
     if (!r) throw new Error(`No live name "${t}" on this network.`);
-    return { id: lez.idFromString(r.target), pk: null, name: r.name };
+    return { id: lez.idFromString(r.target), key: null, name: r.name };
   }
   return parseRecipient(t);
 }
 function parseRecipient(s) {
   const t = s.trim();
-  const code = t.match(/^lez:([1-9A-HJ-NP-Za-km-z]{32,44})\?pk=([0-9a-fA-F]{64})$/);
+  const code = t.match(/^lez:([1-9A-HJ-NP-Za-km-z]{32,44})\?pk=((?:[0-9a-fA-F]{64}|[0-9a-fA-F]{66}))$/);
   if (code) {
-    const id = lez.idFromString(code[1]), pk = lez.unhex(code[2]);
-    if (!lez.equalBytes(lez.accountIdOf(pk), id)) throw new Error('This receive code is damaged: its key does not match its account id.');
-    return { id, pk };
+    const parsed = net.parseAdmissionKey(code[2]);
+    if (!lez.equalBytes(lez.idFromString(code[1]), parsed.id)) throw new Error('This receive code is damaged: its key does not match its account id.');
+    return parsed;
   }
-  if (/^(0x)?[0-9a-fA-F]{64}$/.test(t)) { const pk = lez.unhex(t); return { id: lez.accountIdOf(pk), pk }; }
-  try { return { id: lez.idFromString(t), pk: null }; } catch (e) {
+  if (/^(0x)?[0-9a-fA-F]{64}$/.test(t) || /^(0x)?[0-9a-fA-F]{66}$/.test(t)) return net.parseAdmissionKey(t);
+  try { return { id: lez.idFromString(t), key: null }; } catch (e) {
     if (/private/i.test(e.message)) throw e;
-    throw new Error('That is not an account id, a public key (64 hex digits) or a receive code (lez:…?pk=…).');
+    throw new Error(`That is not an account id, this network's ${net.admissionForm} or a receive code (lez:…?pk=…).`);
   }
 }
 let pending = null;
@@ -371,20 +427,22 @@ $('send-review').onclick = async () => {
     const [info, fs, toAcc] = await Promise.all([account(a.node.accountId), seq.feeState(), seq.account(to.id)]);
     a.chain = info; feeState = fs;
     const toExists = toAcc !== null && toAcc !== undefined;
-    if (!toExists && !to.pk) throw new Error('This account has never been used on LEZ, so the network needs its public key once: ask the recipient for their receive code (Receive tab), or paste their public key.');
+    if (!toExists && !to.key) throw new Error(`This account has never been used on LEZ, so the network needs its ${net.admissionForm} once: ask the recipient for their receive code (Receive tab), or paste that key.`);
     const gasLimit = BigInt(cfg.gasLimitTransfer);
-    const probe = lez.buildTransfer({ from: a.node, to: to.id, toKey: toExists ? null : to.pk, amount, nonce: a.chain.nonce, gasLimit, maxFee: 0n });
     if (!feeState) feeState = await seq.feeState();
-    const { reserve, maxFee } = lez.feeFor({ gasLimit, size: probe.size, feeState });
+    // The network's version is read right before signing: nothing is awaited between that read and the signature.
+    if (!await versionConfirmed()) throw new Error(net.error);
+    const probe = net.buildTransfer({ from: a.node, to: to.id, toKey: toExists ? null : to.key, amount, nonce: a.chain.nonce, gasLimit, maxFee: 0n });
+    const { reserve, maxFee } = net.feeFor({ gasLimit, size: probe.size, feeState });
     if (a.chain.balance < amount + maxFee) throw new Error(`Not enough: ${fmt(amount)} plus at most ${fmt(maxFee)} in fees is more than your ${fmt(a.chain.balance)}.`);
-    pending = { to, toKey: toExists ? null : to.pk, amount, gasLimit, maxFee, reserve, nonce: a.chain.nonce, from: a };
+    pending = { to, toKey: toExists ? null : to.key, amount, gasLimit, maxFee, reserve, nonce: a.chain.nonce, from: a };
     const dl = $('send-summary'); dl.textContent = '';
     const add = (k, v) => { const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = v; dl.append(dt, dd); };
     add('From', `${a.label} (${a.id})`); add('To', `${to.name ? to.name + ' → ' : ''}${lez.idToString(to.id)}`); add('Amount', fmt(amount));
     add('Fee now', `about ${fmt(reserve)} (gas limit ${gasLimit}, ${probe.size} bytes at base fees ${feeState.base_fee_exec}/${feeState.base_fee_stor})`);
     add('Fee at most', `${fmt(maxFee)} (unused gas is refunded)`);
     add('Nonce', pending.nonce.toString());
-    if (pending.toKey) add('First credit', 'the recipient\'s public key goes with it (LEZ\'s admission evidence)');
+    if (pending.toKey) add('First credit', `the recipient's ${net.admissionKind} goes with it (LEZ's admission evidence)`);
     show('send-confirm');
   } catch (e) { $('send-err').textContent = e.message; }
 };
@@ -393,7 +451,7 @@ $('send-max').onclick = async () => {
   clearSendReview();
   await refresh();
   const a = acct(); if (!a.chain || !feeState) return;
-  const { maxFee } = lez.feeFor({ gasLimit: BigInt(cfg.gasLimitTransfer), size: 300, feeState });
+  const { maxFee } = net.feeFor({ gasLimit: BigInt(cfg.gasLimitTransfer), size: 300, feeState });
   const v = a.chain.balance > maxFee ? a.chain.balance - maxFee : 0n;
   $('send-amount').value = (v / UNIT).toString() + (v % UNIT ? '.' + (v % UNIT).toString().padStart(Number(DEC), '0').replace(/0+$/, '') : '');
 };
@@ -403,7 +461,8 @@ $('send-go').onclick = async () => {
   show('send-confirm', false);
   const out = $('send-result'); out.className = 'msg'; out.textContent = 'Signing and sending…';
   try {
-    const tx = lez.buildTransfer({ from: p.from.node, to: p.to.id, toKey: p.toKey, amount: p.amount, nonce: p.nonce, gasLimit: p.gasLimit, maxFee: p.maxFee });
+    if (!await versionConfirmed()) throw new Error(net.error);
+    const tx = net.buildTransfer({ from: p.from.node, to: p.to.id, toKey: p.toKey, amount: p.amount, nonce: p.nonce, gasLimit: p.gasLimit, maxFee: p.maxFee });
     history.remember(ctx(), p.from.id, { hash: tx.hash, wire: tx.wire, nonce: p.nonce.toString(), to: lez.idToString(p.to.id), amount: p.amount.toString(), sent: Date.now() });
     const h = await seq.send(tx.wire);
     const hash = typeof h === 'string' ? h.replace(/^0x/, '') : tx.hash;
@@ -414,17 +473,15 @@ $('send-go').onclick = async () => {
     $('send-amount').value = '';
   } catch (e) { out.textContent = e.message; out.className = 'msg bad'; }
 };
-// LEZ rc3's RPC has no receipts, but its blocks list the charged transactions whose action reverted: the page reads
-// the block that holds the transaction and reports applied or reverted from it.
+// rc3 reads the block's reverted list; v0.4.0 reads the receipt RPC (and can also read a block's receipts in net.js).
 async function waitApplied(a, hash, nonce) {
   for (let i = 0; i < 90; i++) {
     await new Promise((r) => setTimeout(r, 2000));
     const t = await seq.transaction(hash).catch(() => null);
     if (!t) continue;
     const blockId = Number(Array.isArray(t) ? t[1] : t.block_id);
-    const raw = await seq.block(blockId);
-    const blk = lez.decodeBlock(raw);
-    const o = lez.outcomeIn(blk, hash);
+    const block = net.version === 'v0.4.0' ? undefined : await seq.block(blockId);
+    const o = await net.outcome(hash, block);
     await refresh();
     if (o === 'reverted') {
       return { text: `In block ${blockId}, but it reverted: the fee was charged and nothing moved (nonce now ${a.chain?.nonce}).`, cls: 'bad' };
@@ -455,13 +512,13 @@ $('reveal-key').onclick = async () => {
   try {
     await checkPass();
     const a = acct();
-    out.textContent = a.kind === 'raw' ? a.sk : `${lez.hex(a.node.ssk)}\n(the signing key LEZ's wallet derives at ${a.path}; it signs this account's transactions)`;
+    out.textContent = a.kind === 'raw' ? a.sk : `${net.accountSecretHex(a.node)}\n(${net.is040 ? 'the 32-byte account secret' : 'the signing key'} LEZ's wallet derives at ${a.path}; it controls this account's transactions)`;
   } catch (e) { out.textContent = e.message; }
   out.hidden = false; setTimeout(() => { out.textContent = ''; out.hidden = true; }, 60000);
 };
 
 // ------------------------------------------------------------------ the Ferrata panels
-function ctx() { return { cfg, seq, lez, S, acct, fmt, parseAmount, refresh, feeState: () => feeState, persist, names }; }
+function ctx() { return { cfg, seq, net, lez, baseLez, S, acct, fmt, parseAmount, refresh, feeState: () => feeState, persist, names, versionConfirmed }; }
 let inboxPanel = null;
 /** (Re)builds the panels that keep state of their own (plans, reviews): at start, on lock, when config.json changes. */
 function mountPanels() {
@@ -505,7 +562,7 @@ function renderReceiveQR() {
   if (raw) {
     try { const v = parseAmount(raw); amount = fmt(v).split(' ')[0].replace(/,/g, ''); } catch (e) { $('recv-err').textContent = e.message; }
   }
-  const code = receiveCode(a.id, lez.hex(a.node.pk), amount);
+  const code = receiveCode(a.id, lez.hex(net.admissionKeyOf(a.node)), amount);
   renderQR($('recv-qr'), code, amount ? `Receive code asking for ${amount} ${SYMBOL}` : 'Receive code').catch((e) => { $('recv-err').textContent = e.message; });
 }
 $('recv-amount').oninput = renderReceiveQR;
@@ -515,7 +572,7 @@ $('recv-share').onclick = () => navigator.share?.({ title: 'My LEZ receive code'
 const scanSay = (t, cls = '') => { $('scan-msg').textContent = t; $('scan-msg').className = `msg ${cls}`; };
 const scanner = mountScanner({ button: $('send-scan'), file: $('send-scan-file'), say: scanSay, onText: (text) => {
   const r = parseScanned(text, Number(DEC));
-  if (!r) { scanSay('That QR code is not a LEZ receive code, account id, public key or name.', 'bad'); return; }
+  if (!r) { scanSay('That QR code is not a LEZ receive code, account id, admission key or name.', 'bad'); return; }
   $('send-to').value = r.to;
   if (r.amount) $('send-amount').value = r.amount;
   clearSendReview();
@@ -523,5 +580,4 @@ const scanner = mountScanner({ button: $('send-scan'), file: $('send-scan-file')
 } });
 
 route();
-seq.lastBlockId().then((h) => { $('net-status').textContent = `block ${h}`; $('net-status').className = 'pill ok'; })
-  .catch(() => { $('net-status').textContent = 'RPC unreachable'; $('net-status').className = 'pill bad'; });
+if (!net.readOnly) showVersionState();

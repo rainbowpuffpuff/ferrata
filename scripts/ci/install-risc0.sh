@@ -2,7 +2,7 @@
 # RISC Zero's toolchains for CI, with rzup (https://risczero.com/install): in ~/.risc0, cargo-risczero and r0vm
 # 3.1.0, guest Rust 1.88.0 and C++ 2024.1.5 (the guests of bridge/ and checkpoint/, on risc0-zkvm 3.1.0 since the
 # migration's phase 1, docs/design/risc0-3.1-migration.md); in $RISC0_HOME_LEZ (default ~/risc0-home-lez),
-# cargo-risczero and r0vm 3.0.5 (LEZ's version until LEZ is tagged on 3.1) with guest Rust 1.91.1, the version of
+# cargo-risczero and r0vm 3.0.5 (LEZ's version up to v0.4.0-rc3) and 3.1.0 (LEZ v0.4.0's) with guest Rust 1.91.1, the version of
 # LEZ's own guest builds (lez/RESULTS.md §8), kept apart so that it does not change ~/.risc0's default. Installs only what is missing: the CI job restores both
 # homes from its cache first.
 # rzup reads GitHub's releases through GitHub's API: unauthenticated, 60 requests an hour per address, which shared
@@ -33,6 +33,11 @@ need() { # home component version: rzup installs it unless that version is there
 mkdir -p "$HOME/.risc0" "$lez_home"
 need "$HOME/.risc0" cargo-risczero 3.1.0
 need "$HOME/.risc0" r0vm 3.1.0
+# LEZ v0.4.0 (lez/scripts/lez-select.sh v0.4.0, job `lez-040`) is on RISC Zero 3.1.0 (LEZ #1124) with the same guest
+# Rust 1.91.1: its r0vm too, beside 3.0.5 (risc0-zkvm finds the r0vm of its own version in the home). Installed
+# before 3.0.5, so that rzup's shims in ~/.cargo/bin point where they did before (at the last version installed).
+need "$lez_home" cargo-risczero 3.1.0
+need "$lez_home" r0vm 3.1.0
 need "$lez_home" cargo-risczero 3.0.5
 need "$lez_home" r0vm 3.0.5
 for home in "$HOME/.risc0" "$lez_home"; do

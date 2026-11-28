@@ -10,6 +10,8 @@ import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'nod
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as M from '../ferrata-msg.js';
+import * as rc3 from '../../wallet/lez.js';
+import * as v040 from '../../wallet/lez040.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CLI = join(HERE, '..', 'ferrata-msg.mjs');
@@ -47,8 +49,11 @@ function stubRpc(answer) {
     req.on('end', () => {
       const { id, method, params } = JSON.parse(body);
       calls.push({ method, params });
+      const result = answer(method, params);
       res.writeHead(200, { 'Content-Type': 'application/json', Connection: 'close' });
-      res.end(JSON.stringify({ jsonrpc: '2.0', id, result: answer(method, params) }));
+      res.end(JSON.stringify(result === undefined
+        ? { jsonrpc: '2.0', id, error: { code: -32601, message: 'Method not found' } }
+        : { jsonrpc: '2.0', id, result }));
     });
   });
   return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve({
@@ -80,7 +85,7 @@ test('keygen reads the local key, derives the public record, and sends nothing',
   const rpc = await stubRpc(() => { throw new Error('keygen reached the RPC'); });
   const d = scratch();
   try {
-    const r = await cli(['keygen', '--key', join(d, 'k.key'), '--rpc', rpc.url, '--program', PROGRAM, '--epoch', '0']);
+    const r = await cli(['keygen', '--key', join(d, 'k.key'), '--program', PROGRAM, '--epoch', '0']);
     assert.equal(r.code, 0, r.err);
     assert.match(r.out, /^account\s+\S+/m);
     assert.match(r.out, /^epoch\s+0$/m);
@@ -89,6 +94,45 @@ test('keygen reads the local key, derives the public record, and sends nothing',
     assert.match(r.out, /^fingerprint\s+\S+/m);
     assert.deepEqual(rpc.calls, [], 'keygen makes no JSON-RPC call');
   } finally { await rpc.close(); rmSync(d, { recursive: true, force: true }); }
+});
+
+test('--lez-version reports the selected codec; v0.4.0 keygen and the unknown-version refusal follow it', async () => {
+  const d = scratch();
+  const phrase = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  writeFileSync(join(d, 'phrase.key'), phrase + '\n', { mode: 0o600 });
+  const answers = [
+    { answer: () => undefined, version: 'v0.4.0-rc3' },
+    { answer: () => ({ state: 'online', height: 8 }), version: 'v0.4.0' },
+    { answer: () => null, version: 'unknown' },
+  ];
+  try {
+    for (const a of answers) {
+      const rpc = await stubRpc((method) => {
+        assert.equal(method, 'getSequencerStatus');
+        return a.answer();
+      });
+      try {
+        const r = await cli(['--lez-version', '--rpc', rpc.url]);
+        assert.deepEqual({ code: r.code, out: r.out, err: r.err }, { code: 0, out: `${a.version}\n`, err: '' });
+        assert.equal(rpc.calls.length, 1);
+        if (a.version === 'v0.4.0') {
+          const key = await cli(['keygen', '--key', join(d, 'k.key'), '--rpc', rpc.url]);
+          assert.equal(key.code, 0, key.err);
+          assert.match(key.out, new RegExp(`^account\\s+${v040.idToString(v040.publicAccountId(v040.unhex(SK)))}$`, 'm'));
+          const fromPhrase = await cli(['keygen', '--key', join(d, 'phrase.key'), '--path', '/2', '--rpc', rpc.url]);
+          assert.equal(fromPhrase.code, 0, fromPhrase.err);
+          const expected = v040.deriveNode(rc3.seedOf(phrase), [2]);
+          assert.match(fromPhrase.out, new RegExp(`^account\\s+${v040.idToString(expected.accountId)}$`, 'm'));
+        }
+        if (a.version === 'unknown') {
+          const refused = await cli(['publish', '--key', join(d, 'k.key'), '--rpc', rpc.url, '--program', PROGRAM]);
+          assert.equal(refused.code, 3);
+          assert.match(refused.err, /the network's LEZ version could not be read, so nothing is signed/);
+          assert.ok(!rpc.calls.some((x) => x.method === 'sendTransaction'));
+        }
+      } finally { await rpc.close(); }
+    }
+  } finally { rmSync(d, { recursive: true, force: true }); }
 });
 
 test('argument and local-input refusals exit 2 without contacting an RPC', async () => {
@@ -124,6 +168,7 @@ test('status prints the recorded profile and asks only the two account reads', a
   const vectors = JSON.parse(readFileSync(join(HERE, 'vectors-v2.json'), 'utf8'));
   const profile = actor(vectors.states.profile);
   const rpc = await stubRpc((method, params) => {
+    if (method === 'getSequencerStatus') return undefined; // rc3's method-not-found reply
     assert.equal(method, 'getAccount');
     // The profile belongs to B in the committed vector. B has no inbox here.
     return params[0] === B ? profile : { data: { actor_states: {} } };
@@ -136,8 +181,8 @@ test('status prints the recorded profile and asks only the two account reads', a
     assert.match(r.out, /^policy\s+contactsOnly; 1 contacts, 0 blocked$/m);
     assert.match(r.out, /^inbox\s+none \(no key published\)$/m);
     assert.match(r.out, /^sent\s+3 in all, 1 declared within the last hour/m);
-    assert.deepEqual(rpc.calls.map((x) => x.method), ['getAccount', 'getAccount']);
-    assert.equal(rpc.calls[0].params[0], B, 'the profile read names the requested account');
+    assert.deepEqual(rpc.calls.map((x) => x.method), ['getSequencerStatus', 'getAccount', 'getAccount']);
+    assert.equal(rpc.calls[1].params[0], B, 'the profile read names the requested account');
     assert.ok(!rpc.calls.some((x) => x.method === 'sendTransaction'));
   } finally { await rpc.close(); }
 });
@@ -148,6 +193,7 @@ test('inbox decodes its recorded entry, reports a missing envelope, and sends no
   const inboxId = M.inboxAccount(M.idFromString(PROGRAM), node.accountId);
   const inbox = { data: { actor_states: { [PROGRAM]: inboxWithMissingEnvelope(node.accountId) } } };
   const rpc = await stubRpc((method, params) => {
+    if (method === 'getSequencerStatus') return undefined; // rc3's method-not-found reply
     assert.equal(method, 'getAccount');
     return params[0] === M.idToString(inboxId) ? inbox : { data: { actor_states: {} } };
   });
@@ -157,9 +203,9 @@ test('inbox decodes its recorded entry, reports a missing envelope, and sends no
     assert.equal(r.code, 0, r.err);
     assert.match(r.out, /^#1 2026-09-21T14:13:20Z from \S+ \(contact\) \(512 B, X25519\): cannot open: envelope not found$/m);
     assert.match(r.out, /^1 of 32 messages, 512 of 65536 bytes; free them with `ferrata-msg clear 1`$/m);
-    assert.deepEqual(rpc.calls.map((x) => x.method), ['getAccount', 'getAccount'], 'inbox then its envelope');
-    assert.equal(rpc.calls[0].params[0], M.idToString(inboxId));
-    assert.equal(rpc.calls[1].params[0], M.idToString(M.envelopeAccount(M.idFromString(PROGRAM), node.accountId, new Uint8Array(32).fill(0x41), 0n)));
+    assert.deepEqual(rpc.calls.map((x) => x.method), ['getSequencerStatus', 'getAccount', 'getAccount'], 'version probe, inbox then its envelope');
+    assert.equal(rpc.calls[1].params[0], M.idToString(inboxId));
+    assert.equal(rpc.calls[2].params[0], M.idToString(M.envelopeAccount(M.idFromString(PROGRAM), node.accountId, new Uint8Array(32).fill(0x41), 0n)));
     assert.ok(!rpc.calls.some((x) => x.method === 'sendTransaction'));
   } finally { await rpc.close(); rmSync(d, { recursive: true, force: true }); }
 });

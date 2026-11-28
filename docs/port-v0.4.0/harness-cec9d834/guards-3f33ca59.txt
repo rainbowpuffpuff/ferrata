@@ -1,0 +1,14 @@
+# lez040_guards on LEZ v0.4.0 on a laptop, after the core's 5214ae68 (28 November 2026)
+#
+# `cargo test -p harness --locked --no-fail-fast --test lez040_guards` in lez/, dev mode (RISC0_DEV_MODE=1), r0vm 3.1.0,
+# in a scratch worktree of lez-040-verify 3f33ca59 with `lez/scripts/lez-select.sh v0.4.0` applied in place.
+# At cec9d834 (before 5214ae68) four of these five were ignored: ../harness-cec9d834/.
+start 08:10Z 3f33ca59
+     Running tests/lez040_guards.rs (target/debug/deps/lez040_guards-3b00e54404c871bd)
+test a_public_native_balance_increase_of_the_bridge_escrow_is_accepted ... ok
+test a_public_native_balance_increase_does_not_modify_the_system_registry_actor_state ... ok
+test a_private_native_balance_increase_of_the_bridge_escrow_is_refused ... ok
+test a_public_transfer_to_the_clock_is_refused ... ok
+test a_public_transfer_to_each_fee_account_is_refused_including_the_fee_inbox ... ok
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.01s
+exit 0 08:10Z

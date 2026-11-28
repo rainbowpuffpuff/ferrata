@@ -17,9 +17,12 @@ use ferrata_lez_msg_wire::{
     code, selector, Delivered, Mailbox, MsgKey, MsgMessage, Policy, CLOCK_SKEW_MS, MAX_MESSAGES, MLKEM768_PK_LEN,
     RATE_MAX, RATE_WINDOW_MS, STRANGER_SLOTS, STRANGER_UNREAD,
 };
-use harness::{results_dir, Chain, TxReport};
+use harness::{
+    compat::{self, AccountKey},
+    results_dir, Chain, TxReport,
+};
 
-use lee::{program::Program, Account, AccountId, Actor, PrivateKey, PublicKey, V03State};
+use lee::{program::Program, Account, AccountId, Actor, V03State};
 
 const T0: u64 = 1_790_000_000_000;
 
@@ -28,13 +31,13 @@ fn program_account() -> AccountId {
 }
 
 struct User {
-    key: PrivateKey,
+    key: AccountKey,
     id: AccountId,
 }
 
 fn user(seed: u8) -> User {
-    let key = PrivateKey::try_new([seed; 32]).unwrap();
-    let id = AccountId::from(&PublicKey::new_from_private_key(&key));
+    let key = compat::account_key([seed; 32]);
+    let id = compat::account_of(&key);
     User { key, id }
 }
 
@@ -64,9 +67,8 @@ impl World {
         let mut chain = Chain::new();
         let state = std::mem::replace(&mut chain.state, V03State::new());
         let program = Program::new_unchecked(methods_msg::FERRATA_MSG_ID, Cow::Borrowed(methods_msg::FERRATA_MSG_ELF));
-        chain.state = state
-            .with_public_accounts(users.iter().map(|u| (u.id, Account::funded(1 << 60))))
-            .with_genesis_programs([(program, true)]);
+        let state = state.with_public_accounts(users.iter().map(|u| (u.id, Account::funded(1 << 60))));
+        chain.state = compat::genesis_programs(state, [(program, true)]);
         Self { chain, reports: Vec::new(), now: T0 }
     }
 
@@ -84,7 +86,7 @@ impl World {
     fn tx(&mut self, label: &str, signer: Option<&User>, root: AccountId, message: &MsgMessage, extra: &[AccountId]) -> TxReport {
         let mut actors = vec![actor(root)];
         actors.extend(extra.iter().map(|id| actor(*id)));
-        let signers: Vec<&PrivateKey> = signer.map(|u| &u.key).into_iter().collect();
+        let signers: Vec<&AccountKey> = signer.map(|u| &u.key).into_iter().collect();
         let ts = self.now;
         self.now += 1000;
         let r = self.chain.submit_signed(label, actor(root), borsh::to_vec(message).unwrap(), actors, vec![], ts, &signers);

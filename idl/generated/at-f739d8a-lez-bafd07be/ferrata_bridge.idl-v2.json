@@ -1,0 +1,2569 @@
+{
+  "messages": [
+    {
+      "docs": "Variant 0. At the holder's own actor, as a top-level call or the root of a private\nexecution: debit one denomination (from its own state, or else from `holder(cid, account)`, to\nwhich it forwards the note) and send the note to `token(cid, token)`, which admits it (the\ndenomination, the burn freezes and caps) and records it once at `burn(cid, r)`: a second note with a used tag\nis refused.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "r",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "memo",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "mac",
+          "type": {
+            "array": [
+              "u8",
+              16
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "c_out",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ],
+      "name": "Burn",
+      "tag": 0
+    },
+    {
+      "docs": "Variant 1. At `config(cid)`: attest the vault's slots 0 and 1 under the record at\n`record_slot` and write `root(cid, leaf_count)` if they hold `root` and `leaf_count`.\nRefused after `Sunset`.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "record_slot",
+          "type": "u64"
+        },
+        {
+          "name": "root",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "leaf_count",
+          "type": "u64"
+        },
+        {
+          "name": "proof",
+          "type": {
+            "defined": "ImportProof"
+          }
+        }
+      ],
+      "name": "ImportRoot",
+      "tag": 1
+    },
+    {
+      "docs": "Variant 2. The configuration's one-way `Sunset`: a top-level call (or private root) at the\nfreeze authority's own actor, forwarded to `config(cid)`; stops `ImportRoot` for good.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ],
+      "name": "Sunset",
+      "tag": 2
+    },
+    {
+      "docs": "Variant 3. Rule (A)'s echo nonce: accepted anywhere, changes nothing.",
+      "fields": [
+        {
+          "name": "nonce",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ],
+      "name": "Echo",
+      "tag": 3
+    },
+    {
+      "docs": "Variant 4. At `config(cid)`, `cid` computed from `config`: attest the vault's slot 2 and\nwrite the configuration if it holds `cid` (the reciprocal pairing, B5).",
+      "fields": [
+        {
+          "name": "config",
+          "type": {
+            "defined": "BridgeConfig"
+          }
+        },
+        {
+          "name": "record_slot",
+          "type": "u64"
+        },
+        {
+          "name": "proof",
+          "type": {
+            "defined": "PairingProof"
+          }
+        }
+      ],
+      "name": "Init",
+      "tag": 4
+    },
+    {
+      "docs": "Variant 5. At `root(cid, n)`: the plaintext claim, for a public destination. `relayer`\nreceives the relay fee (`None`: the fee recipient). It carries no time: the token's and the\nconfiguration's attested clocks apply.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "leaf_count",
+          "type": "u64"
+        },
+        {
+          "name": "witness",
+          "type": {
+            "defined": "ClaimWitness"
+          }
+        },
+        {
+          "name": "relayer",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ],
+      "name": "Claim",
+      "tag": 5
+    },
+    {
+      "docs": "Variant 6. At the claimant's own actor, meant to run privately: read `root(cid, n)`, verify\nthe claim inside this execution, then `Issue`; a private destination must be this account.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "leaf_count",
+          "type": "u64"
+        },
+        {
+          "name": "witness",
+          "type": {
+            "defined": "ClaimWitness"
+          }
+        },
+        {
+          "name": "relayer",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ],
+      "name": "ClaimPrivately",
+      "tag": 6
+    },
+    {
+      "docs": "Variant 7. Reply with this actor's state (`StateReply`), LEZ v0.4's read idiom.",
+      "name": "Read",
+      "tag": 7
+    },
+    {
+      "docs": "Variant 8. `config(cid)` → `root(cid, n)`: the verified root, written once.",
+      "fields": [
+        {
+          "name": "root",
+          "type": {
+            "defined": "RootState"
+          }
+        }
+      ],
+      "name": "WriteRoot",
+      "tag": 8
+    },
+    {
+      "docs": "Variant 9. `token(cid, token)` → `nullifier(cid, chain, vault, N)`: spend `N` once; mint the\ndenomination to `mint_to` (a public account) if given, and each fee to its account.",
+      "fields": [
+        {
+          "name": "nullifier",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "evm_chain_id",
+          "type": "u64"
+        },
+        {
+          "name": "vault",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "leaf_count",
+          "type": "u64"
+        },
+        {
+          "name": "amount",
+          "type": "u128"
+        },
+        {
+          "name": "mint_to",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "fees",
+          "type": {
+            "vec": {
+              "defined": "Tuple_Root_u128"
+            }
+          }
+        }
+      ],
+      "name": "Spend",
+      "tag": 9
+    },
+    {
+      "docs": "Variant 10. `nullifier(cid, chain, vault, N)` → `holder(cid, holder)`: credit `amount` of `token`.",
+      "fields": [
+        {
+          "name": "nullifier",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "evm_chain_id",
+          "type": "u64"
+        },
+        {
+          "name": "vault",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "holder",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u128"
+        }
+      ],
+      "name": "Mint",
+      "tag": 10
+    },
+    {
+      "docs": "Variant 11. At `config(cid)`: attest the vault's registry entry of `entry.token`, its fee\nschedules 0 and 1 and its leaf count under one record, and write `token(cid, token)`.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "entry",
+          "type": {
+            "defined": "TokenEntry"
+          }
+        },
+        {
+          "name": "schedule",
+          "type": {
+            "defined": "FeeSchedule"
+          }
+        },
+        {
+          "name": "record_slot",
+          "type": "u64"
+        },
+        {
+          "name": "proof",
+          "type": {
+            "defined": "VaultProof"
+          }
+        }
+      ],
+      "name": "Register",
+      "tag": 11
+    },
+    {
+      "docs": "Variant 12. At `config(cid)`: attest the vault's fee schedule `index` of `token` (its hash,\nor zero if `schedule` is `None`) and its leaf count, and extend `token(cid, token)`.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "index",
+          "type": "u64"
+        },
+        {
+          "name": "schedule",
+          "type": {
+            "option": {
+              "defined": "FeeSchedule"
+            }
+          }
+        },
+        {
+          "name": "record_slot",
+          "type": "u64"
+        },
+        {
+          "name": "proof",
+          "type": {
+            "defined": "VaultProof"
+          }
+        }
+      ],
+      "name": "ImportFees",
+      "tag": 12
+    },
+    {
+      "docs": "Variant 13. `config(cid)` → `token(cid, token)`: the attested entry, written once.",
+      "fields": [
+        {
+          "name": "state",
+          "type": {
+            "defined": "TokenState"
+          }
+        }
+      ],
+      "name": "WriteToken",
+      "tag": 13
+    },
+    {
+      "docs": "Variant 14. `config(cid)` → `token(cid, token)`: an attested fee schedule (appended), or\nthe attested absence of schedule `index` at a leaf count (the schedules cover up to it).",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "index",
+          "type": "u64"
+        },
+        {
+          "name": "schedule",
+          "type": {
+            "option": {
+              "defined": "FeeSchedule"
+            }
+          }
+        },
+        {
+          "name": "count",
+          "type": "u64"
+        }
+      ],
+      "name": "ExtendFees",
+      "tag": 14
+    },
+    {
+      "docs": "Variant 15. A claimant (the root of a plaintext claim, or a private claimant) →\n`token(cid, token)` after verifying the deposit: the denomination, its fixed relay fee, the\nmint freezes and caps; then `Admit` to `config(cid)` and `Spend`. No schedule field is\npresent, so the public boundary does not reveal when the deposit was made.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "nullifier",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u128"
+        },
+        {
+          "name": "leaf_count",
+          "type": "u64"
+        },
+        {
+          "name": "mint_to",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "relayer",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ],
+      "name": "Issue",
+      "tag": 15
+    },
+    {
+      "docs": "Variant 16. `token(cid, token)` → `config(cid)`: the global freeze and bucket of a mint or a\nburn of `value` units, at the configuration's attested time.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "mints",
+          "type": "bool"
+        },
+        {
+          "name": "value",
+          "type": "u128"
+        }
+      ],
+      "name": "Admit",
+      "tag": 16
+    },
+    {
+      "docs": "Variant 17. The freeze authority, like `Sunset`: freeze mints and/or burns of `token` (or of\nthe whole configuration) until `until_ms` (0 unfreezes). The target first reads `record`\n(as `Tick` does); `until_ms` must lie after that attested time and at most 30 days after it.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          }
+        },
+        {
+          "name": "mints",
+          "type": "bool"
+        },
+        {
+          "name": "burns",
+          "type": "bool"
+        },
+        {
+          "name": "until_ms",
+          "type": "u64"
+        },
+        {
+          "name": "record",
+          "type": {
+            "defined": "TimeRecord"
+          }
+        }
+      ],
+      "name": "Freeze",
+      "tag": 17
+    },
+    {
+      "docs": "Variant 18. The admin, like `Sunset`: set the mint (or burn) bucket of `token` (or the\nglobal one), never below the floor; refilled at the target's attested time first.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          }
+        },
+        {
+          "name": "mints",
+          "type": "bool"
+        },
+        {
+          "name": "cap",
+          "type": {
+            "defined": "CapParams"
+          }
+        }
+      ],
+      "name": "SetCap",
+      "tag": 18
+    },
+    {
+      "docs": "Variant 19. Anyone, at `config(cid)` or `token(cid, token)`: read the attestation\nprogram's `record` and advance the target's clock to its execution timestamp; the\ntransaction is valid only in a block stamped at or after that time.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          }
+        },
+        {
+          "name": "record",
+          "type": {
+            "defined": "TimeRecord"
+          }
+        }
+      ],
+      "name": "Tick",
+      "tag": 19
+    },
+    {
+      "docs": "Anyone, at `config(cid)`: attest the vault's `retired` flag ([`SLOT_RETIRED`]) under the\nrecord at `record_slot`. The vault sets it only by `retire()`, which anyone may call after\nD13's 30 days without checkpoint progress; afterwards anyone may send `Sunset` at\n`config(cid)` (keyless retirement).",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "record_slot",
+          "type": "u64"
+        },
+        {
+          "name": "proof",
+          "type": {
+            "defined": "VaultProof"
+          }
+        }
+      ],
+      "name": "AttestRetired",
+      "tag": 20
+    },
+    {
+      "docs": "The admin, at its own actor, then `config(cid)`: propose a new freeze authority and watcher\nset, applicable [`ROLE_TIMELOCK_MS`] after the attested time of `record` (read first, in a\nblock stamped at most [`PROPOSAL_RECORD_AGE_MS`] after it). Replaces a pending proposal.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "freeze_authority",
+          "type": {
+            "defined": "FreezeAuthority"
+          }
+        },
+        {
+          "name": "watchers",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "record",
+          "type": {
+            "defined": "TimeRecord"
+          }
+        }
+      ],
+      "name": "ProposeRoles",
+      "tag": 21
+    },
+    {
+      "docs": "Anyone, at `config(cid)`: read `record`, then apply the proposal if that time is at least\nits `effective_ms` (the vault's `applyRoles`).",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "record",
+          "type": {
+            "defined": "TimeRecord"
+          }
+        }
+      ],
+      "name": "ApplyRoles",
+      "tag": 22
+    },
+    {
+      "docs": "The admin, at its own actor, then `config(cid)`: withdraw the pending proposal.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ],
+      "name": "CancelRoles",
+      "tag": 23
+    },
+    {
+      "docs": "A watcher, at its own actor, then `config(cid)` (and `token(cid, token)`): read `record`,\nthen pause mints and/or burns for 12 hours of attested time.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          }
+        },
+        {
+          "name": "mints",
+          "type": "bool"
+        },
+        {
+          "name": "burns",
+          "type": "bool"
+        },
+        {
+          "name": "record",
+          "type": {
+            "defined": "TimeRecord"
+          }
+        }
+      ],
+      "name": "Pause",
+      "tag": 24
+    },
+    {
+      "docs": "`signers`, members of a multisig freeze authority, in one transaction each of them signed:\na top-level call at the first one's own actor, forwarded along their own actors, each\nchecking its own signature, then to `config(cid)`, which checks the threshold.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "signers",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "action",
+          "type": {
+            "defined": "CosignedAction"
+          }
+        }
+      ],
+      "name": "Cosigned",
+      "tag": 25
+    },
+    {
+      "docs": "A holder, at its own actor (a call it authorised): move `amount` of its claimed balance\n(its own state first, else `holder(cid, account)`) through `token(cid, token)` (a multiple of\nthe token's LEZ unit) to `holder(to)`. From a private account, only the boundary delivery\nto the token is public: not the sender.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u128"
+        },
+        {
+          "name": "to",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ],
+      "name": "Transfer",
+      "tag": 26
+    },
+    {
+      "docs": "`token(cid, token)` → `holder(cid, to)` only: credit a transfer, or the protocol fees `MintFees` mints to the\nfee recipient (ADR 0048).",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u128"
+        },
+        {
+          "name": "to",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ],
+      "name": "Credit",
+      "tag": 27
+    },
+    {
+      "docs": "Variant 28. The admin, like `SetCap`: the inbound finality depth beyond Ethereum finality, in beacon slots\n(at most [`MAX_INBOUND_DEPTH_SLOTS`]; [`Roles::inbound_depth_slots`]). Applies to imports from then on.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "slots",
+          "type": "u64"
+        }
+      ],
+      "name": "SetDepth",
+      "tag": 28
+    },
+    {
+      "docs": "Variant 29. Anyone, at `config(cid)`: attest the vault's [`listing_slot`] of `token` under the record at\n`record_slot`, then `SetListing` at `token(cid, token)` (F.10: the LEZ registry follows the vault's delisting\nand relisting).",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "record_slot",
+          "type": "u64"
+        },
+        {
+          "name": "proof",
+          "type": {
+            "defined": "VaultProof"
+          }
+        }
+      ],
+      "name": "AttestListing",
+      "tag": 29
+    },
+    {
+      "docs": "Variant 30. `config(cid)` → `token(cid, token)` only: the attested listing, kept if its record is newer than\nthe one the token holds.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "delisted",
+          "type": "bool"
+        },
+        {
+          "name": "record_slot",
+          "type": "u64"
+        }
+      ],
+      "name": "SetListing",
+      "tag": 30
+    },
+    {
+      "docs": "Variant 31 (ADR 0048). Anyone, at `config(cid)`: attest the vault's [`lez_fees_slot`] of `token` (the protocol\nfees it has escrowed for the fee recipient on LEZ) under the record at `record_slot`, then `AccrueFees` at\n`fees(cid, token)`, which mints at most `limit` of what is not minted yet to the fee recipient. No user's\ntransaction is involved: the amount is a total over every deposit and release up to that record.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "record_slot",
+          "type": "u64"
+        },
+        {
+          "name": "limit",
+          "type": "u128"
+        },
+        {
+          "name": "proof",
+          "type": {
+            "defined": "VaultProof"
+          }
+        }
+      ],
+      "name": "CollectFees",
+      "tag": 31
+    },
+    {
+      "docs": "Variant 32. `config(cid)` → `fees(cid, token)` only: the attested total (a 256-bit big-endian word, as the vault\nholds it); `fees(cid, token)` keeps the new count and sends `MintFees` for the difference (at most `limit`).",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "total",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "limit",
+          "type": "u128"
+        }
+      ],
+      "name": "AccrueFees",
+      "tag": 32
+    },
+    {
+      "docs": "Variant 33. `fees(cid, token)` → `token(cid, token)` only: mint `amount` (a multiple of the LEZ unit) to the\nconfiguration's fee recipient, through the token's and the configuration's mint freezes and buckets.",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u128"
+        }
+      ],
+      "name": "MintFees",
+      "tag": 33
+    }
+  ],
+  "name": "ferrata_bridge",
+  "state_types": [
+    "BridgeState"
+  ],
+  "types": [
+    {
+      "fields": [
+        {
+          "name": "bedrock_genesis_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "channel_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "docs": "The bridge program's image id, as the vault's verifier pins it. The program cannot see its\nown image id; it is part of `configId`, which the vault pins.",
+          "name": "bridge_image_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "docs": "The attestation program whose records the configuration reads Ethereum through.",
+          "name": "attestation",
+          "type": "account_id"
+        },
+        {
+          "docs": "The attestation instance those records belong to.",
+          "name": "instance_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "evm_chain_id",
+          "type": "u64"
+        },
+        {
+          "name": "vault",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "controls",
+          "type": {
+            "defined": "Controls"
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "BridgeConfig"
+    },
+    {
+      "kind": "enum",
+      "name": "BridgeState",
+      "variants": [
+        {
+          "fields": [
+            {
+              "name": "0",
+              "type": {
+                "defined": "ConfigState"
+              }
+            }
+          ],
+          "name": "Config"
+        },
+        {
+          "fields": [
+            {
+              "name": "0",
+              "type": {
+                "defined": "RootState"
+              }
+            }
+          ],
+          "name": "Root"
+        },
+        {
+          "fields": [
+            {
+              "name": "0",
+              "type": {
+                "defined": "NullifierState"
+              }
+            }
+          ],
+          "name": "Nullifier"
+        },
+        {
+          "fields": [
+            {
+              "name": "0",
+              "type": {
+                "defined": "HolderState"
+              }
+            }
+          ],
+          "name": "Holder"
+        },
+        {
+          "fields": [
+            {
+              "name": "0",
+              "type": {
+                "defined": "BurnRecord"
+              }
+            }
+          ],
+          "name": "Burn"
+        },
+        {
+          "fields": [
+            {
+              "name": "0",
+              "type": {
+                "defined": "TokenState"
+              }
+            }
+          ],
+          "name": "Token"
+        },
+        {
+          "fields": [
+            {
+              "name": "0",
+              "type": {
+                "defined": "FeesState"
+              }
+            }
+          ],
+          "name": "Fees"
+        }
+      ]
+    },
+    {
+      "fields": [
+        {
+          "name": "capacity",
+          "type": "u128"
+        },
+        {
+          "name": "refill_per_second",
+          "type": "u128"
+        },
+        {
+          "docs": "Available at `last_ms`.",
+          "name": "level",
+          "type": "u128"
+        },
+        {
+          "name": "last_ms",
+          "type": "u64"
+        }
+      ],
+      "kind": "struct",
+      "name": "Bucket"
+    },
+    {
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "note",
+          "type": {
+            "defined": "Note"
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "BurnRecord"
+    },
+    {
+      "fields": [
+        {
+          "name": "capacity",
+          "type": "u128"
+        },
+        {
+          "name": "refill_per_second",
+          "type": "u128"
+        }
+      ],
+      "kind": "struct",
+      "name": "CapParams"
+    },
+    {
+      "fields": [
+        {
+          "name": "depositor",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "docs": "`uint256`, big-endian.",
+          "name": "amount",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "leaf_index",
+          "type": "u64"
+        },
+        {
+          "docs": "The 32 siblings, leaf level first.",
+          "name": "path",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "s",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "docs": "`0x01` private, `0x02` public (SPEC-v2 §3.3).",
+          "name": "kind",
+          "type": "u8"
+        },
+        {
+          "name": "dest",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "ClaimWitness"
+    },
+    {
+      "kind": "enum",
+      "name": "ConfigState",
+      "variants": [
+        {
+          "fields": [
+            {
+              "name": "config",
+              "type": {
+                "defined": "BridgeConfig"
+              }
+            },
+            {
+              "name": "record_slot",
+              "type": "u64"
+            }
+          ],
+          "name": "Pairing"
+        },
+        {
+          "fields": [
+            {
+              "name": "config",
+              "type": {
+                "defined": "BridgeConfig"
+              }
+            },
+            {
+              "name": "pending",
+              "type": {
+                "option": {
+                  "defined": "Pending"
+                }
+              }
+            },
+            {
+              "name": "gate",
+              "type": {
+                "defined": "Gate"
+              }
+            },
+            {
+              "name": "sunset",
+              "type": "bool"
+            },
+            {
+              "name": "roles",
+              "type": {
+                "defined": "Roles"
+              }
+            }
+          ],
+          "name": "Ready"
+        }
+      ]
+    },
+    {
+      "fields": [
+        {
+          "docs": "Sets caps, never below `floor`; cannot freeze or unfreeze.",
+          "name": "admin",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "docs": "Freezes mints and burns (≤ 30 days unless renewed) and runs `Sunset`.",
+          "name": "freeze_authority",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "docs": "Receives, on LEZ, the protocol fees `CollectFees` mints (ADR 0048: the vault's mint and burn fees, in the\nwrapped token) and the relay fee of a claim that names no relayer.",
+          "name": "fee_recipient",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "docs": "The immutable floor of every cap.",
+          "name": "floor",
+          "type": {
+            "defined": "CapParams"
+          }
+        },
+        {
+          "docs": "The caps a token starts with at registration, and the global caps.",
+          "name": "token_cap",
+          "type": {
+            "defined": "CapParams"
+          }
+        },
+        {
+          "name": "global_cap",
+          "type": {
+            "defined": "CapParams"
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "Controls"
+    },
+    {
+      "kind": "enum",
+      "name": "CosignedAction",
+      "variants": [
+        {
+          "name": "Sunset"
+        },
+        {
+          "fields": [
+            {
+              "name": "token",
+              "type": {
+                "option": {
+                  "array": [
+                    "u8",
+                    20
+                  ]
+                }
+              }
+            },
+            {
+              "name": "mints",
+              "type": "bool"
+            },
+            {
+              "name": "burns",
+              "type": "bool"
+            },
+            {
+              "name": "until_ms",
+              "type": "u64"
+            },
+            {
+              "name": "record",
+              "type": {
+                "defined": "TimeRecord"
+              }
+            }
+          ],
+          "name": "Freeze"
+        }
+      ]
+    },
+    {
+      "fields": [
+        {
+          "name": "index",
+          "type": "u64"
+        },
+        {
+          "name": "from_leaf",
+          "type": "u64"
+        },
+        {
+          "docs": "Ethereum seconds: when the admin announced it, and when it took effect.",
+          "name": "announced_at",
+          "type": "u64"
+        },
+        {
+          "name": "effective_at",
+          "type": "u64"
+        },
+        {
+          "docs": "Paid at deposit on top of the denomination; the vault escrows it and adds it to [`lez_fees_slot`] (ADR 0048),\nminted on LEZ to the fee recipient by `CollectFees`. Never read by a claim.",
+          "name": "mint_fees",
+          "type": {
+            "vec": "u128"
+          }
+        },
+        {
+          "docs": "Deducted from a release on Ethereum under the schedule in force then; the vault escrows it and adds it to\n[`lez_fees_slot`] (ADR 0048). Never read by a burn.",
+          "name": "burn_fees",
+          "type": {
+            "vec": "u128"
+          }
+        },
+        {
+          "name": "checkpoint_fees",
+          "type": {
+            "vec": "u128"
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "FeeSchedule"
+    },
+    {
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "collected",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "FeesState"
+    },
+    {
+      "fields": [
+        {
+          "name": "members",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "threshold",
+          "type": "u8"
+        }
+      ],
+      "kind": "struct",
+      "name": "FreezeAuthority"
+    },
+    {
+      "fields": [
+        {
+          "name": "now_ms",
+          "type": "u64"
+        },
+        {
+          "docs": "Mints (claims) or burns are refused while `now_ms < *_until`; 0: not frozen.",
+          "name": "mints_until",
+          "type": "u64"
+        },
+        {
+          "name": "burns_until",
+          "type": "u64"
+        },
+        {
+          "name": "mint",
+          "type": {
+            "defined": "Bucket"
+          }
+        },
+        {
+          "name": "burn",
+          "type": {
+            "defined": "Bucket"
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "Gate"
+    },
+    {
+      "fields": [
+        {
+          "name": "holdings",
+          "type": {
+            "vec": {
+              "defined": "Holding"
+            }
+          }
+        },
+        {
+          "docs": "A private claim between its `Read` and the reply (within one transaction).",
+          "name": "pending",
+          "type": {
+            "option": {
+              "defined": "PendingClaim"
+            }
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "HolderState"
+    },
+    {
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "docs": "In the token's base units: a sum of whole denominations for users; the fee recipient and\nrelayers also hold fees.",
+          "name": "amount",
+          "type": "u128"
+        }
+      ],
+      "kind": "struct",
+      "name": "Holding"
+    },
+    {
+      "fields": [
+        {
+          "name": "account",
+          "type": {
+            "vec": {
+              "vec": "u8"
+            }
+          }
+        },
+        {
+          "name": "root_slot",
+          "type": {
+            "vec": {
+              "vec": "u8"
+            }
+          }
+        },
+        {
+          "name": "count_slot",
+          "type": {
+            "vec": {
+              "vec": "u8"
+            }
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "ImportProof"
+    },
+    {
+      "fields": [
+        {
+          "name": "r",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "memo",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "mac",
+          "type": {
+            "array": [
+              "u8",
+              16
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "docs": "`uint256`, big-endian.",
+          "name": "amount",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "c_out",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "Note"
+    },
+    {
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "docs": "The leaf count of the root the claim read.",
+          "name": "leaf_count",
+          "type": "u64"
+        },
+        {
+          "name": "amount",
+          "type": "u128"
+        }
+      ],
+      "kind": "struct",
+      "name": "NullifierState"
+    },
+    {
+      "fields": [
+        {
+          "name": "account",
+          "type": {
+            "vec": {
+              "vec": "u8"
+            }
+          }
+        },
+        {
+          "name": "config_slot",
+          "type": {
+            "vec": {
+              "vec": "u8"
+            }
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "PairingProof"
+    },
+    {
+      "kind": "enum",
+      "name": "Pending",
+      "variants": [
+        {
+          "fields": [
+            {
+              "name": "0",
+              "type": {
+                "defined": "PendingImport"
+              }
+            }
+          ],
+          "name": "Import"
+        },
+        {
+          "fields": [
+            {
+              "name": "entry",
+              "type": {
+                "defined": "TokenEntry"
+              }
+            },
+            {
+              "name": "schedule",
+              "type": {
+                "defined": "FeeSchedule"
+              }
+            },
+            {
+              "name": "record_slot",
+              "type": "u64"
+            }
+          ],
+          "name": "Register"
+        },
+        {
+          "fields": [
+            {
+              "name": "token",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "index",
+              "type": "u64"
+            },
+            {
+              "name": "schedule",
+              "type": {
+                "option": {
+                  "defined": "FeeSchedule"
+                }
+              }
+            },
+            {
+              "name": "record_slot",
+              "type": "u64"
+            }
+          ],
+          "name": "Fees"
+        },
+        {
+          "fields": [
+            {
+              "name": "0",
+              "type": {
+                "defined": "PendingTime"
+              }
+            }
+          ],
+          "name": "Time"
+        },
+        {
+          "fields": [
+            {
+              "name": "record_slot",
+              "type": "u64"
+            }
+          ],
+          "name": "Retired"
+        },
+        {
+          "fields": [
+            {
+              "name": "token",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "record_slot",
+              "type": "u64"
+            }
+          ],
+          "name": "Listing"
+        },
+        {
+          "fields": [
+            {
+              "name": "token",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "record_slot",
+              "type": "u64"
+            },
+            {
+              "name": "limit",
+              "type": "u128"
+            }
+          ],
+          "name": "Collect"
+        }
+      ]
+    },
+    {
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "leaf_count",
+          "type": "u64"
+        },
+        {
+          "name": "witness",
+          "type": {
+            "defined": "ClaimWitness"
+          }
+        },
+        {
+          "name": "relayer",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "PendingClaim"
+    },
+    {
+      "fields": [
+        {
+          "name": "record_slot",
+          "type": "u64"
+        },
+        {
+          "name": "root",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "leaf_count",
+          "type": "u64"
+        }
+      ],
+      "kind": "struct",
+      "name": "PendingImport"
+    },
+    {
+      "fields": [
+        {
+          "name": "record",
+          "type": {
+            "defined": "TimeRecord"
+          }
+        },
+        {
+          "name": "then",
+          "type": {
+            "defined": "Timed"
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "PendingTime"
+    },
+    {
+      "fields": [
+        {
+          "name": "freeze_authority",
+          "type": {
+            "defined": "FreezeAuthority"
+          }
+        },
+        {
+          "name": "watchers",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "effective_ms",
+          "type": "u64"
+        }
+      ],
+      "kind": "struct",
+      "name": "RoleProposal"
+    },
+    {
+      "fields": [
+        {
+          "name": "freeze_authority",
+          "type": {
+            "defined": "FreezeAuthority"
+          }
+        },
+        {
+          "docs": "Up to three; each may pause mints or burns for 12 hours. None until a handover sets them.",
+          "name": "watchers",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "proposal",
+          "type": {
+            "option": {
+              "defined": "RoleProposal"
+            }
+          }
+        },
+        {
+          "docs": "The vault's `retired` flag was attested (`AttestRetired`): anyone may send `Sunset`.",
+          "name": "vault_retired",
+          "type": "bool"
+        },
+        {
+          "docs": "The freeze authority approved `Sunset` by `Cosigned`; anyone may then send it.",
+          "name": "sunset_approved",
+          "type": "bool"
+        },
+        {
+          "docs": "The inbound finality depth beyond Ethereum finality, in beacon slots (F.12): `ImportRoot` under the record at\nslot `s` is refused (`FROZEN`) until the configuration's clock has read a record at slot `s + depth` or later.\n0 at `Init` (Ethereum finality: every record is of a finalized header), at most\n[`MAX_INBOUND_DEPTH_SLOTS`]; set by the admin (`SetDepth`), for imports from then on only.",
+          "name": "inbound_depth_slots",
+          "type": "u64"
+        },
+        {
+          "docs": "The newest record slot the configuration's clock has read (`Tick`, `Freeze`, `Pause`, `ProposeRoles`,\n`ApplyRoles` at `config(cid)`): the finalized tip that [`Roles::inbound_depth_slots`] is measured against.",
+          "name": "tip_slot",
+          "type": "u64"
+        }
+      ],
+      "kind": "struct",
+      "name": "Roles"
+    },
+    {
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "evm_chain_id",
+          "type": "u64"
+        },
+        {
+          "name": "vault",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "leaf_count",
+          "type": "u64"
+        },
+        {
+          "name": "root",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "docs": "The beacon slot of the record the root was attested under, and its execution block.",
+          "name": "record_slot",
+          "type": "u64"
+        },
+        {
+          "name": "block_number",
+          "type": "u64"
+        }
+      ],
+      "kind": "struct",
+      "name": "RootState"
+    },
+    {
+      "fields": [
+        {
+          "name": "record_slot",
+          "type": "u64"
+        },
+        {
+          "name": "header",
+          "type": {
+            "option": {
+              "vec": "u8"
+            }
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "TimeRecord"
+    },
+    {
+      "kind": "enum",
+      "name": "Timed",
+      "variants": [
+        {
+          "name": "Tick"
+        },
+        {
+          "fields": [
+            {
+              "name": "mints",
+              "type": "bool"
+            },
+            {
+              "name": "burns",
+              "type": "bool"
+            },
+            {
+              "name": "until_ms",
+              "type": "u64"
+            }
+          ],
+          "name": "Freeze"
+        },
+        {
+          "fields": [
+            {
+              "name": "mints",
+              "type": "bool"
+            },
+            {
+              "name": "burns",
+              "type": "bool"
+            }
+          ],
+          "name": "Pause"
+        },
+        {
+          "fields": [
+            {
+              "name": "freeze_authority",
+              "type": {
+                "defined": "FreezeAuthority"
+              }
+            },
+            {
+              "name": "watchers",
+              "type": {
+                "vec": {
+                  "array": [
+                    "u8",
+                    32
+                  ]
+                }
+              }
+            }
+          ],
+          "name": "Propose"
+        },
+        {
+          "name": "Apply"
+        }
+      ]
+    },
+    {
+      "fields": [
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "docs": "The wrapped token's definition account on LEZ (zero in the M0 fallback: the bridge keeps\nthe balances itself, `lez/BRIDGE.md` §3).",
+          "name": "lez_definition",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "docs": "The token's decimals on Ethereum.",
+          "name": "decimals",
+          "type": "u8"
+        },
+        {
+          "docs": "Base units per LEZ unit: a power of ten (the v0.4 token program has no decimals field, so\nthe registry holds the conversion).",
+          "name": "lez_unit",
+          "type": "u128"
+        },
+        {
+          "docs": "Global-cap value units per LEZ unit (the vault's `unitWeight`).",
+          "name": "unit_weight",
+          "type": "u128"
+        },
+        {
+          "docs": "1 to 8, strictly increasing, each an exact multiple of `lez_unit`.",
+          "name": "denominations",
+          "type": {
+            "vec": "u128"
+          }
+        },
+        {
+          "docs": "One per denomination, fixed at registration, each at most 1% of it.",
+          "name": "relay_fees",
+          "type": {
+            "vec": "u128"
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "TokenEntry"
+    },
+    {
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "evm_chain_id",
+          "type": "u64"
+        },
+        {
+          "name": "vault",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "docs": "The attestation program and instance the configuration reads Ethereum through (copied at\nregistration): the token's clock reads their records.",
+          "name": "attestation",
+          "type": "account_id"
+        },
+        {
+          "name": "instance_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "entry",
+          "type": {
+            "defined": "TokenEntry"
+          }
+        },
+        {
+          "docs": "By index; `from_leaf` non-decreasing.",
+          "name": "schedules",
+          "type": {
+            "vec": {
+              "defined": "FeeSchedule"
+            }
+          }
+        },
+        {
+          "docs": "Every leaf index below this falls under a known schedule.",
+          "name": "known_until",
+          "type": "u64"
+        },
+        {
+          "docs": "The configuration's roles and floor (copied at registration; immutable).",
+          "name": "controls",
+          "type": {
+            "defined": "Controls"
+          }
+        },
+        {
+          "name": "gate",
+          "type": {
+            "defined": "Gate"
+          }
+        },
+        {
+          "docs": "A `Read` of a record for the gate's clock, outstanding within one transaction (`None`\nbetween transactions).",
+          "name": "pending",
+          "type": {
+            "option": {
+              "defined": "PendingTime"
+            }
+          }
+        },
+        {
+          "docs": "The vault refuses deposits of the token (delisted), as attested under the record at `listing_slot` (F.10).\nClaims of its deposits, its burns and its transfers are not affected: delisting stops new deposits only, on\nthe vault, and no valid claim or burn is invalidated by it (R.4).",
+          "name": "delisted",
+          "type": "bool"
+        },
+        {
+          "docs": "The record slot of the newest listing attested (the registration's record at first).",
+          "name": "listing_slot",
+          "type": "u64"
+        }
+      ],
+      "kind": "struct",
+      "name": "TokenState"
+    },
+    {
+      "fields": [
+        {
+          "name": "0",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "1",
+          "type": "u128"
+        }
+      ],
+      "kind": "struct",
+      "name": "Tuple_Root_u128"
+    },
+    {
+      "fields": [
+        {
+          "name": "account",
+          "type": {
+            "vec": {
+              "vec": "u8"
+            }
+          }
+        },
+        {
+          "name": "slots",
+          "type": {
+            "vec": {
+              "vec": {
+                "vec": "u8"
+              }
+            }
+          }
+        }
+      ],
+      "kind": "struct",
+      "name": "VaultProof"
+    }
+  ],
+  "version": "2"
+}

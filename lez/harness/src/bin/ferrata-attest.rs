@@ -42,15 +42,14 @@ use ferrata_lez_wire::{
 };
 use ferrata_spectests::execkit::AccountProof;
 use harness::{
-    plan_job,
+    compat, plan_job,
     sepolia::{replay, sepolia_update, SepoliaFacts, Stage5, FIRST_PERIOD, LAST_PERIOD, SEPOLIA_CHAIN_ID},
     settle::{classify, opening_fee_state, settle_charged_transaction, Charge, LeeTransaction},
     trace::trace_public,
     Instance,
 };
 use lee::{
-    public_transaction::{Message as PublicMessage, WitnessSet},
-    AccountId, Actor, FeeDeclaration, PrivateKey, PublicKey, PublicTransaction, V03State,
+    public_transaction::Message as PublicMessage, AccountId, Actor, FeeDeclaration, PublicTransaction, V03State,
 };
 
 type Word = [u8; 32];
@@ -420,15 +419,15 @@ fn settle_on(
     message: &[u8],
     actors: Vec<Actor>,
 ) -> Result<DryRun, String> {
-    let payer_key = PrivateKey::try_new([0x11; 32]).unwrap();
-    if AccountId::from(&PublicKey::new_from_private_key(&payer_key)) != payer {
+    let payer_key = compat::account_key([0x11; 32]);
+    if compat::account_of(&payer_key) != payer {
         return Err("the harness's fee payer is not the expected key".into());
     }
     let gas_limit = market::MAX_GAS_EXEC;
     let fee = FeeDeclaration::new(payer, gas_limit, 0, u128::MAX >> 8);
     let nonces = BTreeMap::from([(payer, state.get_account_by_id(payer).nonce)]);
-    let msg = PublicMessage::new(root, message.to_vec(), actors, nonces, Some(fee), vec![]);
-    let witness_set = WitnessSet::for_message(&msg, &[&payer_key]);
+    let msg = PublicMessage::new(root, message.to_vec(), compat::declared(actors, [payer]), nonces, Some(fee), vec![]);
+    let witness_set = compat::sign(&msg, &[&payer_key]);
     let tx = PublicTransaction::new(msg, witness_set);
     let (transitions, _) = trace_public(&tx, &*state, gas_limit);
     let lee_tx = LeeTransaction::Public(tx);

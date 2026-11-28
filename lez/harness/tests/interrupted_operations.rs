@@ -34,8 +34,13 @@ use std::{
     path::PathBuf,
 };
 
+#[cfg(not(feature = "lez-040"))]
+use checkpoint_core::lez::{parse_block, Actor as CpActor, Origin, TxKind, Visitor};
+#[cfg(feature = "lez-040")]
+use checkpoint_core::lez_0_4_0::{parse_block, Actor as CpActor, Origin, TxKind, Visitor};
+#[cfg(feature = "lez-040")]
+mod lez_block040;
 use checkpoint_core::{
-    lez::{parse_block, Actor as CpActor, Origin, TxKind, Visitor},
     wire::BridgeMessage as CpMessage,
 };
 use fee_core::BlockFeeSummary;
@@ -58,6 +63,7 @@ use harness::{
         bridge_program, catalog, fee_recipient, holder_of, private_account_id, private_burn_transition, private_keys,
         private_post_state, relayer, Deposit, World, CHAIN_ID, DENOMINATIONS, ETH, RELAY_FEES,
     },
+    compat,
     private::{PrivateAccount, ALIAS_OPENING},
     settle::{classify, opening_fee_state, settle_private_transaction, Charge, LeeTransaction},
     Chain,
@@ -67,11 +73,7 @@ use lee::{
     test_utils::{no_seal, update_witness},
     Actor, PrivacyPreservingTransaction, ProvingInput, PublicExecutionContext, SenderPresentation, Simulation,
 };
-use lee_core::{
-    execution_state::TransactionEntry,
-    program::{ReceiveInput, TransactionEvent},
-    Commitment, FeeTransfer, RootCall,
-};
+use lee_core::{execution_state::TransactionEntry, program::TransactionEvent, Commitment, RootCall};
 
 /// The private-fee reserve every proof here works out of, as the other bridge suites' (`bridge_burn.rs`).
 const RESERVE: u128 = 100_000_000;
@@ -116,15 +118,16 @@ fn prove_dropped(
     let input = ProvingInput {
         root: TransactionEntry::Sync(RootCall { to: root, message }),
         claims: Vec::new(),
-        fee: Some(FeeTransfer {
-            payer: sender.id(),
-            recipient: system_accounts::fee_inbox_account_id(),
-            amount: reserve,
-            refund_to: Some(chain.payer),
-        }),
-        public_context: PublicExecutionContext::new(public_actors, []),
+        fee: Some(compat::fee_transfer(
+            sender.id(),
+            system_accounts::fee_inbox_account_id(),
+            reserve,
+            Some(chain.payer),
+        )),
+        public_context: PublicExecutionContext::new(compat::declared(public_actors, []), []),
         private_witnesses: vec![{
-            let mut witness = update_witness(&sender.keys, sender.account.clone(), membership);
+            let witness = update_witness(&sender.keys, sender.account.clone(), membership);
+            let mut witness = compat::authorize_root(witness, root);
             witness.random_seed = [0; 32];
             witness
         }],
@@ -171,6 +174,7 @@ fn wallet_note(keys: &BridgeKeys, cid: &Hash, vault: &[u8; 20], i: u64, token: [
 
 /// A LEZ block (`borsh(Block)`) holding `txs` (`borsh(LeeTransaction)` each), as `bridge_burn.rs`
 /// builds one for the checkpoint's parser: what the zone shows a fresh client.
+#[cfg(not(feature = "lez-040"))]
 fn block(txs: &[&[u8]], reverted: &[u64]) -> Vec<u8> {
     let mut b = Vec::new();
     b.extend_from_slice(&7u64.to_le_bytes());
@@ -187,6 +191,12 @@ fn block(txs: &[&[u8]], reverted: &[u64]) -> Vec<u8> {
     }
     b.push(2);
     b
+}
+
+/// [`block`] in LEZ v0.4.0's layout (tests/lez_block040).
+#[cfg(feature = "lez-040")]
+fn block(txs: &[&[u8]], reverted: &[u64]) -> Vec<u8> {
+    lez_block040::block(7, 1_700_000_000_000, txs, reverted)
 }
 
 /// The checkpoint's view of one block (`bridge_burn.rs`'s collector): every call to the bridge
@@ -502,13 +512,13 @@ fn a_burn_interrupted_and_a_burn_whose_note_was_never_recorded() {
     // `holder(owner)` arm of `burn`. It cannot reach the token, so the zone is not touched.
     let first = private_burn_transition(&w, id, burned.data.actor_state(program).clone(), &message);
     assert_eq!(first.exit_code, 0, "the root call forwards to the public holder (nothing to debit privately)");
-    let forwarded = ReceiveInput {
-        receiver: holder_of(program, &cid, id),
-        from: Some(me),
-        is_authorized: true,
-        pre_state: Default::default(), // holder(the private account) holds nothing, and never did
-        message: borsh::to_vec(&message).unwrap(),
-    };
+    let forwarded = compat::receive_input(
+        holder_of(program, &cid, id),
+        Some(me),
+        true,
+        Default::default(), // holder(the private account) holds nothing, and never did
+        borsh::to_vec(&message).unwrap(),
+    );
     let at_holder = execute("the forwarded burn at holder(the private account)", bridge_program().elf(), &forwarded);
     assert_eq!(at_holder.exit_code, u32::from(code::INSUFFICIENT_BALANCE), "the note cannot burn twice");
 

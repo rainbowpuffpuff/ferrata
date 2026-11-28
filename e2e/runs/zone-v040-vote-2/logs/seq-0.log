@@ -1,0 +1,363 @@
+2026-11-28T02:40:15.695919Z  INFO sequencer_service: Starting with config config={"home":"work/seq-0","max_num_tx_in_block":20,"mempool_max_size":10000,"mempool_max_per_account":16,"block_create_timeout":"10s","retry_pending_blocks_timeout":"7s","bedrock_config":{"channel_id":"0101010101010101010101010101010101010101010101010101010101010101","node_url":"http://127.0.0.1:18080/","auth":null,"priority_fee_percent":12,"stale_refund_slots":300,"backfill_batch_slots":10000},"genesis":{"channel_params":{"minimum_sequencer_stake":149,"posting_timeframe":60,"posting_timeout":25,"max_block_size":1048576,"finality_depth":35},"actions":[{"supply_account":{"recipient":{"identified":{"key":"00f00d1e62fa5278307fbde46d84a022f571caff20c157b2831884cc3cc2ae4c29"}},"balance":10000}},{"supply_account":{"recipient":{"identified":{"key":"000223ea30d102c2f066dca058325ee30af21c23cf4dd9a16c3e4ab190ba0b49cb"}},"balance":20000}},{"supply_private_account":{"address":"44KVvzvh2ephQU9aR5snboGUXKgS1FnPYh1W4KZKwmhm","balance":10000000000000}},{"supply_private_account":{"address":"478hD6LXFTYu5gRRkWkCyXPRsWgCwAfRredoCUfxr5b9","balance":20000000000000}},{"supply_account":{"recipient":{"identified":{"key":"00346980052d24464b9669f2bd0cdec4d441c3ff3b358ffcc9477a5247a096f84c"}},"balance":10000000000000}},{"supply_account":{"recipient":{"identified":{"key":"001ad39d12ff0cd1562c4095f8f937c35292ae1955661e781dba1a6f0f7c3b99a6"}},"balance":20000000000000}}]},"metrics_listen_address":"127.0.0.1:19200","gossip":{"listen_addr":"/ip4/127.0.0.1/udp/19100/quic-v1","bootstrap_peers":["/ip4/127.0.0.1/udp/19101/quic-v1","/ip4/127.0.0.1/udp/19102/quic-v1","/ip4/127.0.0.1/udp/19103/quic-v1"]}} channel_signing_key_file=work/seq-0/channel_signing_key funding_public_key=2e03b2eff5a45478e7e79668d2a146cf2c5c7925bce927f2b1c67f2ab4fc0d26
+2026-11-28T02:40:15.712796Z  INFO sequencer_service: Storage Actor spawned
+2026-11-28T02:40:15.712851Z  INFO sequencer_service: Bedrock Sharding Pool Actor spawned
+2026-11-28T02:40:15.713010Z  INFO sequencer_service: Channel signing key loaded public_key=ed99d1abd7d5b829ea15c4416b72854f0577f47616cbea8aa181d28dc76cd609
+2026-11-28T02:40:15.713217Z  INFO sequencer_service: Stake Config PubSub Actor spawned
+2026-11-28T02:40:15.713370Z  INFO sequencer_service: Slasher Actor spawned
+2026-11-28T02:40:15.713398Z  INFO sequencer_service: Channel Signing Actor spawned
+2026-11-28T02:40:15.715728Z  INFO logos_blockchain::zone_sdk::sequencer: Starting fresh (no checkpoint)
+2026-11-28T02:40:15.717027Z  INFO logos_blockchain::zone_sdk::sequencer: Sequencer connected: tip=HeaderId(99e4fdba361357efe9db02962ac49157c7aebfc1d73fbbf403ca70cf381d0f5b), lib=HeaderId(99e4fdba361357efe9db02962ac49157c7aebfc1d73fbbf403ca70cf381d0f5b)
+2026-11-28T02:40:15.871767Z  INFO sequencer_genesis: Genesis fingerprint fingerprint=0b74f01afbc90b4b8b1701ebca7e84cd1c5f2094e019e3d6e4ff518f11f706c7
+2026-11-28T02:40:15.871901Z  INFO sequencer_executor_actor::actor::state: No stored channel view; starting on the final tier
+2026-11-28T02:40:15.873254Z  INFO sequencer_executor_actor::actor::state: Channel does not exist yet; starting it as channel creator
+2026-11-28T02:40:15.873535Z  INFO logos_blockchain::zone_sdk::sequencer: Restoring from checkpoint: 0 pending txs, lib=HeaderId(99e4fdba361357efe9db02962ac49157c7aebfc1d73fbbf403ca70cf381d0f5b), lib_slot=Slot(0)
+2026-11-28T02:40:15.874546Z  INFO logos_blockchain::zone_sdk::sequencer: Sequencer connected: tip=HeaderId(99e4fdba361357efe9db02962ac49157c7aebfc1d73fbbf403ca70cf381d0f5b), lib=HeaderId(99e4fdba361357efe9db02962ac49157c7aebfc1d73fbbf403ca70cf381d0f5b)
+2026-11-28T02:40:17.405991Z  INFO sequencer_genesis: Genesis fingerprint fingerprint=0b74f01afbc90b4b8b1701ebca7e84cd1c5f2094e019e3d6e4ff518f11f706c7
+2026-11-28T02:40:18.265343Z  INFO sequencer_bedrock_actor::actor::channel: Published block block_id=1 size_bytes=5599
+2026-11-28T02:40:18.988385Z  INFO sequencer_executor_actor::actor::state::online: Producer reward account (stake ownership) reward_account=DsRuGGHEvd98T2wkKMH8AsuQyTZmDsknGMA8JMzw59xo
+2026-11-28T02:40:18.989290Z  INFO sequencer_service: Executor Actor spawned
+2026-11-28T02:40:18.989295Z  INFO bedrock_event{otel.name="bedrock.turn_notification"}: sequencer_bedrock_actor::actor::channel: Turn update our_turn=true
+2026-11-28T02:40:18.991907Z  INFO libp2p_swarm: local_peer_id=12D3KooWRorqBStXA4ycu9TS4XqqRWvux27iqTnKyDryCaJTiYZ6
+2026-11-28T02:40:18.992307Z  INFO sequencer_gossip_actor::actor: Gossip listening listen_addrs=[/ip4/127.0.0.1/udp/19100/quic-v1] peer_id=12D3KooWRorqBStXA4ycu9TS4XqqRWvux27iqTnKyDryCaJTiYZ6
+2026-11-28T02:40:18.992561Z  INFO sequencer_service: Gossip network started peer_id=12D3KooWRorqBStXA4ycu9TS4XqqRWvux27iqTnKyDryCaJTiYZ6
+2026-11-28T02:40:18.992692Z  INFO sequencer_service: Gossip Actor spawned
+2026-11-28T02:40:18.992832Z  INFO sequencer_rpc_server_actor::actor: Starting RPC server addr=127.0.0.1:19300
+2026-11-28T02:40:18.992863Z  INFO sequencer_service: RPC Server Actor spawned
+2026-11-28T02:40:18.992875Z  INFO sequencer_service: Block production scheduler started
+2026-11-28T02:40:19.030270Z  INFO quinn_udp::imp: `libc::sendmsg` failed with Invalid argument (os error 22); halting segmentation offload
+2026-11-28T02:40:19.030306Z  WARN quinn_udp: sendmsg error: Os { code: 22, kind: InvalidInput, message: "Invalid argument" }, Transmit: { destination: 127.0.0.1:19101, src_ip: None, ecn: Some(Ect0), len: 2400, segment_size: Some(1200) }
+2026-11-28T02:40:23.134748Z  INFO bedrock_event{otel.name="bedrock.turn_notification"}: sequencer_bedrock_actor::actor::channel: Turn update our_turn=true starting_slot=2585148 ends_at_slot=2585148
+2026-11-28T02:40:29.144649Z  INFO sequencer_core: Created block transactions=2 elapsed=150.381431ms
+2026-11-28T02:40:29.144743Z  INFO sequencer_core: Publishing block block_id=2 pin=a15f69010187a51c787a3f1d57eca37b3b59fbae0df3184dee9dcdb9aee0f2d4
+2026-11-28T02:40:29.210887Z  INFO logos_blockchain::zone_sdk::sequencer: Submitted tx including inscription TxHash([215, 49, 19, 241, 216, 28, 36, 52, 11, 110, 5, 241, 10, 92, 51, 62, 49, 246, 169, 74, 23, 54, 132, 88, 109, 12, 107, 97, 255, 1, 96, 99])
+2026-11-28T02:40:29.210990Z  INFO sequencer_bedrock_actor::actor::channel: Published block block_id=2 size_bytes=724
+2026-11-28T02:40:29.362593Z  INFO sequencer_executor_actor::actor: Block created block_id=2 producer=ed99d1abd7d5b829ea15c4416b72854f0577f47616cbea8aa181d28dc76cd609
+2026-11-28T02:40:31.121843Z  INFO sequencer_core::logging: Channel update adopted=none finalized=1..=1 (1) head=2
+2026-11-28T02:40:39.158961Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=855baacd53258e04a185b315475ed6e0e192788dcf2a1370a7fbda079584ac53
+2026-11-28T02:40:39.308908Z  INFO sequencer_core: Created block transactions=3 elapsed=314.247169ms
+2026-11-28T02:40:39.308974Z  INFO sequencer_core: Publishing block block_id=3 pin=457387854a409be2d4c3b78b2da95d3898eda8ebe8d7b1d4047bcfa1e087c5d0
+2026-11-28T02:40:39.374004Z  INFO logos_blockchain::zone_sdk::sequencer: Submitted tx including inscription TxHash([189, 226, 22, 32, 144, 164, 32, 118, 125, 114, 174, 232, 212, 35, 102, 197, 76, 62, 100, 215, 3, 62, 247, 12, 71, 233, 105, 206, 0, 221, 144, 2])
+2026-11-28T02:40:39.374050Z  INFO sequencer_bedrock_actor::actor::channel: Published block block_id=3 size_bytes=1850
+2026-11-28T02:40:39.754774Z  INFO sequencer_core: Channel-config draft needs only our own signature draft_tx_hash=9cc607b0bb7227e4978ef519de0cc1a08c07c713256c095b449c87c6309f1496
+2026-11-28T02:40:39.755816Z  INFO logos_blockchain::zone_sdk::sequencer: Submitted tx including inscription TxHash([156, 198, 7, 176, 187, 114, 39, 228, 151, 142, 245, 25, 222, 12, 193, 160, 140, 7, 199, 19, 37, 108, 9, 91, 68, 156, 135, 198, 48, 159, 20, 150])
+2026-11-28T02:40:39.755924Z  INFO sequencer_executor_actor::actor: Block created block_id=3 producer=ed99d1abd7d5b829ea15c4416b72854f0577f47616cbea8aa181d28dc76cd609
+2026-11-28T02:40:43.125502Z  INFO sequencer_core::logging: Channel update adopted=none finalized=2..=2 (1) head=3
+2026-11-28T02:40:43.134263Z DEBUG sequencer_core: A channel config is still in flight, not targeting another
+2026-11-28T02:40:43.134357Z  INFO bedrock_event{otel.name="bedrock.turn_notification"}: sequencer_bedrock_actor::actor::channel: Turn update our_turn=true starting_slot=2585154 ends_at_slot=2585214
+2026-11-28T02:40:47.112097Z DEBUG sequencer_core: A channel config is still in flight, not targeting another
+2026-11-28T02:40:49.144816Z  INFO sequencer_core: Created block transactions=2 elapsed=150.876859ms
+2026-11-28T02:40:49.144876Z  INFO sequencer_core: Publishing block block_id=4 pin=95bfea1900475594fbb435bdcc562020a7c50ff94e3696ac5b977a1454d76a68
+2026-11-28T02:40:49.211281Z  INFO logos_blockchain::zone_sdk::sequencer: Submitted tx including inscription TxHash([139, 135, 80, 243, 79, 9, 80, 250, 130, 251, 77, 20, 213, 167, 149, 214, 22, 141, 129, 52, 116, 255, 197, 129, 191, 203, 105, 184, 28, 206, 43, 232])
+2026-11-28T02:40:49.211343Z  INFO sequencer_bedrock_actor::actor::channel: Published block block_id=4 size_bytes=724
+2026-11-28T02:40:49.364622Z  INFO sequencer_executor_actor::actor: Block created block_id=4 producer=ed99d1abd7d5b829ea15c4416b72854f0577f47616cbea8aa181d28dc76cd609
+2026-11-28T02:40:51.118108Z DEBUG sequencer_core: A channel config is still in flight, not targeting another
+2026-11-28T02:40:55.112864Z  INFO sequencer_core::logging: Channel update adopted=none finalized=3..=3 (1) head=4
+2026-11-28T02:40:59.145878Z  INFO sequencer_core: Created block transactions=2 elapsed=150.87883ms
+2026-11-28T02:40:59.145923Z  INFO sequencer_core: Publishing block block_id=5 pin=711109f3d2b967691bb1c2580936c0a7cdcff5e66f5057313eec32b46f7879a9
+2026-11-28T02:40:59.205075Z  INFO logos_blockchain::zone_sdk::sequencer: Submitted tx including inscription TxHash([77, 131, 252, 205, 107, 112, 217, 161, 223, 4, 72, 53, 39, 139, 136, 37, 223, 46, 162, 43, 117, 161, 115, 232, 222, 157, 205, 9, 223, 31, 129, 225])
+2026-11-28T02:40:59.205116Z  INFO sequencer_bedrock_actor::actor::channel: Published block block_id=5 size_bytes=724
+2026-11-28T02:40:59.424446Z  INFO sequencer_core: Channel-config draft needs only our own signature draft_tx_hash=6ac2b1519d38a7593f4b8b3bd513d0620b4c61a776fa871bd8d1282d9310631f
+2026-11-28T02:40:59.425257Z  INFO logos_blockchain::zone_sdk::sequencer: Submitted tx including inscription TxHash([106, 194, 177, 81, 157, 56, 167, 89, 63, 75, 139, 59, 213, 19, 208, 98, 11, 76, 97, 167, 118, 250, 135, 27, 216, 209, 40, 45, 147, 16, 99, 31])
+2026-11-28T02:40:59.425319Z  INFO sequencer_executor_actor::actor: Block created block_id=5 producer=ed99d1abd7d5b829ea15c4416b72854f0577f47616cbea8aa181d28dc76cd609
+2026-11-28T02:41:03.119468Z  INFO sequencer_core::logging: Channel conflict orphaned=5..=5 (1) view=none finalized=4..=4 (1) head=5
+2026-11-28T02:41:03.119526Z  INFO sequencer_core: Channel pin moved pin=711109f3d2b967691bb1c2580936c0a7cdcff5e66f5057313eec32b46f7879a9
+2026-11-28T02:41:03.119536Z  WARN sequencer_core::logging: Head rewound before=5 after=4 pin=711109f3d2b967691bb1c2580936c0a7cdcff5e66f5057313eec32b46f7879a9
+2026-11-28T02:41:03.131027Z DEBUG sequencer_core: A channel config is still in flight, not targeting another
+2026-11-28T02:41:03.131052Z  INFO bedrock_event{otel.name="bedrock.turn_notification"}: sequencer_bedrock_actor::actor::channel: Turn update our_turn=false starting_slot=2585159 ends_at_slot=2585219
+2026-11-28T02:41:11.139149Z DEBUG sequencer_core: A channel config is still in flight, not targeting another
+2026-11-28T02:41:15.124582Z  INFO sequencer_core::logging: Channel update adopted=5..=5 (1) finalized=none head=4
+2026-11-28T02:41:15.276102Z  INFO sequencer_core: Channel pin moved pin=c60c87c43bcd89ba86d7c40ade2d76c3f5a783a192fdfcf6364592a7b05c147c
+2026-11-28T02:41:15.279403Z DEBUG sequencer_core: A channel config is still in flight, not targeting another
+2026-11-28T02:41:19.120021Z  INFO sequencer_core::logging: Channel update adopted=none finalized=none head=5
+2026-11-28T02:41:23.129189Z  INFO sequencer_core::logging: Channel update adopted=6..=6 (1) finalized=none head=5
+2026-11-28T02:41:23.287623Z  INFO sequencer_core: Channel pin moved pin=1376e64538cc4fe30aefcb3a03eb47b9f0d31ef21b4c49fcbaa99bb1f1f8448f
+2026-11-28T02:41:27.119501Z  INFO sequencer_core::logging: Channel update adopted=none finalized=5..=5 (1) head=6
+2026-11-28T02:41:35.131173Z  INFO sequencer_core::logging: Channel update adopted=7..=7 (1) finalized=6..=6 (1) head=6
+2026-11-28T02:41:35.280393Z  INFO sequencer_core: Channel pin moved pin=4ed39908725f61aadadb33df2f1ef31ed42c1f51068e76f1aa23a3076021d5d7
+2026-11-28T02:41:43.127400Z  INFO sequencer_core::logging: Channel update adopted=8..=8 (1) finalized=none head=7
+2026-11-28T02:41:43.278298Z  INFO sequencer_core: Channel pin moved pin=b6d5ea13267a6f8fce007000a583a8f4dc76af647c9669426942c44368b9f858
+2026-11-28T02:41:47.116515Z  INFO sequencer_core::logging: Channel update adopted=none finalized=7..=7 (1) head=8
+2026-11-28T02:41:55.122838Z  INFO sequencer_core::logging: Channel update adopted=9..=9 (1) finalized=8..=8 (1) head=8
+2026-11-28T02:41:55.271808Z  INFO sequencer_core: Channel pin moved pin=34f20ccacb497e3f5e24415fb0d585ff9d1189e53c1c5940a81baa9e1ab34bf7
+2026-11-28T02:42:03.128128Z  INFO sequencer_core::logging: Channel update adopted=10..=10 (1) finalized=none head=9
+2026-11-28T02:42:03.281210Z  INFO sequencer_core: Channel pin moved pin=43b45430da0106ed670dcf3e2ce41df890c0a61d41e0c46fbcf43789865df6a6
+2026-11-28T02:42:07.119864Z  INFO sequencer_core::logging: Channel update adopted=none finalized=9..=9 (1) head=10
+2026-11-28T02:42:15.124357Z  INFO sequencer_core::logging: Channel update adopted=11..=11 (1) finalized=10..=10 (1) head=10
+2026-11-28T02:42:15.270683Z  INFO sequencer_core: Channel pin moved pin=8501b3a246f15b0c3b5fa6643827917d6552a205787d853ce797d3b3b65a7c09
+2026-11-28T02:42:23.118853Z  INFO sequencer_core::logging: Channel update adopted=12..=12 (1) finalized=none head=11
+2026-11-28T02:42:23.260610Z  INFO sequencer_core: Channel pin moved pin=b444e11eee60302234c4430d42e5c219bbf7e465a7538dc7c87b69fdc63f9390
+2026-11-28T02:42:27.115856Z  INFO sequencer_core::logging: Channel update adopted=none finalized=11..=11 (1) head=12
+2026-11-28T02:42:35.127182Z  INFO sequencer_core::logging: Channel update adopted=13..=13 (1) finalized=12..=12 (1) head=12
+2026-11-28T02:42:35.279326Z  INFO sequencer_core: Channel pin moved pin=935eda7608fc2a628df79db59d14bc68ff6cebc8bddeee95c41ee58f28cd5221
+2026-11-28T02:42:43.123753Z  INFO sequencer_core::logging: Channel update adopted=14..=14 (1) finalized=none head=13
+2026-11-28T02:42:43.267025Z  INFO sequencer_core: Channel pin moved pin=ca9315c6720f060b8d54210f1055de623dd54bc9b56871523a7a7ba56dcd58c2
+2026-11-28T02:42:47.124883Z  INFO sequencer_core::logging: Channel update adopted=none finalized=13..=13 (1) head=14
+2026-11-28T02:42:55.131138Z  INFO sequencer_core::logging: Channel update adopted=15..=15 (1) finalized=14..=14 (1) head=14
+2026-11-28T02:42:55.294208Z  INFO sequencer_core: Channel pin moved pin=3b77da4311c8d40239f6491bc645a1b84191a90413e1e964f40f9662d62dc724
+2026-11-28T02:43:03.138794Z  INFO sequencer_core::logging: Channel update adopted=16..=16 (1) finalized=none head=15
+2026-11-28T02:43:03.291989Z  INFO sequencer_core: Channel pin moved pin=03c43a84b2c03611910a3f6fa20ed01a2ec15f1ff802f9ba03778a7e72fe3d22
+2026-11-28T02:43:07.119609Z  INFO sequencer_core::logging: Channel update adopted=none finalized=15..=15 (1) head=16
+2026-11-28T02:43:15.125090Z  INFO sequencer_core::logging: Channel update adopted=17..=17 (1) finalized=16..=16 (1) head=16
+2026-11-28T02:43:15.272598Z  INFO sequencer_core: Channel pin moved pin=90e7de1635a47c974ba7791b1e5c835750e5d160ae4b7fc48b4f56b612005d99
+2026-11-28T02:43:23.131471Z  INFO sequencer_core::logging: Channel update adopted=18..=18 (1) finalized=none head=17
+2026-11-28T02:43:23.285382Z  INFO sequencer_core: Channel pin moved pin=0015b734088047e0372fda0fd1e4df83f5ec29f84499bb1ccbc7c17de01bc9ec
+2026-11-28T02:43:27.122136Z  INFO sequencer_core::logging: Channel update adopted=none finalized=17..=17 (1) head=18
+2026-11-28T02:43:35.135696Z  INFO sequencer_core::logging: Channel update adopted=19..=19 (1) finalized=18..=18 (1) head=18
+2026-11-28T02:43:35.304787Z  INFO sequencer_core: Channel pin moved pin=db6d3a6777d6503d87925088a725fef3965a4dd9eff20fe59d38400154089ada
+2026-11-28T02:43:43.130849Z  INFO sequencer_core::logging: Channel update adopted=20..=20 (1) finalized=none head=19
+2026-11-28T02:43:43.285242Z  INFO sequencer_core: Channel pin moved pin=1fad1bae558b84b512643fab5a4994282cd0f4880cb5a44cefebee07b576ba8f
+2026-11-28T02:43:47.116962Z  INFO sequencer_core::logging: Channel update adopted=none finalized=19..=19 (1) head=20
+2026-11-28T02:43:55.128925Z  INFO sequencer_core::logging: Channel update adopted=21..=21 (1) finalized=20..=20 (1) head=20
+2026-11-28T02:43:55.279688Z  INFO sequencer_core: Channel pin moved pin=b02e99fd9b79929270d9e27fe2dbc912c345c7769631f833ee114b4fa6b87cfb
+2026-11-28T02:44:03.130900Z  INFO sequencer_core::logging: Channel update adopted=22..=22 (1) finalized=none head=21
+2026-11-28T02:44:03.291170Z  INFO sequencer_core: Channel pin moved pin=5f4f839152fafb51fa71e60b65681ac0b7f8820aea39bddd7aa4dda54a7fc9e5
+2026-11-28T02:44:07.121657Z  INFO sequencer_core::logging: Channel update adopted=none finalized=21..=21 (1) head=22
+2026-11-28T02:44:15.133662Z  INFO sequencer_core::logging: Channel update adopted=23..=23 (1) finalized=22..=22 (1) head=22
+2026-11-28T02:44:15.284175Z  INFO sequencer_core: Channel pin moved pin=07572e0502689a578f4522d5db23889e77fffe5779e455456cb7b371a261d5e3
+2026-11-28T02:44:23.120645Z  INFO sequencer_core::logging: Channel update adopted=24..=24 (1) finalized=none head=23
+2026-11-28T02:44:23.276029Z  INFO sequencer_core: Channel pin moved pin=8d6d9ed8c0af7c4bac3125ee35d3e1e9e7d3351c86560b1209bbecc48493e3c1
+2026-11-28T02:44:27.124088Z  INFO sequencer_core::logging: Channel update adopted=none finalized=23..=23 (1) head=24
+2026-11-28T02:44:35.135554Z  INFO sequencer_core::logging: Channel update adopted=25..=25 (1) finalized=24..=24 (1) head=24
+2026-11-28T02:44:35.285657Z  INFO sequencer_core: Channel pin moved pin=50589ae66ad5a584a1d72ba7b527423d4d330d1d7dc3e42603527f0e58afa758
+2026-11-28T02:44:43.121570Z  INFO sequencer_core::logging: Channel update adopted=26..=26 (1) finalized=none head=25
+2026-11-28T02:44:43.274787Z  INFO sequencer_core: Channel pin moved pin=2ce92b1eda08599abe46448adc40e214995d3f753cdaa31e19b2ada707db4db0
+2026-11-28T02:44:47.117477Z  INFO sequencer_core::logging: Channel update adopted=none finalized=25..=25 (1) head=26
+2026-11-28T02:44:59.135817Z  INFO sequencer_core::logging: Channel update adopted=27..=27 (1) finalized=26..=26 (1) head=26
+2026-11-28T02:44:59.287202Z  INFO sequencer_core: Channel pin moved pin=a85800e228fb61857a90b01343feb291afa3a6a12c4db6d89d924f037ad308f9
+2026-11-28T02:45:03.011996Z  INFO bedrock_event{otel.name="bedrock.turn_notification"}: sequencer_bedrock_actor::actor::channel: Turn update our_turn=true starting_slot=2585219 ends_at_slot=2585279
+2026-11-28T02:45:09.174374Z DEBUG sequencer_core: Validated transaction, including it in block tx_hash=2414c1dbcb80e32db9c967b1caee1b975e1b2adf23cb6351a349033a96a8743a
+2026-11-28T02:45:09.330031Z  INFO sequencer_core: Created block transactions=3 elapsed=335.35766ms
+2026-11-28T02:45:09.330102Z  INFO sequencer_core: Publishing block block_id=28 pin=a85800e228fb61857a90b01343feb291afa3a6a12c4db6d89d924f037ad308f9
+2026-11-28T02:45:09.403777Z  INFO logos_blockchain::zone_sdk::sequencer: Submitted tx including inscription TxHash([106, 168, 174, 136, 248, 202, 33, 92, 212, 229, 16, 154, 145, 115, 211, 187, 160, 77, 223, 106, 129, 208, 80, 192, 159, 52, 152, 207, 133, 105, 61, 102])
+2026-11-28T02:45:09.403829Z  INFO sequencer_bedrock_actor::actor::channel: Published block block_id=28 size_bytes=1850
+2026-11-28T02:45:09.727617Z  INFO sequencer_executor_actor::actor: Block created block_id=28 producer=ed99d1abd7d5b829ea15c4416b72854f0577f47616cbea8aa181d28dc76cd609
+2026-11-28T02:45:11.124960Z  INFO sequencer_core::logging: Channel update adopted=none finalized=27..=27 (1) head=28
+2026-11-28T02:45:19.152462Z  INFO sequencer_core: Created block transactions=2 elapsed=157.903379ms
+2026-11-28T02:45:19.152562Z  INFO sequencer_core: Publishing block block_id=29 pin=4557b789deb4892121345a2e9111109c4fa53b3153fcc5c1bc6b25537e7711d8
+2026-11-28T02:45:19.225831Z  INFO logos_blockchain::zone_sdk::sequencer: Submitted tx including inscription TxHash([163, 214, 135, 124, 95, 34, 253, 250, 95, 34, 87, 64, 2, 212, 152, 157, 73, 247, 202, 236, 146, 215, 51, 105, 184, 135, 37, 183, 228, 251, 30, 129])
+2026-11-28T02:45:19.225891Z  INFO sequencer_bedrock_actor::actor::channel: Published block block_id=29 size_bytes=724
+2026-11-28T02:45:19.381179Z  INFO sequencer_executor_actor::actor: Block created block_id=29 producer=ed99d1abd7d5b829ea15c4416b72854f0577f47616cbea8aa181d28dc76cd609
+2026-11-28T02:45:23.134004Z  INFO sequencer_core::logging: Channel update adopted=none finalized=28..=28 (1) head=29
+2026-11-28T02:45:29.149286Z  INFO sequencer_core: Created block transactions=2 elapsed=155.002279ms
+2026-11-28T02:45:29.149370Z  INFO sequencer_core: Publishing block block_id=30 pin=f743f981d099b3e225dfbdeba94d814fd49f3bd042065c09c5495309b5175747
+2026-11-28T02:45:29.217121Z  INFO logos_blockchain::zone_sdk::sequencer: Submitted tx including inscription TxHash([111, 84, 87, 167, 158, 27, 58, 166, 162, 238, 158, 180, 240, 178, 79, 244, 226, 61, 2, 98, 147, 188, 64, 21, 186, 85, 13, 167, 214, 108, 25, 27])
+2026-11-28T02:45:29.217181Z  INFO sequencer_bedrock_actor::actor::channel: Published block block_id=30 size_bytes=724
+2026-11-28T02:45:29.447742Z  INFO sequencer_core: Channel-config draft needs only our own signature draft_tx_hash=74315f88185331ebc30578d077ddbce97e4cec7d039bad245bb079e3e84e922d
+2026-11-28T02:45:29.448670Z  INFO logos_blockchain::zone_sdk::sequencer: Submitted tx including inscription TxHash([116, 49, 95, 136, 24, 83, 49, 235, 195, 5, 120, 208, 119, 221, 188, 233, 126, 76, 236, 125, 3, 155, 173, 36, 91, 176, 121, 227, 232, 78, 146, 45])
+2026-11-28T02:45:29.448867Z  INFO sequencer_executor_actor::actor: Block created block_id=30 producer=ed99d1abd7d5b829ea15c4416b72854f0577f47616cbea8aa181d28dc76cd609
+2026-11-28T02:45:31.129517Z DEBUG sequencer_core: A channel config is still in flight, not targeting another
+2026-11-28T02:45:31.129560Z  INFO bedrock_event{otel.name="bedrock.turn_notification"}: sequencer_bedrock_actor::actor::channel: Turn update our_turn=false starting_slot=2585226 ends_at_slot=2585286
+2026-11-28T02:45:35.127316Z  INFO sequencer_core::logging: Channel update adopted=none finalized=29..=29 (1) head=30
+2026-11-28T02:45:35.132799Z DEBUG sequencer_core: A channel config is still in flight, not targeting another
+2026-11-28T02:45:39.122572Z DEBUG sequencer_core: A channel config is still in flight, not targeting another
+2026-11-28T02:45:43.133886Z  INFO sequencer_core::logging: Channel update adopted=31..=31 (1) finalized=30..=30 (1) head=30
+2026-11-28T02:45:43.292485Z  INFO sequencer_core: Channel pin moved pin=05f459bd12ba32e54bceaf67d0fecf7d8e05a549ffcb4e80bdaa83e5b6e4e7c0
+2026-11-28T02:45:55.145316Z  INFO sequencer_core::logging: Channel update adopted=32..=32 (1) finalized=31..=31 (1) head=31
+2026-11-28T02:45:55.295020Z  INFO sequencer_core: Channel pin moved pin=7d670005f823c86b8ccfee1365c8d50dcd86492d17892c6bab85ee982ed8f20d
+2026-11-28T02:46:03.138933Z  INFO sequencer_core::logging: Channel update adopted=33..=33 (1) finalized=none head=32
+2026-11-28T02:46:03.294994Z  INFO sequencer_core: Channel pin moved pin=c16d5a667c68d2ddc35e2b1b4c493fcc8218b990e8fb895301fa16d78277e286
+2026-11-28T02:46:07.133626Z  INFO sequencer_core::logging: Channel update adopted=none finalized=32..=32 (1) head=33
+2026-11-28T02:46:15.132162Z  INFO sequencer_core::logging: Channel update adopted=34..=34 (1) finalized=33..=33 (1) head=33
+2026-11-28T02:46:15.292616Z  INFO sequencer_core: Channel pin moved pin=23d72a01d0c9a75c22f5d50945b8ca7c5a974a749cdb0611a90c8dfaadb5b887
+2026-11-28T02:46:23.141084Z  INFO sequencer_core::logging: Channel update adopted=35..=35 (1) finalized=none head=34
+2026-11-28T02:46:23.308674Z  INFO sequencer_core: Channel pin moved pin=c6affe17116cc34bd1eb9a30d658f14a517f10c9e700f77d16ddbae25a62b91b
+2026-11-28T02:46:27.126438Z  INFO sequencer_core::logging: Channel update adopted=none finalized=34..=34 (1) head=35
+2026-11-28T02:46:35.133529Z  INFO sequencer_core::logging: Channel update adopted=36..=36 (1) finalized=35..=35 (1) head=35
+2026-11-28T02:46:35.284792Z  INFO sequencer_core: Channel pin moved pin=834928c7fb1544dfa7cfa6caeb7dc9a1dc1619cf309d621f521e5861cbc52377
+2026-11-28T02:46:43.125095Z  INFO sequencer_core::logging: Channel update adopted=37..=37 (1) finalized=none head=36
+2026-11-28T02:46:43.283021Z  INFO sequencer_core: Channel pin moved pin=3e32d0274d3c1cd0e6fde6b3589f2d8da91ef9bef60e9925d2afe041bae3e6b1
+2026-11-28T02:46:47.122313Z  INFO sequencer_core::logging: Channel update adopted=none finalized=36..=36 (1) head=37
+2026-11-28T02:46:55.124897Z  INFO sequencer_core::logging: Channel update adopted=38..=38 (1) finalized=37..=37 (1) head=37
+2026-11-28T02:46:55.282444Z  INFO sequencer_core: Channel pin moved pin=643edd4f7308310cb26aab0a5af61a7f7c154aeea397c1d50ede968b42c0398e
+2026-11-28T02:47:03.123937Z  INFO sequencer_core::logging: Channel update adopted=39..=39 (1) finalized=none head=38
+2026-11-28T02:47:03.278479Z  INFO sequencer_core: Channel pin moved pin=50e39067bae52edc2192e2ba5d6cfbef17aaece5502c588b96cbc7b4823df5dd
+2026-11-28T02:47:07.132976Z  INFO sequencer_core::logging: Channel update adopted=none finalized=38..=38 (1) head=39
+2026-11-28T02:47:15.144232Z  INFO sequencer_core::logging: Channel update adopted=40..=40 (1) finalized=39..=39 (1) head=39
+2026-11-28T02:47:15.301264Z  INFO sequencer_core: Channel pin moved pin=062f1609a58da73d45c124b4240aaf117cfcafbf9787ba1c2be402077c894012
+2026-11-28T02:47:23.127902Z  INFO sequencer_core::logging: Channel update adopted=41..=41 (1) finalized=none head=40
+2026-11-28T02:47:23.283453Z  INFO sequencer_core: Channel pin moved pin=d5a64591ecd1e5c2fedcf8719574e06aba686f3dcd1ce88f827a1ee50211bd13
+2026-11-28T02:47:27.126983Z  INFO sequencer_core::logging: Channel update adopted=none finalized=40..=40 (1) head=41
+2026-11-28T02:47:35.128451Z  INFO sequencer_core::logging: Channel update adopted=42..=42 (1) finalized=41..=41 (1) head=41
+2026-11-28T02:47:35.284628Z  INFO sequencer_core: Channel pin moved pin=2613bb53f50be4b432f532adff739a2890c510c2de2b54d4c5d39c4ed64279f0
+2026-11-28T02:47:43.125584Z  INFO sequencer_core::logging: Channel update adopted=43..=43 (1) finalized=none head=42
+2026-11-28T02:47:43.272855Z  INFO sequencer_core: Channel pin moved pin=da12169b32326dd321052ef67139447c90d64794834d1125502ac6afc1bc6bca
+2026-11-28T02:47:47.120505Z  INFO sequencer_core::logging: Channel update adopted=none finalized=42..=42 (1) head=43
+2026-11-28T02:47:55.129067Z  INFO sequencer_core::logging: Channel update adopted=44..=44 (1) finalized=43..=43 (1) head=43
+2026-11-28T02:47:55.285324Z  INFO sequencer_core: Channel pin moved pin=8cc4cdf0b541ab3d7b0ff15735617b012750202b4799ec58834c54470cd7cf98
+2026-11-28T02:48:03.134631Z  INFO sequencer_core::logging: Channel update adopted=45..=45 (1) finalized=none head=44
+2026-11-28T02:48:03.291895Z  INFO sequencer_core: Channel pin moved pin=d23675d477a8e2c7dda8f806964a6cb2064348e530f01e58b51b3ea61480e049
+2026-11-28T02:48:07.123822Z  INFO sequencer_core::logging: Channel update adopted=none finalized=44..=44 (1) head=45
+2026-11-28T02:48:15.135378Z  INFO sequencer_core::logging: Channel update adopted=46..=46 (1) finalized=45..=45 (1) head=45
+2026-11-28T02:48:15.290963Z  INFO sequencer_core: Channel pin moved pin=7f1e59582056579668e64a77cc8174d27cf7db463b32f4c9e9e44328f315edf5
+2026-11-28T02:48:23.128659Z  INFO sequencer_core::logging: Channel update adopted=47..=47 (1) finalized=none head=46
+2026-11-28T02:48:23.282061Z  INFO sequencer_core: Channel pin moved pin=5746084e2f36ee3d2f5d5eb89d0045ec740bb063b0816ec31b0691fb9ba01d12
+2026-11-28T02:48:27.131464Z  INFO sequencer_core::logging: Channel update adopted=none finalized=46..=46 (1) head=47
+2026-11-28T02:48:35.136607Z  INFO sequencer_core::logging: Channel update adopted=48..=48 (1) finalized=47..=47 (1) head=47
+2026-11-28T02:48:35.300918Z  INFO sequencer_core: Channel pin moved pin=135ad3baa211b6e99f3dc698538bf8bd0e089a82f604a1a7d6f6a2c27f503622
+2026-11-28T02:48:43.136665Z  INFO sequencer_core::logging: Channel update adopted=49..=49 (1) finalized=none head=48
+2026-11-28T02:48:43.302875Z  INFO sequencer_core: Channel pin moved pin=f7e90448178a54216b7a2d7e01669ff0e7772d587f026d3b5e7df0d8176171af
+2026-11-28T02:48:47.125825Z  INFO sequencer_core::logging: Channel update adopted=none finalized=48..=48 (1) head=49
+2026-11-28T02:48:55.137554Z  INFO sequencer_core::logging: Channel update adopted=50..=50 (1) finalized=49..=49 (1) head=49
+2026-11-28T02:48:55.303545Z  INFO sequencer_core: Channel pin moved pin=a66753dcb560a4fbd0222e49dfbf129314e6c757dcecdb1799133a3bf4d56c27
+2026-11-28T02:49:03.132002Z  INFO sequencer_core::logging: Channel update adopted=51..=51 (1) finalized=none head=50
+2026-11-28T02:49:03.299178Z  INFO sequencer_core: Channel pin moved pin=1ccd4a8d26df6d29906f0393d77b3c40197f29c4848a32ceb72d03f52a32cbc2
+2026-11-28T02:49:07.134036Z  INFO sequencer_core::logging: Channel update adopted=none finalized=50..=50 (1) head=51
+2026-11-28T02:49:15.136209Z  INFO sequencer_core::logging: Channel update adopted=52..=52 (1) finalized=51..=51 (1) head=51
+2026-11-28T02:49:15.297830Z  INFO sequencer_core: Channel pin moved pin=3f357a743462b732f151bb0e248718f8eca6fca0111028fa146ff9e0cf410c4f
+2026-11-28T02:49:23.133565Z  INFO sequencer_core::logging: Channel update adopted=53..=53 (1) finalized=none head=52
+2026-11-28T02:49:23.289547Z  INFO sequencer_core: Channel pin moved pin=f1994e884a1ca80d05c84de141fd63c3c178a3ba587466081d55476dbd9c473d
+2026-11-28T02:49:27.121594Z  INFO sequencer_core::logging: Channel update adopted=none finalized=52..=52 (1) head=53
+2026-11-28T02:49:31.011741Z  INFO bedrock_event{otel.name="bedrock.turn_notification"}: sequencer_bedrock_actor::actor::channel: Turn update our_turn=false starting_slot=2585286 ends_at_slot=2585346
+2026-11-28T02:49:35.136825Z  INFO sequencer_core::logging: Channel update adopted=54..=54 (1) finalized=53..=53 (1) head=53
+2026-11-28T02:49:35.472742Z  INFO sequencer_core: Channel pin moved pin=ec2a0a14746a37315a61394bf708b6eb9d6f12fb1e53dfb80227481e16344ea4
+2026-11-28T02:49:43.138570Z  INFO sequencer_core::logging: Channel update adopted=55..=55 (1) finalized=none head=54
+2026-11-28T02:49:43.295521Z  INFO sequencer_core: Channel pin moved pin=9ebe1f5f15562b6f53cbed1502d54cb7c4a5b602c616c2be2e1ebd65827a9ecc
+2026-11-28T02:49:47.130832Z  INFO sequencer_core::logging: Channel update adopted=none finalized=54..=54 (1) head=55
+2026-11-28T02:49:55.158317Z  INFO sequencer_core::logging: Channel update adopted=56..=56 (1) finalized=55..=55 (1) head=55
+2026-11-28T02:49:55.320258Z  INFO sequencer_core: Channel pin moved pin=bc8ff1824cfcb7d4f0394a776d8f406e8227e178fe1ab2b1dda440cd1c416265
+2026-11-28T02:49:55.326188Z DEBUG sequencer_core: A channel config is still in flight, not targeting another
+2026-11-28T02:49:55.326225Z  INFO bedrock_event{otel.name="bedrock.turn_notification"}: sequencer_bedrock_actor::actor::channel: Turn update our_turn=false starting_slot=2585292 ends_at_slot=2585352
+2026-11-28T02:49:59.130133Z DEBUG sequencer_core: A channel config is still in flight, not targeting another
+2026-11-28T02:50:03.128865Z  INFO sequencer_core::logging: Channel update adopted=57..=57 (1) finalized=none head=56
+2026-11-28T02:50:03.289182Z  INFO sequencer_core: Channel pin moved pin=85a4b1a68597727693f790187fdeff1283fe635439675af6f03a90503bcb8208
+2026-11-28T02:50:03.293237Z DEBUG sequencer_core: A channel config is still in flight, not targeting another
+2026-11-28T02:50:07.159845Z  INFO sequencer_core::logging: Channel update adopted=none finalized=56..=56 (1) head=57
+2026-11-28T02:50:15.183390Z  INFO sequencer_core::logging: Channel update adopted=58..=58 (1) finalized=57..=57 (1) head=57
+2026-11-28T02:50:15.527564Z  INFO sequencer_core: Channel pin moved pin=41ad9b8986ce3f1e69cd117c2fcfdfeabfc9809b0a55b54fd7fb7d7d8b7ce7f8
+2026-11-28T02:50:23.148338Z  INFO sequencer_core::logging: Channel update adopted=59..=59 (1) finalized=none head=58
+2026-11-28T02:50:23.315288Z  INFO sequencer_core: Channel pin moved pin=6d128662343838ffe507e25955e67c2455bd6576f776c72ae1d04698d39bd349
+2026-11-28T02:50:27.126519Z  INFO sequencer_core::logging: Channel update adopted=none finalized=58..=58 (1) head=59
+2026-11-28T02:50:35.131055Z  INFO sequencer_core::logging: Channel update adopted=60..=60 (1) finalized=59..=59 (1) head=59
+2026-11-28T02:50:35.300671Z  INFO sequencer_core: Channel pin moved pin=e31a05fa6a3013d93a16d51d2c0901e0755f7029d49b7cfcecd8c375ec19434c
+2026-11-28T02:50:43.134101Z  INFO sequencer_core::logging: Channel update adopted=61..=61 (1) finalized=none head=60
+2026-11-28T02:50:43.479830Z  INFO sequencer_core: Channel pin moved pin=aa256cc7fbbb81f7c543ba5ff4d21ccd7957ac8a6cd8dd4a9abde2e35002d694
+2026-11-28T02:50:47.132060Z  INFO sequencer_core::logging: Channel update adopted=none finalized=60..=60 (1) head=61
+2026-11-28T02:50:55.127887Z  INFO sequencer_core::logging: Channel update adopted=62..=62 (1) finalized=61..=61 (1) head=61
+2026-11-28T02:50:55.297239Z  INFO sequencer_core: Channel pin moved pin=60a521ca55d325b49b8df73897f6eda8d5d6ccd9b2be821a1c76c8f6ebc532aa
+2026-11-28T02:51:03.138925Z  INFO sequencer_core::logging: Channel update adopted=63..=63 (1) finalized=none head=62
+2026-11-28T02:51:03.295449Z  INFO sequencer_core: Channel pin moved pin=e9ee757a461628e942dc4d22c880e7186dc29a86c6b1193dfd3bf59a5d2c3cb3
+2026-11-28T02:51:07.125096Z  INFO sequencer_core::logging: Channel update adopted=none finalized=62..=62 (1) head=63
+2026-11-28T02:51:15.126872Z  INFO sequencer_core::logging: Channel update adopted=64..=64 (1) finalized=63..=63 (1) head=63
+2026-11-28T02:51:15.483985Z  INFO sequencer_core: Channel pin moved pin=2ce8fae01b480975df863d4aeada40f18fdbed16fa306bb9e0a1d9aaccc1674f
+2026-11-28T02:51:23.149917Z  INFO sequencer_core::logging: Channel update adopted=65..=65 (1) finalized=none head=64
+2026-11-28T02:51:23.313575Z  INFO sequencer_core: Channel pin moved pin=1f78ed989d545601d34690df23b4f6f6c6e6e5081d7469e4a01c3a826e552ada
+2026-11-28T02:51:27.127599Z  INFO sequencer_core::logging: Channel update adopted=none finalized=64..=64 (1) head=65
+2026-11-28T02:51:35.179030Z  INFO sequencer_core::logging: Channel update adopted=66..=66 (1) finalized=65..=65 (1) head=65
+2026-11-28T02:51:35.343366Z  INFO sequencer_core: Channel pin moved pin=bd448a48f5b03109674a9b55c0440354795cb1acb086a67d06593ae7c2f2e7a5
+2026-11-28T02:51:35.351097Z DEBUG sequencer_core: A channel config is still in flight, not targeting another
+2026-11-28T02:51:35.351179Z  INFO bedrock_event{otel.name="bedrock.turn_notification"}: sequencer_bedrock_actor::actor::channel: Turn update our_turn=false starting_slot=2585317 ends_at_slot=2585407
+2026-11-28T02:51:39.133651Z DEBUG sequencer_core: A channel config is still in flight, not targeting another
+2026-11-28T02:51:43.137538Z  INFO sequencer_core::logging: Channel update adopted=67..=67 (1) finalized=none head=66
+2026-11-28T02:51:43.295506Z  INFO sequencer_core: Channel pin moved pin=4e1b057b3155b76a1c867bed89483b1d17c78f8811101a2fe11576ca7af2de54
+2026-11-28T02:51:43.298502Z DEBUG sequencer_core: A channel config is still in flight, not targeting another
+2026-11-28T02:51:47.122968Z  INFO sequencer_core::logging: Channel update adopted=none finalized=66..=66 (1) head=67
+2026-11-28T02:51:55.146032Z  INFO sequencer_core::logging: Channel update adopted=68..=68 (1) finalized=67..=67 (1) head=67
+2026-11-28T02:51:55.309878Z  INFO sequencer_core: Channel pin moved pin=afe2763ff3449c92c0cf1c72e72c48a83e282f9648d7bdc818fdce2e5e3c9a48
+2026-11-28T02:52:03.139180Z  INFO sequencer_core::logging: Channel update adopted=69..=69 (1) finalized=none head=68
+2026-11-28T02:52:03.304394Z  INFO sequencer_core: Channel pin moved pin=14b7d40b08fcf7b54a27a6cb1535fad97415ba78aac8329406771ca0a620561b
+2026-11-28T02:52:07.125768Z  INFO sequencer_core::logging: Channel update adopted=none finalized=68..=68 (1) head=69
+2026-11-28T02:52:15.138511Z  INFO sequencer_core::logging: Channel update adopted=70..=70 (1) finalized=69..=69 (1) head=69
+2026-11-28T02:52:15.468216Z  INFO sequencer_core: Channel pin moved pin=4fe9aae92d7275ce2ed98420e22b4ab76af41cce6f01ac6f57ea6a77ea7c2fa7
+2026-11-28T02:52:23.124037Z  INFO sequencer_core::logging: Channel update adopted=71..=71 (1) finalized=none head=70
+2026-11-28T02:52:23.276203Z  INFO sequencer_core: Channel pin moved pin=3ac40bb9df20b02e4627698d9bebe0a05b09e39de06d9033d0bcd94c1e9b36d3
+2026-11-28T02:52:27.125224Z  INFO sequencer_core::logging: Channel update adopted=none finalized=70..=70 (1) head=71
+2026-11-28T02:52:35.142563Z  INFO sequencer_core::logging: Channel update adopted=72..=72 (1) finalized=71..=71 (1) head=71
+2026-11-28T02:52:35.302159Z  INFO sequencer_core: Channel pin moved pin=cefa039b9973ad7d4b43d2674f96f7694092da83db4f36d38689d5f78de13bfe
+2026-11-28T02:52:35.307854Z DEBUG sequencer_core: A channel config is still in flight, not targeting another
+2026-11-28T02:52:35.307892Z  INFO bedrock_event{otel.name="bedrock.turn_notification"}: sequencer_bedrock_actor::actor::channel: Turn update our_turn=false starting_slot=2585332 ends_at_slot=2585422
+2026-11-28T02:52:39.142993Z DEBUG sequencer_core: A channel config is still in flight, not targeting another
+2026-11-28T02:52:43.138012Z  INFO sequencer_core::logging: Channel update adopted=73..=73 (1) finalized=none head=72
+2026-11-28T02:52:43.319017Z  INFO sequencer_core: Channel pin moved pin=94c58fdb2d6e59cf656172cd7b87747549cc57f88cf65b1a7d16696e2eeb1536
+2026-11-28T02:52:43.324607Z DEBUG sequencer_core: A channel config is still in flight, not targeting another
+2026-11-28T02:52:47.140181Z  INFO sequencer_core::logging: Channel update adopted=none finalized=72..=72 (1) head=73
+2026-11-28T02:52:55.151310Z  INFO sequencer_core::logging: Channel update adopted=74..=74 (1) finalized=73..=73 (1) head=73
+2026-11-28T02:52:55.323041Z  INFO sequencer_core: Channel pin moved pin=5ec9911d38ed4d059c16e7906bb2ac1fe51da415038cbcf955632433bce55690
+2026-11-28T02:53:03.152827Z  INFO sequencer_core::logging: Channel update adopted=75..=75 (1) finalized=none head=74
+2026-11-28T02:53:03.312568Z  INFO sequencer_core: Channel pin moved pin=63f98e768583dc72d2c457767c948d766f8027e1d74c65268ff2a40d9b41b073
+2026-11-28T02:53:07.159041Z  INFO sequencer_core::logging: Channel update adopted=none finalized=74..=74 (1) head=75
+2026-11-28T02:53:15.135161Z  INFO sequencer_core::logging: Channel update adopted=76..=76 (1) finalized=75..=75 (1) head=75
+2026-11-28T02:53:15.308924Z  INFO sequencer_core: Channel pin moved pin=942cf3877bdd52387b6b7b6b28c9cbb50110ed0728a0dd2464d6fbbdb120d6a1
+2026-11-28T02:53:23.144446Z  INFO sequencer_core::logging: Channel update adopted=77..=77 (1) finalized=none head=76
+2026-11-28T02:53:23.301873Z  INFO sequencer_core: Channel pin moved pin=c6d0618ab1e80a0455861faa4800d3e3a9168a3acdb2cc6b5675270c9fcbeb66
+2026-11-28T02:53:27.147558Z  INFO sequencer_core::logging: Channel update adopted=none finalized=76..=76 (1) head=77
+2026-11-28T02:53:35.190488Z  INFO sequencer_core::logging: Channel update adopted=78..=78 (1) finalized=77..=77 (1) head=77
+2026-11-28T02:53:35.355834Z  INFO sequencer_core: Channel pin moved pin=a43f52c22fa5687fb494367a821f2b7525b85ba2200b4df4473668b42586f5ff
+2026-11-28T02:53:43.140387Z  INFO sequencer_core::logging: Channel update adopted=79..=79 (1) finalized=none head=78
+2026-11-28T02:53:43.301293Z  INFO sequencer_core: Channel pin moved pin=84c71f84d57a0bd23b0252753e5e2c805be711dba2e76c9baec196c8fc97fcab
+2026-11-28T02:53:47.130408Z  INFO sequencer_core::logging: Channel update adopted=none finalized=78..=78 (1) head=79
+2026-11-28T02:53:55.146848Z  INFO sequencer_core::logging: Channel update adopted=80..=80 (1) finalized=79..=79 (1) head=79
+2026-11-28T02:53:55.316090Z  INFO sequencer_core: Channel pin moved pin=634c3597aab7d46c2544ae34aaa67c6e1eee5010f09a8e8dc6af31a633767647
+2026-11-28T02:54:03.133158Z  INFO sequencer_core::logging: Channel update adopted=81..=81 (1) finalized=none head=80
+2026-11-28T02:54:03.288780Z  INFO sequencer_core: Channel pin moved pin=f0750ae7b942149789d1a6605f07290ac51eaeeda6dd4cc40ff8abd360502c13
+2026-11-28T02:54:07.136069Z  INFO sequencer_core::logging: Channel update adopted=none finalized=80..=80 (1) head=81
+2026-11-28T02:54:15.137080Z  INFO sequencer_core::logging: Channel update adopted=82..=82 (1) finalized=81..=81 (1) head=81
+2026-11-28T02:54:15.298365Z  INFO sequencer_core: Channel pin moved pin=2c07b5a57536fffb9d18a23549cd54ecac4fefb7883e2cc83313adbae67a8d9c
+2026-11-28T02:54:23.139987Z  INFO sequencer_core::logging: Channel update adopted=83..=83 (1) finalized=none head=82
+2026-11-28T02:54:23.302805Z  INFO sequencer_core: Channel pin moved pin=386e126edc31b06d112cb54f722c82ac55bd86ba7b2616ac5577f3b9cf930e75
+2026-11-28T02:54:27.124334Z  INFO sequencer_core::logging: Channel update adopted=none finalized=82..=82 (1) head=83
+2026-11-28T02:54:35.133367Z  INFO sequencer_core::logging: Channel update adopted=84..=84 (1) finalized=83..=83 (1) head=83
+2026-11-28T02:54:35.304815Z  INFO sequencer_core: Channel pin moved pin=3c66bbdb9b61dd7f538c43633498ab439d8d5df028f7cd4b94832b6ed2bffa2d
+2026-11-28T02:54:43.133255Z  INFO sequencer_core::logging: Channel update adopted=85..=85 (1) finalized=none head=84
+2026-11-28T02:54:43.296077Z  INFO sequencer_core: Channel pin moved pin=fdbd57d8a2d1322df2536a9ebbeb8a6b380be383b5c57fd9613fe09ddccdffa9
+2026-11-28T02:54:47.123755Z  INFO sequencer_core::logging: Channel update adopted=none finalized=84..=84 (1) head=85
+2026-11-28T02:54:55.137309Z  INFO sequencer_core::logging: Channel update adopted=86..=86 (1) finalized=85..=85 (1) head=85
+2026-11-28T02:54:55.303325Z  INFO sequencer_core: Channel pin moved pin=a87a1f33b13df42de60850eb36dcbefa830f005073c76d388c197dc1875ba793
+2026-11-28T02:55:03.161328Z  INFO sequencer_core::logging: Channel update adopted=87..=87 (1) finalized=none head=86
+2026-11-28T02:55:03.328418Z  INFO sequencer_core: Channel pin moved pin=512f446122c295994e5f6ccf9294606f02e8d60a89ae329f3a53cf3947071452
+2026-11-28T02:55:07.124770Z  INFO sequencer_core::logging: Channel update adopted=none finalized=86..=86 (1) head=87
+2026-11-28T02:55:15.131099Z  INFO sequencer_core::logging: Channel update adopted=88..=88 (1) finalized=87..=87 (1) head=87
+2026-11-28T02:55:15.296597Z  INFO sequencer_core: Channel pin moved pin=076c3c12ef063dc534e302f5c587558c80b43cc69624f4b2e5045b36687c3193
+2026-11-28T02:55:23.138925Z  INFO sequencer_core::logging: Channel update adopted=89..=89 (1) finalized=none head=88
+2026-11-28T02:55:23.294065Z  INFO sequencer_core: Channel pin moved pin=003d7211a3972deeb08f566da1a4b53ec9f013d7eaaa18e12df78dee18e40ae6
+2026-11-28T02:55:27.126906Z  INFO sequencer_core::logging: Channel update adopted=none finalized=88..=88 (1) head=89
+2026-11-28T02:55:35.128202Z  INFO sequencer_core::logging: Channel update adopted=90..=90 (1) finalized=89..=89 (1) head=89
+2026-11-28T02:55:35.297662Z  INFO sequencer_core: Channel pin moved pin=2d9d4242f33be8c012b35d40c62e0d7c8113c26cb028918f5c72c3c774c7fac2
+2026-11-28T02:55:43.135115Z  INFO sequencer_core::logging: Channel update adopted=91..=91 (1) finalized=none head=90
+2026-11-28T02:55:43.298483Z  INFO sequencer_core: Channel pin moved pin=5bf791e0e5b50ddfa74ae7e049fbf1ade8fe8ee3ff16d374e7d6ee58c3165d5e
+2026-11-28T02:55:47.130736Z  INFO sequencer_core::logging: Channel update adopted=none finalized=90..=90 (1) head=91
+2026-11-28T02:55:55.128734Z  INFO sequencer_core::logging: Channel update adopted=92..=92 (1) finalized=91..=91 (1) head=91
+2026-11-28T02:55:55.287632Z  INFO sequencer_core: Channel pin moved pin=5768db7132ac3b2127c97411e99e04f75a507350095b02fe3075c575c93f62cb
+2026-11-28T02:56:03.130524Z  INFO sequencer_core::logging: Channel update adopted=93..=93 (1) finalized=none head=92
+2026-11-28T02:56:03.287253Z  INFO sequencer_core: Channel pin moved pin=4c2b3988538147285f1e38e102c16229d70a4ae81dc24f3dffdbd1f06888f633
+2026-11-28T02:56:07.132505Z  INFO sequencer_core::logging: Channel update adopted=none finalized=92..=92 (1) head=93
+2026-11-28T02:56:15.130966Z  INFO sequencer_core::logging: Channel update adopted=94..=94 (1) finalized=93..=93 (1) head=93
+2026-11-28T02:56:15.296844Z  INFO sequencer_core: Channel pin moved pin=95f2179911862bd3ef369c9d7d4b9c7a26d5930ad9450dabe33e1da01eac9f0e
+2026-11-28T02:56:23.130557Z  INFO sequencer_core::logging: Channel update adopted=95..=95 (1) finalized=none head=94
+2026-11-28T02:56:23.291316Z  INFO sequencer_core: Channel pin moved pin=b3f89bd5f75f68bf430581b1e9ba53ce572bda17139df31889cf224604642163
+2026-11-28T02:56:27.121978Z  INFO sequencer_core::logging: Channel update adopted=none finalized=94..=94 (1) head=95
+2026-11-28T02:56:35.133179Z  INFO sequencer_core::logging: Channel update adopted=96..=96 (1) finalized=95..=95 (1) head=95
+2026-11-28T02:56:35.295087Z  INFO sequencer_core: Channel pin moved pin=624da65caa58358bf8d19d60908be5a5fcc63fd087a2c9fd888e73f549e632ac
+2026-11-28T02:56:43.146036Z  INFO sequencer_core::logging: Channel update adopted=97..=97 (1) finalized=none head=96
+2026-11-28T02:56:43.324142Z  INFO sequencer_core: Channel pin moved pin=0579d8ada685b190a0fba789ba1527532f0ac54ae4116d2dd3d510205177f26b
+2026-11-28T02:56:47.128147Z  INFO sequencer_core::logging: Channel update adopted=none finalized=96..=96 (1) head=97
+2026-11-28T02:56:55.139382Z  INFO sequencer_core::logging: Channel update adopted=98..=98 (1) finalized=97..=97 (1) head=97
+2026-11-28T02:56:55.313954Z  INFO sequencer_core: Channel pin moved pin=50f51d5d0f3bbda23fd6934a9ec1a393c695e087fa9fca10d023a86e275edc53
+2026-11-28T02:57:03.161371Z  INFO sequencer_core::logging: Channel update adopted=99..=99 (1) finalized=none head=98
+2026-11-28T02:57:03.358344Z  INFO sequencer_core: Channel pin moved pin=c5d91331060aaea1ad708b4d248a679d8d6fef31184f58a0e56768bc526d9fbe
+2026-11-28T02:57:07.144121Z  INFO sequencer_core::logging: Channel update adopted=none finalized=98..=98 (1) head=99
+2026-11-28T02:57:15.163737Z  INFO sequencer_core::logging: Channel update adopted=100..=100 (1) finalized=99..=99 (1) head=99
+2026-11-28T02:57:15.427926Z  INFO sequencer_core: Channel pin moved pin=46c404ff48e95792ce3e68479fc92e09ced0895f2a902f1f4f092cd8c408976e
+2026-11-28T02:57:17.782821Z  INFO sequencer_service: Received SIGTERM
+2026-11-28T02:57:17.782913Z  INFO sequencer_service: Shutting down sequencer
+2026-11-28T02:57:17.783070Z  INFO sequencer_service::actor_handle: Stopping actor actor="kameo_actors::scheduler::Scheduler#9"
+2026-11-28T02:57:17.783231Z  INFO sequencer_service::actor_handle: Actor stopped actor="kameo_actors::scheduler::Scheduler#9"
+2026-11-28T02:57:17.783262Z  INFO sequencer_service::actor_handle: Killing actor actor="kameo_actors::scheduler::Scheduler#9"
+2026-11-28T02:57:17.783297Z  INFO sequencer_service::actor_handle: Stopping actor actor="sequencer_rpc_server_actor::actor::RpcServerActor#10"
+2026-11-28T02:57:17.783473Z  INFO sequencer_service::actor_handle: Actor stopped actor="sequencer_rpc_server_actor::actor::RpcServerActor#10"
+2026-11-28T02:57:17.783496Z  INFO sequencer_service::actor_handle: Killing actor actor="sequencer_rpc_server_actor::actor::RpcServerActor#10"
+2026-11-28T02:57:17.783514Z  INFO sequencer_service::actor_handle: Stopping actor actor="sequencer_gossip_actor::actor::GossipActor#3"
+2026-11-28T02:57:17.784582Z  INFO sequencer_service::actor_handle: Actor stopped actor="sequencer_gossip_actor::actor::GossipActor#3"
+2026-11-28T02:57:17.784601Z  INFO sequencer_service::actor_handle: Killing actor actor="sequencer_gossip_actor::actor::GossipActor#3"
+2026-11-28T02:57:17.784616Z  INFO sequencer_service::actor_handle: Stopping actor actor="sequencer_service::supervisor::SequencerSupervisor#6"
+2026-11-28T02:57:17.784949Z  INFO sequencer_service::actor_handle: Actor stopped actor="sequencer_service::supervisor::SequencerSupervisor#6"
+2026-11-28T02:57:17.784974Z  INFO sequencer_service::actor_handle: Killing actor actor="sequencer_service::supervisor::SequencerSupervisor#6"
+2026-11-28T02:57:17.785022Z  INFO sequencer_service::actor_handle: Stopping actor actor="sequencer_slasher_actor::actor::SlasherActor<sequencer_storage_actor::actor::StorageActor>#4"
+2026-11-28T02:57:17.785174Z  INFO sequencer_service::actor_handle: Actor stopped actor="sequencer_slasher_actor::actor::SlasherActor<sequencer_storage_actor::actor::StorageActor>#4"
+2026-11-28T02:57:17.785237Z  INFO sequencer_service::actor_handle: Killing actor actor="sequencer_slasher_actor::actor::SlasherActor<sequencer_storage_actor::actor::StorageActor>#4"
+2026-11-28T02:57:17.785249Z  INFO sequencer_service::actor_handle: Stopping actor actor="sharding_pool_actor::actor::ShardingPoolActor<sequencer_bedrock_actor::actor::BedrockActor<sequencer_storage_actor::actor::StorageActor>, logos_blockchain_core::mantle::ops::channel::ChannelId>#1"
+2026-11-28T02:57:17.785517Z  INFO sequencer_service::actor_handle: Actor stopped actor="sharding_pool_actor::actor::ShardingPoolActor<sequencer_bedrock_actor::actor::BedrockActor<sequencer_storage_actor::actor::StorageActor>, logos_blockchain_core::mantle::ops::channel::ChannelId>#1"
+2026-11-28T02:57:17.785534Z  INFO sequencer_service::actor_handle: Killing actor actor="sharding_pool_actor::actor::ShardingPoolActor<sequencer_bedrock_actor::actor::BedrockActor<sequencer_storage_actor::actor::StorageActor>, logos_blockchain_core::mantle::ops::channel::ChannelId>#1"
+2026-11-28T02:57:17.785550Z  INFO sequencer_service::actor_handle: Stopping actor actor="sequencer_storage_actor::actor::StorageActor#0"
+2026-11-28T02:57:17.791040Z  INFO sequencer_service::actor_handle: Actor stopped actor="sequencer_storage_actor::actor::StorageActor#0"
+2026-11-28T02:57:17.791056Z  INFO sequencer_service::actor_handle: Killing actor actor="sequencer_storage_actor::actor::StorageActor#0"
+2026-11-28T02:57:17.791074Z  INFO sequencer_service: Sequencer shutdown complete

@@ -28,17 +28,18 @@ export function remember(c, id, entry) {
 }
 
 function classify(c, d, blockId, time, reverted) {
+  const lez = c.net ? c.net.codec : c.lez;
   if (d.kind !== 'public') return [];
-  const t = c.lez.nativeTransferOf(d.tx);
+  const t = lez.nativeTransferOf(d.tx);
   if (!t) return [];
   const out = [];
   for (const a of c.S.accounts) {
     const mine = a.node.accountId;
-    const isFrom = c.lez.equalBytes(t.from, mine), isTo = c.lez.equalBytes(t.to, mine);
+    const isFrom = lez.equalBytes(t.from, mine), isTo = lez.equalBytes(t.to, mine);
     if (!isFrom && !isTo) continue;
     out.push({ account: a.id, hash: d.hash, block: blockId, time, dir: isFrom ? 'out' : 'in',
-      other: c.lez.idToString(isFrom ? t.to : t.from), amount: t.amount.toString(), reverted,
-      nonce: d.tx.nonces.find(([k]) => c.lez.equalBytes(k, t.from))?.[1]?.toString() ?? null });
+      other: lez.idToString(isFrom ? t.to : t.from), amount: t.amount.toString(), reverted,
+      nonce: d.tx.nonces.find(([k]) => lez.equalBytes(k, t.from))?.[1]?.toString() ?? null });
   }
   return out;
 }
@@ -49,9 +50,9 @@ async function scanRange(c, a, b) {
     const e = Math.min(b, s + CHUNK - 1);
     const blocks = await c.seq.blockRange(s, e);
     for (const raw of blocks) {
-      const blk = c.lez.decodeBlock(raw);
+      const blk = (c.net ? c.net.codec : c.lez).decodeBlock(raw);
       blk.transactions.forEach((d, i) => {
-        found.push(...classify(c, d, blk.header.id, blk.header.timestamp || null, blk.reverted.includes(i)));
+        found.push(...classify(c, d, Number(blk.header.id), blk.header.timestamp ? Number(blk.header.timestamp) : null, blk.reverted.includes(i)));
       });
     }
   }

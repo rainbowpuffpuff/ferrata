@@ -1,0 +1,71 @@
+{
+ "bedrock_took_params": true,
+ "bundle_sha256": "019d07107cd9990d30a38949ecd9c4efcddff452ac679415f6f9af743af5c8be",
+ "channel_created": {
+  "accredited_keys": [
+   "ed99d1abd7d5b829ea15c4416b72854f0577f47616cbea8aa181d28dc76cd609"
+  ],
+  "config_tip_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "configuration_threshold": 1,
+  "posting_timeframe": 0,
+  "posting_timeout": 0,
+  "tip_message": "a15f69010187a51c787a3f1d57eca37b3b59fbae0df3184dee9dcdb9aee0f2d4",
+  "tip_sequencer": 0,
+  "tip_sequencer_starting_slot": 2585148,
+  "tip_slot": 2585148,
+  "transfer_threshold": 1
+ },
+ "channel_keys": [
+  "ed99d1abd7d5b829ea15c4416b72854f0577f47616cbea8aa181d28dc76cd609",
+  "b72d9ff60e3be550115689b06d5ba9e5cacacca63f93437158d9adef7f9b89fd",
+  "07247f32f8cdfa2a3f891b7e2ac25b133ad1dce013b5f548ded18a0f478185ec",
+  "12b8798325cb182af297ca2ff208ee4262a0f592412e63e49f88f87d4c779047"
+ ],
+ "channel_posting_timeframe_after_vote_1": "60",
+ "channel_posting_timeframe_after_vote_2": "60",
+ "channel_posting_timeframe_after_vote_3": "90",
+ "finality_depth": 35,
+ "four_keys_after_s": 0,
+ "heights_end": "100/100/100/100",
+ "key_removed_after_s": "30",
+ "key_removed_node_height": "185",
+ "lez": "v0.4.0 a255b42c0fc80d1cb219454a3a1f5ec3b5d92115",
+ "node_info_end": {
+  "cryptarchia_info": {
+   "height": 254,
+   "lib": "15f823ddd2c15ecead826b64d66f6fac5610a988f5460450b4b40fc6f46c05bc",
+   "lib_slot": 2585399,
+   "slot": 2585402,
+   "state": "Online",
+   "tip": "0acbceb50188a46843986b20fb5a3c5a110a389dd27ff15149a611304df99786"
+  },
+  "phase": "Following"
+ },
+ "node_info_start": {
+  "cryptarchia_info": {
+   "height": 0,
+   "lib": "99e4fdba361357efe9db02962ac49157c7aebfc1d73fbbf403ca70cf381d0f5b",
+   "lib_slot": 0,
+   "slot": 0,
+   "state": "Bootstrapping",
+   "tip": "99e4fdba361357efe9db02962ac49157c7aebfc1d73fbbf403ca70cf381d0f5b"
+  },
+  "phase": "InitialBlockDownload"
+ },
+ "posting_timeframe_before": 60,
+ "posting_timeframe_voted": 90,
+ "release_after_s": 306,
+ "release_destination_before": 1000,
+ "release_node_height": "254",
+ "release_paid": 149,
+ "sha256_r0vm": "990c7e55c5627c6d78968c5fa6c6c98119a6282b5298831ccb52178f0dff9310",
+ "sha256_sequencer_service": "4af2f89449e2497f1785e24bb5bbaa3e342e735a54b027789a21f20cb292b6bc",
+ "sha256_sequencer_service_standalone": "8dce25a8ad4d1ba9a442d6435981c6c332ca061dedde0aa78f1aecbbf729ef3c",
+ "sha256_wallet": "ac9820a110c26247eb3cd1d92491e6015a9c6e56c3a4d325a6801617c8cff4d3",
+ "unstake_destination": "Public/2RGtE674RwzgrytsXt9GtqN3tYarqqSa3XCJAk8vVGoX",
+ "unstake_node_height": "185",
+ "unstake_out": "Releasing 149 to 2RGtE674RwzgrytsXt9GtqN3tYarqqSa3XCJAk8vVGoX: 59e125759b99225daea2931c461fb8dae765822953205648be06c99de6cc2d24 Included in block 70 ",
+ "vote_1": "Included in block 58 1 of the 3 accredited keys these params need have voted for them ",
+ "vote_2": "Included in block 61 2 of the 3 accredited keys these params need have voted for them ",
+ "vote_3": "Included in block 64 The channel params are now ChannelParams { minimum_sequencer_stake: 149, posting_timeframe: 90, posting_timeout: 25, max_block_size: 1048576, finality_depth: 35 }, by this vote or others that landed first "
+}

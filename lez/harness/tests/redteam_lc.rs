@@ -24,7 +24,7 @@ use ferrata_lez_wire::{
 };
 use ferrata_spectests::testkit::{fabricated_header, fabricated_update, fake_committee, sign, sparse_tree, Fabrication};
 use harness::{
-    as_finality_update, ferrata_account, mainnet_config, plan_job, root,
+    as_finality_update, compat, ferrata_account, mainnet_config, plan_job, root,
     scenarios::{World, BLS},
     scripted_account,
     sepolia::{self, FIRST_PERIOD, GLOAS_PERIOD},
@@ -1449,7 +1449,7 @@ fn lc_controls() {
         let job = job_actor(inst.program, &inst.id, &jid);
         let time = time_of(&w, &x);
         let header = header_actor(inst.program, &inst.id, x.finalized_header.beacon.slot);
-        let k: Vec<lee::PrivateKey> = keys.iter().map(|b| lee::PrivateKey::try_new(*b).unwrap()).collect();
+        let k: Vec<compat::AccountKey> = keys.iter().map(|b| compat::account_key(*b)).collect();
         let mut reps = vec![w.chain.submit_signed(
             "Open (fresh signer)",
             inst.actor(),

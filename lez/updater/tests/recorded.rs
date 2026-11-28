@@ -5,6 +5,7 @@
 #![cfg(feature = "harness")]
 
 use std::{fs, path::PathBuf};
+use ferrata_updater::lez::PayerKey;
 
 use sha2::Digest as _;
 
@@ -17,10 +18,10 @@ use ferrata_updater::{
     source::{lab_record, load_entries, Clock, Entry, Fault, Faulty, Recorded, Source},
     updater::{Instance, Plan, Step, Updater},
 };
-use lee::PrivateKey;
 
-fn key(b: u8) -> PrivateKey {
-    PrivateKey::try_new([b; 32]).unwrap()
+
+fn key(b: u8) -> PayerKey {
+    ferrata_updater::lez::payer_key([b; 32])
 }
 
 fn no_sleep(_: u64) {}
@@ -64,7 +65,7 @@ impl Rec {
     fn updater(
         &self,
         label: &str,
-        payer: PrivateKey,
+        payer: PayerKey,
         sources: Vec<Box<dyn Source>>,
         state: Option<PathBuf>,
         policy: Policy,

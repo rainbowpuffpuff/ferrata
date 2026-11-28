@@ -165,6 +165,9 @@ pub struct DepositOpts {
     pub confirmations: u64,
     /// The deposit journal's directory ([`crate::deposits`]): a sent deposit is recorded there before it is signed.
     pub journal: Option<PathBuf>,
+    /// The network's LEZ checked for this deposit ([`crate::lezver::require_for_deposit`]): the deposit commits to an
+    /// account of this build's key tree, which LEZ v0.4.0 changed.
+    pub lez: crate::lezver::DepositCheck,
 }
 
 pub struct Deposited {

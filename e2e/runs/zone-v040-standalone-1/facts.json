@@ -1,0 +1,48 @@
+{
+ "bundle_sha256": "019d07107cd9990d30a38949ecd9c4efcddff452ac679415f6f9af743af5c8be",
+ "check_health": true,
+ "lez": "v0.4.0 a255b42c0fc80d1cb219454a3a1f5ec3b5d92115",
+ "new_account": "Public/3btKzYghDyWvsdYPBPsHpMSLqhk8WkCzZtWRh645A68P",
+ "new_account_view": "Balance 1000, nonce 0 ",
+ "private_account": "Private/9VPUZRm9Uqv54pVFHD33g9hLQH7jRY8WPybcFNVDP1dL",
+ "private_receipt": {
+  "fee": {
+   "fee_base": 5163400,
+   "gas_exec": 409764,
+   "gas_stor": 235661,
+   "refund": 0,
+   "tip": 0
+  },
+  "success": true
+ },
+ "private_seconds": 140,
+ "private_tx": "431ee48182ad222280eea791636f868b224f24346201e72b319bb955ce83b590",
+ "program_deploy": {
+  "elf": "ferrata_rebate.bin",
+  "header": "Public/2diWPJ77qp6RzLCzwLgrHaRUEoPsxntt3sAsrbnnb7eH",
+  "image_id": "eddda0baf6daac70d4baf3aa2446b8907578f9f863817ff1353d05511eb18712",
+  "seconds": 121,
+  "segments": 3,
+  "sha256": "d20c19ee4210cb87dd5aceb0a9a901669866d91970bd18fa412ad32e9da287a4"
+ },
+ "sha256_r0vm": "990c7e55c5627c6d78968c5fa6c6c98119a6282b5298831ccb52178f0dff9310",
+ "sha256_sequencer_service": "4af2f89449e2497f1785e24bb5bbaa3e342e735a54b027789a21f20cb292b6bc",
+ "sha256_sequencer_service_standalone": "8dce25a8ad4d1ba9a442d6435981c6c332ca061dedde0aa78f1aecbbf729ef3c",
+ "sha256_wallet": "ac9820a110c26247eb3cd1d92491e6015a9c6e56c3a4d325a6801617c8cff4d3",
+ "standalone_first_height": 2,
+ "standalone_last_height": 21,
+ "test_account": "Public/7VDm7YRPvimbZgCzuFqCGf6RwPsTV3XY5W9DzT71oain",
+ "transfer_block": "3",
+ "transfer_receipt": {
+  "fee": {
+   "fee_base": 4968,
+   "gas_exec": 0,
+   "gas_stor": 621,
+   "refund": 0,
+   "tip": 0
+  },
+  "success": true
+ },
+ "transfer_tx": "693058a41f64d7f08415dc725b5e4c7e4d71f5654eda14ab5d4f5a29fb74bf7c",
+ "wallet_storage_sealed": true
+}

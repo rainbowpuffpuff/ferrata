@@ -113,9 +113,11 @@ lez-wallet = ["dep:wallet", "dep:common", "dep:sequencer_service_rpc", "dep:key_
 seqnet = ["lez-wallet"]
 # The few calls whose LEZ API differs between tags, as lez/'s crates (lez/scripts/lez-select.sh): none for
 # v0.4.0-rc1 (as committed); a build against v0.4.0-rc3 (its LEZ paths pointed there, as modules/scripts/live-testnet.sh
-# does in a copy of the tree) enables `lez-rc3`.
+# does in a copy of the tree) enables `lez-rc3`; a build against v0.4.0 (cli/v040/build.sh, in a copy of the tree)
+# enables `lez-040`, which implies `lez-rc3`.
 lez-rc2 = []
 lez-rc3 = ["lez-rc2"]
+lez-040 = ["lez-rc3", "ferrata-wallet/lez-040"]
 
 [dev-dependencies]
 # The LEZ side of the end-to-end test: LEZ's state transition with the bridge guest (dev mode).

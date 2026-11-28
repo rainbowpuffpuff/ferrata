@@ -4,7 +4,9 @@
 
 import { el, accountLink, badge, labels } from "./ui.js";
 import { hex, b58, fmtInt, fmtNative, fmtBytes } from "./util.js";
-import { rootOf, signerAccounts } from "./lez.js";
+import { rootOf } from "./lez.js";
+import { signerAccounts } from "./lez040.js";
+import { outcome } from "./outcome.js";
 import { field, plain } from "./idl.js";
 
 const v = (args, name) => {
@@ -18,12 +20,13 @@ const opt = (x) => (x && x.k === "opt" ? x.v : x);
 export async function activityOf(tx, block, index, programs, config) {
   const root = rootOf(tx);
   const reverted = block.reverted.includes(index);
+  const receiptOutcome = Array.isArray(block.receipts) ? outcome(block, index, config.native, { reverted: "refused" }) : null;
   const signer = signerAccounts(tx)[0] || null;
   const who = signer ? accountLink(signer) : el("span", { class: "muted" }, "someone");
   if (tx.kind === "PrivacyPreserving") {
     const n = tx.execution.private_actions.length;
     const call = root ? await programs.decodeMessage(root.to.program_account_id, root.message) : null;
-    return { kind: "private", icon: "🔒", reverted, parts: ["a private transaction", ` (${n} private action${n === 1 ? "" : "s"}`, call && call.info && call.info.name ? `, public call to ${call.info.name}` : "", ")"] };
+    return { kind: "private", icon: "🔒", reverted, outcome: receiptOutcome, parts: ["a private transaction", ` (${n} private action${n === 1 ? "" : "s"}`, call && call.info && call.info.name ? `, public call to ${call.info.name}` : "", ")"] };
   }
   if (!root) return null;
   const { info, decoded } = await programs.decodeMessage(root.to.program_account_id, root.message);
@@ -33,7 +36,7 @@ export async function activityOf(tx, block, index, programs, config) {
   if (!tx.witnesses.length && (key === "clock" || key === "fee" || info.name === "clock" || info.name === "fee")) return null;
   const prog = accountLink(root.to.program_account_id);
   const native = config.native;
-  const out = (kind, icon, parts) => ({ kind, icon, reverted, parts });
+  const out = (kind, icon, parts) => ({ kind, icon, reverted, outcome: receiptOutcome, parts });
 
   if (info.name === "native token" && name === "transfer") {
     const isFaucet = signer && labels.get(signer) && labels.get(signer).name === "faucet";
@@ -103,6 +106,6 @@ export function activityItem(a, tx, block, fresh = false) {
   const t = Number(block.header.timestamp);
   return el("li", { class: `act act-${a.kind}${fresh ? " fresh" : ""}` },
     el("span", { class: "act-icon", "aria-hidden": "true" }, a.icon),
-    el("span", { class: "act-text" }, a.parts, a.reverted ? [" ", badge("refused", "bad")] : null),
+    el("span", { class: "act-text" }, a.parts, a.outcome ? [" ", a.outcome] : a.reverted ? [" ", badge("refused", "bad")] : null),
     el("span", { class: "act-meta muted small" }, el("a", { href: `#/tx/${hex(tx.hash)}` }, "tx"), " · ", el("a", { href: `#/block/${block.header.block_id}` }, `#${fmtInt(block.header.block_id)}`), " · ", el("span", { "data-ts": String(t) }, "")));
 }

@@ -10,6 +10,7 @@ import { field, plain } from "./idl.js";
 import { attestationPda } from "./ferrata.js";
 import { checkAttest, factLines, verdictBadge } from "./facts.js";
 import { lineChart } from "./chart.js";
+import { outcome } from "./outcome.js";
 
 const { main, config, rpc } = await shell("status");
 const programs = new Programs(rpc, config);
@@ -154,7 +155,7 @@ async function activityPanels(calls, head) {
     txLink(c.tx.hash),
     el("span", { class: "callname" }, c.ins.name, c.ins.name === "adopt" ? ` part ${plain(c.args[0][1])}` : ""),
     accountLink(c.root.to.account_id),
-    c.reverted ? badge("reverted", "bad") : badge("applied", "ok"),
+    outcome(c.block, c.index, config.native),
   ]);
   const recordCache = new Map();
   const atRows = [];
@@ -175,7 +176,7 @@ async function activityPanels(calls, head) {
       txLink(c.tx.hash),
       el("div", { class: "wrap" }, facts.length ? facts : el("span", { class: "muted" }, "relations only")),
       accountLink(c.root.to.account_id),
-      c.reverted ? badge("refused", "bad") : badge("attested", "ok"),
+      outcome(c.block, c.index, config.native, { applied: "attested", reverted: "refused" }),
       verdict,
     ]);
   }

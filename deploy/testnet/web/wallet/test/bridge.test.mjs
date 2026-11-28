@@ -36,3 +36,14 @@ test('depositETH calldata: selector, then denomIndex, C, j as words', () => {
   assert.equal(d.slice(74, 138), 'ab'.repeat(32));
   assert.equal(d.slice(138), '0'.repeat(63) + '7');
 });
+
+test('a deposit is reviewed and sent only with the network\'s LEZ version read (its account follows the version)', async () => {
+  const unread = { readOnly: true, error: 'the network\'s LEZ version could not be read, so nothing is signed: offline' };
+  let rechecks = 0;
+  await assert.rejects(br.depositVersionGate({ net: unread, versionConfirmed: async () => { rechecks++; return false; } }), /could not be read/);
+  assert.equal(rechecks, 1);
+  const confirmed = { readOnly: false, error: null };
+  await br.depositVersionGate({ net: confirmed, versionConfirmed: async () => true });
+  await br.depositVersionGate({ net: confirmed }); // a context without the page's re-read (tests, older callers)
+  await assert.rejects(br.depositVersionGate({ net: unread }), /could not be read/);
+});

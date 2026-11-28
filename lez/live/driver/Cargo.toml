@@ -54,10 +54,11 @@ env_logger = "0.11"
 [features]
 # The calls whose LEZ API differs between the tags this crate builds against. The default is set
 # with the path dependencies by ../../scripts/lez-select.sh (none: v0.4.0-rc1; `lez-rc2`: v0.4.0-rc2;
-# `lez-rc3`: v0.4.0-rc3, which has rc2's API changes too).
+# `lez-rc3`: v0.4.0-rc3, which has rc2's API changes too; `lez-040`: v0.4.0, which implies `lez-rc3`).
 default = [] # lez-select
 lez-rc2 = []
 lez-rc3 = ["lez-rc2"]
+lez-040 = ["lez-rc3"]
 
 # As in LEZ's workspace, so that the wallet is built with the dependencies LEZ builds it with.
 [patch.crates-io]

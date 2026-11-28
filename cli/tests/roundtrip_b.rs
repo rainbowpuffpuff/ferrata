@@ -60,7 +60,9 @@ use ferrata_cli::{
 };
 use ferrata_lez_bridge_wire::{fee_slot, registry_slot, FeeSchedule};
 use harness::{bridge as hb, TxReport};
-use lee::{AccountId, PrivateKey, PublicAccountEvidence};
+use lee::{AccountId, PublicAccountEvidence};
+// The harness\'s key type for the tag (a private key up to rc3, the account secret from v0.4.0: LEZ #1135).
+use harness::compat::AccountKey;
 use lee_core::account::Actor;
 use serde_json::{json, Value};
 
@@ -100,7 +102,7 @@ const TENTH_ETH: u128 = 100_000_000_000_000_000;
 struct HarnessLedger {
     world: hb::World,
     applied: Vec<Applied>,
-    keys: HashMap<AccountId, PrivateKey>,
+    keys: HashMap<AccountId, AccountKey>,
     /// `borsh(LeeTransaction)` of every applied transaction, in order: the zone's blocks.
     txs: Vec<Vec<u8>>,
 }
@@ -136,7 +138,7 @@ impl HarnessLedger {
                 }
             }
         }
-        let signers: Vec<PrivateKey> = call
+        let signers: Vec<AccountKey> = call
             .mentions
             .iter()
             .filter_map(|m| match m {
@@ -146,7 +148,7 @@ impl HarnessLedger {
                 _ => None,
             })
             .collect();
-        let refs: Vec<&PrivateKey> = signers.iter().collect();
+        let refs: Vec<&AccountKey> = signers.iter().collect();
         let report = self.world.submit_signed(&call.what, root, &call.message, actors, evidence, &refs);
         self.record(&report);
         report

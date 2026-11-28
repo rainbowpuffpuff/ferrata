@@ -26,7 +26,7 @@ use ferrata_lez_wire::{
 };
 use harness::{
     attest::{storage_statement_id, u256},
-    exit_name,
+    compat, exit_name,
     holdings::Holdings,
     render, render_transitions, results_dir, TxReport,
 };
@@ -48,7 +48,7 @@ fn reader() -> AccountId {
 fn world() -> Holdings {
     let mut h = Holdings::new();
     let state = std::mem::replace(&mut h.s.w.chain.state, V03State::new());
-    h.s.w.chain.state = state.with_genesis_programs([
+    h.s.w.chain.state = compat::genesis_programs(state, [
         (
             Program::new_unchecked(
                 methods_statements::FERRATA_STATEMENTS_ID,

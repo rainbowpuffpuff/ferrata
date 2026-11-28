@@ -91,6 +91,8 @@ use harness::{
     scenarios::{self, World},
     vault, Instance, TxReport, EXPECTED_FINALIZED, GENESIS_VALIDATORS_ROOT,
 };
+#[cfg(feature = "lez-040")]
+use harness::{compat, settle::LeeTransaction};
 use lee::Actor;
 
 // ---------------------------------------------------------------------------------------------
@@ -403,8 +405,15 @@ impl Pins {
         Self { rows: Vec::new() }
     }
 
-    /// Assert `got` is the number the record gives, and record the row.
+    /// Assert `got` is the number the record gives, and record the row. On LEZ v0.4.0 (feature `lez-040`) the records
+    /// are the release candidates' programs' (v0.4.0 builds them with RISC Zero 3.1.0, LEZ #1124): the row shows both
+    /// numbers, and what stays asserted is the invariants around the call sites (the same cost whatever the chain
+    /// holds; no growth from one update to the next; the fee arithmetic).
     fn eq(&mut self, what: &str, got: u64, want: u64) {
+        if cfg!(feature = "lez-040") {
+            self.rows.push(format!("| {what} | {} (the release candidates' record: {}) |", grouped(got), grouped(want)));
+            return;
+        }
         assert_eq!(got, want, "{what}: the pinned number moved (record: {want})");
         self.pin(what, want);
     }
@@ -430,10 +439,22 @@ impl Pins {
 /// Assert `got` is the transaction `want` pins, and record its rows.
 fn pin_tx(pins: &mut Pins, got: &Charged, want: &Tx) {
     let handlers: Vec<(&str, u64)> = got.handlers.iter().map(|(h, c)| (h.as_str(), *c)).collect();
-    assert_eq!(handlers, want.handlers, "{}: the pinned handlers' cycles moved", got.action);
+    // On LEZ v0.4.0 the handlers' cycles are printed beside the release candidates' pins (see `Pins::eq`).
+    if !cfg!(feature = "lez-040") {
+        assert_eq!(handlers, want.handlers, "{}: the pinned handlers' cycles moved", got.action);
+    }
     pins.note(&format!("{}: handlers (cycles each)", got.action), &got.handlers_text());
     pins.eq(&format!("{}: execution gas", got.action), got.gas_exec, want.exec);
+    #[cfg(not(feature = "lez-040"))]
     pins.eq(&format!("{}: storage gas", got.action), got.gas_stor, want.stor);
+    #[cfg(feature = "lez-040")]
+    if want.stor == PRIVATE_GAS_STOR {
+        // v0.4.0 charges a private transaction's bytes, its proof counted at PROOF_BYTES (LEZ #1044): at least that.
+        assert!(got.gas_stor > market::PROOF_BYTES, "{}: private storage gas {} below PROOF_BYTES", got.action, got.gas_stor);
+        pins.note(&format!("{}: storage gas (charged bytes)", got.action), &grouped(got.gas_stor));
+    } else {
+        pins.eq(&format!("{}: storage gas", got.action), got.gas_stor, want.stor);
+    }
 }
 
 /// The only execution of `handler` in `report`.
@@ -450,6 +471,8 @@ fn one<'a>(report: &'a TxReport, handler: &str) -> &'a TransitionTrace {
 /// exceeds the one before it, while the records the chain holds grow with every job.
 fn flat(pins: &mut Pins, world: &World, what: &str, at: usize, handler: &str, want: u64) {
     let seen: Vec<u64> = (1..world.runs.len()).map(|r| one(&world.runs[r].reports[at], handler).cycles).collect();
+    // On LEZ v0.4.0 the record's number is the release candidates' (see `Pins::eq`): every update still costs the same.
+    let want = if cfg!(feature = "lez-040") { seen[0] } else { want };
     assert!(seen.iter().all(|&c| c == want), "{what}: {seen:?}, the record pins {want}");
     assert!(seen.windows(2).all(|w| w[1] <= w[0]), "{what}: {seen:?} grew from one update to the next");
     pins.pin(what, want);
@@ -497,19 +520,26 @@ fn the_per_period_updates_cost_what_the_record_shows_and_do_not_grow() {
     flat(&mut pins, &world, "Finish's cycles (step 3, the final exponentiation)", 4, "Finish", FINISH_CYCLES);
 
     // The gas of the flat steps' transactions follows their only handler's cycles, and their
-    // storage gas — the transaction's serialized size — is constant too.
+    // storage gas — the transaction's serialized size — is constant too. On v0.4.0 the rc3
+    // absolute pins do not apply, but update_0 supplies a baseline for the no-growth assertion.
+    let miller_exec = if cfg!(feature = "lez-040") { world.runs[1].reports[1].charge.gas_exec } else { MILLER_CYCLES };
+    let miller_stor = if cfg!(feature = "lez-040") { world.runs[1].reports[1].charge.gas_stor } else { MILLER_TX_STOR };
+    let adopt1_exec = if cfg!(feature = "lez-040") { world.runs[1].reports[2].charge.gas_exec } else { ADOPT1_CYCLES };
+    let adopt1_stor = if cfg!(feature = "lez-040") { world.runs[1].reports[2].charge.gas_stor } else { ADOPT_TX_STOR };
+    let adopt2_exec = if cfg!(feature = "lez-040") { world.runs[1].reports[3].charge.gas_exec } else { ADOPT2_CYCLES };
+    let adopt2_stor = if cfg!(feature = "lez-040") { world.runs[1].reports[3].charge.gas_stor } else { ADOPT_TX_STOR };
     for i in 0..5 {
         let run = &world.runs[1 + i];
-        assert_eq!(run.reports[1].charge.gas_exec, MILLER_CYCLES, "update_{i}: step 2's execution gas");
-        assert_eq!(run.reports[1].charge.gas_stor, MILLER_TX_STOR, "update_{i}: step 2's storage gas");
+        assert_eq!(run.reports[1].charge.gas_exec, miller_exec, "update_{i}: step 2's execution gas");
+        assert_eq!(run.reports[1].charge.gas_stor, miller_stor, "update_{i}: step 2's storage gas");
         assert_eq!(
             (run.reports[2].charge.gas_exec, run.reports[2].charge.gas_stor),
-            (ADOPT1_CYCLES, ADOPT_TX_STOR),
+            (adopt1_exec, adopt1_stor),
             "update_{i}: adopt 1/2's transaction"
         );
         assert_eq!(
             (run.reports[3].charge.gas_exec, run.reports[3].charge.gas_stor),
-            (ADOPT2_CYCLES, ADOPT_TX_STOR),
+            (adopt2_exec, adopt2_stor),
             "update_{i}: adopt 2/2's transaction"
         );
     }
@@ -666,8 +696,14 @@ fn the_finality_update_costs_what_the_hourly_row_assumes() {
         one(&fin.reports[1], "Miller").cycles,
         FIN_MILLER_CYCLES,
     );
-    assert_eq!(fin.reports[1].charge.gas_exec, FIN_MILLER_CYCLES, "step 2's execution gas");
+    // v0.4.0 still charges this one-handler transaction its handler's cycles; only the rc3
+    // absolute cycle and serialized-size pins are relaxed.
+    let miller_exec = if cfg!(feature = "lez-040") { one(&fin.reports[1], "Miller").cycles } else { FIN_MILLER_CYCLES };
+    assert_eq!(fin.reports[1].charge.gas_exec, miller_exec, "step 2's execution gas");
+    #[cfg(not(feature = "lez-040"))]
     assert_eq!(fin.reports[1].charge.gas_stor, MILLER_TX_STOR, "step 2's storage gas");
+    #[cfg(feature = "lez-040")]
+    pins.eq("finality update: step 2's storage gas", fin.reports[1].charge.gas_stor, MILLER_TX_STOR);
     pins.eq("finality update: Finish's cycles (step 3)", one(&fin.reports[2], "Finish").cycles, FIN_FINISH_CYCLES);
     pins.eq("finality update: Apply's cycles", one(&fin.reports[2], "Apply").cycles, FIN_APPLY_CYCLES);
     pins.eq("finality update: Record's cycles", one(&fin.reports[2], "Record").cycles, RECORD_CYCLES);
@@ -708,18 +744,34 @@ fn the_finality_update_costs_what_the_hourly_row_assumes() {
     );
 
     // The other way a committee handover runs — adoption with no new header (five transactions):
-    // the flat steps cost the adopting updates' numbers again, in another world.
+    // the flat steps cost the adopting updates' numbers again, in another world. On LEZ v0.4.0
+    // (feature `lez-040`) those numbers are rc3's pins, so there they are printed beside, not
+    // compared: this world's flat steps are not checked against the first world's on v0.4.0.
     let nc = &world.runs[3];
     assert_eq!(nc.reports.len(), 5, "adoption runs in five transactions");
     pins.eq("next-committee update: Open's cycles (step 1)", one(&nc.reports[0], "Open").cycles, NC_OPEN_CYCLES);
     pins.eq("next-committee update: step 1's execution gas", nc.reports[0].charge.gas_exec, NC_OPEN_TX_GAS);
     pins.eq("next-committee update: step 1's storage gas", nc.reports[0].charge.gas_stor, NC_OPEN_TX_STOR);
-    assert_eq!(one(&nc.reports[0], "JobOpen").cycles, JOB_OPEN_CYCLES, "JobOpen's cycles, flat here too");
-    assert_eq!(one(&nc.reports[1], "Miller").cycles, MILLER_CYCLES, "Miller's cycles, flat here too");
-    assert_eq!(one(&nc.reports[2], "Adopt").cycles, ADOPT1_CYCLES, "adopt 1/2's cycles, flat here too");
-    assert_eq!(one(&nc.reports[3], "Adopt").cycles, ADOPT2_CYCLES, "adopt 2/2's cycles, flat here too");
-    assert_eq!(one(&nc.reports[4], "Finish").cycles, FINISH_CYCLES, "Finish's cycles, flat here too");
-    assert_eq!(one(&nc.reports[4], "Apply").cycles, APPLY_NO_RECORD, "no new header, so the lighter Apply");
+    #[cfg(not(feature = "lez-040"))]
+    {
+        assert_eq!(one(&nc.reports[0], "JobOpen").cycles, JOB_OPEN_CYCLES, "JobOpen's cycles, flat here too");
+        assert_eq!(one(&nc.reports[1], "Miller").cycles, MILLER_CYCLES, "Miller's cycles, flat here too");
+        assert_eq!(one(&nc.reports[2], "Adopt").cycles, ADOPT1_CYCLES, "adopt 1/2's cycles, flat here too");
+        assert_eq!(one(&nc.reports[3], "Adopt").cycles, ADOPT2_CYCLES, "adopt 2/2's cycles, flat here too");
+        assert_eq!(one(&nc.reports[4], "Finish").cycles, FINISH_CYCLES, "Finish's cycles, flat here too");
+        assert_eq!(one(&nc.reports[4], "Apply").cycles, APPLY_NO_RECORD, "no new header, so the lighter Apply");
+    }
+    #[cfg(feature = "lez-040")]
+    {
+        // Print these second-world checks beside rc3's record without pretending that one run
+        // supplies a v0.4.0 record. The first world's cross-update checks remain in force.
+        pins.eq("next-committee update: JobOpen's cycles", one(&nc.reports[0], "JobOpen").cycles, JOB_OPEN_CYCLES);
+        pins.eq("next-committee update: Miller's cycles", one(&nc.reports[1], "Miller").cycles, MILLER_CYCLES);
+        pins.eq("next-committee update: adopt 1/2's cycles", one(&nc.reports[2], "Adopt").cycles, ADOPT1_CYCLES);
+        pins.eq("next-committee update: adopt 2/2's cycles", one(&nc.reports[3], "Adopt").cycles, ADOPT2_CYCLES);
+        pins.eq("next-committee update: Finish's cycles", one(&nc.reports[4], "Finish").cycles, FINISH_CYCLES);
+        pins.eq("next-committee update: Apply's cycles", one(&nc.reports[4], "Apply").cycles, APPLY_NO_RECORD);
+    }
     let gas: u64 = nc.reports.iter().map(|r| r.charge.gas_exec).sum();
     let stor: u64 = nc.reports.iter().map(|r| r.charge.gas_stor).sum();
     pins.eq("next-committee update: total execution gas", gas, NC_TOTAL_GAS);
@@ -769,8 +821,13 @@ fn an_update_verified_privately_costs_what_it_is_charged() {
         )
         .expect("settles");
     assert!(run.charge.revert.is_none(), "{:?}", run.charge.revert);
+    #[cfg(not(feature = "lez-040"))]
     assert_eq!(run.charge.gas_stor, market::PRIVATE_GAS_STOR, "the private storage gas is fee_core's flat");
-    assert_eq!(run.charge.gas_stor, PRIVATE_GAS_STOR);
+    #[cfg(not(feature = "lez-040"))]
+    let expected_stor = PRIVATE_GAS_STOR;
+    #[cfg(feature = "lez-040")]
+    let expected_stor = compat::private_storage_gas(&LeeTransaction::PrivacyPreserving(run.tx.clone()));
+    assert_eq!(run.charge.gas_stor, expected_stor);
     assert_eq!(
         run.charge.gas_exec,
         market::PRIVATE_VERIFY_GAS + run.charge.cycles,
@@ -779,7 +836,10 @@ fn an_update_verified_privately_costs_what_it_is_charged() {
     pins.eq("a finality update, proven: PRIVATE_VERIFY_GAS (flat)", market::PRIVATE_VERIFY_GAS, PRIVATE_VERIFY_GAS);
     pins.eq("a finality update, proven: the public part's cycles", run.charge.cycles, FINALITY_PRIVATE_CYCLES);
     pins.eq("a finality update, proven: execution gas", run.charge.gas_exec, FINALITY_PRIVATE_GAS);
+    #[cfg(not(feature = "lez-040"))]
     pins.pin("a private transaction's storage gas (flat)", PRIVATE_GAS_STOR);
+    #[cfg(feature = "lez-040")]
+    pins.pin("a private transaction's storage gas (charged bytes)", expected_stor);
     w.native.process_update(&update, update.signature_slot + 1, &ctx).unwrap();
     w.check_store();
     w.check_record(update.finalized_header.beacon.slot);
@@ -850,7 +910,15 @@ fn an_attestation_costs_the_same_whatever_the_chain_holds() {
     let few_all = acc::attest_all(&mut s, &requests);
     for (c, (cycles, stor)) in few_all.iter().zip(STATEMENTS) {
         pins.eq(&format!("{}: cycles", c.action), c.cycles("Attest"), cycles);
+        #[cfg(not(feature = "lez-040"))]
         assert_eq!((c.gas_exec, c.gas_stor), (cycles, stor), "{}: execution and storage gas", c.action);
+        #[cfg(feature = "lez-040")]
+        {
+            // Keep v0.4.0's execution-gas identity and the few/many comparison; only its
+            // rc3 storage-size figure is not a pin.
+            assert_eq!(c.gas_exec, c.cycles("Attest"), "{}: execution gas is its Attest cycles", c.action);
+            pins.eq(&format!("{}: storage gas", c.action), c.gas_stor, stor);
+        }
     }
 
     // #9 and #7: a thousand more records — placed as the program writes them
@@ -953,6 +1021,7 @@ fn an_update_verified_in_one_call_costs_the_same_whatever_the_chain_holds() {
         market::PRIVATE_VERIFY_GAS + few.cycles("public part"),
         "the flat receipt gas plus the public part"
     );
+    #[cfg(not(feature = "lez-040"))]
     assert_eq!(few.gas_stor, market::PRIVATE_GAS_STOR, "the private storage gas is fee_core's flat");
     pins.note(
         "added for the second run of each",
@@ -1043,7 +1112,13 @@ fn the_leaf_statement_costs_the_same_whatever_the_chain_holds() {
     acc::assert_flat(&few, &many, more);
     for (c, (cycles, stor)) in few.iter().zip(LEAVES) {
         pins.eq(&format!("{}: cycles", c.action), c.cycles("Attest"), cycles);
+        #[cfg(not(feature = "lez-040"))]
         assert_eq!((c.gas_exec, c.gas_stor), (cycles, stor), "{}: execution and storage gas", c.action);
+        #[cfg(feature = "lez-040")]
+        {
+            assert_eq!(c.gas_exec, c.cycles("Attest"), "{}: execution gas is its Attest cycles", c.action);
+            pins.eq(&format!("{}: storage gas", c.action), c.gas_stor, stor);
+        }
     }
     pins.note("added for the second run", "a thousand records of the synthetic instance");
     pins.print(

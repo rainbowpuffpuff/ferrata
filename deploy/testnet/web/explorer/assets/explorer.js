@@ -5,7 +5,9 @@ import { activityOf, activityItem } from "./activity.js";
 import { features, featuresTable } from "./features.js";
 import { NameService, normalizeName, wellFormedName, nameStatus, mailboxSummary } from "./names.js";
 import { hex, b58, fmtInt, fmtTime, fmtAge, fmtBytes, shortHex, parseAccountId, fromHex, fmtNative } from "./util.js";
-import { rootOf, signerAccounts, BUILTINS, builtinProgramId, isZero, NATIVE_TOKEN_PROGRAM_ID, PROGRAM_LOADER_ID } from "./lez.js";
+import { rootOf, builtinProgramId, isZero, NATIVE_TOKEN_PROGRAM_ID, PROGRAM_LOADER_ID } from "./lez.js";
+import { signerAccounts, BUILTINS, systemProgramId } from "./lez040.js";
+import { outcome, receiptAt } from "./outcome.js";
 import { Programs } from "./programs.js";
 import { FORKS, beaconClock, attestationPda, CHAIN_NAMES } from "./ferrata.js";
 import { plain } from "./idl.js";
@@ -68,8 +70,8 @@ function searchBar() {
 
 const isSystem = (tx) => {
   if (tx.kind !== "Public" || tx.witnesses.length) return false;
-  const p = hex(tx.execution.root.to.program_account_id);
-  return p === hex(builtinProgramId("clock")) || p === hex(builtinProgramId("fee"));
+  const program = BUILTINS.get(hex(tx.execution.root.to.program_account_id));
+  return program && (program.name === "clock" || program.name === "fee");
 };
 
 async function describe(tx) {
@@ -80,8 +82,7 @@ async function describe(tx) {
 }
 
 function statusBadge(block, index) {
-  if (!block) return badge("—");
-  return block.reverted.includes(index) ? badge("reverted", "bad") : badge("applied", "ok");
+  return outcome(block, index, config.native);
 }
 
 function bedrockBadge(status) {
@@ -307,7 +308,10 @@ async function home(view, stale) {
       panel(el("h2", {}, "Latest activity ", liveDot), el("p", { class: "muted small" }, "Decoded from the blocks: transfers and the faucet, names, encrypted messages (who, to whom, how large; never the content), the Ethereum light client and its attestations, the bridge, program deployments."), feed),
       el("div", {}, faucetBox(), panel(el("h2", {}, "LEZ v0.4 on this network"), featBox), usePanel())),
     panel(el("h2", {}, "Latest blocks ", el("a", { class: "small", href: "#/blocks" }, "all →")), blocksBox),
-    el("p", { class: "muted small" }, "Every block's hash is recomputed in your browser from its contents (SHA-256 over LEZ's block encoding). The sequencer's RPC reports no receipts: an outcome is read from its block's reverted list."),
+    el("p", { class: "muted small" }, "Every block's hash is recomputed in your browser from its contents (SHA-256 over LEZ's block encoding). ",
+      blocksInView.some((b) => Array.isArray(b.receipts))
+        ? "Each user transaction's outcome, charged fee and refund come from its receipt; the trailing system transactions have none."
+        : "The sequencer's RPC reports no receipts: an outcome is read from its block's reverted list."),
   );
   annotateNames(view);
   // refresh: new blocks every 10 s, ages every second; stops when the page changes
@@ -455,7 +459,7 @@ async function messagesPage(view, stale) {
         accountLink(signerAccounts(tx)[0]),
         accountLink(to),
         fmtBytes(body.length),
-        recent[i].reverted.includes(j) ? badge("refused", "bad") : badge("delivered", "ok"),
+        outcome(recent[i], j, config.native, { applied: "delivered", reverted: "refused" }),
         txLink(tx.hash),
       ]);
     }
@@ -483,7 +487,7 @@ async function featuresPage(view, stale) {
   if (stale()) return;
   view.replaceChildren(
     el("h1", {}, "LEZ v0.4 on this network"),
-    el("p", { class: "muted" }, `What LEZ v0.4.0-rc3 does here, read live from the last ${recent.length} blocks and the RPC; each row links its evidence on this chain and in LEZ's source at that tag.`),
+    el("p", { class: "muted" }, `What LEZ ${recent.some((b) => Array.isArray(b.receipts)) ? "v0.4.0" : "v0.4.0-rc3"} does here, read live from the last ${recent.length} blocks and the RPC; each row links its evidence on this chain and in LEZ's source at that tag.`),
     panel(featuresTable(features({ view: recent, head, fee, ids, deadLetters: dead, status: hostStatus, config }))),
   );
 }
@@ -570,7 +574,10 @@ async function txPage(view, stale, hashArg) {
   parts.push(panel(kv([
     ["Hash", hexSpan(tx.hash)],
     ["Block", el("span", {}, blockLink(blockId), index >= 0 ? ` · position ${index}` : "", block ? ` · ${fmtTime(Number(block.header.timestamp))}` : "")],
-    ["Status", index >= 0 ? el("span", {}, statusBadge(block, index), " ", el("span", { class: "muted small" }, block.reverted.includes(index) ? "charged, its effects reverted (listed in the block's reverted indices)" : "included and not in the block's reverted list")) : "—"],
+    ["Status", index >= 0 ? el("span", {}, statusBadge(block, index), " ", el("span", { class: "muted small" },
+      receiptAt(block, index) ? `receipt success ${receiptAt(block, index).success}` :
+        Array.isArray(block.receipts) ? "a trailing system transaction has no receipt" :
+          block.reverted.includes(index) ? "charged, its effects reverted (listed in the block's reverted indices)" : "included and not in the block's reverted list")) : "—"],
     ["Bedrock", block ? bedrockBadge(block.bedrock_status) : "—"],
     ["Kind", tx.kind === "Public" ? "public" : "privacy-preserving (only the public parts are shown)"],
     ["Size", fmtBytes(tx.size)],
@@ -585,8 +592,9 @@ async function txPage(view, stale, hashArg) {
       parts.push(errorBox(e));
     }
   }
-  if (tx.kind === "Public" && tx.execution.fee) {
-    const f = tx.execution.fee;
+  const declaredFee = tx.kind === "Public" ? tx.execution.fee : tx.fee;
+  if (declaredFee) {
+    const f = declaredFee;
     parts.push(panel(el("h2", {}, "Fee declaration"), kv([["Payer", accountLink(f.payer, { short: false })], ["Gas limit", fmtInt(f.gas_limit)], ["Tip", fmtInt(f.tip)], ["Max fee", `${fmtNative(f.max_fee, config.native)}`]])));
   }
   if (tx.kind === "PrivacyPreserving") parts.push(...privateParts(tx));
@@ -632,7 +640,9 @@ function privateParts(tx) {
       String(i), s.kind, s.delivery ? accountLink(s.delivery.envelope.from.account_id) : "", s.delivery ? el("span", {}, accountLink(s.delivery.envelope.to.account_id), " @ ", accountLink(s.delivery.envelope.to.program_account_id)) : "", s.delivery ? `${s.delivery.envelope.message.length} B` : "",
     ]))));
   }
-  if (e.async_messages.length) out.push(panel(el("h2", {}, `Sealed messages (${e.async_messages.length})`), table(["#", "Commitment", ">Note"], e.async_messages.map((m, i) => [String(i), el("span", { class: "mono" }, hex(m.commitment)), fmtBytes(m.note.ciphertext.length)]))));
+  if (e.async_messages.length) out.push(panel(el("h2", {}, `Publications (${e.async_messages.length})`), table(["#", "Kind", "Commitment / recipient", ">Note / message"], e.async_messages.map((m, i) => m.kind === "Clear" ?
+    [String(i), "clear", el("span", {}, accountLink(m.envelope.to.account_id), " @ ", accountLink(m.envelope.to.program_account_id)), fmtBytes(m.envelope.message.length)] :
+    [String(i), "sealed", el("span", { class: "mono" }, hex(m.commitment)), fmtBytes(m.note.ciphertext.length)]))));
   if (e.recovery_bindings.length) out.push(panel(el("h2", {}, `Recovery bindings (${e.recovery_bindings.length})`), table(["#", "Address", ">Note"], e.recovery_bindings.map((m, i) => [String(i), accountLink(m.address), fmtBytes(m.note.ciphertext.length)]))));
   const w = e.validity;
   const win = (x, f) => (x.from === null && x.to === null ? "unbounded" : `${x.from === null ? "−∞" : f(x.from)} … ${x.to === null ? "∞" : f(x.to)}`);
@@ -640,7 +650,7 @@ function privateParts(tx) {
     ["Blocks", win(w.blocks, (v) => `#${fmtInt(v)}`)],
     ["Timestamps", win(w.timestamps, (v) => fmtTime(Number(v)))],
     ["Program images", e.program_image_claims.length ? el("div", {}, e.program_image_claims.map((c) => el("div", {}, c.kind === "Disclosed" ? [accountLink(c.account_id), " runs image ", el("span", { class: "mono" }, shortHex(hex(c.image_id), 10))] : ["undisclosed, under root ", el("span", { class: "mono" }, shortHex(hex(c.root), 10))]))) : "none"],
-    ["Fee", e.fee ? el("span", {}, "refund to ", e.fee.refund_to ? accountLink(e.fee.refund_to) : "—", e.fee.fallback ? " · with a fallback action" : "") : "none"],
+    ["Fee", e.fee ? el("span", {}, "refund to ", e.fee.refund_to ? accountLink(e.fee.refund_to) : "—", e.fee.tip !== undefined ? ` · tip ${fmtInt(e.fee.tip)}` : "", e.fee.fallback ? " · with a fallback action" : "") : "none"],
     ["Proof", fmtBytes(tx.proof.length)],
   ])));
   return out;
@@ -649,19 +659,24 @@ function privateParts(tx) {
 function signersPanel(tx) {
   const signers = signerAccounts(tx);
   const nonce = new Map(tx.nonces.map((n) => [hex(n.account), n.nonce]));
-  return panel(el("h2", {}, `Signers (${signers.length})`), table(["Account", "Public key", ">Nonce"], signers.map((a, i) => [
-    accountLink(a, { short: false }), el("span", { class: "mono small", title: hex(tx.witnesses[i].public_key) }, shortHex(hex(tx.witnesses[i].public_key), 8)), nonce.has(hex(a)) ? fmtInt(nonce.get(hex(a))) : "—",
-  ]), { empty: "none: a system transaction (the sequencer's own) or a private one whose spends are proven, not signed" }));
+  return panel(el("h2", {}, `Signers (${signers.length})`), table(["Account", "Witness public key", ">Nonce"], signers.map((a, i) => {
+    const w = tx.witnesses[i];
+    const publicKey = w.public_key || w.auth_data.subarray(-32);
+    return [
+      accountLink(a, { short: false }), el("span", { class: "mono small", title: w.next ? `${hex(publicKey)} · next key state ${hex(w.next)}` : hex(publicKey) }, shortHex(hex(publicKey), 8)), nonce.has(hex(a)) ? fmtInt(nonce.get(hex(a))) : "—",
+    ];
+  }), { empty: "none: a system transaction (the sequencer's own) or a private one whose spends are proven, not signed" }));
 }
 
 function contextPanel(tx) {
   const c = tx.public_context;
   return panel(el("h2", {}, "Public context"),
-    table(["Actor account", "Program"], c.actors.map((a) => [accountLink(a.account_id, { short: false }), accountLink(a.program_account_id)]), { empty: "no public actors" }),
+    table(["Actor account", "Program", "Authority"], c.actors.map((a) => [accountLink(a.account_id, { short: false }), accountLink(a.program_account_id), a.authority || "—"]), { empty: "no public actors" }),
     kv([
       ["Authorized", c.authorized_accounts.length ? el("div", {}, c.authorized_accounts.map((a) => el("div", {}, accountLink(a, { short: false })))) : "none"],
       c.promotions.length ? ["Promotions", c.promotions.map(String).join(", ")] : null,
-      tx.admission_evidence.length ? ["Admission evidence", el("div", {}, tx.admission_evidence.map((e) => el("div", { class: "small" }, e.kind === "key" ? ["key ", el("span", { class: "mono" }, shortHex(hex(e.public_key), 8))] : ["PDA of ", accountLink(e.program), " seed ", el("span", { class: "mono" }, shortHex(hex(e.seed), 8))])))] : null,
+      c.private_signers && c.private_signers.length ? ["Private signers", el("div", {}, c.private_signers.map((a) => el("div", {}, accountLink(a.account_id), " @ ", accountLink(a.program_account_id))))] : null,
+      tx.admission_evidence.length ? ["Admission evidence", el("div", {}, tx.admission_evidence.map((e) => el("div", { class: "small" }, e.kind === "key" ? [e.public_key.length === 33 ? "signing key state " : "key ", el("span", { class: "mono" }, shortHex(hex(e.public_key), 8))] : ["PDA of ", accountLink(e.program), " seed ", el("span", { class: "mono" }, shortHex(hex(e.seed), 8))])))] : null,
     ]));
 }
 
@@ -718,7 +733,8 @@ async function scanAccount(id, stale) {
       ];
       const root = rootOf(tx);
       if (root) touched.push(root.to.account_id, root.to.program_account_id);
-      if (tx.kind === "Public" && tx.execution.fee) touched.push(tx.execution.fee.payer);
+      const declaredFee = tx.kind === "Public" ? tx.execution.fee : tx.fee;
+      if (declaredFee) touched.push(declaredFee.payer);
       if (touched.some((t) => hex(t) === h)) out.push({ tx, block: b, index });
     });
   }
@@ -836,9 +852,11 @@ async function programsPage(view, stale) {
   setTitle("Programs");
   view.replaceChildren(loading());
   const ids = await rpc.programIds().catch(() => ({}));
+  const version = await rpc.lezVersion();
   if (stale()) return;
   const builtin = Object.entries(ids).map(([name, img]) => {
-    const acct = name === "authenticated_transfer" || name === "native_token" ? NATIVE_TOKEN_PROGRAM_ID : builtinProgramId(name);
+    const acct = name === "authenticated_transfer" || name === "native_token" ? NATIVE_TOKEN_PROGRAM_ID :
+      version === "v0.4.0" ? systemProgramId(name) : builtinProgramId(name);
     return [el("strong", {}, name), BUILTINS.has(hex(acct)) ? accountLink(acct) : el("span", { class: "muted" }, "—"), el("span", { class: "mono small", title: img }, shortHex(img, 10))];
   });
   const ferrata = (config.programs || []).map((p) => [el("strong", {}, p.name), p.account ? accountLink(fromB58Safe(p.account)) : el("span", { class: "muted" }, "not deployed yet"), el("span", { class: "mono small" }, p.image_id ? shortHex(p.image_id.replace(/^0x/, ""), 10) : "—"), p.idl ? el("a", { href: href(p.idl) }, "IDL") : ""]);

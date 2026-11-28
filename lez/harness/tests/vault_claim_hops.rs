@@ -20,33 +20,26 @@ use ferrata_lez_wire::consumer::{secret_nullifier, ConsumerMessage};
 use harness::{
     accumulated::VaultWorld,
     attest::{execute, Executed},
-    consumer_account, consumer_program, grouped,
+    compat, consumer_account, consumer_program, grouped,
     hops::{claim_hops, MAX_USER_HOPS},
 };
 use lee::Actor;
-use lee_core::program::{ReceiveInput, StateReply};
+use lee_core::program::StateReply;
 
 /// The claim's two private transitions in the executor: the root call at a fresh private account's
 /// actor (it sends `Read`), then the record's reply (it verifies the deposit and sends `Spend`).
 fn transitions(vw: &VaultWorld, message: &ConsumerMessage) -> (Executed, Option<Executed>) {
     let account = lee::AccountId::new([0x93; 32]);
     let actor = Actor::new(account, consumer_account());
-    let call = ReceiveInput {
-        receiver: actor,
-        from: None,
-        is_authorized: true,
-        pre_state: Default::default(),
-        message: borsh::to_vec(message).unwrap(),
-    };
+    let call = compat::receive_input(actor, None, true, Default::default(), borsh::to_vec(message).unwrap());
     let first = execute("ClaimDepositPrivately (sends Read)", consumer_program().elf(), &call);
     let Some(t) = &first.transition else { return (first, None) };
-    let reply = ReceiveInput {
-        receiver: actor,
-        from: Some(vw.v.actor()),
-        is_authorized: true,
-        pre_state: t.response.post_state.clone().expect("the claim is kept for the reply"),
-        message: borsh::to_vec(&StateReply { state: vw.v.w.chain.actor_state(vw.v.actor()) }).unwrap(),
-    };
+    let reply = compat::reply_input(
+        actor,
+        vw.v.actor(),
+        t.response.post_state.clone().expect("the claim is kept for the reply"),
+        borsh::to_vec(&StateReply { state: vw.v.w.chain.actor_state(vw.v.actor()) }).unwrap(),
+    );
     let second = execute("the record's reply", consumer_program().elf(), &reply);
     (first, Some(second))
 }

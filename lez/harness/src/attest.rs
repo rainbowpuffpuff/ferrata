@@ -1257,23 +1257,22 @@ impl Stage4 {
         message: &ConsumerMessage,
     ) -> Vec<Executed> {
         let actor = Actor::new(account, consumer_account());
-        let call = ReceiveInput {
-            receiver: actor,
-            from: None,
-            is_authorized: true,
-            pre_state: Default::default(),
-            message: borsh::to_vec(message).unwrap(),
-        };
+        let call = crate::compat::receive_input(
+            actor,
+            None,
+            true,
+            Default::default(),
+            borsh::to_vec(message).unwrap(),
+        );
         let first = execute("AttestPrivately (sends Read)", elf.elf(), &call);
         let Some(transition) = &first.transition else { return vec![first] };
         let header = self.header(slot);
-        let reply = ReceiveInput {
-            receiver: actor,
-            from: Some(header),
-            is_authorized: true,
-            pre_state: transition.response.post_state.clone().expect("the query is kept for the reply"),
-            message: borsh::to_vec(&StateReply { state: self.w.chain.actor_state(header) }).unwrap(),
-        };
+        let reply = crate::compat::reply_input(
+            actor,
+            header,
+            transition.response.post_state.clone().expect("the query is kept for the reply"),
+            borsh::to_vec(&StateReply { state: self.w.chain.actor_state(header) }).unwrap(),
+        );
         let second = execute("the record's reply (verifies the fact)", elf.elf(), &reply);
         vec![first, second]
     }

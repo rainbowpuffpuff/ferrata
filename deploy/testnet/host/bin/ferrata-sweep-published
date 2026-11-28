@@ -12,7 +12,22 @@
 # Run as root; idempotent (an account holding at most RESERVE is left alone). Prints one JSON line per account and
 # records the two ids in /var/lib/ferrata/status/published-accounts.json for ferrata-status's alarm.
 set -euo pipefail
-LEZ_SRC="${FERRATA_LEZ_SRC:-/opt/ferrata/src/upstream/lez-v0.4.0-rc3}"
+# The host's LEZ tag: FERRATA_LEZ_TAG (empty counts as unset), else the tag install.sh records on a v0.4.0 host
+# (/etc/ferrata/lez-tag), else v0.4.0-rc3; a variable that disagrees with the record is refused (as lez-tag.sh does)
+lez_host_tag() {
+  local f="${FERRATA_LEZ_TAG_FILE:-/etc/ferrata/lez-tag}" host="" tag
+  if [ -e "$f" ]; then   # a record that exists must name a tag: an empty or damaged one is refused, never taken for rc3
+    host="$(tr -d '[:space:]' < "$f" 2>/dev/null)" || host=""
+    case "$host" in v0.4.0-rc3|v0.4.0) ;; *) echo "this host's tag record $f holds '$host', not v0.4.0-rc3 or v0.4.0" >&2; return 2 ;; esac
+  fi
+  if [ -n "${FERRATA_LEZ_TAG:-}" ] && [ -n "$host" ] && [ "$FERRATA_LEZ_TAG" != "$host" ]; then
+    echo "FERRATA_LEZ_TAG=$FERRATA_LEZ_TAG, but this host runs LEZ $host ($f)" >&2; return 2
+  fi
+  tag="${FERRATA_LEZ_TAG:-${host:-v0.4.0-rc3}}"
+  case "$tag" in v0.4.0-rc3|v0.4.0) echo "$tag" ;; *) echo "FERRATA_LEZ_TAG must be v0.4.0-rc3 or v0.4.0 (got '$tag')" >&2; return 2 ;; esac
+}
+LEZ_TAG="$(lez_host_tag)" || exit 2
+LEZ_SRC="${FERRATA_LEZ_SRC:-/opt/ferrata/src/upstream/lez-$LEZ_TAG}"
 RPC="${FERRATA_RPC:-http://127.0.0.1:3040}"
 DATA=/var/lib/ferrata
 RESERVE="${FERRATA_SWEEP_RESERVE:-200000000}"   # 0.2 LGO left to cover the transfer's fee reservation

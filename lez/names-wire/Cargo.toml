@@ -6,6 +6,11 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 publish = false
 
+# The program's source; on LEZ v0.4.0 its generated twin src/lib_lez040.rs (lez/scripts/lez040-sources.py: LEZ #1144's API),
+# which lez/scripts/lez-select.sh points the marked line at. The release candidates build src/lib.rs itself.
+[lib]
+path = "src/lib.rs" # lez-select
+
 [dependencies]
 # LEZ v0.4.0-rc1 by path (see ../wire/Cargo.toml); lez-select.sh points it at another tag.
 lee_core = { path = "../../../upstream/lez-v0.4.0-rc1/lee/state_machine/core" }

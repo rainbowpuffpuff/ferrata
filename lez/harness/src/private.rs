@@ -11,6 +11,8 @@ use std::{
 
 use fee_core::BlockFeeSummary;
 use ferrata_lez_wire::{attest::Attestation, Message};
+#[cfg(feature = "lez-040")]
+use lee::test_utils::{privacy_witness_for, TestSigner};
 use lee::{
     privacy_preserving_transaction::{circuit::ProgramCatalog, Message as PrivateMessage, WitnessSet},
     test_utils::{no_seal, update_witness, TestPrivateKeys},
@@ -22,7 +24,7 @@ use lee_core::{
     execution_state::{BoundaryStep, Delivery, TransactionEntry},
     native_token,
     program::{StateReply, TransactionEvent},
-    AuthorizationSecretKey, Commitment, DummyInput, DummyOutput, EphemeralSecretKey, FeeTransfer, Nullifier,
+    AuthorizationSecretKey, Commitment, DummyInput, DummyOutput, EphemeralSecretKey, Nullifier,
     NullifierPublicKey, NullifierSecretKey, PrivateAccountKind, ProgramImageClaim, RootCall, SharedSecretKey,
 };
 
@@ -343,17 +345,18 @@ impl Chain {
         let input = ProvingInput {
             root: TransactionEntry::Sync(RootCall { to: root, message }),
             claims: Vec::new(),
-            fee: Some(FeeTransfer {
-                payer: sender.id(),
-                recipient: system_accounts::fee_inbox_account_id(),
-                amount: reserve,
+            fee: Some(crate::compat::fee_transfer(
+                sender.id(),
+                system_accounts::fee_inbox_account_id(),
+                reserve,
                 // Bare: the unspent reserve goes back to the public payer account. Wallet: to the
                 // payer's alias, which the recovery note below binds (`refund_to: None`).
-                refund_to: if wallet { None } else { Some(self.payer) },
-            }),
-            public_context: PublicExecutionContext::new(public_actors, []),
+                if wallet { None } else { Some(self.payer) },
+            )),
+            public_context: PublicExecutionContext::new(crate::compat::declared(public_actors, []), []),
             private_witnesses: vec![{
-                let mut witness = update_witness(&sender.keys, sender.account.clone(), membership);
+                let witness = update_witness(&sender.keys, sender.account.clone(), membership);
+                let mut witness = crate::compat::authorize_root(witness, root);
                 witness.random_seed = freshness.random_seed;
                 witness
             }],
@@ -406,6 +409,72 @@ impl Chain {
         )?;
         self.block_id += 1;
         Ok(PrivateRun { tx, charge, events, prove_time, tx_bytes, proof_bytes })
+    }
+
+    /// Prove a private transaction whose fee is declared and signed by the separate public account `payer`, as
+    /// LEZ v0.4.0's wallet builds one for LEZ #1080. The caller supplies the action's root and public actors; unlike
+    /// [`Chain::prove_and_settle_private`], this adds no fee-inbox actor and puts no fee transfer in the proof.
+    ///
+    /// This follows the wallet's `send_publicly_paid` (`lez/wallet/src/lib.rs` lines 1960-1975 and 2059-2068):
+    /// `ProvingInput.fee` stays `None`, `Message::from_circuit_output` is extended with the payer's current nonce and
+    /// `fee`, and the payer signs that complete message. `lee::test_utils::privacy_witness_for` is the same
+    /// `WitnessSet::sign` call over `Signer`s at the message's nonces (`lee/state_machine/src/test_utils.rs` lines
+    /// 191-201), which the wallet makes with its signing keys. The transaction is signed only by the payer and returned
+    /// unsettled so the caller can price it at its chain's opening fee state or exercise admission refusals.
+    #[cfg(feature = "lez-040")]
+    #[allow(clippy::too_many_arguments)]
+    pub fn prove_private_with_declared_fee(
+        &self,
+        sender: &PrivateAccount,
+        root: Actor,
+        message: Vec<u8>,
+        public_actors: Vec<Actor>,
+        programs: &ProgramCatalog,
+        payer: &TestSigner,
+        fee: lee::FeeDeclaration,
+    ) -> Result<PrivacyPreservingTransaction, String> {
+        assert_eq!(fee.payer, payer.account_id(), "the declaration names its signer");
+        let public_actor_states: HashMap<Actor, lee::ActorState> =
+            public_actors.iter().map(|actor| (*actor, self.actor_state(*actor))).collect();
+        let membership = self
+            .state
+            .get_proof_for_commitment(&Commitment::new(&sender.id(), &sender.account))
+            .ok_or("the sender's commitment is not in the state")?;
+        let witness = update_witness(&sender.keys, sender.account.clone(), membership);
+        let mut witness = crate::compat::authorize_root(witness, root);
+        witness.random_seed = [0; 32];
+        let input = ProvingInput {
+            root: TransactionEntry::Sync(RootCall { to: root, message }),
+            claims: Vec::new(),
+            fee: None,
+            // The payer signs the message, so it is the context's one authorized account: lee checks that the
+            // message's nonces name exactly these (`Message::check_signers`, lee/state_machine/src/transaction_message.rs).
+            public_context: PublicExecutionContext::new(
+                crate::compat::declared(public_actors, []),
+                [payer.account_id()],
+            ),
+            private_witnesses: vec![witness],
+            dummy_inputs: Vec::new(),
+            ciphertext_padding: None,
+            recoveries: Vec::new(),
+            private_promotions: BTreeSet::new(),
+        };
+        let simulation = Simulation { public_actor_states, admitted_accounts: None };
+        let sender_id = sender.id();
+        let presentation = move |actor: Actor| {
+            if actor.account_id == sender_id {
+                SenderPresentation::Blinded(ALIAS_OPENING)
+            } else {
+                SenderPresentation::Canonical
+            }
+        };
+        let (output, proof) = lee::execute_and_prove(input, &simulation, programs, presentation, |_, _| false, no_seal)
+            .map_err(|error| format!("proving failed: {error}"))?;
+        let nonces = BTreeMap::from([(payer.account_id(), self.state.get_account_by_id(payer.account_id()).nonce)]);
+        let mut message = PrivateMessage::from_circuit_output(nonces, output);
+        message.fee = Some(fee);
+        let witness_set = privacy_witness_for(&message, proof, &[payer]);
+        Ok(PrivacyPreservingTransaction::new(message, witness_set))
     }
 }
 
@@ -487,7 +556,7 @@ pub fn describe_public_outputs(tx: &PrivacyPreservingTransaction) -> String {
     out.push_str(&format!(
         "public_context.actors ({}): {}\n",
         m.public_context.actors.len(),
-        m.public_context.actors.iter().map(actor_name).collect::<Vec<_>>().join(", ")
+        crate::compat::declared_actors(&m.public_context.actors).iter().map(actor_name).collect::<Vec<_>>().join(", ")
     ));
     out.push_str(&format!("public_context.authorized_accounts: {:?}\n", m.public_context.authorized_accounts));
     out.push_str(&format!("execution.public_root: {:?}\n", e.public_root.as_ref().map(|r| actor_name(&r.to))));
@@ -531,7 +600,7 @@ pub fn describe_public_outputs(tx: &PrivacyPreservingTransaction) -> String {
     out.push_str(&format!("execution.validity: {:?}\n", e.validity));
     out.push_str(&format!(
         "execution.fee: {:?}\n",
-        e.fee.as_ref().map(|f| format!("refund_to {:?}, fallback {}", f.refund_to, f.fallback.is_some()))
+        crate::compat::proven_fee(e).map(|(refund_to, fallback)| format!("refund_to {refund_to:?}, fallback {fallback}"))
     ));
     out.push_str(&format!("nonces: {}, admission evidence: {}\n", m.nonces.len(), m.admission_evidence.len()));
     out

@@ -37,7 +37,7 @@ use ferrata_lez_wire::consumer::{
 };
 use harness::{
     attest::{consumer_state, execute, render_executed},
-    consumer_account, consumer_program, grouped,
+    compat, consumer_account, consumer_program, grouped,
     hops::MAX_USER_HOPS,
     image_id_hex,
     private::*,
@@ -45,10 +45,7 @@ use harness::{
     vault::{crown_openings, eth_pool, RealVault},
 };
 use lee::Actor;
-use lee_core::{
-    program::{ReceiveInput, StateReply},
-    ProgramImageClaim,
-};
+use lee_core::{program::StateReply, ProgramImageClaim};
 
 fn usage() -> ! {
     eprintln!(
@@ -164,25 +161,18 @@ fn main() {
             let first = execute(
                 "ClaimDepositPrivately (sends Read)",
                 consumer_program().elf(),
-                &ReceiveInput {
-                    receiver: root,
-                    from: None,
-                    is_authorized: true,
-                    pre_state: Default::default(),
-                    message: borsh::to_vec(&message).unwrap(),
-                },
+                &compat::receive_input(root, None, true, Default::default(), borsh::to_vec(&message).unwrap()),
             );
             let transition = first.transition.as_ref().expect("the root call passes");
             let reply = execute(
                 "the record's reply (verifies the deposit, sends Spend)",
                 consumer_program().elf(),
-                &ReceiveInput {
-                    receiver: root,
-                    from: Some(v.actor()),
-                    is_authorized: true,
-                    pre_state: transition.response.post_state.clone().expect("the claim is kept for the reply"),
-                    message: borsh::to_vec(&StateReply { state: v.w.chain.actor_state(v.actor()) }).unwrap(),
-                },
+                &compat::reply_input(
+                    root,
+                    v.actor(),
+                    transition.response.post_state.clone().expect("the claim is kept for the reply"),
+                    borsh::to_vec(&StateReply { state: v.w.chain.actor_state(v.actor()) }).unwrap(),
+                ),
             );
             assert_eq!(reply.exit_code, 0, "the reply verifies the deposit");
             println!("the consumer's private transitions (executor):\n{}", render_executed(&[first, reply]));

@@ -1,0 +1,153 @@
+== updater-privacy
+-- (cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-updater --features harness --locked --no-fail-fast --lib --bins --test bounds --test config --test copies --test daemon_clock --test diversity_limi
+test chain::rpcurl::tests::hosts_read ... ok
+test chain::rpcurl::tests::loopback_hosts ... ok
+test lc_json::tests::a_wrong_shape_is_refused ... ok
+test chain::rpcurl::tests::not_loopback ... ok
+test lc_json::tests::uint256_is_little_endian ... ok
+test lc_json::tests::finality_update_json_is_the_served_ssz ... ok
+test serve::tests::ipv6_clients_count_by_their_64_network ... ok
+test serve::tests::per_client_and_total_bounds ... ok
+test updater::tests::distinct_clients_from_distinct_sources ... ok
+test lc_json::tests::bootstrap_json_is_the_served_ssz ... ok
+test lc_json::tests::updates_json_is_the_served_ssz ... ok
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test fetch_reads_exactly_its_bound ... ok
+test huge_answers_are_refused_without_growing_the_process ... ok
+test module_replies_and_messages_are_bounded ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+test a_beacon_api_module_source_parses ... ok
+test header_answers_and_utc ... ok
+test node_version_answers ... ok
+test an_execution_source_parses_and_its_misuses_are_refused ... ok
+test sepolia_gloas_instance_is_the_crown_instance ... ok
+test shipped_configurations_parse ... ok
+test updates_stream_splits_with_either_length_convention ... ok
+test client_diversity_configuration ... ok
+test bad_configurations_are_refused ... ok
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test an_open_gives_back_the_bytes_a_source_served ... ok
+test unread_transactions_are_reported_by_health ... ok
+test a_batch_of_copies_read_at_once_keeps_the_job_that_leads ... ok
+test a_job_opened_for_a_copy_never_served_is_found_and_joined ... ok
+test of_two_copies_opened_in_one_block_one_is_finished_and_the_other_left_at_its_open ... ok
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 13.63s
+test a_sequencer_backend_gets_the_machine_clock_and_the_harness_its_own_time ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.40s
+test headers_answers_count_canonical_blocks_and_client_names_are_the_providers_text ... ok
+test waiting_for_clients_is_reported_in_health ... ok
+test one_provider_listed_twice_is_refused_by_the_configuration ... ok
+test finalized_header_mode_sends_what_one_light_client_source_served ... ok
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 153.44s
+test deployer_holds_nothing_after_deployment ... ok
+test execution_providers_cannot_forge_a_fact ... ok
+test checkpoint_source_misleads_only_until_checked ... ok
+test beacon_providers_lie_lag_or_stop ... ok
+test trust_md_lists_exactly_the_parties_walked_here ... ok
+test provers_none_is_needed_on_the_public_job ... ok
+test submitters_any_account_advances_none_is_needed ... ok
+test sequencers_censor_or_stall_the_instance_still_advances ... ok
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.64s
+test json_rpc_answers ... ok
+test an_execution_block_counts_only_where_the_endpoint_holds_it_canonical ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test a_daemon_cut_off_from_its_chain_answers_503 ... ok
+test no_light_client_source_answering_is_down ... ok
+test no_progress_while_the_sources_move_on_is_degraded_then_down ... ok
+test committees_no_source_serves_take_it_down ... ok
+test an_unreachable_chain_takes_it_down_and_back ... ok
+test an_instance_past_its_weak_subjectivity_period_is_down ... ok
+test rejected_sends_degrade_then_take_it_down ... ok
+test transport_failures_degrade_then_take_it_down_and_recover ... ok
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.79s
+test a_kept_job_is_not_left_for_a_short_hold ... ok
+test jobs_another_party_opens_and_leaves_are_finished_not_paid_for_again ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.86s
+test a_copy_of_the_chosen_update_open_on_the_store_is_joined ... ok
+test a_carrier_yields_to_a_newer_job_with_as_many_steps ... ok
+test a_carrier_finds_a_newer_job_that_leads_its_own_and_waits ... ok
+test an_unreadable_job_on_the_store_is_waited_for_not_an_error ... ok
+test a_stalled_job_holds_an_updater_back_for_join_wait_rounds_at_most ... ok
+test a_new_job_each_round_holds_an_updater_back_for_the_cap_at_most ... ok
+test new_copies_of_one_update_opened_each_round_are_not_moves ... ok
+test of_two_copies_open_the_one_further_on_is_joined ... ok
+test an_open_waits_for_the_job_open_on_the_store ... ok
+test which_job_leads ... ok
+test of_two_jobs_opened_in_one_block_the_one_behind_is_not_continued ... ok
+test new_jobs_of_a_stalled_kind_do_not_hold_the_open_back ... ok
+test updaters_released_together_take_their_turns_again ... ok
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 48.88s
+test earlier_a_liar_re_dating_far_on_every_other_answer_is_demoted_each_time ... ok
+test newest_only_sources_with_finish_own_jobs_off_open_once_per_turn ... ok
+test earlier_two_liars_re_dating_alike_do_not_hold_the_adoption ... ok
+test opener_a_new_opened_copy_each_round_does_not_hold_the_instance ... ok
+test opener_a_new_opened_copy_every_turn_does_not_hold_the_instance ... ok
+test earlier_re_dated_a_few_slots_varying_each_round_does_not_hold_the_adoption ... ok
+test started_slots_with_finish_own_jobs_off_an_open_is_sent_once_per_turn ... ok
+test started_slots_an_adopting_update_re_dated_each_round_does_not_hold_the_instance ... ok
+test opener_cycling_through_every_kind_of_step_is_bounded ... ok
+test opener_sending_open_and_miller_does_not_hold_the_instance ... ok
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 66.63s
+test a_hold_for_good_outlives_its_rounds_and_a_restart ... ok
+test a_re_dated_copy_of_an_update_does_not_hold_it_back ... ok
+test a_re_dated_update_only_one_source_serves_is_refused ... ok
+test a_refusal_that_lost_a_race_is_not_held ... ok
+test a_refusal_of_unknown_cause_is_sent_again_until_it_lands ... ok
+test a_refusal_with_the_chain_unreadable_after_it_is_judged_once_it_reads ... ok
+test a_failed_read_after_a_lost_race_is_read_again ... ok
+test a_step_made_moot_while_planning_is_not_sent ... ok
+test a_refusal_with_the_chain_unreadable_after_it_is_judged_a_race ... ok
+test an_adopting_update_re_dated_within_the_margin_every_round_does_not_hold_the_instance ... ok
+test init_is_not_sent_outside_its_window ... ok
+test an_update_only_one_source_serves_re_dated_within_the_margin_every_round_holds_back_only_itself ... ok
+test a_step_refused_out_of_gas_is_not_charged_again ... ok
+test open_is_not_sent_outside_its_window ... ok
+test the_breaker_bounds_refusals_when_every_round_brings_a_new_job ... ok
+test a_re_dated_update_with_more_signers_does_not_hold_back_another ... ok
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 83.76s
+test a_consumer_moves_to_a_replacement_instance ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.26s
+test a_stale_snapshot_is_unhealthy ... ok
+test health_answers_beside_an_idle_connection ... ok
+test a_trickling_client_is_cut_off ... ok
+test request_heads_are_bounded ... ok
+test four_hundred_connections_at_once ... ok
+test more_connections_than_it_serves ... ok
+test health_answers_while_clients_keep_reopening_idle_connections ... ok
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.97s
+test the_clock_keeps_its_kind_and_never_goes_back ... ok
+test an_updater_back_after_a_long_gap_waits_its_draw ... ok
+test a_turn_comes_at_a_height_not_after_a_count_of_reads ... ok
+test the_stall_alarm_counts_blocks_and_a_height_that_stops ... ok
+test a_stalled_job_is_passed_after_join_wait_blocks_however_often_the_chain_is_read ... ok
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.66s
+-- exit 0
+-- (cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-updater --features harness --locked --no-fail-fast --doc -- --test-threads 4)
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+-- exit 0
+-- (cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-updater --features harness --locked --no-fail-fast --test recorded -- --test-threads 4 --exact --skip an_update_one_client_serves_is_held_back --sk
+test beacon_api_sources_over_http ... ok
+test a_lying_client_is_logged_and_does_not_count ... ok
+test distinct_clients_must_serve_the_same_bytes ... ok
+test fee_limits_are_declared_and_enforced ... ok
+test execution_source_confirms_or_holds_back ... ok
+test clients_reported_over_http ... ok
+test headers_source_confirms_or_holds_back ... ok
+test lying_source_is_refused_without_gas ... ok
+test own_job_is_finished_when_the_source_moves_on ... ok
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 55.94s
+-- exit 0
+-- bash scripts/privacy/run.sh <tree>/../tmp/ci-privacy
+thread 'privacy_suite_lez_half' (2323297) panicked at harness/tests/privacy_suite.rs:303:44:
+the checkpoint parses the block: NotStrictlyOrdered { what: "actors" }
+test privacy_suite_lez_half ... FAILED
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.80s
+-- exit 101
+-- python3 -I scripts/privacy/check-results.py <tree>/../tmp/ci-privacy
+(its output left out: it read <tree>/../tmp/ci-privacy, which an earlier run had written on 27 November 2026 at 23:46 UTC; this run's run.sh stopped before writing there, so the check is no evidence here)
+-- exit 0
+-- python3 -I scripts/privacy/controls.py target/privacy <tree>/../tmp/ci-privacy-controls
+Traceback (most recent call last):
+FileNotFoundError: [Errno 2] No such file or directory: 'target/privacy/lez.json'
+-- exit 1

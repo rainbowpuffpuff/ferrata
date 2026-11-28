@@ -1733,6 +1733,22 @@ mod tests {
         (job, DropContext { image_id, me: j.relayer, chain_id: j.chain_id, vault: j.vault, imported_roots: roots }, j)
     }
 
+    /// LEZ v0.4.0 moved to RISC Zero 3.1.0 (LEZ #1124), whose verifier refuses the recorded receipt, proven with 3.0.5:
+    /// on a v0.4.0 network the claimant's gas-drop receipt must come from a 3.1.0 prover.
+    #[cfg(feature = "lez-040")]
+    #[test]
+    fn a_receipt_of_risc0_3_0_is_refused_by_the_3_1_verifier() {
+        let (job, ctx, _) = recorded_job();
+        let bytes = serde_json::to_vec(&job).unwrap();
+        match check_drop_job(&bytes, &ctx) {
+            Err(DropRefusal::BadReceipt(m)) => assert!(m.contains("parameters digest"), "{m}"),
+            other => panic!("expected the verifier's version refusal, got {other:?}"),
+        }
+    }
+
+    // The recorded job's receipt was proven with RISC Zero 3.0.5: verified by the rc builds (risc0 3.0.5), refused by
+    // the v0.4.0 build's 3.1.0 verifier (the test above).
+    #[cfg(not(feature = "lez-040"))]
     #[test]
     fn a_gateway_admits_only_a_verified_job_of_this_relayer() {
         let (job, ctx, j) = recorded_job();

@@ -45,7 +45,8 @@ export function mountInbox(root, c) {
 
   let mine = null;
   const me = () => c.acct();
-  const keysOf = (a, epoch = 0) => M.deriveKeys(a.node.ssk, epoch);
+  const secretOf = (a) => c.net ? c.net.messagingSecretOf(a.node) : a.node.ssk;
+  const keysOf = (a, epoch = 0) => M.deriveKeys(secretOf(a), epoch);
   const cap = () => M.capacity(M.V_HYBRID, M.BUCKETS[M.BUCKETS.length - 1]);
   text.oninput = () => { const n = new TextEncoder().encode(text.value).length; count.textContent = `${n} / ${cap()} bytes`; };
   text.oninput();
@@ -56,8 +57,8 @@ export function mountInbox(root, c) {
       const t = await c.seq.transaction(hash).catch(() => null);
       if (!t) continue;
       const bid = Number(Array.isArray(t) ? t[1] : t.block_id);
-      const blk = c.lez.decodeBlock(await c.seq.block(bid));
-      const o = c.lez.outcomeIn(blk, hash);
+      const block = c.net?.version === 'v0.4.0' ? undefined : await c.seq.block(bid);
+      const o = c.net ? await c.net.outcome(hash, block) : c.lez.outcomeIn(c.lez.decodeBlock(block), hash);
       return { block: bid, reverted: o === 'reverted', missing: o === 'missing' };
     }
     return null;
@@ -65,7 +66,7 @@ export function mountInbox(root, c) {
   async function act(label, data, gasLimit, others = []) {
     const a = me();
     out.className = 'msg'; out.textContent = `${label}: signing and sending…`;
-    const r = await C.call(c.seq, { node: a.node, program, data, others, gasLimit });
+    const r = await C.call(c.seq, { node: a.node, program, data, others, gasLimit, net: c.net, gate: c.versionConfirmed });
     out.textContent = `${label}: sent ${r.hash}; waiting for a block…`;
     const o = await outcome(r.hash);
     if (!o) throw new Error(`${label}: not in a block after three minutes (${r.hash})`);
@@ -120,7 +121,7 @@ export function mountInbox(root, c) {
       publish.hidden = !!fp;
       policy.value = mine?.policy ?? 'open';
       list.textContent = '';
-      const items = M.readInbox(mine, a.node.accountId, a.node.ssk).reverse();
+      const items = M.readInbox(mine, a.node.accountId, secretOf(a)).reverse();
       if (!items.length) list.append(el('li', { text: 'No messages.' }));
       for (const m of items) {
         const who = c.names ? await c.names.reverse(m.from).catch(() => null) : null;

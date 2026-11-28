@@ -9,8 +9,13 @@
 
 use std::{fs, path::PathBuf};
 
+#[cfg(not(feature = "lez-040"))]
+use checkpoint_core::lez::{parse_block, Actor as CpActor, Origin, TxKind, Visitor};
+#[cfg(feature = "lez-040")]
+use checkpoint_core::lez_0_4_0::{parse_block, Actor as CpActor, Origin, TxKind, Visitor};
+#[cfg(feature = "lez-040")]
+mod lez_block040;
 use checkpoint_core::{
-    lez::{parse_block, Actor as CpActor, Origin, TxKind, Visitor},
     wire::BridgeMessage as CpMessage,
 };
 use ferrata_lez_bridge_wire::{
@@ -71,6 +76,7 @@ impl<'a> Visitor<'a> for Calls<'a> {
 }
 
 /// A LEZ block (`borsh(Block)`) holding `txs`, `reverted` the positions of reverted ones.
+#[cfg(not(feature = "lez-040"))]
 fn block(txs: &[&[u8]], reverted: &[u64]) -> Vec<u8> {
     let mut b = Vec::new();
     b.extend_from_slice(&7u64.to_le_bytes());
@@ -87,6 +93,12 @@ fn block(txs: &[&[u8]], reverted: &[u64]) -> Vec<u8> {
     }
     b.push(2);
     b
+}
+
+/// [`block`] in LEZ v0.4.0's layout (tests/lez_block040).
+#[cfg(feature = "lez-040")]
+fn block(txs: &[&[u8]], reverted: &[u64]) -> Vec<u8> {
+    lez_block040::block(7, 1_700_000_000_000, txs, reverted)
 }
 
 #[test]

@@ -75,9 +75,11 @@ use ferrata_lez_wire::{
     header_actor, instance_actor, instance_id, instance_seed, job_actor, job_id, InstanceState, Message, RecordState,
 };
 use ferrata_spectests::execkit::{account_proof, receipt_rlp, AccountProof, Trie};
+#[cfg(not(feature = "lez-040"))]
+use lee::{PrivateKey, PublicKey};
 use lee::{
     public_transaction::{Message as PublicMessage, WitnessSet},
-    AccountId, Actor, FeeDeclaration, PrivateKey, PublicAccountEvidence, PublicKey, PublicTransaction, ValidatedStateDiff,
+    AccountId, Actor, FeeDeclaration, PublicAccountEvidence, PublicTransaction, ValidatedStateDiff,
 };
 use sequencer_service_rpc::{SequencerClient, SequencerClientBuilder};
 use serde::{Deserialize, Serialize};
@@ -490,6 +492,8 @@ fn load_follower(dir: Option<&Path>) -> Result<Follower> {
 
 impl Zone {
     async fn open(rpc: &str, wait_final: bool, state_dir: Option<PathBuf>) -> Result<Self> {
+        // The network's LEZ before anything is read, built or signed (LEZ v0.4.0 changed the formats).
+        crate::lezver::require(rpc).await?;
         let client = SequencerClientBuilder::default().build(rpc).with_context(|| format!("the sequencer at {rpc}"))?;
         let follower = load_follower(state_dir.as_deref())?;
         let saved_height = state_dir.as_ref().filter(|d| d.join(FOLLOWER_STATE).exists()).map(|_| follower.height());
@@ -631,11 +635,12 @@ fn settle(state: &mut lee::V03State, tx: &LeeTransaction, block_id: u64, ts: u64
     let opening = opening_fee_state(state);
     let mut summary = BlockFeeSummary::default();
     let pre = state.clone();
-    let (events, reverted) =
+    let (events, settled) =
         settle_transaction(tx, state, &opening, block_id, ts, 0, &mut summary).map_err(|e| anyhow!("settlement rejects it: {e}"))?;
+    let reverted = settled_reverted(&settled);
     let reason = match (reverted, tx) {
         (true, LeeTransaction::Public(p)) => {
-            let budget = p.message().execution.fee.map(|f| f.gas_limit).unwrap_or(fee_core::market::MAX_GAS_EXEC);
+            let budget = declared_fee(p.message()).map(|f| f.gas_limit).unwrap_or(fee_core::market::MAX_GAS_EXEC);
             ValidatedStateDiff::from_public_transaction_metered(p, &pre, block_id, ts, budget).0.revert
         }
         _ => None,
@@ -651,6 +656,27 @@ fn settle(state: &mut lee::V03State, tx: &LeeTransaction, block_id: u64, ts: u64
         at_ms: ts,
         dry: true,
     })
+}
+
+/// Whether LEZ's settlement reverted the transaction: its flag up to v0.4.0-rc3, its receipt's status from v0.4.0
+/// (LEZ #1107: a receipt per user transaction in place of the reverted list).
+#[cfg(not(feature = "lez-040"))]
+fn settled_reverted(reverted: &bool) -> bool {
+    *reverted
+}
+#[cfg(feature = "lez-040")]
+fn settled_reverted(receipt: &common::block::TransactionReceipt) -> bool {
+    !receipt.success
+}
+
+/// A public transaction's fee declaration: in its execution up to v0.4.0-rc3, in the message from v0.4.0 (LEZ #1080).
+#[cfg(not(feature = "lez-040"))]
+fn declared_fee(m: &PublicMessage) -> Option<FeeDeclaration> {
+    m.execution.fee
+}
+#[cfg(feature = "lez-040")]
+fn declared_fee(m: &PublicMessage) -> Option<FeeDeclaration> {
+    m.fee
 }
 
 /// The zone's receipt of a transaction, from the follower.
@@ -678,8 +704,15 @@ fn same(zone: &Outcome, dry: &Outcome) -> bool {
         && zone.events == dry.events
 }
 
+/// The fee payer's key: a private key up to LEZ v0.4.0-rc3; from v0.4.0 the public account's secret, which its
+/// per-nonce keys derive from (LEZ #1135), as LEZ's wallet imports and exports it (64 hex digits either way).
+#[cfg(not(feature = "lez-040"))]
+type PayerKey = PrivateKey;
+#[cfg(feature = "lez-040")]
+type PayerKey = lee::signature::PublicAccountSecret;
+
 struct Payer {
-    key: PrivateKey,
+    key: PayerKey,
     id: AccountId,
 }
 
@@ -687,8 +720,18 @@ fn payer(path: &Option<PathBuf>) -> Result<Payer> {
     let path = path.as_ref().ok_or_else(|| anyhow!("--key (the fee payer's private key file) is needed to build a transaction"))?;
     let text = std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
     let bytes: [u8; 32] = hex::decode(text.trim().trim_start_matches("0x"))?.try_into().map_err(|_| anyhow!("not 32 bytes"))?;
-    let key = PrivateKey::try_new(bytes).map_err(|e| anyhow!("not a private key: {e:?}"))?;
-    let id = AccountId::from(&PublicKey::new_from_private_key(&key));
+    #[cfg(not(feature = "lez-040"))]
+    let (key, id) = {
+        let key = PrivateKey::try_new(bytes).map_err(|e| anyhow!("not a private key: {e:?}"))?;
+        let id = AccountId::from(&PublicKey::new_from_private_key(&key));
+        (key, id)
+    };
+    #[cfg(feature = "lez-040")]
+    let (key, id) = {
+        let key = lee::signature::PublicAccountSecret::new(bytes);
+        let id = lee::signature::public_account_id(&key);
+        (key, id)
+    };
     Ok(Payer { key, id })
 }
 
@@ -696,8 +739,28 @@ fn payer(path: &Option<PathBuf>) -> Result<Payer> {
 fn build(p: &Payer, nonce: u128, root: Actor, message: Vec<u8>, actors: Vec<Actor>, evidence: Vec<PublicAccountEvidence>, gas_limit: u64) -> LeeTransaction {
     let fee = FeeDeclaration::new(p.id, gas_limit, 0, wallet::max_fee_for(gas_limit));
     let nonces = BTreeMap::from([(p.id, lee_core::account::Nonce(nonce))]);
-    let msg = PublicMessage::new(root, message, actors, nonces, Some(fee), evidence);
-    let witness = WitnessSet::for_message(&msg, &[&p.key]);
+    #[cfg(not(feature = "lez-040"))]
+    let (msg, witness) = {
+        let msg = PublicMessage::new(root, message, actors, nonces, Some(fee), evidence);
+        let witness = WitnessSet::for_message(&msg, &[&p.key]);
+        (msg, witness)
+    };
+    // LEZ v0.4.0: each actor carries its authority, Signer only for the payer's own accounts, as up to rc3 an
+    // actor was authorized when its account signed (LEZ #1144); the payer signs with its key at `nonce` and
+    // rotates to its next one (LEZ #1135).
+    #[cfg(feature = "lez-040")]
+    let (msg, witness) = {
+        use lee::{signature::Signer, Authority};
+        use lee_core::signing_key::KeyType;
+        let actors = actors
+            .into_iter()
+            .map(|a| (a, if a.account_id == p.id { Authority::Signer } else { Authority::None }))
+            .collect::<Vec<_>>();
+        let msg = PublicMessage::new(root, message, actors, nonces, Some(fee), evidence);
+        let signer = Signer::new(&p.key, lee_core::account::Nonce(nonce), KeyType::Schnorr, KeyType::Schnorr);
+        let witness = WitnessSet::sign(&msg, &[signer]);
+        (msg, witness)
+    };
     LeeTransaction::Public(PublicTransaction::new(msg, witness))
 }
 
@@ -1983,6 +2046,7 @@ mod tests {
 
     /// The recorded refusal: the `twin Init` row of `run.tsv` (its status, gas and LEZ's note), and its transaction's
     /// block from `blocks.borsh` (its time, and the `Init` message it carried).
+    #[cfg(not(feature = "lez-040"))]
     fn recorded() -> (Outcome, Config, Root, u64) {
         let tsv = std::fs::read_to_string(format!("{RUN}/run.tsv")).unwrap();
         let header: Vec<&str> = tsv.lines().next().unwrap().split('\t').collect();
@@ -2033,6 +2097,9 @@ mod tests {
         assert_eq!(lee::error::LeeError::OutOfValidityWindow.to_string(), WINDOW_REFUSAL);
     }
 
+    // Recorded on LEZ v0.4.0-rc1 (its blocks' borsh): a v0.4.0 build cannot read them (LEZ #1107, #1135); a v0.4.0
+    // recording takes their place once a v0.4.0 run is recorded.
+    #[cfg(not(feature = "lez-040"))]
     #[test]
     fn recorded_refusal_of_a_stale_checkpoint_maps_to_code_53() {
         let (outcome, config, checkpoint, slot) = recorded();
@@ -2067,6 +2134,9 @@ mod tests {
         assert!(!outcome.show_for(None).contains("OutsideWeakSubjectivityPeriod"), "{}", outcome.show_for(None));
     }
 
+    // Recorded on LEZ v0.4.0-rc1 (its blocks' borsh): a v0.4.0 build cannot read them (LEZ #1107, #1135); a v0.4.0
+    // recording takes their place once a v0.4.0 run is recorded.
+    #[cfg(not(feature = "lez-040"))]
     #[test]
     fn a_window_not_open_yet_is_not_code_53() {
         let (mut outcome, config, checkpoint, slot) = recorded();
@@ -2098,6 +2168,9 @@ mod tests {
         assert!(outcome.show_for(Some(&note)).starts_with("refused with 53 OutsideWeakSubjectivityPeriod"));
     }
 
+    // Recorded on LEZ v0.4.0-rc1 (its blocks' borsh): a v0.4.0 build cannot read them (LEZ #1107, #1135); a v0.4.0
+    // recording takes their place once a v0.4.0 run is recorded.
+    #[cfg(not(feature = "lez-040"))]
     #[test]
     fn a_step_is_not_sent_past_or_near_its_window_end() {
         let (outcome, config, checkpoint, slot) = recorded();

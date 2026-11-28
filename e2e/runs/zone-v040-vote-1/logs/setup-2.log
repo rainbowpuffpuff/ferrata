@@ -1,0 +1,3 @@
+work/seq-2 is set up
+  channel signing public key  105ddf3f2dc3fe4b435a15f21bc518375729283d313b739460a714e00d0806cb
+Pass that key to `stake --sequencer-key`.

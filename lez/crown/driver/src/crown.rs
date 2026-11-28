@@ -190,14 +190,24 @@ fn h(bytes: &[u8]) -> String {
 /// tag is used once, `burn(cid, r)`) B1's program was `0x847a4336…` (B1's first build `0xac1fb59b…`); ADR 0046's (a claim
 /// names no fee schedule) was `0xffb47f6e…`, never deployed; since ADR 0048 (protocol fees minted on LEZ by
 /// `CollectFees`) the program of this tree is `0x9d02d54d…`, docs/image-ids.md `ferrata_bridge_lezfee`.
+#[cfg(not(feature = "lez-040"))]
 pub const BRIDGE_IMAGE_ID: &str = "9d02d54d56b026079e94c8d9b12db69f3a96b7acccd11283f68e5bc343bfa321";
+/// On LEZ v0.4.0 (feature `lez-040`): the same program built from its v0.4.0 twin (guests/bridge/src/main_lez040.rs,
+/// RISC Zero 3.1.0), lez/results/v0.4.0/image-ids.md; deployed nowhere yet.
+#[cfg(feature = "lez-040")]
+pub const BRIDGE_IMAGE_ID: &str = "7e39359d8d447d6e98696a4a64266c0d12aaa2a2bdcfd0a3704545fbbfbc26e0";
+/// Where [`BRIDGE_IMAGE_ID`] is recorded.
+#[cfg(not(feature = "lez-040"))]
+const BRIDGE_RECORD: &str = "docs/image-ids.md `ferrata_bridge_lezfee`";
+#[cfg(feature = "lez-040")]
+const BRIDGE_RECORD: &str = "lez/results/v0.4.0/image-ids.md `ferrata_bridge`";
 
 /// Refuses a bridge program other than [`BRIDGE_IMAGE_ID`].
 pub fn check_bridge_image(image_id: [u8; 32]) -> Result<()> {
     ensure!(
         hex::encode(image_id) == BRIDGE_IMAGE_ID,
-        "the bridge program 0x{} is not the one this crown-driver speaks (0x{BRIDGE_IMAGE_ID}, docs/image-ids.md \
-         `ferrata_bridge_lezfee`): its messages or accounts differ; B1's program needs the driver of 40e8d799, the live runs' that of f13faee2",
+        "the bridge program 0x{} is not the one this crown-driver speaks (0x{BRIDGE_IMAGE_ID}, {BRIDGE_RECORD}): its \
+         messages or accounts differ; B1's program needs the driver of 40e8d799, the live runs' that of f13faee2",
         hex::encode(image_id)
     );
     Ok(())
@@ -1632,6 +1642,61 @@ fn note_json(i: u64, kind: &str, cid: &Root, vault: &[u8; 20], note: &Note, s_ou
     })
 }
 
+/// LEZ v0.4.0: genesis credits LEZ's private test accounts by publications (`supply_private_account`), not in their
+/// notes, and LEZ's wallet pays a private transaction whose public part can fail from the note alone (that keeps its
+/// fee fallback payable): the bridge's private claim refuses to build ("Fee payer ... holds 0"). So the session first
+/// receives the account's pending native credits into its note, one transaction each (a receipt pays its fee out of
+/// what it credits), each settled before the next. With fake receipts the sequencer drops them, and nothing changes.
+#[cfg(feature = "lez-040")]
+async fn receive_native_credits(
+    live: &mut Live,
+    wallet: &mut wallet::WalletCore<TapClient>,
+    me: AccountId,
+    fake: bool,
+) -> Result<()> {
+    for round in 0..4 {
+        let pending = wallet.owned_pending_messages().await?;
+        let Some(credit) = pending.into_iter().find(|p| p.recipient.account_id() == me && p.native_credit().is_some())
+        else {
+            return Ok(());
+        };
+        let amount = credit.native_credit().unwrap_or(0);
+        let step = format!("receive a pending credit of {amount} into private test account 0 (#{round})");
+        let started = Instant::now();
+        let (hash, _) = wallet
+            .receive_pending_message(credit)
+            .await
+            .map_err(|e| anyhow!("{step}: not sent: {e:?}"))?;
+        // A real proof takes minutes of blocks: the wait for inclusion counts from the submission.
+        let since_head = live.head().await?;
+        println!("[crown-b] {step}: executed, proven and sent in {:.1} s", started.elapsed().as_secs_f64());
+        let outcome = live
+            .settle(Sent {
+                step: step.clone(),
+                hash,
+                sent_at: Instant::now(),
+                since_head,
+                payer: None,
+                balance_before: 0,
+                harness: None,
+                note: "LEZ v0.4.0: a genesis credit received into the note before the session's transactions".into(),
+            })
+            .await?;
+        if fake {
+            println!(
+                "[crown-b] {step}: dev mode: the sequencer drops a fake receipt, so the note stays unfunded and the session's \
+                 private transactions on v0.4.0 cannot pay their fee from it"
+            );
+            return Ok(());
+        }
+        ensure!(outcome.applied(), "{step}: {} {} {}", outcome.row.status, outcome.row.exit, outcome.row.note);
+        live.sync().await?;
+        let height = live.follower.height();
+        wallet.sync_to_block(height).await?;
+    }
+    Ok(())
+}
+
 /// LEZ's wallet holding the private test account 0, for the session's private transactions:
 /// each is executed and proven by the wallet (r0vm as LEZ's prover), sent, and settled.
 struct PrivateSession {
@@ -1661,6 +1726,8 @@ impl PrivateSession {
         let (mut wallet, me) = private_wallet(&dir.join("wallet"), &live.opts.rpc, client)?;
         let tip = wallet.start_at_chain_tip().await?;
         println!("[crown-b] private wallet at block {tip}: account {me}");
+        #[cfg(feature = "lez-040")]
+        receive_native_credits(live, &mut wallet, me, fake).await?;
         let bridge = deployment_accounts(BRIDGE, bridge_bin).0;
         let catalog = ProgramCatalog::from([(bridge, Program::new(Cow::Owned(bridge_bin.bytes.clone()))?)]);
         Ok(Self { wallet, me, bridge, catalog, dir, fake })
@@ -1824,6 +1891,7 @@ mod tests {
 
     /// The bridge program this driver speaks is docs/image-ids.md's `ferrata_bridge_lezfee`; B1's, the live runs' program,
     /// and any other, are refused.
+    #[cfg(not(feature = "lez-040"))]
     #[test]
     fn the_driver_speaks_the_bridge_program_since_b1_only() {
         let doc = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../docs/image-ids.md")).unwrap();
@@ -1843,6 +1911,28 @@ mod tests {
         assert_ne!(live, tree);
         assert!(check_bridge_image(live).is_err(), "the live runs' bridge program is refused");
         let mut other = tree;
+        other[31] ^= 1;
+        assert!(check_bridge_image(other).is_err());
+    }
+
+    /// On LEZ v0.4.0 the driver speaks the v0.4.0 build of the same program (lez/results/v0.4.0/image-ids.md, the
+    /// "v0.4.0 build" column), and refuses this tree's release-candidate build (docs/image-ids.md
+    /// `ferrata_bridge_lezfee`) and any other.
+    #[cfg(feature = "lez-040")]
+    #[test]
+    fn on_v040_the_driver_speaks_the_v040_build_of_the_bridge() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../results/v0.4.0/image-ids.md");
+        let record = std::fs::read_to_string(path).unwrap();
+        let row = record.lines().find(|l| l.starts_with("| `ferrata_bridge` |")).expect("the bridge's row");
+        let v040 = row.split(" | ").nth(4).unwrap().trim_matches('`').trim_start_matches("0x");
+        let mut id = [0u8; 32];
+        hex::decode_to_slice(v040, &mut id).unwrap();
+        assert_eq!(hex::encode(id), BRIDGE_IMAGE_ID);
+        assert!(check_bridge_image(id).is_ok());
+        let mut rc = [0u8; 32];
+        hex::decode_to_slice("9d02d54d56b026079e94c8d9b12db69f3a96b7acccd11283f68e5bc343bfa321", &mut rc).unwrap();
+        assert!(check_bridge_image(rc).is_err(), "the release candidates' build is refused on v0.4.0");
+        let mut other = id;
         other[31] ^= 1;
         assert!(check_bridge_image(other).is_err());
     }

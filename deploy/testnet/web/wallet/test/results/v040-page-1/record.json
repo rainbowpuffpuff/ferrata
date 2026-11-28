@@ -1,0 +1,111 @@
+{
+ "passed": 13,
+ "total": 13,
+ "checks": [
+  {
+   "name": "Settings reports LEZ v0.4.0",
+   "ok": true,
+   "detail": "v0.4.0",
+   "t": 1.2
+  },
+  {
+   "name": "receive admission key is 66 hex digits starting 00",
+   "ok": true,
+   "detail": "000537b6dc1db5e86d0ef9b254ffd13856a4647cfb41a0526d50e9a43435286381",
+   "t": 1.2
+  },
+  {
+   "name": "receive code equals Node's lez040.js account /0 derivation",
+   "ok": true,
+   "detail": "lez:E6Mb7gptmMnFDmL7r4fxeAvYwcWf6hpBFDVi5xUd9ddC?pk=000537b6dc1db5e86d0ef9b254ffd13856a4647cfb41a0526d50e9a43435286381",
+   "t": 1.2
+  },
+  {
+   "name": "recorded wire decodes as the named v0.4.0 public native transfer",
+   "ok": true,
+   "detail": "76f9285b4b26783f703d7a1e5a9f9ada7a0dc186ea772e39ce93ff3b1c715b4d",
+   "t": 3.8
+  },
+  {
+   "name": "wire payer nonce is 0",
+   "ok": true,
+   "detail": "",
+   "t": 3.8
+  },
+  {
+   "name": "actors: the payer's and recipient's native-token actors, the payer alone signing, one witness",
+   "ok": true,
+   "detail": "",
+   "t": 3.8
+  },
+  {
+   "name": "nonce-0 witness carries the payer initial key and rotates its key",
+   "ok": true,
+   "detail": "",
+   "t": 3.8
+  },
+  {
+   "name": "witness signature verifies over messageWithKeys with the nonce-0 key",
+   "ok": true,
+   "detail": "",
+   "t": 3.8
+  },
+  {
+   "name": "recipient initial key state is the admission evidence",
+   "ok": true,
+   "detail": "",
+   "t": 3.8
+  },
+  {
+   "name": "wire amount is 2.5 times 10^config.token.decimals",
+   "ok": true,
+   "detail": "2500000000 atomic units",
+   "t": 3.8
+  },
+  {
+   "name": "page reports the transaction outcome as applied",
+   "ok": true,
+   "detail": "In block 2, applied; the nonce moved to 1. Balance: 997.5 LGO. Transaction 76f9285b4b26783f703d7a1e5a9f9ada7a0dc186ea772e39ce93ff3b1c715b4d.",
+   "t": 3.8
+  },
+  {
+   "name": "lock and passphrase unlock preserve the receive code",
+   "ok": true,
+   "detail": "lez:E6Mb7gptmMnFDmL7r4fxeAvYwcWf6hpBFDVi5xUd9ddC?pk=000537b6dc1db5e86d0ef9b254ffd13856a4647cfb41a0526d50e9a43435286381",
+   "t": 3.9
+  },
+  {
+   "name": "no page script errors or non-origin requests",
+   "ok": true,
+   "detail": "",
+   "t": 3.9
+  }
+ ],
+ "phrase": "BIP-39 all-abandon public test vector",
+ "amount": "2.5",
+ "base": "http://127.0.0.1:58453",
+ "rpc": "http://127.0.0.1:49335/rpc",
+ "expected": {
+  "payer": "E6Mb7gptmMnFDmL7r4fxeAvYwcWf6hpBFDVi5xUd9ddC",
+  "payerKey": "000537b6dc1db5e86d0ef9b254ffd13856a4647cfb41a0526d50e9a43435286381",
+  "recipient": "CnJQobGbqfrqDwhS17gaza4Qv1urWtM9gRTjCh1Zsmaf",
+  "recipientKey": "00dd2dad3b22997e13b5ea54aabca9ade2dbbc48590fc960d2036ebec62f3c77d6",
+  "payerCode": "lez:E6Mb7gptmMnFDmL7r4fxeAvYwcWf6hpBFDVi5xUd9ddC?pk=000537b6dc1db5e86d0ef9b254ffd13856a4647cfb41a0526d50e9a43435286381",
+  "recipientCode": "lez:CnJQobGbqfrqDwhS17gaza4Qv1urWtM9gRTjCh1Zsmaf?pk=00dd2dad3b22997e13b5ea54aabca9ade2dbbc48590fc960d2036ebec62f3c77d6",
+  "amount": "2500000000",
+  "decimals": 9
+ },
+ "outcome": "In block 2, applied; the nonce moved to 1. Balance: 997.5 LGO. Transaction 76f9285b4b26783f703d7a1e5a9f9ada7a0dc186ea772e39ce93ff3b1c715b4d.",
+ "transaction_hash": "76f9285b4b26783f703d7a1e5a9f9ada7a0dc186ea772e39ce93ff3b1c715b4d",
+ "wire_verification": {
+  "public": true,
+  "hash": true,
+  "nonce": true,
+  "authorities": true,
+  "initial": true,
+  "signature": true,
+  "admission": true,
+  "amount": true,
+  "decodedHash": "76f9285b4b26783f703d7a1e5a9f9ada7a0dc186ea772e39ce93ff3b1c715b4d"
+ }
+}

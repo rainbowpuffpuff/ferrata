@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read a LEZ v0.4.0-rc3 network from a terminal, as the test network's explorer reads it in a browser: blocks,
+"""Read a LEZ network (v0.4.0-rc3, or v0.4.0) from a terminal, as the test network's explorer reads it in a browser: blocks,
 transactions, accounts and Ferrata's programs, each decoded and each hash recomputed. Read-only; Python 3.11+
 standard library only (scripts/verifylib/lez.py and lc.py, the explorer's decoder ported).
 
@@ -16,7 +16,10 @@ standard library only (scripts/verifylib/lez.py and lc.py, the explorer's decode
                                                                      the program's IDL where it has one
     --json prints one JSON object instead of text.
 
-URL: the network's site (default: scripts/reproduce/deployed-programs.json's network); its RPC is URL/rpc. Messages to
+URL: the network's site (default: scripts/reproduce/deployed-programs.json's network); its RPC is URL/rpc.
+--lez-version auto (the default) asks the network once (getSequencerStatus, a read LEZ v0.4.0 added) and decodes with
+v0.4.0's layouts (scripts/verifylib/lez040.py: receipts, rotating keys, actor authorities) when it answers, with
+v0.4.0-rc3's otherwise; a probe that fails falls back to rc3's with a message. v0.4.0-rc3 or v0.4.0 forces one. Messages to
 Ferrata's programs are decoded with the IDLs under idl/ (attestation, bridge, names, messages); others are shown raw.
 Exit 0, 1 when something read does not hold (a hash that does not match its bytes, a message that does not decode),
 2 when the network cannot be read. `instance ACCOUNT --alarms` also exits 1 when an alarm is "bad" (a warning does
@@ -33,7 +36,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from verifylib import lc, lez  # noqa: E402
+from verifylib import lc, lez, lez040  # noqa: E402
 
 LOADER = bytes([0xFE]) * 32
 
@@ -157,12 +160,47 @@ def alarms(cfg: dict, slot: int, *, active: bool, next_committee: bool, now_ms: 
 
 
 class Reader:
-    def __init__(self, site: str, committee: int = 512):
+    def __init__(self, site: str, committee: int = 512, lez_version: str = "auto"):
         self.site = site.rstrip("/")
         self.committee = committee
-        self.rpc = lez.Rpc(self.site + "/rpc", budget_s=120)
+        # `sure`: the version was forced or the probe named it; otherwise rc3 is a fallback, and a block or transaction
+        # that rc3's decoder refuses is tried as v0.4.0 (a v0.4.0 network whose probe failed for a moment).
+        self.sure = True
+        if lez_version == "auto":
+            try:
+                lez_version = "v0.4.0" if lez040.probe(self.site + "/rpc") == "v0.4.0" else "v0.4.0-rc3"
+            except (lez.RpcError, OSError) as e:
+                print(f"lez-read: the network's LEZ version could not be read ({e}); decoding as v0.4.0-rc3",
+                      file=sys.stderr)
+                lez_version, self.sure = "v0.4.0-rc3", False
+        self.use(lez_version)
         self._programs = None
         self._idls = {}
+
+    def use(self, lez_version: str):
+        self.lez_version = lez_version
+        self.codec = lez040 if lez_version == "v0.4.0" else lez
+        self.rpc = (lez040.Rpc040 if lez_version == "v0.4.0" else lez.Rpc)(self.site + "/rpc", budget_s=120)
+        # The built-in programs by account: v0.4.0's system programs are system_upgrader PDAs (LEZ #946).
+        self.builtins = dict(BUILTINS)
+        if lez_version == "v0.4.0":
+            self.builtins.update({lez.b58encode(lez040.system_program_id(n)): n.replace("_", " ")
+                                  for n in lez040.SYSTEM_PROGRAMS})
+
+    def decode(self, what: str, raw: bytes):
+        """`what` (decode_block or decode_transaction) with the selected codec; when the version is only rc3's
+        fallback and rc3's decoder refuses the bytes, v0.4.0's is tried, and kept if it reads them."""
+        try:
+            return getattr(self.codec, what)(raw)
+        except lez.DecodeError:
+            if self.sure or self.codec is lez040:
+                raise
+            out = getattr(lez040, what)(raw)
+            print("lez-read: the bytes read as LEZ v0.4.0 (rc3's decoder refused them); decoding as v0.4.0",
+                  file=sys.stderr)
+            self.use("v0.4.0")
+            self.sure = True
+            return out
 
     def programs(self) -> dict:
         """program account (base58) -> (name, image id) from the network's /programs.json."""
@@ -184,13 +222,19 @@ class Reader:
                 self._idls[name] = lc.Idl.load(ROOT / path) if path and (ROOT / path).exists() else None
         return self._idls[name]
 
-    def describe_tx(self, tx: dict, reverted: bool | None = None) -> dict:
+    def describe_tx(self, tx: dict, reverted: bool | None = None, receipt: dict | None = None,
+                    outcome: str | None = None) -> dict:
         root = tx["root"]
         out = {"hash": tx["hash"].hex(), "kind": tx["kind"], "size": tx["size"],
                "signers": [lez.b58encode(s) for s in tx["signers"]],
                "nonces": [{"account": lez.b58encode(n["account"]), "nonce": n["nonce"]} for n in tx["nonces"]]}
-        if reverted is not None:
+        if outcome is not None:
+            out["outcome"] = outcome
+        elif reverted is not None:
             out["outcome"] = "reverted" if reverted else "applied"
+        if receipt is not None:
+            # LEZ v0.4.0's receipt (#1107): what the transaction was charged, reverted or not.
+            out["fee"] = {k: receipt[k] for k in ("gas_exec", "gas_stor", "fee_base", "tip", "refund")}
         if tx["kind"] == "PrivacyPreserving":
             e = tx["execution"]
             out["private"] = {"nullifiers": len(e["private_actions"]), "proof_bytes": len(tx["proof"]),
@@ -199,7 +243,7 @@ class Reader:
             out["call"] = None
             return out
         prog = lez.b58encode(root["to"]["program_account_id"])
-        name, image = self.programs().get(prog, (BUILTINS.get(prog), None))
+        name, image = self.programs().get(prog, (self.builtins.get(prog), None))
         call = {"program": prog, "program_name": name, "account": lez.b58encode(root["to"]["account_id"]),
                 "message_bytes": len(root["message"])}
         idl = self.idl(name) if name else None
@@ -224,21 +268,31 @@ class Reader:
         raw = self.rpc.call("getBlock", [n])
         if raw is None:
             raise LookupError(f"block {n}: not served")
-        b = lez.decode_block(base64.b64decode(raw))
+        b = self.decode("decode_block", base64.b64decode(raw))
         h = b["header"]
-        return {"block": h["block_id"], "hash": h["hash"].hex(), "hash_recomputed": b["computed_hash"].hex(),
-                "hash_ok": b["hash_ok"], "prev": h["prev_block_hash"].hex(),
+        if self.codec is lez040:
+            txs = [self.describe_tx(tx, receipt=b["receipts"][i] if i < len(b["receipts"]) else None,
+                                    outcome=lez040.outcome(b, i)) for i, tx in enumerate(b["transactions"])]
+        else:
+            txs = [self.describe_tx(tx, i in set(b["reverted"])) for i, tx in enumerate(b["transactions"])]
+        return {"block": h["block_id"], "lez": self.lez_version, "hash": h["hash"].hex(),
+                "hash_recomputed": b["computed_hash"].hex(), "hash_ok": b["hash_ok"], "prev": h["prev_block_hash"].hex(),
                 "time_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(h["timestamp"] / 1000)),
-                "bedrock_status": b["bedrock_status"], "bytes": b["size"],
-                "transactions": [self.describe_tx(tx, i in set(b["reverted"])) for i, tx in enumerate(b["transactions"])]}
+                "bedrock_status": b["bedrock_status"], "bytes": b["size"], "transactions": txs}
 
     def tx(self, h: str) -> dict:
         import base64
         raw = self.rpc.call("getTransaction", [h.removeprefix("0x")])
         if raw is None:
             raise LookupError(f"transaction {h}: not served")
-        tx = lez.decode_transaction(base64.b64decode(raw))
-        d = self.describe_tx(tx)
+        tx = self.decode("decode_transaction", base64.b64decode(raw))
+        receipt = None
+        if self.codec is lez040:
+            r = self.rpc.call("getTransactionReceipt", [h.removeprefix("0x")])
+            if r is not None:
+                receipt = {"success": r["success"], **r["fee"]}
+        d = self.describe_tx(tx, receipt=receipt, outcome=None if receipt is None else
+                             ("applied" if receipt["success"] else "reverted"))
         d["hash_ok"] = tx["hash"].hex() == h.removeprefix("0x").lower()
         return d
 
@@ -321,11 +375,13 @@ def main(argv=None) -> int:
     ap.add_argument("--finalized-slot", type=int, metavar="N",
                     help="with --alarms: Ethereum's finalized checkpoint slot, as a beacon API serves it (the lag is "
                          "judged by it, as the page judges it; without it, by the wall clock)")
+    ap.add_argument("--lez-version", choices=["auto", "v0.4.0-rc3", "v0.4.0"], default="auto",
+                    help="the network's LEZ: auto (asks it with getSequencerStatus; rc3 when that fails), or forced")
     ap.add_argument("what", choices=["head", "block", "tx", "programs", "instance", "account"])
     ap.add_argument("args", nargs="*")
     a = ap.parse_args(argv)
     site = a.lez or json.loads((ROOT / "scripts/reproduce/deployed-programs.json").read_text())["network"]
-    r = Reader(site, a.committee)
+    r = Reader(site, a.committee, a.lez_version)
     try:
         if a.what == "head":
             out = r.block(r.rpc.call("getLastBlockId"))

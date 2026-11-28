@@ -24,3 +24,5 @@ serde_json = { version = "1", optional = true }
 [features]
 default = []
 prove = ["dep:risc0-zkvm", "dep:serde_json"]
+# LEZ v0.4.0 (cli/v040/build.sh): the bridge program's v0.4.0 image id (src/deployed.rs).
+lez-040 = []

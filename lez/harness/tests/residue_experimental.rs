@@ -66,7 +66,7 @@ fn a_finality_update_in_one_transaction_with_the_residue_witness() {
     // A chain with the experimental copy deployed at its own account, beside the real programs.
     let mut chain = Chain::new();
     let state = std::mem::replace(&mut chain.state, V03State::new());
-    chain.state = state.with_named_programs([(EXPERIMENTAL, experimental_program())]);
+    chain.state = compat::named_programs(state, [(EXPERIMENTAL, experimental_program())]);
 
     // The instance, initialized and advanced by update_0 through the copy's (unchanged) job path.
     let config = mainnet_config(2);
@@ -183,7 +183,7 @@ fn a_finality_update_in_one_transaction_with_the_residue_witness() {
 fn world_after_update_0() -> World {
     let mut chain = Chain::new();
     let state = std::mem::replace(&mut chain.state, V03State::new());
-    chain.state = state.with_named_programs([(EXPERIMENTAL, experimental_program())]);
+    chain.state = compat::named_programs(state, [(EXPERIMENTAL, experimental_program())]);
     let config = mainnet_config(2);
     let checkpoint = root(TRUSTED_BLOCK_ROOT);
     let bootstrap = mainnet_bootstrap();

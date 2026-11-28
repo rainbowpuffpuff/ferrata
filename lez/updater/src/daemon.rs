@@ -15,7 +15,8 @@ use std::{
 };
 
 use anyhow::{anyhow, bail, Context as _, Result};
-use lee::{AccountId, Actor, PrivateKey, PublicKey};
+use lee::{AccountId, Actor};
+use crate::lez::PayerKey;
 
 use crate::{
     chain::{instance_config, root},
@@ -29,11 +30,11 @@ use crate::{
 
 /// Opens the chain a configuration names (`daemon.ledger`) for a payer: the backend and the attestation program's
 /// account on it. The path is the configuration file's directory (relative paths are relative to it).
-pub type OpenLedger = fn(&File, &Path, &PrivateKey) -> Result<(Box<dyn Ledger>, AccountId)>;
+pub type OpenLedger = fn(&File, &Path, &PayerKey) -> Result<(Box<dyn Ledger>, AccountId)>;
 
 /// This crate's backend: `harness` (LEZ's state machine in process, feature `harness`). `sequencer` is the build of
 /// `sequencer/`, which links LEZ's node-side crates (a workspace of its own) and opens its backend itself.
-pub fn open_ledger(file: &File, _base: &Path, payer: &PrivateKey) -> Result<(Box<dyn Ledger>, AccountId)> {
+pub fn open_ledger(file: &File, _base: &Path, payer: &PayerKey) -> Result<(Box<dyn Ledger>, AccountId)> {
     match file.daemon.ledger.as_str() {
         #[cfg(feature = "harness")]
         "harness" => {
@@ -66,7 +67,7 @@ impl Ledger for MachineClock {
     fn actor_state(&self, actor: Actor) -> Result<Vec<u8>> {
         self.0.actor_state(actor)
     }
-    fn submit(&mut self, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome> {
+    fn submit(&mut self, payer: &PayerKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome> {
         self.0.submit(payer, tx, gas_limit, max_fee)
     }
     fn flush(&mut self) -> Result<()> {
@@ -120,7 +121,7 @@ impl Daemon {
         let key_bytes: [u8; 32] = hex::decode(key_hex.trim().trim_start_matches("0x"))?
             .try_into()
             .map_err(|_| anyhow!("the payer key is not 32 bytes"))?;
-        let payer = PrivateKey::try_new(key_bytes).map_err(|e| anyhow!("payer key: {e:?}"))?;
+        let payer = crate::lez::try_payer_key(key_bytes)?;
 
         let state_dir = at(&base, &file.daemon.state_dir);
         fs::create_dir_all(&state_dir)?;
@@ -184,7 +185,7 @@ impl Daemon {
                     c.name,
                     hex::encode(inst.id),
                     hex::encode(inst.checkpoint),
-                    AccountId::from(&PublicKey::new_from_private_key(&payer)),
+                    crate::lez::payer_account(&payer),
                     file.daemon.ledger
                 );
             }

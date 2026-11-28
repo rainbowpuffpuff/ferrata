@@ -38,5 +38,11 @@ system_accounts = { path = "../../../upstream/lez-v0.4.0-rc1/lez/system_accounts
 programs = { path = "../../../upstream/lez-v0.4.0-rc1/lez/programs", default-features = false, features = ["artifacts"], optional = true }
 
 [features]
-default = []
+# The calls whose LEZ API differs between the tags (the payer's key, src/lez.rs): set with the path dependencies by
+# ../scripts/lez-select.sh (none: v0.4.0-rc1; `lez-rc2`: v0.4.0-rc2; `lez-rc3`: v0.4.0-rc3; `lez-040`: v0.4.0, which
+# implies `lez-rc3`).
+default = [] # lez-select
+lez-rc2 = []
+lez-rc3 = ["lez-rc2"]
+lez-040 = ["lez-rc3"]
 harness = ["dep:harness", "dep:fee_core", "dep:system_accounts", "dep:programs"]

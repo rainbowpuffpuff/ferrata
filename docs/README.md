@@ -18,6 +18,8 @@ Every document in this folder, one line each. Start with [EVIDENCE.md](EVIDENCE.
 - [not-built.md](not-built.md): what the design notes specify and this repository does not build yet, in full.
 - [sepolia.md](sepolia.md): the live runs on Sepolia, the three deployed vaults, and how to check them.
 - [image-ids.md](image-ids.md): the image ids of the final programs, which any checkout rebuilds.
+- [port-v0.4.0.md](port-v0.4.0.md): the port from LEZ v0.4.0-rc3 to v0.4.0: every LEZ change that touches
+  Ferrata, the files it touches, who ports it and its status (in progress).
 - [privacy/RESULTS.md](privacy/RESULTS.md): the privacy suite and its results.
 
 ## Design notes

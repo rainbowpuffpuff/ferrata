@@ -13,7 +13,13 @@
 //! transactions, the same executor sessions, the same sizes — so that a change which would
 //! invalidate the record fails here, and the measurements have to be redone.
 //!
-//! What is checked against the record, and where the record states it:
+//! On LEZ v0.4.0 (feature `lez-040`) none of the record's numbers below is asserted: the record
+//! measured the release candidates' builds (RISC Zero 3.0.5), and v0.4.0's programs (3.1.0) and
+//! transaction encoding differ. There the cycles, sizes and shapes are printed beside the record,
+//! and what is still checked is that each transition executes and verifies (exit code 0), that the
+//! consumer and the claim verify in two transitions, and the deposit's destination.
+//!
+//! What is checked against the record (on the release candidates), and where the record states it:
 //!
 //! * **The programs' private transitions.** The prover proves each of them from a
 //!   `ReceiveInput` written with `lee::program::Program::write_receive_input` over the program ELF
@@ -73,7 +79,7 @@ use harness::{
         catalog as bridge_catalog, private_burn_transition, private_claim_transitions, private_keys,
         private_post_state, World, DENOMINATIONS, ETH,
     },
-    consumer_account, grouped,
+    compat, consumer_account, grouped,
     private::{self, PrivateAccount, PrivateRun, Shape},
     settle::LeeTransaction,
 };
@@ -204,6 +210,11 @@ fn check_session(what: &str, executed: &Executed, record: (u64, usize, u64), now
         grouped(padded)
     );
     assert_eq!(executed.exit_code, 0, "{what}: the transition did not verify");
+    // On LEZ v0.4.0 (feature `lez-040`) the programs are their v0.4.0 builds (RISC Zero 3.1.0, LEZ #1124): the pins
+    // and the p4 records measure the release candidates' builds, so the row above is printed and not held to them.
+    if cfg!(feature = "lez-040") {
+        return;
+    }
     assert_eq!(
         executed.cycles,
         now,
@@ -261,6 +272,11 @@ fn check_size(what: &str, shape: Shape, run: &PrivateRun, record: (usize, usize)
         grouped(receipt as u64),
         grouped(recorded as u64)
     );
+    // On LEZ v0.4.0 the transaction's encoding changed (a compact fee fallback, LEZ #1146): the size is printed above,
+    // not held to the release candidates' pin or record.
+    if cfg!(feature = "lez-040") {
+        return;
+    }
     assert_eq!(
         bytes,
         now,
@@ -278,6 +294,20 @@ fn check_size(what: &str, shape: Shape, run: &PrivateRun, record: (usize, usize)
 /// (p4-minimum:323-325); the wallet's row is LEZ's own transfer's row, equal to each of ours.
 fn check_shape(what: &str, shape: Shape, run: &PrivateRun, row: &ShapeRow, cite: &str) {
     let e = &run.tx.message.execution;
+    // On LEZ v0.4.0 the shape is printed, not held to the release candidates' record (see check_size).
+    if cfg!(feature = "lez-040") {
+        let actions: Vec<usize> = e.private_actions.iter().map(len).collect();
+        let fallback = compat::proven_fee_details(e).and_then(|fee| fee.fallback.map(|fallback| fallback.encoded_len));
+        println!(
+            "{what} ({}) on v0.4.0: private actions of {actions:?} bytes, fee fallback {fallback:?} bytes; the record \
+             (release candidates): {} actions of {} bytes, fallback {} bytes ({cite})",
+            shape.name(),
+            row.actions,
+            row.action_bytes,
+            row.fallback
+        );
+        return;
+    }
     assert_eq!(
         e.private_actions.len(),
         row.actions,
@@ -328,9 +358,9 @@ fn check_shape(what: &str, shape: Shape, run: &PrivateRun, row: &ShapeRow, cite:
             row.recovery.1
         );
     }
-    let fee = e.fee.as_ref().expect("a fee");
+    let fee = compat::proven_fee_details(e).expect("a fee");
     assert_eq!(
-        fee.fallback.as_ref().map(len),
+        fee.fallback.as_ref().map(|fallback| fallback.encoded_len),
         Some(row.fallback),
         "{what} ({}): the fee's fallback note, the record states {} bytes ({cite})",
         shape.name(),

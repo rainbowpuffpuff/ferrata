@@ -31,10 +31,11 @@ use ferrata_updater::{
     source::{lab_record, Clock, Fault, Faulty, Recorded, Source},
     updater::{Instance, Plan, Updater, DOWN_AFTER_FAILED_ROUNDS, DOWN_AFTER_FAILED_SENDS},
 };
-use lee::{AccountId, Actor, PrivateKey};
+use lee::{AccountId, Actor};
+use ferrata_updater::lez::PayerKey;
 
-fn key(b: u8) -> PrivateKey {
-    PrivateKey::try_new([b; 32]).unwrap()
+fn key(b: u8) -> PayerKey {
+    ferrata_updater::lez::payer_key([b; 32])
 }
 
 fn no_sleep(_: u64) {}
@@ -56,7 +57,7 @@ impl Rec {
     fn source(&self, label: &str, clock: &Clock) -> Recorded {
         Recorded::open(label, &self.dir, &self.config, clock.clone()).unwrap()
     }
-    fn updater(&self, label: &str, payer: PrivateKey, sources: Vec<Box<dyn Source>>, policy: Policy) -> Updater {
+    fn updater(&self, label: &str, payer: PayerKey, sources: Vec<Box<dyn Source>>, policy: Policy) -> Updater {
         let inst = Instance::new("mainnet", HarnessLedger::program(), self.config.clone(), self.checkpoint);
         let mut u = Updater::new(label, inst, payer, Fees::default(), policy, sources, None).unwrap();
         u.sleep = no_sleep;
@@ -201,7 +202,7 @@ impl Ledger for Unreachable {
         }
         self.inner.actor_state(actor)
     }
-    fn submit(&mut self, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome> {
+    fn submit(&mut self, payer: &PayerKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome> {
         if self.down {
             anyhow::bail!("connection refused");
         }
@@ -301,7 +302,7 @@ fn an_instance_past_its_weak_subjectivity_period_is_down() {
 }
 
 /// Stands in for a chain backend that answers nothing (the daemon's opener; `daemon.ledger = "harness"`).
-fn open_unreachable(_: &File, _: &Path, payer: &PrivateKey) -> Result<(Box<dyn Ledger>, AccountId)> {
+fn open_unreachable(_: &File, _: &Path, payer: &PayerKey) -> Result<(Box<dyn Ledger>, AccountId)> {
     let l = Unreachable { inner: HarnessLedger::new(std::slice::from_ref(payer)), down: true };
     Ok((Box::new(l), HarnessLedger::program()))
 }

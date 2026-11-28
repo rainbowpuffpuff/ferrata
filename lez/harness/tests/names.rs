@@ -17,8 +17,11 @@ use ferrata_lez_names_wire::{
     NameRecord, NamesMessage as M, PendingCommit, PrivateReceiver, UserState, CLOCK_SLACK_MS, COMMIT_SLACK_MS,
     CONTEST_MS, EVENT_KINDS, GRACE_MS, MAX_NAMES, MAX_REVEAL_WINDOW_MS, MIN_REVEAL_DELAY_MS, NPK_LEN, TERM_MS, VPK_LEN,
 };
-use harness::{grouped, results_dir, Chain, TxReport};
-use lee::{program::Program, Account, AccountId, Actor, PrivateKey, PublicAccountEvidence, PublicKey, V03State};
+use harness::{
+    compat::{self, AccountKey},
+    grouped, results_dir, Chain, TxReport,
+};
+use lee::{program::Program, Account, AccountId, Actor, PublicAccountEvidence, V03State};
 
 /// A block time in 2027 (ms); each action's `now_ms`, its block 12 s later.
 const T0: u64 = 1_800_000_000_000;
@@ -30,13 +33,13 @@ fn program() -> AccountId {
 }
 
 struct User {
-    key: PrivateKey,
+    key: AccountKey,
     id: AccountId,
 }
 
 fn account(b: u8) -> User {
-    let key = PrivateKey::try_new([b; 32]).unwrap();
-    let id = AccountId::from(&PublicKey::new_from_private_key(&key));
+    let key = compat::account_key([b; 32]);
+    let id = compat::account_of(&key);
     User { key, id }
 }
 
@@ -61,7 +64,8 @@ fn world() -> World {
     let state = std::mem::replace(&mut chain.state, V03State::new());
     let funded = [alice.id, bob.id, carol.id, mallory.id].map(|id| (id, Account::funded(1)));
     let names = Program::new_unchecked(methods_names::FERRATA_NAMES_ID, Cow::Borrowed(methods_names::FERRATA_NAMES_ELF));
-    chain.state = state.with_public_accounts(funded).with_genesis_programs([(names, true)]);
+    let state = state.with_public_accounts(funded);
+    chain.state = compat::genesis_programs(state, [(names, true)]);
     World { chain, alice, bob, carol, mallory, auto_commit: true }
 }
 
@@ -121,7 +125,7 @@ impl World {
             }
         }
         actors.extend_from_slice(extra);
-        let signers: Vec<&PrivateKey> = if sign { vec![&who.key] } else { vec![] };
+        let signers: Vec<&AccountKey> = if sign { vec![&who.key] } else { vec![] };
         self.chain.submit_signed(label, root, bytes, actors, evidence, time, &signers)
     }
 

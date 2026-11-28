@@ -9,9 +9,9 @@
 | program `ferrata_msg` (v1, live, read only here) | [`lez/guests/msg`](../../../../lez/guests/msg), [`lez/msg-wire`](../../../../lez/msg-wire/src/lib.rs) |
 | IDLs (SPEL format) | [`idl/ferrata_msg_v2.idl.json`](../../../../idl/ferrata_msg_v2.idl.json), [`idl/ferrata_msg.idl.json`](../../../../idl/ferrata_msg.idl.json), written by [`idl/tools/msg_idl.py`](../../../../idl/tools/msg_idl.py); `python3 -I idl/check.py` decodes every vector with them |
 | harness tests (LEZ state machine + fee settlement) | [`lez/harness/tests/messages_v2.rs`](../../../../lez/harness/tests/messages_v2.rs), [`messages_findings.rs`](../../../../lez/harness/tests/messages_findings.rs), [`messages.rs`](../../../../lez/harness/tests/messages.rs) (v1); records in [`lez/results/`](../../../../lez/results/messages-v2.md) (`messages-v2.md`, `messages-findings.md`, `messages.md`) |
-| JS library (browser and node) | [`ferrata-msg.js`](ferrata-msg.js) (keys, envelopes, borsh, PDAs, preflight), [`client.js`](client.js) (RPC, signing, outcomes; uses `../wallet/lez.js`) |
+| JS library (browser and node) | [`ferrata-msg.js`](ferrata-msg.js) (keys, envelopes, borsh, PDAs, preflight), [`client.js`](client.js) (RPC, signing, outcomes; rc3 by default, or the codec selected by `../wallet/net.js`) |
 | CLI | [`ferrata-msg.mjs`](ferrata-msg.mjs) |
-| tests | `node --test deploy/testnet/web/msg/test/*.test.mjs` (library; the CLI process offline against loopback RPC stand-ins; an independent implementation against OpenSSL's ML-KEM values), `cargo test -p ferrata-lez-msg-v2-wire -p ferrata-lez-msg-wire` (logic, vectors), [`test/box.sh`](test/box.sh) (LEZ rc3's own sequencer, end to end; record [`test/results/local-2/`](test/results/local-2/record.txt)) |
+| tests | `node --test deploy/testnet/web/msg/test/*.test.mjs` (library; the CLI process offline against loopback RPC stand-ins; an independent implementation against OpenSSL's ML-KEM values; both LEZ transaction versions against stubbed `fetch`), `cargo test -p ferrata-lez-msg-v2-wire -p ferrata-lez-msg-wire` (logic, vectors), [`test/box.sh`](test/box.sh) (LEZ rc3's own sequencer, end to end; record [`test/results/local-2/`](test/results/local-2/record.txt)) |
 
 ## CLI
 
@@ -20,9 +20,10 @@ Node 20 or later (checked on 20.11 and 22.12), from this directory, nothing to i
 
 ```sh
 export FERRATA_RPC=<the network's RPC URL>      # or --rpc, or config.json's "rpc" (the host serving this directory fills it)
-export FERRATA_KEY_FILE=~/my-lez-key.hex        # 64 hex digits (a raw LEZ key) or a BIP-39 mnemonic (--path /0)
+export FERRATA_KEY_FILE=~/my-lez-key.hex        # 64 hex digits (the network's raw key/account secret) or a BIP-39 mnemonic (--path /0)
 export FERRATA_MSG_PROGRAM=<ferrata_msg_v2 id>  # until config.json names it
-./ferrata-msg.mjs keygen                         # account, messaging keys (derived from your key), fingerprint
+./ferrata-msg.mjs --lez-version                  # probe the RPC once; print v0.4.0, v0.4.0-rc3 or unknown
+./ferrata-msg.mjs keygen                         # account, messaging keys (derived from your account secret), fingerprint
 ./ferrata-msg.mjs publish                        # put the hybrid key on chain; this also opens your inbox
 ./ferrata-msg.mjs send <account> hello --expect-key <their fingerprint>
 ./ferrata-msg.mjs inbox                          # read and decrypt; --legacy reads your v1 inbox
@@ -30,24 +31,29 @@ export FERRATA_MSG_PROGRAM=<ferrata_msg_v2 id>  # until config.json names it
 ./ferrata-msg.mjs delete <n>... | clear <n> | contact|uncontact|block|unblock <account> | policy open|contacts
 ```
 
+The CLI probes `getSequencerStatus` once and uses that network's account tree, transaction codec and outcome rules.
+`keygen` without an RPC keeps its original local rc3 behavior; with an RPC it derives for the detected network. A raw
+64-digit key therefore means an rc3 signing key or a v0.4.0 account secret, as appropriate. An unknown version is
+refused before signing. On rc3 a command reports the outcome in its block's reverted list, exactly as before; on
+v0.4.0 it reports `getTransactionReceipt`'s success boolean in the same output format. LEZ's RPC serves no exit codes.
+
 `send` prints the recipient's key fingerprint before sending; with `--expect-key` it refuses any other key (the RPC
 could otherwise substitute one). It checks every rule of the program first (`preflightSend`) and refuses locally with
-the program's code name, so a message that would be refused costs nothing; `--force` sends anyway. Every signed command
-reports what its block recorded: applied, or reverted (refused; the fee is charged, nothing changes). LEZ's RPC does not
-serve exit codes. The key file never leaves the machine: only signed transactions and public reads go to the RPC.
+the program's code name, so a message that would be refused costs nothing; `--force` sends anyway. The key file never
+leaves the machine: only signed transactions and public reads go to the RPC.
 
 ## For the wallet
 
 ```js
 import * as M from '/msg/ferrata-msg.js';
-import * as C from '/msg/client.js';                                // uses /wallet/lez.js
-await C.publish(seq, { node, program });                             // first time: opens the inbox too
-const r = await C.send(seq, { node, program, to, text, expectKey }); // r.refused (with r.why) when nothing was sent;
-                                                                     // otherwise r.block and r.reverted
-const { list } = await C.messages(seq, { program, node });           // decrypted in the page
-await C.remove(seq, { node, program, ns: [n] });                     // or { upto: n }; envelopes emptied
-await C.contacts(seq, { node, program, add: [id] }); await C.block(seq, { node, program, add: [id] });
-await C.setPolicy(seq, { node, program, policy: 'contactsOnly' });
+import * as C from '/msg/client.js';                                // optional net: from /wallet/net.js; omit for rc3
+await C.publish(seq, { node, program, net });                        // first time: opens the inbox too
+const r = await C.send(seq, { node, program, to, text, expectKey, net }); // r.refused (with r.why) when unsent;
+                                                                          // otherwise r.block and r.reverted
+const { list } = await C.messages(seq, { program, node, net });      // decrypted in the page with the account secret
+await C.remove(seq, { node, program, ns: [n], net });                // or { upto: n }; envelopes emptied
+await C.contacts(seq, { node, program, add: [id], net }); await C.block(seq, { node, program, add: [id], net });
+await C.setPolicy(seq, { node, program, policy: 'contactsOnly', net });
 ```
 
 `C.send` sets `now_ms` a few seconds behind the page's clock and never before the account's last send, and uses the

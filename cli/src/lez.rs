@@ -46,6 +46,13 @@ pub const REFUSED: u64 = u64::MAX;
 /// `ferrata_bridge_module` through `ferrata-wallet`).
 pub use ferrata_wallet::Context;
 
+/// What names a public account LEZ may admit: its public key up to v0.4.0-rc3; from v0.4.0 its initial key state
+/// (LEZ #1135: an account's id is its nonce-0 key's).
+#[cfg(not(feature = "lez-040"))]
+pub type AdmissionKey = lee::PublicKey;
+#[cfg(feature = "lez-040")]
+pub type AdmissionKey = lee_core::signing_key::SigningKeyState;
+
 /// One account a call declares.
 #[derive(Clone, Debug)]
 pub enum Mention {
@@ -53,9 +60,9 @@ pub enum Mention {
     Pda { actor: Actor, seed: PdaSeed },
     /// A public account that signs the call (a burn's holder).
     Signer(Actor),
-    /// A public account named with its public key when it may not exist yet (LEZ admits a new
+    /// A public account named with its admission key when it may not exist yet (LEZ admits a new
     /// account on evidence). A claim credits `holder(account)` PDAs, named as [`Mention::Pda`].
-    Other(Actor, Option<lee::PublicKey>),
+    Other(Actor, Option<AdmissionKey>),
     /// The claimant's own private account, the root of a private claim.
     PrivateSelf(Actor),
 }
@@ -838,7 +845,19 @@ pub fn open_wallet(home: &Path, rpc: &str, password_file: &Path, seed: &Seed) ->
     let storage_path = home.join("storage.json");
     std::fs::write(&config_path, wallet_config_json(rpc))?;
     let wallet = if storage_path.exists() {
-        WalletCore::new_update_chain(config_path, storage_path, None, password)?
+        #[cfg(not(feature = "lez-040"))]
+        let wallet = WalletCore::new_update_chain(config_path, storage_path, None, password)?;
+        // A wallet home made by an earlier LEZ holds private keys where v0.4.0 keeps account secrets (LEZ #1135).
+        #[cfg(feature = "lez-040")]
+        let wallet = WalletCore::new_update_chain(config_path, storage_path, None, password).with_context(|| {
+            format!(
+                "the LEZ wallet at {} did not open on LEZ v0.4.0: check --lez-password-file; if the password is right \
+                 and the wallet was made by an earlier LEZ (which keeps private keys where v0.4.0 keeps account secrets, \
+                 LEZ #1135), give ferrata a new --lez-wallet directory: it makes the wallet again from the seed",
+                home.display()
+            )
+        })?;
+        wallet
     } else {
         let (mut wallet, _fresh) = WalletCore::new_init_storage(config_path, storage_path, None, password)?;
         wallet.restore_storage(seed.mnemonic());
@@ -868,7 +887,13 @@ fn mention(m: &Mention) -> AccountMention {
             AccountIdentity::PublicPda { program, seed: *seed }.select_program_actor_state(program)
         }
         Mention::Signer(_) => AccountIdentity::Public(actor.account_id).select_program_actor_state(program),
+        #[cfg(not(feature = "lez-040"))]
         Mention::Other(_, Some(key)) => AccountIdentity::PublicForeign(key.clone()).select_program_actor_state(program),
+        // LEZ v0.4.0's only key type (Schnorr) is allowed as an initial key, so the key always names an account.
+        #[cfg(feature = "lez-040")]
+        Mention::Other(_, Some(key)) => AccountIdentity::public_foreign(*key)
+            .expect("a Schnorr initial key names an account")
+            .select_program_actor_state(program),
         Mention::Other(_, None) => AccountIdentity::PublicNoSign(actor.account_id).select_program_actor_state(program),
         Mention::PrivateSelf(_) => AccountIdentity::PrivateOwned(actor.account_id).select_program_actor_state(program),
     }
@@ -891,7 +916,7 @@ impl Ledger for Sequencer {
                 client.get_block_range(start, end).await.map_err(|e| anyhow!("get_block_range {start}..{end}: {e}"))?;
             for block in blocks {
                 for (i, tx) in block.body.transactions.iter().enumerate() {
-                    let reverted = block.body.reverted.contains(&(i as u64));
+                    let reverted = block.body.is_reverted(i);
                     match tx {
                         LeeTransaction::Public(tx) => {
                             let root = &tx.message.execution.root;

@@ -11,10 +11,11 @@ publish = false
 # circuit, which was not tried; the consumer the other measurements deploy is ../consumer.
 [workspace]
 
-# The source is the other guest's own file: nothing is copied.
+# The source is the other guest's own file: nothing is copied (on LEZ v0.4.0 its generated twin, main_lez040.rs,
+# which lez/scripts/lez-select.sh points the marked line at).
 [[bin]]
 name = "ferrata_consumer_keccak_accel"
-path = "../consumer/src/main.rs"
+path = "../consumer/src/main.rs" # lez-select
 
 [dependencies]
 ferrata-lez-wire = { path = "../../wire" }

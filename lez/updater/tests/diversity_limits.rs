@@ -13,6 +13,7 @@ use std::{
         Arc, Mutex,
     },
 };
+use ferrata_updater::lez::PayerKey;
 
 use ferrata_core::{witness::CompactStore, Root};
 use ferrata_lez_wire::Config;
@@ -26,10 +27,10 @@ use ferrata_updater::{
     },
     updater::{Instance, Plan, Step, Updater},
 };
-use lee::PrivateKey;
 
-fn key(b: u8) -> PrivateKey {
-    PrivateKey::try_new([b; 32]).unwrap()
+
+fn key(b: u8) -> PayerKey {
+    ferrata_updater::lez::payer_key([b; 32])
 }
 fn no_sleep(_: u64) {}
 
@@ -59,7 +60,7 @@ impl Rec {
         s.ahead = ahead;
         s
     }
-    fn updater(&self, label: &str, payer: PrivateKey, sources: Vec<Box<dyn Source>>, policy: Policy) -> Updater {
+    fn updater(&self, label: &str, payer: PayerKey, sources: Vec<Box<dyn Source>>, policy: Policy) -> Updater {
         let inst = Instance::new(self.name, HarnessLedger::program(), self.config.clone(), self.checkpoint);
         let mut u = Updater::new(label, inst, payer, Fees::default(), policy, sources, None).unwrap();
         u.sleep = no_sleep;

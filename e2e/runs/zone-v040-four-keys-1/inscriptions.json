@@ -1,0 +1,49 @@
+{
+ "_source": "the node's final blocks (cryptarchia/blocks) of zone.sh's run, channel inscriptions with their signer (checkpoint/attestor/zone_inscriptions.py)",
+ "nodeBlocks": 270,
+ "inscriptions": 107,
+ "perSequencer": {
+  "seq-0": 38,
+  "seq-3": 23,
+  "seq-2": 23,
+  "seq-1": 23
+ },
+ "turns": [
+  {
+   "sequencer": "seq-0",
+   "inscriptions": 24,
+   "fromSlot": 2584724,
+   "toSlot": 2584782
+  },
+  {
+   "sequencer": "seq-3",
+   "inscriptions": 23,
+   "fromSlot": 2584787,
+   "toSlot": 2584842
+  },
+  {
+   "sequencer": "seq-2",
+   "inscriptions": 23,
+   "fromSlot": 2584847,
+   "toSlot": 2584902
+  },
+  {
+   "sequencer": "seq-1",
+   "inscriptions": 23,
+   "fromSlot": 2584907,
+   "toSlot": 2584962
+  },
+  {
+   "sequencer": "seq-0",
+   "inscriptions": 14,
+   "fromSlot": 2584968,
+   "toSlot": 2584999
+  }
+ ],
+ "signersNamed": [
+  "seq-0",
+  "seq-1",
+  "seq-2",
+  "seq-3"
+ ]
+}

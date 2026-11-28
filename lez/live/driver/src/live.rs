@@ -127,7 +127,7 @@ pub fn open_wallet(home: &Path, rpc: &str, keys: &[PrivateKey]) -> Result<Wallet
         wallet
     };
     for key in keys {
-        wallet.storage_mut().key_chain_mut().add_imported_public_account(key.clone());
+        wallet.storage_mut().key_chain_mut().add_imported_public_account(wallet_key(key));
     }
     wallet.store_persistent_data()?;
     // From LEZ v0.4.0-rc2 the wallet simulates a public send and does not send one that reverts
@@ -500,3 +500,35 @@ impl Outcome {
         Ok(self)
     }
 }
+
+/// A key as LEZ's wallet imports it: the private key on the release candidates.
+#[cfg(not(feature = "lez-040"))]
+pub fn wallet_key(key: &lee::PrivateKey) -> lee::PrivateKey {
+    key.clone()
+}
+
+/// A key as LEZ's wallet imports it: from v0.4.0 a public account is its secret, from which the key at each nonce
+/// derives (LEZ #1135); the driver's 32 key bytes are that secret.
+#[cfg(feature = "lez-040")]
+pub fn wallet_key(key: &lee::PrivateKey) -> lee::signature::PublicAccountSecret {
+    lee::signature::PublicAccountSecret::new(*key.value())
+}
+
+/// The out-of-gas detour's gas limit (scenario.rs, fresh.rs): LEZ's wallet default on the release candidates
+/// (2,000,000), which the step exceeds.
+#[cfg(not(feature = "lez-040"))]
+pub const DETOUR_GAS: u64 = wallet::DEFAULT_GAS_LIMIT;
+#[cfg(not(feature = "lez-040"))]
+pub const DETOUR_GAS_STEP: &str = "with the wallet's default gas limit";
+/// On LEZ v0.4.0 the wallet's default is `fee_core::market::MAX_GAS_EXEC` (lez/wallet/src/lib.rs), which covers the
+/// step: the detour declares the release candidates' 2,000,000 itself, to keep showing an out-of-gas revert charged
+/// its whole limit.
+#[cfg(feature = "lez-040")]
+pub const DETOUR_GAS: u64 = 2_000_000;
+#[cfg(feature = "lez-040")]
+pub const DETOUR_GAS_STEP: &str = "with a 2,000,000 gas limit (the release candidates' wallet default)";
+/// The detour row's note: why 2,000,000.
+#[cfg(not(feature = "lez-040"))]
+pub const DETOUR_GAS_NOTE: &str = "LEZ's wallet declares 2,000,000 by default";
+#[cfg(feature = "lez-040")]
+pub const DETOUR_GAS_NOTE: &str = "the release candidates' wallet declared 2,000,000 by default (v0.4.0's: MAX_GAS_EXEC)";

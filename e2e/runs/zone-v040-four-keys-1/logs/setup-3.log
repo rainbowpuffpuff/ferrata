@@ -1,0 +1,3 @@
+work/attestor-zone/seq-3 is set up
+  channel signing public key  1a074e4376b7700e5bc526ccad66a60469948484b1edf745fbd4f6b40342110a
+Pass that key to `stake --sequencer-key`.

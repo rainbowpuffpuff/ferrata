@@ -36,11 +36,12 @@ use ferrata_updater::{
     source::{lab_record, load_entries, Clock, Entry, Recorded, Source},
     updater::{Instance, Plan, Step, Updater},
 };
-use lee::{AccountId, PrivateKey, PublicKey};
+use lee::AccountId;
+use ferrata_updater::lez::PayerKey;
 use sha2::{Digest, Sha256};
 
-fn key(b: u8) -> PrivateKey {
-    PrivateKey::try_new([b; 32]).unwrap()
+fn key(b: u8) -> PayerKey {
+    ferrata_updater::lez::payer_key([b; 32])
 }
 
 fn no_sleep(_: u64) {}
@@ -79,7 +80,7 @@ impl Rec {
     fn instance(&self) -> Instance {
         Instance::new("mainnet", HarnessLedger::program(), self.config.clone(), self.checkpoint)
     }
-    fn updater(&self, label: &str, payer: PrivateKey, sources: Vec<Box<dyn Source>>, policy: Policy) -> Updater {
+    fn updater(&self, label: &str, payer: PayerKey, sources: Vec<Box<dyn Source>>, policy: Policy) -> Updater {
         let mut u = Updater::new(label, self.instance(), payer, Fees::default(), policy, sources, None).unwrap();
         u.sleep = no_sleep;
         u
@@ -260,7 +261,7 @@ fn starved(finish_own_jobs: bool, payer_byte: u8, n13: usize, n20: usize) -> Sta
     let clock = Clock::new(9);
     let payer = key(payer_byte);
     let label = "starved";
-    let payer_id = AccountId::from(&PublicKey::new_from_private_key(&payer));
+    let payer_id = ferrata_updater::lez::payer_account(&payer);
     let tag: [u8; 32] = Sha256::digest(format!("{label}/{payer_id:?}").as_bytes()).into();
     let eth = Arc::new(AtomicU64::new(0));
     let shared = Arc::new(Mutex::new(None));
@@ -400,12 +401,12 @@ fn started_slots_with_finish_own_jobs_off_an_open_is_sent_once_per_turn() {
 
 // ---- The opener (a later review's M1): the same source opening each copy's job itself (anyone may) -----------------
 
-fn id_of(k: &PrivateKey) -> AccountId {
-    AccountId::from(&PublicKey::new_from_private_key(k))
+fn id_of(k: &PayerKey) -> AccountId {
+    ferrata_updater::lez::payer_account(k)
 }
 
 /// The updater's deferral tag as anyone computes it: from its name and its payer's account.
-fn tag_of(label: &str, payer: &PrivateKey) -> [u8; 32] {
+fn tag_of(label: &str, payer: &PayerKey) -> [u8; 32] {
     Sha256::digest(format!("{label}/{:?}", id_of(payer)).as_bytes()).into()
 }
 

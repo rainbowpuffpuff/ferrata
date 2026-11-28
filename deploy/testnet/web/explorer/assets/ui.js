@@ -2,7 +2,7 @@
 // helpers. Everything from the chain is put in the page with textContent, never as HTML.
 
 import { b58, hex, fmtInt, shortHex, fmtAge, parseAccountId } from "./util.js";
-import { BUILTINS } from "./lez.js";
+import { BUILTINS } from "./lez040.js";
 import { Rpc, rpcUrl } from "./rpc.js";
 import { Idl } from "./idl.js";
 

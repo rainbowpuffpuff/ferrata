@@ -8,22 +8,25 @@ use std::{borrow::Cow, collections::BTreeMap, fs, path::PathBuf};
 
 use ferrata_lez_msg_v2_wire as v2;
 use ferrata_lez_msg_wire as v1;
-use harness::{Chain, TxReport};
-use lee::{program::Program, Account, AccountId, Actor, PrivateKey, PublicKey, V03State};
+use harness::{
+    compat::{self, AccountKey},
+    Chain, TxReport,
+};
+use lee::{program::Program, Account, AccountId, Actor, V03State};
 use sha2::{Digest, Sha256};
 
 pub const T0: u64 = 1_790_000_000_000;
 
 pub struct User {
-    pub key: PrivateKey,
+    pub key: AccountKey,
     pub id: AccountId,
 }
 
 /// A signing account from a number (its key: SHA-256 of a label and the number).
 pub fn user(n: u32) -> User {
     let bytes: [u8; 32] = Sha256::new().chain_update(b"ferrata-msg test user").chain_update(n.to_le_bytes()).finalize().into();
-    let key = PrivateKey::try_new(bytes).unwrap();
-    let id = AccountId::from(&PublicKey::new_from_private_key(&key));
+    let key = compat::account_key(bytes);
+    let id = compat::account_of(&key);
     User { key, id }
 }
 
@@ -78,9 +81,8 @@ impl World {
         let mut chain = Chain::new();
         let state = std::mem::replace(&mut chain.state, V03State::new());
         let program = Program::new_unchecked(id, Cow::Borrowed(elf));
-        chain.state = state
-            .with_public_accounts(users.iter().map(|u| (u.id, Account::funded(1 << 60))))
-            .with_genesis_programs([(program, true)]);
+        let state = state.with_public_accounts(users.iter().map(|u| (u.id, Account::funded(1 << 60))));
+        chain.state = compat::genesis_programs(state, [(program, true)]);
         Self { chain, program: AccountId::from_builtin_program(id), now: T0, reports: Vec::new() }
     }
 
@@ -97,7 +99,7 @@ impl World {
     pub fn tx(&mut self, label: &str, signer: Option<&User>, root: AccountId, message: Vec<u8>, actors: &[AccountId]) -> TxReport {
         let mut declared = vec![self.actor(root)];
         declared.extend(actors.iter().filter(|a| **a != root).map(|a| self.actor(*a)));
-        let signers: Vec<&PrivateKey> = signer.map(|u| &u.key).into_iter().collect();
+        let signers: Vec<&AccountKey> = signer.map(|u| &u.key).into_iter().collect();
         let ts = self.now;
         self.now += 1000;
         let r = self.chain.submit_signed(label, self.actor(root), message, declared, vec![], ts, &signers);

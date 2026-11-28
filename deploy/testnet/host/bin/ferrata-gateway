@@ -78,6 +78,7 @@ import os
 import re
 import sqlite3
 import subprocess
+import sys
 import threading
 import time
 import urllib.error
@@ -155,11 +156,48 @@ READ_METHODS = {
     "getRecoveryBinding", "getProofsAndRoot", "getAccount", "getProgramIds", "getChannelId",
     "getCrossZoneDeadLetters",
 }
+# LEZ v0.4.0 (FERRATA_LEZ_TAG=v0.4.0 in /etc/ferrata/gateway.env: install.sh writes it on v0.4.0) answers two reads its
+# clients need: getTransactionReceipt (a transaction's receipt and fee, LEZ PR 1107) and getSequencerStatus (which they
+# probe to tell v0.4.0 from rc3); it has no cross-zone dead letters (PR 1147). rc3's set above is served unchanged.
+
+
+def lez_host_tag():
+    """The host's LEZ tag: FERRATA_LEZ_TAG (empty counts as unset), else the tag install.sh records on a v0.4.0 host
+    (/etc/ferrata/lez-tag), else v0.4.0-rc3; a variable that disagrees with the record, or a record or variable naming
+    no known tag, is refused (as lez-tag.sh does)."""
+    env = os.environ.get("FERRATA_LEZ_TAG") or ""
+    path = os.environ.get("FERRATA_LEZ_TAG_FILE") or "/etc/ferrata/lez-tag"
+    host = ""
+    if os.path.lexists(path):   # a record that exists must name a tag: an empty or damaged one is refused, not taken for rc3
+        try:
+            with open(path) as f:
+                host = "".join(f.read().split())
+        except OSError as e:
+            sys.exit(f"this host's tag record {path} cannot be read: {e}")
+        if host not in ("v0.4.0-rc3", "v0.4.0"):
+            sys.exit(f"this host's tag record {path} holds {host!r}, not v0.4.0-rc3 or v0.4.0")
+    if env and host and env != host:
+        sys.exit(f"FERRATA_LEZ_TAG={env}, but this host runs LEZ {host} ({path})")
+    tag = env or host or "v0.4.0-rc3"
+    if tag not in ("v0.4.0-rc3", "v0.4.0"):
+        sys.exit(f"FERRATA_LEZ_TAG must be v0.4.0-rc3 or v0.4.0 (got {tag!r})")
+    return tag
+
+
+LEZ_TAG = lez_host_tag()
+if LEZ_TAG == "v0.4.0":
+    READ_METHODS = (READ_METHODS - {"getCrossZoneDeadLetters"}) | {"getTransactionReceipt", "getSequencerStatus"}
 SEND_METHODS = {"sendTransaction"}
 LIST_METHODS = {"getProofsAndRoot", "getAccountsNonces"}
 # Not forwarded: requeueCrossZoneDeadLetter (an operator's move) and anything else LEZ may add.
 ACCOUNT_RE = re.compile(r"^(Public/)?[1-9A-HJ-NP-Za-km-z]{32,44}$")
 PK_RE = re.compile(r"^[0-9a-f]{64}$")
+PK_FORM = "64 hex digits (the account's public key)"
+if LEZ_TAG == "v0.4.0":
+    # v0.4.0 makes a public account known by its typed initial key (LEZ PR 1135): the key's type byte, 00, and its 32 bytes,
+    # as the v0.4.0 web wallet sends it and ferrata-day1's --to-pk takes it there; a bare 64-hex key is rc3's form
+    PK_RE = re.compile(r"^00[0-9a-f]{64}$")
+    PK_FORM = "66 hex digits (the account's typed initial key: 00, then its 64-hex public key)"
 CORS = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
@@ -901,7 +939,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                                "global_per_hour": int(CFG["FAUCET_GLOBAL_PER_HOUR"])},
                     "network": {"public_send_per_second": F["GATEWAY_SEND_GLOBAL_RATE"],
                                 "note": "public sendTransaction is capped network-wide and per IP; on HTTP 429 wait Retry-After seconds"},
-                    "how": "POST /faucet with {\"account\": \"<your LEZ public account id>\", \"public_key\": \"<its 64-hex public key; required for an account never used>\"}; testnet tokens only",
+                    "how": "POST /faucet with {\"account\": \"<your LEZ public account id>\", \"public_key\": \"<" + PK_FORM + "; required for an account never used>\"}; testnet tokens only",
                 }
                 FAUCET_INFO["t"] = now
             body = FAUCET_INFO["body"]
@@ -938,11 +976,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return self.send(400, {"ok": False, "error": "account must be a LEZ public account id (base58, optionally Public/...)"})
         account = account.removeprefix("Public/")
         if pk and not PK_RE.match(pk):
-            return self.send(400, {"ok": False, "error": "public_key must be 64 hex digits (the account's public key)"})
+            return self.send(400, {"ok": False, "error": "public_key must be " + PK_FORM})
         if not pk and self.account_absent(account):
             # LEZ credits a public account that does not exist yet only with its public key as admission evidence.
             return self.send(400, {"ok": False, "error": "this account has never been used: send its public_key too "
-                                   "({\"account\": ..., \"public_key\": \"<64 hex>\"})"})
+                                   "({\"account\": ..., \"public_key\": \"<" + PK_FORM + ">\"})"})
         if not tool_records():
             print("faucet: its tool does not record transfers (an older ferrata-day1?): no claims", flush=True)
             return self.send(503, {"ok": False, "error": "the faucet is being updated; try again later"}, {"Retry-After": "600"})

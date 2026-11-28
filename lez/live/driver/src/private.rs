@@ -29,7 +29,7 @@ use ferrata_core::{fork::LcFork, witness::CompactUpdate};
 use ferrata_lez_wire::Message;
 use lee::{
     privacy_preserving_transaction::circuit::ProgramCatalog, program::Program, Account, AccountId, Actor,
-    EncryptedNote, ProgramId, Publication,
+    EncryptedNote, ProgramId,
 };
 use lee_core::{
     account::Nonce, BlockId, Commitment, CommitmentPosition, CommitmentSetDigest, MembershipProof, ProgramImageClaim,
@@ -351,13 +351,39 @@ impl WalletSequencerClient for TapClient {
             .await
     }
 
+    #[cfg(not(feature = "lez-040"))]
     async fn get_publications(
         &self,
         from_position: CommitmentPosition,
         limit: PageLimit,
-    ) -> Result<Vec<(CommitmentPosition, Publication)>, Self::Error> {
+    ) -> Result<Vec<(CommitmentPosition, lee::Publication)>, Self::Error> {
         self.tap("getPublications", &(from_position, limit), |c| async move {
             <SequencerClient as WalletSequencerClient>::get_publications(&c, from_position, limit).await
+        })
+        .await
+    }
+
+    /// From LEZ v0.4.0 a page of publications also carries their recovery bindings.
+    #[cfg(feature = "lez-040")]
+    async fn get_publications(
+        &self,
+        from_position: CommitmentPosition,
+        limit: PageLimit,
+    ) -> Result<lee::PublicationsPage, Self::Error> {
+        self.tap("getPublications", &(from_position, limit), |c| async move {
+            <SequencerClient as WalletSequencerClient>::get_publications(&c, from_position, limit).await
+        })
+        .await
+    }
+
+    /// LEZ v0.4.0's receipt of a transaction (LEZ #1107).
+    #[cfg(feature = "lez-040")]
+    async fn get_transaction_receipt(
+        &self,
+        tx_hash: HashType,
+    ) -> Result<Option<common::block::TransactionReceipt>, Self::Error> {
+        self.tap("getTransactionReceipt", &tx_hash, |c| async move {
+            <SequencerClient as WalletSequencerClient>::get_transaction_receipt(&c, tx_hash).await
         })
         .await
     }
@@ -426,6 +452,65 @@ pub(crate) fn private_wallet(home: &Path, rpc: &str, client: TapClient) -> Resul
     private_wallet_at(home, rpc, client, 0)
 }
 
+/// LEZ v0.4.0: genesis credits LEZ's private test accounts by publications (`supply_private_account`), not in their
+/// notes, and LEZ's wallet pays a private transaction whose public part can fail from the note alone (that keeps its
+/// fee fallback payable): a private session's first transaction refuses to build ("Fee payer ... holds 0"). So the
+/// session first receives the account's pending native credits into its note, one transaction each (a receipt pays its
+/// fee out of what it credits), each settled before the next. In dev mode (fake receipts) the sequencer drops them and
+/// nothing changes. `stage` prefixes the printed lines. (The crown driver, which includes this file, keeps its own
+/// copy in crown.rs.)
+#[cfg(feature = "lez-040")]
+#[allow(dead_code)]
+pub(crate) async fn receive_native_credits(
+    stage: &str,
+    live: &mut Live,
+    wallet: &mut WalletCore<TapClient>,
+    me: AccountId,
+) -> Result<()> {
+    let fake = dev_mode();
+    for round in 0..4 {
+        let pending = wallet.owned_pending_messages().await?;
+        let Some(credit) = pending.into_iter().find(|p| p.recipient.account_id() == me && p.native_credit().is_some())
+        else {
+            return Ok(());
+        };
+        let amount = credit.native_credit().unwrap_or(0);
+        let step = format!("receive a pending credit of {amount} into the private account {me} (#{round})");
+        let started = Instant::now();
+        let (hash, _) = wallet
+            .receive_pending_message(credit)
+            .await
+            .map_err(|e| anyhow!("{step}: not sent: {e:?}"))?;
+        // A real proof takes minutes of blocks: the wait for inclusion counts from the submission.
+        let since_head = live.head().await?;
+        println!("{stage} {step}: executed, proven and sent in {:.1} s", started.elapsed().as_secs_f64());
+        let outcome = live
+            .settle(Sent {
+                step: step.clone(),
+                hash,
+                sent_at: Instant::now(),
+                since_head,
+                payer: None,
+                balance_before: 0,
+                harness: None,
+                note: "LEZ v0.4.0: a genesis credit received into the note before the session's transactions".into(),
+            })
+            .await?;
+        if fake {
+            println!(
+                "{stage} {step}: dev mode: the sequencer drops a fake receipt, so the note stays unfunded and the session's \
+                 private transactions on v0.4.0 cannot pay their fee from it"
+            );
+            return Ok(());
+        }
+        ensure!(outcome.applied(), "{step}: {} {} {}", outcome.row.status, outcome.row.exit, outcome.row.note);
+        live.sync().await?;
+        let height = live.follower.height();
+        wallet.sync_to_block(height).await?;
+    }
+    Ok(())
+}
+
 /// As `private_wallet`, with LEZ's test private account `index` (0 or 1 on LEZ's local network).
 pub(crate) fn private_wallet_at(home: &Path, rpc: &str, client: TapClient, index: usize) -> Result<(WalletCore<TapClient>, AccountId)> {
     let mut wallet = empty_wallet(home, rpc, client)?;
@@ -492,6 +577,8 @@ pub async fn private_update(
     let client = TapClient::recording(live.wallet.client_owned(), &transcript, &tx_out)?;
     let (mut wallet, payer) = private_wallet(&dir.join("wallet"), &live.opts.rpc, client)?;
     let tip = wallet.start_at_chain_tip().await?;
+    #[cfg(feature = "lez-040")]
+    crate::private::receive_native_credits("[private]", live, &mut wallet, payer).await?;
     let catalog = ProgramCatalog::from([(twin, Program::new(Cow::Owned(program.bytes.clone()))?)]);
     let mentions = || {
         vec![

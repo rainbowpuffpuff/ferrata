@@ -126,17 +126,23 @@ links:
     python3 -I deploy/testnet/tests/test_prover_client.py
     python3 -I scripts/test_verify_live_roundtrip.py
     python3 -I lez/scripts/test_fetch_attest_fixture.py
+    python3 -I lez/scripts/test_lez_select.py
+    python3 -I lez/scripts/test_guest_ids.py
     python3 -I scripts/test_perf_records.py
     python3 -I bench/perf/test_summarize_proofs.py
     python3 -I bench/perf/test_gate_scripts.py
     python3 -I bench/perf/test_summarize_p4_hops.py
     python3 -I modules/scripts/test_live_testnet.py
     python3 -I checkpoint/attestor/test_resources.py
+    python3 -I checkpoint/attestor/test_zone_lib.py && python3 -I checkpoint/attestor/test_zone_scripts.py && python3 -I checkpoint/attestor/test_zone_inscriptions.py && python3 -I checkpoint/attestor/test_check_zone_v040.py
     python3 -I scripts/test_audit_scope.py
     python3 -I deploy/testnet/tests/test_gateway_gasdrop.py
     python3 -I deploy/testnet/tests/test_site_delta.py
     python3 -I deploy/testnet/web/wallet/test/test_serve_site.py
+    python3 -I scripts/test_lez040_decode.py
+    python3 -I modules/scripts/test_stage_tag.py
     python3 -I deploy/testnet/tests/test_zone_keys.py && python3 -I deploy/testnet/tests/test_checkpoint_attestors.py
+    python3 -I deploy/testnet/tests/test_lez_tag.py && python3 -I deploy/testnet/tests/test_host_blocks.py && python3 -I deploy/testnet/tests/test_bridge_tag.py && python3 -I deploy/testnet/tests/test_gateway_tag.py && python3 -I deploy/testnet/tests/test_web_config.py
     python3 -I site/test_site.py --skip-freshness
     python3 -I scripts/ci/check-row-tests.py
     python3 -I scripts/ci/test_ci_model.py
@@ -155,7 +161,7 @@ ci-verify:
     python3 -I scripts/vault_libs.py check
     (cd vault && forge build)
     python3 -I scripts/verify.py --all --offline --strict
-    python3 -I scripts/test_verify.py && python3 -I scripts/test_verify_lc.py && python3 -I scripts/test_verify_zone.py && python3 -I scripts/test_verify_f13.py && python3 -I scripts/test_verify_f13_lez.py && python3 -I scripts/test_verify_f7.py && python3 -I scripts/test_verify_bridge.py && python3 -I scripts/test_verify_bridge_rows.py && python3 -I scripts/test_verify_sec.py
+    python3 -I scripts/test_verify.py && python3 -I scripts/test_verify_lc.py && python3 -I scripts/test_verify_zone.py && python3 -I scripts/test_verify_lez040.py && python3 -I scripts/test_verify_lez040_ids.py && python3 -I scripts/test_verify_lez040_runs.py && python3 -I scripts/test_verify_f13.py && python3 -I scripts/test_verify_f13_lez.py && python3 -I scripts/test_verify_f7.py && python3 -I scripts/test_verify_bridge.py && python3 -I scripts/test_verify_bridge_rows.py && python3 -I scripts/test_verify_sec.py
     git status --porcelain --untracked-files=all
     test -z "$(git status --porcelain --untracked-files=all)"
 

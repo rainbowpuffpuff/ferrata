@@ -13,3 +13,13 @@ export function checkConfig(c) {
   if (typeof c.token.symbol !== 'string' || !c.token.symbol.trim()) throw new Error('token.symbol is missing');
   return c;
 }
+
+/** The Settings row: rc3 is identified by the privacy circuit evidence it exposes, as before the v0.4.0 probe. */
+export function lezVersionText(net, ppcHex) {
+  if (net.version === 'v0.4.0-rc3') {
+    return ppcHex && ppcHex.startsWith('631f0c96')
+      ? 'v0.4.0-rc2/rc3 (privacy circuit 631f0c96…)'
+      : 'see the privacy circuit id';
+  }
+  return net.readOnly ? `unreadable${net.accountsAs ? ` (accounts shown as on ${net.accountsAs})` : ''}: ${net.error}` : net.version;
+}

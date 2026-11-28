@@ -1,0 +1,23 @@
+[02:11:55] node up (LEZ v0.4.0): {"cryptarchia_info":{"lib":"99e4fdba361357efe9db02962ac49157c7aebfc1d73fbbf403ca70cf381d0f5b","lib_slot":0,"tip":"99e4fdba361357efe9db02962ac49157c7aebfc1d73fbbf403ca70cf381d0f5b","slot":0,"height":0,"state":"Bootstrapping"},"phase":"InitialBlockDownload"}
+[02:11:55] seq-0 set up: 4d5a2a28cd75c1f2a9e96e9a2558c9fbd18041dee124325d8cab3042101c8479
+[02:11:56] seq-1 set up: 6b45fe698a819dc0360672f8492c5f67807daa576a0da139375c4b3dae3c2afb
+[02:11:56] seq-2 set up: 5b6cc548cb8b7266a7a3a1d8b84920ae67fa74ae5912d325d8ea483a4ed571d1
+[02:11:56] seq-3 set up: 1a074e4376b7700e5bc526ccad66a60469948484b1edf745fbd4f6b40342110a
+[02:12:11] channel keys/tip_sequencer/tip_slot: 4 0 2584724 | heights: 1/// | alive 4 | lib 2584723
+[02:12:31] channel keys/tip_sequencer/tip_slot: 4 0 2584729 | heights: 3/3/3/3 | alive 4 | lib 2584728
+[02:18:57] channel keys/tip_sequencer/tip_slot: 4 1 2584827 | heights: 41/41/41/41 | alive 4 | lib 2584824
+[02:19:17] channel keys/tip_sequencer/tip_slot: 4 1 2584832 | heights: 43/43/43/43 | alive 4 | lib 2584829
+[02:19:37] channel keys/tip_sequencer/tip_slot: 4 1 2584837 | heights: 45/45/45/45 | alive 4 | lib 2584834
+[02:19:58] channel keys/tip_sequencer/tip_slot: 4 1 2584842 | heights: 47/47/47/47 | alive 4 | lib 2584839
+[02:20:18] channel keys/tip_sequencer/tip_slot: 4 2 2584847 | heights: 48/48/48/48 | alive 4 | lib 2584844
+[02:20:38] channel keys/tip_sequencer/tip_slot: 4 2 2584852 | heights: 50/50/50/50 | alive 4 | lib 2584849
+[02:20:58] channel keys/tip_sequencer/tip_slot: 4 2 2584857 | heights: 52/52/52/52 | alive 4 | lib 2584854
+[02:21:19] channel keys/tip_sequencer/tip_slot: 4 2 2584862 | heights: 54/54/54/54 | alive 4 | lib 2584859
+[02:21:39] channel keys/tip_sequencer/tip_slot: 4 2 2584867 | heights: 56/56/56/56 | alive 4 | lib 2584865
+[02:21:59] channel keys/tip_sequencer/tip_slot: 4 2 2584872 | heights: 58/58/58/58 | alive 4 | lib 2584870
+[02:22:19] channel keys/tip_sequencer/tip_slot: 4 2 2584877 | heights: 60/60/60/60 | alive 4 | lib 2584875
+[02:22:39] channel keys/tip_sequencer/tip_slot: 4 2 2584882 | heights: 62/62/62/62 | alive 4 | lib 2584880
+[02:23:00] channel keys/tip_sequencer/tip_slot: 4 2 2584887 | heights: 64/64/64/64 | alive 4 | lib 2584885
+[02:23:20] channel keys/tip_sequencer/tip_slot: 4 2 2584892 | heights: 66/66/66/66 | alive 4 | lib 2584890
+[02:23:40] channel keys/tip_sequencer/tip_slot: 4 2 2584897 | heights: 68/68/68/68 | alive 4 | lib 2584895
+[02:24:00] channel keys/tip_sequencer/tip_slot: 4 2 2584902 | heights: 70/70/70/70 | alive 4 | lib 2584900

@@ -1,0 +1,2 @@
+== the node's final tier
+Error: block 2: parser refused it: NotStrictlyOrdered { what: "actors" }

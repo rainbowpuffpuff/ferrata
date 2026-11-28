@@ -1,0 +1,235 @@
+{
+  "channel_params": {
+    "minimum_sequencer_stake": 149,
+    "posting_timeframe": 60,
+    "posting_timeout": 25,
+    "max_block_size": 1048576,
+    "finality_depth": 35
+  },
+  "actions": [
+    {
+      "stake_sequencer": {
+        "sequencer_key": [
+          77,
+          90,
+          42,
+          40,
+          205,
+          117,
+          193,
+          242,
+          169,
+          233,
+          110,
+          154,
+          37,
+          88,
+          201,
+          251,
+          209,
+          128,
+          65,
+          222,
+          225,
+          36,
+          50,
+          93,
+          140,
+          171,
+          48,
+          66,
+          16,
+          28,
+          132,
+          121
+        ],
+        "ownership_id": "3DpQ7crHm9mYi59LvGA2jPtXT929hRULYKuJBBam3jEr",
+        "stake_entry": {
+          "auth_data": "00d09b81a9d7f33fdadc30104413f441b56305804f41a592f30b31f1bec8a047b29b8ca0d65ebaa03fb2c7a7df7453575d00ce956d20090c4eb7af0691ebee018280682766c9d220c33b59bc68d6cefac6772729e6c4052845effce2d33c56d7ae83c75274f05c6ef19377de60a36208543ae0494f90fd24952984d2fdad17c9a4",
+          "next": "00ba54ccf73eb5ce8f74189232d83734265dac87cabc2bdc267bf715a63252ae9c"
+        }
+      }
+    },
+    {
+      "stake_sequencer": {
+        "sequencer_key": [
+          107,
+          69,
+          254,
+          105,
+          138,
+          129,
+          157,
+          192,
+          54,
+          6,
+          114,
+          248,
+          73,
+          44,
+          95,
+          103,
+          128,
+          125,
+          170,
+          87,
+          106,
+          13,
+          161,
+          57,
+          55,
+          92,
+          75,
+          61,
+          174,
+          60,
+          42,
+          251
+        ],
+        "ownership_id": "81XH42vBEN4XLLDttQvv2uapGtoUVBtVgPCZgX8YYQHS",
+        "stake_entry": {
+          "auth_data": "00cf080a9d8004a13d114fd3398cec0821542844a1b1522c5ee27e0e52f27be31d873c5f376eab0bd8852a85bd199a72f51a4022907e2ddb328f6fde3eddac63f770209712da7024381e1a726c4389f3644350ef86a3be74cce8c9ee432a505e62f270a1c8380c68b67e1ccd38becb932ab2da11a51108dec638086db6932a5dea",
+          "next": "00e80013da98a58f08aa23f1991fa4e1958f8f8477c413365f4026a640eb61d2a0"
+        }
+      }
+    },
+    {
+      "stake_sequencer": {
+        "sequencer_key": [
+          91,
+          108,
+          197,
+          72,
+          203,
+          139,
+          114,
+          102,
+          167,
+          163,
+          161,
+          216,
+          184,
+          73,
+          32,
+          174,
+          103,
+          250,
+          116,
+          174,
+          89,
+          18,
+          211,
+          37,
+          216,
+          234,
+          72,
+          58,
+          78,
+          213,
+          113,
+          209
+        ],
+        "ownership_id": "4sxWS7CrTDKtyqeuSqSA9qBDWgUvwK3iJhjydyCGUiet",
+        "stake_entry": {
+          "auth_data": "000b9c8fac8ed11205f124738f82e9d9850534016cb80fbfd119cb5d0f8b902df5bcbd4c814efb923cb910b7aebd4a45cec1c64a1a31a5941d2c0e6d5a34dc33825789c417bccfe6773a30da44caadac34c4ca7f2ff1504aab8dda22cd493f8894b1c8132b7764c62e702602e30af066ceadc47727d205214b2c39afbdd00ff253",
+          "next": "00c66e462087952f1d4ca66a6a3fae67a55495b98824afef48b62991127f38f964"
+        }
+      }
+    },
+    {
+      "stake_sequencer": {
+        "sequencer_key": [
+          26,
+          7,
+          78,
+          67,
+          118,
+          183,
+          112,
+          14,
+          91,
+          197,
+          38,
+          204,
+          173,
+          102,
+          166,
+          4,
+          105,
+          148,
+          132,
+          132,
+          177,
+          237,
+          247,
+          69,
+          251,
+          212,
+          246,
+          180,
+          3,
+          66,
+          17,
+          10
+        ],
+        "ownership_id": "HGkYVqzWRoJoq7898iFLj2uNmC56f1bqxuQVWifPMvS7",
+        "stake_entry": {
+          "auth_data": "001dd441ec9d3b8350021ef1726e53ddcc777b0f1ead132d01564ab7a102bba496395bf7a99911ff8775d74e0f7818cb7f617681886ddcfff0574152758381e5efe9f467a48a1d5455b9b18a1c0d8449835d05f078fa81a5ae571f9f5b18c52a635c3cb7cf548f0fa9454e4251b9a0b983b53f34b399965614463398e536fa1877",
+          "next": "0049ee0c8de7012e99ff9b203a4001f025c4213b09d75153abb9cf3ee9fbeffaef"
+        }
+      }
+    },
+    {
+      "supply_account": {
+        "recipient": {
+          "identified": {
+            "key": "00f00d1e62fa5278307fbde46d84a022f571caff20c157b2831884cc3cc2ae4c29"
+          }
+        },
+        "balance": 10000
+      }
+    },
+    {
+      "supply_account": {
+        "recipient": {
+          "identified": {
+            "key": "000223ea30d102c2f066dca058325ee30af21c23cf4dd9a16c3e4ab190ba0b49cb"
+          }
+        },
+        "balance": 20000
+      }
+    },
+    {
+      "supply_private_account": {
+        "address": "44KVvzvh2ephQU9aR5snboGUXKgS1FnPYh1W4KZKwmhm",
+        "balance": 10000000000000
+      }
+    },
+    {
+      "supply_private_account": {
+        "address": "478hD6LXFTYu5gRRkWkCyXPRsWgCwAfRredoCUfxr5b9",
+        "balance": 20000000000000
+      }
+    },
+    {
+      "supply_account": {
+        "recipient": {
+          "identified": {
+            "key": "00346980052d24464b9669f2bd0cdec4d441c3ff3b358ffcc9477a5247a096f84c"
+          }
+        },
+        "balance": 10000000000000
+      }
+    },
+    {
+      "supply_account": {
+        "recipient": {
+          "identified": {
+            "key": "001ad39d12ff0cd1562c4095f8f937c35292ae1955661e781dba1a6f0f7c3b99a6"
+          }
+        },
+        "balance": 20000000000000
+      }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+== updater-gate
+-- (cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-updater --features harness --locked --no-fail-fast --test recorded -- --test-threads 4 --exact an_update_one_client_serves_is_held_back catches_up_
+test catches_up_mainnet_and_sepolia_from_recorded_data ... ok
+test an_update_one_client_serves_is_held_back ... ok
+test gate_copies_join_or_wait ... ok
+test gate_overlapping_updates_join_or_wait ... ok
+test restart_mid_job_and_mid_period ... ok
+test stale_and_down_sources_fall_back ... ok
+test gate_two_honest_one_adversary ... ok
+test gate_poll_speeds_share_the_cost ... ok
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 1063.64s
+-- exit 0
+-- (cd lez && RISC0_DEV_MODE=1 bash updater/dev/demo.sh target/updater-demo)
+-- exit 0

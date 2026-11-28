@@ -25,10 +25,11 @@ use ferrata_updater::{
     source::{lab_record, load_entries, Clock, Entry, Recorded, Source},
     updater::{Instance, Plan, Step, Updater},
 };
-use lee::{Actor, PrivateKey};
+use lee::Actor;
+use ferrata_updater::lez::PayerKey;
 
-fn key(b: u8) -> PrivateKey {
-    PrivateKey::try_new([b; 32]).unwrap()
+fn key(b: u8) -> PayerKey {
+    ferrata_updater::lez::payer_key([b; 32])
 }
 
 fn no_sleep(_: u64) {}
@@ -50,7 +51,7 @@ impl Fx {
         Self { config, dir, checkpoint, entries, clock: Clock::new(1) }
     }
 
-    fn updater(&self, label: &str, payer: PrivateKey, policy: Policy) -> Updater {
+    fn updater(&self, label: &str, payer: PayerKey, policy: Policy) -> Updater {
         let source = Recorded::open("a", &self.dir, &self.config, self.clock.clone()).unwrap();
         let inst = Instance::new("mainnet", HarnessLedger::program(), self.config.clone(), self.checkpoint);
         let sources: Vec<Box<dyn Source>> = vec![Box::new(source)];
@@ -306,7 +307,7 @@ impl Ledger for Scripted {
     fn actor_state(&self, actor: Actor) -> anyhow::Result<Vec<u8>> {
         self.inner.actor_state(actor)
     }
-    fn submit(&mut self, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> anyhow::Result<TxOutcome> {
+    fn submit(&mut self, payer: &PayerKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> anyhow::Result<TxOutcome> {
         self.inner.submit(payer, tx, gas_limit, max_fee)
     }
     fn height(&self) -> Option<u64> {

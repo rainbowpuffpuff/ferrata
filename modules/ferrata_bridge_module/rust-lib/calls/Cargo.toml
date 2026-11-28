@@ -38,3 +38,7 @@ base64 = "0.22"
 # process made non-dumpable while it holds keys (libc's prctl).
 x25519-dalek = { version = "2", features = ["static_secrets"] }
 libc = "0.2"
+
+[features]
+# LEZ v0.4.0 (modules/scripts/v040-calls.sh): the bridge program's v0.4.0 image id, as the wallet library knows it.
+lez-040 = ["ferrata-wallet/lez-040"]

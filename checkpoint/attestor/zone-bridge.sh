@@ -46,7 +46,7 @@
 # Environment: ZB_BUNDLE (the crown-live-3 LEZ bundle: binaries, the final LEZ programs, the fixture), ZB_PROGRAMS (R0BF
 # checkpoint_b.bin, checkpoint.bin, release.bin, ids.jsonl of docs/image-ids.md), ZB_DRIVER, ZB_TMP (box scratch),
 # ZB_ROUND_S (60), ZB_LEAVE_OUT (the attestor left out; default the last; `none`: all of them), ZB_ROTATE,
-# ZB_ROTATE_RUN_S, ZB_FIXTURE, ZB_RELEASES_PROVE (0: stage releases writes the statements and runs them in the
+# ZB_ROTATE_RUN_S, ZB_FINAL_TRIES (60: the final rounds tried before the stage stops), ZB_FIXTURE, ZB_RELEASES_PROVE (0: stage releases writes the statements and runs them in the
 # executor, not the prover), ZB_TOKEN (eth by default; test-token selects the deployment's TUSD); for stages after `zone`:
 # ZB_CHECKPOINT_B (the rule (B) program's name in ZB_PROGRAMS,
 # default checkpoint_b; checkpoint_b_0_3_5 for a zone on Logos Blockchain 0.3.5-rc.1, whose `zone` stage is
@@ -61,6 +61,15 @@
 # ZB_CHECKPOINT_B (default checkpoint; checkpoint_0_3_5 on rc3). ZB_DEPLOYER_LABEL: the label whose keccak names the anvil
 # deployer (default ferrata/zone-bridge/anvil-deployer; a fresh label gives an address with nonce 0 on Sepolia too, so
 # that vault/script/fork-rehearsal-31.sh can deploy the same vault at the same address on a fork of it).
+# LEZ v0.4.0 (released 27 Nov 2026): ZB_LEZ=<spike>/upstream/lez-v0.4.0. Its devnet keys, local.json accounts and
+# Bedrock settings are v0.4.0's (Logos Blockchain 0.4.0-rc.2, the V2 era schema, finality_depth in place of exit_delay;
+# checkpoint/attestor/zone-lib.sh). Nothing defaults on v0.4.0: ZB_BUNDLE (a v0.4.0 bundle whose lez-config/lez-tag.txt
+# says v0.4.0, with this tree's crown-driver and programs built with `lez-select.sh v0.4.0`), ZB_PROGRAMS,
+# ZB_CHECKPOINT_A and ZB_CHECKPOINT_B (the rule (A) and (B) programs for 0.4.0-rc.2's blocks) must be given, and the
+# stage stops before writing anything if one is missing. crown-driver's target directory is $ZB_TMP/target-lez-v0.4.0
+# (ZB_RISC0_HOME: the RISC Zero home its guests build with, default risc0-home-lez beside the repository); the
+# sequencers' logs are tracing's (both formats are read). ZB_WALLET_PASSWORD: the password of crown-driver's wallet,
+# which `sequencer_service stake` needs when that wallet is sealed (LEZ PR 987, in rc3 already; crown-driver decides).
 # Every attestor round is timed (GNU time: wall, user and system CPU, peak RSS) and the bytes of the node's and the LEZ
 # node's answers it read are counted (zone/attestor-<i>/resources.tsv: RFP-022 P.6's ferrata_attestor), and each
 # attestor's earliest signed round is kept (zone/attestor-<i>/first-round.json: the stale tip of stage input's refusals).
@@ -69,13 +78,23 @@ STAGE="${1:?stage}"; RUN_ARG="${2:?run dir (under e2e/runs/)}"
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SPIKE="$(cd "$REPO/.." && pwd)"
 LEZ="${ZB_LEZ:-$SPIKE/upstream/lez-v0.4.0-rc1}"; DEV="$LEZ/lez/configs/docker-all-in-one/devnet"
+. "$(dirname "${BASH_SOURCE[0]}")/zone-lib.sh"
+TAG="$(zl_tag_of_tree "$LEZ")" && zl_known_tag "$TAG" || { echo "zone-bridge: $LEZ is not a LEZ tree of a known tag"; exit 2; }
+if zl_is_v040 "$TAG"; then
+  case "$STAGE" in build|zone|input|prove|releases|vault|fixture|verify|gpu-jobs|gpu-seals|groth16)
+    for v in ZB_BUNDLE ZB_PROGRAMS ZB_CHECKPOINT_A ZB_CHECKPOINT_B; do
+      [ -n "${!v:-}" ] || { echo "zone-bridge: LEZ v0.4.0 has no default $v (the header: the v0.4.0 bundle, programs and rule (A)/(B) programs)"; exit 2; }
+    done ;;
+  esac
+fi
 T="${ZB_TMP:-$SPIKE/tmp/zone-bridge}"
 mkdir -p "$RUN_ARG"; RUN="$(cd "$RUN_ARG" && pwd)"; NAME="$(basename "$RUN")"
 case "$RUN" in "$REPO"/e2e/runs/*) ;; *) echo "the run directory must be under e2e/runs/ (forge reads it there)"; exit 2 ;; esac
 W="$T/work/$NAME"
 BUNDLE="${ZB_BUNDLE:-$SPIKE/tmp/crown-fresh/lez/bundle.tar.zst}"
 PROGRAMS="${ZB_PROGRAMS:-$SPIKE/tmp/final-build/repro-a/r0bf}"
-DRV="${ZB_DRIVER:-$T/target-lez/release/crown-driver}"
+if zl_is_v040 "$TAG"; then TARGET_LEZ="$T/target-lez-$TAG"; else TARGET_LEZ="$T/target-lez"; fi
+DRV="${ZB_DRIVER:-$TARGET_LEZ/release/crown-driver}"
 ATT="$REPO/checkpoint/target/release/ferrata_attestor"
 RC="$REPO/checkpoint/target/release/realblocks-crown"
 E="$REPO/bridge/target/release/ferrata-e2e"
@@ -117,7 +136,7 @@ stop_pid() { # pid name [seconds]: SIGTERM, then SIGKILL
 
 # ---- build -----------------------------------------------------------------------------------------------------
 stage_build() {
-  ( cd "$REPO/lez/crown/driver" && RISC0_HOME="$SPIKE/risc0-home-lez" CARGO_TARGET_DIR="$T/target-lez" cargo build --release --locked )
+  ( cd "$REPO/lez/crown/driver" && RISC0_HOME="${ZB_RISC0_HOME:-$SPIKE/risc0-home-lez}" CARGO_TARGET_DIR="$TARGET_LEZ" cargo build --release --locked )
   ( cd "$REPO/checkpoint" && cargo build --release --locked -p realblocks --bin realblocks-crown && cargo build --release --locked -p ferrata-attestor )
   ( cd "$REPO/bridge" && cargo build --release --locked -p ferrata-e2e )
   ( cd "$REPO/vault" && forge build )
@@ -146,20 +165,7 @@ zone_cleanup() {
 }
 
 write_cfg() { # i: upstream's devnet sequencer configuration, loopback addresses, genesis plus local.json's funded accounts
-  python3 -I - "$DEV/sequencer_config.json" "$LEZ/lez/sequencer/service/networks/local.json" "$W/cfg-$1.json" "$API" "$1" <<'EOF'
-import json, sys
-src, local, dst, api, i = sys.argv[1:6]; i = int(i)
-c = json.load(open(src)); l = json.load(open(local))
-have = {json.dumps(a, sort_keys=True) for a in c["genesis"]["actions"]}
-extra = [a for a in l["genesis"]["actions"] if json.dumps(a, sort_keys=True) not in have]
-assert all("supply_account" in a for a in extra), "only local.json's public test accounts are added"
-c["genesis"]["actions"] += extra
-c["bedrock_config"]["node_url"] = api
-c["gossip"] = {"listen_addr": f"/ip4/127.0.0.1/udp/{19100 + i}/quic-v1",
-               "bootstrap_peers": [f"/ip4/127.0.0.1/udp/{19100 + j}/quic-v1" for j in range(5) if j != i]}
-c["metrics_listen_address"] = f"127.0.0.1:{19200 + i}"
-json.dump(c, open(dst, "w"), indent=2)
-EOF
+  zl_seq_cfg "$DEV/sequencer_config.json" "$LEZ/lez/sequencer/service/networks/local.json" "$W/cfg-$1.json" "$API" "$1" 5 "$TAG"
 }
 
 start_attestor() { # i: a key, its certificate by sequencer i's channel key for this deployment, the loop
@@ -193,7 +199,7 @@ rotate_committee() { # a fifth key staked on LEZ (upstream's `sequencer_service 
   log "seq-4 set up: channel key $k4, not staked; the channel: $(echo "$ch" | jq -c '{keys: (.accredited_keys | length), configuration_threshold, config_tip_hash}')"
   from="$(b58 "$("$DRV" destinations | jq -r .public0)")"
   t0="$(date +%s)"
-  env -u RISC0_DEV_MODE sequencer_service stake --wallet-home "$W/driver/wallet" --sequencer-key "$k4" --from "Public/$from" \
+  env -u RISC0_DEV_MODE ${ZB_WALLET_PASSWORD:+LEE_WALLET_PASSWORD="$ZB_WALLET_PASSWORD"} sequencer_service stake --wallet-home "$W/driver/wallet" --sequencer-key "$k4" --from "Public/$from" \
     > "$W/logs/stake.log" 2>&1 || { tail -n 20 "$W/logs/stake.log" | scrub; die "stake"; }
   tail -n 3 "$W/logs/stake.log" | scrub | tee -a "$RUN/logs/zone-bridge.log"
   for k in $(seq 1 120); do
@@ -230,7 +236,7 @@ seq_aligned() { # i: started until its blocks fall TICK_MIN..TICK_MAX s after an
     fi
     marker="zone-bridge start $i.$starts"; launched="$(date +%s)"; seq_start "$i" "$marker"; sched=""
     for k in $(seq 1 300); do
-      sched="$(sed -n "/$marker/,\$p" "$W/logs/seq-$i.log" | grep -m1 'Block production scheduler started' | sed -n 's/^\[\([0-9T:-]*\)Z.*/\1/p' || true)"
+      sched="$(zl_first_marker_ts "$W/logs/seq-$i.log" "$marker" 'Block production scheduler started' || true)"
       [ -n "$sched" ] && break
       kill -0 "${SEQ_PID[$i]}" 2>/dev/null || break
       sleep 1
@@ -283,7 +289,7 @@ attest_loop() { # i: a round every ROUND_S s while the zone runs; each new tip k
 final_rounds() { # n t1: every attestor's round side by side (each against its own sequencer's LEZ node, the zone up),
                  # again until all n sign one tip at or above t1: realblocks-crown takes attestations of one T
   local n="$1" t1="$2" try i rc tips pids=()
-  for try in $(seq 1 60); do
+  for try in $(seq 1 "${ZB_FINAL_TRIES:-60}"); do
     for i in $(seq 0 $(( n - 1 ))); do
       rm -f "$W/att-$i/final.json"; attest_round "$i" "$W/att-$i/final.json" & pids[$i]=$!
     done
@@ -301,7 +307,7 @@ final_rounds() { # n t1: every attestor's round side by side (each against its o
     sleep 10
   done
   for i in $(seq 0 $(( n - 1 ))); do tail -n 2 "$W/att-$i/attest.log" | scrub; done
-  die "the attestors did not sign one tip at or above T1 = $t1 in 60 rounds"
+  die "the attestors did not sign one tip at or above T1 = $t1 in ${ZB_FINAL_TRIES:-60} rounds"
 }
 
 save_answers() { # the node's answers from FROM to its LIB, as zone.sh reads them, into $W/node: the checkpoint's input is
@@ -336,9 +342,12 @@ stage_zone() {
 
   # -- the node: upstream's Bedrock configuration, as attestor/zone.sh (its deployment settings = the bundle's lez-config)
   cp "$LEZ/bedrock/node-config.yaml" "$LEZ/bedrock/deployment-settings.yaml" "$W/bedrock/"
-  sed -i -e "s#listen_address: 0.0.0.0:18080#listen_address: 127.0.0.1:$PORT#" \
-         -e 's#^    swarm:$#    swarm:\n      host: 127.0.0.1#' "$W/bedrock/node-config.yaml"
+  zl_node_loopback "$W/bedrock/node-config.yaml" "$PORT"
   cmp -s "$W/bedrock/deployment-settings.yaml" "$B/lez-config/deployment-settings.yaml" || die "deployment settings differ from the bundle's"
+  if zl_is_v040 "$TAG"; then
+    [ "$(zl_tag_of_tree "$B/lez-config" 2>/dev/null)" = "$TAG" ] || die "the bundle is not LEZ $TAG (lez-config/lez-tag.txt)"
+    [ "$(zl_era_schema "$W/bedrock/deployment-settings.yaml")" = V2 ] || die "v0.4.0's deployment settings are not in the V2 era schema"
+  fi
   ( cd "$W/bedrock" && POL_PROOF_DEV_MODE=true exec "$NODE" node-config.yaml --deployment deployment-settings.yaml ) > "$W/logs/bedrock.log" 2>&1 &
   NODE_PID=$!
   local i k

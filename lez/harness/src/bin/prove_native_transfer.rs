@@ -33,6 +33,7 @@ use std::{
 
 use fee_core::BlockFeeSummary;
 use harness::{
+    compat,
     private::*,
     settle::{classify, opening_fee_state, settle_private_transaction, LeeTransaction},
     *,
@@ -46,8 +47,8 @@ use lee::{
 use lee_core::{
     encryption::{Ciphertext, EncryptedNote, MlKem768EncapsulationKey},
     execution_state::TransactionEntry,
-    native_token, Commitment, DummyInput, DummyOutput, EphemeralSecretKey, FeeTransfer, NullifierPublicKey,
-    NullifierSecretKey, PrivateAccountKind, RootCall, SharedSecretKey,
+    native_token, Commitment, DummyInput, DummyOutput, EphemeralSecretKey, NullifierPublicKey, NullifierSecretKey,
+    PrivateAccountKind, RootCall, SharedSecretKey,
 };
 
 /// The wallet's `PADDED_PRIVATE_ACTIONS` and `CIPHERTEXT_PAD_SIZE` (LEZ v0.4.0-rc1).
@@ -179,13 +180,8 @@ fn main() {
             message: borsh::to_vec(&native_token::Message::Transfer { to: RECIPIENT, amount: AMOUNT }).unwrap(),
         }),
         claims: Vec::new(),
-        fee: Some(FeeTransfer {
-            payer: sender.id(),
-            recipient: inbox,
-            amount: RESERVE,
-            refund_to: if wallet { None } else { Some(chain.payer) },
-        }),
-        public_context: PublicExecutionContext::new(public_actors, []),
+        fee: Some(compat::fee_transfer(sender.id(), inbox, RESERVE, if wallet { None } else { Some(chain.payer) })),
+        public_context: PublicExecutionContext::new(compat::declared(public_actors, []), []),
         private_witnesses: vec![witness],
         dummy_inputs: (0..dummies)
             .map(|_| DummyInput { nullifier_seed: random_bytes(), commitment_root, output: dummy_output() })

@@ -28,10 +28,10 @@ use harness::{
         registry_slots, Block, Deposit, Vault, VaultSlots, World, ADMIN_SEED, CHAIN_ID, DENOMINATIONS, ETH, INSTANCE,
         RELAY_FEES,
     },
-    TxReport,
+    compat, TxReport,
 };
 use lee::{AccountId, Actor, PublicAccountEvidence};
-use lee_core::program::{PdaSeed, ReceiveInput};
+use lee_core::program::PdaSeed;
 use test_guest_core::Script;
 
 fn require_dev_mode() {
@@ -378,13 +378,8 @@ fn h1_b_import_with_a_sender_is_refused() {
     let sender = Actor::new(AccountId::new([0x5e; 32]), harness::scripted_account());
     let elf = bridge_program();
     for (what, from) in [("ImportRoot delivered with a sender", Some(sender)), ("ImportRoot, top-level", None)] {
-        let input = ReceiveInput {
-            receiver: config,
-            from,
-            is_authorized: false,
-            pre_state: w.chain.actor_state(config),
-            message: borsh::to_vec(&message).unwrap(),
-        };
+        let input =
+            compat::receive_input(config, from, false, w.chain.actor_state(config), borsh::to_vec(&message).unwrap());
         let executed = harness::attest::execute(what, elf.elf(), &input);
         let want = if from.is_some() { u32::from(code::NOT_AUTHORIZED) } else { 0 };
         assert_eq!(executed.exit_code, want, "{what}");
@@ -418,13 +413,8 @@ fn c1_f_a_mint_is_accepted_only_at_its_holder() {
         ("Mint naming config(cid), delivered at config(cid)", target, u32::from(code::WRONG_SENDER)),
         ("Mint naming config(cid), delivered at holder(config(cid))", holder_of(program, &cid, target.account_id), 0),
     ] {
-        let input = ReceiveInput {
-            receiver,
-            from: Some(from),
-            is_authorized: true,
-            pre_state: Default::default(),
-            message: borsh::to_vec(&mint).unwrap(),
-        };
+        let input =
+            compat::receive_input(receiver, Some(from), true, Default::default(), borsh::to_vec(&mint).unwrap());
         assert_eq!(harness::attest::execute(what, elf.elf(), &input).exit_code, want, "{what}");
     }
 }

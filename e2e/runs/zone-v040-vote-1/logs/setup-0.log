@@ -1,0 +1,4 @@
+work/seq-0 is set up
+  channel signing public key  57170793c72834f4d7a352e7e3605f0284a7413a5282fceddb3583c14f985d18
+`start` creates the channel if it does not exist yet.
+Creating the channel stakes that key at genesis.

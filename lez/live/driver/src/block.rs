@@ -225,7 +225,7 @@ pub async fn attest_block(
         &dir.join("funding.borsh"),
     )?;
     let mut wallet: WalletCore<TapClient> = empty_wallet(&dir.join("wallet"), &live.opts.rpc, client.clone())?;
-    wallet.storage_mut().key_chain_mut().add_imported_public_account(funder_key.clone());
+    wallet.storage_mut().key_chain_mut().add_imported_public_account(crate::live::wallet_key(&funder_key));
     wallet.start_at_chain_tip().await?;
     let accounts: Vec<AccountId> = (0..READERS).map(|_| wallet.create_new_account_private(None).0).collect();
     for (i, account) in accounts.iter().enumerate() {

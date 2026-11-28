@@ -71,8 +71,8 @@ use ferrata_lez_wire::{
     InstanceState, Message, RecordState,
 };
 use lee::{
-    public_transaction::{Message as PublicMessage, WitnessSet},
-    AccountId, Actor, FeeDeclaration, PrivateKey, PublicAccountEvidence, PublicKey, PublicTransaction,
+    public_transaction::Message as PublicMessage,
+    AccountId, Actor, FeeDeclaration, PrivateKey, PublicAccountEvidence, PublicTransaction,
 };
 use lee_core::{account::Nonce, program::PROGRAM_LOADER_ACCOUNT_ID};
 use program_loader_core::Message as LoaderMessage;
@@ -173,7 +173,7 @@ fn read_key(path: &Path) -> Result<PrivateKey> {
 }
 
 fn id_of(key: &PrivateKey) -> AccountId {
-    AccountId::from(&PublicKey::new_from_private_key(key))
+    crate::compat::account_of(key)
 }
 
 /// The keys of one deployment: the header's and one per segment. Or, for a program another deployment made (a second
@@ -251,9 +251,9 @@ fn keygen(a: &Args) -> Result<()> {
 fn accounts_json(dir: &Path) -> Result<Value> {
     let mut v = json!({
         "payer": id_of(&read_key(&dir.join("payer.key"))?).to_string(),
-        "payer_public_key": hex::encode(PublicKey::new_from_private_key(&read_key(&dir.join("payer.key"))?).value()),
+        "payer_public_key": crate::compat::public_key_hex(&read_key(&dir.join("payer.key"))?),
         "daemon": id_of(&read_key(&dir.join("daemon.key"))?).to_string(),
-        "daemon_public_key": hex::encode(PublicKey::new_from_private_key(&read_key(&dir.join("daemon.key"))?).value()),
+        "daemon_public_key": crate::compat::public_key_hex(&read_key(&dir.join("daemon.key"))?),
     });
     for name in ["program", "bridge"] {
         if Deployment::known(&dir.join(name)) {
@@ -333,9 +333,11 @@ fn public_tx(
     max_fee: u128,
 ) -> (LeeTransaction, Vec<(AccountId, u128)>) {
     let nonces: BTreeMap<AccountId, Nonce> = signers.iter().map(|(k, n)| (id_of(k), Nonce(*n))).collect();
+    let signer_ids: Vec<AccountId> = nonces.keys().copied().collect();
+    let actors = crate::compat::declared(actors, &signer_ids);
     let msg = PublicMessage::new(root, message, actors, nonces, Some(FeeDeclaration::new(id_of(payer), gas_limit, 0, max_fee)), evidence);
     let keys: Vec<&PrivateKey> = signers.iter().map(|(k, _)| *k).collect();
-    let ws = WitnessSet::for_message(&msg, &keys);
+    let ws = crate::compat::sign(&msg, &keys);
     let tx = LeeTransaction::Public(PublicTransaction::new(msg, ws));
     (tx, signers.iter().map(|(k, n)| (id_of(k), *n)).collect())
 }
@@ -665,9 +667,14 @@ async fn send_stage(live: &mut Live, state: &Path, stage: &str) -> Result<bool> 
 }
 
 /// A segment's loader actor state: tagged from LEZ v0.4.0-rc2 on (#943), untagged on rc1 (as `programs.rs`).
-#[cfg(feature = "lez-rc2")]
+#[cfg(all(feature = "lez-rc2", not(feature = "lez-040")))]
 fn segment_of(s: &[u8]) -> Option<program_loader_core::ProgramSegment> {
     program_loader_core::ProgramSegment::from_loader_actor_state(s)
+}
+/// A segment's loader actor state: v0.4.0 decodes it through `LoaderActorState` (LEZ #946), the same encoding.
+#[cfg(feature = "lez-040")]
+fn segment_of(s: &[u8]) -> Option<program_loader_core::ProgramSegment> {
+    <program_loader_core::ProgramSegment as program_loader_core::LoaderActorState>::from_loader_actor_state(s)
 }
 #[cfg(not(feature = "lez-rc2"))]
 fn segment_of(s: &[u8]) -> Option<program_loader_core::ProgramSegment> {
@@ -1197,7 +1204,7 @@ async fn cmd_fund(a: &Args) -> Result<()> {
         let to = id_of(&key);
         let before = live.balance(to).await?;
         let (hash, _) = NativeTokenTransfer(&live.wallet)
-            .transfer(wallet::AccountIdentity::Public(id_of(&faucet)), wallet::AccountIdentity::PublicForeign(PublicKey::new_from_private_key(&key)), amount, CreditDelivery::Automatic)
+            .transfer(wallet::AccountIdentity::Public(id_of(&faucet)), crate::compat::foreign(&key), amount, CreditDelivery::Automatic)
             .await
             .map_err(|e| anyhow!("the transfer to the {who} was not sent: {e:?}"))?;
         let t0 = Instant::now();
@@ -1227,27 +1234,19 @@ async fn cmd_transfer(a: &Args) -> Result<()> {
     ensure!(amount > 0, "--amount must be positive");
     // A public account never used before is credited only with admission evidence: its public key
     // (`--to-pk`, 64 hex digits, as LEZ's wallet prints it); `--to` alone reaches an account that exists.
-    let to_pk = match a.get("to-pk") {
-        Some(h) => {
-            let b: [u8; 32] = hex::decode(h.trim().trim_start_matches("0x"))
-                .context("--to-pk: not hex")?
-                .try_into()
-                .map_err(|_| anyhow!("--to-pk: not 32 bytes"))?;
-            Some(PublicKey::try_new(b).map_err(|e| anyhow!("--to-pk: not a public key ({e:?})"))?)
-        }
-        None => None,
-    };
+    // (From LEZ v0.4.0 the key is the account's typed initial key, 66 hex digits: `compat::parse_foreign_key`.)
+    let to_pk = a.get("to-pk").map(crate::compat::parse_foreign_key).transpose()?;
     let to = match (a.get("to"), &to_pk) {
         (Some(t), pk) => {
             let t = t.trim();
             let t = t.strip_prefix("Public/").unwrap_or(t);
             let to = AccountId::from_str(t).map_err(|e| anyhow!("--to {t}: not a LEZ public account id ({e:?})"))?;
-            if let Some(pk) = pk {
-                ensure!(AccountId::from(pk) == to, "--to-pk is not the key of --to");
+            if let Some((of_pk, _)) = pk {
+                ensure!(*of_pk == to, "--to-pk is not the key of --to");
             }
             to
         }
-        (None, Some(pk)) => AccountId::from(pk),
+        (None, Some((of_pk, _))) => *of_pk,
         (None, None) => bail!("--to ACCOUNT or --to-pk HEX is required"),
     };
     let from = id_of(&key);
@@ -1257,7 +1256,7 @@ async fn cmd_transfer(a: &Args) -> Result<()> {
     let wait: u64 = a.get("wait").unwrap_or("120").parse().context("--wait")?;
     let home = a.path("state")?.join("wallet");
     let dest = match to_pk {
-        Some(pk) => wallet::AccountIdentity::PublicForeign(pk),
+        Some((_, identity)) => identity,
         None => wallet::AccountIdentity::PublicNoSign(to),
     };
     match a.get("record") {
@@ -1312,7 +1311,7 @@ async fn receipt<C: wallet::WalletSequencerClient>(c: &C, hash: &[u8; 32]) -> Re
     };
     let block = c.get_block(id).await.map_err(|e| anyhow!("getBlock {id}: {e}"))?.ok_or_else(|| anyhow!("block {id} is not served"))?;
     let i = block.body.transactions.iter().position(|t| t.hash().0 == *hash).ok_or_else(|| anyhow!("block {id} does not hold it"))?;
-    Ok(Some((if block.body.reverted.contains(&(i as u64)) { "reverted" } else { "applied" }, id)))
+    Ok(Some((if crate::compat::is_reverted(&block.body, i) { "reverted" } else { "applied" }, id)))
 }
 
 /// The client of the faucet's transfers (`transfer --record FILE`): before a transaction leaves, its record (its hash,
@@ -1391,12 +1390,30 @@ impl wallet::WalletSequencerClient for RecordingClient {
     async fn get_program_ids(&self) -> std::result::Result<std::collections::BTreeMap<String, lee::ProgramId>, Self::Error> {
         <sequencer_service_rpc::SequencerClient as wallet::WalletSequencerClient>::get_program_ids(&self.inner).await
     }
+    #[cfg(not(feature = "lez-040"))]
     async fn get_publications(
         &self,
         from_position: lee_core::CommitmentPosition,
         limit: common::PageLimit,
     ) -> std::result::Result<Vec<(lee_core::CommitmentPosition, lee_core::program::Publication)>, Self::Error> {
         <sequencer_service_rpc::SequencerClient as wallet::WalletSequencerClient>::get_publications(&self.inner, from_position, limit).await
+    }
+    /// From LEZ v0.4.0 a page of publications also carries their recovery bindings.
+    #[cfg(feature = "lez-040")]
+    async fn get_publications(
+        &self,
+        from_position: lee_core::CommitmentPosition,
+        limit: common::PageLimit,
+    ) -> std::result::Result<lee::PublicationsPage, Self::Error> {
+        <sequencer_service_rpc::SequencerClient as wallet::WalletSequencerClient>::get_publications(&self.inner, from_position, limit).await
+    }
+    /// LEZ v0.4.0's receipt of a transaction (LEZ #1107).
+    #[cfg(feature = "lez-040")]
+    async fn get_transaction_receipt(
+        &self,
+        tx_hash: common::HashType,
+    ) -> std::result::Result<Option<common::block::TransactionReceipt>, Self::Error> {
+        <sequencer_service_rpc::SequencerClient as wallet::WalletSequencerClient>::get_transaction_receipt(&self.inner, tx_hash).await
     }
     async fn get_recovery_binding(&self, address: AccountId) -> std::result::Result<Option<lee::EncryptedNote>, Self::Error> {
         <sequencer_service_rpc::SequencerClient as wallet::WalletSequencerClient>::get_recovery_binding(&self.inner, address).await

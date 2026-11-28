@@ -32,8 +32,13 @@
 
 use std::{collections::BTreeSet, fs, path::PathBuf};
 
+#[cfg(not(feature = "lez-040"))]
+use checkpoint_core::lez::{parse_block, Actor as CpActor, Origin, TxKind, Visitor};
+#[cfg(feature = "lez-040")]
+use checkpoint_core::lez_0_4_0::{parse_block, Actor as CpActor, Origin, TxKind, Visitor};
+#[cfg(feature = "lez-040")]
+mod lez_block040;
 use checkpoint_core::{
-    lez::{parse_block, Actor as CpActor, Origin, TxKind, Visitor},
     wire::BridgeMessage as CpMessage,
 };
 use ferrata_bridge_core::{
@@ -54,6 +59,7 @@ use harness::{
         catalog, eth_entry, private_account_id, private_keys, private_post_state, relayer, Deposit, Vault, World,
         CHAIN_ID, DENOMINATIONS, ETH,
     },
+    compat,
     private::{Freshness, PrivateAccount},
     settle::LeeTransaction,
     TxReport,
@@ -270,7 +276,8 @@ impl Record {
 
 /// A LEZ block holding one transaction, in the layout `checkpoint-core` parses (the block id and
 /// timestamp filled; the previous-hash and hash fields left zero: the harness does not chain blocks).
-fn block(block_id: u64, timestamp_ms: u64, tx: &[u8]) -> Vec<u8> {
+#[cfg(not(feature = "lez-040"))]
+fn block(block_id: u64, timestamp_ms: u64, tx: &[u8], _charge: &harness::settle::Charge) -> Vec<u8> {
     let mut b = Vec::new();
     b.extend_from_slice(&block_id.to_le_bytes());
     b.extend_from_slice(&[0u8; 32]);
@@ -281,6 +288,13 @@ fn block(block_id: u64, timestamp_ms: u64, tx: &[u8]) -> Vec<u8> {
     b.extend_from_slice(&0u32.to_le_bytes());
     b.push(2);
     b
+}
+
+/// [`block`] in LEZ v0.4.0's layout (tests/lez_block040), with the transaction's receipt as settlement wrote it: on
+/// v0.4.0 the block publishes what each transaction was charged (LEZ #1107), so the suite's public data holds it.
+#[cfg(feature = "lez-040")]
+fn block(block_id: u64, timestamp_ms: u64, tx: &[u8], charge: &harness::settle::Charge) -> Vec<u8> {
+    lez_block040::block_with_receipts(block_id, timestamp_ms, &[tx], &[charge.receipt])
 }
 
 struct Calls {
@@ -436,7 +450,7 @@ fn private_fields(tx: &PrivacyPreservingTransaction, program: AccountId) -> (Vec
     let m = &tx.message;
     let e = &m.execution;
     let mut f = Vec::new();
-    for (i, a) in m.public_context.actors.iter().enumerate() {
+    for (i, a) in compat::declared_actors(&m.public_context.actors).iter().enumerate() {
         f.push((
             format!("public_context.actors[{i}]"),
             [&a.account_id.value()[..], &a.program_account_id.value()[..]].concat(),
@@ -446,7 +460,7 @@ fn private_fields(tx: &PrivacyPreservingTransaction, program: AccountId) -> (Vec
     for (j, a) in e.private_actions.iter().enumerate() {
         action_fields(&format!("private_actions[{j}]"), a, &mut f);
     }
-    if let Some(fee) = &e.fee {
+    if let Some(fee) = compat::proven_fee_details(e) {
         if let Some(r) = &fee.refund_to {
             f.push(("fee.refund_to".into(), r.value().to_vec()));
         }
@@ -541,7 +555,7 @@ fn public_fields(tx_bytes: &[u8], program: AccountId) -> Vec<(String, Vec<u8>)> 
     };
     let m = &tx.message;
     let mut f = Vec::new();
-    for (i, a) in m.public_context.actors.iter().enumerate() {
+    for (i, a) in compat::declared_actors(&m.public_context.actors).iter().enumerate() {
         f.push((
             format!("public_context.actors[{i}]"),
             [&a.account_id.value()[..], &a.program_account_id.value()[..]].concat(),
@@ -549,7 +563,7 @@ fn public_fields(tx_bytes: &[u8], program: AccountId) -> Vec<(String, Vec<u8>)> 
     }
     f.push(("root.to".into(), m.execution.root.to.account_id.value().to_vec()));
     delivery_fields("root.message", &m.execution.root.to, &m.execution.root.message, program, &mut f);
-    f.push(("fee".into(), borsh::to_vec(&m.execution.fee).unwrap()));
+    f.push(("fee".into(), borsh::to_vec(&compat::public_fee(m)).unwrap()));
     f.push(("nonces".into(), borsh::to_vec(&m.nonces).unwrap()));
     let message_len = borsh::to_vec(m).unwrap().len();
     f.push(("witness_set".into(), tx_bytes[1 + message_len..].to_vec()));
@@ -575,7 +589,7 @@ fn collect_public(
     let after = snapshot(w, &ids);
     let tx = w.txs.last().unwrap().1.clone();
     let block_id = w.chain.block_id - 1;
-    let body = block(block_id, w.time, &tx);
+    let body = block(block_id, w.time, &tx, &report.charge);
     Record {
         id,
         kind,
@@ -633,7 +647,7 @@ fn collect_private(
     let tx = borsh::to_vec(&LeeTransaction::PrivacyPreserving(run.tx.clone())).unwrap();
     assert_eq!(tx.len(), run.tx_bytes);
     let block_id = w.chain.block_id - 1;
-    let body = block(block_id, time, &tx);
+    let body = block(block_id, time, &tx, &run.charge);
     let (fields, mut meta) = private_fields(&run.tx, w.program);
     meta["prove_s"] = json!(run.prove_time.as_secs_f64());
     meta["proof_bytes"] = json!(run.proof_bytes);

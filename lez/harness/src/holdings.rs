@@ -65,7 +65,7 @@ impl Holdings {
         // Deploy the program beside Ferrata's, as a genesis program (as `Chain::new` deploys the
         // reference consumer).
         let state = std::mem::replace(&mut s.w.chain.state, V03State::new());
-        s.w.chain.state = state.with_genesis_programs([(holdings_program(), true)]);
+        s.w.chain.state = crate::compat::genesis_programs(state, [(holdings_program(), true)]);
         let manifest: Value = serde_json::from_slice(&fixture_file("fixture.json")).unwrap();
         let holder: Address =
             hex::decode(manifest["holder"].as_str().unwrap().trim_start_matches("0x")).unwrap().try_into().unwrap();
@@ -250,12 +250,9 @@ impl ExecutionEnvironment for Recorder<'_> {
 /// execution in order, with its input, as `crate::trace::trace_public` replays it for the tables.
 pub fn record_transitions(tx: &PublicTransaction, state: &V03State) -> Result<Vec<Recorded>, String> {
     let message = tx.message();
-    let evidence = tx
-        .witness_set()
-        .signatures_and_public_keys()
-        .iter()
-        .map(|(_, key)| AccountId::from(key))
-        .chain(message.admission_evidence.iter().map(lee::PublicAccountEvidence::account_id))
+    let evidence = crate::compat::signer_accounts(tx)
+        .into_iter()
+        .chain(message.admission_evidence.iter().filter_map(crate::compat::evidence_account))
         .collect();
     let mut recorder = Recorder { state, evidence, out: Vec::new() };
     WholeExecution::new(

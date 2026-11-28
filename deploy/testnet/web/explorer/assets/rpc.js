@@ -2,7 +2,8 @@
 // transactions arrive as base64(borsh) and are decoded here; account ids travel as base58, hashes as hex.
 
 import { b64decode, b58, hex, parseJsonLossless, big } from "./util.js";
-import { decodeBlock, decodeTransaction } from "./lez.js";
+import * as lezRc3 from "./lez.js";
+import * as lez040 from "./lez040.js";
 
 export class RpcError extends Error {
   constructor(code, message, data) {
@@ -28,8 +29,68 @@ export class Rpc {
     this.timeoutMs = timeoutMs;
     this.rangeLimit = Math.max(1, Math.min(100, Number(rangeLimit) || 100)); // the gateway refuses longer spans
     this.id = 0;
-    this.blocks = new Map(); // id -> decoded block (only Finalized ones are kept: Pending may change status)
+    this.blocks = new Map(); // `${version}:${id}` -> decoded block (only Finalized ones are kept)
     this.calls = 0;
+    this.version = "v0.4.0-rc3";
+    this.versionKnown = false;
+    this.versionProbe = null;
+  }
+
+  /**
+   * Pin the wire version after one successful probe. rc3 remains the fallback for a call whose probe fails for any
+   * reason other than method-not-found; such a failure is not cached, so the next decode probes again.
+   */
+  async lezVersion() {
+    if (this.versionKnown) return this.version;
+    if (!this.versionProbe) {
+      this.versionProbe = (async () => {
+        try {
+          // v0.4.0's SequencerStatus is tagged by `state` (lez/sequencer/service/protocol/src/lib.rs); any other
+          // answer names no version: rc3 for this call, probed again on the next.
+          const status = await this.call("getSequencerStatus");
+          if (status && (status.state === "online" || status.state === "bootstrapping")) {
+            this.version = "v0.4.0";
+            this.versionKnown = true;
+          } else {
+            this.version = "v0.4.0-rc3";
+          }
+        } catch (e) {
+          this.version = "v0.4.0-rc3";
+          // Only v0.4.0 reports that its sequencer is not online yet.
+          if (e instanceof RpcError && e.code === -31902) {
+            this.version = "v0.4.0";
+            this.versionKnown = true;
+          } else if (e instanceof RpcError && e.code === -32601) {
+            this.versionKnown = true;
+          }
+        } finally {
+          this.versionProbe = null;
+        }
+        return this.version;
+      })();
+    }
+    return this.versionProbe;
+  }
+
+  async decoder() {
+    return await this.lezVersion() === "v0.4.0" ? lez040 : lezRc3;
+  }
+
+  /**
+   * Decode with the chosen codec; while the version is unknown (a probe that named none: rc3 by default), bytes that
+   * rc3's decoder refuses are tried as v0.4.0, and the decoder that read them is returned with the result.
+   */
+  decodeWith(kind, bytes, codec, sure) {
+    try {
+      return { codec, value: codec[kind](bytes) };
+    } catch (e) {
+      if (sure || codec === lez040) throw e;
+      return { codec: lez040, value: lez040[kind](bytes) };
+    }
+  }
+
+  cacheKey(id, codec) {
+    return `${codec === lez040 ? "v0.4.0" : "v0.4.0-rc3"}:${Number(id)}`;
   }
 
   /**
@@ -91,11 +152,13 @@ export class Rpc {
 
   async block(id) {
     const n = Number(id);
-    if (this.blocks.has(n)) return this.blocks.get(n);
+    const codec = await this.decoder(), sure = this.versionKnown;
+    const key = this.cacheKey(n, codec);
+    if (this.blocks.has(key)) return this.blocks.get(key);
     const b64 = await this.call("getBlock", [n]);
     if (b64 === null || b64 === undefined) return null;
-    const block = decodeBlock(b64decode(b64));
-    if (block.bedrock_status === "Finalized") this.blocks.set(n, block);
+    const { codec: used, value: block } = this.decodeWith("decodeBlock", b64decode(b64), codec, sure);
+    if (block.bedrock_status === "Finalized") this.blocks.set(this.cacheKey(n, used), block);
     return block;
   }
 
@@ -105,12 +168,16 @@ export class Rpc {
    */
   async blockRange(from, to) {
     const out = [];
+    const codec = await this.decoder(), sure = this.versionKnown;
     let a = Number(from);
     while (a <= Number(to)) {
       const n = this.rangeLimit;
       const b = Math.min(Number(to), a + n - 1);
       const cached = [];
-      for (let i = a; i <= b; i++) if (this.blocks.has(i)) cached.push(this.blocks.get(i));
+      for (let i = a; i <= b; i++) {
+        const key = this.cacheKey(i, codec);
+        if (this.blocks.has(key)) cached.push(this.blocks.get(key));
+      }
       if (cached.length === b - a + 1) {
         out.push(...cached);
         a = b + 1;
@@ -128,8 +195,8 @@ export class Rpc {
         throw e;
       }
       for (const b64 of list || []) {
-        const block = decodeBlock(b64decode(b64));
-        if (block.bedrock_status === "Finalized") this.blocks.set(Number(block.header.block_id), block);
+        const { codec: used, value: block } = this.decodeWith("decodeBlock", b64decode(b64), codec, sure);
+        if (block.bedrock_status === "Finalized") this.blocks.set(this.cacheKey(block.header.block_id, used), block);
         out.push(block);
       }
       a = b + 1;
@@ -139,10 +206,25 @@ export class Rpc {
 
   /** {tx, blockId} or null. */
   async transaction(hashHex) {
+    const codec = await this.decoder(), sure = this.versionKnown;
     const r = await this.call("getTransaction", [hashHex.replace(/^0x/, "").toLowerCase()]);
     if (!r) return null;
     const [b64, blockId] = r;
-    return { tx: decodeTransaction(b64decode(b64)), blockId: Number(blockId) };
+    return { tx: this.decodeWith("decodeTransaction", b64decode(b64), codec, sure).value, blockId: Number(blockId) };
+  }
+
+  /** A v0.4.0 transaction receipt, with every receipt integer kept exact. rc3 has no such method. */
+  async receipt(hashHex) {
+    if (await this.lezVersion() !== "v0.4.0") throw new RpcError(-32601, "getTransactionReceipt requires LEZ v0.4.0");
+    const r = await this.call("getTransactionReceipt", [String(hashHex).replace(/^0x/, "").toLowerCase()]);
+    if (!r) return null;
+    return {
+      success: r.success,
+      fee: {
+        gas_exec: big(r.fee.gas_exec), gas_stor: big(r.fee.gas_stor),
+        fee_base: big(r.fee.fee_base), tip: big(r.fee.tip), refund: big(r.fee.refund),
+      },
+    };
   }
 
   /** {nonce, states: [{program, data}]} or null; `program` and `data` as bytes. */

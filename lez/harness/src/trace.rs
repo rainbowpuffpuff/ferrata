@@ -216,12 +216,9 @@ pub fn trace_public(
     budget: u64,
 ) -> (Vec<TransitionTrace>, Result<(), String>) {
     let message = tx.message();
-    let evidence = tx
-        .witness_set()
-        .signatures_and_public_keys()
-        .iter()
-        .map(|(_, key)| AccountId::from(key))
-        .chain(message.admission_evidence.iter().map(lee::PublicAccountEvidence::account_id))
+    let evidence = crate::compat::signer_accounts(tx)
+        .into_iter()
+        .chain(message.admission_evidence.iter().filter_map(crate::compat::evidence_account))
         .collect();
     let mut tracer = Tracer { state, evidence, budget, used: 0, traces: Vec::new() };
     let result = WholeExecution::new(

@@ -27,13 +27,14 @@ use fee_core::BlockFeeSummary;
 use ferrata_core::{fork::LcFork, validate::Context, witness::CompactUpdate};
 use ferrata_lez_wire::{header_actor, Message};
 use harness::{
+    compat,
     private::*,
     scenarios::World,
     settle::{classify, opening_fee_state, settle_private_transaction, LeeTransaction},
     *,
 };
 use lee::{Actor, PrivacyPreservingTransaction};
-use lee_core::{program::ReceiveInput, ProgramImageClaim};
+use lee_core::ProgramImageClaim;
 use risc0_zkvm::{default_executor, ExecutorEnv};
 
 fn usage() -> ! {
@@ -112,13 +113,7 @@ fn main() {
         Some(path) => settle(&mut w, path, time),
         None => {
             // The private transition alone, executed: what the prover proves for the program.
-            let input = ReceiveInput {
-                receiver: root,
-                from: None,
-                is_authorized: true,
-                pre_state: Default::default(),
-                message: message.clone(),
-            };
+            let input = compat::receive_input(root, None, true, Default::default(), message.clone());
             let mut builder = ExecutorEnv::builder();
             lee::program::Program::write_receive_input(&input, &mut builder).unwrap();
             let info = default_executor().execute(builder.build().unwrap(), ferrata_program().elf()).unwrap();

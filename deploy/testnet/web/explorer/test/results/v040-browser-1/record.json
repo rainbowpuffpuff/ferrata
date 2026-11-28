@@ -1,0 +1,110 @@
+{
+ "passed": 14,
+ "total": 14,
+ "checks": [
+  {
+   "name": "replay RPC: v0.4.0 status, head, exact recorded block, and transfer receipt",
+   "ok": true,
+   "detail": "head=5, transfer=13cfde13485e\u2026",
+   "t": 0.1
+  },
+  {
+   "name": "home: latest activity and blocks show recorded blocks 3, 4, and 5",
+   "ok": true,
+   "detail": "activity transactions=3",
+   "t": 0.7
+  },
+  {
+   "name": "home: activity shows all three recorded transfer amounts",
+   "ok": true,
+   "detail": "0.000001 LGO, 0.000002345 LGO, 0.000000777 LGO",
+   "t": 0.7
+  },
+  {
+   "name": "block 3: all three recorded transactions appear in block order",
+   "ok": true,
+   "detail": "13cfde13485e\u2026, 521cb0882373\u2026, ceba29fce807\u2026",
+   "t": 0.8
+  },
+  {
+   "name": "block 3: recorded block hash recomputes equal in the browser",
+   "ok": true,
+   "detail": "bc0c88b72524398ec26ce5d70103ab6f1ca9ebba4b02953530ab01180a725490",
+   "t": 0.8
+  },
+  {
+   "name": "block 3 transfer: outcome is applied, as receipt success=true records",
+   "ok": true,
+   "detail": "applied fee 0.000004968 LGO \u00b7 refund 0 LGO",
+   "t": 0.8
+  },
+  {
+   "name": "block 3 transfer: charged base fee plus tip and refund match the receipt",
+   "ok": true,
+   "detail": "expected 'fee 0.000004968 LGO \u00b7 refund 0 LGO'; row says 'applied fee 0.000004968 LGO \u00b7 refund 0 LGO'",
+   "t": 0.8
+  },
+  {
+   "name": "block 3: trailing fee-distribute and clock-tick transactions are system transactions",
+   "ok": true,
+   "detail": "rows 1-2 statuses=['system', 'system']",
+   "t": 0.8
+  },
+  {
+   "name": "block 3 transfer transaction page: sender matches the recorded signer",
+   "ok": true,
+   "detail": "7VDm7YRPvimbZgCzuFqCGf6RwPsTV3XY5W9DzT71oain",
+   "t": 0.9
+  },
+  {
+   "name": "block 3 transfer transaction page: recipient matches the recorded native transfer argument",
+   "ok": true,
+   "detail": "E6Mb7gptmMnFDmL7r4fxeAvYwcWf6hpBFDVi5xUd9ddC",
+   "t": 0.9
+  },
+  {
+   "name": "block 3 transfer transaction page: amount matches the recorded 1,000 native units",
+   "ok": true,
+   "detail": "call argument amount=1,000",
+   "t": 0.9
+  },
+  {
+   "name": "block 3 transfer transaction page: receipt outcome and charged fee are shown",
+   "ok": true,
+   "detail": "fee 0.000004968 LGO \u00b7 refund 0 LGO",
+   "t": 0.9
+  },
+  {
+   "name": "features page: the probed network version is LEZ v0.4.0 wherever named",
+   "ok": true,
+   "detail": "What LEZ v0.4.0 does here",
+   "t": 1.1
+  },
+  {
+   "name": "no script errors, failed local requests, or off-loopback requests",
+   "ok": true,
+   "detail": "[]",
+   "t": 1.2
+  }
+ ],
+ "url": "http://127.0.0.1:43801/",
+ "run": "<local>",
+ "errors": [],
+ "off_loopback_requests": [],
+ "transfer": {
+  "hash": "13cfde13485e87665ef8b407e0d068d460521f2160fdf8ced69904a56df36ff0",
+  "sender": "7VDm7YRPvimbZgCzuFqCGf6RwPsTV3XY5W9DzT71oain",
+  "recipient": "E6Mb7gptmMnFDmL7r4fxeAvYwcWf6hpBFDVi5xUd9ddC",
+  "amount_units": 1000,
+  "receipt": {
+   "success": true,
+   "fee": {
+    "gas_exec": 0,
+    "gas_stor": 621,
+    "fee_base": 4968,
+    "tip": 0,
+    "refund": 0
+   }
+  }
+ }
+}

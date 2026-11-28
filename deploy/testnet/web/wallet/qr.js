@@ -7,18 +7,18 @@ const B58 = '[1-9A-HJ-NP-Za-km-z]';
 let lib = null;
 const qrLib = () => (lib ??= import('./vendor/qr.js'));
 
-/** `lez:<id>?pk=<hex>[&amount=<decimal>]`, a bare id, a public key or a name; null when it is none of these. */
+/** `lez:<id>?pk=<hex>[&amount=<decimal>]`, a bare id, an rc3 public key, a v0.4.0 initial key state or a name. */
 export function parseScanned(text, decimals = 9) {
   const t = String(text ?? '').trim();
   const m = t.match(new RegExp(`^lez:(${B58}{32,44})(?:\\?(.*))?$`));
   if (m) {
     const p = new URLSearchParams(m[2] ?? '');
     const pk = p.get('pk'), amount = p.get('amount');
-    if (pk !== null && !/^[0-9a-fA-F]{64}$/.test(pk)) return null;
+    if (pk !== null && !/^(?:[0-9a-fA-F]{64}|[0-9a-fA-F]{66})$/.test(pk)) return null;
     const okAmount = amount !== null && new RegExp(`^\\d{1,20}(\\.\\d{1,${decimals}})?$`).test(amount);
     return { to: pk ? `lez:${m[1]}?pk=${pk.toLowerCase()}` : m[1], amount: okAmount ? amount : null };
   }
-  if (new RegExp(`^${B58}{32,44}$`).test(t) || /^(0x)?[0-9a-fA-F]{64}$/.test(t) || /^[a-zA-Z0-9-]{3,32}(\.lez)?$/.test(t)) return { to: t, amount: null };
+  if (new RegExp(`^${B58}{32,44}$`).test(t) || /^(0x)?(?:[0-9a-fA-F]{64}|[0-9a-fA-F]{66})$/.test(t) || /^[a-zA-Z0-9-]{3,32}(\.lez)?$/.test(t)) return { to: t, amount: null };
   return null;
 }
 

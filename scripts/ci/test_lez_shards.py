@@ -56,8 +56,8 @@ def run_check(map_data, harness_dir=mod.DEFAULT_HARNESS_DIR, updater_dir=mod.DEF
 # 1. Real map passes
 probs, summary = mod.check_shards()
 check("real map passes guard", not probs, "; ".join(probs))
-check("real map discovers 56 harness binaries (46 active + 10 feature-gated: names and names_review run in job `names`, the 3 messages tests in job `msg`) and 16 updater binaries",
-      summary.get("harness_total") == 56 and summary.get("harness_feature_gated") == 10 and summary.get("updater_total") == 16,
+check("real map discovers 58 harness binaries (48 active, lez040 and lez040_guards among them, + 10 feature-gated: names and names_review run in job `names`, the 3 messages tests in job `msg`) and 16 updater binaries",
+      summary.get("harness_total") == 58 and summary.get("harness_feature_gated") == 10 and summary.get("updater_total") == 16,
       str(summary))
 
 # 1b. The updater process demo belongs to exactly one shard and runs in dev mode after its recorded tests.

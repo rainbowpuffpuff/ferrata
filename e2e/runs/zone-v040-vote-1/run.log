@@ -1,0 +1,8 @@
+[02:30:47] node up: {"cryptarchia_info":{"lib":"99e4fdba361357efe9db02962ac49157c7aebfc1d73fbbf403ca70cf381d0f5b","lib_slot":0,"tip":"99e4fdba361357efe9db02962ac49157c7aebfc1d73fbbf403ca70cf381d0f5b","slot":0,"height":0,"state":"Bootstrapping"},"phase":"InitialBlockDownload"}
+[02:30:47] seq-0 set up: channel key 57170793c72834f4d7a352e7e3605f0284a7413a5282fceddb3583c14f985d18; Creating the channel stakes that key at genesis.
+[02:30:47] seq-1 set up: channel key 6b3d864bf280a052635a5e5bb6e439c0f742f67ac799585e408c9f3a20bdd526; Pass that key to `stake --sequencer-key`.
+[02:30:47] seq-2 set up: channel key 105ddf3f2dc3fe4b435a15f21bc518375729283d313b739460a714e00d0806cb; Pass that key to `stake --sequencer-key`.
+[02:30:47] seq-3 set up: channel key dadacd632cae6f949ed5fe3c27907ce17a0908767df3d0281697acee2b76d341; Pass that key to `stake --sequencer-key`.
+[02:31:08] channel created by seq-0 (one key, its own genesis stake): 1 0 2585010; height 2
+[02:31:09] published test accounts: Public/7VDm7YRPvimbZgCzuFqCGf6RwPsTV3XY5W9DzT71oain Public/6AtC7ekAeMXh9QgiBoUnsb69SVEnCy9DMhCy4nmJDbkh
+[02:31:39] seq-1's key staked: Staking 149 from 7VDm7YRPvimbZgCzuFqCGf6RwPsTV3XY5W9DzT71oain into EmKRaFYcMcHmaDxJKXmRrjfGsgXNUmmbZ9iSASj6BHrp: 4a8f5bfa253fccff2a37c5e3e63ffa7d610a0aef9d4f558e48a2f3bc82e43b6a

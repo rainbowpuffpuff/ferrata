@@ -1,0 +1,49 @@
+{
+ "bedrock_took_params": true,
+ "bundle_sha256": "019d07107cd9990d30a38949ecd9c4efcddff452ac679415f6f9af743af5c8be",
+ "channel_created": {
+  "accredited_keys": [
+   "57170793c72834f4d7a352e7e3605f0284a7413a5282fceddb3583c14f985d18"
+  ],
+  "config_tip_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "configuration_threshold": 1,
+  "posting_timeframe": 0,
+  "posting_timeout": 0,
+  "tip_message": "2f1788f7778d3c8d7a07aa805f241ef5423fe158bcbd96f920c767e611a8af8a",
+  "tip_sequencer": 0,
+  "tip_sequencer_starting_slot": 2585007,
+  "tip_slot": 2585010,
+  "transfer_threshold": 1
+ },
+ "channel_keys": [
+  "57170793c72834f4d7a352e7e3605f0284a7413a5282fceddb3583c14f985d18",
+  "6b3d864bf280a052635a5e5bb6e439c0f742f67ac799585e408c9f3a20bdd526",
+  "105ddf3f2dc3fe4b435a15f21bc518375729283d313b739460a714e00d0806cb",
+  "dadacd632cae6f949ed5fe3c27907ce17a0908767df3d0281697acee2b76d341"
+ ],
+ "channel_posting_timeframe_after_vote_1": "60",
+ "channel_posting_timeframe_after_vote_2": "60",
+ "channel_posting_timeframe_after_vote_3": "90",
+ "four_keys_after_s": 1,
+ "lez": "v0.4.0 a255b42c0fc80d1cb219454a3a1f5ec3b5d92115",
+ "node_info_start": {
+  "cryptarchia_info": {
+   "height": 0,
+   "lib": "99e4fdba361357efe9db02962ac49157c7aebfc1d73fbbf403ca70cf381d0f5b",
+   "lib_slot": 0,
+   "slot": 0,
+   "state": "Bootstrapping",
+   "tip": "99e4fdba361357efe9db02962ac49157c7aebfc1d73fbbf403ca70cf381d0f5b"
+  },
+  "phase": "InitialBlockDownload"
+ },
+ "posting_timeframe_before": 60,
+ "posting_timeframe_voted": 90,
+ "sha256_r0vm": "990c7e55c5627c6d78968c5fa6c6c98119a6282b5298831ccb52178f0dff9310",
+ "sha256_sequencer_service": "4af2f89449e2497f1785e24bb5bbaa3e342e735a54b027789a21f20cb292b6bc",
+ "sha256_sequencer_service_standalone": "8dce25a8ad4d1ba9a442d6435981c6c332ca061dedde0aa78f1aecbbf729ef3c",
+ "sha256_wallet": "ac9820a110c26247eb3cd1d92491e6015a9c6e56c3a4d325a6801617c8cff4d3",
+ "vote_1": "Included in block 36 1 of the 3 accredited keys these params need have voted for them ",
+ "vote_2": "Included in block 39 2 of the 3 accredited keys these params need have voted for them ",
+ "vote_3": "Included in block 42 The channel params are now ChannelParams { minimum_sequencer_stake: 149, posting_timeframe: 90, posting_timeout: 25, max_block_size: 1048576, finality_depth: 35 }, by this vote or others that landed first "
+}

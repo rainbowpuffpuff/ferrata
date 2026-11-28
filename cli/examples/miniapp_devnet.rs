@@ -75,7 +75,9 @@ use key_protocol::key_management::{
     key_tree::{chain_index::ChainIndex, KeyTreePrivate},
     secret_holders::SeedHolder,
 };
-use lee::{test_utils::TestPrivateKeys, Account, AccountId, PrivateKey, PublicAccountEvidence};
+use lee::{test_utils::TestPrivateKeys, Account, AccountId, PublicAccountEvidence};
+// The harness\'s key type for the tag (a private key up to rc3, the account secret from v0.4.0: LEZ #1135).
+use harness::compat::AccountKey;
 use lee_core::{account::Actor, execution_state::BoundaryStep, AuthorizationSecretKey};
 use serde_json::{json, Value};
 
@@ -125,7 +127,7 @@ struct HarnessLedger {
     /// Public accounts named by settled privacy-preserving transactions (a private claim's nullifier
     /// account among them), as `Sequencer::included` reads them from blocks.
     touched: HashSet<AccountId>,
-    keys: HashMap<AccountId, PrivateKey>,
+    keys: HashMap<AccountId, AccountKey>,
 }
 
 impl HarnessLedger {
@@ -177,7 +179,7 @@ impl HarnessLedger {
                 }
             }
         }
-        let signers: Vec<PrivateKey> = call
+        let signers: Vec<AccountKey> = call
             .mentions
             .iter()
             .filter_map(|m| match m {
@@ -185,7 +187,7 @@ impl HarnessLedger {
                 _ => None,
             })
             .collect();
-        let refs: Vec<&PrivateKey> = signers.iter().collect();
+        let refs: Vec<&AccountKey> = signers.iter().collect();
         let report = self.world.submit_signed(&call.what, root, &call.message, actors, evidence, &refs);
         self.record(&report);
         report

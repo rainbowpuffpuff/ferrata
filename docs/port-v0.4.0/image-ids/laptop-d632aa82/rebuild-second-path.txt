@@ -1,0 +1,23 @@
+# A rebuild of this record's 15 guests at another path than the record's (28 November 2026, 06:27-06:35 UTC)
+#
+# Command: bash scripts/verify-lez040-ids.sh (the script as committed in b399cd6c: a rebuild works in a clean
+# worktree of the record's commit d632aa82 named ferrata-verify-lez040-ids-d632aa82-rebuild beside the repository,
+# the record's own build in ferrata-verify-lez040-ids-d632aa82), a fresh target directory, on the laptop.
+# Its output, unedited below: each guest's recorded and rebuilt image id and whether the binaries' sha256 are equal.
+lez-select: v0.4.0-rc1 -> v0.4.0 (a255b42c0fc80d1cb219454a3a1f5ec3b5d92115)
+laptop-d632aa82: ferrata_bridge: recorded 0x7e39359d8d447d6e98696a4a64266c0d12aaa2a2bdcfd0a3704545fbbfbc26e0, rebuilt 0x7e39359d8d447d6e98696a4a64266c0d12aaa2a2bdcfd0a3704545fbbfbc26e0, binary sha256 equal: same
+laptop-d632aa82: ferrata_consumer: recorded 0x41a36bde4976fb08fafc8df730d0be5dac5520f8eb9081aa42a25c97f01029c2, rebuilt 0x41a36bde4976fb08fafc8df730d0be5dac5520f8eb9081aa42a25c97f01029c2, binary sha256 equal: same
+laptop-d632aa82: ferrata_consumer_keccak_accel: recorded 0x52ff31ab56eeade382cc71593d43e11ceb2d9b2bef7b938901945c36c885faa5, rebuilt 0x52ff31ab56eeade382cc71593d43e11ceb2d9b2bef7b938901945c36c885faa5, binary sha256 equal: same
+laptop-d632aa82: ferrata_holdings: recorded 0x79a7bab4b979842ed2032f8813fcf60208dea4a7a920c642c1b94be74b64f9fb, rebuilt 0x79a7bab4b979842ed2032f8813fcf60208dea4a7a920c642c1b94be74b64f9fb, binary sha256 equal: same
+laptop-d632aa82: ferrata_lez: recorded 0x95a93abfe4073a7eaad8f86be311af45e7729f1c3dba7f1b0ce016b7b1b8e2f1, rebuilt 0x95a93abfe4073a7eaad8f86be311af45e7729f1c3dba7f1b0ce016b7b1b8e2f1, binary sha256 equal: same
+laptop-d632aa82: ferrata_lez_class: recorded 0xa971293b2d597dad6cd7fd7d8aac78c74478e20bed28f00014449effed4836ea, rebuilt 0xa971293b2d597dad6cd7fd7d8aac78c74478e20bed28f00014449effed4836ea, binary sha256 equal: same
+laptop-d632aa82: ferrata_lez_keccak_soft: recorded 0x8acaa28d8d9bc6fbeb203b0883dcc2e1e2e086e017fdf9b163b264008239afcf, rebuilt 0x8acaa28d8d9bc6fbeb203b0883dcc2e1e2e086e017fdf9b163b264008239afcf, binary sha256 equal: same
+laptop-d632aa82: ferrata_lez_residue_experimental: recorded 0xc4db35ad583b10ffdc66e0429db14d4512ae7dbdf8a0d3906d5795f09b0e939f, rebuilt 0xc4db35ad583b10ffdc66e0429db14d4512ae7dbdf8a0d3906d5795f09b0e939f, binary sha256 equal: same
+laptop-d632aa82: ferrata_msg: recorded 0xcefe356029b86d4efd67cd57738cc7010afa8842fd0c35ec12caf7f7eacbe553, rebuilt 0xcefe356029b86d4efd67cd57738cc7010afa8842fd0c35ec12caf7f7eacbe553, binary sha256 equal: same
+laptop-d632aa82: ferrata_msg_v2: recorded 0xe3c2b44875ad8c5d9bdc93629e991ec40b3960e2f0403ea625b3a65e9bbc7313, rebuilt 0xe3c2b44875ad8c5d9bdc93629e991ec40b3960e2f0403ea625b3a65e9bbc7313, binary sha256 equal: same
+laptop-d632aa82: ferrata_names: recorded 0x9339342a2c1251e00321740f8f4cea330a2f3632f99e5c58a555f17d031937a4, rebuilt 0x9339342a2c1251e00321740f8f4cea330a2f3632f99e5c58a555f17d031937a4, binary sha256 equal: same
+laptop-d632aa82: ferrata_rebate: recorded 0xeddda0baf6daac70d4baf3aa2446b8907578f9f863817ff1353d05511eb18712, rebuilt 0xeddda0baf6daac70d4baf3aa2446b8907578f9f863817ff1353d05511eb18712, binary sha256 equal: same
+laptop-d632aa82: ferrata_statements: recorded 0x513ee15e7bfacc75b44a75a9b096a3adc779683debcfb79701e0b457f89f4b89, rebuilt 0x513ee15e7bfacc75b44a75a9b096a3adc779683debcfb79701e0b457f89f4b89, binary sha256 equal: same
+laptop-d632aa82: ferrata_statements_reader: recorded 0x5086019aba6ce2849ad50d53e47445a934b61fbbff4b8f2dcfc914587a552be2, rebuilt 0x5086019aba6ce2849ad50d53e47445a934b61fbbff4b8f2dcfc914587a552be2, binary sha256 equal: same
+laptop-d632aa82: scripted: recorded 0x0a37d9ba1f59c9abb457f3fd62d6b7bd7e15ccb327d24f847d8cd61f51ce329c, rebuilt 0x0a37d9ba1f59c9abb457f3fd62d6b7bd7e15ccb327d24f847d8cd61f51ce329c, binary sha256 equal: same
+exit 0 06:35:14Z

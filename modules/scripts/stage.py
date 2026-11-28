@@ -4,7 +4,7 @@ and the module builder find them: the builder copies only rust-lib/.
 
 The crates keep their places relative to each other, so their own path dependencies hold unchanged:
 the repository's under rust-lib/staged/<path in the repository>, LEZ's under
-rust-lib/upstream/lez-v0.4.0-rc1/<path in LEZ> (the wire crates name LEZ as ../../../upstream/...).
+rust-lib/upstream/lez-<tag>/<path in LEZ> (the wire crates name LEZ as ../../../upstream/...).
 Each staged manifest is written with what it inherits from its own workspace resolved (package fields,
 workspace dependencies), and without its dev-dependencies and lints, which a module build does not use.
 What was copied is recorded in rust-lib/staged/STAGED.json, which each module's version() reports.
@@ -12,7 +12,8 @@ What was copied is recorded in rust-lib/staged/STAGED.json, which each module's 
     python3 -I modules/scripts/stage.py [MODULE...]   the attestation and the bridge module (default both;
                                                    stage.sh stages the other three)
     FERRATA_COMMIT=<sha> FERRATA_LEZ=<dir> ...     the commit to record; LEZ's clone (default
-                                                   spike/upstream/lez-v0.4.0-rc1 beside the repository)
+                                                   spike/upstream/lez-<tag> beside the repository)
+    FERRATA_LEZ_TAG=<tag> ...                      the LEZ tag and staged directory (default v0.4.0-rc1)
 """
 import hashlib
 import json
@@ -26,8 +27,9 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent.parent
-LEZ = Path(os.environ.get("FERRATA_LEZ") or REPO.parent / "upstream" / "lez-v0.4.0-rc1").resolve()
-LEZ_DIR = "upstream/lez-v0.4.0-rc1"
+LEZ_TAG = os.environ.get("FERRATA_LEZ_TAG") or "v0.4.0-rc1"
+LEZ = Path(os.environ.get("FERRATA_LEZ") or REPO.parent / "upstream" / f"lez-{LEZ_TAG}").resolve()
+LEZ_DIR = f"upstream/lez-{LEZ_TAG}"
 
 # Each module's crates: (root, path). The calls crate of each module depends on them by path.
 MODULES = {

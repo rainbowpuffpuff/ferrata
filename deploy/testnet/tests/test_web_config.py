@@ -12,6 +12,7 @@ whole (a new file renamed over the old); the program streams' AGENTS sections an
 once, also after a second run.
 Run: python3 -I deploy/testnet/tests/test_web_config.py"""
 import json
+import os
 import pathlib
 import shutil
 import subprocess
@@ -20,6 +21,8 @@ import tempfile
 
 HERE = pathlib.Path(__file__).resolve().parent
 SCRIPT = HERE.parent / "web-config.py"
+SCRATCH = HERE.parents[2] / ".scratch"   # temporary sites go under the tree's ignored .scratch/, never /tmp
+SCRATCH.mkdir(exist_ok=True)
 BUNDLE = HERE.parent / "web" / "wallet"  # the wallet as this repository bundles it
 CLIENTS = ("vendor/names.js", "msg/ferrata-msg.js")
 STAND_IN = {"v1": ("const SEED_DOMAIN = enc.encode('ferrata-names/v1/name/');\n", "const SALT = utf8('ferrata-msg/v1');\n"),
@@ -72,22 +75,26 @@ def site(root, v2, clients="bundle"):
     return www, stage, here, served
 
 
-def run(www, stage, here, served):
+def run(www, stage, here, served, tag=None):
+    env = os.environ.copy()
+    env.pop("FERRATA_LEZ_TAG", None)
+    if tag is not None:
+        env["FERRATA_LEZ_TAG"] = tag
     return subprocess.run([sys.executable, "-I", str(SCRIPT), str(www), "net.example", str(here), "50", str(stage), str(served)],
-                          capture_output=True, text=True, timeout=60)
+                          capture_output=True, text=True, timeout=60, env=env)
 
 
-def configs(v2, clients):
+def configs(v2, clients, tag=None):
     """(the messaging module's config, the wallet's) after a run on a fresh stand-in site."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(dir=SCRATCH) as d:
         www, stage, here, served = site(pathlib.Path(d), v2, clients)
-        r = run(www, stage, here, served)
+        r = run(www, stage, here, served, tag)
         if r.returncode != 0:
             return {}, {"error": r.stderr[-300:]}
         return json.loads((www / "msg" / "config.json").read_text()), json.loads((www / "wallet" / "config.json").read_text())
 
 
-with tempfile.TemporaryDirectory() as d:
+with tempfile.TemporaryDirectory(dir=SCRATCH) as d:
     www, stage, here, served = site(pathlib.Path(d), v2=True)
     agents_inode = (www / "AGENTS.md").stat().st_ino
     r = run(www, stage, here, served)
@@ -138,7 +145,7 @@ check("a wallet whose clients are not recognised: its panels left off, whatever 
 m, w = configs(v2=True, clients="v1")
 check("stand-in v1 clients read as v1 (the markers, not the bundle's other text)",
       w.get("msg") == {"program": MSG1} and w.get("names") == {"program": NAMES1})
-with tempfile.TemporaryDirectory() as d:
+with tempfile.TemporaryDirectory(dir=SCRATCH) as d:
     www, stage, here, served = site(pathlib.Path(d), v2=True)
     # The live file as this run found it (install-web.sh copies it into the stage before step 3): the operator closed
     # deposits and moved fromBlock after the last good run, whose served copy still says otherwise.
@@ -153,5 +160,16 @@ with tempfile.TemporaryDirectory() as d:
     check("the live file's values win over the copy served after the last good run (lezReady false stays false, the "
           "vault and fromBlock as set live); that copy fills only what the live file lacks or leaves null (token, configId)",
           (b["lezReady"], b["fromBlock"], b["vault"], b["configId"], b["token"]) == (False, 12200000, "0x1949", "0x37", {"symbol": "TUSD"}))
+for tag, network in ((None, "Ferrata LEZ testnet (rc3)"), ("v0.4.0-rc3", "Ferrata LEZ testnet (rc3)"),
+                     ("v0.4.0", "Ferrata LEZ testnet (v0.4.0)")):
+    m, w = configs(v2=True, clients="v1", tag=tag)
+    check("wallet network label for FERRATA_LEZ_TAG=" + repr(tag), w.get("network") == network)
+for tag, node in ((None, "0.3.5-rc.1"), ("v0.4.0-rc3", "0.3.5-rc.1"), ("v0.4.0", "0.4.0-rc.2")):
+    with tempfile.TemporaryDirectory(dir=SCRATCH) as d:
+        www, stage, here, served = site(pathlib.Path(d), v2=True)
+        r = run(www, stage, here, served, tag)
+        e = json.loads((www / "config.json").read_text()) if r.returncode == 0 else {}
+    check("explorer: the Logos Blockchain node release for FERRATA_LEZ_TAG=" + repr(tag),
+          (e.get("bedrock") or {}).get("node_version") == node)
 print("all passed" if not FAILED else f"FAILED {len(FAILED)}")
 sys.exit(1 if FAILED else 0)
