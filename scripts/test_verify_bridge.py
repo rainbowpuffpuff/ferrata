@@ -232,8 +232,8 @@ REVIEW_REPRODUCTIONS = {
                        # M1: a negative count is offset by a duplicate singleton bin; the collapsed bins still say 20.
                        ((f"{PRIVACY}/generated/results.json", LEZ_CLAIM_TO_BURN, LEZ_NEGATIVE_COUNT),
                         (f"{PRIVACY}/generated/summary.md", LEZ_SUMMARY_ROW,
-                         "| on LEZ: claim to burn (informational) | 4.8% | 0 of 20 | 1: -1, 1: 1, 20: 19 | "
-                         "4.8% | 4.8% | 5.0% |"))),
+                         "| on LEZ: claim to burn (informational) | 4.5% | 0 of 20 | 1: -1, 1: 2, 20: 18 | "
+                         "4.5% | 4.5% | 5.0% |"))),
     # 2: Q0 loses both of its expected failures (25 passed, 2 failed -> 27 passed, 0 failed).
     "bridge-u8-refusals": (("e2e/runs/cli-u8/README.md", "25 passed, 2 failed: exactly those",
                             "27 passed, 0 failed: none"),

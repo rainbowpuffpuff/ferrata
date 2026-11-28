@@ -103,7 +103,7 @@ const CLAIM_TRANSITIONS: [(u64, usize, u64); 2] = [(41_160, 1, 131_072), (111_59
 const BURN_TRANSITION: (u64, usize, u64) = (25_377, 1, 131_072);
 
 /// The same transitions' user cycles as this tree's programs execute them (build box, 22 November
-/// 2026). The programs changed after the record's runs by a few hundred cycles per transition, inside
+/// 2026). The programs changed after the record's runs by up to about 1,800 cycles per transition, inside
 /// the same segments and padded sizes; these exact pins catch the next change, which must then be
 /// checked against the record's segments again (the asserts below) or the measurements redone.
 const ATTEST_TRANSITIONS_NOW: [u64; 2] = [34_717, 346_763];

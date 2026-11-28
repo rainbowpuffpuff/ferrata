@@ -40,12 +40,12 @@ GROUPS = {
     ),
     "lez/guests/program/src/": (
         "LEZ light-client actor shell and inclusion attestations",
-        "LEZ R0BF ferrata_lez (docs/image-ids.md:46)",
+        "LEZ R0BF ferrata_lez (docs/image-ids.md:49)",
         "main dispatches Message",
     ),
     "lez/guests/bridge/src/": (
         "LEZ deposit, burn, balances, clocks, roles and fees",
-        "LEZ R0BF ferrata_bridge_lezfee (docs/image-ids.md:47)",
+        "LEZ R0BF ferrata_bridge_lezfee (docs/image-ids.md:50)",
         "main dispatches BridgeMessage",
     ),
     "checkpoint/crates/checkpoint-core/src/": (
@@ -56,27 +56,27 @@ GROUPS = {
     ),
     "checkpoint/guests/checkpoint/src/": (
         "checkpoint rule A and composed segment-receipt verification",
-        "RISC Zero checkpoint_31 (docs/image-ids.md:53)",
+        "RISC Zero checkpoint_31 (docs/image-ids.md:56)",
         "zkVM main reads CheckpointInput",
     ),
     "checkpoint/guests/checkpoint-b/src/": (
         "checkpoint rule B and composed segment-receipt verification",
-        "RISC Zero checkpoint_b_31 (docs/image-ids.md:54)",
+        "RISC Zero checkpoint_b_31 (docs/image-ids.md:57)",
         "zkVM main reads CheckpointInputB",
     ),
     "checkpoint/guests/segment/src/": (
         "bounded LEZ block-chain segment used by either checkpoint rule",
-        "RISC Zero segment_31 (docs/image-ids.md:56), verified by checkpoint guests",
+        "RISC Zero segment_31 (docs/image-ids.md:59), verified by checkpoint guests",
         "zkVM main reads SegmentInput",
     ),
     "checkpoint/guests-0-3-5/checkpoint/src/": (
         "rule A for the Bedrock 0.3.5-rc.1 transaction layout",
-        "RISC Zero checkpoint_0_3_5_31 (docs/image-ids.md:87)",
+        "RISC Zero checkpoint_0_3_5_31 (docs/image-ids.md:90)",
         "zkVM main reads CheckpointInput",
     ),
     "checkpoint/guests-0-3-5/checkpoint-b/src/": (
         "rule B for the Bedrock 0.3.5-rc.1 transaction layout",
-        "RISC Zero checkpoint_b_0_3_5_31 (docs/image-ids.md:88)",
+        "RISC Zero checkpoint_b_0_3_5_31 (docs/image-ids.md:91)",
         "zkVM main reads CheckpointInputB",
     ),
     "bridge/crates/ferrata-bridge-core/src/": (
@@ -86,7 +86,7 @@ GROUPS = {
     ),
     "bridge/guests/src/bin/release.rs": (
         "burn membership verification and bound release journal",
-        "RISC Zero release_31 (docs/image-ids.md:57), verified by FerrataVault",
+        "RISC Zero release_31 (docs/image-ids.md:60), verified by FerrataVault",
         "zkVM main reads ReleaseInput",
     ),
     "vault/src/FerrataVault.sol": (

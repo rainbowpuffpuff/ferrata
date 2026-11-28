@@ -167,7 +167,7 @@ def _check_privacy_run(ctx, problems: list, base: str, real: bool) -> dict:
     else:
         # The record's own raw partition: allowed, unique size bins with nonnegative counts covering exactly 20.
         # The burns in a candidate set of all 20 (each guessed at 1/20) and the others in singleton sets, none right
-        # (exactly_identified 0), give (burns in full sets)/20 x 1/20: 18 full, 4.5%, before ADR 0046; 19 full, 4.8%.
+        # (exactly_identified 0), give (burns in full sets)/20 x 1/20: 18 full, 4.5%, before ADR 0046; 19 full, 4.8%, under it; 18 full, 4.5%, under ADR 0048.
         pairs = lez["candidate_set_sizes"]
         full = sum(count for size, count in pairs if size == 20)
         derived = full / 20 * (1 / 20)

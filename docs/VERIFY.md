@@ -196,7 +196,7 @@ this network before building anything (B1 has no `CollectFees`). Check its image
 using it. What has run of this:
 the tests of both layouts (B1's frozen encoding vectors, the loader header of LEZ rc1 and rc3, the claim plans and the
 module's session against stand-ins), and CI's round trip on a LEZ v0.4.0-rc3 sequencer of our own with the deployed
-B1 binary in place of this tree's program: this tree's `ferrata` sent its plaintext claim in B1's layout, B1 applied it,
+B1 binary in place of the tree's own program (before the merge with ADR 0048: ADR 0046's vault; the B1 claim code unchanged since): `ferrata` sent its plaintext claim in B1's layout, B1 applied it,
 and the burn and release followed, 14 of 14 steps (`e2e/runs/rc3-roundtrip-b1/`, EVIDENCE row 281). A send to our test
 network with this tree's tool has not been made (this project sends nothing to it).
 
