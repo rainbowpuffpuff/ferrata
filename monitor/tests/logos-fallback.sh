@@ -174,7 +174,7 @@ cast rpc --rpc-url "$rpc" anvil_setBalance "$watcher" 0x0 > /dev/null
 burnt=$(requests | jq -r --argjson r "$r0" '.[$r:][0].nonce // "none"')
 check "L5 the module burnt nonce $burnt (failed, nothing sent) and the plain send after it failed (the account empty): the candidate still pending, nothing mined" \
   '[ "$(hits)" -gt "$h0" ] && [ "$burnt" = $((nonce0 + 4)) ] && [ "$(submitted_at "$n5")" != 0 ] && [ "$(cast nonce --rpc-url "$rpc" "$watcher" --block latest)" = $((nonce0 + 4)) ]'
-cast rpc --rpc-url "$rpc" anvil_setBalance "$watcher" "$(printf '0x%x' "$fund")" > /dev/null
+cast rpc --rpc-url "$rpc" anvil_setBalance "$watcher" "$(cast to-hex "$fund")" > /dev/null
 echo pass > "$ctl"
 "$mon" "${margs[@]}" --max-polls 3 2>> "$run/monitor-stderr.log" || echo "monitor run exited $? (L5, funded again)" >> "$run/monitor-stderr.log"
 a=$(cancelled "$n5"); [ -n "$a" ] || a='{}'
@@ -207,4 +207,12 @@ sed -i -e 's#"file:[^"]*/monitor/\(results\|target\)/#"file:<checkout>/monitor/\
   echo "$passes passed, $fails failed."
 } >> "$summary"
 cat "$summary"
+# On a failure, what the monitor and the stand-in said (they write to files the summary does not show), so that a CI
+# failure names its cause (28 November 2026: all ten checks failed once on GitHub, L1 without a request; the same
+# tree passed on GitHub on another branch and locally on anvil 1.3.6 and 1.5.1).
+if [ "$fails" -gt 0 ]; then
+  for f in monitor-stderr.log txsender-stderr.log anvil.log; do
+    [ -s "$run/$f" ] && { echo; echo "--- last 40 lines of $f"; tail -n 40 "$run/$f" | sed -e "s#$repo#<checkout>#g"; }
+  done
+fi
 exit "$fails"
