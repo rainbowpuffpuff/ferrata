@@ -563,15 +563,15 @@ a.btn { display: inline-block; text-decoration: none; }
 .g6{flex-grow:6}
 .g8{flex-grow:8}
 .g9{flex-grow:9}
-.g10{flex-grow:10}
 .g13{flex-grow:13}
 .g15{flex-grow:15}
 .g16{flex-grow:16}
+.g17{flex-grow:17}
 .g18{flex-grow:18}
 .g24{flex-grow:24}
 .g29{flex-grow:29}
-.g31{flex-grow:31}
-.g47{flex-grow:47}
+.g32{flex-grow:32}
+.g48{flex-grow:48}
 .g49{flex-grow:49}
 .gs1-1{grid-column:1 / span 1}
 .gs2-1{grid-column:2 / span 1}

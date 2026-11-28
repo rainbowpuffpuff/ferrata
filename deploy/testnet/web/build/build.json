@@ -1,8 +1,8 @@
 {
- "commit": "5891a6f493ca477308e87158fa1542c2ad1eeade",
- "date": "2026-11-27",
+ "commit": "1a39b860e51c4af4ee6462c5c8f04ec518935b05",
+ "date": "2026-11-28",
  "dirty": false,
- "statuses_from": "5fb3edac0a3b6192526deed3830b20575cf32fa6",
+ "statuses_from": "1a39b860e51c4af4ee6462c5c8f04ec518935b05",
  "hard": {
   "RFP-021": {
    "shown": 49,
@@ -12,8 +12,8 @@
    "total": 59
   },
   "RFP-022": {
-   "shown": 47,
-   "in part": 18,
+   "shown": 48,
+   "in part": 17,
    "not yet": 1,
    "waits on Logos": 2,
    "total": 68
@@ -38,7 +38,7 @@
   "RFP-022": 66
  },
  "rows": 137,
- "evidence_rows": 280,
+ "evidence_rows": 299,
  "warnings": [],
  "files": [
   "assets/logo.svg",
