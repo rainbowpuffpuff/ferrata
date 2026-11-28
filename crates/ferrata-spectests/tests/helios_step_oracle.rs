@@ -1119,7 +1119,14 @@ fn helios_pin_is_unmodified_0_12_0() {
 /// Sepolia light-client fixtures (for example synthetic/corrupted fixtures or non-light-client SSZ
 /// files). Add `(repo_relative_path, reason)` entries here only when a file cannot be replayed in
 /// `every_recorded_real_update_in_repo_agrees_with_helios_on_step_path`.
-const NON_REPLAY_SSZ: &[(&str, &str)] = &[];
+const NON_REPLAY_SSZ: &[(&str, &str)] = &[
+    ("e2e/runs/ci-sequencer-attest-v040/fresh/attest/finality_update.ssz", V040_REHEARSAL),
+    ("e2e/runs/ci-sequencer-attest-v040/fresh/checkpoint/bootstrap.ssz", V040_REHEARSAL),
+    ("e2e/runs/ci-sequencer-attest-v040/fresh/checkpoint/finality_update.ssz", V040_REHEARSAL),
+    ("e2e/runs/ci-sequencer-attest-v040/fresh/checkpoint/update_1425.ssz", V040_REHEARSAL),
+];
+const V040_REHEARSAL: &str =
+    "the LEZ v0.4.0 port's sequencer-attest rehearsal (28 Nov 2026): Sepolia data it fetched, after the differential's corpus and not yet replayed through Helios (scripts/verifylib/checks_lc.py POST_CORPUS)";
 
 fn format_uncovered_ssz_message(uncovered: &[&String]) -> String {
     let list = uncovered.iter().map(|p| format!("  - {p}")).collect::<Vec<_>>().join("\n");
