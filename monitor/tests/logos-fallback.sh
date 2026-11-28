@@ -212,7 +212,7 @@ cat "$summary"
 # tree passed on GitHub on another branch and locally on anvil 1.3.6 and 1.5.1).
 if [ "$fails" -gt 0 ]; then
   for f in monitor-stderr.log txsender-stderr.log anvil.log; do
-    [ -s "$run/$f" ] && { echo; echo "--- last 40 lines of $f"; tail -n 40 "$run/$f" | sed -e "s#$repo#<checkout>#g"; }
+    [ -s "$run/$f" ] && { echo; echo "--- last 40 lines of $f"; tail -n 40 "$run/$f" | while IFS= read -r l; do printf '%s\n' "${l//"$repo"/<checkout>}"; done; }
   done
 fi
 exit "$fails"
